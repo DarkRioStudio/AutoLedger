@@ -5,7 +5,6 @@ struct InboxView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImportingPhoto = false
-    @State private var lastRecognizedText = ""
 
     private let ocrService = OCRService()
 
@@ -21,7 +20,7 @@ struct InboxView: View {
                         statusBanner(summary)
                     }
 
-                    if !lastRecognizedText.isEmpty {
+                    if !store.lastRecognizedText.isEmpty {
                         recognizedTextCard
                     }
 
@@ -243,7 +242,7 @@ struct InboxView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            Text(lastRecognizedText)
+            Text(store.lastRecognizedText)
                 .font(.footnote.monospaced())
                 .foregroundStyle(AppTheme.ink.opacity(0.82))
                 .padding(14)
@@ -260,6 +259,7 @@ struct InboxView: View {
 
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
         isImportingPhoto = true
+        store.prepareForLiveImport()
         defer {
             isImportingPhoto = false
             selectedPhoto = nil
@@ -270,7 +270,6 @@ struct InboxView: View {
                 throw OCRServiceError.loadFailed
             }
             let text = try ocrService.recognizeText(from: data)
-            lastRecognizedText = text
             store.importRecognizedText(text)
         } catch {
             store.setImportError(error.localizedDescription)
