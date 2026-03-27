@@ -26,6 +26,13 @@ enum AppFormatters {
         return formatter
     }()
 
+    private static let exportDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+
     static func currency(_ amount: Double) -> String {
         currencyFormatter.string(from: NSNumber(value: amount)) ?? "¥0.00"
     }
@@ -36,6 +43,10 @@ enum AppFormatters {
 
     static func month(_ date: Date) -> String {
         monthFormatter.string(from: date)
+    }
+
+    static func exportDateTime(_ date: Date) -> String {
+        exportDateFormatter.string(from: date)
     }
 
     static func parseFlexibleDate(_ rawValue: String) -> Date? {

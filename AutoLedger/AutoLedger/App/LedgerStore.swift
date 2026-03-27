@@ -4,7 +4,10 @@ import Foundation
 final class LedgerStore: ObservableObject {
     @Published private(set) var transactions: [Transaction]
     @Published private(set) var recentImports: [ImportedReceipt] = []
+    @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
+    @Published private(set) var lastRecognizedText = ""
+    @Published private(set) var lastParsedReceipt: ImportedReceipt?
     @Published var lastImportSummary: String?
 
     private let parser: ReceiptParser
@@ -40,22 +43,57 @@ final class LedgerStore: ObservableObject {
         fallbackMerchant: String? = nil,
         notePrefix: String = "来自真实截图 OCR 导入"
     ) {
-        let source = preferredSource ?? ReceiptSource.infer(from: text)
+        let normalizedText = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = preferredSource ?? ReceiptSource.infer(from: normalizedText)
+
+        lastRecognizedText = normalizedText
+        lastParsedReceipt = nil
 
         guard let receipt = parser.parse(
-            text: text,
+            text: normalizedText,
             source: source,
             fallbackMerchant: fallbackMerchant
         ) else {
-            lastImportSummary = "OCR 已完成，但还没解析出可入账字段。"
+            let summary = "OCR 已完成，但还没解析出可入账字段。"
+            lastImportSummary = summary
+            recordDebugEvent(
+                stage: .parseFailed,
+                source: source,
+                rawText: normalizedText,
+                parsedReceipt: nil,
+                summary: summary
+            )
             return
         }
 
-        persistReceipt(receipt, notePrefix: notePrefix)
+        lastParsedReceipt = receipt
+        persistReceipt(receipt, rawText: normalizedText, notePrefix: notePrefix)
     }
 
-    func setImportError(_ summary: String) {
+    func prepareForLiveImport() {
+        lastRecognizedText = ""
+        lastParsedReceipt = nil
+    }
+
+    func setImportError(_ summary: String, source: ReceiptSource = .manual) {
         lastImportSummary = summary
+        lastParsedReceipt = nil
+        recordDebugEvent(
+            stage: .ocrFailed,
+            source: source,
+            rawText: "",
+            parsedReceipt: nil,
+            summary: summary
+        )
+    }
+
+    func clearDebugRecords() {
+        debugRecords.removeAll()
+        lastRecognizedText = ""
+        lastParsedReceipt = nil
+        lastImportSummary = nil
     }
 
     func updateTransaction(_ transaction: Transaction) {
@@ -74,9 +112,17 @@ final class LedgerStore: ObservableObject {
         }
     }
 
-    private func persistReceipt(_ receipt: ImportedReceipt, notePrefix: String) {
+    private func persistReceipt(_ receipt: ImportedReceipt, rawText: String, notePrefix: String) {
         if hasDuplicate(receipt) {
-            lastImportSummary = "\(receipt.merchant) 已存在同日同金额记录，账本未重复写入。"
+            let summary = "\(receipt.merchant) 已存在同日同金额记录，账本未重复写入。"
+            lastImportSummary = summary
+            recordDebugEvent(
+                stage: .duplicateSkipped,
+                source: receipt.source,
+                rawText: rawText,
+                parsedReceipt: receipt,
+                summary: summary
+            )
             return
         }
 
@@ -95,11 +141,27 @@ final class LedgerStore: ObservableObject {
         do {
             try transactionStore?.save(transaction: transaction)
         } catch {
-            lastImportSummary = "账单已导入，但写入本地存储失败：\(error.localizedDescription)"
+            let summary = "账单已导入，但写入本地存储失败：\(error.localizedDescription)"
+            lastImportSummary = summary
+            recordDebugEvent(
+                stage: .persistenceFailed,
+                source: receipt.source,
+                rawText: rawText,
+                parsedReceipt: receipt,
+                summary: summary
+            )
             return
         }
 
-        lastImportSummary = "已导入 \(receipt.merchant)，金额 \(AppFormatters.currency(receipt.amount))。"
+        let summary = "已导入 \(receipt.merchant)，金额 \(AppFormatters.currency(receipt.amount))。"
+        lastImportSummary = summary
+        recordDebugEvent(
+            stage: .persisted,
+            source: receipt.source,
+            rawText: rawText,
+            parsedReceipt: receipt,
+            summary: summary
+        )
     }
 
     private func hasDuplicate(_ receipt: ImportedReceipt) -> Bool {
@@ -117,6 +179,26 @@ final class LedgerStore: ObservableObject {
             }
             return lhs.occurredAt > rhs.occurredAt
         }
+    }
+
+    private func recordDebugEvent(
+        stage: ImportDebugStage,
+        source: ReceiptSource,
+        rawText: String,
+        parsedReceipt: ImportedReceipt?,
+        summary: String
+    ) {
+        debugRecords.insert(
+            ImportDebugRecord(
+                createdAt: .now,
+                stage: stage,
+                source: source,
+                rawText: rawText,
+                parsedReceipt: parsedReceipt,
+                summary: summary
+            ),
+            at: 0
+        )
     }
 }
 
