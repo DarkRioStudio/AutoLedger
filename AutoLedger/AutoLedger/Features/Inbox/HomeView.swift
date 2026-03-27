@@ -9,16 +9,32 @@ import SwiftUI
 
 struct HomeView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            InboxView()
+                .tabItem {
+                    Label("收件箱", systemImage: "tray.full.fill")
+                }
+
+            LedgerView()
+                .tabItem {
+                    Label("账本", systemImage: "list.bullet.rectangle.portrait.fill")
+                }
+
+            ReportView()
+                .tabItem {
+                    Label("月报", systemImage: "chart.bar.fill")
+                }
+
+            SettingsView()
+                .tabItem {
+                    Label("设置", systemImage: "gearshape.fill")
+                }
         }
-        .padding()
+        .tint(AppTheme.accent)
     }
 }
 
 #Preview {
     HomeView()
+        .environmentObject(LedgerStore())
 }
