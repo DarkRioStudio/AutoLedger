@@ -21,8 +21,8 @@ enum SQLiteTransactionStoreError: LocalizedError {
 final class SQLiteTransactionStore: TransactionStore {
     private var db: OpaquePointer?
 
-    init(filename: String = "autoledger.sqlite3") throws {
-        let url = try Self.makeDatabaseURL(filename: filename)
+    init(baseDirectoryURL: URL? = nil, filename: String = "autoledger.sqlite3") throws {
+        let url = try Self.makeDatabaseURL(baseDirectoryURL: baseDirectoryURL, filename: filename)
 
         if sqlite3_open(url.path, &db) != SQLITE_OK {
             throw SQLiteTransactionStoreError.openDatabase
@@ -176,9 +176,9 @@ final class SQLiteTransactionStore: TransactionStore {
         sqlite3_bind_text(statement, 9, now, -1, SQLITE_TRANSIENT)
     }
 
-    private static func makeDatabaseURL(filename: String) throws -> URL {
+    private static func makeDatabaseURL(baseDirectoryURL: URL? = nil, filename: String) throws -> URL {
         let fileManager = FileManager.default
-        let base = try fileManager.url(
+        let base = try baseDirectoryURL ?? fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
