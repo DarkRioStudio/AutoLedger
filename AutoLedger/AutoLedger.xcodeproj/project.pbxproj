@@ -6,23 +6,106 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
+		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
+		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C017EEB82F875C1600639DC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C042FD6C2F76270200A01918 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C017EEAF2F875C1600639DC8;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C017EEBF2F875C1600639DC8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C042FD742F76270200A01918 /* AutoLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AutoLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C017EEBB2F875C1600639DC8 /* Exceptions for "ShareExtension" folder in "ShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
+		};
+		C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Data/DTO/README.md",
+				"Data/Mappers/README.md",
+				"Data/Persistence/README.md",
+				"Domain/Enums/README.md",
+				"Domain/Models/README.md",
+				"Domain/Services/README.md",
+				"Features/Inbox/README.md",
+				"Features/Ledger/README.md",
+				"Features/Report/README.md",
+				"Features/Settings/README.md",
+				"Features/Subscription/README.md",
+				"Resources/README.md",
+				"Shared/Components/README.md",
+				"Shared/Constants/README.md",
+				"Shared/Extensions/README.md",
+				"Shared/Utils/README.md",
+			);
+			target = C042FD732F76270200A01918 /* AutoLedger */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		C017EEB12F875C1600639DC8 /* ShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C017EEBB2F875C1600639DC8 /* Exceptions for "ShareExtension" folder in "ShareExtension" target */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
 		C042FD762F76270200A01918 /* AutoLedger */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */,
+			);
 			path = AutoLedger;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		C017EEAD2F875C1600639DC8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AABB00050000000500000005 /* AutoLedgerCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C042FD712F76270200A01918 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AABB00040000000400000004 /* AutoLedgerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +116,7 @@
 			isa = PBXGroup;
 			children = (
 				C042FD762F76270200A01918 /* AutoLedger */,
+				C017EEB12F875C1600639DC8 /* ShareExtension */,
 				C042FD752F76270200A01918 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				C042FD742F76270200A01918 /* AutoLedger.app */,
+				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,22 +133,49 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C042FD732F76270200A01918 /* AutoLedger */ = {
+		C017EEAF2F875C1600639DC8 /* ShareExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C042FD7F2F76270300A01918 /* Build configuration list for PBXNativeTarget "AutoLedger" */;
+			buildConfigurationList = C017EEBC2F875C1600639DC8 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
 			buildPhases = (
-				C042FD702F76270200A01918 /* Sources */,
-				C042FD712F76270200A01918 /* Frameworks */,
+				C017EEAC2F875C1600639DC8 /* Sources */,
+				C017EEAD2F875C1600639DC8 /* Frameworks */,
+				C017EEAE2F875C1600639DC8 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				C017EEB12F875C1600639DC8 /* ShareExtension */,
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+				AABB00030000000300000003 /* AutoLedgerCore */,
+			);
+			productName = ShareExtension;
+			productReference = C017EEB02F875C1600639DC8 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C042FD732F76270200A01918 /* AutoLedger */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C042FD7F2F76270300A01918 /* Build configuration list for PBXNativeTarget "AutoLedger" */;
+			buildPhases = (
+				C042FD702F76270200A01918 /* Sources */,
+				C042FD712F76270200A01918 /* Frameworks */,
+				C042FD722F76270200A01918 /* Resources */,
+				C017EEBF2F875C1600639DC8 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C017EEB92F875C1600639DC8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
 				C042FD762F76270200A01918 /* AutoLedger */,
 			);
 			name = AutoLedger;
 			packageProductDependencies = (
+				AABB00020000000200000002 /* AutoLedgerCore */,
 			);
 			productName = AutoLedger;
 			productReference = C042FD742F76270200A01918 /* AutoLedger.app */;
@@ -76,9 +188,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
+					C017EEAF2F875C1600639DC8 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					C042FD732F76270200A01918 = {
 						CreatedOnToolsVersion = 26.4;
 					};
@@ -93,17 +208,45 @@
 			);
 			mainGroup = C042FD6B2F76270200A01918;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AABB00010000000100000001 /* XCLocalSwiftPackageReference "AutoLedgerCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C042FD752F76270200A01918 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				C042FD732F76270200A01918 /* AutoLedger */,
+				C017EEAF2F875C1600639DC8 /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		C017EEAE2F875C1600639DC8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C042FD722F76270200A01918 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		C017EEAC2F875C1600639DC8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C042FD702F76270200A01918 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -113,7 +256,77 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		C017EEB92F875C1600639DC8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
+			targetProxy = C017EEB82F875C1600639DC8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		C017EEBD2F875C1600639DC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C017EEBE2F875C1600639DC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		C042FD7D2F76270300A01918 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -240,6 +453,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AutoLedger/AutoLedger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -249,11 +463,13 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=iphoneos*]" = AutoLedger;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍照识别支付账单。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -268,7 +484,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -277,6 +493,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AutoLedger/AutoLedger.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -286,11 +503,13 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=iphoneos*]" = AutoLedger;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_NSCameraUsageDescription = "用于拍照识别支付账单。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -305,13 +524,22 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		C017EEBC2F875C1600639DC8 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C017EEBD2F875C1600639DC8 /* Debug */,
+				C017EEBE2F875C1600639DC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C042FD6F2F76270200A01918 /* Build configuration list for PBXProject "AutoLedger" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -331,6 +559,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		AABB00010000000100000001 /* XCLocalSwiftPackageReference "AutoLedgerCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = AutoLedgerCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AABB00020000000200000002 /* AutoLedgerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AutoLedgerCore;
+		};
+		AABB00030000000300000003 /* AutoLedgerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AutoLedgerCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C042FD6C2F76270200A01918 /* Project object */;
 }
