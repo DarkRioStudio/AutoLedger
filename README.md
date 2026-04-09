@@ -1,53 +1,99 @@
-# 项目文档目录
+<p align="center">
+  <img src="icon.png" width="128" height="128" alt="AutoLedger Icon" />
+</p>
 
-## 项目简介
+<h1 align="center">AutoLedger</h1>
 
-本目录目前承载的项目是一个 **iPhone AI 自动截图记账助手（AutoLedger）**。该项目旨在通过利用 iOS 平台的 Vision OCR 能力和本地 AI 分类，实现用户支付截图的自动识别、分类与记账，并提供订阅识别、月度消费汇总等智能分析功能。项目以 Swift + SwiftUI 为主要技术栈，侧重本地处理和隐私保护。随着迭代推进，AutoLedger 计划逐步支持短讯通知识别、订阅提醒、月报生成以及消费趋势分析等功能。
+<p align="center">
+  <strong>截图即记账 — iPhone 自动化消费记录工具</strong><br/>
+  拍一张支付截图，自动识别金额和商户，一秒入账。
+</p>
 
-本目录可直接作为新项目的文档目录使用，涵盖从启动到发布的完整文档治理体系。
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-iOS_26+-blue?logo=apple" alt="Platform" />
+  <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+</p>
 
-## 目录说明
+---
 
-| 目录 / 文件 | 用途 |
-|---|---|
-| `AutoLedger/` | iOS 项目文件，包含源代码、资源和配置 |
-| `CHANGELOG.md` | 项目文档与流程变更总账，每次文档改动必须记录 |
-| `process/` | 过程治理文档（迭代工作流、想法池、迭代日志），日常执行与回填 |
-| `versions/` | 版本级文档（版本计划、回归基线、发布门禁），按版本收口 |
-| `prototype/` | 项目原型文件（Axure RP），按版本归档，驱动前端详细设计与想法池 |
-| `template/` | 可复用模板库，支持 0→1 启动与持续迭代 |
-| `README.md` | 项目简介与目录说明，指导使用者理解文档体系和启动流程 |
+## Features
 
-## 推荐启动方式
+| | 功能 | 说明 |
+|---|---|---|
+| 📸 | **截图记账** | 相册选取 / 拍照 / 剪切板粘贴，OCR 自动识别金额、商户和时间 |
+| ⚡ | **一键记账** | iPhone 操作按钮 + 快捷指令，按一下完成全流程 |
+| 🤖 | **智能解析** | 规则引擎 + LLM 双模式，覆盖微信、支付宝、App Store 等 |
+| 📊 | **月度报告** | 分类统计、消费趋势、商户排名一目了然 |
+| 📤 | **Share Extension** | 在任意 App 中分享截图直接导入 |
+| 🔒 | **完全离线** | 所有识别和分析在本地完成，零数据上传 |
 
-### 标准启动
+## Quick Start
 
-适用于新项目从零搭建、需要先建立完整文档治理骨架再推进开发的场景。
+**App 内导入** — 打开 AutoLedger → 选择截图 → 自动入账
 
-1. **建立文档骨架**：阅读并落地 `template/00-bootstrap/项目文档组织架构模板.md`，确定目录结构与命名规范
-2. **填写版本计划**：基于业务目标填写 `versions/vX.Y.Z-plan.md`
-3. **建立回归基线**：填写 `versions/vX.Y.Z-regression-baseline.md`
-4. **推进迭代**：进入标准迭代工作流，按版本计划逐步执行
-5. **版本收口**：执行 `versions/vX.Y.Z-RELEASE.md` 发布门禁，完成后更新 `CHANGELOG.md`
+**一键记账（推荐）** — [安装快捷指令](https://www.icloud.com/shortcuts/e64528fb5bc34afdab4d7c64242d537e) → 绑定操作按钮 → 按一下记账
 
-### 快速迭代启动
+**分享扩展** — 在微信/支付宝中分享截图 → 选择 AutoLedger
 
-适用于目标已有初步方向、希望跳过文档骨架搭建、直接进入 IDEA 驱动的快节奏迭代场景。
+## Tech Stack
 
-1. **阅读启动模板**：阅读并落地 `template/00-bootstrap/项目启动流程与快速迭代模板.md`
-2. **填写第一个想法**：在 `process/iteration-idea-backlog.md` 填写宏观想法 `IDEA-001`
-3. **业务评审**：基于 `IDEA-001` 完成业务需求评审，明确范围与成功标准
-4. **执行迭代**：按启动主路径推进，使用 `template/02-execution/标准迭代提示模板.md` 驱动每轮迭代
-5. **回填日志**：每轮结束后更新 `process/iteration-log.md` 与 `CHANGELOG.md`
+| 层级 | 技术 |
+|------|------|
+| UI | SwiftUI, iOS 26 |
+| OCR | Apple Vision (`VNRecognizeTextRequest`) |
+| 解析 | 规则引擎 + LLM (SmartReceiptParser) |
+| 存储 | SQLite (本地) |
+| 架构 | MVVM + 依赖注入 |
+| 快捷指令 | AppIntents / `ForegroundContinuableIntent` |
+| 分享 | Share Extension |
 
-### 原型驱动启动
+## Project Structure
 
-适用于需求已初步明确、希望先通过 RP 可视化对齐再进入开发的场景，流程如下：
+```
+AutoLedgerRio/
+├── AutoLedger/                  # Xcode 工程
+│   ├── AutoLedger/              # 主 App 源码
+│   │   ├── App/                 # 入口 & 全局配置
+│   │   ├── Features/            # 功能模块 (Inbox, Ledger, Report, Settings)
+│   │   ├── Domain/              # 模型、枚举、业务服务
+│   │   ├── Data/                # 持久化、DTO、Mapper
+│   │   ├── Shared/              # 通用组件、常量、扩展
+│   │   └── Assets.xcassets/     # 图标 & 资源
+│   ├── AutoLedgerCore/          # 本地 Swift Package (共享模型)
+│   └── ShareExtension/          # Share Extension
+├── versions/                    # 版本计划 & 回归基线
+├── process/                     # 迭代工作流文档
+├── scripts/                     # 回归测试脚本
+└── template/                    # 文档模板
+```
 
-1. **整理需求**：将核心需求整理为结构化描述，明确核心页面、用户角色与关键交互
-2. **生产 RP 原型**：在 `prototype/vX.Y.Z/` 下创建 Axure RP 文件，完成页面流转与交互标注
-3. **生产前端详细设计方案**：基于 RP 原型截图与标注，填写 `template/05-frontend/前端详细设计方案模板.md`
-4. **生产想法池**：将原型评审中识别到的功能点、边界场景、待确认项批量写入 `process/iteration-idea-backlog.md`（每条为独立 IDEA）
-5. **开始迭代**：进入标准迭代工作流，按 IDEA 优先级逐步推进实现
+## Build
 
+```bash
+# 环境要求：Xcode 26 beta
+sudo xcode-select -s /Applications/Xcode-beta.app/Contents/Developer
 
+# 构建 (真机)
+cd AutoLedger
+xcodebuild -project AutoLedger.xcodeproj \
+  -scheme AutoLedger \
+  -destination 'generic/platform=iOS' \
+  build
+
+# 回归测试
+bash scripts/run_offline_regression.sh
+```
+
+## Roadmap
+
+| 版本 | 状态 | 主要内容 |
+|------|------|----------|
+| v0.1.0 | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
+| v0.1.1 | 🚧 开发中 | 一键记账引导、LLM 智能解析、操作按钮集成、图标 |
+| v0.2.0 | 📋 计划中 | 订阅识别、扣费预测与提醒、去重、分类学习 |
+| v0.3.0 | 📋 计划中 | 异常消费检测、个性化建议、更多平台适配 |
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
