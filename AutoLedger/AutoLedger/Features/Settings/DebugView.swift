@@ -1,3 +1,4 @@
+import AutoLedgerCore
 import SwiftUI
 import UIKit
 
@@ -178,7 +179,21 @@ struct DebugView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    Text("\(record.source.title) · \(AppFormatters.shortDateTime(record.createdAt))")
+                    HStack(spacing: 6) {
+                        Text(record.source.title)
+                        Text("·")
+                        Text(record.imageSource.title)
+                        if record.usedLLM {
+                            Text("·")
+                            Text("LLM")
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+
+                    Text(AppFormatters.shortDateTime(record.createdAt))
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -223,6 +238,38 @@ struct DebugView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.black.opacity(0.05))
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            if let prompt = record.llmPrompt {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("模型输入")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+                    Text(prompt)
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(AppTheme.ink.opacity(0.78))
+                        .lineLimit(8)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.accent.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            if let response = record.llmResponse {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("模型输出")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color(red: 0.18, green: 0.67, blue: 0.36))
+                    Text(response)
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(AppTheme.ink.opacity(0.78))
+                        .lineLimit(8)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.18, green: 0.67, blue: 0.36).opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
         .padding(18)
@@ -330,13 +377,19 @@ struct DebugView: View {
         if !store.debugRecords.isEmpty {
             lines.append("最近调试记录：")
             for record in store.debugRecords.prefix(10) {
-                lines.append("- [\(record.stage.title)] \(record.source.title) · \(AppFormatters.exportDateTime(record.createdAt))")
+                lines.append("- [\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(record.usedLLM ? "LLM" : "规则") · \(AppFormatters.exportDateTime(record.createdAt))")
                 lines.append("  结论：\(record.summary)")
                 if let receipt = record.parsedReceipt {
                     lines.append("  解析：\(receipt.merchant) · \(AppFormatters.currency(receipt.amount)) · \(receipt.suggestedCategory.title)")
                 }
                 if !record.rawText.isEmpty {
                     lines.append("  OCR：\(record.rawText)")
+                }
+                if let prompt = record.llmPrompt {
+                    lines.append("  模型输入：\(prompt)")
+                }
+                if let response = record.llmResponse {
+                    lines.append("  模型输出：\(response)")
                 }
             }
         }
@@ -358,6 +411,8 @@ struct DebugView: View {
             "记录时间：\(AppFormatters.exportDateTime(record.createdAt))",
             "阶段：\(record.stage.title)",
             "来源：\(record.source.title)",
+            "图片来源：\(record.imageSource.title)",
+            "解析模式：\(record.usedLLM ? "LLM 智能解析" : "纯规则解析")",
             "结论：\(record.summary)"
         ]
 
@@ -373,6 +428,16 @@ struct DebugView: View {
         if !record.rawText.isEmpty {
             lines.append("OCR 文本：")
             lines.append(record.rawText)
+        }
+
+        if let prompt = record.llmPrompt {
+            lines.append("模型输入：")
+            lines.append(prompt)
+        }
+
+        if let response = record.llmResponse {
+            lines.append("模型输出：")
+            lines.append(response)
         }
 
         return lines.joined(separator: "\n")
