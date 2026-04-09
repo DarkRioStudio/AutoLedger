@@ -44,6 +44,14 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    toggleCard(
+                        icon: "doc.on.clipboard",
+                        iconColor: .orange,
+                        title: "回到前台自动读取剪切板",
+                        subtitle: "开启后，每次回到 App 时自动检测剪切板中的支付截图并导入记账。",
+                        key: "autoClipboardImport"
+                    )
+
                     infoCard(
                         title: "当前版本",
                         body: "v0.1.1 — 快捷指令一键记账、Share Extension 分享导入、LLM + 规则混合解析、相机拍照 / 剪切板导入、调试记录全链路追溯。"
@@ -91,6 +99,41 @@ struct SettingsView: View {
             Image(systemName: "chevron.right")
                 .foregroundStyle(AppTheme.mutedInk)
                 .padding(.top, 4)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AppTheme.card)
+        )
+    }
+
+    private func toggleCard(icon: String, iconColor: Color, title: String, subtitle: String, key: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(iconColor)
+                .frame(width: 40, height: 40)
+                .background(iconColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: Binding(
+                get: { UserDefaults.standard.bool(forKey: key) },
+                set: { UserDefaults.standard.set($0, forKey: key) }
+            ))
+            .labelsHidden()
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

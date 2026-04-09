@@ -164,6 +164,10 @@ struct InboxView: View {
             Text("仅支持 iPhone 15 Pro 及以上带操作按钮的机型。")
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
+
+            Text("你也可以复制支付截图后回到 App，自动读取剪切板记账（需在设置中开启）。")
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
         }
         .padding(18)
         .background(

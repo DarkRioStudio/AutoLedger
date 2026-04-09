@@ -19,6 +19,9 @@ struct AutoLedgerApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.refreshFromStore()
+                        if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
+                            store.attemptClipboardImport()
+                        }
                     }
                 }
         }

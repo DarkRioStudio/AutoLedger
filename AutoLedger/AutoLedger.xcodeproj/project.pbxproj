@@ -52,22 +52,22 @@
 		C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Data/DTO/README.md",
-				"Data/Mappers/README.md",
-				"Data/Persistence/README.md",
-				"Domain/Enums/README.md",
-				"Domain/Models/README.md",
-				"Domain/Services/README.md",
-				"Features/Inbox/README.md",
-				"Features/Ledger/README.md",
-				"Features/Report/README.md",
-				"Features/Settings/README.md",
-				"Features/Subscription/README.md",
-				"Resources/README.md",
-				"Shared/Components/README.md",
-				"Shared/Constants/README.md",
-				"Shared/Extensions/README.md",
-				"Shared/Utils/README.md",
+				Data/DTO/README.md,
+				Data/Mappers/README.md,
+				Data/Persistence/README.md,
+				Domain/Enums/README.md,
+				Domain/Models/README.md,
+				Domain/Services/README.md,
+				Features/Inbox/README.md,
+				Features/Ledger/README.md,
+				Features/Report/README.md,
+				Features/Settings/README.md,
+				Features/Subscription/README.md,
+				Resources/README.md,
+				Shared/Components/README.md,
+				Shared/Constants/README.md,
+				Shared/Extensions/README.md,
+				Shared/Utils/README.md,
 			);
 			target = C042FD732F76270200A01918 /* AutoLedger */;
 		};
