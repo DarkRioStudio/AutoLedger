@@ -55,9 +55,13 @@ public enum AppFormatters: Sendable {
             .replacingOccurrences(of: "月", with: "-")
             .replacingOccurrences(of: "日", with: "")
             .replacingOccurrences(of: "/", with: "-")
+            // OCR 可能产出全角空格、不间断空格等 Unicode 空白，统一替换为 ASCII 空格
+            .replacingOccurrences(of: #"[\u00A0\u2000-\u200B\u3000\uFEFF]"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         let formats = [
+            "yyyy-M-d HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
             "yyyy-M-d HH:mm",
             "yyyy-MM-dd HH:mm",
             "yyyy-M-d",
