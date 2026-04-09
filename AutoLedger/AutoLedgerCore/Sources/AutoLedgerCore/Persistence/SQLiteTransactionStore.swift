@@ -198,10 +198,28 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             throw SQLiteTransactionStoreError.executeStatement(debugSQL)
         }
 
-        // 安全迁移：为旧表添加新列（已存在则静默忽略）
-        sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN llm_prompt TEXT;", nil, nil, nil)
-        sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN llm_response TEXT;", nil, nil, nil)
-        sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN image_source TEXT;", nil, nil, nil)
+        // 安全迁移：为旧表添加新列（仅在列不存在时执行）
+        let existingColumns = Self.columnNames(db: db, table: "debug_events")
+        for col in ["llm_prompt", "llm_response", "image_source"] {
+            if !existingColumns.contains(col) {
+                sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN \(col) TEXT;", nil, nil, nil)
+            }
+        }
+    }
+
+    private static func columnNames(db: OpaquePointer?, table: String) -> Set<String> {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table));", -1, &stmt, nil) == SQLITE_OK else {
+            return []
+        }
+        var names = Set<String>()
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let cName = sqlite3_column_text(stmt, 1) {
+                names.insert(String(cString: cName))
+            }
+        }
+        return names
     }
 
     // MARK: - Debug Events

@@ -6,11 +6,18 @@
 //
 
 import SwiftUI
+import AutoLedgerCore
 
 @main
 struct AutoLedgerApp: App {
     @StateObject private var store = LedgerStore()
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        ClipboardImportIntent.handler = {
+            LedgerStore.shared?.attemptClipboardImport(force: true)
+        }
+    }
 
     var body: some Scene {
         WindowGroup {

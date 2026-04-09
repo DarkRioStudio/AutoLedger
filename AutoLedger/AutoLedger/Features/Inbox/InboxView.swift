@@ -257,7 +257,7 @@ struct InboxView: View {
                     .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(AppTheme.accent.opacity(0.85))
+                .tint(AppTheme.accent)
             }
 
             Button {

@@ -11,6 +11,15 @@
 
 ### 新增
 - [2026-04-09 22:00 +0800] 新增 `ClipboardImportIntent`（无参数 AppIntent，`openAppWhenRun=true`），注册为 App Shortcut「剪切板记账」，用户可将其添加到控制中心作为一键记账入口。
+- [2026-04-09 24:00 +0800] 新增 `ControlWidgetExtension` Widget Extension target，包含 `ControlWidget` 注册到 iOS 控制中心；用户可在设置 → 控制中心中添加「剪切板记账」按钮。
+- [2026-04-09 24:00 +0800] `ClipboardImportIntent` 迁移至 `AutoLedgerCore` 共享包（handler 模式），主 App 和 Widget Extension 共用同一 Intent 类型。
+
+### 修复
+- [2026-04-09 23:30 +0800] 首页 Tab 名称由「收件箱」改为「记账」。
+- [2026-04-09 23:30 +0800] 拍照识别按钮 tint 从 `AppTheme.accent.opacity(0.85)` 改为 `AppTheme.accent`，与其他按钮颜色统一。
+- [2026-04-09 23:30 +0800] SQLite 迁移 `ALTER TABLE ADD COLUMN` 改为先查 `PRAGMA table_info` 判断列是否存在，消除重复列名错误日志。
+
+### 新增
 - [2026-04-09 22:00 +0800] App 回到前台自动读取剪切板功能（设置页开关，默认关闭）：开启后每次回到 App 自动检测剪切板是否有新截图并导入；使用 `UIPasteboard.changeCount` 防止重复导入。
 - [2026-04-09 22:00 +0800] `LedgerStore` 新增 `static var shared` 和 `attemptClipboardImport(force:)` 方法，供 Intent 与自动检测共用。
 - [2026-04-09 22:00 +0800] 设置页新增"回到前台自动读取剪切板"开关卡片（默认关闭）。
