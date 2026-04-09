@@ -18,6 +18,7 @@
 - [2026-04-09 24:00 +0800] `ClipboardImportIntent` 迁移至 `AutoLedgerCore` 共享包（handler 模式），主 App 和 Widget Extension 共用同一 Intent 类型。
 
 ### 修复
+- [2026-04-10 +0800] 去重逻辑从「同一天」缩小为「5 分钟窗口」：同商户同金额但不同时间的交易不再被误判为重复（影响 LedgerStore、QuickLedgerIntent、ShareExtension 三处）。
 - [2026-04-09 23:30 +0800] 首页 Tab 名称由「收件箱」改为「记账」。
 - [2026-04-09 23:30 +0800] 拍照识别按钮 tint 从 `AppTheme.accent.opacity(0.85)` 改为 `AppTheme.accent`，与其他按钮颜色统一。
 - [2026-04-09 23:30 +0800] SQLite 迁移 `ALTER TABLE ADD COLUMN` 改为先查 `PRAGMA table_info` 判断列是否存在，消除重复列名错误日志。
