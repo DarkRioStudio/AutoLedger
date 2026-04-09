@@ -1,8 +1,11 @@
 import AutoLedgerCore
 import Combine
 import Foundation
+import UIKit
 
 final class LedgerStore: ObservableObject {
+    static var shared: LedgerStore?
+
     @Published private(set) var transactions: [Transaction]
     @Published private(set) var recentImports: [ImportedReceipt] = []
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
@@ -16,6 +19,7 @@ final class LedgerStore: ObservableObject {
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
     private let transactionStore: TransactionStore?
+    private var lastPasteboardChangeCount: Int
 
     init(
         parser: ReceiptParser = ReceiptParser(),
@@ -29,6 +33,8 @@ final class LedgerStore: ObservableObject {
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+        self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
+        LedgerStore.shared = self
     }
 
     var monthlySnapshot: MonthlySnapshot {
@@ -150,6 +156,30 @@ final class LedgerStore: ObservableObject {
             debugRecords = (try? sqlStore.loadDebugEvents()) ?? debugRecords
         }
         loadShareExtensionResult()
+    }
+
+    /// 从剪切板读取图片并尝试 OCR → 解析 → 记账
+    /// - Parameter force: `true` 跳过 changeCount 去重（控制中心 / 快捷指令显式触发）
+    func attemptClipboardImport(force: Bool = false) {
+        if !force {
+            let current = UIPasteboard.general.changeCount
+            guard current != lastPasteboardChangeCount else { return }
+            lastPasteboardChangeCount = current
+        }
+
+        guard UIPasteboard.general.hasImages else { return }
+        guard let image = UIPasteboard.general.image,
+              let data = image.pngData() else { return }
+
+        lastPasteboardChangeCount = UIPasteboard.general.changeCount
+        prepareForLiveImport()
+
+        do {
+            let text = try OCRService().recognizeText(from: data)
+            importRecognizedText(text, imageSource: .clipboard)
+        } catch {
+            setImportError(error.localizedDescription, imageSource: .clipboard)
+        }
     }
 
     func deleteTransaction(_ transaction: Transaction) {

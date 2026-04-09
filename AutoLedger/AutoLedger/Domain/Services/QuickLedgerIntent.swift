@@ -126,5 +126,14 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             shortTitle: "快速记账",
             systemImageName: "doc.text.viewfinder"
         )
+        AppShortcut(
+            intent: ClipboardImportIntent(),
+            phrases: [
+                "用 \(.applicationName) 从剪切板记账",
+                "\(.applicationName) 剪切板记账"
+            ],
+            shortTitle: "剪切板记账",
+            systemImageName: "doc.on.clipboard"
+        )
     }
 }
