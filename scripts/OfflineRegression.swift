@@ -91,7 +91,7 @@ struct OfflineRegression {
                     "\(sample.title) date matches"
                 )
             }
-            // Samples without an expected date fixture (e.g. transit notifications) skip date verification.
+            // Skip date check for samples that have no expected date fixture.
         }
     }
 

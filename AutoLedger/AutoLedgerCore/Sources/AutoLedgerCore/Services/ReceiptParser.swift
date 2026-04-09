@@ -227,11 +227,11 @@ public struct ReceiptParser: Sendable {
         //   (B) 同一行 "地铁：内江路 东丽文体中心"
         let transitKeywords: Set<String> = ["地铁", "公交"]
         for (idx, line) in lines.enumerated() {
-            let colonParts = line.components(separatedBy: CharacterSet(charactersIn: ":："))
-            guard colonParts.count >= 2 else { continue }
-            let label = colonParts.first?.trimmingCharacters(in: .whitespaces) ?? ""
+            // 用 rangeOfCharacter 找第一个冒号，避免多次分割时字符类型不一致
+            guard let colonRange = line.rangeOfCharacter(from: CharacterSet(charactersIn: ":：")) else { continue }
+            let label = String(line[line.startIndex..<colonRange.lowerBound]).trimmingCharacters(in: .whitespaces)
             guard transitKeywords.contains(label) else { continue }
-            let inlinePart = colonParts.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+            let inlinePart = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let stationText: String
             if !inlinePart.isEmpty {
                 // (B) 同一行：地铁：内江路 东丽文体中心
