@@ -310,7 +310,7 @@ final class LedgerStore: ObservableObject {
         transactions.contains {
             $0.merchant == receipt.merchant &&
             abs($0.amount - receipt.amount) < 0.01 &&
-            abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 300
+            abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 60
         }
     }
 
