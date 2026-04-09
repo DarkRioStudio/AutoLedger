@@ -1,6 +1,9 @@
 import AutoLedgerCore
 import Foundation
 import FoundationModels
+import os.log
+
+private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "SmartParser")
 
 /// 混合解析器：规则提取金额/日期 → Foundation Models 提取商户+分类
 /// 设备不支持时自动回退到纯规则解析
@@ -30,11 +33,14 @@ struct SmartReceiptParser: Sendable {
     func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) async -> SmartResult? {
         // 1. 规则先提取金额和日期（可靠）
         guard let ruleResult = ruleParser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {
+            logger.warning("[规则] 规则解析失败，无法提取金额")
             return nil
         }
+        logger.info("[规则] 商户=\(ruleResult.merchant) 金额=\(ruleResult.amount) 时间=\(AppFormatters.exportDateTime(ruleResult.occurredAt)) 分类=\(ruleResult.suggestedCategory.title)")
 
         // 2. 检查设备是否支持 Foundation Models
         guard SystemLanguageModel.default.isAvailable else {
+            logger.info("[LLM] 设备不支持 Foundation Models，使用纯规则结果")
             return SmartResult(receipt: ruleResult, llmTrace: nil)
         }
 
@@ -47,6 +53,7 @@ struct SmartReceiptParser: Sendable {
             let responseText = response.content
 
             guard let parsed = parseJSON(responseText) else {
+                logger.warning("[LLM] JSON 解析失败，回退规则结果。响应: \(responseText.prefix(200))")
                 return SmartResult(
                     receipt: ruleResult,
                     llmTrace: LLMTrace(prompt: prompt, response: responseText)
@@ -55,6 +62,7 @@ struct SmartReceiptParser: Sendable {
 
             let merchant = parsed.merchant.isEmpty ? ruleResult.merchant : parsed.merchant
             let category = TransactionCategory(rawValue: parsed.category) ?? ruleResult.suggestedCategory
+            logger.info("[LLM] 商户=\(merchant) 分类=\(category.title)")
 
             let enhanced = ImportedReceipt(
                 source: source,
@@ -72,6 +80,7 @@ struct SmartReceiptParser: Sendable {
                 llmTrace: LLMTrace(prompt: prompt, response: responseText)
             )
         } catch {
+            logger.error("[LLM] 调用失败: \(error.localizedDescription)")
             return SmartResult(receipt: ruleResult, llmTrace: LLMTrace(prompt: prompt, response: "错误：\(error.localizedDescription)"))
         }
     }

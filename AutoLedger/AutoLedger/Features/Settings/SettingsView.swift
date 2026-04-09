@@ -44,6 +44,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    NavigationLink {
+                        MerchantAliasView()
+                    } label: {
+                        settingsRow(
+                            icon: "person.text.rectangle.fill",
+                            iconColor: Color(red: 0.33, green: 0.59, blue: 0.41),
+                            title: "商户别名",
+                            subtitle: "将解析到的商户全称映射为熟悉的短名称，如「广州骑安科技有限公司 → 青桔单车」"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     toggleCard(
                         icon: "doc.on.clipboard",
                         iconColor: .orange,
