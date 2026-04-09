@@ -221,6 +221,39 @@ public struct ReceiptParser: Sendable {
             }
         }
 
+        // ── 地铁 / 公交储值卡格式 ──
+        // 支持两种 OCR 版式：
+        //   (A) 独立行 "地铁：" + 金额行 + 站点行（如 "ExampleStationA ExampleStationB"）
+        //   (B) 同一行 "地铁：ExampleStationA ExampleStationB"
+        let transitKeywords: Set<String> = ["地铁", "公交"]
+        for (idx, line) in lines.enumerated() {
+            let colonParts = line.components(separatedBy: CharacterSet(charactersIn: ":："))
+            guard colonParts.count >= 2 else { continue }
+            let label = colonParts.first?.trimmingCharacters(in: .whitespaces) ?? ""
+            guard transitKeywords.contains(label) else { continue }
+            let inlinePart = colonParts.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+            let stationText: String
+            if !inlinePart.isEmpty {
+                // (B) 同一行：地铁：ExampleStationA ExampleStationB
+                stationText = inlinePart
+            } else {
+                // (A) 独立 "地铁：" 行 — 向后查找站点行（跳过金额行）
+                guard let stationLine = lines.dropFirst(idx + 1).first(where: { sl in
+                    !sl.isEmpty && amountCandidate(in: sl) == nil
+                }) else { continue }
+                stationText = stationLine
+            }
+            // 将 "ExampleStationA ExampleStationB" 规范化为 "ExampleStationA → ExampleStationB"
+            let route: String
+            if stationText.contains("→") || stationText.contains("->") {
+                route = stationText
+            } else {
+                let stations = stationText.components(separatedBy: " ").filter { !$0.isEmpty }
+                route = stations.count >= 2 ? stations.joined(separator: " → ") : stationText
+            }
+            return "\(label)：\(route)"
+        }
+
         // 跳过纯时间、纯数字、极短行、平台 UI 文案
         let skipContainsFallback = ["成功", "金额", "时间", "Total", "全部账单",
                                      "可在支持的商户", "扫码退款", "收单机构", "账单详情"]
