@@ -15,6 +15,8 @@ struct MetricCard: View {
             Text(value)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
 
             Text(detail)
                 .font(.subheadline)
