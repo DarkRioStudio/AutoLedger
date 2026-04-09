@@ -1,9 +1,9 @@
 import Foundation
 
-enum AppFormatters {
-    static let calendar = Calendar(identifier: .gregorian)
+public enum AppFormatters: Sendable {
+    public static let calendar = Calendar(identifier: .gregorian)
 
-    private static let currencyFormatter: NumberFormatter = {
+    nonisolated(unsafe) private static let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "CNY"
@@ -12,44 +12,44 @@ enum AppFormatters {
         return formatter
     }()
 
-    private static let shortDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "M月d日 HH:mm"
         return formatter
     }()
 
-    private static let monthFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let monthFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "yyyy年M月"
         return formatter
     }()
 
-    private static let exportDateFormatter: DateFormatter = {
+    nonisolated(unsafe) private static let exportDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
 
-    static func currency(_ amount: Double) -> String {
+    public static func currency(_ amount: Double) -> String {
         currencyFormatter.string(from: NSNumber(value: amount)) ?? "¥0.00"
     }
 
-    static func shortDateTime(_ date: Date) -> String {
+    public static func shortDateTime(_ date: Date) -> String {
         shortDateFormatter.string(from: date)
     }
 
-    static func month(_ date: Date) -> String {
+    public static func month(_ date: Date) -> String {
         monthFormatter.string(from: date)
     }
 
-    static func exportDateTime(_ date: Date) -> String {
+    public static func exportDateTime(_ date: Date) -> String {
         exportDateFormatter.string(from: date)
     }
 
-    static func parseFlexibleDate(_ rawValue: String) -> Date? {
+    public static func parseFlexibleDate(_ rawValue: String) -> Date? {
         let normalized = rawValue
             .replacingOccurrences(of: "年", with: "-")
             .replacingOccurrences(of: "月", with: "-")

@@ -1,11 +1,13 @@
 import Foundation
 
-protocol SampleReceiptProviding {
+public protocol SampleReceiptProviding: Sendable {
     var samples: [SampleReceipt] { get }
 }
 
-struct SampleReceiptProvider: SampleReceiptProviding {
-    let samples: [SampleReceipt] = [
+public struct SampleReceiptProvider: SampleReceiptProviding {
+    public init() {}
+
+    public let samples: [SampleReceipt] = [
         SampleReceipt(
             title: "微信买菜截图",
             source: .wechat,
@@ -43,6 +45,6 @@ struct SampleReceiptProvider: SampleReceiptProviding {
             Subscription: iCloud+
             """,
             preview: "Apple Services · CNY 28.00 · 2026-03-22 12:14"
-        )
+        ),
     ]
 }

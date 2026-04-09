@@ -1,0 +1,267 @@
+import Foundation
+
+public struct ReceiptParser: Sendable {
+    public init() {}
+
+    public func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) -> ImportedReceipt? {
+        let normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let amount = extractAmount(from: normalized) else {
+            return nil
+        }
+
+        let merchant = extractMerchant(from: normalized, source: source) ?? fallbackMerchant ?? "待确认商户"
+        let date = extractDate(from: normalized) ?? .now
+        let category = TransactionCategory.infer(from: "\(merchant)\n\(normalized)")
+
+        return ImportedReceipt(
+            source: source,
+            merchant: merchant,
+            amount: amount,
+            occurredAt: date,
+            rawText: normalized,
+            summary: "\(source.title) OCR 解析草稿",
+            confidence: 0.82,
+            suggestedCategory: category
+        )
+    }
+
+    private func extractAmount(from text: String) -> Double? {
+        let lines = text.components(separatedBy: .newlines)
+
+        // 微信支付格式优先：独立行 "-XX.XX" 就是实际支付金额
+        let wechatNegPattern = #"^\s*-([0-9]+(?:\.[0-9]{1,2})?)\s*$"#
+        if let negRegex = try? NSRegularExpression(pattern: wechatNegPattern) {
+            for line in lines {
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                if let match = negRegex.firstMatch(in: line, range: nsRange),
+                   let range = Range(match.range(at: 1), in: line),
+                   let amount = Double(String(line[range])),
+                   amount > 0 {
+                    return amount
+                }
+            }
+        }
+
+        // 带 ¥/￥ 前缀的行优先
+        let currencyPrefixPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+
+        // 实付/实际支付行最优先（外卖、电商常有优惠前金额干扰）
+        let actualPayKeywords = ["实付", "实际支付", "实际付款", "合计支付"]
+        if let cpRegex = try? NSRegularExpression(pattern: currencyPrefixPattern) {
+            for line in lines where actualPayKeywords.contains(where: { line.contains($0) }) {
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                if let match = cpRegex.firstMatch(in: line, range: nsRange),
+                   let range = Range(match.range(at: 1), in: line),
+                   let amount = Double(String(line[range])),
+                   amount > 0 && amount < 100000 {
+                    return amount
+                }
+            }
+        }
+
+        // 普通 ¥ 前缀行
+        if let cpRegex = try? NSRegularExpression(pattern: currencyPrefixPattern) {
+            for line in lines {
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                if let match = cpRegex.firstMatch(in: line, range: nsRange),
+                   let range = Range(match.range(at: 1), in: line),
+                   let amount = Double(String(line[range])),
+                   amount > 0 && amount < 100000 {
+                    return amount
+                }
+            }
+        }
+
+        // 关键词行回退
+        let keywords = ["金额", "支付", "总计", "总额", "实际支付", "Price", "Total", "CNY", "RMB"]
+        let prioritizedLines = lines.filter {
+            let line = $0.lowercased()
+            return keywords.contains { line.contains($0.lowercased()) }
+        }
+
+        for line in prioritizedLines where !line.isEmpty {
+            if let amount = amountCandidate(in: line) {
+                return amount
+            }
+        }
+
+        // 全文兜底
+        for line in lines {
+            if let amount = amountCandidate(in: line) {
+                return amount
+            }
+        }
+
+        return nil
+    }
+
+    private func amountCandidate(in line: String) -> Double? {
+        // 跳过疑似状态栏时间/信号格式，如 "10:131" 或 "9:41"
+        let timeOnlyPattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
+        if (try? NSRegularExpression(pattern: timeOnlyPattern))?
+            .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil {
+            return nil
+        }
+
+        let pattern = #"(?:(?:¥|￥|RMB|CNY)\s*)?([0-9]+(?:\.[0-9]{1,2})?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+        let matches = regex.matches(in: line, range: nsRange)
+
+        let candidates = matches.compactMap { match -> Double? in
+            guard let range = Range(match.range(at: 1), in: line) else {
+                return nil
+            }
+            return Double(String(line[range]))
+        }
+
+        return candidates
+            .filter { $0 < 100000 }
+            .sorted(by: >)
+            .first
+    }
+
+    private func extractMerchant(from text: String, source: ReceiptSource) -> String? {
+        let lines = text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        // 这些是微信支付等平台的字段标签名，不是商户名
+        let fieldLabels: Set<String> = [
+            "商户全称", "收单机构", "支付方式", "交易单号", "商户单号",
+            "当前状态", "支付时间", "商品", "备注", "附言"
+        ]
+
+        // ── 来源专用逻辑优先 ──
+        if source == .appStore {
+            // Apple 收据：先找含中文订阅标记的产品行（如 "Apple Developer Program（自动续期）"）
+            if let subLine = lines.first(where: { $0.contains("自动续期") }) {
+                let cleaned = subLine
+                    .replacingOccurrences(of: #"（[^）]*）"#, with: "", options: .regularExpression)
+                    .replacingOccurrences(of: #"\([^)]*\)"#, with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespaces)
+                if !cleaned.isEmpty { return cleaned }
+            }
+            // 回退：找第一个有效商户/产品行（跳过元数据行）
+            let skipKeywords: Set<String> = ["app store", "文稿编号", "订单号", "apple 账户", "收据", "详情", "报告问题", "付款信息"]
+            let skipContains = ["@", "支付", "如需", "了解", "Copyright", "总计", "续期",
+                                "¥", "￥", "密码", "销售条款", "Subscription", "subscription",
+                                "Date", "CHN", "保留所有权利"]
+            let pureNumberPattern = #"^\s*[\d\s]+\s*$"#
+            let dateLinePattern = #"^\d{4}年"#
+            if let appLine = lines.first(where: { line in
+                let lower = line.lowercased().trimmingCharacters(in: .whitespaces)
+                return !skipKeywords.contains(lower)
+                    && !skipContains.contains(where: { line.contains($0) })
+                    && line.count >= 4
+                    && amountCandidate(in: line) == nil
+                    && ((try? NSRegularExpression(pattern: pureNumberPattern))?.firstMatch(
+                        in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil)
+                    && ((try? NSRegularExpression(pattern: dateLinePattern))?.firstMatch(
+                        in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil)
+            }) {
+                return appLine
+            }
+        }
+
+        // ── 通用前缀匹配（要求关键词出现在冒号之前，防止误匹配语句中间的"项目"等） ──
+        let merchantPrefixes = ["收款方", "商户", "Merchant", "项目", "商品"]
+        for line in lines {
+            let parts = line.components(separatedBy: CharacterSet(charactersIn: ":："))
+            guard parts.count >= 2 else { continue }
+            let label = parts.first?.trimmingCharacters(in: .whitespaces) ?? ""
+            if merchantPrefixes.contains(where: { label.contains($0) }) {
+                let candidate = parts.dropFirst().joined(separator: ":").trimmingCharacters(in: .whitespacesAndNewlines)
+                if !candidate.isEmpty, !fieldLabels.contains(candidate) {
+                    return candidate
+                }
+            }
+        }
+
+        // 外卖平台："闪购 XXX店" / "外卖 XXX店" 格式
+        let deliveryPrefixes = ["闪购", "外卖"]
+        for line in lines {
+            for prefix in deliveryPrefixes where line.hasPrefix(prefix) {
+                let candidate = line
+                    .replacingOccurrences(of: prefix, with: "")
+                    .trimmingCharacters(in: CharacterSet.whitespaces.union(CharacterSet(charactersIn: "＞>》")))
+                if !candidate.isEmpty {
+                    return candidate
+                }
+            }
+        }
+
+        // 微信支付格式：负数金额行（如 -6.00）相邻行通常是商户名
+        let wechatNegativeAmountPattern = #"^-[0-9]+(?:\.[0-9]{1,2})?$"#
+        if let negLineIdx = lines.indices.first(where: { i in
+            let line = lines[i]
+            return (try? NSRegularExpression(pattern: wechatNegativeAmountPattern))?
+                .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil
+        }) {
+            // 先查上一行（微信支付详情页：商户名在金额上方）
+            if negLineIdx - 1 >= 0 {
+                let candidate = lines[negLineIdx - 1]
+                if candidate.count >= 2 && !fieldLabels.contains(candidate) && amountCandidate(in: candidate) == nil {
+                    return candidate
+                }
+            }
+            // 再查下一行（转账/红包等其他格式）
+            if negLineIdx + 1 < lines.count {
+                let candidate = lines[negLineIdx + 1]
+                if !candidate.isEmpty && !fieldLabels.contains(candidate) && amountCandidate(in: candidate) == nil {
+                    return candidate
+                }
+            }
+        }
+
+        // 跳过纯时间、纯数字、极短行、平台 UI 文案
+        let skipContainsFallback = ["成功", "金额", "时间", "Total", "全部账单",
+                                     "可在支持的商户", "扫码退款", "收单机构", "账单详情"]
+        let timePattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
+        let pureNumberPattern = #"^\s*\d{1,5}\s*$"#
+        return lines.first(where: { line in
+            !skipContainsFallback.contains(where: { line.contains($0) }) &&
+            !fieldLabels.contains(line) &&
+            line.count >= 2 &&
+            amountCandidate(in: line) == nil &&
+            (try? NSRegularExpression(pattern: timePattern))?
+                .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
+            (try? NSRegularExpression(pattern: pureNumberPattern))?
+                .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil
+        })
+    }
+
+    private func extractDate(from text: String) -> Date? {
+        let lines = text.components(separatedBy: .newlines)
+        let patterns = [
+            #"(20[0-9]{2}[年/-][0-9]{1,2}[月/-][0-9]{1,2}[日]?\s+[0-9]{1,2}:[0-9]{2})"#,
+            #"(20[0-9]{2}[年/-][0-9]{1,2}[月/-][0-9]{1,2}[日]?)"#
+        ]
+
+        for line in lines {
+            for pattern in patterns {
+                guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                    continue
+                }
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                guard let match = regex.firstMatch(in: line, range: nsRange),
+                      let range = Range(match.range(at: 1), in: line) else {
+                    continue
+                }
+
+                if let date = AppFormatters.parseFlexibleDate(String(line[range])) {
+                    return date
+                }
+            }
+        }
+
+        return nil
+    }
+}

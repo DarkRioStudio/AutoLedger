@@ -1,15 +1,15 @@
 import Foundation
 
-struct Transaction: Identifiable, Equatable, Codable {
-    let id: UUID
-    let merchant: String
-    let amount: Double
-    let occurredAt: Date
-    let category: TransactionCategory
-    let source: ReceiptSource
-    let note: String
+public struct Transaction: Identifiable, Equatable, Codable, Sendable {
+    public let id: UUID
+    public let merchant: String
+    public let amount: Double
+    public let occurredAt: Date
+    public let category: TransactionCategory
+    public let source: ReceiptSource
+    public let note: String
 
-    init(
+    public init(
         id: UUID = UUID(),
         merchant: String,
         amount: Double,
