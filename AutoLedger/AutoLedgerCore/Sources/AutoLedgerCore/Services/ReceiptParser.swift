@@ -12,8 +12,21 @@ public struct ReceiptParser: Sendable {
             return nil
         }
 
-        let merchant = extractMerchant(from: normalized, source: source) ?? fallbackMerchant ?? "待确认商户"
-        let date = extractDate(from: normalized) ?? .now
+        let cleanedLines = normalized
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        // 微信支付详情页：标签块→值块格式，优先提取商户全称和支付时间
+        let wechatDetail = parseWeChatDetailBlock(lines: cleanedLines)
+
+        let merchant = wechatDetail?.merchant
+            ?? extractMerchant(from: normalized, source: source)
+            ?? fallbackMerchant
+            ?? "待确认商户"
+        let date = wechatDetail?.date
+            ?? extractDate(from: normalized)
+            ?? .now
         let category = TransactionCategory.infer(from: "\(merchant)\n\(normalized)")
 
         return ImportedReceipt(
@@ -23,7 +36,7 @@ public struct ReceiptParser: Sendable {
             occurredAt: date,
             rawText: normalized,
             summary: "\(source.title) OCR 解析草稿",
-            confidence: 0.82,
+            confidence: wechatDetail != nil ? 0.90 : 0.82,
             suggestedCategory: category
         )
     }
@@ -274,7 +287,7 @@ public struct ReceiptParser: Sendable {
     private func extractDate(from text: String) -> Date? {
         let lines = text.components(separatedBy: .newlines)
         let patterns = [
-            #"(20[0-9]{2}[年/-][0-9]{1,2}[月/-][0-9]{1,2}[日]?\s+[0-9]{1,2}:[0-9]{2})"#,
+            #"(20[0-9]{2}[年/-][0-9]{1,2}[月/-][0-9]{1,2}[日]?\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)"#,
             #"(20[0-9]{2}[年/-][0-9]{1,2}[月/-][0-9]{1,2}[日]?)"#
         ]
 
@@ -296,5 +309,53 @@ public struct ReceiptParser: Sendable {
         }
 
         return nil
+    }
+
+    // MARK: - 微信支付详情页 label-block → value-block 解析
+
+    /// 微信支付交易详情页的 OCR 输出通常为：标签连续排列（当前状态、支付时间、商户全称…），
+    /// 之后是对应值按相同顺序排列。此方法检测该结构并提取商户名和支付时间。
+    private func parseWeChatDetailBlock(lines: [String]) -> (merchant: String?, date: Date?)? {
+        guard lines.contains(where: { $0.contains("交易详情") }) else { return nil }
+
+        let knownLabels: Set<String> = [
+            "当前状态", "支付时间", "商品", "商户全称", "收单机构",
+            "支付方式", "交易单号", "商户单号", "备注"
+        ]
+
+        // 找最长的连续标签块
+        var bestRun: [(index: Int, label: String)] = []
+        var currentRun: [(index: Int, label: String)] = []
+
+        for (i, line) in lines.enumerated() {
+            if knownLabels.contains(line) {
+                currentRun.append((i, line))
+            } else {
+                if currentRun.count > bestRun.count { bestRun = currentRun }
+                currentRun = []
+            }
+        }
+        if currentRun.count > bestRun.count { bestRun = currentRun }
+
+        guard bestRun.count >= 3, let lastLabelIdx = bestRun.last?.index else { return nil }
+
+        let valueStart = lastLabelIdx + 1
+        var merchant: String?
+        var date: Date?
+
+        for (offset, item) in bestRun.enumerated() {
+            let valueIdx = valueStart + offset
+            guard valueIdx < lines.count else { break }
+            let value = lines[valueIdx]
+
+            if item.label == "商户全称" && !value.isEmpty {
+                merchant = value
+            }
+            if item.label == "支付时间" && !value.isEmpty {
+                date = AppFormatters.parseFlexibleDate(value)
+            }
+        }
+
+        return (merchant, date)
     }
 }
