@@ -1,7 +1,10 @@
 import AutoLedgerCore
 import Combine
 import Foundation
+import os.log
 import UIKit
+
+private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "LedgerStore")
 
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
@@ -15,6 +18,7 @@ final class LedgerStore: ObservableObject {
     @Published var lastImportSummary: String?
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
+    @Published var merchantAliases: [String: String] = [:]
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -33,6 +37,7 @@ final class LedgerStore: ObservableObject {
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+        self.merchantAliases = UserDefaults.standard.dictionary(forKey: "merchantAliases") as? [String: String] ?? [:]
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         LedgerStore.shared = self
     }
@@ -47,6 +52,15 @@ final class LedgerStore: ObservableObject {
 
     func saveCustomCategories() {
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
+    }
+
+    func saveMerchantAliases() {
+        UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+    }
+
+    /// 如果商户名命中别名映射则返回别名，否则原样返回
+    func resolveMerchant(_ merchant: String) -> String {
+        merchantAliases[merchant] ?? merchant
     }
 
     func importSample(_ sample: SampleReceipt) {
@@ -93,6 +107,7 @@ final class LedgerStore: ObservableObject {
 
             guard let result else {
                 let summary = "OCR 已完成，但还没解析出可入账字段。"
+                logger.warning("[解析] 智能解析失败，无可入账字段")
                 lastImportSummary = summary
                 recordDebugEvent(
                     stage: .parseFailed,
@@ -106,6 +121,7 @@ final class LedgerStore: ObservableObject {
             }
 
             lastParsedReceipt = result.receipt
+            logger.info("[解析] 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) LLM=\(result.llmTrace != nil ? "是" : "否")")
             persistReceipt(
                 result.receipt,
                 rawText: normalizedText,
@@ -245,7 +261,26 @@ final class LedgerStore: ObservableObject {
         }
     }
 
-    private func persistReceipt(_ receipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil) {
+    private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil) {
+        // 商户别名映射
+        let resolvedMerchant = resolveMerchant(inReceipt.merchant)
+        let receipt: ImportedReceipt
+        if resolvedMerchant != inReceipt.merchant {
+            logger.info("[别名] \(inReceipt.merchant) → \(resolvedMerchant)")
+            receipt = ImportedReceipt(
+                source: inReceipt.source,
+                merchant: resolvedMerchant,
+                amount: inReceipt.amount,
+                occurredAt: inReceipt.occurredAt,
+                rawText: inReceipt.rawText,
+                summary: inReceipt.summary,
+                confidence: inReceipt.confidence,
+                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)")
+            )
+        } else {
+            receipt = inReceipt
+        }
+
         if hasDuplicate(receipt) {
             let summary = "\(receipt.merchant) 已存在同日同金额记录，账本未重复写入。"
             lastImportSummary = summary

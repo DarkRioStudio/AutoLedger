@@ -13,6 +13,8 @@
 - [2026-04-09] 新增 `process/testflight-distribution.md`：详细说明构建上传成功后如何在 App Store Connect 中获取 TestFlight 公开邀请链接（Public Link）和指定邮件邀请方式，包含 Beta App Review 注意事项与常见问题。
 
 ### 新增
+- [2026-04-10 +0800] 新增「商户别名」设置：用户可在 设置 → 商户别名 中配置映射关系（如 广州骑安科技有限公司 → 青桔单车），解析入账时自动替换商户名并重新推断分类。
+- [2026-04-10 +0800] 新增 `os_log` 日志：SmartReceiptParser（规则结果、LLM 结果/失败）和 LedgerStore（解析结果、别名映射）关键阶段输出到 Xcode Console，方便实时调试。
 - [2026-04-09 22:00 +0800] 新增 `ClipboardImportIntent`（无参数 AppIntent，`openAppWhenRun=true`），注册为 App Shortcut「剪切板记账」，用户可将其添加到控制中心作为一键记账入口。
 - [2026-04-09 24:00 +0800] 新增 `ControlWidgetExtension` Widget Extension target，包含 `ControlWidget` 注册到 iOS 控制中心；用户可在设置 → 控制中心中添加「剪切板记账」按钮。
 - [2026-04-09 24:00 +0800] `ClipboardImportIntent` 迁移至 `AutoLedgerCore` 共享包（handler 模式），主 App 和 Widget Extension 共用同一 Intent 类型。
