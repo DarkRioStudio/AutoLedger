@@ -1,3 +1,4 @@
+import AutoLedgerCore
 import SwiftUI
 
 struct ReportView: View {

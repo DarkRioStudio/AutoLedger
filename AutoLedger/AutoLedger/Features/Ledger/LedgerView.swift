@@ -1,14 +1,95 @@
+import AutoLedgerCore
 import SwiftUI
+
+private enum LedgerFilter: String, CaseIterable {
+    case all = "全部"
+    case month = "本月"
+    case year = "本年"
+}
 
 struct LedgerView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var selectedTransaction: Transaction?
+    @State private var filter: LedgerFilter = .all
+    @State private var filterDate = Date()
+
+    private var filteredTransactions: [Transaction] {
+        let cal = Calendar.current
+        switch filter {
+        case .all:
+            return store.transactions
+        case .month:
+            return store.transactions.filter {
+                cal.isDate($0.occurredAt, equalTo: filterDate, toGranularity: .month)
+            }
+        case .year:
+            return store.transactions.filter {
+                cal.isDate($0.occurredAt, equalTo: filterDate, toGranularity: .year)
+            }
+        }
+    }
+
+    private var filterLabel: String {
+        let fmt = DateFormatter()
+        switch filter {
+        case .all: return "全部账单"
+        case .month:
+            fmt.dateFormat = "yyyy年M月"
+            return fmt.string(from: filterDate)
+        case .year:
+            fmt.dateFormat = "yyyy年"
+            return fmt.string(from: filterDate)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    ForEach(store.transactions) { transaction in
+                    // Filter controls
+                    VStack(alignment: .leading, spacing: 10) {
+                        Picker("筛选", selection: $filter) {
+                            ForEach(LedgerFilter.allCases, id: \.self) { f in
+                                Text(f.rawValue).tag(f)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if filter != .all {
+                            HStack {
+                                Button {
+                                    filterDate = stepDate(filterDate, by: -1)
+                                } label: {
+                                    Image(systemName: "chevron.left")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .buttonStyle(.plain)
+
+                                Spacer()
+
+                                Text(filterLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.ink)
+
+                                Spacer()
+
+                                Button {
+                                    filterDate = stepDate(filterDate, by: 1)
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isAtOrAfterToday)
+                            }
+                            .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                    .listRowBackground(AppTheme.card)
+                }
+
+                Section {
+                    ForEach(filteredTransactions) { transaction in
                         Button {
                             selectedTransaction = transaction
                         } label: {
@@ -56,11 +137,19 @@ struct LedgerView: View {
                         .buttonStyle(.plain)
                         .padding(.vertical, 6)
                         .listRowBackground(AppTheme.card)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                store.deleteTransaction(transaction)
+                            } label: {
+                                Label("删除", systemImage: "trash")
+                            }
+                        }
                     }
                 } header: {
-                    Text("本地账本")
+                    Text(filterLabel)
                 } footer: {
-                    Text("当前账本已写入本地 SQLite，点按任一账单可修正金额、分类和备注。")
+                    let count = filteredTransactions.count
+                    Text("共 \(count) 笔，点按任一账单可修正金额、分类和备注。")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -71,6 +160,26 @@ struct LedgerView: View {
                     store.updateTransaction(updated)
                 }
             }
+        }
+    }
+
+    private func stepDate(_ date: Date, by value: Int) -> Date {
+        let cal = Calendar.current
+        switch filter {
+        case .all: return date
+        case .month: return cal.date(byAdding: .month, value: value, to: date) ?? date
+        case .year: return cal.date(byAdding: .year, value: value, to: date) ?? date
+        }
+    }
+
+    private var isAtOrAfterToday: Bool {
+        let cal = Calendar.current
+        switch filter {
+        case .all: return true
+        case .month: return cal.isDate(filterDate, equalTo: Date(), toGranularity: .month) ||
+                           filterDate > Date()
+        case .year: return cal.isDate(filterDate, equalTo: Date(), toGranularity: .year) ||
+                          filterDate > Date()
         }
     }
 }
