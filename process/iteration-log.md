@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-011 TestFlight 邀请链接获取流程文档
+- 日期：2026-04-09
+- 所属版本：v0.1.1
+- 所属阶段：Phase 4（发布与分发）
+- 类型：文档
+- 目标：补充 TestFlight 分发流程文档，说明构建上传成功后如何获取并分享邀请测试链接（公开链接与指定邮件邀请两种方式）。
+- 改动范围：新增 `process/testflight-distribution.md`；更新 `CHANGELOG.md`；更新 `process/iteration-log.md`。
+- 未改动范围：未修改任何业务代码、Xcode 工程配置或构建脚本。
+- 完成内容：文档已涵盖三种邀请方式（公开链接、指定邮件、README 徽章）、Beta App Review 注意事项，以及常见问题说明。
+- 未完成内容：无。
+- 测试情况：文档类变更，无需构建验证。
+- 风险与注意事项：外部测试公开链接需先通过 Apple Beta App Review（约 1–2 工作日），内部测试无需审核但限 100 人且须为 App Store Connect 团队成员。
+- 回滚方式：若文档内容有误，直接修改 `process/testflight-distribution.md` 即可，不影响代码。
+- 结论：本轮完成，项目现在有了标准的 TestFlight 分发操作参考文档。
+- 下一步建议：在 `README.md` 的 Quick Start 部分嵌入 TestFlight 公开链接，方便外部测试者一键安装。
+
 ### ITER-005E 无真机条件下的离线回归脚本
 - 日期：2026-03-27
 - 所属版本：v0.1.0
