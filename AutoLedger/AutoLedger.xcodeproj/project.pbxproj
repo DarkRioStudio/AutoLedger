@@ -257,6 +257,9 @@
 					C042FD732F76270200A01918 = {
 						CreatedOnToolsVersion = 26.4;
 					};
+					D0CC00072FA68B0000639DC8 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 				};
 			};
 			buildConfigurationList = C042FD6F2F76270200A01918 /* Build configuration list for PBXProject "AutoLedger" */;
