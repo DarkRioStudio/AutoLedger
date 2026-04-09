@@ -6,22 +6,39 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT
 
+CORE="$ROOT/AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore"
+
+# LedgerStore has 'import AutoLedgerCore' which doesn't exist as a module in flat compilation.
+# Also depends on SmartReceiptParser (Foundation Models) — stub it out for offline use.
+PREP_DIR="$(mktemp -d /tmp/autoledger-prep.XXXXXX)"
+trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
+sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
+
+cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
+import Foundation
+struct SmartReceiptParser {
+    struct LLMTrace { let prompt: String; let response: String }
+    func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) async -> (receipt: ImportedReceipt, llmTrace: LLMTrace?)? { return nil }
+}
+STUB
+
 swiftc \
   -o "$TMP_BIN" \
   -lsqlite3 \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Enums/ReceiptSource.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Enums/TransactionCategory.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Models/ImportedReceipt.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Models/ImportDebugRecord.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Models/SampleReceipt.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Models/MonthlySnapshot.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Models/Transaction.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Domain/Services/SampleReceiptProvider.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Data/Persistence/TransactionStore.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Data/Persistence/SQLiteTransactionStore.swift" \
-  "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" \
-  "$ROOT/AutoLedger/AutoLedger/Shared/Utils/AppFormatters.swift" \
+  "$CORE/Enums/ReceiptSource.swift" \
+  "$CORE/Enums/TransactionCategory.swift" \
+  "$CORE/Models/ImportedReceipt.swift" \
+  "$CORE/Models/ImportDebugRecord.swift" \
+  "$CORE/Models/SampleReceipt.swift" \
+  "$CORE/Models/MonthlySnapshot.swift" \
+  "$CORE/Models/Transaction.swift" \
+  "$CORE/Services/ReceiptParser.swift" \
+  "$CORE/Services/SampleReceiptProvider.swift" \
+  "$CORE/Persistence/TransactionStore.swift" \
+  "$CORE/Persistence/SQLiteTransactionStore.swift" \
+  "$PREP_DIR/LedgerStore.swift" \
+  "$PREP_DIR/SmartReceiptParserStub.swift" \
+  "$CORE/Utils/AppFormatters.swift" \
   "$ROOT/scripts/OfflineRegression.swift"
 
 "$TMP_BIN"
