@@ -14,7 +14,7 @@ struct HomeView: View {
         TabView(selection: $selectedTab) {
             InboxView(selectedTab: $selectedTab)
                 .tabItem {
-                    Label("收件箱", systemImage: "tray.full.fill")
+                    Label("记账", systemImage: "tray.full.fill")
                 }
                 .tag(0)
 

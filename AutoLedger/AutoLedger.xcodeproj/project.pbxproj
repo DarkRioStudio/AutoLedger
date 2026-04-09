@@ -10,6 +10,8 @@
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
 		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,6 +21,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C017EEAF2F875C1600639DC8;
 			remoteInfo = ShareExtension;
+		};
+		D0CC00082FA68B0000639DC8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C042FD6C2F76270200A01918 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0CC00072FA68B0000639DC8;
+			remoteInfo = ControlWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -30,6 +39,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */,
+				D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -39,6 +49,7 @@
 /* Begin PBXFileReference section */
 		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C042FD742F76270200A01918 /* AutoLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AutoLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ControlWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -71,6 +82,13 @@
 			);
 			target = C042FD732F76270200A01918 /* AutoLedger */;
 		};
+		D0CC00032FA68B0000639DC8 /* Exceptions for "ControlWidgetExtension" folder in "ControlWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -88,6 +106,14 @@
 				C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */,
 			);
 			path = AutoLedger;
+			sourceTree = "<group>";
+		};
+		D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D0CC00032FA68B0000639DC8 /* Exceptions for "ControlWidgetExtension" folder in "ControlWidgetExtension" target */,
+			);
+			path = ControlWidgetExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -109,6 +135,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0CC00052FA68B0000639DC8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -117,6 +151,7 @@
 			children = (
 				C042FD762F76270200A01918 /* AutoLedger */,
 				C017EEB12F875C1600639DC8 /* ShareExtension */,
+				D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */,
 				C042FD752F76270200A01918 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -126,6 +161,7 @@
 			children = (
 				C042FD742F76270200A01918 /* AutoLedger.app */,
 				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
+				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -169,6 +205,7 @@
 			);
 			dependencies = (
 				C017EEB92F875C1600639DC8 /* PBXTargetDependency */,
+				D0CC00092FA68B0000639DC8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C042FD762F76270200A01918 /* AutoLedger */,
@@ -180,6 +217,29 @@
 			productName = AutoLedger;
 			productReference = C042FD742F76270200A01918 /* AutoLedger.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0CC000C2FA68B0000639DC8 /* Build configuration list for PBXNativeTarget "ControlWidgetExtension" */;
+			buildPhases = (
+				D0CC00042FA68B0000639DC8 /* Sources */,
+				D0CC00052FA68B0000639DC8 /* Frameworks */,
+				D0CC00062FA68B0000639DC8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */,
+			);
+			name = ControlWidgetExtension;
+			packageProductDependencies = (
+				D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */,
+			);
+			productName = ControlWidgetExtension;
+			productReference = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -218,6 +278,7 @@
 			targets = (
 				C042FD732F76270200A01918 /* AutoLedger */,
 				C017EEAF2F875C1600639DC8 /* ShareExtension */,
+				D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -231,6 +292,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C042FD722F76270200A01918 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0CC00062FA68B0000639DC8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -254,6 +322,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0CC00042FA68B0000639DC8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -261,6 +336,11 @@
 			isa = PBXTargetDependency;
 			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
 			targetProxy = C017EEB82F875C1600639DC8 /* PBXContainerItemProxy */;
+		};
+		D0CC00092FA68B0000639DC8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */;
+			targetProxy = D0CC00082FA68B0000639DC8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -528,6 +608,66 @@
 			};
 			name = Release;
 		};
+		D0CC000D2FA68B0000639DC8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "剪切板记账";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D0CC000E2FA68B0000639DC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "剪切板记账";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -558,6 +698,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		D0CC000C2FA68B0000639DC8 /* Build configuration list for PBXNativeTarget "ControlWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0CC000D2FA68B0000639DC8 /* Debug */,
+				D0CC000E2FA68B0000639DC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -573,6 +722,10 @@
 			productName = AutoLedgerCore;
 		};
 		AABB00030000000300000003 /* AutoLedgerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AutoLedgerCore;
+		};
+		D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AutoLedgerCore;
 		};
