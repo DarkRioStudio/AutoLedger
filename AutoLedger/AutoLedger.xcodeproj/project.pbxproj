@@ -48,7 +48,7 @@
 
 /* Begin PBXFileReference section */
 		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		C042FD742F76270200A01918 /* AutoLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AutoLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AutoLedger - 一键记账.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ControlWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -159,7 +159,7 @@
 		C042FD752F76270200A01918 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C042FD742F76270200A01918 /* AutoLedger.app */,
+				C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */,
 				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
 				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
 			);
@@ -215,7 +215,7 @@
 				AABB00020000000200000002 /* AutoLedgerCore */,
 			);
 			productName = AutoLedger;
-			productReference = C042FD742F76270200A01918 /* AutoLedger.app */;
+			productReference = C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */ = {
@@ -559,7 +559,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "AutoLedger - 一键记账";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -599,7 +599,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "AutoLedger - 一键记账";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
