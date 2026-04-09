@@ -1,11 +1,11 @@
 import Foundation
 import Vision
 
-enum OCRServiceError: LocalizedError {
+public enum OCRServiceError: LocalizedError {
     case loadFailed
     case emptyText
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .loadFailed:
             return "未能读取所选图片，请换一张截图再试。"
@@ -15,8 +15,10 @@ enum OCRServiceError: LocalizedError {
     }
 }
 
-struct OCRService {
-    func recognizeText(from data: Data) throws -> String {
+public struct OCRService: Sendable {
+    public init() {}
+
+    public func recognizeText(from data: Data) throws -> String {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
