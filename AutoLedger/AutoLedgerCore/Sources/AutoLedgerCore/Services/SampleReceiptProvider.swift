@@ -80,5 +80,25 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "地铁：ExampleStationA → ExampleStationB · CN¥2.70"
         ),
+        SampleReceipt(
+            title: "支付宝碰一下支付截图（7-11）",
+            source: .alipay,
+            rawText: """
+            08:48
+            ：！⑤
+            回首页
+            支付成功
+            ¥4.30
+            获得森林能量（20g）
+            Example Convenience Store
+            付款方式
+            ¥4.80
+            -¥0.50
+            Example Bank Card (1234)
+            碰一下支付
+            便捷 安全优惠
+            """,
+            preview: "Example Convenience Store · ¥4.30"
+        ),
     ]
 }
