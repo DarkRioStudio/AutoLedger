@@ -1,0 +1,8 @@
+# AutoLedger Feedback Email-to-Issue Processor
+# Python 3.11+
+
+# No external dependencies — uses only stdlib:
+# - imaplib (Gmail IMAP)
+# - email (MIME parsing)
+# - urllib.request (GitHub REST API)
+# - json, zipfile, re, os, sys, logging

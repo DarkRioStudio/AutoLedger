@@ -1,0 +1,42 @@
+name: Feedback Email to GitHub Issue
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip issue creation)"
+        required: false
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+
+jobs:
+  process-feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/feedback
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run feedback processor
+        env:
+          GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FEEDBACK_SUBJECT_PREFIX: "[AutoLedger]"
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: python tools/feedback/email_to_issue.py
