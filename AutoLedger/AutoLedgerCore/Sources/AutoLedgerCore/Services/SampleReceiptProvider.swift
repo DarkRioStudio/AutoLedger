@@ -80,5 +80,25 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "地铁：内江路 → 东丽文体中心 · CN¥2.70"
         ),
+        SampleReceipt(
+            title: "支付宝碰一下支付截图（7-11）",
+            source: .alipay,
+            rawText: """
+            08:48
+            ：！⑤
+            回首页
+            支付成功
+            ¥4.30
+            获得森林能量（20g）
+            柒一拾壹（天津）商业有限公司
+            付款方式
+            ¥4.80
+            -¥0.50
+            光大银行信用卡（1802）
+            碰一下支付
+            便捷 安全优惠
+            """,
+            preview: "柒一拾壹（天津）商业有限公司 · ¥4.30"
+        ),
     ]
 }
