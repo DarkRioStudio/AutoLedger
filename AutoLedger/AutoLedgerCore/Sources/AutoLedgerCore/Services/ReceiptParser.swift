@@ -236,7 +236,7 @@ public struct ReceiptParser: Sendable {
 
         // ── 含工商登记主体关键词的行（有限公司等）→ 直接作为商户全称 ──
         // 适用于支付宝碰一下、银联等在截图中直接显示公司全称的场景
-        let companyKeywords = ["有限公司", "股份有限", "有限责任", "集团公司", "商业有限"]
+        let companyKeywords = ["有限公司", "股份有限", "有限责任", "集团公司"]
         if let companyLine = lines.first(where: { line in
             companyKeywords.contains(where: { line.contains($0) }) &&
             !fieldLabels.contains(line)
