@@ -21,6 +21,10 @@
 
 ### 变更
 - [2026-04-10 +0800] 版本号体系从 `v0.1.1` 统一调整为 `v1.0.0`（因 App Store Connect 已上传 build 1.0，版本号只能递增）；文档、标签、CHANGELOG 同步更新。
+- [2026-04-10 +0800] 小修改（文档）：更新 `v1.1.0` 版本计划，新增"订阅续期邮件截图导入"能力、"自动续期高置信按订阅处理"规则与"已有订阅去重"要求。
+- [2026-04-10 +0800] 小修改（文档）：IDEA-014（用户反馈：分级日志导出 + 邮件发送）通过需求评审，状态 NEW→ACCEPTED/P1，纳入 v1.1.0 Phase 4（ITER-015）；原 Phase 4 顺延为 Phase 5（ITER-016）。
+- [2026-04-10 +0800] 变更（文档）：IDEA-014 整合为"用户反馈闭环"，吸收 `feedback_log_email_bundle_templates.md`（邮件/bundle 协议）和 `tools_feedback_README_template.md`（服务端 email→Issue 自动化），拆分为 A 层（App 端）+ B 层（协议）+ C 层（服务端）；ITER-015 覆盖 A+B 层，新增 ITER-016 覆盖 C 层，原 ITER-016 去重增强顺延为 ITER-017。
+- [2026-04-10 +0800] 变更（文档）：Feedback ID 规则从 `AL-{yyyyMMdd}-{seq}` 改为 `AL-{vendorID_short6}-{yyyyMMddHHmmss}-{seq}`（全局唯一），服务端以此幂等去重防重复 Issue；DebugView 开发者模式内容升级为 ≥ L3（无脱敏限制，含 SQLite 浏览、OCR 全文、trace、容器概况、一键导出诊断包）。
 
 ## [v1.0.0] — 2026-04-10
 

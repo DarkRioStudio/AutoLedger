@@ -62,11 +62,11 @@
 - 已落地产物：`versions/v0.1.0-plan.md`、`process/iteration-log.md`、MVP 壳层代码。
 
 ### IDEA-002 订阅识别与扣费提醒
-- 状态：NEW
-- 优先级：P2
+- 状态：ACCEPTED
+- 优先级：P1
 - 来源：用户需求
 - 日期：2026-03-27
-- 建议版本：v0.2.0
+- 建议版本：v1.1.0
 - 相关模块：SubscriptionDetector，NotificationService
 - 描述：通过分析历史交易记录，识别出具有周期性的订阅扣费，提供下次扣费预测及提醒。
 - 价值：帮助用户及时发现遗忘的订阅并进行财务规划，避免不必要的自动扣费。
@@ -76,11 +76,11 @@
 - 已落地产物：
 
 ### IDEA-003 月度消费汇总与异常分析
-- 状态：NEW
+- 状态：ACCEPTED
 - 优先级：P2
 - 来源：用户需求
 - 日期：2026-03-27
-- 建议版本：v0.2.0
+- 建议版本：v1.1.0（周期检测前置）/ v1.2.0（异常分析主体）
 - 相关模块：MonthlyInsight，NotificationService
 - 描述：在每月结束时自动生成消费报告，包括各分类支出统计、环比变化、最常消费商户以及异常支出提醒。
 - 价值：为用户提供消费可视化和趋势洞察，帮助优化预算和消费决策。
@@ -229,16 +229,69 @@
 - 原因：真机回归中发现的 P1 问题。
 - 已落地产物：`AutoLedgerCore/Services/ReceiptParser.swift`；commit `73efba2`。
 
-### IDEA-014 抖音团购券码页解析支持
-- 状态：DONE
-- 优先级：P1
-- 来源：调试记录（抖音团购买单后生成券码页面）
-- 日期：2026-04-10
-- 建议版本：v1.0.0
-- 相关模块：ReceiptSource、ReceiptParser、ShareViewController、SampleReceiptProvider
-- 描述：抖音团购券码页（待使用/券号/适用门店）OCR 识别失败，商户名误提取为抖音导航栏文本"经验 直播 团购 天津 精）"，应从"适用门店（X家）"区块提取真实门店名。
-- 价值：覆盖抖音团购场景，正确识别商户和餐饮分类。
-- 风险：无。
-- 结论：已完成。
-- 原因：用户真机调试记录中发现的 P1 问题。
 - 已落地产物：`ReceiptSource.swift`（新增 `.douyin` 来源）、`ReceiptParser.swift`（新增 `parseDouyinVoucher()`）、`ShareViewController.swift`（新增抖音 bundle ID 映射）、`SampleReceiptProvider.swift`（新增回归样例）、`OfflineRegression.swift`（新增回归断言）。
+
+### IDEA-015 用户反馈闭环：App 端分级日志导出 → 邮件协议 → 服务端自动 Issue
+- 状态：ACCEPTED
+- 优先级：P1
+- 来源：用户体验需求 + 运维效率需求
+- 日期：2026-04-10
+- 建议版本：v1.1.0
+- 相关模块：SettingsView、DebugView、FeedbackService（新建）、`tools/feedback/`（新建）、GitHub Actions（新建）
+- 设计输入文档：
+  - `feedback_log_email_bundle_templates.md`（邮件标题/正文/附件 bundle 协议模板）
+  - `tools_feedback_README_template.md`（服务端邮件→Issue 自动处理链路设计）
+- 描述：
+  搭建从 App 端到开发者的完整反馈链路，分三层：
+
+  **A 层 — App 端（iOS 客户端）**
+  1. **反馈入口**：设置页新增"问题反馈"按钮，点击后组装日志 → 预览 → 调起 `MFMailComposeViewController` 发送邮件。
+  2. **日志分级**（L1/L2/L3）：
+     - **L1 标准反馈（默认）**：App 版本 / 设备型号 / iOS 版本 / 最近 N 条脱敏操作日志（商户名/金额以占位符替代）/ 崩溃栈摘要。
+     - **L2 增强调试**：+ 结构化解析结果（OCR 片段、规则/LLM 命中路径）、`trace.log`、`redacted_ocr_context.txt`；敏感字段自动正则脱敏（姓名、手机号、金额尾数）。
+     - **L3 完整诊断**：+ `full_ocr_text.txt`、原始截图缩略图；需用户主动勾选二次确认。L3 仅内部/高级测试者开启。
+  3. **脱敏与预览**：默认导出 L1，用户可逐级勾选升级；发送前弹出预览页，展示即将发送的完整内容，用户确认后才发送（核心原则：让用户放心）。
+  4. **调试界面入口调整 + 内容升级**：DebugView 从设置页直达改为"多次点击当前版本号"后显示（类似开发者选项），普通用户不可见。既然入口已隐藏为开发者模式，DebugView 内容应 **≥ L3 且无脱敏限制**，额外展示：
+     - 实时 SQLite 数据浏览（transactions / subscriptions / category_corrections / debug_events 表）
+     - OCR 原始识别结果（全文，不脱敏）
+     - 规则/LLM 解析路径详情 + 置信度
+     - 最近 N 次导入的完整 trace（含时间戳、耗时）
+     - App Group 容器文件列表与大小
+     - 当前内存/磁盘使用概况
+     - 一键导出完整诊断包（等同 L3 但不走邮件，直接 share sheet）
+  5. **Fallback**：未配置邮件账户时降级为复制到剪切板 / 系统分享。
+
+  **B 层 — 邮件/附件协议（App 输出规范）**
+  1. **邮件标题格式**：`[AutoLedger][L{n}][iOS][{version}({build})][{issue_type}] 简短摘要`。
+  2. **邮件正文**：上半部分自然语言（用户描述/预期/实际/复现性/时间），下半部分机器可解析 `AUTOLEDGER_FEEDBACK_META` 区块（feedback_level、issue_type、app_version、device_model 等）。
+  3. **附件 bundle**：统一 zip 包 `AutoLedger_Feedback_{level}_{feedback_id}.zip`，内含 `issue_bundle.json`（结构化故障数据）、`summary.txt`、`metadata.json`，L2 额外含 `trace.log` + `redacted_ocr_context.txt`，L3 额外含 `full_ocr_text.txt` + 可选截图。
+  4. **问题类型枚举**：`feedback` / `ocr_parse_wrong` / `merchant_parse_wrong` / `amount_parse_wrong` / `time_parse_wrong` / `save_failed` / `shortcut_flow` / `share_extension` / `camera_import` / `clipboard_import` / `ui_bug` / `performance` / `crash` / `other`。
+  5. **Feedback ID 规则**：`AL-{vendorID_short6}-{yyyyMMddHHmmss}-{seq}`，全局唯一。`vendorID_short6` = `UIDevice.current.identifierForVendor` 的 SHA-256 前 6 位 hex，保证跨设备不碰撞；服务端以 `feedback_id` 为幂等键去重，相同 ID 不重复创建 Issue。
+
+  **C 层 — 服务端自动处理（DevOps）**
+  1. **邮件路由**：`support@darkrio326.top` → Cloudflare Email Routing → Gmail 收件箱。
+  2. **GitHub Actions 定时任务**：每 15 分钟拉取 Gmail 未读反馈邮件（IMAP），解析标题前缀 `[AutoLedger]` 过滤。
+  3. **邮件解析脚本** `tools/feedback/email_to_issue.py`：提取主题、正文、附件 → 解压 bundle → 读取 `issue_bundle.json` + `summary.txt` + `metadata.json` → 二次脱敏 → 调用 GitHub REST API 创建 Issue（含 label：`feedback`/`L1`/`L2`/`L3`/`issue_type`）→ 标记邮件已读。
+  4. **人工分诊** → Copilot/Agent 辅助分析 → 人工 review + merge。
+  5. **当前不做**：自动上传原始截图到 GitHub、自动创建 PR、自动合并修复。
+
+- 完整链路：
+  ```
+  用户 App 内反馈 → MFMailComposeViewController → support@darkrio326.top
+  → Cloudflare Email Routing → Gmail
+  → GitHub Actions 定时拉取 → email_to_issue.py 解析
+  → 自动创建 GitHub Issue（含 label + 结构化数据）
+  → 人工筛选 → Copilot/Agent 辅助修复 → 人工 review + merge
+  ```
+- 价值：打通"用户一键反馈 → 开发者自动收到结构化 Issue"的完整闭环；降低反馈门槛 + 保护隐私 + 减少人工分诊成本。
+- 风险：
+  - A 层：`MFMailComposeViewController` 在未配置邮件账户设备不可用，需 fallback；日志体积过大时附件可能超限。
+  - B 层：邮件协议变更需 App 端与服务端同步更新，存在版本不一致风险。
+  - C 层：依赖 Gmail IMAP + Cloudflare Email Routing + GitHub API，任一环节故障会中断 Issue 自动创建；需监控告警。
+- 落地节奏建议：
+  - v1.1.0 Phase 4 ITER-015：A 层 + B 层（App 端生成符合协议的邮件与 bundle）
+  - v1.1.0 Phase 4 ITER-016：C 层（服务端 `tools/feedback/` + GitHub Actions workflow）
+  - 原 ITER-016 去重增强 → 顺延为 ITER-017
+- 结论：已接受，纳入 v1.1.0 Phase 4（ITER-015 + ITER-016）。
+- 原因：TestFlight 外测后用户反馈渠道是刚需；A+B+C 三层分离使客户端与服务端可独立迭代，协议层保证兼容性。
+- 已落地产物:
