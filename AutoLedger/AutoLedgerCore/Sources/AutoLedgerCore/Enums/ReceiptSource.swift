@@ -6,6 +6,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
     case appStore
     case taobao
     case eleme
+    case douyin
     case manual
 
     public var id: String { rawValue }
@@ -17,6 +18,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .appStore: return "App Store"
         case .taobao:   return "淘宝"
         case .eleme:    return "饿了么"
+        case .douyin:   return "抖音团购"
         case .manual:   return "手动录入"
         }
     }
@@ -28,6 +30,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .appStore: return "App Store"
         case .taobao:   return "淘宝"
         case .eleme:    return "饿了么"
+        case .douyin:   return "抖音"
         case .manual:   return "手动"
         }
     }
@@ -45,6 +48,10 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         }
         if normalized.contains("饿了么") || normalized.contains("eleme") {
             return .eleme
+        }
+        // 抖音团购券码页：含"待使用"加"券号"或"适用门店"
+        if normalized.contains("待使用") && (normalized.contains("券号") || normalized.contains("适用门店")) {
+            return .douyin
         }
         if normalized.contains("微信") || normalized.contains("wechat")
             || normalized.contains("收单机构") || normalized.contains("商户单号") {
