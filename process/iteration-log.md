@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-03-27
+更新日期：2026-04-10
 
 ## 记录规则
 
@@ -43,6 +43,93 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-017 移除预置样例数据 + 一键记账引导智能折叠
+- 日期：2026-04-10
+- 所属版本：v0.1.1
+- 所属阶段：Phase 4（UX 优化）
+- 类型：变更 / UI
+- 目标：新安装后账本为空（不再预置样例数据）；首页一键记账引导卡片在已有快捷指令记录时自动折叠为摘要卡。
+- 改动范围：`LedgerStore.swift`（`seedTransactions` 清空）；`InboxView.swift`（新增 `quickSetupCollapsed` / `hasShortcutEntries`、条件切换展示）；`CHANGELOG.md`。
+- 未改动范围：解析器、持久化层、设置页均未改动。
+- 完成内容：`seedTransactions = []`；`quickSetupCollapsed` 摘要卡显示已记录笔数，点击展开完整指引。
+- 未完成内容：无。
+- 测试情况：`xcodebuild build` PASS。
+- 风险与注意事项：已安装用户若存在旧样例数据，不受此改动影响（已在 SQLite 中持久化）。
+- 回滚方式：恢复 `seedTransactions` 数组内容；移除 `quickSetupCollapsed`。
+- 结论：本轮完成。
+- 下一步建议：继续完善首页信息密度优化。
+
+### ITER-016 商户别名映射 + os_log 解析诊断
+- 日期：2026-04-10
+- 所属版本：v0.1.1
+- 所属阶段：Phase 3（功能增强）
+- 类型：能力增强 / 调试
+- 目标：支持商户名别名映射（如"广州骑安科技有限公司 → 青桔单车"），并在 SmartReceiptParser 和 LedgerStore 关键阶段添加 os_log 日志。
+- 改动范围：`LedgerStore.swift`（`merchantAliases`、`resolveMerchant`、`saveMerchantAliases`、os_log Logger）；新增 `MerchantAliasView.swift`；`SettingsView.swift`（新增商户别名入口）；`SmartReceiptParser.swift`（os_log Logger）；`CHANGELOG.md`。
+- 未改动范围：ReceiptParser 规则层、SQLite 持久化层、AppFormatters 均未改动。
+- 完成内容：别名映射存储在 UserDefaults，`persistReceipt` 入账前自动替换并重新推断分类；Logger 输出规则/LLM 结果、别名映射触发到 Xcode Console。
+- 未完成内容：无。
+- 测试情况：`xcodebuild build` PASS；真机验证 os_log 输出正常（确认 Foundation Models 在国行设备不可用，纯规则路径运行正常）。
+- 风险与注意事项：商户别名仅存 UserDefaults，不随 iCloud 同步。
+- 回滚方式：移除 `MerchantAliasView`、`LedgerStore` 别名相关代码、`SmartReceiptParser`/`LedgerStore` 的 Logger 调用。
+- 结论：本轮完成，真机调试效率大幅提升。
+- 下一步建议：持续积累真机回归用例，利用 os_log 快速定位解析偏差。
+
+### ITER-015 微信支付详情页标签块解析 + 日期秒级支持
+- 日期：2026-04-10
+- 所属版本：v0.1.1
+- 所属阶段：Phase 3（解析增强）
+- 类型：Bugfix / 能力增强
+- 目标：修复微信支付详情页 OCR 输出的标签块→值块分列结构无法正确解析的问题（商户误提为页面标题、时间回退为当前时间）。
+- 改动范围：`AutoLedgerCore/Services/ReceiptParser.swift`（新增 `parseWeChatDetailBlock`、`extractDate` 增加可选秒段、`parse()` 增加 WeChat detail 优先级）；`AutoLedgerCore/Utils/AppFormatters.swift`（新增 `HH:mm:ss` 格式、Unicode 全角/NBSP 空格归一化）；`CHANGELOG.md`。
+- 未改动范围：SmartReceiptParser、LedgerStore、SQLite、UI 层均未改动。
+- 完成内容：`parseWeChatDetailBlock` 检测连续已知标签（当前状态/支付时间/商品/商户全称…），找到最长连续标签段后按偏移映射到值行，提取商户全称和支付时间；`extractDate` 正则增加 `(?::[0-9]{2})?`；`parseFlexibleDate` 增加秒级格式和空格归一化。
+- 未完成内容：无。
+- 测试情况：`xcodebuild build` PASS；真机测试微信支付详情页截图，商户/时间/分类均正确提取。
+- 风险与注意事项：标签块解析依赖标签连续性，若微信更新页面布局可能需要调整。
+- 回滚方式：移除 `parseWeChatDetailBlock` 方法并回退 `parse()` 中的调用，恢复 `extractDate` 正则和 `parseFlexibleDate` 格式列表。
+- 结论：本轮完成，微信支付详情页最常见布局已覆盖。
+- 下一步建议：继续收集不同微信版本和支付场景的 OCR 输出，扩展标签识别列表。
+
+### ITER-014 去重窗口缩小 + 支付宝 NFC 收据解析
+- 日期：2026-04-10
+- 所属版本：v0.1.1
+- 所属阶段：Phase 3（Bugfix）
+- 类型：Bugfix
+- 目标：去重窗口从 5 分钟缩小到 60 秒，避免同商户同金额不同时间的交易被误判重复；修复支付宝 NFC 收据商户名提取失败的问题。
+- 改动范围：`LedgerStore.swift`、`QuickLedgerIntent.swift`、`ShareViewController.swift`（去重窗口 300→60）；`AutoLedgerCore/Services/ReceiptParser.swift`（支付宝 NFC 公司名提取、跳过纯符号行、移除冗余 keyword）；`CHANGELOG.md`。
+- 未改动范围：SmartReceiptParser、AppFormatters、UI 层均未改动。
+- 完成内容：三处去重逻辑统一为 60 秒窗口；支付宝 NFC 收据可正确提取公司名称；移除 `商业有限` 冗余关键词（已被 `有限公司` 覆盖）。
+- 未完成内容：无。
+- 测试情况：`xcodebuild build` PASS。
+- 风险与注意事项：60 秒窗口可能在极端场景（如连续在同一商户同金额消费）下误判，但概率极低。
+- 回滚方式：将三处 `< 60` 改回 `< 300`；回退 ReceiptParser NFC 相关改动。
+- 结论：本轮完成。
+- 下一步建议：持续收集真机回归用例。
+
+### ITER-012 v0.1.1 多渠道导入 + LLM 混合解析 + 真机调试
+- 日期：2026-04-09
+- 所属版本：v0.1.1
+- 所属阶段：Phase 2–4（全链路）
+- 类型：能力增强 / Bugfix / UI / 重构
+- 目标：完成 v0.1.1 全部计划功能——多渠道导入（相机/剪切板/Share Extension/快捷指令/ControlWidget）、LLM 混合解析、App Intent 快捷指令、UI 增强，并在真机上完成端到端验证。
+- 改动范围：（详见 CHANGELOG.md 2026-04-09 全部条目，此处概述）
+  - 重构：抽出 `AutoLedgerCore` 本地 Swift Package，主 App/ShareExt/ControlWidget 共享
+  - 新增：Share Extension、QuickLedgerIntent（AppIntent）、SmartReceiptParser（Foundation Models 混合解析）、ClipboardImportIntent、ControlWidgetExtension
+  - 新增：相机拍照导入、剪切板导入、回前台自动读取剪切板
+  - 新增：LedgerView 时间筛选、商户消费排名 Sheet、跨 Tab 导航
+  - 新增：设置页重写（来源/分类管理）、ImportDebugRecord 图片来源追踪
+  - 修复：20+ 项解析规则修正（金额优先级、商户名过滤、来源推断、App Store 收据、外卖订单等）
+  - 修复：SQLite 迁移、相机权限、App 图标、pbxproj 清理
+- 未改动范围：月报页核心逻辑未改动。
+- 完成内容：v0.1.1 计划 Phase 2–4 全部功能交付，真机端到端验证通过。
+- 未完成内容：v0.1.1 发布门禁文档尚未正式判定。
+- 测试情况：`xcodebuild build` PASS；真机验证快捷指令→OCR→入账→返回文本全链路通过；Share Extension 分享图片入账通过；相机/剪切板导入通过；ControlWidget 控制中心触发通过。
+- 风险与注意事项：Foundation Models 在国行设备不可用（Apple Intelligence 未上线），SmartReceiptParser 始终走纯规则路径。
+- 回滚方式：回退到 v0.1.0 tag 即可。
+- 结论：本轮完成，v0.1.1 全部核心功能已交付并通过真机验证。
+- 下一步建议：持续收集真机回归用例，完成发布门禁判定。
 
 ### ITER-011 TestFlight 邀请链接获取流程文档
 - 日期：2026-04-09
