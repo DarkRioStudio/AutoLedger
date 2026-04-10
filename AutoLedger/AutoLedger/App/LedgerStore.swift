@@ -4,12 +4,17 @@ import Foundation
 import os.log
 import UIKit
 
+// Combine.Subscription 与 AutoLedgerCore.Subscription 同名，显式消歧义
+typealias Subscription = AutoLedgerCore.Subscription
+
 private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "LedgerStore")
 
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
 
     @Published private(set) var transactions: [Transaction]
+    @Published private(set) var subscriptions: [Subscription] = []
+    @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:]
     @Published private(set) var recentImports: [ImportedReceipt] = []
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
@@ -22,6 +27,7 @@ final class LedgerStore: ObservableObject {
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
+    private let subscriptionDetector = SubscriptionDetector()
     private let transactionStore: TransactionStore?
     private var lastPasteboardChangeCount: Int
 
@@ -34,6 +40,8 @@ final class LedgerStore: ObservableObject {
         self.sampleReceipts = sampleProvider.samples
         self.transactionStore = transactionStore
         self.transactions = LedgerStore.loadInitialTransactions(using: transactionStore)
+        self.subscriptions = LedgerStore.loadInitialSubscriptions(using: transactionStore)
+        self.categoryCorrections = LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
@@ -99,6 +107,13 @@ final class LedgerStore: ObservableObject {
 
         // 尝试智能解析（异步）
         Task { @MainActor in
+            // 高置信订阅续期邮件检测（优先于普通交易解析）
+            if let subscription = subscriptionDetector.detectFromText(normalizedText) {
+                upsertSubscription(subscription)
+                lastImportSummary = "已识别为订阅：\(subscription.merchant) \(AppFormatters.currency(subscription.amount))/\(subscription.period.title)"
+                return
+            }
+
             let result = await smartParser.parse(
                 text: normalizedText,
                 source: source,
@@ -169,7 +184,9 @@ final class LedgerStore: ObservableObject {
             // 静默失败，保留内存中的数据
         }
         if let sqlStore = store as? SQLiteTransactionStore {
-            debugRecords = (try? sqlStore.loadDebugEvents()) ?? debugRecords
+            debugRecords        = (try? sqlStore.loadDebugEvents())          ?? debugRecords
+            subscriptions       = (try? sqlStore.loadSubscriptions())        ?? subscriptions
+            categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
         }
         loadShareExtensionResult()
     }
@@ -250,6 +267,13 @@ final class LedgerStore: ObservableObject {
             return
         }
 
+        let original = transactions[index]
+
+        // 检测分类修正——记录用户偏好
+        if original.category != transaction.category {
+            recordCategoryCorrection(merchant: transaction.merchant, category: transaction.category)
+        }
+
         transactions[index] = transaction
         sortTransactions()
 
@@ -275,14 +299,36 @@ final class LedgerStore: ObservableObject {
                 rawText: inReceipt.rawText,
                 summary: inReceipt.summary,
                 confidence: inReceipt.confidence,
-                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)")
+                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)", corrections: categoryCorrections)
+            )
+        } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
+            receipt = ImportedReceipt(
+                source: inReceipt.source,
+                merchant: inReceipt.merchant,
+                amount: inReceipt.amount,
+                occurredAt: inReceipt.occurredAt,
+                rawText: inReceipt.rawText,
+                summary: inReceipt.summary,
+                confidence: inReceipt.confidence,
+                suggestedCategory: correctedCategory
+            )
+        } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
+            receipt = ImportedReceipt(
+                source: inReceipt.source,
+                merchant: inReceipt.merchant,
+                amount: inReceipt.amount,
+                occurredAt: inReceipt.occurredAt,
+                rawText: inReceipt.rawText,
+                summary: inReceipt.summary,
+                confidence: inReceipt.confidence,
+                suggestedCategory: correctedCategory
             )
         } else {
             receipt = inReceipt
         }
 
-        if hasDuplicate(receipt) {
-            let summary = "\(receipt.merchant) 已存在同日同金额记录，账本未重复写入。"
+        if hasDuplicate(receipt, rawText: rawText) {
+            let summary = "\(receipt.merchant) 已存在同日同金额记录或 OCR 文本高度相似，账本未重复写入。"
             lastImportSummary = summary
             recordDebugEvent(
                 stage: .duplicateSkipped,
@@ -341,12 +387,28 @@ final class LedgerStore: ObservableObject {
         )
     }
 
-    private func hasDuplicate(_ receipt: ImportedReceipt) -> Bool {
-        transactions.contains {
+    private func hasDuplicate(_ receipt: ImportedReceipt, rawText: String = "") -> Bool {
+        // 原有策略：60s 窗口 + 同商户同金额
+        let windowMatch = transactions.contains {
             $0.merchant == receipt.merchant &&
             abs($0.amount - receipt.amount) < 0.01 &&
             abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 60
         }
+        if windowMatch { return true }
+
+        // 增强策略：OCR 文本 Jaccard 相似度 > 0.8 视为同一来源
+        guard !rawText.isEmpty else { return false }
+        let recentTexts = debugRecords
+            .filter { $0.stage == .persisted }
+            .prefix(30)
+            .map(\.rawText)
+        for existingText in recentTexts where !existingText.isEmpty {
+            if TextSimilarity.jaccard(rawText, existingText) > 0.8 {
+                logger.info("[去重] OCR Jaccard 相似度命中（>0.8），判定为重复来源")
+                return true
+            }
+        }
+        return false
     }
 
     private func sortTransactions() {
@@ -388,6 +450,70 @@ final class LedgerStore: ObservableObject {
     private static func loadInitialDebugRecords(using store: TransactionStore?) -> [ImportDebugRecord] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
         return (try? sqlStore.loadDebugEvents()) ?? []
+    }
+
+    // MARK: - Subscriptions
+
+    /// 新增或更新订阅（去重：同商户 + 同周期命中时更新，否则新增）
+    func upsertSubscription(_ sub: Subscription) {
+        guard let sqlStore = transactionStore as? SQLiteTransactionStore else { return }
+
+        if let idx = subscriptions.firstIndex(where: {
+            $0.merchant == sub.merchant && $0.period == sub.period
+        }) {
+            guard sub.lastChargedAt >= subscriptions[idx].lastChargedAt else { return }
+            let updated = subscriptions[idx].updated(
+                lastChargedAt: sub.lastChargedAt,
+                amount: sub.amount
+            )
+            subscriptions[idx] = updated
+            try? sqlStore.updateSubscription(updated)
+        } else {
+            subscriptions.append(sub)
+            subscriptions.sort { $0.nextChargedAt < $1.nextChargedAt }
+            try? sqlStore.saveSubscription(sub)
+        }
+        NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+    }
+
+    func deleteSubscription(_ sub: Subscription) {
+        subscriptions.removeAll { $0.id == sub.id }
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.deleteSubscription(id: sub.id)
+        }
+        NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+    }
+
+    /// 扫描全部历史账单，自动识别并保存周期性订阅
+    func detectAndUpsertSubscriptions() {
+        let detected = subscriptionDetector.detectFromHistory(transactions)
+        for sub in detected { upsertSubscription(sub) }
+    }
+
+    private static func loadInitialSubscriptions(using store: TransactionStore?) -> [Subscription] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
+        return (try? sqlStore.loadSubscriptions()) ?? []
+    }
+
+    // MARK: - Category Corrections
+
+    func recordCategoryCorrection(merchant: String, category: TransactionCategory) {
+        categoryCorrections[merchant] = category
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.saveCategoryCorrection(merchant: merchant, category: category)
+        }
+    }
+
+    func deleteCategoryCorrection(merchant: String) {
+        categoryCorrections.removeValue(forKey: merchant)
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.deleteCategoryCorrection(merchant: merchant)
+        }
+    }
+
+    private static func loadInitialCategoryCorrections(using store: TransactionStore?) -> [String: TransactionCategory] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [:] }
+        return (try? sqlStore.loadCategoryCorrections()) ?? [:]
     }
 }
 

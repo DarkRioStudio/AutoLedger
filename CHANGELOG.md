@@ -9,6 +9,17 @@
 
 ## [Unreleased]
 
+### 新增（v1.1.0）
+- [2026-04-10 +0800] ITER-017 去重增强 + 回归基线 + 发布门禁：新增 `AutoLedgerCore/Utils/TextSimilarity.swift`（字符级 bigram Jaccard 相似度函数）；`LedgerStore.hasDuplicate` 增加 `rawText` 参数，原有 60s 窗口去重基础上新增 Jaccard > 0.8 判定为重复来源（比较 debugRecords 中最近 30 条已持久化记录之 rawText）；`QuickLedgerIntent` 和 `ShareViewController` 去重逻辑同样增加 OCR Jaccard 相似度检查（通过 `loadDebugEvents()` 获取历史 rawText）；`OfflineRegression.swift` 新增 Jaccard 去重与 TextSimilarity 单元回归测试项（3 条）；新增 `v1.1.0-regression-baseline.md`（回归矩阵覆盖 9 大类场景，含去重增强/订阅/分类学习/反馈全链路），新增 `v1.1.0-RELEASE(draft).md`（发布门禁草稿，含检查项/门禁项/亮点/回滚方案）。
+- [2026-04-10 +0800] ITER-016 用户反馈 C 层（服务端自动 Issue）：新增 `tools/feedback/email_to_issue.py`（Gmail IMAP 拉取未读反馈邮件 → 解析邮件标题/正文/AUTOLEDGER_FEEDBACK_META 区块 → 解压 bundle zip 提取 issue_bundle.json/summary.txt/metadata.json/trace.log/redacted_ocr_context.txt → 服务端二次正则脱敏（邮箱/手机号/长数字串）→ GitHub REST API 创建 Issue（含 label：feedback/source·email/level·Lx/type·xxx/status·new）→ feedback_id 幂等去重 → 标记邮件已读）；新增 `.github/workflows/feedback-email-to-issue.yml`（每 15 分钟定时 + 手动触发 + dry_run 开关）；新增 `tools/feedback/requirements.txt`（纯标准库，无外部依赖）；新增 `tools/feedback/test_email_to_issue.py`（本地 smoke tests）。Secret 名称：`GMAIL_USERNAME`、`GMAIL_APP_PASSWORD`、`GH_PAT_TOKEN`。
+- [2026-04-10 +0800] ITER-015 用户反馈 A+B 层：新增 `FeedbackLevel`（L1/L2/L3）与 `FeedbackIssueType`（14 种问题类型）枚举；新增 `FeedbackBundleBuilder`（生成 Feedback ID、设备信息采集、分级 bundle 组装、正则脱敏、zip 压缩、邮件标题/正文生成）；新增 `FeedbackService`（MFMailComposeViewController 发送 + 剪切板复制降级 + 系统分享降级）；新增 `FeedbackComposerView`（问题类型选择、反馈级别选择、描述表单、L3 二次确认、截图附带开关）；新增 `FeedbackPreviewView`（发送前预览标题/正文/附件包内容）；`SettingsView` 新增“问题反馈”入口；`DebugView` 入口隐藏为多次点击版本号解锁；`DebugView` 内容升级：新增系统信息卡、App Group 容器文件浏览、SQLite 数据分页浏览（交易/订阅/分类学习/调试事件）、内存磁盘概况、一键导出 L3 诊断包。
+- [2026-04-10 +0800] ITER-014 分类学习：新增 `category_corrections` SQLite 表（merchant PRIMARY KEY, category, updated_at）及 CRUD 方法；`TransactionCategory.infer(from:corrections:)` 支持修正历史优先查询；`LedgerStore` 新增 `categoryCorrections` Published 属性、`recordCategoryCorrection`/`deleteCategoryCorrection` 方法；`updateTransaction` 自动检测分类变更并记录修正；`persistReceipt` 两条路径均优先使用修正分类；新增 `CategoryLearningView`（已学习列表 + 空态引导 + 长按删除）；`SettingsView` 新增"分类学习"入口。
+- [2026-04-10 +0800] ITER-013 扣费提醒：新增 `SubscriptionListView`（全部订阅列表 + 即将扣费高亮 + 预估月均费用 + 长按删除）；`InboxView` 新增"即将扣费"卡片（未来 7 天内有预测扣费时自动展示，含商户/金额/倒计时）；新增 `NotificationService`（`UNUserNotificationCenter` 本地通知，扣费前 1 天提醒）；`SettingsView` 新增"订阅管理"入口 + "订阅扣费提醒"开关（默认开启）；`AutoLedgerApp` 注册默认设置 + 回前台时自动调度通知；`LedgerStore` 订阅增删后自动重新调度通知；版本信息卡更新为 `v1.1.0-dev`。
+- [2026-04-10 +0800] 小修改（文档）：`v1.1.0-plan.md` 同步实际进度——Phase 1（订阅识别）+ Phase 2（扣费提醒）合并为 Phase 1，Phase 编号整体前移（5→4 阶段）；ITER-012/013 状态标记为 ✅ DONE；依赖状态更新。
+- [2026-04-10 +0800] ITER-012 订阅识别引擎：新增 `Subscription` 模型（`SubscriptionPeriod` 枚举 + weekly/monthly/yearly）、`SubscriptionDetector` 服务（续期邮件 OCR 高置信检测 + 历史账单周期检测）、`subscriptions` SQLite 表（CRUD）；`LedgerStore` 新增 `subscriptions` Published 属性、`upsertSubscription` 去重入库、`detectAndUpsertSubscriptions` 历史扫描、导入流高置信订阅优先路径。
+- [2026-04-10 +0800] 小修改（文档）：将 `feedback_log_email_bundle_templates.md` 和 `tools_feedback_README_template.md` 从根目录移至 `process/`；同步更新 `v1.1.0-plan.md` 路径引用。
+- [2026-04-10 +0800] 小修改（文档）：README `🌐 官网` 文本链接更改为与其他 badge 等宽的 shields.io badge 格式。
+
 ### 修复（TestFlight 外测就绪）
 - [2026-04-10 +0800] 新增 `PrivacyInfo.xcprivacy`（声明 UserDefaults API 使用，NSPrivacyTracking=false），满足 Apple 隐私清单要求。
 - [2026-04-10 +0800] 新增 `ControlWidgetExtension.entitlements`，添加 App Group（`group.top.darkrio326.AutoLedger`），使 Widget Extension 可访问共享 SQLite 数据库。

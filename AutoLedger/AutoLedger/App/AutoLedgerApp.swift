@@ -14,6 +14,11 @@ struct AutoLedgerApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // 注册默认设置
+        UserDefaults.standard.register(defaults: [
+            "subscriptionReminder": true
+        ])
+
         ClipboardImportIntent.handler = {
             LedgerStore.shared?.attemptClipboardImport(force: true)
         }
@@ -28,6 +33,11 @@ struct AutoLedgerApp: App {
                         store.refreshFromStore()
                         if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
                             store.attemptClipboardImport()
+                        }
+                        // 订阅提醒通知调度
+                        if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
+                            NotificationService.shared.requestPermissionIfNeeded()
+                            NotificationService.shared.scheduleUpcomingChargeReminders(for: store.subscriptions)
                         }
                     }
                 }
