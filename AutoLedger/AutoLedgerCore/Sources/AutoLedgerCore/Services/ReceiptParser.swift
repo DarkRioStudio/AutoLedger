@@ -234,6 +234,16 @@ public struct ReceiptParser: Sendable {
             }
         }
 
+        // ── 含工商登记主体关键词的行（有限公司等）→ 直接作为商户全称 ──
+        // 适用于支付宝碰一下、银联等在截图中直接显示公司全称的场景
+        let companyKeywords = ["有限公司", "股份有限", "有限责任", "集团公司", "商业有限"]
+        if let companyLine = lines.first(where: { line in
+            companyKeywords.contains(where: { line.contains($0) }) &&
+            !fieldLabels.contains(line)
+        }) {
+            return companyLine
+        }
+
         // ── 地铁 / 公交储值卡格式 ──
         // 支持两种 OCR 版式：
         //   (A) 独立行 "地铁：" + 金额行 + 站点行（如 "内江路 东丽文体中心"）
@@ -276,6 +286,8 @@ public struct ReceiptParser: Sendable {
             !skipContainsFallback.contains(where: { line.contains($0) }) &&
             !fieldLabels.contains(line) &&
             line.count >= 2 &&
+            // 跳过无实质字母内容的行（如 "：！⑤"，来自系统通知徽标的 OCR 噪声）
+            line.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) &&
             amountCandidate(in: line) == nil &&
             (try? NSRegularExpression(pattern: timePattern))?
                 .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
