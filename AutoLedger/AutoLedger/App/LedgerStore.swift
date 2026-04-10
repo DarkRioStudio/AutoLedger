@@ -400,30 +400,5 @@ private extension LedgerStore {
         }
     }
 
-    static let seedTransactions: [Transaction] = [
-        Transaction(
-            merchant: "盒马鲜生",
-            amount: 86.30,
-            occurredAt: AppFormatters.calendar.date(byAdding: .day, value: -1, to: .now) ?? .now,
-            category: .groceries,
-            source: .manual,
-            note: "冷启动样例数据"
-        ),
-        Transaction(
-            merchant: "滴滴出行",
-            amount: 23.80,
-            occurredAt: AppFormatters.calendar.date(byAdding: .day, value: -2, to: .now) ?? .now,
-            category: .transport,
-            source: .manual,
-            note: "冷启动样例数据"
-        ),
-        Transaction(
-            merchant: "Apple Services",
-            amount: 28.00,
-            occurredAt: AppFormatters.calendar.date(byAdding: .day, value: -5, to: .now) ?? .now,
-            category: .digital,
-            source: .manual,
-            note: "冷启动样例数据"
-        )
-    ]
+    static let seedTransactions: [Transaction] = []
 }
