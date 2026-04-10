@@ -9,7 +9,17 @@
 
 ## [Unreleased]
 
-## [v0.1.1] — 2026-04-10
+### 修复（TestFlight 外测就绪）
+- [2026-04-10 +0800] 新增 `PrivacyInfo.xcprivacy`（声明 UserDefaults API 使用，NSPrivacyTracking=false），满足 Apple 隐私清单要求。
+- [2026-04-10 +0800] 新增 `ControlWidgetExtension.entitlements`，添加 App Group（`group.top.darkrio326.AutoLedger`），使 Widget Extension 可访问共享 SQLite 数据库。
+- [2026-04-10 +0800] 全部 target MARKETING_VERSION 从 `1.0` 改为 `1.0.0`，与 App Store Connect 上传版本对齐。
+- [2026-04-10 +0800] 主 App Debug/Release 添加 `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO`，跳过每次上传的出口合规手动确认。
+- [2026-04-10 +0800] ShareExtension `TARGETED_DEVICE_FAMILY` 从 `"1,2"`（iPhone+iPad）改为 `1`（仅 iPhone），与主 App 保持一致。
+
+### 变更
+- [2026-04-10 +0800] 版本号体系从 `v0.1.1` 统一调整为 `v1.0.0`（因 App Store Connect 已上传 build 1.0，版本号只能递增）；文档、标签、CHANGELOG 同步更新。
+
+## [v1.0.0] — 2026-04-10
 
 ### 新增
 - [2026-04-10 +0800] 记账页「一键记账」引导卡片改为智能折叠：当账本中已有快捷指令入账记录时，自动收起为「一键记账已开启 · 已记录 N 笔」摘要卡，点击可展开完整操作指引。
@@ -24,7 +34,7 @@
 - [2026-04-09 22:00 +0800] 首页"一键记账"引导卡片底部新增提示：复制支付截图后回到 App 也可自动读取记账。
 - [2026-04-09 16:20 +0800] 首页新增"一键记账"引导卡片（位于 Hero 区下方、支付账单导入上方）：分三步引导用户添加 iCloud 快捷指令 → 绑定 iPhone 操作按钮 → 按下即可截图记账；含 iCloud 快捷指令下载链接和跳转系统设置按钮。
 - [2026-04-09 14:00 +0800] 收件箱新增"拍照识别"入口：调用系统相机拍摄支付凭证，走 OCR → 解析 → 入账完整链路；`ImageSource` 新增 `.camera` 枚举值。
-- [2026-04-09 14:00 +0800] 设置页重写：新增"来源管理"和"分类管理"入口；内置来源/分类以只读列表展示，用户可新增和删除自定义来源/分类（存储在 UserDefaults）；版本信息更新为 v0.1.1 当前状态。
+- [2026-04-09 14:00 +0800] 设置页重写：新增"来源管理"和"分类管理"入口；内置来源/分类以只读列表展示，用户可新增和删除自定义来源/分类（存储在 UserDefaults）；版本信息更新为 v1.0.0 当前状态。
 - [2026-04-09 14:00 +0800] `MonthlySnapshot` 新增 `topMerchants: [String]` 数组（按消费金额降序排列）；首页 Hero 区 Top 商户卡片展示最多 6 家商户，超出部分以"..."省略。
 - [2026-04-09 13:52 +0800] `LedgerView` 账本列表新增时间筛选：支持"全部 / 本月 / 本年"三档切换（Segmented Picker），选月/年后可通过左右箭头翻页，禁止翻到未来月/年；Section header 动态显示当前筛选范围，footer 显示当前结果条数。
 - [2026-04-09 13:52 +0800] 首页 Hero 区"Top 商户"卡仅显示消费第一名商户；点击弹出"商户消费排名"Sheet，按商户 groupby 全量账单后按总金额降序展示完整列表（含排名序号）。
