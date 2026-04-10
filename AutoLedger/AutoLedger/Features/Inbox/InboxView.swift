@@ -13,8 +13,13 @@ struct InboxView: View {
     @State private var capturedImageData: Data?
     @State private var isImportingCamera = false
     @State private var showMerchantSheet = false
+    @State private var isQuickSetupExpanded = false
 
     private let ocrService = OCRService()
+
+    private var hasShortcutEntries: Bool {
+        store.transactions.contains { $0.note == "快捷指令自动记账" }
+    }
 
     var body: some View {
         NavigationStack {
@@ -22,7 +27,11 @@ struct InboxView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     hero
 
-                    quickSetupCard
+                    if hasShortcutEntries && !isQuickSetupExpanded {
+                        quickSetupCollapsed
+                    } else {
+                        quickSetupCard
+                    }
 
                     liveImportCard
 
@@ -174,6 +183,43 @@ struct InboxView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(AppTheme.card)
         )
+    }
+
+    private var quickSetupCollapsed: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isQuickSetupExpanded = true
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.accent)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("一键记账已开启")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+
+                    let count = store.transactions.filter { $0.note == "快捷指令自动记账" }.count
+                    Text("已通过快捷指令记录 \(count) 笔账单")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(AppTheme.card)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func setupStep(number: String, title: String, detail: String) -> some View {
