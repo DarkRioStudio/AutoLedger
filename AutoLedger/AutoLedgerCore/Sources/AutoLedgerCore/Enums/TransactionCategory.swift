@@ -38,7 +38,14 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
         }
     }
 
-    public static func infer(from text: String) -> TransactionCategory {
+    public static func infer(from text: String, corrections: [String: TransactionCategory] = [:]) -> TransactionCategory {
+        // 优先查询用户修正历史
+        for (merchant, category) in corrections {
+            if text.localizedCaseInsensitiveContains(merchant) {
+                return category
+            }
+        }
+
         let lowered = text.lowercased()
 
         if lowered.contains("麦当劳") || lowered.contains("肯德基") || lowered.contains("星巴克")
