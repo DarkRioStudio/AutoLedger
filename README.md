@@ -61,7 +61,8 @@ AutoLedgerRio/
 │   │   ├── Shared/              # 通用组件、常量、扩展
 │   │   └── Assets.xcassets/     # 图标 & 资源
 │   ├── AutoLedgerCore/          # 本地 Swift Package (共享模型)
-│   └── ShareExtension/          # Share Extension
+│   ├── ShareExtension/          # Share Extension
+│   └── ControlWidgetExtension/  # 控制中心 Widget Extension
 ├── versions/                    # 版本计划 & 回归基线
 ├── process/                     # 迭代工作流文档
 ├── scripts/                     # 回归测试脚本
@@ -90,9 +91,9 @@ bash scripts/run_offline_regression.sh
 | 版本 | 状态 | 主要内容 |
 |------|------|----------|
 | v0.1.0 | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
-| v1.0.0 | 🚧 开发中 | 一键记账引导、LLM 智能解析、操作按钮集成、图标 |
-| v0.2.0 | 📋 计划中 | 订阅识别、扣费预测与提醒、去重、分类学习 |
-| v0.3.0 | 📋 计划中 | 异常消费检测、个性化建议、更多平台适配 |
+| v1.0.0 | ✅ 已发布 | 一键记账引导、LLM 智能解析、操作按钮集成、图标、TestFlight 外测就绪 |
+| v1.1.0 | 📋 计划中 | 订阅识别、扣费预测与提醒、去重、分类学习 |
+| v1.2.0 | 📋 计划中 | 异常消费检测、个性化建议、更多平台适配 |
 
 ## License
 
