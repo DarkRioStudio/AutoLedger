@@ -100,5 +100,53 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "Example Convenience Store · ¥4.30"
         ),
+        SampleReceipt(
+            title: "抖音团购麦当劳截图",
+            source: .douyin,
+            rawText: """
+            12:34
+            89
+            经验 直播 团购 天津 精）
+            天津，Demo Burger团购 目
+            搜索
+            订单
+            99
+            00
+            更多
+            × 待使用
+            6
+            客服
+            请在 2026.04.24（含）前到店消费
+            门店自取时，请注意选择正确的【取餐门店】 和【预⋯＞
+            小食任意搭4件套
+            B
+            【一人食】Demo Burger小食任意＞
+            搭2+2【小食趴专属】【...
+            ¥44
+            ×1
+            实付 ¥26.90〉
+            周一至周日10:30-次日05:00可用•过期自动退•免预约＞
+            方式1
+            到店验券
+            方式2
+            自助使用
+            券号 MCD64P00201RX.＞复制
+            查看详细步骤＞
+            适用门店（6673家）
+            U 直播中
+            Demo Burger (Example Branch)
+            营业中 06:30-23:00
+            最近273m
+            • 河西区郁江道14号
+            全部门店＞
+            1
+            6g
+            交易快照
+            可作为交易争执的判断依据
+            申请退款
+            再来一单
+            """,
+            preview: "Demo Burger (Example Branch)· ¥26.90"
+        ),
     ]
 }

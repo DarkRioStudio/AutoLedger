@@ -16,6 +16,9 @@
 - [2026-04-10 +0800] 主 App Debug/Release 添加 `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO`，跳过每次上传的出口合规手动确认。
 - [2026-04-10 +0800] ShareExtension `TARGETED_DEVICE_FAMILY` 从 `"1,2"`（iPhone+iPad）改为 `1`（仅 iPhone），与主 App 保持一致。
 
+### 新增
+- [2026-04-10 +0800] 新增 `.douyin`（抖音团购）来源：`ReceiptSource.infer()` 检测"待使用"+"券号"/"适用门店"，自动识别抖音团购券码页；`ReceiptParser` 新增 `parseDouyinVoucher()` 从"适用门店（X家）"区块提取门店名，自动剥离"U 直播中"等直播状态前缀；`ShareViewController.bundleSourceMap` 新增抖音 Bundle ID（`com.ss.iphone.ugc.Aweme`）映射。
+
 ### 变更
 - [2026-04-10 +0800] 版本号体系从 `v0.1.1` 统一调整为 `v1.0.0`（因 App Store Connect 已上传 build 1.0，版本号只能递增）；文档、标签、CHANGELOG 同步更新。
 
