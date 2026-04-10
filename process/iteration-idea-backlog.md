@@ -1,6 +1,6 @@
 # 迭代想法池
 
-更新日期：2026-03-27
+更新日期：2026-04-10
 
 ## 状态说明
 
@@ -144,3 +144,87 @@
 - 结论：接受并纳入当前版本尾段迭代。
 - 原因：版本需要有可执行门禁，不能长期停留在“文档 PASS、功能未完成”的状态。
 - 已落地产物：基础月报页面、构建验证命令、修订中的门禁文档。
+
+### IDEA-008 微信支付详情页标签块解析
+- 状态：DONE
+- 优先级：P0
+- 来源：真机回归发现
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：ReceiptParser，AppFormatters
+- 描述：微信支付详情页 OCR 输出为标签块→值块分列结构（当前状态/支付时间/商户全称…连续排列，值按相同顺序跟随），原解析器无法识别该布局，商户误提为页面标题、时间回退为当前时间。
+- 价值：覆盖微信支付最常见的详情页格式，大幅提升真实场景命中率。
+- 风险：不同微信版本的 OCR 布局可能有差异。
+- 结论：已完成并推送，`parseWeChatDetailBlock` 方法通过最长连续标签段偏移定位值块。
+- 原因：P0 级真机阻断问题，影响核心记账准确性。
+- 已落地产物：`AutoLedgerCore/Services/ReceiptParser.swift`（新增 `parseWeChatDetailBlock`）；`AutoLedgerCore/Utils/AppFormatters.swift`（HH:mm:ss + Unicode 空格归一化）；commit `8e722a3`。
+
+### IDEA-009 商户别名映射
+- 状态：DONE
+- 优先级：P1
+- 来源：用户需求
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：LedgerStore，MerchantAliasView，SettingsView
+- 描述：支持用户自定义商户名映射（如"广州骑安科技有限公司 → 青桔单车"），解析入账时自动替换商户名并重新推断分类。
+- 价值：解决 OCR 解析出的商户全称对用户不友好的问题，提升账本可读性。
+- 风险：别名不当可能导致分类推断偏差。
+- 结论：已完成，设置页新增商户别名管理入口。
+- 原因：真实使用中大量商户名为公司全称，用户难以辨认。
+- 已落地产物：`MerchantAliasView.swift`、`LedgerStore.swift`（`resolveMerchant`）、`SettingsView.swift`；commit `da68408`。
+
+### IDEA-010 解析链路 os_log 诊断日志
+- 状态：DONE
+- 优先级：P1
+- 来源：开发调试需求
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：SmartReceiptParser，LedgerStore
+- 描述：在 SmartReceiptParser 和 LedgerStore 关键阶段添加 os_log 日志，输出规则/LLM 解析结果、别名映射等，方便在 Xcode Console 实时调试。
+- 价值：取代 print 调试，支持按 category 过滤，提升真机调试效率。
+- 风险：无。
+- 结论：已完成。
+- 原因：真机调试时无法查看 print 输出，需要结构化日志。
+- 已落地产物：`SmartReceiptParser.swift`、`LedgerStore.swift`；commit `da68408`。
+
+### IDEA-011 一键记账引导卡片智能折叠
+- 状态：DONE
+- 优先级：P2
+- 来源：UX 优化
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：InboxView
+- 描述：当账本中已有快捷指令入账记录时，首页「一键记账」引导卡片自动收起为摘要卡（"一键记账已开启 · 已记录 N 笔"），点击可展开完整操作指引。
+- 价值：老用户不再被大面积引导卡遮挡，新用户仍能看到完整引导。
+- 风险：无。
+- 结论：已完成。
+- 原因：引导卡片占据过多首屏空间，对已配置用户无用。
+- 已落地产物：`InboxView.swift`（`quickSetupCollapsed` + `hasShortcutEntries`）；commit `34201e4`。
+
+### IDEA-012 移除冷启动预置样例数据
+- 状态：DONE
+- 优先级：P1
+- 来源：产品定义
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：LedgerStore
+- 描述：新安装 App 后账本应为空，不再预置样例数据（盒马鲜生/滴滴出行/Apple Services）。
+- 价值：避免用户困惑，保持账本真实干净。
+- 风险：无。
+- 结论：已完成。
+- 原因：预置数据在 MVP 早期用于演示，现已进入真实使用阶段，不再需要。
+- 已落地产物：`LedgerStore.swift`（`seedTransactions = []`）；commit `dfc95e6`。
+
+### IDEA-013 支付宝 NFC 收据商户名提取
+- 状态：DONE
+- 优先级：P1
+- 来源：真机回归发现
+- 日期：2026-04-10
+- 建议版本：v0.1.1
+- 相关模块：ReceiptParser
+- 描述：支付宝 NFC 收据格式商户名提取失败（误提为符号行），需识别公司名称格式并跳过纯符号行。
+- 价值：扩展支付宝收据覆盖面。
+- 风险：无。
+- 结论：已完成。
+- 原因：真机回归中发现的 P1 问题。
+- 已落地产物：`AutoLedgerCore/Services/ReceiptParser.swift`；commit `73efba2`。
