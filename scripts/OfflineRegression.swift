@@ -164,6 +164,26 @@ struct OfflineRegression {
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips duplicate OCR text")
 
+        // Jaccard 相似度去重：略微修改的文本应被判定为重复
+        let similarText = """
+        支付宝
+        交易成功
+        商户：离线回归咖啡
+        金额：￥12.50
+        时间：2026/03/27 09:15
+        备注：离线回归测试
+        """
+        ledger.importRecognizedText(similarText, preferredSource: .alipay)
+        reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
+
+        // TextSimilarity 单元验证
+        let sim = TextSimilarity.jaccard(rawText, similarText)
+        reporter.check(sim > 0.8, "TextSimilarity.jaccard returns > 0.8 for similar texts (got \(String(format: "%.3f", sim)))")
+
+        let unrelatedText = "美团外卖订单 金额 ¥88.00 商户 麦当劳"
+        let lowSim = TextSimilarity.jaccard(rawText, unrelatedText)
+        reporter.check(lowSim < 0.5, "TextSimilarity.jaccard returns < 0.5 for unrelated texts (got \(String(format: "%.3f", lowSim)))")
+
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
         reporter.check(reloadedTransactions.count == initialCount + 1, "SQLite store reload keeps imported transaction")

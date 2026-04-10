@@ -64,8 +64,19 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 60
         }
 
-        if isDuplicate {
-            let msg = "\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount)) 已存在，未重复记录"
+        // OCR 文本 Jaccard 相似度去重
+        let isOCRDuplicate: Bool = {
+            guard !text.isEmpty else { return false }
+            let recentTexts = ((try? store.loadDebugEvents()) ?? [])
+                .filter { $0.stage == .persisted }
+                .prefix(30)
+                .map(\.rawText)
+            return recentTexts.contains { !$0.isEmpty && TextSimilarity.jaccard(text, $0) > 0.8 }
+        }()
+
+        if isDuplicate || isOCRDuplicate {
+            let reason = isOCRDuplicate ? "OCR文本高度相似" : "同商户同金额"
+            let msg = "\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount)) 已存在（\(reason)），未重复记录"
             writeDebugEvent(stage: .duplicateSkipped, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace)
             return .result(value: msg)
         }
