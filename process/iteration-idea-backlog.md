@@ -228,3 +228,17 @@
 - 结论：已完成。
 - 原因：真机回归中发现的 P1 问题。
 - 已落地产物：`AutoLedgerCore/Services/ReceiptParser.swift`；commit `73efba2`。
+
+### IDEA-014 抖音团购券码页解析支持
+- 状态：DONE
+- 优先级：P1
+- 来源：调试记录（抖音团购买单后生成券码页面）
+- 日期：2026-04-10
+- 建议版本：v1.0.0
+- 相关模块：ReceiptSource、ReceiptParser、ShareViewController、SampleReceiptProvider
+- 描述：抖音团购券码页（待使用/券号/适用门店）OCR 识别失败，商户名误提取为抖音导航栏文本"经验 直播 团购 天津 精）"，应从"适用门店（X家）"区块提取真实门店名。
+- 价值：覆盖抖音团购场景，正确识别商户和餐饮分类。
+- 风险：无。
+- 结论：已完成。
+- 原因：用户真机调试记录中发现的 P1 问题。
+- 已落地产物：`ReceiptSource.swift`（新增 `.douyin` 来源）、`ReceiptParser.swift`（新增 `parseDouyinVoucher()`）、`ShareViewController.swift`（新增抖音 bundle ID 映射）、`SampleReceiptProvider.swift`（新增回归样例）、`OfflineRegression.swift`（新增回归断言）。

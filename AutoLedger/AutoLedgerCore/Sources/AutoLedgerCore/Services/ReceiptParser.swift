@@ -20,7 +20,11 @@ public struct ReceiptParser: Sendable {
         // 微信支付详情页：标签块→值块格式，优先提取商户全称和支付时间
         let wechatDetail = parseWeChatDetailBlock(lines: cleanedLines)
 
+        // 抖音团购券码页：从"适用门店"区块提取门店名称
+        let douyinMerchant = parseDouyinVoucher(lines: cleanedLines)
+
         let merchant = wechatDetail?.merchant
+            ?? douyinMerchant
             ?? extractMerchant(from: normalized, source: source)
             ?? fallbackMerchant
             ?? "待确认商户"
@@ -318,6 +322,61 @@ public struct ReceiptParser: Sendable {
                     return date
                 }
             }
+        }
+
+        return nil
+    }
+
+    // MARK: - 抖音团购券码页解析
+
+    /// 抖音团购券码页的典型特征：含"待使用"、"券号"和"适用门店"。
+    /// 商户名通常出现在"适用门店（X家）"之后的第一个有效门店行。
+    /// 抖音直播状态标记（如"U 直播中"）可能与门店名在同一行，需剥离。
+    private func parseDouyinVoucher(lines: [String]) -> String? {
+        let hasVoucherStatus = lines.contains(where: { $0.contains("待使用") })
+        let hasVoucherCode = lines.contains(where: { $0.contains("券号") })
+        let hasStoreList = lines.contains(where: { $0.contains("适用门店") })
+        guard hasVoucherStatus && (hasVoucherCode || hasStoreList) else { return nil }
+
+        guard let storeListIdx = lines.indices.first(where: { lines[$0].contains("适用门店") }) else {
+            return nil
+        }
+
+        // 抖音直播状态前缀可能粘连在门店名之前（如 "U 直播中麦当劳（怒江道店）"）
+        let douyinUIPrefixes = ["U 直播中", "直播中"]
+        let skipLines = ["全部门店", "交易快照", "申请退款", "再来一单", "查看详细步骤", "适用门店"]
+        // 匹配噪声行：营业时间、距离、地址、纯数字/字母组合
+        let noisePatterns = [
+            #"^营业中"#,
+            #"^最近\d"#,
+            #"^[•·]"#,
+            #"^\d+[a-zA-Z]*$"#
+        ]
+
+        for line in lines[(storeListIdx + 1)...] {
+            var candidate = line
+            for prefix in douyinUIPrefixes where candidate.hasPrefix(prefix) {
+                candidate = String(candidate.dropFirst(prefix.count))
+                    .trimmingCharacters(in: .whitespaces)
+            }
+
+            guard !candidate.isEmpty else { continue }
+            guard candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) else { continue }
+            guard !skipLines.contains(where: { candidate.contains($0) }) else { continue }
+            guard !candidate.hasPrefix("•") && !candidate.hasPrefix("·") else { continue }
+
+            var isNoise = false
+            for pattern in noisePatterns {
+                if (try? NSRegularExpression(pattern: pattern))?
+                    .firstMatch(in: candidate,
+                                range: NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)) != nil {
+                    isNoise = true
+                    break
+                }
+            }
+            if isNoise { continue }
+
+            return candidate
         }
 
         return nil
