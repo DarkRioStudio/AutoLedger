@@ -21,11 +21,20 @@ struct InboxView: View {
         store.transactions.contains { $0.note == "快捷指令自动记账" }
     }
 
+    private var upcomingSubscriptions: [Subscription] {
+        let sevenDaysLater = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
+        return store.subscriptions.filter { $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     hero
+
+                    if !upcomingSubscriptions.isEmpty {
+                        upcomingChargeCard
+                    }
 
                     if hasShortcutEntries && !isQuickSetupExpanded {
                         quickSetupCollapsed
@@ -220,6 +229,60 @@ struct InboxView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Upcoming Charge Card
+
+    private var upcomingChargeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "bell.badge.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.accentSecondary)
+
+                Text("即将扣费")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Spacer()
+
+                Text("未来 7 天")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            ForEach(upcomingSubscriptions) { sub in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(sub.merchant)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.ink)
+
+                        Text(sub.period.title)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(AppFormatters.currency(sub.amount))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+
+                        let days = Calendar.current.dateComponents([.day], from: .now, to: sub.nextChargedAt).day ?? 0
+                        Text(days <= 0 ? "今天" : days == 1 ? "明天" : "\(days) 天后")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AppTheme.card)
+        )
     }
 
     private func setupStep(number: String, title: String, detail: String) -> some View {

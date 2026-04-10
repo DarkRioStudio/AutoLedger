@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://app.darkrio326.top/autoledger/">🌐 官网</a> &nbsp;·&nbsp;
+  <a href="https://app.darkrio326.top/autoledger/"><img src="https://img.shields.io/badge/官网-app.darkrio326.top-orange?logo=safari&logoColor=white" alt="官网" /></a>
   <img src="https://img.shields.io/badge/platform-iOS_26+-blue?logo=apple" alt="Platform" />
   <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />

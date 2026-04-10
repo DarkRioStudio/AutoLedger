@@ -3,22 +3,27 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: LedgerStore
+    @State private var versionTapCount = 0
+    @State private var showDebugUnlocked = false
+    @State private var showFeedbackComposer = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    NavigationLink {
-                        DebugView()
-                    } label: {
-                        settingsRow(
-                            icon: "ladybug.fill",
-                            iconColor: AppTheme.accent,
-                            title: "调试与回归",
-                            subtitle: "查看 OCR 原文、解析结果、导入状态和最近账单"
-                        )
+                    if showDebugUnlocked {
+                        NavigationLink {
+                            DebugView()
+                        } label: {
+                            settingsRow(
+                                icon: "ladybug.fill",
+                                iconColor: AppTheme.accent,
+                                title: "调试与回归",
+                                subtitle: "查看 OCR 原文、解析结果、导入状态和最近账单"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
                     NavigationLink {
                         SourceManagementView()
@@ -55,6 +60,37 @@ struct SettingsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    NavigationLink {
+                        SubscriptionListView()
+                    } label: {
+                        settingsRow(
+                            icon: "repeat.circle.fill",
+                            iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
+                            title: "订阅管理",
+                            subtitle: "查看已识别的周期性订阅，管理扣费提醒"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    toggleCard(
+                        icon: "bell.badge.fill",
+                        iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
+                        title: "订阅扣费提醒",
+                        subtitle: "开启后，在预测扣费前 1 天发送本地通知。",
+                        key: "subscriptionReminder"
+                    )
+
+                    NavigationLink {
+                        CategoryLearningView()
+                    } label: {
+                        settingsRow(
+                            icon: "brain.head.profile",
+                            iconColor: Color(red: 0.55, green: 0.36, blue: 0.69),
+                            title: "分类学习",
+                            subtitle: "查看已学习的商户→分类偏好，支持删除"
+                        )
+                    }
+                    .buttonStyle(.plain)
 
                     toggleCard(
                         icon: "doc.on.clipboard",
@@ -64,10 +100,29 @@ struct SettingsView: View {
                         key: "autoClipboardImport"
                     )
 
+                    Button {
+                        showFeedbackComposer = true
+                    } label: {
+                        settingsRow(
+                            icon: "envelope.fill",
+                            iconColor: Color(red: 0.20, green: 0.56, blue: 0.82),
+                            title: "问题反馈",
+                            subtitle: "遇到问题？发送分级日志帮助我们快速定位"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     infoCard(
                         title: "当前版本",
-                        body: "v0.1.1 — 快捷指令一键记账、Share Extension 分享导入、LLM + 规则混合解析、相机拍照 / 剪切板导入、调试记录全链路追溯。"
+                        body: "v1.1.0-dev — 订阅识别、扣费提醒、快捷指令一键记账、Share Extension 分享导入、LLM + 规则混合解析。"
                     )
+                    .onTapGesture {
+                        versionTapCount += 1
+                        if versionTapCount >= 5 && !showDebugUnlocked {
+                            showDebugUnlocked = true
+                            versionTapCount = 0
+                        }
+                    }
 
                     infoCard(
                         title: "隐私策略",
@@ -84,6 +139,10 @@ struct SettingsView: View {
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("设置")
+            .sheet(isPresented: $showFeedbackComposer) {
+                FeedbackComposerView()
+                    .environmentObject(store)
+            }
         }
     }
 

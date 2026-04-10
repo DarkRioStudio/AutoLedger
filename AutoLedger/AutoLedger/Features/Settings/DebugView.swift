@@ -5,11 +5,24 @@ import UIKit
 struct DebugView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var copyStatusMessage: String?
+    @State private var selectedDataTab: DataTab = .transactions
+    @State private var showShareSheet = false
+    @State private var diagnosticZipURL: URL?
+
+    enum DataTab: String, CaseIterable, Identifiable {
+        case transactions = "交易"
+        case subscriptions = "订阅"
+        case corrections = "分类学习"
+        case debugEvents = "调试事件"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
+                systemInfoCard
+                containerInfoCard
 
                 if let summary = store.lastImportSummary {
                     summaryCard(summary)
@@ -32,6 +45,8 @@ struct DebugView: View {
                         debugRecordCard(record)
                     }
                 }
+
+                sqliteDataBrowser
 
                 Text("最近账单")
                     .font(.title3.weight(.bold))
@@ -57,19 +72,31 @@ struct DebugView: View {
             Text(copyStatusMessage ?? "")
         }
         .toolbar {
-            if hasExportableContent {
-                Button("拷贝记录") {
-                    UIPasteboard.general.string = exportText
-                    copyStatusMessage = "已将当前测试记录复制到剪贴板，可以直接粘贴到备忘录、Issue 或回归文档。"
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("诊断包") {
+                    exportDiagnosticBundle()
                 }
                 .foregroundStyle(AppTheme.accent)
-            }
 
-            if !store.debugRecords.isEmpty || !store.lastRecognizedText.isEmpty || store.lastParsedReceipt != nil || store.lastImportSummary != nil {
-                Button("清空") {
-                    store.clearDebugRecords()
+                if hasExportableContent {
+                    Button("拷贝记录") {
+                        UIPasteboard.general.string = exportText
+                        copyStatusMessage = "已将当前测试记录复制到剪贴板，可以直接粘贴到备忘录、Issue 或回归文档。"
+                    }
+                    .foregroundStyle(AppTheme.accent)
                 }
-                .foregroundStyle(AppTheme.accent)
+
+                if !store.debugRecords.isEmpty || !store.lastRecognizedText.isEmpty || store.lastParsedReceipt != nil || store.lastImportSummary != nil {
+                    Button("清空") {
+                        store.clearDebugRecords()
+                    }
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = diagnosticZipURL {
+                ShareSheet(activityItems: [url])
             }
         }
     }
@@ -110,6 +137,189 @@ struct DebugView: View {
                 .fill(AppTheme.card)
         )
     }
+
+    // MARK: - System Info
+
+    private var systemInfoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("系统信息")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            let device = FeedbackBundleBuilder.collectDeviceInfo()
+            infoRow("App 版本", device.appVersion)
+            infoRow("Build", device.buildNumber)
+            infoRow("iOS", device.iosVersion)
+            infoRow("设备", device.deviceModel)
+            infoRow("内存使用", formatMemory())
+            infoRow("磁盘可用", formatDiskSpace())
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    private var containerInfoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("App Group 容器")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.top.darkrio326.AutoLedger") {
+                let files = (try? FileManager.default.contentsOfDirectory(at: containerURL, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+                if files.isEmpty {
+                    Text("容器为空")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                } else {
+                    ForEach(files, id: \.absoluteString) { url in
+                        HStack(spacing: 8) {
+                            Image(systemName: url.hasDirectoryPath ? "folder" : "doc")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.mutedInk)
+                            Text(url.lastPathComponent)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(AppTheme.ink)
+                            Spacer()
+                            if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                                Text(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.mutedInk)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("无法访问 App Group 容器")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    // MARK: - SQLite Data Browser
+
+    private var sqliteDataBrowser: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("SQLite 数据浏览")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            Picker("", selection: $selectedDataTab) {
+                ForEach(DataTab.allCases) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            switch selectedDataTab {
+            case .transactions:
+                Text("\(store.transactions.count) 条交易")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                ForEach(store.transactions.prefix(20)) { tx in
+                    sqliteRow("\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.category.title) · \(AppFormatters.shortDateTime(tx.occurredAt))")
+                }
+            case .subscriptions:
+                Text("\(store.subscriptions.count) 条订阅")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                ForEach(store.subscriptions) { sub in
+                    sqliteRow("\(sub.merchant) · \(sub.period.rawValue) · \(AppFormatters.currency(sub.amount))")
+                }
+            case .corrections:
+                let sorted = store.categoryCorrections.sorted { $0.key < $1.key }
+                Text("\(sorted.count) 条分类学习")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                ForEach(sorted, id: \.key) { merchant, category in
+                    sqliteRow("\(merchant) → \(category.title)")
+                }
+            case .debugEvents:
+                Text("\(store.debugRecords.count) 条调试事件")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                ForEach(store.debugRecords.prefix(20)) { record in
+                    sqliteRow("[\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(AppFormatters.shortDateTime(record.createdAt))")
+                }
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    private func sqliteRow(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.monospaced())
+            .foregroundStyle(AppTheme.ink.opacity(0.85))
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func infoRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+            Spacer()
+            Text(value)
+                .font(.subheadline.monospaced())
+                .foregroundStyle(AppTheme.ink)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func formatMemory() -> String {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        if result == KERN_SUCCESS {
+            return ByteCountFormatter.string(fromByteCount: Int64(info.resident_size), countStyle: .memory)
+        }
+        return "N/A"
+    }
+
+    private func formatDiskSpace() -> String {
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let free = attrs[.systemFreeSize] as? Int64 {
+            return ByteCountFormatter.string(fromByteCount: free, countStyle: .file)
+        }
+        return "N/A"
+    }
+
+    private func exportDiagnosticBundle() {
+        let feedbackID = FeedbackBundleBuilder.generateFeedbackID()
+        do {
+            let bundleDir = try FeedbackBundleBuilder.buildBundle(
+                feedbackID: feedbackID,
+                level: .L3,
+                issueType: .other,
+                userDescription: "开发者一键导出诊断包",
+                expectedResult: "",
+                actualResult: "",
+                reproducible: "N/A",
+                entryPoint: "debug_view",
+                debugRecords: store.debugRecords,
+                lastOCRText: store.lastRecognizedText,
+                lastReceipt: store.lastParsedReceipt
+            )
+            let zipURL = try FeedbackBundleBuilder.zipBundle(at: bundleDir, feedbackID: feedbackID, level: .L3)
+            diagnosticZipURL = zipURL
+            showShareSheet = true
+        } catch {
+            copyStatusMessage = "导出失败：\(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Existing Cards
 
     private func summaryCard(_ summary: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -449,4 +659,14 @@ struct DebugView: View {
         DebugView()
             .environmentObject(LedgerStore())
     }
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
