@@ -1,8 +1,13 @@
 import AutoLedgerCore
+import PhotosUI
 import SwiftUI
 
 struct SubscriptionListView: View {
     @EnvironmentObject private var store: LedgerStore
+
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isImporting = false
+    private let ocrService = OCRService()
 
     var body: some View {
         ScrollView {
@@ -164,12 +169,18 @@ struct SubscriptionListView: View {
                 .foregroundStyle(AppTheme.mutedInk)
                 .multilineTextAlignment(.center)
 
-            Button {
-                store.detectAndUpsertSubscriptions()
-            } label: {
+            PhotosPicker(
+                selection: $selectedPhoto,
+                matching: .images,
+                preferredItemEncoding: .automatic
+            ) {
                 HStack {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("扫描历史账单")
+                    if isImporting {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "envelope.open.fill")
+                    }
+                    Text(isImporting ? "识别中..." : "上传续期邮件截图")
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -177,6 +188,10 @@ struct SubscriptionListView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.accent)
+            .task(id: selectedPhoto) {
+                guard let item = selectedPhoto else { return }
+                await importPickedPhoto(item)
+            }
         }
         .padding(24)
         .background(
@@ -192,6 +207,21 @@ struct SubscriptionListView: View {
         if days <= 0 { return "今天" }
         if days == 1 { return "明天" }
         return "\(days) 天后"
+    }
+
+    private func importPickedPhoto(_ item: PhotosPickerItem) async {
+        isImporting = true
+        defer {
+            isImporting = false
+            selectedPhoto = nil
+        }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else { return }
+            let text = try ocrService.recognizeText(from: data)
+            store.importRecognizedText(text, notePrefix: "订阅续期邮件截图")
+        } catch {
+            store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
+        }
     }
 }
 
