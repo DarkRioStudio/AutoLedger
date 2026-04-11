@@ -81,6 +81,47 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "地铁：ExampleStationA → ExampleStationB · CN¥2.70"
         ),
         SampleReceipt(
+            title: "互联互通城市卡CN¥嵌入格式截图",
+            source: .manual,
+            rawText: """
+            14:47
+            63
+            现在
+            支
+            消费成功通知
+            你的储值消费成功，查看详情>
+            天津互联互通城市卡
+            地铁：CN¥7.00
+            ExampleAirport - ExampleEastStation
+            你的新余额为 CN¥60.75。
+            现在
+            通知中心
+            X
+            周六2
+            11
+            乘坐列车G876次杭州东..•30分钟后
+            交通严重拥堵。经德胜快速路前往
+            杭州东站需要19分钟。
+            3
+            小红书
+            PLUS抽签购权益过期提醒
+            1分钟前
+            您有一份原价飞飞天茅台的抽签权益
+            即将过期，请尽快查看，若已参与
+            请忽略>
+            收获一个新的赞
+            【陈槿琪】点赞了你的弹幕，快来看
+            看吧>
+            1分钟前
+            小鸡毛烫不烫啊
+            160
+            下雨
+            20° ＄15°
+            可
+            """,
+            preview: "地铁：ExampleAirport → ExampleEastStation · CN¥7.00"
+        ),
+        SampleReceipt(
             title: "支付宝碰一下支付截图（7-11）",
             source: .alipay,
             rawText: """

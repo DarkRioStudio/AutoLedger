@@ -253,9 +253,10 @@ public struct ReceiptParser: Sendable {
         }
 
         // ── 地铁 / 公交储值卡格式 ──
-        // 支持两种 OCR 版式：
+        // 支持三种 OCR 版式：
         //   (A) 独立行 "地铁：" + 金额行 + 站点行（如 "ExampleStationA ExampleStationB"）
         //   (B) 同一行 "地铁：ExampleStationA ExampleStationB"
+        //   (C) 同一行 "地铁：CN¥7.00"（金额嵌入冒号后）+ 下一行站点（如 "ExampleAirport - ExampleEastStation"）
         let transitKeywords: Set<String> = ["地铁", "公交"]
         for (idx, line) in lines.enumerated() {
             // 用 rangeOfCharacter 找第一个冒号，避免多次分割时字符类型不一致
@@ -264,22 +265,25 @@ public struct ReceiptParser: Sendable {
             guard transitKeywords.contains(label) else { continue }
             let inlinePart = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let stationText: String
-            if !inlinePart.isEmpty {
+            if !inlinePart.isEmpty && amountCandidate(in: inlinePart) == nil {
                 // (B) 同一行：地铁：ExampleStationA ExampleStationB
                 stationText = inlinePart
             } else {
-                // (A) 独立 "地铁：" 行 — 向后查找站点行（跳过金额行）
+                // (A)/(C) 独立 "地铁：" 行 或 "地铁：CN¥X.XX" — 向后查找站点行（跳过金额行）
                 guard let stationLine = lines.dropFirst(idx + 1).first(where: { sl in
                     !sl.isEmpty && amountCandidate(in: sl) == nil
                 }) else { continue }
                 stationText = stationLine
             }
-            // 将 "ExampleStationA ExampleStationB" 规范化为 "ExampleStationA → ExampleStationB"
+            // 将站名文本规范化为 "站A → 站B"
             let route: String
             if stationText.contains("→") || stationText.contains("->") {
                 route = stationText
             } else {
-                let stations = stationText.components(separatedBy: " ").filter { !$0.isEmpty }
+                let hyphenSet = CharacterSet(charactersIn: "-")
+                let stations = stationText.components(separatedBy: " ")
+                    .map { $0.trimmingCharacters(in: hyphenSet) }
+                    .filter { !$0.isEmpty }
                 route = stations.count >= 2 ? stations.joined(separator: " → ") : stationText
             }
             return "\(label)：\(route)"
