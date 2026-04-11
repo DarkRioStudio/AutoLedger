@@ -69,6 +69,23 @@ def redact(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# GitHub notification filter
+# ---------------------------------------------------------------------------
+
+
+def is_github_notification(subject: str) -> bool:
+    """Return True if the subject is a GitHub repository notification email.
+
+    GitHub (and Copilot) notification emails carry a ``[owner/repo]`` label at
+    the start of the subject, e.g. ``[darkrio326/AutoLedgerRio] PR opened``.
+    These must be skipped so the bot does not create garbage issues from them.
+    """
+    if not GITHUB_REPOSITORY:
+        return False
+    return f"[{GITHUB_REPOSITORY}]" in subject
+
+
+# ---------------------------------------------------------------------------
 # Subject parsing
 # ---------------------------------------------------------------------------
 
@@ -447,6 +464,15 @@ def process_email(mail: dict[str, Any]) -> bool:
     zip_bytes = mail["zip_bytes"]
 
     LOG.info("Processing: %s", subject)
+
+    # 0. Skip GitHub repository notification emails (e.g. from Copilot).
+    #    These carry a [owner/repo] label in the subject and must not be
+    #    turned into feedback issues.
+    if is_github_notification(subject):
+        LOG.info("Skipping GitHub notification email: %s", subject)
+        if not DRY_RUN:
+            mark_as_read(mail["uid"])
+        return False
 
     # 1. Parse subject
     subj = parse_subject(subject)
