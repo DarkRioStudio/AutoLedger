@@ -148,5 +148,44 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "Demo Burger (Example Branch)· ¥26.90"
         ),
+        SampleReceipt(
+            title: "滴滴出行结束订单截图",
+            source: .manual,
+            rawText: """
+            09:11
+            ＜ 行程已给束
+            ：！！⑦9
+            您对我的服务满意吗？
+            Example Driver EX-0001 5.0分
+            匿名
+            发红包
+            很糟糕
+            一般般
+            太赞了
+            ¥19.60 优惠-¥490
+            费用明细〉
+            终
+            河东区
+            京津塘高速
+            公 收藏路线
+            特惠快车 全程12.57公里 12分钟
+            里桯值 +12.57
+            • 08:52 Example Start School
+            • 09:05 Example Airport Pickup（步行导航＞
+            匿名反馈墻
+            ；494.3万+人参与中
+            司机是否有打电话玩手机等行为？
+            是
+            否
+            ：
+            曰
+            开发票
+            联系客服
+            呼叫司机
+            呼叫返程
+            再来一单
+            """,
+            preview: "滴滴出行 · ¥19.60"
+        ),
     ]
 }
