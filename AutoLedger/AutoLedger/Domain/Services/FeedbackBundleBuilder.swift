@@ -44,6 +44,7 @@ enum FeedbackBundleBuilder {
         reproducible: String,
         entryPoint: String,
         debugRecords: [ImportDebugRecord],
+        transactions: [Transaction] = [],
         lastOCRText: String,
         lastReceipt: ImportedReceipt?,
         includeRawImage: Bool = false,
@@ -93,7 +94,7 @@ enum FeedbackBundleBuilder {
             entryPoint: entryPoint, nowLocal: nowLocal, nowISO: nowISO,
             userDescription: userDescription, expectedResult: expectedResult,
             actualResult: actualResult, reproducible: reproducible,
-            debugRecords: debugRecords, lastOCRText: lastOCRText, lastReceipt: lastReceipt,
+            debugRecords: debugRecords, transactions: transactions, lastOCRText: lastOCRText, lastReceipt: lastReceipt,
             includeRawImage: includeRawImage
         )
         let issueBundleData = try JSONSerialization.data(withJSONObject: issueBundle, options: [.prettyPrinted, .sortedKeys])
@@ -101,7 +102,7 @@ enum FeedbackBundleBuilder {
 
         // --- L2+ trace.log ---
         if level.containsTrace {
-            let trace = buildTraceLog(debugRecords: debugRecords)
+            let trace = buildTraceLog(debugRecords: debugRecords, transactions: transactions)
             try trace.write(to: bundleDir.appendingPathComponent("trace.log"), atomically: true, encoding: .utf8)
         }
 
@@ -389,7 +390,7 @@ enum FeedbackBundleBuilder {
         device: DeviceInfo, entryPoint: String, nowLocal: String, nowISO: String,
         userDescription: String, expectedResult: String,
         actualResult: String, reproducible: String,
-        debugRecords: [ImportDebugRecord], lastOCRText: String, lastReceipt: ImportedReceipt?,
+        debugRecords: [ImportDebugRecord], transactions: [Transaction], lastOCRText: String, lastReceipt: ImportedReceipt?,
         includeRawImage: Bool
     ) -> [String: Any] {
         var json: [String: Any] = [
@@ -439,8 +440,13 @@ enum FeedbackBundleBuilder {
 
             if level >= .L2 {
                 debug["ocr_text_redacted"] = redactText(latest.rawText)
-                debug["trace"] = debugRecords.prefix(10).map { r in
-                    "\(r.stage.rawValue)|\(r.source.rawValue)|\(r.imageSource.rawValue)|\(AppFormatters.exportDateTime(r.createdAt))"
+                debug["trace"] = debugRecords.prefix(10).map { r -> String in
+                    var entry = "\(r.stage.rawValue)|\(r.source.rawValue)|\(r.imageSource.rawValue)|\(AppFormatters.exportDateTime(r.createdAt))"
+                    if let txID = r.transactionID,
+                       let tx = transactions.first(where: { $0.id == txID }) {
+                        entry += "|user_tx=\(tx.merchant):\(String(format: "%.2f", tx.amount)):\(tx.category.rawValue)"
+                    }
+                    return entry
                 }
             }
 
@@ -469,7 +475,7 @@ enum FeedbackBundleBuilder {
         return json
     }
 
-    private static func buildTraceLog(debugRecords: [ImportDebugRecord]) -> String {
+    private static func buildTraceLog(debugRecords: [ImportDebugRecord], transactions: [Transaction]) -> String {
         var lines = ["AutoLedger Import Trace Log", "Generated: \(AppFormatters.exportDateTime(.now))", ""]
         for record in debugRecords.prefix(20) {
             var entry = "[\(AppFormatters.exportDateTime(record.createdAt))] "
@@ -485,6 +491,10 @@ enum FeedbackBundleBuilder {
             }
             if let response = record.llmResponse {
                 lines.append("  llm_response=\(response.prefix(500))")
+            }
+            if let txID = record.transactionID,
+               let tx = transactions.first(where: { $0.id == txID }) {
+                lines.append("  user_modified_transaction: merchant=\(tx.merchant) amount=\(String(format: "%.2f", tx.amount)) category=\(tx.category.rawValue) date=\(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " note=\(tx.note)")")
             }
             lines.append("")
         }

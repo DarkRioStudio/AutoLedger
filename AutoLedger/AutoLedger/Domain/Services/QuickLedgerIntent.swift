@@ -98,7 +98,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         }
 
         let msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
-        writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace)
+        writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace, transactionID: transaction.id)
         return .result(value: msg)
     }
 
@@ -108,7 +108,8 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         rawText: String,
         receipt: ImportedReceipt? = nil,
         summary: String,
-        llmTrace: SmartReceiptParser.LLMTrace? = nil
+        llmTrace: SmartReceiptParser.LLMTrace? = nil,
+        transactionID: UUID? = nil
     ) {
         let record = ImportDebugRecord(
             stage: stage,
@@ -118,7 +119,8 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             parsedReceipt: receipt,
             summary: summary,
             llmPrompt: llmTrace?.prompt,
-            llmResponse: llmTrace?.response
+            llmResponse: llmTrace?.response,
+            transactionID: transactionID
         )
         guard let store = try? SQLiteTransactionStore() else { return }
         try? store.saveDebugEvent(record)

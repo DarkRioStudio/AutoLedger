@@ -56,6 +56,8 @@ public struct ImportDebugRecord: Identifiable, Sendable {
     public let llmPrompt: String?
     public let llmResponse: String?
     public var parsedReceipt: ImportedReceipt? = nil
+    /// 对应入账的交易 ID（仅 stage == .persisted 时有值），用于导出时查询用户修改后的账单数据
+    public let transactionID: UUID?
 
     /// 是否经过 LLM 解析
     public var usedLLM: Bool { llmPrompt != nil }
@@ -70,7 +72,8 @@ public struct ImportDebugRecord: Identifiable, Sendable {
         parsedReceipt: ImportedReceipt? = nil,
         summary: String,
         llmPrompt: String? = nil,
-        llmResponse: String? = nil
+        llmResponse: String? = nil,
+        transactionID: UUID? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -84,5 +87,6 @@ public struct ImportDebugRecord: Identifiable, Sendable {
         self.summary = summary
         self.llmPrompt = llmPrompt
         self.llmResponse = llmResponse
+        self.transactionID = transactionID
     }
 }
