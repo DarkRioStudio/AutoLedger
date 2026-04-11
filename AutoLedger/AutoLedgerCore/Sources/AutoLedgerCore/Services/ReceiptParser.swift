@@ -23,8 +23,12 @@ public struct ReceiptParser: Sendable {
         // 抖音团购券码页：从"适用门店"区块提取门店名称
         let douyinMerchant = parseDouyinVoucher(lines: cleanedLines)
 
+        // 滴滴出行结束订单页：含"行程已结束"特征，直接返回"滴滴出行"
+        let didiMerchant = parseDidiTrip(lines: cleanedLines)
+
         let merchant = wechatDetail?.merchant
             ?? douyinMerchant
+            ?? didiMerchant
             ?? extractMerchant(from: normalized, source: source)
             ?? fallbackMerchant
             ?? "待确认商户"
@@ -380,6 +384,21 @@ public struct ReceiptParser: Sendable {
         }
 
         return nil
+    }
+
+    // MARK: - 滴滴出行结束订单页解析
+
+    /// 滴滴出行结束订单页识别：
+    /// 特征：含"行程已"（行程已结束，OCR 可能误读为"行程已给束"等）
+    /// 且含滴滴车型关键词（快车、专车等）或"呼叫返程"。
+    private func parseDidiTrip(lines: [String]) -> String? {
+        let hasTripEnd = lines.contains(where: { $0.contains("行程已") })
+        let didiSignals = ["快车", "专车", "优享", "豪华车", "顺风车", "两轮车", "呼叫返程"]
+        let hasSignal = lines.contains(where: { line in
+            didiSignals.contains(where: { line.contains($0) })
+        })
+        guard hasTripEnd && hasSignal else { return nil }
+        return "滴滴出行"
     }
 
     // MARK: - 微信支付详情页 label-block → value-block 解析

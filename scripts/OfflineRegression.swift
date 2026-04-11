@@ -57,7 +57,8 @@ struct OfflineRegression {
             "支付宝出行截图": "滴滴出行",
             "App Store 订阅截图": "Apple Services",
             "天津地铁储值卡截图": "地铁：内江路 → 东丽文体中心",
-            "抖音团购麦当劳截图": "麦当劳（怒江道店）"
+            "抖音团购麦当劳截图": "麦当劳（怒江道店）",
+            "滴滴出行结束订单截图": "滴滴出行"
         ]
 
         let expectedAmounts: [String: Double] = [
@@ -65,7 +66,8 @@ struct OfflineRegression {
             "支付宝出行截图": 23.80,
             "App Store 订阅截图": 28.00,
             "天津地铁储值卡截图": 2.70,
-            "抖音团购麦当劳截图": 26.90
+            "抖音团购麦当劳截图": 26.90,
+            "滴滴出行结束订单截图": 19.60
         ]
 
         let expectedCategories: [String: TransactionCategory] = [
@@ -73,7 +75,8 @@ struct OfflineRegression {
             "支付宝出行截图": .transport,
             "App Store 订阅截图": .digital,
             "天津地铁储值卡截图": .transport,
-            "抖音团购麦当劳截图": .dining
+            "抖音团购麦当劳截图": .dining,
+            "滴滴出行结束订单截图": .transport
         ]
 
         for sample in samples {
