@@ -15,11 +15,11 @@ struct FeedbackComposerView: View {
     @State private var extraNote = ""
     @State private var includeScreenshot = false
 
-    @State private var showPreview = false
     @State private var showL3Confirmation = false
     @State private var previewBundle: PreviewBundle?
 
-    struct PreviewBundle {
+    struct PreviewBundle: Identifiable {
+        let id = UUID()
         let feedbackID: String
         let subject: String
         let body: String
@@ -52,13 +52,11 @@ struct FeedbackComposerView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
             }
-            .sheet(isPresented: $showPreview) {
-                if let bundle = previewBundle {
-                    FeedbackPreviewView(bundle: bundle) {
-                        sendFeedback(bundle: bundle)
-                    }
-                    .environmentObject(store)
+            .sheet(item: $previewBundle) { bundle in
+                FeedbackPreviewView(bundle: bundle) {
+                    sendFeedback(bundle: bundle)
                 }
+                .environmentObject(store)
             }
             .alert("发送结果", isPresented: Binding(
                 get: { feedbackService.sendResult != nil },
@@ -291,14 +289,13 @@ struct FeedbackComposerView: View {
                 feedbackID: feedbackID, subject: subject, body: body,
                 bundleDir: bundleDir, zipURL: zipURL, zipData: zipData
             )
-            showPreview = true
         } catch {
             feedbackService.sendResult = .failed("无法构建反馈包：\(error.localizedDescription)")
         }
     }
 
     private func sendFeedback(bundle: PreviewBundle) {
-        showPreview = false
+        previewBundle = nil
         let service = FeedbackService.shared
         if service.canSendMail {
             guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
