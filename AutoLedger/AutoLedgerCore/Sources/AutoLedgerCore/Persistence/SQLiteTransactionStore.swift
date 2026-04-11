@@ -190,7 +190,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             parsed_amount REAL,
             summary TEXT NOT NULL DEFAULT '',
             llm_prompt TEXT,
-            llm_response TEXT
+            llm_response TEXT,
+            transaction_id TEXT
         );
         """
 
@@ -200,7 +201,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         // 安全迁移：为旧表添加新列（仅在列不存在时执行）
         let existingColumns = Self.columnNames(db: db, table: "debug_events")
-        for col in ["llm_prompt", "llm_response", "image_source"] {
+        for col in ["llm_prompt", "llm_response", "image_source", "transaction_id"] {
             if !existingColumns.contains(col) {
                 sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN \(col) TEXT;", nil, nil, nil)
             }
@@ -256,8 +257,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func saveDebugEvent(_ record: ImportDebugRecord) throws {
         let sql = """
-        INSERT INTO debug_events (id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO debug_events (id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -293,6 +294,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sqlite3_bind_null(statement, 10)
         }
         sqlite3_bind_text(statement, 11, record.imageSource.rawValue, -1, sqliteTransient)
+        if let txID = record.transactionID {
+            sqlite3_bind_text(statement, 12, txID.uuidString, -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, 12)
+        }
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -301,7 +307,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadDebugEvents() throws -> [ImportDebugRecord] {
         let sql = """
-        SELECT id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source
+        SELECT id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id
         FROM debug_events
         ORDER BY created_at DESC;
         """
@@ -352,6 +358,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 return ImageSource(rawValue: String(cString: cStr)) ?? .unknown
             }()
 
+            let transactionID: UUID? = {
+                guard sqlite3_column_type(statement, 11) != SQLITE_NULL,
+                      let cStr = sqlite3_column_text(statement, 11) else { return nil }
+                return UUID(uuidString: String(cString: cStr))
+            }()
+
             var receipt: ImportedReceipt? = nil
             if let m = parsedMerchant, let a = parsedAmount {
                 receipt = ImportedReceipt(
@@ -377,7 +389,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     parsedReceipt: receipt,
                     summary: summary,
                     llmPrompt: llmPrompt,
-                    llmResponse: llmResponse
+                    llmResponse: llmResponse,
+                    transactionID: transactionID
                 )
             )
         }
