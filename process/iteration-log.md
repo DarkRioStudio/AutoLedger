@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-04-10
+更新日期：2026-04-11
 
 ## 记录规则
 
@@ -43,6 +43,88 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-018 地铁规则修复：CN¥ 嵌入格式 + 空格连字符站名分隔符
+- 日期：2026-04-11
+- 所属版本：v1.1.0
+- 所属阶段：Phase 4
+- 类型：Bugfix / 规则
+- 目标：修复真机调试发现的地铁储值卡通知解析错误——"地铁：CN¥7.00"（金额嵌入冒号后）被错误当作站点文本，导致商户输出为 "地铁：CN¥7.00"、分类误判为"其他"；同时修复 "ExampleAirport - ExampleEastStation" 格式（空格+连字符分隔）未能正确规范化为 "ExampleAirport → ExampleEastStation" 的问题。
+- 触发调试记录（原始，未修正，完整内容）：
+  ```
+  AutoLedger 单条测试记录
+  导出时间：2026-04-11 14:50:30
+  记录时间：2026-04-11 14:47:11
+  阶段：已入账
+  来源：手动录入
+  图片来源：快捷指令
+  解析模式：纯规则解析
+  结论：已记好：地铁：CN¥7.00 ¥7.00
+  解析结果：
+  - 商户：地铁：CN¥7.00
+  - 金额：¥7.00
+  - 分类：其他
+  - 时间：2026-04-11 14:47:11
+  - 摘要：已记好：地铁：CN¥7.00 ¥7.00
+  OCR 文本：
+  14:47
+  63
+  现在
+  支
+  消费成功通知
+  你的储值消费成功，查看详情>
+  天津互联互通城市卡
+  地铁：CN¥7.00
+  ExampleAirport - ExampleEastStation
+  你的新余额为 CN¥60.75。
+  现在
+  通知中心
+  X
+  周六2
+  11
+  乘坐列车G876次杭州东..•30分钟后
+  交通严重拥堵。经德胜快速路前往
+  杭州东站需要19分钟。
+  3
+  小红书
+  PLUS抽签购权益过期提醒
+  1分钟前
+  您有一份原价飞飞天茅台的抽签权益
+  即将过期，请尽快查看，若已参与
+  请忽略>
+  收获一个新的赞
+  【陈槿琪】点赞了你的弹幕，快来看
+  看吧>
+  1分钟前
+  小鸡毛烫不烫啊
+  160
+  下雨
+  20° ＄15°
+  可
+  ```
+- 对应保存账单条目数据（与调试记录生成数据不一致，说明用户已手动修正，可作为预期结果参考）：
+  - 商户：地铁：ExampleAirport → ExampleEastStation
+  - 金额：¥7.00
+  - 分类：出行
+  - 时间：2026-04-11 14:47:11
+  - 来源：手动录入
+- 改动范围：
+  - 修改 `AutoLedgerCore/Services/ReceiptParser.swift`：地铁/公交储值卡解析块新增版式 (C)——新增私有方法 `isStandaloneAmount(_:)` 以锚定正则判断整行是否为独立金额（`CN¥`/`¥`/`￥`/`CNY`/`RMB` 前缀 + 数字，避免含数字的站名如"T2航站楼"、"3号线"误判）；当冒号后内联部分是独立金额时（`isStandaloneAmount` 返回 true）回退到 (A)/(C) 路径，向后查找第一个非金额行作为站点行；站名规范化时对各部分执行 `.trimmingCharacters(in: hyphenSet)` 以去掉空格连字符分隔符带来的前导"-"。
+  - 修改 `AutoLedgerCore/Services/SampleReceiptProvider.swift`：新增样例 "互联互通城市卡CN¥嵌入格式截图"，使用本次调试 OCR 原文（含通知栏噪声）。
+  - 修改 `scripts/OfflineRegression.swift`：为新样例补充 expectedMerchants / expectedAmounts / expectedCategories 断言。
+- 未改动范围：数据层 schema、UI 层、订阅识别、去重逻辑均无改动。
+- 完成内容：
+  - 版式 (C)（`地铁：CN¥X.XX` 单行）现可正确识别，商户输出 "地铁：ExampleAirport → ExampleEastStation"。
+  - 版式 (A)（独立 `地铁：` 行 + 金额行 + 站点行）回归通过，输出仍为 "地铁：ExampleStationA → ExampleStationB"。
+  - 版式 (B)（`地铁：站A 站B` 同行）回归通过，输出不变。
+  - 站名含空格+连字符分隔符（如 " -ExampleEastStation"）现可正确规范化，前导"-"被去除。
+  - 离线回归（Swift 逻辑单测）5 项全 PASS。
+- 未完成内容：完整离线回归脚本（`run_offline_regression.sh`）需在 macOS/Xcode 环境执行；真机验证待补充。
+- 测试情况：手动 `swiftc` 单测验证 5 项 PASS（版式 A/B/C、amountCandidate 对 CN¥ 的识别、站名连字符清洗）。
+- 风险与注意事项：`.trimmingCharacters(in: "-")` 仅去除站名组件两端的"-"，不影响站名中间的连字符（如"CBD-East"类名称）；若真实场景出现站名本身以"-"开头，可进一步细化为仅去前导"-"。
+- 回滚方式：还原 `ReceiptParser.swift` 中地铁块的 `if !inlinePart.isEmpty` 判断与 `map` 清洗步骤，删除 `SampleReceiptProvider.swift` 中的新样例，还原 `OfflineRegression.swift` 中对应断言。
+- 结论：修复完成，地铁解析规则覆盖三种常见 OCR 版式。
+- 下一步建议：真机以本次 OCR 文本重新触发快捷指令，验证商户 = "地铁：ExampleAirport → ExampleEastStation"、分类 = "出行"。
 
 ### ITER-017 去重增强 + 回归基线 + 发布门禁
 - 日期：2026-04-10

@@ -57,6 +57,7 @@ struct OfflineRegression {
             "支付宝出行截图": "滴滴出行",
             "App Store 订阅截图": "Apple Services",
             "天津地铁储值卡截图": "地铁：ExampleStationA → ExampleStationB",
+            "互联互通城市卡CN¥嵌入格式截图": "地铁：ExampleAirport → ExampleEastStation",
             "抖音团购麦当劳截图": "Demo Burger (Example Branch)",
             "滴滴出行结束订单截图": "滴滴出行"
         ]
@@ -66,6 +67,7 @@ struct OfflineRegression {
             "支付宝出行截图": 23.80,
             "App Store 订阅截图": 28.00,
             "天津地铁储值卡截图": 2.70,
+            "互联互通城市卡CN¥嵌入格式截图": 7.00,
             "抖音团购麦当劳截图": 26.90,
             "滴滴出行结束订单截图": 19.60
         ]
@@ -75,6 +77,7 @@ struct OfflineRegression {
             "支付宝出行截图": .transport,
             "App Store 订阅截图": .digital,
             "天津地铁储值卡截图": .transport,
+            "互联互通城市卡CN¥嵌入格式截图": .transport,
             "抖音团购麦当劳截图": .dining,
             "滴滴出行结束订单截图": .transport
         ]
