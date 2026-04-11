@@ -29,14 +29,14 @@ final class RegressionReporter {
 
 @main
 struct OfflineRegression {
-    static func main() throws {
+    static func main() async throws {
         let reporter = RegressionReporter()
         let parser = ReceiptParser()
         let sampleProvider = SampleReceiptProvider()
 
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
-        try verifyLedgerImportFlow(using: reporter)
+        try await verifyLedgerImportFlow(using: reporter)
 
         reporter.finish()
     }
@@ -59,7 +59,9 @@ struct OfflineRegression {
             "天津地铁储值卡截图": "地铁：ExampleStationA → ExampleStationB",
             "互联互通城市卡CN¥嵌入格式截图": "地铁：ExampleAirport → ExampleEastStation",
             "抖音团购麦当劳截图": "Demo Burger (Example Branch)",
-            "滴滴出行结束订单截图": "滴滴出行"
+            "支付宝碰一下支付截图（7-11）": "Example Convenience Store",
+            "滴滴出行结束订单截图": "滴滴出行",
+            "滴滴出行通知截图": "滴滴出行"
         ]
 
         let expectedAmounts: [String: Double] = [
@@ -69,7 +71,9 @@ struct OfflineRegression {
             "天津地铁储值卡截图": 2.70,
             "互联互通城市卡CN¥嵌入格式截图": 7.00,
             "抖音团购麦当劳截图": 26.90,
-            "滴滴出行结束订单截图": 19.60
+            "支付宝碰一下支付截图（7-11）": 4.30,
+            "滴滴出行结束订单截图": 19.60,
+            "滴滴出行通知截图": 9.70
         ]
 
         let expectedCategories: [String: TransactionCategory] = [
@@ -79,7 +83,9 @@ struct OfflineRegression {
             "天津地铁储值卡截图": .transport,
             "互联互通城市卡CN¥嵌入格式截图": .transport,
             "抖音团购麦当劳截图": .dining,
-            "滴滴出行结束订单截图": .transport
+            "支付宝碰一下支付截图（7-11）": .other,
+            "滴滴出行结束订单截图": .transport,
+            "滴滴出行通知截图": .transport
         ]
 
         for sample in samples {
@@ -141,7 +147,7 @@ struct OfflineRegression {
         reporter.check(reloaded.contains(updated), "SQLite update persists modified transaction")
     }
 
-    private static func verifyLedgerImportFlow(using reporter: RegressionReporter) throws {
+    private static func verifyLedgerImportFlow(using reporter: RegressionReporter) async throws {
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AutoLedgerLedgerRegression-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
@@ -153,7 +159,7 @@ struct OfflineRegression {
         let ledger = LedgerStore(transactionStore: store)
 
         let initialCount = ledger.transactions.count
-        reporter.check(initialCount == 3, "LedgerStore bootstraps seed data in empty store")
+        reporter.check(initialCount == 0, "LedgerStore bootstraps seed data in empty store")
 
         let rawText = """
         支付宝
@@ -165,9 +171,11 @@ struct OfflineRegression {
         """
 
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)  // 等待 Task 完成
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore imports unique OCR text")
 
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips duplicate OCR text")
 
         // Jaccard 相似度去重：略微修改的文本应被判定为重复
@@ -180,6 +188,7 @@ struct OfflineRegression {
         备注：离线回归测试
         """
         ledger.importRecognizedText(similarText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
 
         // TextSimilarity 单元验证

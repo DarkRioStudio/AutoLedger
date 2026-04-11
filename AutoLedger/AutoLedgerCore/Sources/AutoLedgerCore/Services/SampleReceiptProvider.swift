@@ -228,5 +228,33 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "滴滴出行 · ¥19.60"
         ),
+        SampleReceipt(
+            title: "滴滴出行通知截图",
+            source: .manual,
+            rawText: """
+            中国联通
+            39
+            4月11日周六，丙午年二月廿四
+            SAMPLE-NOTIFICATION-ID
+            滴滴
+            已支付9.70元
+            感谢使用滴滴出行，低碳出行每一天
+            通知中心
+            请确认
+            您购买的商品将在24小时后确
+            认收货，请确认是否已收到，如
+            有问题可延长收货或联系商家，
+            查看>>
+            UnionPay
+            半付一下： 显 不必何从 怀示，
+            还可抽最高620元大奖！
+            现在
+            >14°
+            微雨
+            个18° 14°
+            ◎
+            """,
+            preview: "滴滴出行 · ¥9.70"
+        ),
     ]
 }

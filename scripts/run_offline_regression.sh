@@ -12,15 +12,48 @@ CORE="$ROOT/AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore"
 # Also depends on SmartReceiptParser (Foundation Models) — stub it out for offline use.
 PREP_DIR="$(mktemp -d /tmp/autoledger-prep.XXXXXX)"
 trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
-sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
+sed '/import AutoLedgerCore/d; /import UIKit/d; /import UserNotifications/d; /typealias Subscription/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
 struct SmartReceiptParser {
     struct LLMTrace { let prompt: String; let response: String }
-    func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) async -> (receipt: ImportedReceipt, llmTrace: LLMTrace?)? { return nil }
+    private let parser = ReceiptParser()
+    func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) async -> (receipt: ImportedReceipt, llmTrace: LLMTrace?)? {
+        guard let receipt = parser.parse(text: text, source: source) else { return nil }
+        return (receipt, nil)
+    }
 }
 STUB
+
+cat > "$PREP_DIR/IOSStubs.swift" << 'IOSTUB'
+import Foundation
+
+// --- UIKit stubs ---
+enum UIPasteboard {
+    static let general = UIPasteboardInstance()
+}
+struct UIPasteboardInstance {
+    var changeCount: Int { 0 }
+    var hasImages: Bool { false }
+    var image: UIPasteboardImage? { nil }
+}
+struct UIPasteboardImage {
+    func pngData() -> Data? { nil }
+}
+
+// --- OCRService stub (uses Vision, iOS only) ---
+struct OCRService: Sendable {
+    func recognizeText(from data: Data) throws -> String { "" }
+}
+
+// --- NotificationService stub (uses UserNotifications, iOS only) ---
+final class NotificationService: Sendable {
+    static let shared = NotificationService()
+    func requestPermissionIfNeeded() {}
+    func scheduleUpcomingChargeReminders(for subscriptions: [Subscription]) {}
+}
+IOSTUB
 
 swiftc \
   -o "$TMP_BIN" \
@@ -32,13 +65,17 @@ swiftc \
   "$CORE/Models/SampleReceipt.swift" \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/Transaction.swift" \
+  "$CORE/Models/Subscription.swift" \
   "$CORE/Services/ReceiptParser.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
+  "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \
   "$CORE/Persistence/SQLiteTransactionStore.swift" \
   "$PREP_DIR/LedgerStore.swift" \
   "$PREP_DIR/SmartReceiptParserStub.swift" \
+  "$PREP_DIR/IOSStubs.swift" \
   "$CORE/Utils/AppFormatters.swift" \
+  "$CORE/Utils/TextSimilarity.swift" \
   "$ROOT/scripts/OfflineRegression.swift"
 
 "$TMP_BIN"

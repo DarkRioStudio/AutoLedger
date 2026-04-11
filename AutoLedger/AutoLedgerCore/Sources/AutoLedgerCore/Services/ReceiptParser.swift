@@ -299,12 +299,32 @@ public struct ReceiptParser: Sendable {
             return "\(label)：\(route)"
         }
 
-        // 跳过纯时间、纯数字、极短行、平台 UI 文案
+        // ── 通知类收据："感谢使用XXX" 通常包含真实服务/商户名 ──
+        let thankYouPattern = #"感谢使用(.{2,10}?)[，,。.！!\s]"#
+        if let regex = try? NSRegularExpression(pattern: thankYouPattern) {
+            let nsText = text as NSString
+            let range = NSRange(location: 0, length: nsText.length)
+            if let match = regex.firstMatch(in: text, range: range),
+               let captureRange = Range(match.range(at: 1), in: text) {
+                return String(text[captureRange])
+            }
+        }
+
+        // ── 兜底：取第一个有意义的行 ──
+        // 状态栏运营商名称，不是商户名
+        let carrierNames: Set<String> = [
+            "中国联通", "中国移动", "中国电信",
+            "China Unicom", "China Mobile", "China Telecom", "CMCC"
+        ]
         let skipContainsFallback = ["成功", "金额", "时间", "Total", "全部账单",
-                                     "可在支持的商户", "扫码退款", "收单机构", "账单详情"]
+                                     "可在支持的商户", "扫码退款", "收单机构", "账单详情",
+                                     "通知中心", "请确认"]
         let timePattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
         let pureNumberPattern = #"^\s*\d{1,5}\s*$"#
+        // 日期行（"X月X日..."）不是商户名
+        let dateLikePattern = #"^\d{1,2}月\d{1,2}日"#
         return lines.first(where: { line in
+            !carrierNames.contains(line) &&
             !skipContainsFallback.contains(where: { line.contains($0) }) &&
             !fieldLabels.contains(line) &&
             line.count >= 2 &&
@@ -314,6 +334,8 @@ public struct ReceiptParser: Sendable {
             (try? NSRegularExpression(pattern: timePattern))?
                 .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
             (try? NSRegularExpression(pattern: pureNumberPattern))?
+                .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
+            (try? NSRegularExpression(pattern: dateLikePattern))?
                 .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil
         })
     }
@@ -402,17 +424,25 @@ public struct ReceiptParser: Sendable {
 
     // MARK: - 滴滴出行结束订单页解析
 
-    /// 滴滴出行结束订单页识别：
-    /// 特征：含"行程已"（行程已结束，OCR 可能误读为"行程已给束"等）
-    /// 且含滴滴车型关键词（快车、专车等）或"呼叫返程"。
+    /// 滴滴出行识别：
+    /// A. 结束订单页 — 含"行程已"（行程已结束，OCR 可能误读为"行程已给束"等）
+    ///    且含滴滴车型关键词（快车、专车等）或"呼叫返程"。
+    /// B. 支付通知截图 — 含"滴滴" + "已支付"（来自通知中心的支付完成推送）
     private func parseDidiTrip(lines: [String]) -> String? {
+        // A. 行程结束页
         let hasTripEnd = lines.contains(where: { $0.contains("行程已") })
         let didiSignals = ["快车", "专车", "优享", "豪华车", "顺风车", "两轮车", "呼叫返程"]
         let hasSignal = lines.contains(where: { line in
             didiSignals.contains(where: { line.contains($0) })
         })
-        guard hasTripEnd && hasSignal else { return nil }
-        return "滴滴出行"
+        if hasTripEnd && hasSignal { return "滴滴出行" }
+
+        // B. 通知截图："滴滴" + "已支付"
+        let hasDidi = lines.contains(where: { $0.contains("滴滴") })
+        let hasPaid = lines.contains(where: { $0.contains("已支付") })
+        if hasDidi && hasPaid { return "滴滴出行" }
+
+        return nil
     }
 
     // MARK: - 微信支付详情页 label-block → value-block 解析
