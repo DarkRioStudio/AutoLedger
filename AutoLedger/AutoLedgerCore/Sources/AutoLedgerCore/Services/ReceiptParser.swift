@@ -148,6 +148,16 @@ public struct ReceiptParser: Sendable {
             .first
     }
 
+    /// 判断字符串是否是一个独立的金额（整行基本就是货币符号 + 数字）。
+    /// 例如 "CN¥7.00"、"¥2.70"、"CNY 3.50" 均返回 true；
+    /// "T2航站楼"、"3号线"、"萧山国际机场" 等含有非数字字符的站名返回 false。
+    private func isStandaloneAmount(_ string: String) -> Bool {
+        let pattern = #"^\s*(?:CN¥|¥|￥|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        let trimmed = string.trimmingCharacters(in: .whitespaces)
+        return (try? NSRegularExpression(pattern: pattern))?
+            .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil
+    }
+
     private func extractMerchant(from text: String, source: ReceiptSource) -> String? {
         let lines = text
             .components(separatedBy: .newlines)
@@ -265,8 +275,8 @@ public struct ReceiptParser: Sendable {
             guard transitKeywords.contains(label) else { continue }
             let inlinePart = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let stationText: String
-            if !inlinePart.isEmpty && amountCandidate(in: inlinePart) == nil {
-                // (B) 同一行：地铁：内江路 东丽文体中心
+            if !inlinePart.isEmpty && !isStandaloneAmount(inlinePart) {
+                // (B) 同一行：地铁：内江路 东丽文体中心（内联部分不是独立金额）
                 stationText = inlinePart
             } else {
                 // (A)/(C) 独立 "地铁：" 行 或 "地铁：CN¥X.XX" — 向后查找站点行（跳过金额行）
