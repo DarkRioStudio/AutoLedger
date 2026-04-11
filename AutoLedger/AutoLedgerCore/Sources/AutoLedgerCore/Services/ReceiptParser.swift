@@ -148,6 +148,16 @@ public struct ReceiptParser: Sendable {
             .first
     }
 
+    /// 判断字符串是否是一个独立的金额（整行基本就是货币符号 + 数字）。
+    /// 例如 "CN¥7.00"、"¥2.70"、"CNY 3.50" 均返回 true；
+    /// "T2航站楼"、"3号线"、"萧山国际机场" 等含有非数字字符的站名返回 false。
+    private func isStandaloneAmount(_ string: String) -> Bool {
+        let pattern = #"^\s*(?:CN¥|¥|￥|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        let trimmed = string.trimmingCharacters(in: .whitespaces)
+        return (try? NSRegularExpression(pattern: pattern))?
+            .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil
+    }
+
     private func extractMerchant(from text: String, source: ReceiptSource) -> String? {
         let lines = text
             .components(separatedBy: .newlines)
@@ -253,9 +263,10 @@ public struct ReceiptParser: Sendable {
         }
 
         // ── 地铁 / 公交储值卡格式 ──
-        // 支持两种 OCR 版式：
+        // 支持三种 OCR 版式：
         //   (A) 独立行 "地铁：" + 金额行 + 站点行（如 "内江路 东丽文体中心"）
         //   (B) 同一行 "地铁：内江路 东丽文体中心"
+        //   (C) 同一行 "地铁：CN¥7.00"（金额嵌入冒号后）+ 下一行站点（如 "萧山国际机场 -火车东站"）
         let transitKeywords: Set<String> = ["地铁", "公交"]
         for (idx, line) in lines.enumerated() {
             // 用 rangeOfCharacter 找第一个冒号，避免多次分割时字符类型不一致
@@ -264,22 +275,25 @@ public struct ReceiptParser: Sendable {
             guard transitKeywords.contains(label) else { continue }
             let inlinePart = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
             let stationText: String
-            if !inlinePart.isEmpty {
-                // (B) 同一行：地铁：内江路 东丽文体中心
+            if !inlinePart.isEmpty && !isStandaloneAmount(inlinePart) {
+                // (B) 同一行：地铁：内江路 东丽文体中心（内联部分不是独立金额）
                 stationText = inlinePart
             } else {
-                // (A) 独立 "地铁：" 行 — 向后查找站点行（跳过金额行）
+                // (A)/(C) 独立 "地铁：" 行 或 "地铁：CN¥X.XX" — 向后查找站点行（跳过金额行）
                 guard let stationLine = lines.dropFirst(idx + 1).first(where: { sl in
                     !sl.isEmpty && amountCandidate(in: sl) == nil
                 }) else { continue }
                 stationText = stationLine
             }
-            // 将 "内江路 东丽文体中心" 规范化为 "内江路 → 东丽文体中心"
+            // 将站名文本规范化为 "站A → 站B"
             let route: String
             if stationText.contains("→") || stationText.contains("->") {
                 route = stationText
             } else {
-                let stations = stationText.components(separatedBy: " ").filter { !$0.isEmpty }
+                let hyphenSet = CharacterSet(charactersIn: "-")
+                let stations = stationText.components(separatedBy: " ")
+                    .map { $0.trimmingCharacters(in: hyphenSet) }
+                    .filter { !$0.isEmpty }
                 route = stations.count >= 2 ? stations.joined(separator: " → ") : stationText
             }
             return "\(label)：\(route)"
