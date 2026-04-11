@@ -308,6 +308,7 @@ struct DebugView: View {
                 reproducible: "N/A",
                 entryPoint: "debug_view",
                 debugRecords: store.debugRecords,
+                transactions: store.transactions,
                 lastOCRText: store.lastRecognizedText,
                 lastReceipt: store.lastParsedReceipt
             )
@@ -592,6 +593,10 @@ struct DebugView: View {
                 if let receipt = record.parsedReceipt {
                     lines.append("  解析：\(receipt.merchant) · \(AppFormatters.currency(receipt.amount)) · \(receipt.suggestedCategory.title)")
                 }
+                if let txID = record.transactionID,
+                   let tx = store.transactions.first(where: { $0.id == txID }) {
+                    lines.append("  当前账单（用户修改后）：\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.category.title) · \(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " · 备注：\(tx.note)")")
+                }
                 if !record.rawText.isEmpty {
                     lines.append("  OCR：\(record.rawText)")
                 }
@@ -633,6 +638,18 @@ struct DebugView: View {
             lines.append("- 分类：\(receipt.suggestedCategory.title)")
             lines.append("- 时间：\(AppFormatters.exportDateTime(receipt.occurredAt))")
             lines.append("- 摘要：\(receipt.summary)")
+        }
+
+        if let txID = record.transactionID,
+           let tx = store.transactions.first(where: { $0.id == txID }) {
+            lines.append("当前账单（用户修改后）：")
+            lines.append("- 商户：\(tx.merchant)")
+            lines.append("- 金额：\(AppFormatters.currency(tx.amount))")
+            lines.append("- 分类：\(tx.category.title)")
+            lines.append("- 时间：\(AppFormatters.exportDateTime(tx.occurredAt))")
+            if !tx.note.isEmpty {
+                lines.append("- 备注：\(tx.note)")
+            }
         }
 
         if !record.rawText.isEmpty {

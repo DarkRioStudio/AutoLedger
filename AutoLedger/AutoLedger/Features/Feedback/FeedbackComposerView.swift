@@ -274,6 +274,7 @@ struct FeedbackComposerView: View {
                 reproducible: reproducible,
                 entryPoint: "settings_feedback",
                 debugRecords: store.debugRecords,
+                transactions: store.transactions,
                 lastOCRText: store.lastRecognizedText,
                 lastReceipt: store.lastParsedReceipt,
                 includeRawImage: includeScreenshot

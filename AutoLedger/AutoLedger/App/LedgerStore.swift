@@ -383,7 +383,8 @@ final class LedgerStore: ObservableObject {
             parsedReceipt: receipt,
             summary: summary,
             llmPrompt: llmTrace?.prompt,
-            llmResponse: llmTrace?.response
+            llmResponse: llmTrace?.response,
+            transactionID: transaction.id
         )
     }
 
@@ -428,7 +429,8 @@ final class LedgerStore: ObservableObject {
         parsedReceipt: ImportedReceipt?,
         summary: String,
         llmPrompt: String? = nil,
-        llmResponse: String? = nil
+        llmResponse: String? = nil,
+        transactionID: UUID? = nil
     ) {
         let record = ImportDebugRecord(
             createdAt: .now,
@@ -439,7 +441,8 @@ final class LedgerStore: ObservableObject {
             parsedReceipt: parsedReceipt,
             summary: summary,
             llmPrompt: llmPrompt,
-            llmResponse: llmResponse
+            llmResponse: llmResponse,
+            transactionID: transactionID
         )
         debugRecords.insert(record, at: 0)
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
