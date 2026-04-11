@@ -318,7 +318,8 @@ public struct ReceiptParser: Sendable {
         ]
         let skipContainsFallback = ["成功", "金额", "时间", "Total", "全部账单",
                                      "可在支持的商户", "扫码退款", "收单机构", "账单详情",
-                                     "通知中心", "请确认"]
+                                     "通知中心", "请确认",
+                                     "回首页"]   // 支付宝支付成功页导航按钮
         let timePattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
         let pureNumberPattern = #"^\s*\d{1,5}\s*$"#
         // 日期行（"X月X日..."）不是商户名
