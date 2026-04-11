@@ -2,7 +2,8 @@
 """Quick smoke tests for email_to_issue core functions."""
 import sys, os, json
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from tools.feedback.email_to_issue import parse_subject, parse_meta_block, redact, build_labels, extract_bundle
+from tools.feedback.email_to_issue import parse_subject, parse_meta_block, redact, build_labels, extract_bundle, is_github_notification
+import tools.feedback.email_to_issue as _m
 
 # 1. Subject parsing
 subj = parse_subject("[AutoLedger][L2][iOS][1.1.0(10)][ocr_parse_wrong] 金额识别错误")
@@ -56,5 +57,19 @@ result = extract_bundle(buf.getvalue())
 assert result["issue_bundle"]["feedback_id"] == "test-001"
 assert "test summary" in result["summary"]
 print("✅ extract_bundle (valid zip) OK")
+
+# 7. GitHub notification filter
+_orig_repo = _m.GITHUB_REPOSITORY
+_m.GITHUB_REPOSITORY = "darkrio326/AutoLedgerRio"
+assert is_github_notification("[darkrio326/AutoLedgerRio] PR opened by copilot"), \
+    "Should detect GitHub notification label"
+assert is_github_notification("[darkrio326/AutoLedgerRio] Some issue title"), \
+    "Should detect GitHub notification label (issue)"
+assert not is_github_notification("[AutoLedger][L2][iOS][1.1.0(10)][ocr_parse_wrong] 金额识别错误"), \
+    "Should not flag a legitimate feedback email"
+assert not is_github_notification("Re: unrelated email"), \
+    "Should not flag an unrelated email"
+_m.GITHUB_REPOSITORY = _orig_repo
+print("✅ is_github_notification OK")
 
 print("\n🎉 All tests passed!")
