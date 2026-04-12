@@ -10,6 +10,8 @@
 ## [Unreleased]
 
 ### 新增（v1.1.0）
+- [2026-04-12 +0800] 新增 OCR 置信度感知 + 低置信 LLM 金额验证：`OCRService` 新增 `OCRResult` 结构体（含 `minimumWordConfidence: Float`）和 `recognizeTextWithConfidence(from:)` 方法；`SmartReceiptParser.parse()` 增加 `ocrMinConfidence: Float?` 参数，当 Vision 最低单词置信度 < 0.75 时，LLM prompt 额外要求提取 `amount` 字段，若与规则金额差异 > 5% 则采用 LLM 结果；`LedgerStore.attemptClipboardImport()` 和 `QuickLedgerIntent` 两条主要 OCR 入口均已升级为 `recognizeTextWithConfidence()`；`LedgerStore.importRecognizedText()` 增加 `ocrMinConfidence` 参数。
+- [2026-04-12 +0800] 修复滴滴出行结束订单页金额误识别 bug：`ReceiptParser` 新增 `extractDidiTripAmount(lines:)` 专用方法，在"费用明细"前 5 行内逆序搜索车费，避免将评价人数等页面顶部无关数字（如"71"）误识别为车费；同时处理 OCR 将"¥"误读为"4"的情形（如"¥45.00"→"445"→修正为 45.00；要求修正后金额 ≥10 元避免误伤）；重构 `parse()` 使 cleanedLines 提前构建、优先走滴滴专用提取器；新增"滴滴出行优享出租车截图"回归样本及预期值（merchant=滴滴出行, amount=45.00, category=transport）。
 - [2026-04-11 +0800] 修复深色模式配色：`AppTheme` 所有基础色（canvas/card/ink/mutedInk/screenGradient）改用 `UIColor(dynamicProvider:)` 实现 Light/Dark 双套值，解决深色模式下导航标题白字黄底可读性问题及账本年月分区字体对比度不足问题。
 - [2026-04-11 +0800] 修复支付宝支付成功页"回首页"按钮被误识别为商户名：`ReceiptParser` fallback 商户提取 skip 列表新增"回首页"（支付宝页面导航按钮）；fix 后"麦当劳湖州德清米兰洲际酒店餐厅"等真实商户可正常提取，分类自动命中 .dining；新增"支付宝麦当劳支付成功截图"回归样本及预期值。
 - [2026-04-12 +0800] 修复滴滴出行通知截图解析 bug：`ReceiptParser.parseDidiTrip` 新增通知截图路径（"滴滴"+"已支付"→"滴滴出行"）；新增"感谢使用XXX"通用通知商户提取规则；fallback 商户提取增加运营商名（中国联通/中国移动/中国电信等）、日期行、"通知中心"/"请确认"过滤；新增"滴滴出行通知截图"回归样本及预期值；补齐"支付宝碰一下支付截图（7-11）"回归预期值；`run_offline_regression.sh` 更新：新增 iOS-only 类型 stubs（UIPasteboard/OCRService/NotificationService）、SmartReceiptParser stub 改为调用 ReceiptParser 实际解析、补充编译文件列表（Subscription/SubscriptionDetector/TextSimilarity）、修复 import 清理；`OfflineRegression.swift` 改为 async main 以支持 Task-based import 测试。

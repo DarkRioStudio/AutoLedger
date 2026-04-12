@@ -95,7 +95,8 @@ final class LedgerStore: ObservableObject {
         preferredSource: ReceiptSource? = nil,
         fallbackMerchant: String? = nil,
         notePrefix: String = "支付截图照片导入",
-        imageSource: ImageSource = .photoLibrary
+        imageSource: ImageSource = .photoLibrary,
+        ocrMinConfidence: Float? = nil
     ) {
         let normalizedText = text
             .replacingOccurrences(of: "\r\n", with: "\n")
@@ -117,7 +118,8 @@ final class LedgerStore: ObservableObject {
             let result = await smartParser.parse(
                 text: normalizedText,
                 source: source,
-                fallbackMerchant: fallbackMerchant
+                fallbackMerchant: fallbackMerchant,
+                ocrMinConfidence: ocrMinConfidence
             )
 
             guard let result else {
@@ -208,8 +210,12 @@ final class LedgerStore: ObservableObject {
         prepareForLiveImport()
 
         do {
-            let text = try OCRService().recognizeText(from: data)
-            importRecognizedText(text, imageSource: .clipboard)
+            let ocrResult = try OCRService().recognizeTextWithConfidence(from: data)
+            if ocrResult.minimumWordConfidence < 0.75 {
+                logger.warning("[OCR] 剪贴板截图识别置信度偏低：\(String(format: "%.2f", ocrResult.minimumWordConfidence))，将启用 LLM 金额验证")
+            }
+            importRecognizedText(ocrResult.text, imageSource: .clipboard,
+                                 ocrMinConfidence: ocrResult.minimumWordConfidence)
         } catch {
             setImportError(error.localizedDescription, imageSource: .clipboard)
         }

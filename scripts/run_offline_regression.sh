@@ -43,7 +43,12 @@ struct UIPasteboardImage {
 }
 
 // --- OCRService stub (uses Vision, iOS only) ---
+struct OCRResult: Sendable {
+    let text: String
+    let minimumWordConfidence: Float
+}
 struct OCRService: Sendable {
+    func recognizeTextWithConfidence(from data: Data) throws -> OCRResult { OCRResult(text: "", minimumWordConfidence: 1.0) }
     func recognizeText(from data: Data) throws -> String { "" }
 }
 
