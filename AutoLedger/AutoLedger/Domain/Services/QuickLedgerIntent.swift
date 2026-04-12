@@ -32,18 +32,20 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
 
         // 1. OCR
         let ocrService = OCRService()
-        let text: String
+        let ocrResult: OCRResult
         do {
-            text = try ocrService.recognizeText(from: imageData)
+            ocrResult = try ocrService.recognizeTextWithConfidence(from: imageData)
         } catch {
             writeDebugEvent(stage: .ocrFailed, source: .manual, rawText: "", summary: "快捷指令 OCR 失败：\(error.localizedDescription)")
             return .result(value: "识别失败，请打开 App 确认")
         }
+        let text = ocrResult.text
 
         // 2. 智能解析（规则 + LLM）
         let source = ReceiptSource.infer(from: text)
         let smartParser = SmartReceiptParser()
-        guard let result = await smartParser.parse(text: text, source: source) else {
+        guard let result = await smartParser.parse(text: text, source: source,
+                                                   ocrMinConfidence: ocrResult.minimumWordConfidence) else {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
             return .result(value: "识别失败，请打开 App 确认")
         }

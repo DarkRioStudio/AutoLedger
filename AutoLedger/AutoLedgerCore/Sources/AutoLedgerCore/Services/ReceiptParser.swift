@@ -8,14 +8,20 @@ public struct ReceiptParser: Sendable {
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard let amount = extractAmount(from: normalized) else {
-            return nil
-        }
-
         let cleanedLines = normalized
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+
+        // 滴滴行程结束页：优先使用专用金额提取器，避免将评价人数等无关数字误识别为车费
+        let amount: Double
+        if let didiAmt = extractDidiTripAmount(lines: cleanedLines) {
+            amount = didiAmt
+        } else if let genericAmt = extractAmount(from: normalized) {
+            amount = genericAmt
+        } else {
+            return nil
+        }
 
         // 微信支付详情页：标签块→值块格式，优先提取商户全称和支付时间
         let wechatDetail = parseWeChatDetailBlock(lines: cleanedLines)
@@ -418,6 +424,63 @@ public struct ReceiptParser: Sendable {
             if isNoise { continue }
 
             return candidate
+        }
+
+        return nil
+    }
+
+    // MARK: - 滴滴出行车费专用提取
+
+    /// 滴滴行程结束页的车费紧邻"费用明细"按钮之前。
+    /// 通用 extractAmount 会先碰到页面顶部的评价人数等无关数字，导致误识别。
+    /// 此方法仅在含"行程已"的滴滴结束页触发，在"费用明细"前 5 行内逆序搜索：
+    ///   1. 带 ¥/￥ 前缀的标准格式（如 "¥45.00"、"¥19.60 优惠-¥490"）
+    ///   2. OCR 将 "¥" 误读为 "4" 的情形（如 "¥45" → "445"、"¥19.60" → "419.60"），
+    ///      整行符合 "4XX" / "4XX.XX" 且去除首字符后为合理金额时修正。
+    private func extractDidiTripAmount(lines: [String]) -> Double? {
+        // 只在行程结束页（含"行程已"关键词）触发
+        guard lines.contains(where: { $0.contains("行程已") }) else { return nil }
+
+        // 定位"费用明细"行
+        guard let fareDetailIdx = lines.indices.first(where: { lines[$0].contains("费用明细") }) else {
+            return nil
+        }
+
+        // 在"费用明细"前最多 5 行中逆序搜索（从近到远）
+        let windowStart = max(0, fareDetailIdx - 5)
+        let candidateLines = lines[windowStart..<fareDetailIdx].reversed()
+
+        // 1. 优先：带 ¥/￥ 前缀的金额（标准 OCR 格式）
+        let currencyPrefixPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+        if let cpRegex = try? NSRegularExpression(pattern: currencyPrefixPattern) {
+            for line in candidateLines {
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                if let match = cpRegex.firstMatch(in: line, range: nsRange),
+                   let range = Range(match.range(at: 1), in: line),
+                   let amt = Double(String(line[range])),
+                   amt > 0 && amt < 10000 {
+                    return amt
+                }
+            }
+        }
+
+        // 2. OCR 将 "¥" 误读为 "4"：整行形如 "4XX" / "4XX.XX"，去掉首位 "4" 后为实际金额。
+        //    例：OCR "¥45.00" → "445" → 修正为 45.00。
+        //    要求去除首字符后至少 2 位整数（[1-9][0-9]{1,2}，即 10–999.99 元），
+        //    避免误伤极小金额（如 "41" 被修正为 1.00）。
+        //    仅匹配整行纯数字/小数，避免误伤含中文的行。
+        let yenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
+        if let yenRegex = try? NSRegularExpression(pattern: yenArtifactPattern) {
+            for line in candidateLines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+                if let match = yenRegex.firstMatch(in: trimmed, range: nsRange),
+                   let range = Range(match.range(at: 1), in: trimmed),
+                   let amt = Double(String(trimmed[range])),
+                   amt > 0 && amt < 10000 {
+                    return amt
+                }
+            }
         }
 
         return nil
