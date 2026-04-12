@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-04-11
+更新日期：2026-04-12
 
 ## 记录规则
 
@@ -43,6 +43,71 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-020 滴滴出行微信支付扣费凭证商户误识别修复
+- 日期：2026-04-12
+- 所属版本：v1.1.0
+- 所属阶段：Phase 4
+- 类型：Bugfix / 规则
+- 目标：修复滴滴出行"先乘车后付款"微信支付扣费凭证截图商户误识别问题——OCR 文本无"行程已"和"已支付"关键词，`parseDidiTrip` 两条已有分支均未命中，商户回退为"微信支付"，分类为"其他"；实际应为商户"滴滴出行"、分类"出行"。
+- 触发调试记录（原始，未修正，完整内容）：
+  ```
+  AutoLedger 单条测试记录
+  导出时间：2026-04-13 05:57:42
+  记录时间：2026-04-12 17:44:18
+  阶段：已入账
+  来源：微信支付
+  图片来源：快捷指令
+  解析模式：纯规则解析
+  结论：已记好：微信支付 ¥24.90
+  解析结果：
+  - 商户：微信支付
+  - 金额：¥24.90
+  - 分类：其他
+  - 时间：2026-04-12 17:44:18
+  - 摘要：已记好：微信支付 ¥24.90
+  当前账单（用户修改后）：
+  - 商户：滴滴出行
+  - 金额：¥24.90
+  - 分类：出行
+  - 时间：2026-04-12 17:44:18
+  - 备注：快捷指令自动记账
+  OCR 文本：
+  17:44
+  69
+  微信支付
+  收支
+  查看明细
+  日报设置
+  17:41
+  • 滴滴出行
+  扣费凭证
+  通过光大银行信用卡（1802）扣款
+  ¥24.90
+  按时支付，记入微信支付分记录
+  扣费服务
+  扣费内容
+  滴滴出行
+  先乘车后付款
+  查看订单详情
+  我的账单
+  支付服务
+  摇优惠
+  ```
+- 根因分析：微信支付"扣费凭证"卡片（先乘车后付款场景）的 OCR 文本无"行程已"（无行程结束页）、无"已支付"（无通知推送），`parseDidiTrip` Case A / Case B 均未命中，商户最终回退到 `fallbackMerchant`（来源标题"微信支付"）。
+- 改动范围：
+  - `AutoLedgerCore/Services/ReceiptParser.swift`：`parseDidiTrip` 新增 Case C，检测 `hasDidi && hasDeductionVoucher`（"扣费凭证"），命中时返回"滴滴出行"。
+  - `AutoLedgerCore/Services/SampleReceiptProvider.swift`：新增样例"滴滴出行微信扣费凭证截图"，使用本次调试 OCR 原文。
+  - `scripts/OfflineRegression.swift`：为新样例补充 expectedMerchants / expectedAmounts / expectedCategories 断言（merchant=滴滴出行, amount=24.90, category=.transport）。
+  - `CHANGELOG.md`：新增本次修复条目。
+- 未改动范围：SmartReceiptParser、LedgerStore、AppFormatters、UI 层均未改动；现有 Case A / Case B 逻辑不变。
+- 完成内容：`parseDidiTrip` Case C 已添加；新样例已加入 SampleReceiptProvider 和 OfflineRegression；本地逻辑验证通过（swift 脚本确认 hasDidi=true, hasDeductionVoucher=true, result=滴滴出行, amount=24.90）。
+- 未完成内容：无。
+- 测试情况：运行 `/tmp/test_didi.swift` 脚本验证 Case C 逻辑，PASS；`swift build`（AutoLedgerCore）ReceiptParser.swift 和 SampleReceiptProvider.swift 均编译通过（AppIntents 缺失错误为 iOS 专属模块在 Linux 环境的既有问题，与本次改动无关）。
+- 风险与注意事项：Case C 依赖"扣费凭证"字样，若微信更新卡片文案需重新添加关键词；当前三条 Case 互斥分支，不会相互影响。
+- 回滚方式：移除 `parseDidiTrip` Case C 代码块（4 行）；删除 SampleReceiptProvider 和 OfflineRegression 中"滴滴出行微信扣费凭证截图"相关条目。
+- 结论：本轮完成，滴滴出行"先乘车后付款"微信扣费凭证场景已正确识别。
+- 下一步建议：继续积累真机回归用例，关注其他先乘车后付款场景变体。
 
 ### ITER-019 滴滴出行结束订单页金额误识别修复
 - 日期：2026-04-12
