@@ -373,7 +373,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             闪购
             肉嫩酥麻
             和府捞面（杭州空港新天地卫星店）＞
-            经典遺软骨
+            经典遗软骨
             价格明细丶
             总优惠¥23.5
             共2件
