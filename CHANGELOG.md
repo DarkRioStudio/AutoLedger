@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.1.0）
+- [2026-04-12 +0800] 修复滴滴出行"微信支付扣费凭证"（先乘车后付款）商户误识别 bug：`ReceiptParser.parseDidiTrip` 新增 Case C，检测"滴滴" + "扣费凭证"组合，将商户正确识别为"滴滴出行"（分类自动推断为"出行"）；新增"滴滴出行微信扣费凭证截图"回归样本及预期值（merchant=滴滴出行, amount=24.90, category=transport）。
 - [2026-04-12 +0800] 新增 OCR 置信度感知 + 低置信 LLM 金额验证：`OCRService` 新增 `OCRResult` 结构体（含 `minimumWordConfidence: Float`）和 `recognizeTextWithConfidence(from:)` 方法；`SmartReceiptParser.parse()` 增加 `ocrMinConfidence: Float?` 参数，当 Vision 最低单词置信度 < 0.75 时，LLM prompt 额外要求提取 `amount` 字段，若与规则金额差异 > 5% 则采用 LLM 结果；`LedgerStore.attemptClipboardImport()` 和 `QuickLedgerIntent` 两条主要 OCR 入口均已升级为 `recognizeTextWithConfidence()`；`LedgerStore.importRecognizedText()` 增加 `ocrMinConfidence` 参数。
 - [2026-04-12 +0800] 修复滴滴出行结束订单页金额误识别 bug：`ReceiptParser` 新增 `extractDidiTripAmount(lines:)` 专用方法，在"费用明细"前 5 行内逆序搜索车费，避免将评价人数等页面顶部无关数字（如"71"）误识别为车费；同时处理 OCR 将"¥"误读为"4"的情形（如"¥45.00"→"445"→修正为 45.00；要求修正后金额 ≥10 元避免误伤）；重构 `parse()` 使 cleanedLines 提前构建、优先走滴滴专用提取器；新增"滴滴出行优享出租车截图"回归样本及预期值（merchant=滴滴出行, amount=45.00, category=transport）。
 - [2026-04-11 +0800] 修复深色模式配色：`AppTheme` 所有基础色（canvas/card/ink/mutedInk/screenGradient）改用 `UIColor(dynamicProvider:)` 实现 Light/Dark 双套值，解决深色模式下导航标题白字黄底可读性问题及账本年月分区字体对比度不足问题。

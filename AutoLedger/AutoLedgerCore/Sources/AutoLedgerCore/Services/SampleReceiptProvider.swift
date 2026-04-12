@@ -294,6 +294,33 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "滴滴出行 · ¥45.00"
         ),
         SampleReceipt(
+            title: "滴滴出行微信扣费凭证截图",
+            source: .wechat,
+            rawText: """
+            17:44
+            69
+            微信支付
+            收支
+            查看明细
+            日报设置
+            17:41
+            • 滴滴出行
+            扣费凭证
+            通过光大银行信用卡（1802）扣款
+            ¥24.90
+            按时支付，记入微信支付分记录
+            扣费服务
+            扣费内容
+            滴滴出行
+            先乘车后付款
+            查看订单详情
+            我的账单
+            支付服务
+            摇优惠
+            """,
+            preview: "滴滴出行 · ¥24.90"
+        ),
+        SampleReceipt(
             title: "支付宝麦当劳支付成功截图",
             source: .alipay,
             rawText: """
