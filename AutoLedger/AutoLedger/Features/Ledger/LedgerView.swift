@@ -12,6 +12,8 @@ struct LedgerView: View {
     @State private var selectedTransaction: Transaction?
     @State private var filter: LedgerFilter = .all
     @State private var filterDate = Date()
+    @State private var isAddingTransaction = false
+    @State private var isShowingDeleted = false
 
     private var filteredTransactions: [Transaction] {
         let cal = Calendar.current
@@ -155,10 +157,47 @@ struct LedgerView: View {
             .scrollContentBackground(.hidden)
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("账本")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        isAddingTransaction = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .fontWeight(.semibold)
+                    }
+                }
+                if !store.deletedTransactions.isEmpty {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            isShowingDeleted = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                    }
+                }
+            }
             .sheet(item: $selectedTransaction) { transaction in
                 TransactionEditorView(transaction: transaction) { updated in
                     store.updateTransaction(updated)
                 }
+            }
+            .sheet(isPresented: $isAddingTransaction) {
+                TransactionEditorView(
+                    transaction: Transaction(
+                        merchant: "",
+                        amount: 0,
+                        occurredAt: .now,
+                        category: .other,
+                        source: .manual,
+                        note: ""
+                    ),
+                    isNew: true
+                ) { newTransaction in
+                    store.addTransaction(newTransaction)
+                }
+            }
+            .sheet(isPresented: $isShowingDeleted) {
+                DeletedTransactionsView()
             }
         }
     }

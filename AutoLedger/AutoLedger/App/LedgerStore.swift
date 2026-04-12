@@ -13,6 +13,7 @@ final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
 
     @Published private(set) var transactions: [Transaction]
+    @Published private(set) var deletedTransactions: [Transaction] = []
     @Published private(set) var subscriptions: [Subscription] = []
     @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:]
     @Published private(set) var recentImports: [ImportedReceipt] = []
@@ -217,12 +218,49 @@ final class LedgerStore: ObservableObject {
 
     func deleteTransaction(_ transaction: Transaction) {
         transactions.removeAll { $0.id == transaction.id }
+        // 保留最近 50 条已删除记录，供用户本次会话内恢复
+        deletedTransactions.insert(transaction, at: 0)
+        if deletedTransactions.count > 50 {
+            deletedTransactions = Array(deletedTransactions.prefix(50))
+        }
 
         do {
             try transactionStore?.delete(transactionID: transaction.id)
             lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
         } catch {
             lastImportSummary = "界面已移除，但本地存储删除失败：\(error.localizedDescription)"
+        }
+    }
+
+    /// 将已删除的账单恢复到账本
+    func restoreTransaction(_ transaction: Transaction) {
+        deletedTransactions.removeAll { $0.id == transaction.id }
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
+
+        do {
+            try transactionStore?.save(transaction: transaction)
+            lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+        } catch {
+            lastImportSummary = "界面已恢复，但写入本地存储失败：\(error.localizedDescription)"
+        }
+    }
+
+    /// 从回收站永久删除（不再可恢复）
+    func permanentlyDeleteTransaction(_ transaction: Transaction) {
+        deletedTransactions.removeAll { $0.id == transaction.id }
+    }
+
+    /// 手动新增账单（账本右上角 + 入口）
+    func addTransaction(_ transaction: Transaction) {
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
+
+        do {
+            try transactionStore?.save(transaction: transaction)
+            lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+        } catch {
+            lastImportSummary = "账单已添加到界面，但写入本地存储失败：\(error.localizedDescription)"
         }
     }
 
@@ -398,9 +436,14 @@ final class LedgerStore: ObservableObject {
         if windowMatch { return true }
 
         // 增强策略：OCR 文本 Jaccard 相似度 > 0.8 视为同一来源
+        // 注意：排除已被用户删除的账单对应的调试记录，避免删除后重试被误判为重复
         guard !rawText.isEmpty else { return false }
+        let activeTransactionIDs = Set(transactions.map(\.id))
         let recentTexts = debugRecords
-            .filter { $0.stage == .persisted }
+            .filter {
+                $0.stage == .persisted &&
+                ($0.transactionID.map { activeTransactionIDs.contains($0) } ?? true)
+            }
             .prefix(30)
             .map(\.rawText)
         for existingText in recentTexts where !existingText.isEmpty {

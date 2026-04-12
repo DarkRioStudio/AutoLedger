@@ -4,6 +4,8 @@ import SwiftUI
 struct TransactionEditorView: View {
     let transaction: Transaction
     let onSave: (Transaction) -> Void
+    /// `true` 表示新增模式，导航栏标题显示"新增账单"；`false` 为编辑模式
+    var isNew: Bool = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var merchant: String
@@ -13,11 +15,12 @@ struct TransactionEditorView: View {
     @State private var occurredAt: Date
     @State private var note: String
 
-    init(transaction: Transaction, onSave: @escaping (Transaction) -> Void) {
+    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction) -> Void) {
         self.transaction = transaction
+        self.isNew = isNew
         self.onSave = onSave
         _merchant = State(initialValue: transaction.merchant)
-        _amountText = State(initialValue: String(format: "%.2f", transaction.amount))
+        _amountText = State(initialValue: isNew ? "" : String(format: "%.2f", transaction.amount))
         _category = State(initialValue: transaction.category)
         _source = State(initialValue: transaction.source)
         _occurredAt = State(initialValue: transaction.occurredAt)
@@ -53,7 +56,7 @@ struct TransactionEditorView: View {
                         .lineLimit(3, reservesSpace: true)
                 }
             }
-            .navigationTitle("编辑账单")
+            .navigationTitle(isNew ? "新增账单" : "编辑账单")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -78,7 +81,7 @@ struct TransactionEditorView: View {
                         )
                         dismiss()
                     }
-                    .disabled(parsedAmount <= 0)
+                    .disabled(parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
