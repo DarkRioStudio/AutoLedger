@@ -32,9 +32,13 @@ public struct ReceiptParser: Sendable {
         // 滴滴出行结束订单页：含"行程已结束"特征，直接返回"滴滴出行"
         let didiMerchant = parseDidiTrip(lines: cleanedLines)
 
+        // 淘宝闪购订单进行中页：含"骑士"+"闪购"，从"闪购"标签后提取店铺名
+        let taobaoFlashMerchant = parseTaobaoFlashOrder(lines: cleanedLines)
+
         let merchant = wechatDetail?.merchant
             ?? douyinMerchant
             ?? didiMerchant
+            ?? taobaoFlashMerchant
             ?? extractMerchant(from: normalized, source: source)
             ?? fallbackMerchant
             ?? "待确认商户"
@@ -325,7 +329,8 @@ public struct ReceiptParser: Sendable {
         let skipContainsFallback = ["成功", "金额", "时间", "Total", "全部账单",
                                      "可在支持的商户", "扫码退款", "收单机构", "账单详情",
                                      "通知中心", "请确认",
-                                     "回首页"]   // 支付宝支付成功页导航按钮
+                                     "回首页",        // 支付宝支付成功页导航按钮
+                                     "外卖红包", "骑士", "催单"]  // 外卖订单 UI 噪声
         let timePattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
         let pureNumberPattern = #"^\s*\d{1,5}\s*$"#
         // 日期行（"X月X日..."）不是商户名
@@ -560,5 +565,43 @@ public struct ReceiptParser: Sendable {
         }
 
         return (merchant, date)
+    }
+
+    // MARK: - 淘宝闪购订单进行中页解析
+
+    /// 淘宝闪购（即时配送）订单进行中页的典型特征：
+    /// - 含"骑士"（骑手配送状态），如"骑士正赶往商家"
+    /// - 含独立的"闪购"标签行
+    /// 商户名通常紧跟在"闪购"标签后出现，格式为"XXX（地址信息）＞"（带导航箭头）。
+    /// 此方法在"闪购"行之后逐行搜索，取第一个含中文全角括号"（"的行作为店铺名，
+    /// 并剥离尾部导航箭头（＞/>）后返回。
+    private func parseTaobaoFlashOrder(lines: [String]) -> String? {
+        guard lines.contains(where: { $0.contains("骑士") }),
+              lines.contains(where: { $0.contains("闪购") }) else { return nil }
+
+        guard let flashIdx = lines.indices.first(where: { lines[$0].contains("闪购") }) else {
+            return nil
+        }
+
+        // 噪声行关键词（价格/操作按钮/骑手状态行，不会是店铺名）
+        let noiseKeywords = ["价格明细", "总优惠", "实付", "备注", "订单号", "订单信息",
+                             "催单", "取消订单", "联系", "骑士", "客服", "复制", "常见问题"]
+
+        // 在"闪购"行之后搜索店铺名称行
+        // 店铺名特征：含中文全角括号"（xxx）"的地址格式（如"和府捞面（杭州空港新天地卫星店）＞"）
+        for i in (flashIdx + 1)..<lines.count {
+            let line = lines[i]
+            guard !line.isEmpty, line.count >= 3 else { continue }
+            guard !noiseKeywords.contains(where: { line.contains($0) }) else { continue }
+            guard amountCandidate(in: line) == nil else { continue }
+
+            if line.contains("（") {
+                return line
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "＞>》"))
+                    .trimmingCharacters(in: .whitespaces)
+            }
+        }
+
+        return nil
     }
 }
