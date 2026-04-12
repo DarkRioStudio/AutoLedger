@@ -492,6 +492,7 @@ public struct ReceiptParser: Sendable {
     /// A. 结束订单页 — 含"行程已"（行程已结束，OCR 可能误读为"行程已给束"等）
     ///    且含滴滴车型关键词（快车、专车等）或"呼叫返程"。
     /// B. 支付通知截图 — 含"滴滴" + "已支付"（来自通知中心的支付完成推送）
+    /// C. 微信支付扣费凭证 — 含"滴滴" + "扣费凭证"（先乘车后付款的微信代扣卡片）
     private func parseDidiTrip(lines: [String]) -> String? {
         // A. 行程结束页
         let hasTripEnd = lines.contains(where: { $0.contains("行程已") })
@@ -505,6 +506,10 @@ public struct ReceiptParser: Sendable {
         let hasDidi = lines.contains(where: { $0.contains("滴滴") })
         let hasPaid = lines.contains(where: { $0.contains("已支付") })
         if hasDidi && hasPaid { return "滴滴出行" }
+
+        // C. 微信支付扣费凭证（先乘车后付款）："滴滴" + "扣费凭证"
+        let hasDeductionVoucher = lines.contains(where: { $0.contains("扣费凭证") })
+        if hasDidi && hasDeductionVoucher { return "滴滴出行" }
 
         return nil
     }
