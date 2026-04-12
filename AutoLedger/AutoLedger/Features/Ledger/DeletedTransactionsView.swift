@@ -67,7 +67,7 @@ struct DeletedTransactionsView: View {
                                 }
                             }
                         } footer: {
-                            Text("左滑恢复，右滑彻底删除。退出 App 后已删除记录将清空。")
+                            Text("右滑恢复，左滑彻底删除。退出 App 后已删除记录将清空。")
                         }
                     }
                     .scrollContentBackground(.hidden)
