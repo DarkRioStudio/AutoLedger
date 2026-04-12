@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.1.0）
+- [2026-04-12 +0800] ITER-018 账本管理三改进：① 修复已删除账单被误判为重复导入的 bug——`hasDuplicate` 的 OCR Jaccard 相似度检查现在排除已删除账单对应的 debugRecord，使用户删除后重试不再被跳过；② 新增"最近删除"功能——`LedgerStore` 新增 `deletedTransactions` 属性及 `restoreTransaction`/`permanentlyDeleteTransaction` 方法，删除的账单在本次会话内可从 `DeletedTransactionsView`（左滑恢复 / 右滑彻底删除）恢复；③ 账本右上角新增加号按钮——`LedgerView` 工具栏新增"+"按钮，打开 `TransactionEditorView`（新增模式）可手动录入商户/金额/分类/来源/时间/备注，`LedgerStore` 新增 `addTransaction` 方法持久化手动账单；`TransactionEditorView` 新增 `isNew` 参数支持"新增账单"与"编辑账单"双模式。
 - [2026-04-11 +0800] 修复深色模式配色：`AppTheme` 所有基础色（canvas/card/ink/mutedInk/screenGradient）改用 `UIColor(dynamicProvider:)` 实现 Light/Dark 双套值，解决深色模式下导航标题白字黄底可读性问题及账本年月分区字体对比度不足问题。
 - [2026-04-11 +0800] 修复支付宝支付成功页"回首页"按钮被误识别为商户名：`ReceiptParser` fallback 商户提取 skip 列表新增"回首页"（支付宝页面导航按钮）；fix 后"Demo Burger Restaurant"等真实商户可正常提取，分类自动命中 .dining；新增"支付宝麦当劳支付成功截图"回归样本及预期值。
 - [2026-04-12 +0800] 修复滴滴出行通知截图解析 bug：`ReceiptParser.parseDidiTrip` 新增通知截图路径（"滴滴"+"已支付"→"滴滴出行"）；新增"感谢使用XXX"通用通知商户提取规则；fallback 商户提取增加运营商名（中国联通/中国移动/中国电信等）、日期行、"通知中心"/"请确认"过滤；新增"滴滴出行通知截图"回归样本及预期值；补齐"支付宝碰一下支付截图（7-11）"回归预期值；`run_offline_regression.sh` 更新：新增 iOS-only 类型 stubs（UIPasteboard/OCRService/NotificationService）、SmartReceiptParser stub 改为调用 ReceiptParser 实际解析、补充编译文件列表（Subscription/SubscriptionDetector/TextSimilarity）、修复 import 清理；`OfflineRegression.swift` 改为 async main 以支持 Task-based import 测试。
