@@ -373,7 +373,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             闪购
             肉嫩酥麻
             Sample Restaurant（Example Branch）＞
-            经典遺软骨
+            经典遗软骨
             价格明细丶
             总优惠¥23.5
             共2件
