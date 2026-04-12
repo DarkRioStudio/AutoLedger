@@ -13,6 +13,7 @@ final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
 
     @Published private(set) var transactions: [Transaction]
+    @Published private(set) var deletedTransactions: [Transaction] = []
     @Published private(set) var subscriptions: [Subscription] = []
     @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:]
     @Published private(set) var recentImports: [ImportedReceipt] = []
@@ -222,14 +223,89 @@ final class LedgerStore: ObservableObject {
     }
 
     func deleteTransaction(_ transaction: Transaction) {
-        transactions.removeAll { $0.id == transaction.id }
+        // 先从持久化层删除，失败时回滚，避免内存与 SQLite 状态不一致
+        guard let store = transactionStore else {
+            // 无持久化层（预览/测试场景）：直接更新内存
+            transactions.removeAll { $0.id == transaction.id }
+            deletedTransactions.insert(transaction, at: 0)
+            if deletedTransactions.count > 50 {
+                deletedTransactions = Array(deletedTransactions.prefix(50))
+            }
+            lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+            return
+        }
 
         do {
-            try transactionStore?.delete(transactionID: transaction.id)
-            lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+            try store.delete(transactionID: transaction.id)
         } catch {
-            lastImportSummary = "界面已移除，但本地存储删除失败：\(error.localizedDescription)"
+            lastImportSummary = "删除失败：\(error.localizedDescription)"
+            return
         }
+
+        transactions.removeAll { $0.id == transaction.id }
+        // 保留最近 50 条已删除记录，供用户本次会话内恢复
+        deletedTransactions.insert(transaction, at: 0)
+        if deletedTransactions.count > 50 {
+            deletedTransactions = Array(deletedTransactions.prefix(50))
+        }
+        lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+    }
+
+    /// 将已删除的账单恢复到账本
+    func restoreTransaction(_ transaction: Transaction) {
+        guard let store = transactionStore else {
+            // 无持久化层（预览/测试场景）：直接更新内存
+            deletedTransactions.removeAll { $0.id == transaction.id }
+            transactions.insert(transaction, at: 0)
+            sortTransactions()
+            lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+            return
+        }
+
+        // 先更新内存状态，再落库
+        deletedTransactions.removeAll { $0.id == transaction.id }
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
+
+        do {
+            try store.save(transaction: transaction)
+            lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+        } catch {
+            // 可能因主键冲突失败（之前删除 SQLite 不成功）——尝试 update 作为 fallback
+            do {
+                try store.update(transaction: transaction)
+                lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+            } catch {
+                lastImportSummary = "界面已恢复，但写入本地存储失败：\(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// 从回收站永久删除（不再可恢复）
+    func permanentlyDeleteTransaction(_ transaction: Transaction) {
+        deletedTransactions.removeAll { $0.id == transaction.id }
+    }
+
+    /// 手动新增账单（账本右上角 + 入口）
+    func addTransaction(_ transaction: Transaction) {
+        guard let store = transactionStore else {
+            // 无持久化层（预览/测试场景）：直接更新内存
+            transactions.insert(transaction, at: 0)
+            sortTransactions()
+            lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+            return
+        }
+
+        do {
+            try store.save(transaction: transaction)
+        } catch {
+            lastImportSummary = "记账失败：\(error.localizedDescription)"
+            return
+        }
+
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
+        lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
     }
 
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
@@ -404,9 +480,14 @@ final class LedgerStore: ObservableObject {
         if windowMatch { return true }
 
         // 增强策略：OCR 文本 Jaccard 相似度 > 0.8 视为同一来源
+        // 注意：排除已被用户删除的账单对应的调试记录，避免删除后重试被误判为重复
         guard !rawText.isEmpty else { return false }
+        let activeTransactionIDs = Set(transactions.map(\.id))
         let recentTexts = debugRecords
-            .filter { $0.stage == .persisted }
+            .filter {
+                $0.stage == .persisted &&
+                ($0.transactionID.map { activeTransactionIDs.contains($0) } ?? true)
+            }
             .prefix(30)
             .map(\.rawText)
         for existingText in recentTexts where !existingText.isEmpty {
