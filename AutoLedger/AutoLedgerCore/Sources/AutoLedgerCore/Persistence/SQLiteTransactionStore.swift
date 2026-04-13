@@ -58,9 +58,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 let sourceCString = sqlite3_column_text(statement, 5),
                 let noteCString = sqlite3_column_text(statement, 6),
                 let id = UUID(uuidString: String(cString: idCString)),
-                let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString)),
-                let category = TransactionCategory(rawValue: String(cString: categoryCString)),
-                let source = ReceiptSource(rawValue: String(cString: sourceCString))
+                let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString))
             else {
                 continue
             }
@@ -68,6 +66,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             let merchant = String(cString: merchantCString)
             let note = String(cString: noteCString)
             let amount = sqlite3_column_double(statement, 2)
+            let category = String(cString: categoryCString)
+            let source = String(cString: sourceCString)
 
             items.append(
                 Transaction(
@@ -75,8 +75,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     merchant: merchant,
                     amount: amount,
                     occurredAt: occurredAt,
-                    category: category,
-                    source: source,
+                    categoryLabel: category,
+                    sourceLabel: source,
                     note: note
                 )
             )
@@ -121,8 +121,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 1, transaction.merchant, -1, sqliteTransient)
         sqlite3_bind_double(statement, 2, transaction.amount)
         sqlite3_bind_text(statement, 3, Self.storageFormatter.string(from: transaction.occurredAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 4, transaction.category.rawValue, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 5, transaction.source.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 4, transaction.category, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, transaction.source, -1, sqliteTransient)
         sqlite3_bind_text(statement, 6, transaction.note, -1, sqliteTransient)
         sqlite3_bind_text(statement, 7, Self.storageFormatter.string(from: .now), -1, sqliteTransient)
         sqlite3_bind_text(statement, 8, transaction.id.uuidString, -1, sqliteTransient)
@@ -410,8 +410,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 2, transaction.merchant, -1, sqliteTransient)
         sqlite3_bind_double(statement, 3, transaction.amount)
         sqlite3_bind_text(statement, 4, Self.storageFormatter.string(from: transaction.occurredAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 5, transaction.category.rawValue, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 6, transaction.source.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, transaction.category, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, transaction.source, -1, sqliteTransient)
         sqlite3_bind_text(statement, 7, transaction.note, -1, sqliteTransient)
         sqlite3_bind_text(statement, 8, now, -1, sqliteTransient)
         sqlite3_bind_text(statement, 9, now, -1, sqliteTransient)

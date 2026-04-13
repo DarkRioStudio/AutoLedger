@@ -19,11 +19,11 @@ struct DeletedTransactionsView: View {
                         Section {
                             ForEach(store.deletedTransactions) { transaction in
                                 HStack(alignment: .top, spacing: 14) {
-                                    Image(systemName: transaction.category.iconName)
+                                    Image(systemName: transaction.categoryEnum.iconName)
                                         .font(.headline)
-                                        .foregroundStyle(transaction.category.tint)
+                                        .foregroundStyle(transaction.categoryEnum.tint)
                                         .frame(width: 34, height: 34)
-                                        .background(transaction.category.tint.opacity(0.12))
+                                        .background(transaction.categoryEnum.tint.opacity(0.12))
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                                     VStack(alignment: .leading, spacing: 6) {
@@ -40,8 +40,8 @@ struct DeletedTransactionsView: View {
                                         }
 
                                         HStack(spacing: 10) {
-                                            Text(transaction.category.title)
-                                            Text(transaction.source.title)
+                                            Text(transaction.categoryTitle)
+                                            Text(transaction.sourceTitle)
                                             Text(AppFormatters.shortDateTime(transaction.occurredAt))
                                         }
                                         .font(.caption)
