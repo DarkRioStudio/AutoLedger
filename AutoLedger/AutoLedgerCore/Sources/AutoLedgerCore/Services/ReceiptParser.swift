@@ -35,10 +35,14 @@ public struct ReceiptParser: Sendable {
         // 淘宝闪购订单进行中页：含"骑士"+"闪购"，从"闪购"标签后提取店铺名
         let taobaoFlashMerchant = parseTaobaoFlashOrder(lines: cleanedLines)
 
+        // 微信代扣凭证页：含"扣费凭证"+"扣费内容"，提取服务内容名称（如"先购后付"）
+        let wechatDeductionMerchant = parseWeChatDeductionVoucher(lines: cleanedLines)
+
         let merchant = wechatDetail?.merchant
             ?? douyinMerchant
             ?? didiMerchant
             ?? taobaoFlashMerchant
+            ?? wechatDeductionMerchant
             ?? extractMerchant(from: normalized, source: source)
             ?? fallbackMerchant
             ?? "待确认商户"
@@ -159,10 +163,11 @@ public struct ReceiptParser: Sendable {
     }
 
     /// 判断字符串是否是一个独立的金额（整行基本就是货币符号 + 数字）。
-    /// 例如 "CN¥7.00"、"¥2.70"、"CNY 3.50" 均返回 true；
+    /// 例如 "CN¥7.00"、"CN￥3.60"（全角￥）、"¥2.70"、"CNY 3.50" 均返回 true；
     /// "T2航站楼"、"3号线"、"ExampleAirport" 等含有非数字字符的站名返回 false。
     private func isStandaloneAmount(_ string: String) -> Bool {
-        let pattern = #"^\s*(?:CN¥|¥|￥|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        // CN¥ 为半角（U+00A5），CN￥ 为全角（U+FFE5），OCR 可能混用，均需支持
+        let pattern = #"^\s*(?:CN¥|CN￥|¥|￥|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
         let trimmed = string.trimmingCharacters(in: .whitespaces)
         return (try? NSRegularExpression(pattern: pattern))?
             .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil
@@ -335,6 +340,8 @@ public struct ReceiptParser: Sendable {
         let pureNumberPattern = #"^\s*\d{1,5}\s*$"#
         // 日期行（"X月X日..."）不是商户名
         let dateLikePattern = #"^\d{1,2}月\d{1,2}日"#
+        // 子弹符号开头 + 3 字以内的短噪声行（如 "•五"，来自微信侧边栏徽标或通知计数的 OCR 误读）
+        let bulletShortNoisePattern = #"^[•·▪▸►▷◦‣⁃]\s*.{0,3}$"#
         return lines.first(where: { line in
             !carrierNames.contains(line) &&
             !skipContainsFallback.contains(where: { line.contains($0) }) &&
@@ -348,6 +355,8 @@ public struct ReceiptParser: Sendable {
             (try? NSRegularExpression(pattern: pureNumberPattern))?
                 .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
             (try? NSRegularExpression(pattern: dateLikePattern))?
+                .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil &&
+            (try? NSRegularExpression(pattern: bulletShortNoisePattern))?
                 .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) == nil
         })
     }
@@ -565,6 +574,48 @@ public struct ReceiptParser: Sendable {
         }
 
         return (merchant, date)
+    }
+
+    // MARK: - 微信代扣凭证页解析
+
+    /// 微信代扣卡片（先购后付、先用后付等自动扣费服务）的典型特征：
+    /// - 含"扣费凭证"
+    /// - 含"扣费内容"标签
+    /// 商户名优先取"扣费内容"标签后的第一个有效值行（如"先购后付"），
+    /// 跳过公司名后缀行（如单独出现的"公司"，常见于两列布局 OCR 拆分）。
+    /// 若无"扣费内容"，则取"扣费凭证"上方的公司名行作为商户名。
+    private func parseWeChatDeductionVoucher(lines: [String]) -> String? {
+        guard lines.contains(where: { $0.contains("扣费凭证") }) else { return nil }
+
+        // 公司名后缀行（单独成行时是上一行拆分的延续，不是服务内容）
+        let companySuffixes: Set<String> = ["公司", "有限公司", "责任公司"]
+        // 遇到这些行时停止向后搜索
+        let stopLabels: Set<String> = ["扣费凭证", "扣费服务", "扣费内容",
+                                       "查看订单详情", "我的账单", "支付服务"]
+
+        // 优先取"扣费内容"后的值行
+        if let contentIdx = lines.indices.first(where: { lines[$0] == "扣费内容" }) {
+            for i in (contentIdx + 1) ..< lines.count {
+                let line = lines[i]
+                if stopLabels.contains(line) { break }
+                if companySuffixes.contains(line) { continue }
+                if !line.isEmpty && line.count >= 2 {
+                    return line
+                }
+            }
+        }
+
+        // 次选：扣费凭证上方的公司/商户名行
+        if let voucherIdx = lines.indices.first(where: { lines[$0].contains("扣费凭证") }),
+           voucherIdx > 0 {
+            let candidate = lines[voucherIdx - 1]
+            if !candidate.isEmpty && candidate.count >= 2
+                && amountCandidate(in: candidate) == nil {
+                return candidate
+            }
+        }
+
+        return nil
     }
 
     // MARK: - 淘宝闪购订单进行中页解析
