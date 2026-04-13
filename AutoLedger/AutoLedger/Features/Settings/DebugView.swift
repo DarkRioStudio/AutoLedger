@@ -41,7 +41,7 @@ struct DebugView: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
-                    ForEach(store.debugRecords.prefix(10)) { record in
+                    ForEach(Array(store.debugRecords.prefix(10))) { record in
                         debugRecordCard(record)
                     }
                 }
@@ -52,7 +52,7 @@ struct DebugView: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
-                ForEach(store.transactions.prefix(5)) { transaction in
+                ForEach(Array(store.transactions.prefix(5))) { transaction in
                     transactionCard(transaction)
                 }
             }
@@ -218,8 +218,8 @@ struct DebugView: View {
                 Text("\(store.transactions.count) 条交易")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
-                ForEach(store.transactions.prefix(20)) { tx in
-                    sqliteRow("\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.category.title) · \(AppFormatters.shortDateTime(tx.occurredAt))")
+                ForEach(Array(store.transactions.prefix(20))) { tx in
+                    sqliteRow("\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.categoryTitle) · \(AppFormatters.shortDateTime(tx.occurredAt))")
                 }
             case .subscriptions:
                 Text("\(store.subscriptions.count) 条订阅")
@@ -240,7 +240,7 @@ struct DebugView: View {
                 Text("\(store.debugRecords.count) 条调试事件")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
-                ForEach(store.debugRecords.prefix(20)) { record in
+                ForEach(Array(store.debugRecords.prefix(20))) { record in
                     sqliteRow("[\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(AppFormatters.shortDateTime(record.createdAt))")
                 }
             }
@@ -595,7 +595,8 @@ struct DebugView: View {
                 }
                 if let txID = record.transactionID,
                    let tx = store.transactions.first(where: { $0.id == txID }) {
-                    lines.append("  当前账单（用户修改后）：\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.category.title) · \(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " · 备注：\(tx.note)")")
+                    let noteStr = tx.note.isEmpty ? "" : " · 备注：\(tx.note)"
+                    lines.append("  当前账单（用户修改后）：\(tx.merchant) · \(AppFormatters.currency(tx.amount)) · \(tx.categoryTitle) · \(AppFormatters.exportDateTime(tx.occurredAt))\(noteStr)")
                 }
                 if !record.rawText.isEmpty {
                     lines.append("  OCR：\(record.rawText)")
@@ -645,7 +646,7 @@ struct DebugView: View {
             lines.append("当前账单（用户修改后）：")
             lines.append("- 商户：\(tx.merchant)")
             lines.append("- 金额：\(AppFormatters.currency(tx.amount))")
-            lines.append("- 分类：\(tx.category.title)")
+            lines.append("- 分类：\(tx.categoryTitle)")
             lines.append("- 时间：\(AppFormatters.exportDateTime(tx.occurredAt))")
             if !tx.note.isEmpty {
                 lines.append("- 备注：\(tx.note)")
