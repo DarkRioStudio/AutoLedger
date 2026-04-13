@@ -494,7 +494,8 @@ enum FeedbackBundleBuilder {
             }
             if let txID = record.transactionID,
                let tx = transactions.first(where: { $0.id == txID }) {
-                lines.append("  user_modified_transaction: merchant=\(tx.merchant) amount=\(String(format: "%.2f", tx.amount)) category=\(tx.category) date=\(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " note=\(tx.note)")"))
+                let noteStr = tx.note.isEmpty ? "" : " note=\(tx.note)"
+                lines.append("  user_modified_transaction: merchant=\(tx.merchant) amount=\(String(format: "%.2f", tx.amount)) category=\(tx.category) date=\(AppFormatters.exportDateTime(tx.occurredAt))\(noteStr)")
             }
             lines.append("")
         }
