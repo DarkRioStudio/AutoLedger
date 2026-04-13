@@ -48,7 +48,7 @@ public struct MonthlySnapshot: Sendable {
             .sorted { $0.value > $1.value }
             .map { $0.key }
 
-        let categoryTotals = Dictionary(grouping: monthTransactions, by: \.category)
+        let categoryTotals = Dictionary(grouping: monthTransactions, by: \.categoryEnum)
             .mapValues { entries in entries.reduce(0) { $0 + $1.amount } }
             .sorted { $0.value > $1.value }
             .map {

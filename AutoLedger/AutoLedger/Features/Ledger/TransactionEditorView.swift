@@ -8,10 +8,11 @@ struct TransactionEditorView: View {
     var isNew: Bool = false
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: LedgerStore
     @State private var merchant: String
     @State private var amountText: String
-    @State private var category: TransactionCategory
-    @State private var source: ReceiptSource
+    @State private var category: String
+    @State private var source: String
     @State private var occurredAt: Date
     @State private var note: String
 
@@ -35,7 +36,12 @@ struct TransactionEditorView: View {
 
                     Picker("来源", selection: $source) {
                         ForEach(ReceiptSource.allCases) { item in
-                            Text(item.title).tag(item)
+                            Text(item.title).tag(item.rawValue)
+                        }
+                        if !store.customSources.isEmpty {
+                            ForEach(store.customSources, id: \.self) { custom in
+                                Text(custom).tag(custom)
+                            }
                         }
                     }
 
@@ -48,7 +54,12 @@ struct TransactionEditorView: View {
 
                     Picker("分类", selection: $category) {
                         ForEach(TransactionCategory.allCases) { item in
-                            Text(item.title).tag(item)
+                            Text(item.title).tag(item.rawValue)
+                        }
+                        if !store.customCategories.isEmpty {
+                            ForEach(store.customCategories, id: \.self) { custom in
+                                Text(custom).tag(custom)
+                            }
                         }
                     }
 
@@ -74,8 +85,8 @@ struct TransactionEditorView: View {
                                 merchant: trimmedMerchant.isEmpty ? transaction.merchant : trimmedMerchant,
                                 amount: parsedAmount,
                                 occurredAt: occurredAt,
-                                category: category,
-                                source: source,
+                                categoryLabel: category,
+                                sourceLabel: source,
                                 note: note.trimmingCharacters(in: .whitespacesAndNewlines)
                             )
                         )

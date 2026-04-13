@@ -492,11 +492,11 @@ struct DebugView: View {
 
     private func transactionCard(_ transaction: Transaction) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: transaction.category.iconName)
+            Image(systemName: transaction.categoryEnum.iconName)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(transaction.category.tint)
+                .foregroundStyle(transaction.categoryEnum.tint)
                 .frame(width: 34, height: 34)
-                .background(transaction.category.tint.opacity(0.12))
+                .background(transaction.categoryEnum.tint.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 6) {
@@ -504,7 +504,7 @@ struct DebugView: View {
                     .font(.headline)
                     .foregroundStyle(AppTheme.ink)
 
-                Text("\(transaction.category.title) · \(transaction.source.title) · \(AppFormatters.shortDateTime(transaction.occurredAt))")
+                Text("\(transaction.categoryTitle) · \(transaction.sourceTitle) · \(AppFormatters.shortDateTime(transaction.occurredAt))")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
 
@@ -612,7 +612,7 @@ struct DebugView: View {
         if !store.transactions.isEmpty {
             lines.append("最近账单：")
             for transaction in store.transactions.prefix(5) {
-                lines.append("- \(transaction.merchant) · \(AppFormatters.currency(transaction.amount)) · \(transaction.category.title) · \(AppFormatters.exportDateTime(transaction.occurredAt))")
+                lines.append("- \(transaction.merchant) · \(AppFormatters.currency(transaction.amount)) · \(transaction.categoryTitle) · \(AppFormatters.exportDateTime(transaction.occurredAt))")
             }
         }
 

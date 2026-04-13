@@ -444,7 +444,7 @@ enum FeedbackBundleBuilder {
                     var entry = "\(r.stage.rawValue)|\(r.source.rawValue)|\(r.imageSource.rawValue)|\(AppFormatters.exportDateTime(r.createdAt))"
                     if let txID = r.transactionID,
                        let tx = transactions.first(where: { $0.id == txID }) {
-                        entry += "|user_tx=\(tx.merchant):\(String(format: "%.2f", tx.amount)):\(tx.category.rawValue)"
+                        entry += "|user_tx=\(tx.merchant):\(String(format: "%.2f", tx.amount)):\(tx.category)"
                     }
                     return entry
                 }
@@ -494,7 +494,7 @@ enum FeedbackBundleBuilder {
             }
             if let txID = record.transactionID,
                let tx = transactions.first(where: { $0.id == txID }) {
-                lines.append("  user_modified_transaction: merchant=\(tx.merchant) amount=\(String(format: "%.2f", tx.amount)) category=\(tx.category.rawValue) date=\(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " note=\(tx.note)")")
+                lines.append("  user_modified_transaction: merchant=\(tx.merchant) amount=\(String(format: "%.2f", tx.amount)) category=\(tx.category) date=\(AppFormatters.exportDateTime(tx.occurredAt))\(tx.note.isEmpty ? "" : " note=\(tx.note)")"))
             }
             lines.append("")
         }

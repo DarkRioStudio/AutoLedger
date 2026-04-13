@@ -351,9 +351,10 @@ final class LedgerStore: ObservableObject {
 
         let original = transactions[index]
 
-        // 检测分类修正——记录用户偏好
-        if original.category != transaction.category {
-            recordCategoryCorrection(merchant: transaction.merchant, category: transaction.category)
+        // 检测分类修正——仅对内置分类记录用户偏好（自定义分类直接以字符串存储在 Transaction）
+        if original.category != transaction.category,
+           let builtIn = TransactionCategory(rawValue: transaction.category) {
+            recordCategoryCorrection(merchant: transaction.merchant, category: builtIn)
         }
 
         transactions[index] = transaction
