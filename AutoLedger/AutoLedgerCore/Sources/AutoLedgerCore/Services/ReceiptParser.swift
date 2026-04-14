@@ -534,6 +534,7 @@ public struct ReceiptParser: Sendable {
     /// 之后是对应值按相同顺序排列。此方法检测该结构并提取商户名和支付时间。
     private func parseWeChatDetailBlock(lines: [String]) -> (merchant: String?, date: Date?)? {
         guard lines.contains(where: { $0.contains("交易详情") }) else { return nil }
+        let normalizedLines = mergeWrappedParenthesisLines(lines)
 
         let knownLabels: Set<String> = [
             "当前状态", "支付时间", "商品", "商户全称", "收单机构",
@@ -544,7 +545,7 @@ public struct ReceiptParser: Sendable {
         var bestRun: [(index: Int, label: String)] = []
         var currentRun: [(index: Int, label: String)] = []
 
-        for (i, line) in lines.enumerated() {
+        for (i, line) in normalizedLines.enumerated() {
             if knownLabels.contains(line) {
                 currentRun.append((i, line))
             } else {
@@ -562,8 +563,8 @@ public struct ReceiptParser: Sendable {
 
         for (offset, item) in bestRun.enumerated() {
             let valueIdx = valueStart + offset
-            guard valueIdx < lines.count else { break }
-            let value = lines[valueIdx]
+            guard valueIdx < normalizedLines.count else { break }
+            let value = normalizedLines[valueIdx]
 
             if item.label == "商户全称" && !value.isEmpty {
                 merchant = value
@@ -574,6 +575,40 @@ public struct ReceiptParser: Sendable {
         }
 
         return (merchant, date)
+    }
+
+    /// 合并被 OCR 拆成多行的括号内容，避免标签块值映射被换行错位。
+    /// 例如："天津市...（个" + "体工商户）" -> "天津市...（个体工商户）"。
+    private func mergeWrappedParenthesisLines(_ lines: [String]) -> [String] {
+        var merged: [String] = []
+        var index = 0
+
+        while index < lines.count {
+            var current = lines[index]
+            var balance = parenthesisBalance(current)
+            var lookahead = index + 1
+
+            while balance > 0, lookahead < lines.count {
+                current += lines[lookahead]
+                balance += parenthesisBalance(lines[lookahead])
+                lookahead += 1
+            }
+
+            merged.append(current)
+            index = lookahead
+        }
+
+        return merged
+    }
+
+    private func parenthesisBalance(_ line: String) -> Int {
+        let openings = line.reduce(into: 0) { partialResult, ch in
+            if ch == "（" || ch == "(" { partialResult += 1 }
+        }
+        let closings = line.reduce(into: 0) { partialResult, ch in
+            if ch == "）" || ch == ")" { partialResult += 1 }
+        }
+        return openings - closings
     }
 
     // MARK: - 微信代扣凭证页解析
