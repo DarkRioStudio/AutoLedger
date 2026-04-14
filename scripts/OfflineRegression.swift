@@ -48,12 +48,14 @@ struct OfflineRegression {
     ) {
         let expectedDates: [String: String] = [
             "微信买菜截图": "2026-03-26 19:42",
+            "微信支付详情个体工商户跨行截图": "2026-04-13 16:42:09",
             "支付宝出行截图": "2026-03-25 08:10",
             "App Store 订阅截图": "2026-03-22 12:14"
         ]
 
         let expectedMerchants: [String: String] = [
             "微信买菜截图": "Example Supermarket",
+            "微信支付详情个体工商户跨行截图": "宜春市Example Mini Market商贸有限公司",
             "支付宝出行截图": "滴滴出行",
             "App Store 订阅截图": "Apple Services",
             "天津地铁储值卡截图": "地铁：ExampleStationA → ExampleStationB",
@@ -70,6 +72,7 @@ struct OfflineRegression {
 
         let expectedAmounts: [String: Double] = [
             "微信买菜截图": 86.30,
+            "微信支付详情个体工商户跨行截图": 6.15,
             "支付宝出行截图": 23.80,
             "App Store 订阅截图": 28.00,
             "天津地铁储值卡截图": 2.70,
@@ -86,6 +89,7 @@ struct OfflineRegression {
 
         let expectedCategories: [String: TransactionCategory] = [
             "微信买菜截图": .groceries,
+            "微信支付详情个体工商户跨行截图": .shopping,
             "支付宝出行截图": .transport,
             "App Store 订阅截图": .digital,
             "天津地铁储值卡截图": .transport,

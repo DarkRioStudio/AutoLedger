@@ -22,6 +22,44 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "Example Supermarket · ¥86.30 · 2026-03-26 19:42"
         ),
         SampleReceipt(
+            title: "微信支付详情个体工商户跨行截图",
+            source: .wechat,
+            rawText: """
+            16:42
+            Example Mini Market
+            等17万+人喜欢
+            3喜欢
+            小程序
+            会员日88折〉
+            服务
+            会员
+            门店
+            • 交易详情
+            一
+            -6.15
+            Example Mini Market
+            当前状态
+            支付时间
+            商品
+            商户全称
+            收单机构
+            支付方式
+            交易单号
+            商户单号
+            支付成功
+            2026年04月13日 16:42:09
+            示例便利店（个
+            Fictional Sole Proprietor
+            宜春市Example Mini Market商贸有限公司
+            Example Acquiring Services Co.
+            Example Bank Card (1234)
+            ORDER-EXAMPLE-WECHAT-001
+            MERCHANT-ORDER-001
+            可在支持的商户扫码退款
+            """,
+            preview: "宜春市Example Mini Market商贸有限公司 · ¥6.15 · 2026-04-13 16:42:09"
+        ),
+        SampleReceipt(
             title: "支付宝出行截图",
             source: .alipay,
             rawText: """
