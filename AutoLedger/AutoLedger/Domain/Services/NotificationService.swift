@@ -1,5 +1,6 @@
 import AutoLedgerCore
 import Foundation
+import os.log
 import UserNotifications
 
 final class NotificationService: Sendable {
@@ -11,6 +12,7 @@ final class NotificationService: Sendable {
     static let quickLedgerTransactionIDUserInfoKey = "transactionID"
     /// 略微延迟，避免与快捷指令完成瞬间的系统 UI 切换抢占展示
     static let quickLedgerNotificationDelay: TimeInterval = 1
+    private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "NotificationService")
 
     private init() {}
 
@@ -46,7 +48,7 @@ final class NotificationService: Sendable {
             let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
                 content.title = "记账成功"
-                content.body = "记账成功：\(merchant) - \(String(format: "¥%.2f", amount))。如有异常，请点击打开 App 确认。"
+                content.body = "记账成功：\(merchant) - \(self.formattedAmount(amount))。如有异常，请点击打开 App 确认。"
                 content.sound = .default
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
@@ -60,7 +62,7 @@ final class NotificationService: Sendable {
                 )
                 center.add(request) { error in
                     guard let error else { return }
-                    print("Failed to schedule quick ledger notification: \(error.localizedDescription)")
+                    Self.logger.error("Failed to schedule quick ledger notification: \(error.localizedDescription)")
                 }
             }
 

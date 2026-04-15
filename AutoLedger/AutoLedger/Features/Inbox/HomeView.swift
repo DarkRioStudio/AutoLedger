@@ -41,18 +41,14 @@ struct HomeView: View {
             consumeQuickLedgerPendingNavigationIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.quickLedgerOpenLedgerEvent)) { _ in
-            openLedgerTabFromShortcutNotification()
+            consumeQuickLedgerPendingNavigationIfNeeded()
         }
     }
 
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
         guard UserDefaults.standard.bool(forKey: NotificationService.quickLedgerPendingOpenLedgerKey) else { return }
-        openLedgerTabFromShortcutNotification()
-    }
-
-    private func openLedgerTabFromShortcutNotification() {
-        selectedTab = 1
         UserDefaults.standard.set(false, forKey: NotificationService.quickLedgerPendingOpenLedgerKey)
+        selectedTab = 1
     }
 }
 
