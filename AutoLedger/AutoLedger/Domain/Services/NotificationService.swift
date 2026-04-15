@@ -21,7 +21,10 @@ final class NotificationService: Sendable {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .notDetermined else { return }
-            center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { _, error in
+                guard let error else { return }
+                Self.logger.error("Failed to request notification authorization: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -73,7 +76,10 @@ final class NotificationService: Sendable {
             case .authorized, .provisional, .ephemeral:
                 scheduleNotification()
             case .notDetermined:
-                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if let error {
+                        Self.logger.error("Failed to request quick ledger notification authorization: \(error.localizedDescription)")
+                    }
                     guard granted else { return }
                     scheduleNotification()
                 }

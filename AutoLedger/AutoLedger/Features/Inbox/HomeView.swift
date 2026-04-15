@@ -50,11 +50,9 @@ struct HomeView: View {
     }
 
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
-        Task {
+        Task { @MainActor in
             guard await QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
-            await MainActor.run {
-                selectedTab = HomeTabIndex.ledger
-            }
+            selectedTab = HomeTabIndex.ledger
         }
     }
 }
