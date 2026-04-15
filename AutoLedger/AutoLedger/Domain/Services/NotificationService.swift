@@ -9,6 +9,7 @@ final class NotificationService: Sendable {
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
     static let quickLedgerTransactionIDUserInfoKey = "transactionID"
+    /// 略微延迟，避免与快捷指令完成瞬间的系统 UI 切换抢占展示
     static let quickLedgerNotificationDelay: TimeInterval = 1
 
     private init() {}
@@ -57,7 +58,10 @@ final class NotificationService: Sendable {
                     content: content,
                     trigger: UNTimeIntervalNotificationTrigger(timeInterval: Self.quickLedgerNotificationDelay, repeats: false)
                 )
-                center.add(request)
+                center.add(request) { error in
+                    guard let error else { return }
+                    print("Failed to schedule quick ledger notification: \(error.localizedDescription)")
+                }
             }
 
             switch settings.authorizationStatus {
