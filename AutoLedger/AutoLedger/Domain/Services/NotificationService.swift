@@ -6,7 +6,6 @@ import UserNotifications
 final class NotificationService: Sendable {
     static let shared = NotificationService()
     static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
-    static let quickLedgerPendingOpenLedgerKey = "quickLedgerPendingOpenLedger"
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
     static let quickLedgerTransactionIDUserInfoKey = "transactionID"
@@ -44,11 +43,12 @@ final class NotificationService: Sendable {
 
     func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
         let center = UNUserNotificationCenter.current()
+        let formattedAmountText = formattedAmount(amount)
         center.getNotificationSettings { settings in
             let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
                 content.title = "记账成功"
-                content.body = "记账成功：\(merchant) - \(self.formattedAmount(amount))。如有异常，请点击打开 App 确认。"
+                content.body = "记账成功：\(merchant) - \(formattedAmountText)。如有异常，请点击打开 App 确认。"
                 content.sound = .default
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
