@@ -99,6 +99,12 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "入账失败，请打开 App 确认")
         }
 
+        NotificationService.shared.scheduleQuickLedgerSuccessNotification(
+            merchant: receipt.merchant,
+            amount: receipt.amount,
+            transactionID: transaction.id
+        )
+
         let msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
         writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace, transactionID: transaction.id)
         return .result(value: msg)

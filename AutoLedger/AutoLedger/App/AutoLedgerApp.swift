@@ -10,6 +10,7 @@ import AutoLedgerCore
 
 @main
 struct AutoLedgerApp: App {
+    @UIApplicationDelegateAdaptor(AutoLedgerAppDelegate.self) private var appDelegate
     @StateObject private var store = LedgerStore()
     @Environment(\.scenePhase) private var scenePhase
 
