@@ -1,9 +1,17 @@
 import AutoLedgerCore
 import Foundation
+import os.log
 import UserNotifications
 
 final class NotificationService: Sendable {
     static let shared = NotificationService()
+    static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
+    static let quickLedgerDestinationUserInfoKey = "destination"
+    static let quickLedgerDestinationLedgerValue = "ledger"
+    static let quickLedgerTransactionIDUserInfoKey = "transactionID"
+    /// 略微延迟，避免与快捷指令完成瞬间的系统 UI 切换抢占展示
+    static let quickLedgerNotificationDelay: TimeInterval = 1
+    private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "NotificationService")
 
     private init() {}
 
@@ -13,7 +21,10 @@ final class NotificationService: Sendable {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .notDetermined else { return }
-            center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { _, error in
+                guard let error else { return }
+                Self.logger.error("Failed to request notification authorization: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -30,6 +41,53 @@ final class NotificationService: Sendable {
 
         for sub in subscriptions {
             scheduleReminder(for: sub)
+        }
+    }
+
+    func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
+        let center = UNUserNotificationCenter.current()
+        let formattedAmountText = String(format: "¥%.2f", amount)
+        center.getNotificationSettings { settings in
+            let scheduleNotification: () -> Void = {
+                let content = UNMutableNotificationContent()
+                content.title = "记账成功"
+                content.body = "记账成功：\(merchant) - \(formattedAmountText)。如有异常，请点击打开 App 确认。"
+                content.sound = .default
+                content.userInfo = [
+                    Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
+                    Self.quickLedgerTransactionIDUserInfoKey: transactionID.uuidString
+                ]
+
+                let request = UNNotificationRequest(
+                    identifier: "quick-ledger-success-\(transactionID.uuidString)",
+                    content: content,
+                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: Self.quickLedgerNotificationDelay, repeats: false)
+                )
+                center.add(request) { error in
+                    if let error {
+                        Self.logger.error("Failed to schedule quick ledger notification: \(error.localizedDescription)")
+                    } else {
+                        Self.logger.debug("Scheduled quick ledger success notification")
+                    }
+                }
+            }
+
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                scheduleNotification()
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if let error {
+                        Self.logger.error("Failed to request quick ledger notification authorization: \(error.localizedDescription)")
+                    }
+                    guard granted else { return }
+                    scheduleNotification()
+                }
+            case .denied:
+                break
+            @unknown default:
+                break
+            }
         }
     }
 
