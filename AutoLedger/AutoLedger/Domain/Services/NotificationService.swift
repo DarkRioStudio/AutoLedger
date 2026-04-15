@@ -43,7 +43,7 @@ final class NotificationService: Sendable {
 
     func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
         let center = UNUserNotificationCenter.current()
-        let formattedAmountText = formattedAmount(amount)
+        let formattedAmountText = String(format: "¥%.2f", amount)
         center.getNotificationSettings { settings in
             let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
