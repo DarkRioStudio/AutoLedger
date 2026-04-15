@@ -58,6 +58,14 @@ public struct ImportDebugRecord: Identifiable, Sendable {
     public var parsedReceipt: ImportedReceipt? = nil
     /// 对应入账的交易 ID（仅 stage == .persisted 时有值），用于导出时查询用户修改后的账单数据
     public let transactionID: UUID?
+    /// 使用的 LLM 模型标识（apple / gemma）
+    public let llmProvider: String?
+    /// LLM 推理耗时（毫秒）
+    public let llmLatencyMs: Int?
+    /// LLM 返回的置信度
+    public let llmConfidence: Double?
+    /// 是否走了规则兜底
+    public let usedRuleFallback: Bool
 
     /// 是否经过 LLM 解析
     public var usedLLM: Bool { llmPrompt != nil }
@@ -73,7 +81,11 @@ public struct ImportDebugRecord: Identifiable, Sendable {
         summary: String,
         llmPrompt: String? = nil,
         llmResponse: String? = nil,
-        transactionID: UUID? = nil
+        transactionID: UUID? = nil,
+        llmProvider: String? = nil,
+        llmLatencyMs: Int? = nil,
+        llmConfidence: Double? = nil,
+        usedRuleFallback: Bool = true
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -88,5 +100,9 @@ public struct ImportDebugRecord: Identifiable, Sendable {
         self.llmPrompt = llmPrompt
         self.llmResponse = llmResponse
         self.transactionID = transactionID
+        self.llmProvider = llmProvider
+        self.llmLatencyMs = llmLatencyMs
+        self.llmConfidence = llmConfidence
+        self.usedRuleFallback = usedRuleFallback
     }
 }

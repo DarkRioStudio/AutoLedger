@@ -92,6 +92,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    NavigationLink {
+                        AIModelSettingsView()
+                    } label: {
+                        settingsRow(
+                            icon: "cpu.fill",
+                            iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
+                            title: "AI 模型",
+                            subtitle: "选择端侧大模型，管理 Gemma 模型下载"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     toggleCard(
                         icon: "doc.on.clipboard",
                         iconColor: .orange,

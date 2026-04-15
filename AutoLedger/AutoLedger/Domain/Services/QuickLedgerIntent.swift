@@ -44,8 +44,10 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         // 2. 智能解析（规则 + LLM）
         let source = ReceiptSource.infer(from: text)
         let smartParser = SmartReceiptParser()
-        guard let result = await smartParser.parse(text: text, source: source,
-                                                   ocrMinConfidence: ocrResult.minimumWordConfidence) else {
+        let cleanedText = OCRTextCleaner.clean(text)
+        guard let result = await smartParser.parse(text: cleanedText, source: source,
+                                                   ocrMinConfidence: ocrResult.minimumWordConfidence,
+                                                   provider: LLMProvider.userSelected) else {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
             return .result(value: "识别失败，请打开 App 确认")
         }
