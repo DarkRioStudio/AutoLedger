@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+private enum HomeTabIndex {
+    static let ledger = 1
+}
+
 struct HomeView: View {
     @State private var selectedTab = 0
 
@@ -49,7 +53,7 @@ struct HomeView: View {
         Task {
             guard await QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
             await MainActor.run {
-                selectedTab = 1
+                selectedTab = HomeTabIndex.ledger
             }
         }
     }

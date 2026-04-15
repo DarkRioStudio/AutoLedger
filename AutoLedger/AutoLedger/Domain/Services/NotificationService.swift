@@ -61,8 +61,11 @@ final class NotificationService: Sendable {
                     trigger: UNTimeIntervalNotificationTrigger(timeInterval: Self.quickLedgerNotificationDelay, repeats: false)
                 )
                 center.add(request) { error in
-                    guard let error else { return }
-                    Self.logger.error("Failed to schedule quick ledger notification: \(error.localizedDescription)")
+                    if let error {
+                        Self.logger.error("Failed to schedule quick ledger notification: \(error.localizedDescription)")
+                    } else {
+                        Self.logger.debug("Scheduled quick ledger success notification")
+                    }
                 }
             }
 
