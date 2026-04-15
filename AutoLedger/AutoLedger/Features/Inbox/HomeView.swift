@@ -46,8 +46,7 @@ struct HomeView: View {
     }
 
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
-        guard UserDefaults.standard.bool(forKey: NotificationService.quickLedgerPendingOpenLedgerKey) else { return }
-        UserDefaults.standard.set(false, forKey: NotificationService.quickLedgerPendingOpenLedgerKey)
+        guard AutoLedgerAppDelegate.consumeQuickLedgerOpenLedgerPending() else { return }
         selectedTab = 1
     }
 }

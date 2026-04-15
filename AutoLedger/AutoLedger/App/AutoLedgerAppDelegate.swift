@@ -3,6 +3,23 @@ import UIKit
 import UserNotifications
 
 final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    private static let quickLedgerNavigationLock = NSLock()
+    private static var quickLedgerOpenLedgerPending = false
+
+    static func markQuickLedgerOpenLedgerPending() {
+        quickLedgerNavigationLock.lock()
+        quickLedgerOpenLedgerPending = true
+        quickLedgerNavigationLock.unlock()
+    }
+
+    static func consumeQuickLedgerOpenLedgerPending() -> Bool {
+        quickLedgerNavigationLock.lock()
+        let pending = quickLedgerOpenLedgerPending
+        quickLedgerOpenLedgerPending = false
+        quickLedgerNavigationLock.unlock()
+        return pending
+    }
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -30,7 +47,7 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
             return
         }
 
-        UserDefaults.standard.set(true, forKey: NotificationService.quickLedgerPendingOpenLedgerKey)
+        Self.markQuickLedgerOpenLedgerPending()
         NotificationCenter.default.post(name: NotificationService.quickLedgerOpenLedgerEvent, object: nil)
         completionHandler()
     }
