@@ -8,6 +8,8 @@ final class NotificationService: Sendable {
     static let quickLedgerPendingOpenLedgerKey = "quickLedgerPendingOpenLedger"
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
+    static let quickLedgerTransactionIDUserInfoKey = "transactionID"
+    static let quickLedgerNotificationDelay: TimeInterval = 1
 
     private init() {}
 
@@ -47,13 +49,13 @@ final class NotificationService: Sendable {
                 content.sound = .default
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
-                    "transactionID": transactionID.uuidString
+                    Self.quickLedgerTransactionIDUserInfoKey: transactionID.uuidString
                 ]
 
                 let request = UNNotificationRequest(
                     identifier: "quick-ledger-success-\(transactionID.uuidString)",
                     content: content,
-                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: Self.quickLedgerNotificationDelay, repeats: false)
                 )
                 center.add(request)
             }
