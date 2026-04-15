@@ -4,6 +4,10 @@ import UserNotifications
 
 final class NotificationService: Sendable {
     static let shared = NotificationService()
+    static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
+    static let quickLedgerPendingOpenLedgerKey = "quickLedgerPendingOpenLedger"
+    static let quickLedgerDestinationUserInfoKey = "destination"
+    static let quickLedgerDestinationLedgerValue = "ledger"
 
     private init() {}
 
@@ -30,6 +34,43 @@ final class NotificationService: Sendable {
 
         for sub in subscriptions {
             scheduleReminder(for: sub)
+        }
+    }
+
+    func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            let enqueue: () -> Void = {
+                let content = UNMutableNotificationContent()
+                content.title = "记账成功"
+                content.body = "记账成功：\(merchant) - \(self.formattedAmount(amount))。如有异常，请点击打开 App 确认。"
+                content.sound = .default
+                content.userInfo = [
+                    Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
+                    "transactionID": transactionID.uuidString
+                ]
+
+                let request = UNNotificationRequest(
+                    identifier: "quick-ledger-success-\(transactionID.uuidString)",
+                    content: content,
+                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+                )
+                center.add(request)
+            }
+
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                enqueue()
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    guard granted else { return }
+                    enqueue()
+                }
+            case .denied:
+                break
+            @unknown default:
+                break
+            }
         }
     }
 

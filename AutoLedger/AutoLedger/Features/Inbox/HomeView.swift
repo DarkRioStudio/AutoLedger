@@ -37,6 +37,19 @@ struct HomeView: View {
                 .tag(3)
         }
         .tint(AppTheme.accent)
+        .onAppear {
+            consumeQuickLedgerPendingNavigationIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NotificationService.quickLedgerOpenLedgerEvent)) { _ in
+            selectedTab = 1
+            UserDefaults.standard.set(false, forKey: NotificationService.quickLedgerPendingOpenLedgerKey)
+        }
+    }
+
+    private func consumeQuickLedgerPendingNavigationIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: NotificationService.quickLedgerPendingOpenLedgerKey) else { return }
+        selectedTab = 1
+        UserDefaults.standard.set(false, forKey: NotificationService.quickLedgerPendingOpenLedgerKey)
     }
 }
 
