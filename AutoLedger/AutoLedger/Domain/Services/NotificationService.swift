@@ -40,10 +40,10 @@ final class NotificationService: Sendable {
     func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
-            let enqueue: () -> Void = {
+            let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
                 content.title = "记账成功"
-                content.body = "记账成功：\(merchant) - \(self.formattedAmount(amount))。如有异常，请点击打开 App 确认。"
+                content.body = "记账成功：\(merchant) - \(String(format: "¥%.2f", amount))。如有异常，请点击打开 App 确认。"
                 content.sound = .default
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
@@ -60,11 +60,11 @@ final class NotificationService: Sendable {
 
             switch settings.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
-                enqueue()
+                scheduleNotification()
             case .notDetermined:
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                     guard granted else { return }
-                    enqueue()
+                    scheduleNotification()
                 }
             case .denied:
                 break
