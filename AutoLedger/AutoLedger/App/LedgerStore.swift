@@ -116,11 +116,17 @@ final class LedgerStore: ObservableObject {
                 return
             }
 
+            // OCR 文本预清洗（去噪 + 缩短 token）
+            let cleanedText = OCRTextCleaner.clean(normalizedText)
+            let selectedProvider = LLMProvider.userSelected
+            logger.info("[解析] 使用模型: \(selectedProvider.displayName)")
+
             let result = await smartParser.parse(
-                text: normalizedText,
+                text: cleanedText,
                 source: source,
                 fallbackMerchant: fallbackMerchant,
-                ocrMinConfidence: ocrMinConfidence
+                ocrMinConfidence: ocrMinConfidence,
+                provider: selectedProvider
             )
 
             guard let result else {
@@ -139,13 +145,16 @@ final class LedgerStore: ObservableObject {
             }
 
             lastParsedReceipt = result.receipt
-            logger.info("[解析] 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) LLM=\(result.llmTrace != nil ? "是" : "否")")
+            let providerName = result.llmTrace?.provider.displayName ?? "规则"
+            let latency = result.llmTrace?.latencyMs ?? 0
+            logger.info("[解析] 模型=\(providerName) 耗时=\(latency)ms 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) 规则兜底=\(result.usedRuleFallback ? "是" : "否")")
             persistReceipt(
                 result.receipt,
                 rawText: normalizedText,
                 notePrefix: notePrefix,
                 imageSource: imageSource,
-                llmTrace: result.llmTrace
+                llmTrace: result.llmTrace,
+                usedRuleFallback: result.usedRuleFallback
             )
         }
     }
@@ -368,7 +377,7 @@ final class LedgerStore: ObservableObject {
         }
     }
 
-    private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil) {
+    private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil, usedRuleFallback: Bool = true) {
         // 商户别名映射
         let resolvedMerchant = resolveMerchant(inReceipt.merchant)
         let receipt: ImportedReceipt
@@ -421,7 +430,11 @@ final class LedgerStore: ObservableObject {
                 parsedReceipt: receipt,
                 summary: summary,
                 llmPrompt: llmTrace?.prompt,
-                llmResponse: llmTrace?.response
+                llmResponse: llmTrace?.response,
+                llmProvider: llmTrace?.provider.rawValue,
+                llmLatencyMs: llmTrace?.latencyMs,
+                llmConfidence: receipt.confidence,
+                usedRuleFallback: usedRuleFallback
             )
             return
         }
@@ -451,7 +464,11 @@ final class LedgerStore: ObservableObject {
                 parsedReceipt: receipt,
                 summary: summary,
                 llmPrompt: llmTrace?.prompt,
-                llmResponse: llmTrace?.response
+                llmResponse: llmTrace?.response,
+                llmProvider: llmTrace?.provider.rawValue,
+                llmLatencyMs: llmTrace?.latencyMs,
+                llmConfidence: receipt.confidence,
+                usedRuleFallback: usedRuleFallback
             )
             return
         }
@@ -467,7 +484,11 @@ final class LedgerStore: ObservableObject {
             summary: summary,
             llmPrompt: llmTrace?.prompt,
             llmResponse: llmTrace?.response,
-            transactionID: transaction.id
+            transactionID: transaction.id,
+            llmProvider: llmTrace?.provider.rawValue,
+            llmLatencyMs: llmTrace?.latencyMs,
+            llmConfidence: receipt.confidence,
+            usedRuleFallback: usedRuleFallback
         )
     }
 
@@ -518,7 +539,11 @@ final class LedgerStore: ObservableObject {
         summary: String,
         llmPrompt: String? = nil,
         llmResponse: String? = nil,
-        transactionID: UUID? = nil
+        transactionID: UUID? = nil,
+        llmProvider: String? = nil,
+        llmLatencyMs: Int? = nil,
+        llmConfidence: Double? = nil,
+        usedRuleFallback: Bool = true
     ) {
         let record = ImportDebugRecord(
             createdAt: .now,
@@ -530,7 +555,11 @@ final class LedgerStore: ObservableObject {
             summary: summary,
             llmPrompt: llmPrompt,
             llmResponse: llmResponse,
-            transactionID: transactionID
+            transactionID: transactionID,
+            llmProvider: llmProvider,
+            llmLatencyMs: llmLatencyMs,
+            llmConfidence: llmConfidence,
+            usedRuleFallback: usedRuleFallback
         )
         debugRecords.insert(record, at: 0)
         if let sqlStore = transactionStore as? SQLiteTransactionStore {

@@ -201,9 +201,17 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         // 安全迁移：为旧表添加新列（仅在列不存在时执行）
         let existingColumns = Self.columnNames(db: db, table: "debug_events")
-        for col in ["llm_prompt", "llm_response", "image_source", "transaction_id"] {
+        for col in ["llm_prompt", "llm_response", "image_source", "transaction_id",
+                     "llm_provider", "llm_latency_ms", "llm_confidence", "used_rule_fallback"] {
             if !existingColumns.contains(col) {
-                sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN \(col) TEXT;", nil, nil, nil)
+                let colType: String
+                switch col {
+                case "llm_latency_ms": colType = "INTEGER"
+                case "llm_confidence": colType = "REAL"
+                case "used_rule_fallback": colType = "INTEGER DEFAULT 1"
+                default: colType = "TEXT"
+                }
+                sqlite3_exec(db, "ALTER TABLE debug_events ADD COLUMN \(col) \(colType);", nil, nil, nil)
             }
         }
 
@@ -257,8 +265,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func saveDebugEvent(_ record: ImportDebugRecord) throws {
         let sql = """
-        INSERT INTO debug_events (id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO debug_events (id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id, llm_provider, llm_latency_ms, llm_confidence, used_rule_fallback)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -299,6 +307,22 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         } else {
             sqlite3_bind_null(statement, 12)
         }
+        if let provider = record.llmProvider {
+            sqlite3_bind_text(statement, 13, provider, -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, 13)
+        }
+        if let latency = record.llmLatencyMs {
+            sqlite3_bind_int(statement, 14, Int32(latency))
+        } else {
+            sqlite3_bind_null(statement, 14)
+        }
+        if let confidence = record.llmConfidence {
+            sqlite3_bind_double(statement, 15, confidence)
+        } else {
+            sqlite3_bind_null(statement, 15)
+        }
+        sqlite3_bind_int(statement, 16, record.usedRuleFallback ? 1 : 0)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -307,7 +331,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadDebugEvents() throws -> [ImportDebugRecord] {
         let sql = """
-        SELECT id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id
+        SELECT id, created_at, stage, source, raw_text, parsed_merchant, parsed_amount, summary, llm_prompt, llm_response, image_source, transaction_id, llm_provider, llm_latency_ms, llm_confidence, used_rule_fallback
         FROM debug_events
         ORDER BY created_at DESC;
         """
@@ -364,6 +388,19 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 return UUID(uuidString: String(cString: cStr))
             }()
 
+            let llmProvider: String? = sqlite3_column_type(statement, 12) != SQLITE_NULL
+                ? String(cString: sqlite3_column_text(statement, 12))
+                : nil
+            let llmLatencyMs: Int? = sqlite3_column_type(statement, 13) != SQLITE_NULL
+                ? Int(sqlite3_column_int(statement, 13))
+                : nil
+            let llmConfidence: Double? = sqlite3_column_type(statement, 14) != SQLITE_NULL
+                ? sqlite3_column_double(statement, 14)
+                : nil
+            let usedRuleFallback: Bool = sqlite3_column_type(statement, 15) != SQLITE_NULL
+                ? sqlite3_column_int(statement, 15) != 0
+                : true
+
             var receipt: ImportedReceipt? = nil
             if let m = parsedMerchant, let a = parsedAmount {
                 receipt = ImportedReceipt(
@@ -390,7 +427,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     summary: summary,
                     llmPrompt: llmPrompt,
                     llmResponse: llmResponse,
-                    transactionID: transactionID
+                    transactionID: transactionID,
+                    llmProvider: llmProvider,
+                    llmLatencyMs: llmLatencyMs,
+                    llmConfidence: llmConfidence,
+                    usedRuleFallback: usedRuleFallback
                 )
             )
         }

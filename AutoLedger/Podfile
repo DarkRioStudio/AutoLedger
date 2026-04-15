@@ -1,0 +1,19 @@
+platform :ios, '18.0'
+
+target 'AutoLedger' do
+  use_frameworks!
+
+  # MediaPipe LLM Inference (Gemma-2 2B on-device)
+  pod 'MediaPipeTasksGenAI'
+  pod 'MediaPipeTasksGenAIC'
+end
+
+# MediaPipe 预编译二进制最低 iOS 16，但我们项目 target 26.0
+# CocoaPods 会将 Pods target 对齐到 platform :ios 或更高
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+    end
+  end
+end
