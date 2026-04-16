@@ -1,7 +1,10 @@
 import AppIntents
 import AutoLedgerCore
 import Foundation
+import OSLog
 import UniformTypeIdentifiers
+
+private let intentLogger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "QuickLedgerIntent")
 
 struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
     static var title: LocalizedStringResource = "快速记账"
@@ -32,11 +35,15 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
 
         // 1. OCR 与模型预加载并行
         let selectedProvider = await LLMProvider.userSelected
-        async let preload: Void = {
-            if selectedProvider == .gemma {
-                await GemmaService.shared.ensureLoaded()
-            }
-        }()
+
+        // 快路径：模型已在内存，可直接推理，无需等待加载
+        let modelAlreadyReady = selectedProvider == .gemma
+            && (await GemmaService.shared.isModelReady)
+
+        // 冷启动时后台异步加载模型（与 OCR 并行）；已就绪时跳过，避免重复进入加载流程
+        if !modelAlreadyReady && selectedProvider == .gemma {
+            Task { await GemmaService.shared.ensureLoaded() }
+        }
 
         let ocrService = OCRService()
         let ocrResult: OCRResult
@@ -47,15 +54,51 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "识别失败，请打开 App 确认")
         }
         let text = ocrResult.text
-        await preload  // 等待模型就绪（通常 OCR 期间已完成大部分加载）
+
+        // 模型就绪策略（解决冷启动推理报错）：
+        // ① 已在内存 → 直接推理，零等待
+        // ② 未加载   → 最多等 4 秒；超时则本次降级纯规则解析，后台 loadTask 继续预热
+        // ③ 非 Gemma → 直接走 SmartReceiptParser（其内部处理可用性）
+        let useModelInference: Bool
+        if modelAlreadyReady {
+            useModelInference = true
+        } else if selectedProvider == .gemma && (await GemmaService.shared.isModelDownloaded) {
+            let deadline = Date(timeIntervalSinceNow: 4)
+            while !Task.isCancelled && Date() < deadline {
+                if await GemmaService.shared.isModelReady { break }
+                try? await Task.sleep(nanoseconds: 200_000_000) // 200 ms
+            }
+            let ready = await GemmaService.shared.isModelReady
+            if !ready {
+                intentLogger.info("[Intent] Gemma 模型未在 4 秒内就绪（冷启动），本次降级规则解析")
+            }
+            useModelInference = ready
+        } else {
+            useModelInference = true
+        }
 
         // 2. 智能解析（规则 + LLM）
         let source = ReceiptSource.infer(from: text)
         let smartParser = SmartReceiptParser()
         let cleanedText = OCRTextCleaner.clean(text)
-        guard let result = await smartParser.parse(text: cleanedText, source: source,
-                                                   ocrMinConfidence: ocrResult.minimumWordConfidence,
-                                                   provider: selectedProvider) else {
+
+        let result: SmartReceiptParser.SmartResult?
+        if useModelInference {
+            result = await smartParser.parse(text: cleanedText, source: source,
+                                             ocrMinConfidence: ocrResult.minimumWordConfidence,
+                                             provider: selectedProvider)
+        } else {
+            // 冷启动模型超时 → 纯规则兜底，保留完整 SmartResult 包装
+            if let ruleReceipt = smartParser.parseWithRules(text: cleanedText, source: source) {
+                result = SmartReceiptParser.SmartResult(receipt: ruleReceipt,
+                                                        llmTrace: nil,
+                                                        usedRuleFallback: true)
+            } else {
+                result = nil
+            }
+        }
+
+        guard let result else {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
             return .result(value: "识别失败，请打开 App 确认")
         }
