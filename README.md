@@ -26,7 +26,8 @@
 |---|---|---|
 | 📸 | **截图记账** | 相册选取 / 拍照 / 剪切板粘贴，OCR 自动识别金额、商户和时间 |
 | ⚡ | **一键记账** | iPhone 操作按钮 + 快捷指令，按一下完成全流程 |
-| 🤖 | **智能解析** | 规则引擎 + LLM 双模式，覆盖微信、支付宝、App Store、抖音团购等 |
+| 🤖 | **智能解析** | 规则引擎 + 端侧 LLM（Apple Intelligence / Gemma-2 2B）双模式，覆盖微信、支付宝、App Store、抖音团购等 |
+| 🧠 | **Gemma 端侧推理** | MediaPipe LLM Inference，CDN 分发 + SHA-256 完整性校验，推理后自动释放内存 |
 | 🔔 | **订阅识别与提醒** | 自动识别周期性订阅扣费，预测下次扣费日并提前提醒 |
 | 🏷️ | **自定义分类 / 来源** | 自由增减分类和来源标签，编辑账单时即时生效并持久化 |
 | 🧠 | **分类学习** | 记住用户修正历史，同商户后续入账自动使用偏好分类 |
@@ -34,7 +35,7 @@
 | 📊 | **月度报告** | 分类统计、消费趋势、商户排名一目了然 |
 | 📤 | **Share Extension** | 在任意 App 中分享截图直接导入 |
 | 🕹️ | **控制中心 Widget** | 从控制中心直接触发剪切板记账，无需解锁进 App |
-| 🔒 | **完全离线** | 所有识别和分析在本地完成，零数据上传 |
+| 🔒 | **完全离线** | 所有识别和分析在本地完成，唯一网络请求为 Gemma 模型版本检查与下载（CDN），零用户数据上传 |
 
 ## Quick Start
 
@@ -51,10 +52,14 @@
 | UI | SwiftUI, iOS 26 |
 | OCR | Apple Vision (`VNRecognizeTextRequest`) |
 | 解析 | 规则引擎 + LLM (SmartReceiptParser) |
+| LLM | Apple Foundation Models / Gemma-2 2B (MediaPipe LLM Inference) |
+| 模型分发 | Cloudflare R2 CDN + SHA-256 (CryptoKit) |
 | 存储 | SQLite (本地) |
 | 架构 | MVVM + 依赖注入 |
+| 依赖管理 | CocoaPods (MediaPipe), SPM (AutoLedgerCore) |
 | 快捷指令 | AppIntents / `ForegroundContinuableIntent` |
 | 分享 | Share Extension |
+| CI | Xcode Cloud |
 
 ## Project Structure
 
@@ -69,6 +74,8 @@ AutoLedgerRio/
 │   │   ├── Shared/              # 通用组件、常量、扩展
 │   │   └── Assets.xcassets/     # 图标 & 资源
 │   ├── AutoLedgerCore/          # 本地 Swift Package (共享模型)
+│   ├── Pods/                    # CocoaPods 依赖 (MediaPipe, gitignored)
+│   ├── ci_scripts/              # Xcode Cloud CI 脚本
 │   ├── ShareExtension/          # Share Extension
 │   └── ControlWidgetExtension/  # 控制中心 Widget Extension
 ├── versions/                    # 版本计划 & 回归基线
@@ -80,17 +87,22 @@ AutoLedgerRio/
 ## Build
 
 ```bash
-# 环境要求：Xcode 26 beta
+# 环境要求：Xcode 26 beta + CocoaPods
 sudo xcode-select -s /Applications/Xcode-beta.app/Contents/Developer
+brew install cocoapods
 
-# 构建 (真机)
+# 安装依赖
 cd AutoLedger
-xcodebuild -project AutoLedger.xcodeproj \
+pod install
+
+# 构建 (需使用 workspace)
+xcodebuild -workspace AutoLedger.xcworkspace \
   -scheme AutoLedger \
   -destination 'generic/platform=iOS' \
   build
 
 # 回归测试
+cd ..
 bash scripts/run_offline_regression.sh
 ```
 
@@ -101,7 +113,7 @@ bash scripts/run_offline_regression.sh
 | v0.1.0 | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
 | v1.0.0 | ✅ 已发布 | 一键记账引导、LLM 智能解析、操作按钮集成、图标、TestFlight 外测就绪 |
 | v1.1.0 | � 外测中 | 订阅识别 & 扣费提醒、分类学习、自定义分类 / 来源、用户反馈闭环、去重增强、最近删除、手动记账、控制中心 Widget |
-| v1.2.0 | 📋 计划中 | 月报图表增强（Swift Charts）、异常消费检测、云闪付 / 银联适配、订阅管理增强、软删除持久化 |
+| v1.2.0 | 🚧 开发中 | Gemma-2 2B 端侧 LLM 集成（CDN + SHA-256）、模型生命周期管理、月报图表增强（Swift Charts）、异常消费检测、云闪付 / 银联适配、订阅管理增强、软删除持久化 |
 
 ## License
 
