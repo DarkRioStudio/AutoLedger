@@ -32,6 +32,18 @@ final class GemmaService {
     private var unloadTask: Task<Void, Never>?
     private static let autoUnloadDelay: UInt64 = 120 * 1_000_000_000 // 2 分钟
 
+    // MARK: - 模型加载耗时埋点
+
+    private static let loadTimeSamplesKey = "gemmaLoadTimeSamples"
+    private static let maxLoadTimeSamples = 10
+
+    /// 最近一次成功加载模型的耗时（秒）
+    private(set) var lastLoadTimeSeconds: Double? = nil
+    /// 最近 N 次成功加载的平均耗时（秒）
+    private(set) var averageLoadTimeSeconds: Double? = nil
+    /// 累计成功加载次数（含历史持久记录）
+    private(set) var loadCount: Int = 0
+
     // MARK: - CDN 配置
 
     private static let manifestURL = "https://cdn.darkrio326.top/gemma/2b-it/v1/manifest.json"
@@ -95,6 +107,10 @@ final class GemmaService {
     private init() {
         // 不在 init 同步加载 2.5 GB 模型，改为首次使用时异步懒加载
         // state 保持 .notDownloaded（文件存在但模型未加载到内存）
+        let samples = (UserDefaults.standard.array(forKey: Self.loadTimeSamplesKey) as? [Double]) ?? []
+        loadCount = samples.count
+        lastLoadTimeSeconds = samples.last
+        averageLoadTimeSeconds = samples.isEmpty ? nil : samples.reduce(0, +) / Double(samples.count)
     }
 
     /// 异步懒加载：首次调用时加载模型，后续直接返回。
@@ -251,6 +267,7 @@ final class GemmaService {
         }
         state = .checkingManifest  // 复用状态表示"加载中"
         logger.info("[Gemma] 异步加载模型: \(path)")
+        let loadStart = CFAbsoluteTimeGetCurrent()
 
         do {
             let options = LlmInference.Options(modelPath: path)
@@ -261,11 +278,26 @@ final class GemmaService {
             }.value
             llmInference = inference
             state = .ready
-            logger.info("[Gemma] 异步模型加载完成")
+            let elapsed = CFAbsoluteTimeGetCurrent() - loadStart
+            logger.info("[Gemma] 异步模型加载完成，耗时: \(String(format: "%.2f", elapsed))s")
+            recordLoadTime(elapsed)
         } catch {
             logger.error("[Gemma] 异步模型加载失败: \(error.localizedDescription)")
             state = .error("模型加载失败：\(error.localizedDescription)")
         }
+    }
+
+    /// 记录一次模型加载耗时，持久化到 UserDefaults，并更新可观察属性
+    private func recordLoadTime(_ seconds: Double) {
+        var samples = (UserDefaults.standard.array(forKey: Self.loadTimeSamplesKey) as? [Double]) ?? []
+        samples.append(seconds)
+        if samples.count > Self.maxLoadTimeSamples {
+            samples = Array(samples.suffix(Self.maxLoadTimeSamples))
+        }
+        UserDefaults.standard.set(samples, forKey: Self.loadTimeSamplesKey)
+        lastLoadTimeSeconds = seconds
+        loadCount = samples.count
+        averageLoadTimeSeconds = samples.reduce(0, +) / Double(samples.count)
     }
 
     // MARK: - 推理
