@@ -22,6 +22,7 @@ struct DebugView: View {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
                 systemInfoCard
+                gemmaMetricsCard
                 containerInfoCard
 
                 if let summary = store.lastImportSummary {
@@ -153,6 +154,39 @@ struct DebugView: View {
             infoRow("设备", device.deviceModel)
             infoRow("内存使用", formatMemory())
             infoRow("磁盘可用", formatDiskSpace())
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    // MARK: - Gemma Metrics
+
+    private var gemmaMetricsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Gemma 模型加载")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            let svc = GemmaService.shared
+            let stateText: String = {
+                if svc.isModelReady { return "已就绪（内存中）" }
+                if svc.isModelDownloaded { return "已下载（未加载）" }
+                return "未下载"
+            }()
+            infoRow("当前状态", stateText)
+
+            if svc.loadCount > 0 {
+                if let last = svc.lastLoadTimeSeconds {
+                    infoRow("最近加载耗时", String(format: "%.2f s", last))
+                }
+                if let avg = svc.averageLoadTimeSeconds {
+                    infoRow("平均加载耗时（\(svc.loadCount) 次）", String(format: "%.2f s", avg))
+                }
+            } else {
+                Text("暂无加载记录")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
