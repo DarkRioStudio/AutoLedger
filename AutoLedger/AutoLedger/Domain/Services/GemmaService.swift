@@ -28,6 +28,10 @@ final class GemmaService {
     private var llmInference: LlmInference?
     private var isLoading = false
 
+    /// 推理结束后延迟卸载模型的计时器（默认 120 秒无新调用则释放内存）
+    private var unloadTask: Task<Void, Never>?
+    private static let autoUnloadDelay: UInt64 = 120 * 1_000_000_000 // 2 分钟
+
     // MARK: - CDN 配置
 
     private static let manifestURL = "https://cdn.darkrio326.top/gemma/2b-it/v1/manifest.json"
@@ -63,6 +67,11 @@ final class GemmaService {
         return false
     }
 
+    /// 模型文件已下载到本地（可能尚未加载到内存）
+    var isModelDownloaded: Bool {
+        resolvedModelPath != nil
+    }
+
     /// 当前是否运行在 App Extension 中（Extension 内存上限 ~50 MB，无法加载 2.5 GB 模型）
     static let isRunningInExtension: Bool = {
         Bundle.main.bundlePath.hasSuffix(".appex")
@@ -85,9 +94,7 @@ final class GemmaService {
 
     private init() {
         // 不在 init 同步加载 2.5 GB 模型，改为首次使用时异步懒加载
-        if resolvedModelPath != nil {
-            state = .notDownloaded  // 有文件但未加载
-        }
+        // state 保持 .notDownloaded（文件存在但模型未加载到内存）
     }
 
     /// 异步懒加载：首次调用时加载模型，后续直接返回。
@@ -98,7 +105,31 @@ final class GemmaService {
         guard resolvedModelPath != nil else { return }
         isLoading = true
         defer { isLoading = false }
+        unloadTask?.cancel()  // 取消即将卸载的计时器
+        unloadTask = nil
         await loadModelAsync()
+    }
+
+    /// 释放模型内存（保留文件），下次 ensureLoaded() 会重新加载
+    func unloadModel() {
+        unloadTask?.cancel()
+        unloadTask = nil
+        llmInference = nil
+        if resolvedModelPath != nil {
+            state = .notDownloaded  // 文件还在，仅释放内存
+        }
+        logger.info("[Gemma] 模型已从内存卸载")
+    }
+
+    /// 推理结束后调度延迟卸载；如果期间有新的 ensureLoaded/generate 调用，计时器会被取消
+    private func scheduleAutoUnload() {
+        unloadTask?.cancel()
+        unloadTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: Self.autoUnloadDelay)
+                await self?.unloadModel()
+            } catch { /* cancelled */ }
+        }
     }
 
     // MARK: - Manifest 检查
@@ -267,6 +298,10 @@ final class GemmaService {
 
         let elapsed = CFAbsoluteTimeGetCurrent() - startTime
         logger.info("[Gemma] 推理耗时: \(String(format: "%.2f", elapsed))s, 响应长度: \(fullResponse.count)")
+
+        // 推理完毕，调度延迟卸载（2 分钟后无新调用则释放内存）
+        await MainActor.run { scheduleAutoUnload() }
+
         return fullResponse
     }
 

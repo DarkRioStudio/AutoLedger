@@ -126,7 +126,7 @@ struct SettingsView: View {
 
                     infoCard(
                         title: "当前版本",
-                        body: "v1.1.0-dev — 订阅识别、扣费提醒、快捷指令一键记账、Share Extension 分享导入、LLM + 规则混合解析。"
+                        body: "v1.2.0-dev — Gemma-2 2B 端侧 LLM 集成（CDN 分发 + SHA-256 校验）、LLM + 规则混合解析、模型异步加载与自动卸载、订阅识别、快捷指令一键记账、Share Extension 分享导入。"
                     )
                     .onTapGesture {
                         versionTapCount += 1
@@ -138,12 +138,12 @@ struct SettingsView: View {
 
                     infoCard(
                         title: "隐私策略",
-                        body: "所有数据留在设备本地，不接入任何云端同步或第三方分析。OCR 与解析均在本地完成。"
+                        body: "所有数据留在设备本地，不接入任何云端同步或第三方分析。OCR 与 LLM 推理均在本地完成。唯一网络请求：Gemma 模型版本检查与下载（CDN），不传输任何用户数据。"
                     )
 
                     infoCard(
                         title: "版本状态",
-                        body: "功能收口中，接下来以问题修复和日常使用测试回归为主。"
+                        body: "端侧 LLM 集成已落地，模型生命周期管理完成。接下来推进月报分析增强、新支付平台适配、订阅管理增强。"
                     )
                 }
                 .padding(.horizontal, 20)

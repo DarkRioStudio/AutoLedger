@@ -30,7 +30,14 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "读取截图失败，请打开 App 手动导入")
         }
 
-        // 1. OCR
+        // 1. OCR 与模型预加载并行
+        let selectedProvider = await LLMProvider.userSelected
+        async let preload: Void = {
+            if selectedProvider == .gemma {
+                await GemmaService.shared.ensureLoaded()
+            }
+        }()
+
         let ocrService = OCRService()
         let ocrResult: OCRResult
         do {
@@ -40,6 +47,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "识别失败，请打开 App 确认")
         }
         let text = ocrResult.text
+        await preload  // 等待模型就绪（通常 OCR 期间已完成大部分加载）
 
         // 2. 智能解析（规则 + LLM）
         let source = ReceiptSource.infer(from: text)
@@ -47,7 +55,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         let cleanedText = OCRTextCleaner.clean(text)
         guard let result = await smartParser.parse(text: cleanedText, source: source,
                                                    ocrMinConfidence: ocrResult.minimumWordConfidence,
-                                                   provider: LLMProvider.userSelected) else {
+                                                   provider: selectedProvider) else {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
             return .result(value: "识别失败，请打开 App 确认")
         }

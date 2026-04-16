@@ -39,7 +39,7 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
             return false
         case .gemma:
             if GemmaService.isRunningInExtension { return false }
-            return GemmaService.shared.isModelReady
+            return GemmaService.shared.isModelDownloaded
         }
     }
 
