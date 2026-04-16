@@ -157,7 +157,6 @@
 				4D9F0E98664337C76D7A2F0D /* Pods-AutoLedger.debug.xcconfig */,
 				F3E9CB3BD1997D348E7B8304 /* Pods-AutoLedger.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -610,7 +609,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
 				PRODUCT_NAME = "AutoLedger - 一键记账";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -652,7 +651,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
 				PRODUCT_NAME = "AutoLedger - 一键记账";
 				PROVISIONING_PROFILE_SPECIFIER = "";

@@ -34,3 +34,5 @@ build/
 # Python
 __pycache__/
 *.py[cod]
+*.zip
+autoledger_store_assets_*/
