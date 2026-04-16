@@ -29,6 +29,12 @@ struct AutoLedgerApp: App {
         WindowGroup {
             HomeView()
                 .environmentObject(store)
+                .task {
+                    // App 启动后台预热 Gemma（如已下载），避免首次推理时才加载
+                    if LLMProvider.userSelected == .gemma {
+                        await GemmaService.shared.ensureLoaded()
+                    }
+                }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.refreshFromStore()
