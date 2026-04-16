@@ -163,7 +163,7 @@ struct DebugView: View {
 
     private var gemmaMetricsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Gemma 模型加载")
+            Text("Gemma 性能统计")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.ink)
 
@@ -175,15 +175,42 @@ struct DebugView: View {
             }()
             infoRow("当前状态", stateText)
 
+            // 模型加载
             if svc.loadCount > 0 {
+                Divider()
+                Text("模型加载（\(svc.loadCount) 次）")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
                 if let last = svc.lastLoadTimeSeconds {
-                    infoRow("最近加载耗时", String(format: "%.2f s", last))
+                    infoRow("最近", String(format: "%.2f s", last))
                 }
-                if let avg = svc.averageLoadTimeSeconds {
-                    infoRow("平均加载耗时（\(svc.loadCount) 次）", String(format: "%.2f s", avg))
+                if let p50 = svc.loadTimeP50 {
+                    infoRow("P50", String(format: "%.2f s", p50))
                 }
-            } else {
-                Text("暂无加载记录")
+                if let p90 = svc.loadTimeP90 {
+                    infoRow("P90", String(format: "%.2f s", p90))
+                }
+            }
+
+            // 推理
+            if svc.inferenceCount > 0 {
+                Divider()
+                Text("推理（\(svc.inferenceCount) 次）")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+                if let last = svc.lastInferenceTimeSeconds {
+                    infoRow("最近", String(format: "%.2f s", last))
+                }
+                if let p50 = svc.inferenceTimeP50 {
+                    infoRow("P50", String(format: "%.2f s", p50))
+                }
+                if let p90 = svc.inferenceTimeP90 {
+                    infoRow("P90", String(format: "%.2f s", p90))
+                }
+            }
+
+            if svc.loadCount == 0 && svc.inferenceCount == 0 {
+                Text("暂无性能数据")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }

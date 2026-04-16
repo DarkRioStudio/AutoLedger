@@ -37,8 +37,8 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         let selectedProvider = await LLMProvider.userSelected
 
         // 快路径：模型已在内存，可直接推理，无需等待加载
-        let modelAlreadyReady = selectedProvider == .gemma
-            && (await GemmaService.shared.isModelReady)
+        let gemmaReady = await GemmaService.shared.isModelReady
+        let modelAlreadyReady = selectedProvider == .gemma && gemmaReady
 
         // 冷启动时后台异步加载模型（与 OCR 并行）；已就绪时跳过，避免重复进入加载流程
         if !modelAlreadyReady && selectedProvider == .gemma {
@@ -59,10 +59,11 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         // ① 已在内存 → 直接推理，零等待
         // ② 未加载   → 最多等 4 秒；超时则本次降级纯规则解析，后台 loadTask 继续预热
         // ③ 非 Gemma → 直接走 SmartReceiptParser（其内部处理可用性）
+        let gemmaDownloaded = await GemmaService.shared.isModelDownloaded
         let useModelInference: Bool
         if modelAlreadyReady {
             useModelInference = true
-        } else if selectedProvider == .gemma && (await GemmaService.shared.isModelDownloaded) {
+        } else if selectedProvider == .gemma && gemmaDownloaded {
             let deadline = Date(timeIntervalSinceNow: 4)
             while !Task.isCancelled && Date() < deadline {
                 if await GemmaService.shared.isModelReady { break }

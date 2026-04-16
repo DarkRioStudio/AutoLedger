@@ -35,14 +35,44 @@ final class GemmaService {
     // MARK: - 模型加载耗时埋点
 
     private static let loadTimeSamplesKey = "gemmaLoadTimeSamples"
-    private static let maxLoadTimeSamples = 10
+    private static let inferenceTimeSamplesKey = "gemmaInferenceTimeSamples"
+    private static let maxSamples = 30
 
     /// 最近一次成功加载模型的耗时（秒）
     private(set) var lastLoadTimeSeconds: Double? = nil
-    /// 最近 N 次成功加载的平均耗时（秒）
-    private(set) var averageLoadTimeSeconds: Double? = nil
-    /// 累计成功加载次数（含历史持久记录）
+    /// 最近一次推理耗时（秒）
+    private(set) var lastInferenceTimeSeconds: Double? = nil
+    /// 累计成功加载次数
     private(set) var loadCount: Int = 0
+    /// 累计推理次数
+    private(set) var inferenceCount: Int = 0
+
+    // MARK: - P50 / P90 统计
+
+    /// 加载耗时 P50 / P90（秒）
+    var loadTimeP50: Double? { Self.percentile(Self.loadSamples, 0.50) }
+    var loadTimeP90: Double? { Self.percentile(Self.loadSamples, 0.90) }
+    /// 推理耗时 P50 / P90（秒）
+    var inferenceTimeP50: Double? { Self.percentile(Self.inferenceSamples, 0.50) }
+    var inferenceTimeP90: Double? { Self.percentile(Self.inferenceSamples, 0.90) }
+
+    private static var loadSamples: [Double] {
+        (UserDefaults.standard.array(forKey: loadTimeSamplesKey) as? [Double]) ?? []
+    }
+    private static var inferenceSamples: [Double] {
+        (UserDefaults.standard.array(forKey: inferenceTimeSamplesKey) as? [Double]) ?? []
+    }
+
+    /// 计算分位数（线性插值）
+    private static func percentile(_ samples: [Double], _ p: Double) -> Double? {
+        guard !samples.isEmpty else { return nil }
+        let sorted = samples.sorted()
+        let index = p * Double(sorted.count - 1)
+        let lower = Int(index)
+        let upper = min(lower + 1, sorted.count - 1)
+        let fraction = index - Double(lower)
+        return sorted[lower] + fraction * (sorted[upper] - sorted[lower])
+    }
 
     // MARK: - CDN 配置
 
@@ -107,10 +137,12 @@ final class GemmaService {
     private init() {
         // 不在 init 同步加载 2.5 GB 模型，改为首次使用时异步懒加载
         // state 保持 .notDownloaded（文件存在但模型未加载到内存）
-        let samples = (UserDefaults.standard.array(forKey: Self.loadTimeSamplesKey) as? [Double]) ?? []
-        loadCount = samples.count
-        lastLoadTimeSeconds = samples.last
-        averageLoadTimeSeconds = samples.isEmpty ? nil : samples.reduce(0, +) / Double(samples.count)
+        let loadSamples = (UserDefaults.standard.array(forKey: Self.loadTimeSamplesKey) as? [Double]) ?? []
+        loadCount = loadSamples.count
+        lastLoadTimeSeconds = loadSamples.last
+        let infSamples = (UserDefaults.standard.array(forKey: Self.inferenceTimeSamplesKey) as? [Double]) ?? []
+        inferenceCount = infSamples.count
+        lastInferenceTimeSeconds = infSamples.last
     }
 
     /// 异步懒加载：首次调用时加载模型，后续直接返回。
@@ -289,15 +321,22 @@ final class GemmaService {
 
     /// 记录一次模型加载耗时，持久化到 UserDefaults，并更新可观察属性
     private func recordLoadTime(_ seconds: Double) {
-        var samples = (UserDefaults.standard.array(forKey: Self.loadTimeSamplesKey) as? [Double]) ?? []
+        var samples = Self.loadSamples
         samples.append(seconds)
-        if samples.count > Self.maxLoadTimeSamples {
-            samples = Array(samples.suffix(Self.maxLoadTimeSamples))
-        }
+        if samples.count > Self.maxSamples { samples = Array(samples.suffix(Self.maxSamples)) }
         UserDefaults.standard.set(samples, forKey: Self.loadTimeSamplesKey)
         lastLoadTimeSeconds = seconds
         loadCount = samples.count
-        averageLoadTimeSeconds = samples.reduce(0, +) / Double(samples.count)
+    }
+
+    /// 记录一次推理耗时
+    private func recordInferenceTime(_ seconds: Double) {
+        var samples = Self.inferenceSamples
+        samples.append(seconds)
+        if samples.count > Self.maxSamples { samples = Array(samples.suffix(Self.maxSamples)) }
+        UserDefaults.standard.set(samples, forKey: Self.inferenceTimeSamplesKey)
+        lastInferenceTimeSeconds = seconds
+        inferenceCount = samples.count
     }
 
     // MARK: - 推理
@@ -331,8 +370,11 @@ final class GemmaService {
         let elapsed = CFAbsoluteTimeGetCurrent() - startTime
         logger.info("[Gemma] 推理耗时: \(String(format: "%.2f", elapsed))s, 响应长度: \(fullResponse.count)")
 
-        // 推理完毕，调度延迟卸载（2 分钟后无新调用则释放内存）
-        await MainActor.run { scheduleAutoUnload() }
+        // 记录推理耗时 + 调度延迟卸载
+        await MainActor.run {
+            recordInferenceTime(elapsed)
+            scheduleAutoUnload()
+        }
 
         return fullResponse
     }
