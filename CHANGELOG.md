@@ -15,6 +15,7 @@
 - [2026-04-16 +0800] Gemma 推理耗时埋点 + P50/P90 统计：`GemmaService` 新增推理耗时记录（`recordInferenceTime`），加载/推理各保留最近 30 次样本至 `UserDefaults`；新增 `percentile()` 线性插值计算，暴露 `loadTimeP50`/`loadTimeP90`/`inferenceTimeP50`/`inferenceTimeP90` 计算属性；`DebugView` "Gemma 性能统计"卡片改版——分"模型加载"和"推理"两栏，各显示最近/P50/P90 指标；移除旧 `averageLoadTimeSeconds` 属性。附带修复 `QuickLedgerIntent` Swift 6 autoclosure `await` 编译错误。
 
 ### 修复（v1.2.0）
+- [2026-04-17 +0800] QuickLedgerIntent Swift 6 actor isolation 编译错误：`ForegroundContinuableIntent` 弃用改为 `openAppWhenRun`；`intentLogger` 标记 `nonisolated(unsafe)`；`LLMProvider.isEnhancementEnabled` / `OCRTextCleaner.clean()` / `SmartReceiptParser()` / `parseWithRules()` / `NotificationService` 调用均补充 `await` actor 跳转；`&&` autoclosure 内 `await` 改为 `,` 逗号条件；`writeDebugEvent` 标记 `nonisolated`。
 - [2026-04-17 +0800] 英文/国际收据解析：① `currencyPrefixPattern` 扩展支持 £/$€ 三种国际货币符号；② `actualPayKeywords` 新增 "Total"/"Grand Total"/"Amount Due"/"Balance Due"/"Subtotal" 英文关键词；③ 新增 `totalLinePattern` 专用正则，匹配 `TOTAL £8.08` / `Grand Total 12.50` 等英文小票总额行；④ `amountCandidate` 和 `isStandaloneAmount` 模式扩展 £/$€；⑤ `extractMerchant` 新增英文小票启发式——检测到 TOTAL/Subtotal 行时，跳过产品行（行尾带价格）、数量标记行（x2 @£0.95）、日期行、电话行、噪声行（receipt/card/vat/cashier 等），取第一个看起来像店名的行作为商户名，避免误将 "FRESH MILK" 等产品名当作商户。修复 Apple 审核员使用英文超市小票时金额与商户均识别错误的问题。
 - [2026-04-16 +0800] Gemma 模型加载耗时统计虚高：将 `loadModelAsync()` 中的计时从主 actor 移入 `Task.detached` 内部，仅测量 `LlmInference` 初始化的真实耗时，排除主线程排队延迟；新增 `resetStats()` 方法及 DebugView "重置统计"按钮，可清除历史虚高样本。
 

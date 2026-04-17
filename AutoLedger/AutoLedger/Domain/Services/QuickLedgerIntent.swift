@@ -4,9 +4,9 @@ import Foundation
 import OSLog
 import UniformTypeIdentifiers
 
-private let intentLogger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "QuickLedgerIntent")
+nonisolated(unsafe) private let intentLogger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "QuickLedgerIntent")
 
-struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
+struct QuickLedgerIntent: AppIntent {
     static var title: LocalizedStringResource = "快速记账"
     static var description: IntentDescription = IntentDescription("从截图中识别支付信息并自动记账")
     /// 需要前台运行以获取沙箱文件读取权限
@@ -35,7 +35,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
 
         // 1. OCR 与模型预加载并行
         let selectedProvider = await LLMProvider.userSelected
-        let enhancementOn = LLMProvider.isEnhancementEnabled
+        let enhancementOn = await LLMProvider.isEnhancementEnabled
 
         // 模型增强关闭时跳过所有模型加载逻辑
         let gemmaReady: Bool
@@ -73,7 +73,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             useModelInference = false
         } else if modelAlreadyReady {
             useModelInference = true
-        } else if selectedProvider == .gemma && await GemmaService.shared.isModelDownloaded {
+        } else if selectedProvider == .gemma, await GemmaService.shared.isModelDownloaded {
             let deadline = Date(timeIntervalSinceNow: 4)
             while !Task.isCancelled && Date() < deadline {
                 if await GemmaService.shared.isModelReady { break }
@@ -90,8 +90,8 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
 
         // 2. 智能解析（规则 + LLM）
         let source = ReceiptSource.infer(from: text)
-        let smartParser = SmartReceiptParser()
-        let cleanedText = OCRTextCleaner.clean(text)
+        let smartParser = await SmartReceiptParser()
+        let cleanedText = await OCRTextCleaner.clean(text)
 
         // 多账单检测
         let multiReceipt = ReceiptParser().detectMultipleReceipts(text: cleanedText)
@@ -103,7 +103,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
                                              provider: selectedProvider)
         } else {
             // 冷启动模型超时 → 纯规则兜底，保留完整 SmartResult 包装
-            if let ruleReceipt = smartParser.parseWithRules(text: cleanedText, source: source) {
+            if let ruleReceipt = await smartParser.parseWithRules(text: cleanedText, source: source) {
                 result = SmartReceiptParser.SmartResult(receipt: ruleReceipt,
                                                         llmTrace: nil,
                                                         usedRuleFallback: true)
@@ -166,7 +166,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "入账失败，请打开 App 确认")
         }
 
-        NotificationService.shared.scheduleQuickLedgerSuccessNotification(
+        await NotificationService.shared.scheduleQuickLedgerSuccessNotification(
             merchant: receipt.merchant,
             amount: receipt.amount,
             transactionID: transaction.id
@@ -180,7 +180,7 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         return .result(value: msg)
     }
 
-    private func writeDebugEvent(
+    nonisolated private func writeDebugEvent(
         stage: ImportDebugStage,
         source: ReceiptSource,
         rawText: String,
