@@ -59,6 +59,19 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     // MARK: - UserDefaults 持久化
 
     private static let key = "selectedLLMProvider"
+    private static let enhancementKey = "llmEnhancementEnabled"
+
+    /// 模型识别增强是否启用
+    static var isEnhancementEnabled: Bool {
+        get {
+            // 默认启用（首次安装 key 不存在时）
+            if UserDefaults.standard.object(forKey: enhancementKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: enhancementKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: enhancementKey)
+        }
+    }
 
     static var userSelected: LLMProvider {
         get {

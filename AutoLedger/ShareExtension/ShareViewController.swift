@@ -94,8 +94,11 @@ class ShareViewController: UIViewController {
                 source = ReceiptSource.infer(from: text)
             }
 
-            // 解析
+            // 多账单检测
             let parser = ReceiptParser()
+            let multiReceipt = parser.detectMultipleReceipts(text: text)
+
+            // 解析
             guard let receipt = parser.parse(text: text, source: source) else {
                 self.writeDebug(stage: .parseFailed, source: source, rawText: text, summary: "Share Extension 解析失败")
                 DispatchQueue.main.async { self.finish(message: "识别失败，请打开 App 手动导入") }
@@ -144,7 +147,10 @@ class ShareViewController: UIViewController {
             do {
                 try store.save(transaction: transaction)
                 self.writeShareResult(ocrText: text, receipt: receipt)
-                let msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+                var msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+                if multiReceipt {
+                    msg += "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图后分别导入"
+                }
                 self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg)
                 DispatchQueue.main.async { self.finish(message: msg) }
             } catch {

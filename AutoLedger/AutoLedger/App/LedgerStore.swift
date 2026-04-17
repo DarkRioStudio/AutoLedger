@@ -118,16 +118,34 @@ final class LedgerStore: ObservableObject {
 
             // OCR 文本预清洗（去噪 + 缩短 token）
             let cleanedText = OCRTextCleaner.clean(normalizedText)
-            let selectedProvider = LLMProvider.userSelected
-            logger.info("[解析] 使用模型: \(selectedProvider.displayName)")
 
-            let result = await smartParser.parse(
-                text: cleanedText,
-                source: source,
-                fallbackMerchant: fallbackMerchant,
-                ocrMinConfidence: ocrMinConfidence,
-                provider: selectedProvider
-            )
+            // 多账单检测：在解析前检查是否疑似包含多笔交易
+            let multiReceiptDetected = self.parser.detectMultipleReceipts(text: cleanedText)
+            if multiReceiptDetected {
+                logger.info("[解析] 检测到疑似多笔账单")
+            }
+
+            let selectedProvider = LLMProvider.userSelected
+            let enhancementOn = LLMProvider.isEnhancementEnabled
+            logger.info("[解析] 使用模型: \(selectedProvider.displayName), 增强: \(enhancementOn ? "开" : "关")")
+
+            let result: SmartReceiptParser.SmartResult?
+            if enhancementOn {
+                result = await smartParser.parse(
+                    text: cleanedText,
+                    source: source,
+                    fallbackMerchant: fallbackMerchant,
+                    ocrMinConfidence: ocrMinConfidence,
+                    provider: selectedProvider
+                )
+            } else {
+                // 模型增强关闭 → 纯规则解析
+                if let ruleReceipt = smartParser.parseWithRules(text: cleanedText, source: source, fallbackMerchant: fallbackMerchant) {
+                    result = SmartReceiptParser.SmartResult(receipt: ruleReceipt, llmTrace: nil, usedRuleFallback: true)
+                } else {
+                    result = nil
+                }
+            }
 
             guard let result else {
                 let summary = "OCR 已完成，但还没解析出可入账字段。"
@@ -156,6 +174,16 @@ final class LedgerStore: ObservableObject {
                 llmTrace: result.llmTrace,
                 usedRuleFallback: result.usedRuleFallback
             )
+
+            // 多账单提示：入账后追加警告，让用户知道可能有遗漏
+            if multiReceiptDetected {
+                let warning = "⚠️ 检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。"
+                if let existing = lastImportSummary {
+                    lastImportSummary = existing + "\n" + warning
+                } else {
+                    lastImportSummary = warning
+                }
+            }
         }
     }
 

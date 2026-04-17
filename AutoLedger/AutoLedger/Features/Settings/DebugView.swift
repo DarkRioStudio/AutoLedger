@@ -214,6 +214,14 @@ struct DebugView: View {
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
+
+            if svc.loadCount > 0 || svc.inferenceCount > 0 {
+                Divider()
+                Button("重置统计", role: .destructive) {
+                    svc.resetStats()
+                }
+                .font(.subheadline)
+            }
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
