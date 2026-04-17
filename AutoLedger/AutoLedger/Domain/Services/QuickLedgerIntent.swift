@@ -35,10 +35,18 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
 
         // 1. OCR 与模型预加载并行
         let selectedProvider = await LLMProvider.userSelected
+        let enhancementOn = LLMProvider.isEnhancementEnabled
 
-        // 快路径：模型已在内存，可直接推理，无需等待加载
-        let gemmaReady = await GemmaService.shared.isModelReady
-        let modelAlreadyReady = selectedProvider == .gemma && gemmaReady
+        // 模型增强关闭时跳过所有模型加载逻辑
+        let gemmaReady: Bool
+        let modelAlreadyReady: Bool
+        if enhancementOn {
+            gemmaReady = await GemmaService.shared.isModelReady
+            modelAlreadyReady = selectedProvider == .gemma && gemmaReady
+        } else {
+            gemmaReady = false
+            modelAlreadyReady = false
+        }
 
         // 冷启动时后台异步加载模型（与 OCR 并行）；已就绪时跳过，避免重复进入加载流程
         if !modelAlreadyReady && selectedProvider == .gemma {
@@ -56,14 +64,16 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         let text = ocrResult.text
 
         // 模型就绪策略（解决冷启动推理报错）：
+        // ⓪ 模型增强关闭 → 纯规则解析
         // ① 已在内存 → 直接推理，零等待
         // ② 未加载   → 最多等 4 秒；超时则本次降级纯规则解析，后台 loadTask 继续预热
         // ③ 非 Gemma → 直接走 SmartReceiptParser（其内部处理可用性）
-        let gemmaDownloaded = await GemmaService.shared.isModelDownloaded
         let useModelInference: Bool
-        if modelAlreadyReady {
+        if !enhancementOn {
+            useModelInference = false
+        } else if modelAlreadyReady {
             useModelInference = true
-        } else if selectedProvider == .gemma && gemmaDownloaded {
+        } else if selectedProvider == .gemma && await GemmaService.shared.isModelDownloaded {
             let deadline = Date(timeIntervalSinceNow: 4)
             while !Task.isCancelled && Date() < deadline {
                 if await GemmaService.shared.isModelReady { break }
@@ -82,6 +92,9 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
         let source = ReceiptSource.infer(from: text)
         let smartParser = SmartReceiptParser()
         let cleanedText = OCRTextCleaner.clean(text)
+
+        // 多账单检测
+        let multiReceipt = ReceiptParser().detectMultipleReceipts(text: cleanedText)
 
         let result: SmartReceiptParser.SmartResult?
         if useModelInference {
@@ -159,7 +172,10 @@ struct QuickLedgerIntent: AppIntent, ForegroundContinuableIntent {
             transactionID: transaction.id
         )
 
-        let msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+        var msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+        if multiReceipt {
+            msg += "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图"
+        }
         writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace, transactionID: transaction.id)
         return .result(value: msg)
     }

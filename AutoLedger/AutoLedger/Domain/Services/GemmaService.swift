@@ -74,6 +74,16 @@ final class GemmaService {
         return sorted[lower] + fraction * (sorted[upper] - sorted[lower])
     }
 
+    /// 清除所有性能统计数据
+    func resetStats() {
+        UserDefaults.standard.removeObject(forKey: Self.loadTimeSamplesKey)
+        UserDefaults.standard.removeObject(forKey: Self.inferenceTimeSamplesKey)
+        lastLoadTimeSeconds = nil
+        lastInferenceTimeSeconds = nil
+        loadCount = 0
+        inferenceCount = 0
+    }
+
     // MARK: - CDN 配置
 
     private static let manifestURL = "https://cdn.darkrio326.top/gemma/2b-it/v1/manifest.json"
@@ -299,18 +309,20 @@ final class GemmaService {
         }
         state = .checkingManifest  // 复用状态表示"加载中"
         logger.info("[Gemma] 异步加载模型: \(path)")
-        let loadStart = CFAbsoluteTimeGetCurrent()
 
         do {
             let options = LlmInference.Options(modelPath: path)
             options.maxTokens = 512
             // LlmInference 初始化可能耗费数秒（加载 2.5 GB 权重），放到后台
-            let inference = try await Task.detached(priority: .userInitiated) {
-                try LlmInference(options: options)
+            // 计时放在 detached task 内部，避免把主 actor 排队延迟算进去
+            let (inference, elapsed) = try await Task.detached(priority: .userInitiated) {
+                let start = CFAbsoluteTimeGetCurrent()
+                let inf = try LlmInference(options: options)
+                let elapsed = CFAbsoluteTimeGetCurrent() - start
+                return (inf, elapsed)
             }.value
             llmInference = inference
             state = .ready
-            let elapsed = CFAbsoluteTimeGetCurrent() - loadStart
             logger.info("[Gemma] 异步模型加载完成，耗时: \(String(format: "%.2f", elapsed))s")
             recordLoadTime(elapsed)
         } catch {

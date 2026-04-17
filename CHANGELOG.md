@@ -10,7 +10,15 @@
 ## [Unreleased]
 
 ### 新增（v1.2.0）
+- [2026-04-17 +0800] 多账单检测与用户提示（App Store 审核 2.1(a) 修复）：`ReceiptParser` 新增 `detectMultipleReceipts(text:)` 启发式检测（交易头部关键词重复 / 独立金额行多次出现），解析仍取首笔账单入账，同时在 status banner 追加 "⚠️ 图片中可能包含多笔账单" 提示引导用户裁剪。`LedgerStore`、`ShareExtension`、`QuickLedgerIntent` 三个入口均已集成。
+- [2026-04-17 +0800] AI 模型识别增强开关：`AIModelSettingsView` 右上角新增 Toggle 开关（`LLMProvider.isEnhancementEnabled`，key: `llmEnhancementEnabled`）；关闭时识别链路走纯规则解析，同时自动删除已下载的 Gemma 模型文件释放存储空间，模型选择卡片置灰禁用；开启时恢复 LLM 优先 → 超时/低置信度回退规则的完整链路。`LedgerStore` 和 `QuickLedgerIntent` 均尊重该开关状态。
 - [2026-04-16 +0800] Gemma 推理耗时埋点 + P50/P90 统计：`GemmaService` 新增推理耗时记录（`recordInferenceTime`），加载/推理各保留最近 30 次样本至 `UserDefaults`；新增 `percentile()` 线性插值计算，暴露 `loadTimeP50`/`loadTimeP90`/`inferenceTimeP50`/`inferenceTimeP90` 计算属性；`DebugView` "Gemma 性能统计"卡片改版——分"模型加载"和"推理"两栏，各显示最近/P50/P90 指标；移除旧 `averageLoadTimeSeconds` 属性。附带修复 `QuickLedgerIntent` Swift 6 autoclosure `await` 编译错误。
+
+### 修复（v1.2.0）
+- [2026-04-17 +0800] 英文/国际收据解析：① `currencyPrefixPattern` 扩展支持 £/$€ 三种国际货币符号；② `actualPayKeywords` 新增 "Total"/"Grand Total"/"Amount Due"/"Balance Due"/"Subtotal" 英文关键词；③ 新增 `totalLinePattern` 专用正则，匹配 `TOTAL £8.08` / `Grand Total 12.50` 等英文小票总额行；④ `amountCandidate` 和 `isStandaloneAmount` 模式扩展 £/$€；⑤ `extractMerchant` 新增英文小票启发式——检测到 TOTAL/Subtotal 行时，跳过产品行（行尾带价格）、数量标记行（x2 @£0.95）、日期行、电话行、噪声行（receipt/card/vat/cashier 等），取第一个看起来像店名的行作为商户名，避免误将 "FRESH MILK" 等产品名当作商户。修复 Apple 审核员使用英文超市小票时金额与商户均识别错误的问题。
+- [2026-04-16 +0800] Gemma 模型加载耗时统计虚高：将 `loadModelAsync()` 中的计时从主 actor 移入 `Task.detached` 内部，仅测量 `LlmInference` 初始化的真实耗时，排除主线程排队延迟；新增 `resetStats()` 方法及 DebugView "重置统计"按钮，可清除历史虚高样本。
+
+### 新增（v1.2.0 续）
 - [2026-04-16 +0800] Gemma 模型加载耗时埋点：`GemmaService` 在 `loadModelAsync()` 成功后记录耗时，最多保留最近 10 次样本至 `UserDefaults`（key: `gemmaLoadTimeSamples`），并通过 `@Observable` 属性（`lastLoadTimeSeconds`、`averageLoadTimeSeconds`、`loadCount`）实时暴露；`DebugView` 新增"Gemma 模型加载"卡片，显示当前模型状态、最近加载耗时和平均加载耗时（N 次），跟随真实加载自动刷新。
 - [2026-04-16 +0800] QuickLedgerIntent 冷启动超时回退：`async let preload` + 无限 `await` 改为三路就绪策略——① 模型已在内存（`isModelReady`）立即推理；② 模型已下载但未加载时后台触发 `ensureLoaded()`（与 OCR 并行），最多等待 4 秒，超时则本次降级纯规则解析（`parseWithRules`），后台加载任务继续预热以便下次调用；③ 非 Gemma 提供方行为不变。解决快捷指令冷启动调用 AppIntent 时模型推理报错问题。
 - [2026-04-16 +0800] Intent 链路修复 + 模型生命周期管理 + 设置页信息更新：① `LLMProvider.isAvailable` 对 Gemma 从检查 `isModelReady`（state == .ready）改为检查 `isModelDownloaded`（文件是否存在），修复异步加载重构后 Intent 始终走纯规则兜底的 bug；② `QuickLedgerIntent` OCR 与 `ensureLoaded()` 改为 `async let` 并行执行，模型加载时间被 OCR 覆盖；③ `GemmaService` 新增推理后自动卸载机制——`scheduleAutoUnload()` 推理结束后 120 秒无新调用则释放 `llmInference` 内存（文件保留），新调用自动取消计时器并重加载；④ `AutoLedgerApp` 启动时 `.task` 预热 Gemma（若用户已选择且已下载）；⑤ `SettingsView` 三张 infoCard 更新——当前版本 `v1.1.0-dev` → `v1.2.0-dev`，隐私策略补充 CDN 网络请求说明，版本状态更新为"端侧 LLM 已落地，推进月报/平台/订阅"；⑥ `v1.2.0-plan.md` 新增 Phase 0（端侧 LLM 集成，已完成）及 ITER-020/021/022 三轮已完成迭代记录。

@@ -3,6 +3,50 @@ import Foundation
 public struct ReceiptParser: Sendable {
     public init() {}
 
+    // MARK: - 多账单检测
+
+    /// 检测 OCR 文本中是否疑似包含多笔独立账单。
+    /// 启发式规则：统计"支付成功""交易成功""支付金额""实付"等交易头部关键词出现次数，
+    /// 或统计独立金额行（`-XX.XX` / `¥XX.XX`）数量，超过 1 次即判定为多账单。
+    public func detectMultipleReceipts(text: String) -> Bool {
+        let lines = text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        // 策略 1：交易头部关键词重复出现
+        let headerKeywords = ["支付成功", "交易成功", "付款成功", "扣费成功", "订单支付成功"]
+        let headerCount = lines.filter { line in
+            headerKeywords.contains(where: { line.contains($0) })
+        }.count
+        if headerCount > 1 { return true }
+
+        // 策略 2：独立金额行（微信格式 "-XX.XX" 独占一行）出现多次
+        let negAmountPattern = #"^\s*-[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        if let regex = try? NSRegularExpression(pattern: negAmountPattern) {
+            let negAmountCount = lines.filter { line in
+                regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil
+            }.count
+            if negAmountCount > 1 { return true }
+        }
+
+        // 策略 3："¥" 前缀的独立金额行出现多次（排除含"优惠""红包""补贴"的行）
+        let currencyPattern = #"^\s*[¥￥]\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        let excludeKeywords = ["优惠", "红包", "补贴", "代金券", "折扣", "购物金", "立减"]
+        if let regex = try? NSRegularExpression(pattern: currencyPattern) {
+            let currencyLineCount = lines.filter { line in
+                let hasMatch = regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil
+                let isDiscount = excludeKeywords.contains(where: { line.contains($0) })
+                return hasMatch && !isDiscount
+            }.count
+            if currencyLineCount > 1 { return true }
+        }
+
+        return false
+    }
+
+    // MARK: - 单笔解析
+
     public func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) -> ImportedReceipt? {
         let normalized = text
             .replacingOccurrences(of: "\r\n", with: "\n")
@@ -80,11 +124,14 @@ public struct ReceiptParser: Sendable {
             }
         }
 
-        // 带 ¥/￥ 前缀的行优先
-        let currencyPrefixPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+        // 带货币符号前缀的行优先（¥/￥/£/$€ 等）
+        let currencyPrefixPattern = #"[¥￥£$€]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
 
-        // 实付/实际支付行最优先（外卖、电商常有优惠前金额干扰）
-        let actualPayKeywords = ["实付", "实际支付", "实际付款", "合计支付"]
+        // 实付/总额行最优先（中英文皆支持）
+        let actualPayKeywords = ["实付", "实际支付", "实际付款", "合计支付",
+                                  "TOTAL", "Total", "total", "GRAND TOTAL", "Grand Total",
+                                  "Amount Due", "AMOUNT DUE", "Balance Due", "BALANCE DUE",
+                                  "Subtotal", "SUBTOTAL"]
         if let cpRegex = try? NSRegularExpression(pattern: currencyPrefixPattern) {
             for line in lines where actualPayKeywords.contains(where: { line.contains($0) }) {
                 let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
@@ -110,8 +157,23 @@ public struct ReceiptParser: Sendable {
             }
         }
 
+        // TOTAL 行专用提取（英文小票 TOTAL 后通常紧跟金额，可带货币符号）
+        let totalLinePattern = #"(?i)(?:grand\s+)?total[:\s]+[¥￥£$€]?\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+        if let totalRegex = try? NSRegularExpression(pattern: totalLinePattern) {
+            for line in lines {
+                let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+                if let match = totalRegex.firstMatch(in: line, range: nsRange),
+                   let range = Range(match.range(at: 1), in: line),
+                   let amount = Double(String(line[range])),
+                   amount > 0 && amount < 100000 {
+                    return amount
+                }
+            }
+        }
+
         // 关键词行回退
-        let keywords = ["金额", "支付", "总计", "总额", "实际支付", "Price", "Total", "CNY", "RMB"]
+        let keywords = ["金额", "支付", "总计", "总额", "实际支付", "Price", "Total", "CNY", "RMB",
+                        "Amount", "Subtotal", "Balance"]
         let prioritizedLines = lines.filter {
             let line = $0.lowercased()
             return keywords.contains { line.contains($0.lowercased()) }
@@ -141,7 +203,7 @@ public struct ReceiptParser: Sendable {
             return nil
         }
 
-        let pattern = #"(?:(?:¥|￥|RMB|CNY)\s*)?([0-9]+(?:\.[0-9]{1,2})?)"#
+        let pattern = #"(?:(?:¥|￥|£|\$|€|RMB|CNY)\s*)?([0-9]+(?:\.[0-9]{1,2})?)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return nil
         }
@@ -167,7 +229,8 @@ public struct ReceiptParser: Sendable {
     /// "T2航站楼"、"3号线"、"萧山国际机场" 等含有非数字字符的站名返回 false。
     private func isStandaloneAmount(_ string: String) -> Bool {
         // CN¥ 为半角（U+00A5），CN￥ 为全角（U+FFE5），OCR 可能混用，均需支持
-        let pattern = #"^\s*(?:CN¥|CN￥|¥|￥|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        // 同时兼容英文货币符号 £/$€
+        let pattern = #"^\s*(?:CN¥|CN￥|¥|￥|£|\$|€|CNY|RMB)\s*[0-9]+(?:\.[0-9]{1,2})?\s*$"#
         let trimmed = string.trimmingCharacters(in: .whitespaces)
         return (try? NSRegularExpression(pattern: pattern))?
             .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil
@@ -322,6 +385,61 @@ public struct ReceiptParser: Sendable {
             if let match = regex.firstMatch(in: text, range: range),
                let captureRange = Range(match.range(at: 1), in: text) {
                 return String(text[captureRange])
+            }
+        }
+
+        // ── 英文小票 / 国际收据启发式 ──
+        // 特征：含 "TOTAL" 行 → 商户名通常在小票最前几行（店名/地址/电话）
+        // 产品行（"FRESH MILK  3.89"）不是商户名
+        let isEnglishReceipt = lines.contains(where: {
+            $0.localizedCaseInsensitiveContains("total") || $0.localizedCaseInsensitiveContains("subtotal")
+        })
+        if isEnglishReceipt {
+            // 跳过产品行/价格行/数量行/日期行/时间行，取第一个看起来像店名的行
+            let productLinePattern = #"[0-9]+(?:\.[0-9]{1,2})?\s*$"#  // 行尾有数字（价格）
+            let qtyPattern = #"(?:x\s*\d|@\s*[\d£$€¥]|\d+\s*@)"#    // 数量标记
+            let dateTimePattern = #"\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}"#  // 日期格式
+            let phonePattern = #"\+?\d[\d\s\-]{7,}"#                  // 电话号码
+            let receiptNoiseWords = ["receipt", "change", "cash", "card", "visa", "mastercard",
+                                     "debit", "credit", "vat", "tax", "served by", "cashier",
+                                     "thank you", "thanks"]
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let lower = trimmed.lowercased()
+                // 跳过过短的行
+                guard trimmed.count >= 3 else { continue }
+                // 跳过行尾有价格的产品行
+                if (try? NSRegularExpression(pattern: productLinePattern))?.firstMatch(
+                    in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil {
+                    continue
+                }
+                // 跳过含数量标记的行
+                if (try? NSRegularExpression(pattern: qtyPattern, options: .caseInsensitive))?.firstMatch(
+                    in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil {
+                    continue
+                }
+                // 跳过日期行
+                if (try? NSRegularExpression(pattern: dateTimePattern))?.firstMatch(
+                    in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil {
+                    continue
+                }
+                // 跳过电话行
+                if (try? NSRegularExpression(pattern: phonePattern))?.firstMatch(
+                    in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil {
+                    continue
+                }
+                // 跳过含 TOTAL / 噪声关键词的行
+                if lower.contains("total") || lower.contains("subtotal") { continue }
+                if receiptNoiseWords.contains(where: { lower.contains($0) }) { continue }
+                // 跳过纯金额
+                if amountCandidate(in: trimmed) != nil && trimmed.count < 10 { continue }
+                // 跳过时间格式
+                let timeOnlyPat = #"^\s*\d{1,2}:\d{2,3}\s*$"#
+                if (try? NSRegularExpression(pattern: timeOnlyPat))?.firstMatch(
+                    in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil {
+                    continue
+                }
+                return trimmed
             }
         }
 

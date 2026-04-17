@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AIModelSettingsView: View {
     @State private var selectedProvider = LLMProvider.userSelected
+    @State private var enhancementEnabled = LLMProvider.isEnhancementEnabled
     private var gemmaService: GemmaService { GemmaService.shared }
 
     var body: some View {
@@ -9,14 +10,18 @@ struct AIModelSettingsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 infoCard(
                     title: "端侧模型说明",
-                    body: "所有推理均在设备本地完成，不上传任何数据。切换模型后立即生效。"
+                    body: enhancementEnabled
+                        ? "所有推理均在设备本地完成，不上传任何数据。切换模型后立即生效。"
+                        : "模型识别增强已关闭，当前仅使用纯规则解析。打开右上角开关可启用 AI 模型增强识别。"
                 )
 
                 ForEach(LLMProvider.allCases) { provider in
                     modelCard(provider)
                 }
+                .disabled(!enhancementEnabled)
+                .opacity(enhancementEnabled ? 1 : 0.5)
 
-                if case .ready = gemmaService.state {
+                if enhancementEnabled, case .ready = gemmaService.state {
                     Button(role: .destructive) {
                         gemmaService.deleteModel()
                         if selectedProvider == .gemma {
@@ -45,8 +50,25 @@ struct AIModelSettingsView: View {
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
         .navigationTitle("AI 模型")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Toggle("", isOn: $enhancementEnabled)
+                    .labelsHidden()
+                    .tint(AppTheme.accent)
+                    .onChange(of: enhancementEnabled) { _, newValue in
+                        LLMProvider.isEnhancementEnabled = newValue
+                        if !newValue {
+                            // 禁用时删除已下载的模型文件
+                            if gemmaService.isModelDownloaded {
+                                gemmaService.deleteModel()
+                            }
+                        }
+                    }
+            }
+        }
         .task {
             // 进入页面时异步加载模型（如已下载但未加载）
+            guard enhancementEnabled else { return }
             await gemmaService.ensureLoaded()
         }
     }
