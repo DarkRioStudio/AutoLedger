@@ -650,8 +650,10 @@ public struct ReceiptParser: Sendable {
 
     /// 微信支付交易详情页的 OCR 输出通常为：标签连续排列（当前状态、支付时间、商户全称…），
     /// 之后是对应值按相同顺序排列。此方法检测该结构并提取商户名和支付时间。
+    /// 页面标题可能为"交易详情"（从账单列表点入）或"全部账单"（从微信支付主页点入）。
     private func parseWeChatDetailBlock(lines: [String]) -> (merchant: String?, date: Date?)? {
-        guard lines.contains(where: { $0.contains("交易详情") }) else { return nil }
+        let isWeChatPage = lines.contains(where: { $0.contains("交易详情") || $0.contains("全部账单") })
+        guard isWeChatPage else { return nil }
         let normalizedLines = mergeWrappedParenthesisLines(lines)
 
         let knownLabels: Set<String> = [
@@ -697,6 +699,8 @@ public struct ReceiptParser: Sendable {
 
     /// 合并被 OCR 拆成多行的括号内容，避免标签块值映射被换行错位。
     /// 例如："天津市...（个" + "体工商户）" -> "天津市...（个体工商户）"。
+    /// 同时合并因行宽限制被拆开的公司全称后缀，
+    /// 例如："柒一拾壹（天津）商业有限" + "公司" -> "柒一拾壹（天津）商业有限公司"。
     private func mergeWrappedParenthesisLines(_ lines: [String]) -> [String] {
         var merged: [String] = []
         var index = 0
@@ -709,6 +713,12 @@ public struct ReceiptParser: Sendable {
             while balance > 0, lookahead < lines.count {
                 current += lines[lookahead]
                 balance += parenthesisBalance(lines[lookahead])
+                lookahead += 1
+            }
+
+            // 公司全称被 OCR 在"有限"后换行（如"柒一拾壹（天津）商业有限" + "公司"）时合并。
+            if lookahead < lines.count && current.hasSuffix("有限") {
+                current += lines[lookahead]
                 lookahead += 1
             }
 
