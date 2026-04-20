@@ -166,6 +166,11 @@ struct QuickLedgerIntent: AppIntent {
             return .result(value: "入账失败，请打开 App 确认")
         }
 
+        // 通知 App 内 LedgerStore 刷新（Intent 直写 SQLite，绕过了 LedgerStore）
+        await MainActor.run {
+            NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
+        }
+
         await NotificationService.shared.scheduleQuickLedgerSuccessNotification(
             merchant: receipt.merchant,
             amount: receipt.amount,

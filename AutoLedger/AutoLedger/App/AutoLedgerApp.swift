@@ -35,6 +35,9 @@ struct AutoLedgerApp: App {
                         await GemmaService.shared.ensureLoaded()
                     }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
+                    store.refreshFromStore()
+                }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.refreshFromStore()
