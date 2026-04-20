@@ -156,6 +156,9 @@ struct LedgerView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppTheme.screenGradient.ignoresSafeArea())
+            .refreshable {
+                store.refreshFromStore()
+            }
             .navigationTitle("账本")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

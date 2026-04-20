@@ -6,6 +6,8 @@ import UserNotifications
 final class NotificationService: Sendable {
     static let shared = NotificationService()
     static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
+    /// Intent 入账成功后发送，通知 LedgerStore 刷新
+    static let didSaveTransactionFromIntent = Notification.Name("AutoLedger.didSaveTransactionFromIntent")
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
     static let quickLedgerTransactionIDUserInfoKey = "transactionID"
