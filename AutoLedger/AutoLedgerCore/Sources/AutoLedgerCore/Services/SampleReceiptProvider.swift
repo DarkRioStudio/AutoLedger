@@ -430,5 +430,38 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "Sample Restaurant（Example Branch）· ¥47.40"
         ),
+        SampleReceipt(
+            title: "微信支付全部账单截图（7-11）",
+            source: .wechat,
+            rawText: """
+            18:18
+            ×
+            •1 66
+            全部账单
+            UELEVEN
+            Example Convenience
+            -16.80
+            当前状态
+            支付时间
+            商品
+            商户全称
+            收单机构
+            支付方式
+            交易单号
+            商户单号
+            支付成功
+            2026年4月20日18:17:58
+            Example Store Branch
+            Example Convenience Store
+            公司
+            财付通支付科技有限公司
+            Example Bank Card (1234)
+            ORDER-EXAMPLE-WECHAT-002
+            MERCHANT-ORDER-002
+            可在支持的商户扫码退款
+            MERCHANT-REF-EXAMPLE-002
+            """,
+            preview: "Example Convenience Store · ¥16.80 · 2026-04-20 18:17:58"
+        ),
     ]
 }
