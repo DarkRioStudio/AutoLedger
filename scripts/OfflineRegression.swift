@@ -69,7 +69,9 @@ struct OfflineRegression {
             "滴滴出行微信扣费凭证截图": "滴滴出行",
             "支付宝麦当劳支付成功截图": "Demo Burger Restaurant",
             "淘宝闪购订单进行中截图": "Sample Restaurant（Example Branch）",
-            "微信支付全部账单截图（7-11）": "Example Convenience Store"
+            "微信支付全部账单截图（7-11）": "Example Convenience Store",
+            "云闪付付款成功截图": "示例咖啡（Example Station）",
+            "银联二维码支付详情截图": "示例便利店（Example Road）"
         ]
 
         let expectedAmounts: [String: Double] = [
@@ -87,12 +89,14 @@ struct OfflineRegression {
             "滴滴出行微信扣费凭证截图": 24.90,
             "支付宝麦当劳支付成功截图": 60.80,
             "淘宝闪购订单进行中截图": 47.4,
-            "微信支付全部账单截图（7-11）": 16.80
+            "微信支付全部账单截图（7-11）": 16.80,
+            "云闪付付款成功截图": 18.60,
+            "银联二维码支付详情截图": 12.80
         ]
 
         let expectedCategories: [String: TransactionCategory] = [
             "微信买菜截图": .groceries,
-            "微信支付详情个体工商户跨行截图": .shopping,
+            "微信支付详情个体工商户跨行截图": .groceries,
             "支付宝出行截图": .transport,
             "App Store 订阅截图": .digital,
             "天津地铁储值卡截图": .transport,
@@ -105,7 +109,9 @@ struct OfflineRegression {
             "滴滴出行微信扣费凭证截图": .transport,
             "支付宝麦当劳支付成功截图": .dining,
             "淘宝闪购订单进行中截图": .dining,
-            "微信支付全部账单截图（7-11）": .other
+            "微信支付全部账单截图（7-11）": .other,
+            "云闪付付款成功截图": .dining,
+            "银联二维码支付详情截图": .groceries
         ]
 
         for sample in samples {
@@ -117,7 +123,11 @@ struct OfflineRegression {
             reporter.check(receipt.source == sample.source, "\(sample.title) source matches")
             reporter.check(receipt.merchant == expectedMerchants[sample.title], "\(sample.title) merchant matches")
             reporter.check(abs(receipt.amount - (expectedAmounts[sample.title] ?? 0)) < 0.001, "\(sample.title) amount matches")
-            reporter.check(receipt.suggestedCategory == expectedCategories[sample.title], "\(sample.title) category matches")
+            let expectedCategory = expectedCategories[sample.title]
+            reporter.check(
+                receipt.suggestedCategory == expectedCategory,
+                "\(sample.title) category matches (got \(receipt.suggestedCategory.rawValue), expected \(expectedCategory?.rawValue ?? "nil"))"
+            )
 
             if let expectedDate = expectedDates[sample.title],
                let parsedDate = AppFormatters.parseFlexibleDate(expectedDate) {
@@ -165,6 +175,57 @@ struct OfflineRegression {
 
         let reloaded = try store.loadTransactions()
         reporter.check(reloaded.contains(updated), "SQLite update persists modified transaction")
+
+        try store.delete(transactionID: updated.id)
+        let activeAfterDelete = try store.loadTransactions()
+        let deletedAfterDelete = try store.loadDeletedTransactions()
+        reporter.check(!activeAfterDelete.contains(updated), "SQLite soft delete hides transaction from active load")
+        reporter.check(deletedAfterDelete.contains(updated), "SQLite soft delete exposes transaction in deleted load")
+
+        let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "offline.sqlite3")
+        let reopenedDeleted = try reopenedStore.loadDeletedTransactions()
+        reporter.check(reopenedDeleted.contains(updated), "SQLite deleted transactions survive store reopen")
+
+        try store.restoreTransaction(id: updated.id)
+        let activeAfterRestore = try store.loadTransactions()
+        reporter.check(activeAfterRestore.contains(updated), "SQLite restore returns transaction to active load")
+
+        try store.delete(transactionID: updated.id)
+        try store.permanentlyDeleteTransaction(id: updated.id)
+        let activeAfterPermanentDelete = try store.loadTransactions()
+        let deletedAfterPermanentDelete = try store.loadDeletedTransactions()
+        reporter.check(
+            !activeAfterPermanentDelete.contains(updated) && !deletedAfterPermanentDelete.contains(updated),
+            "SQLite permanent delete removes transaction completely"
+        )
+
+        let subscription = Subscription(
+            merchant: "离线订阅",
+            planName: "月度会员",
+            period: .monthly,
+            amount: 18.00,
+            lastChargedAt: AppFormatters.parseFlexibleDate("2026-03-01 09:00") ?? .now
+        )
+        try store.saveSubscription(subscription)
+        let persistedSubscription = try store.loadSubscriptions().first { $0.id == subscription.id } ?? subscription
+
+        let editedSubscription = Subscription(
+            id: persistedSubscription.id,
+            merchant: "离线订阅 Pro",
+            planName: "年度对比会员",
+            period: .yearly,
+            amount: 188.00,
+            lastChargedAt: persistedSubscription.lastChargedAt,
+            nextChargedAt: AppFormatters.parseFlexibleDate("2027-03-01 09:00") ?? persistedSubscription.nextChargedAt,
+            createdAt: persistedSubscription.createdAt
+        )
+        try store.updateSubscription(editedSubscription)
+
+        let loadedSubscriptions = try store.loadSubscriptions()
+        reporter.check(
+            loadedSubscriptions.contains(editedSubscription),
+            "SQLite subscription update persists edited fields"
+        )
     }
 
     private static func verifyLedgerImportFlow(using reporter: RegressionReporter) async throws {

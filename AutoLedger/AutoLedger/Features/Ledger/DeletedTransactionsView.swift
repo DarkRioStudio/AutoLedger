@@ -12,7 +12,7 @@ struct DeletedTransactionsView: View {
                     ContentUnavailableView(
                         "暂无已删除账单",
                         systemImage: "trash",
-                        description: Text("删除的账单会暂存于此，可在本次使用期间恢复。")
+                        description: Text("删除的账单会暂存于此，重启 App 后仍可恢复。")
                     )
                 } else {
                     List {
@@ -67,7 +67,7 @@ struct DeletedTransactionsView: View {
                                 }
                             }
                         } footer: {
-                            Text("右滑恢复，左滑彻底删除。退出 App 后已删除记录将清空。")
+                            Text("右滑恢复，左滑彻底删除。最近删除会跨会话保留。")
                         }
                     }
                     .scrollContentBackground(.hidden)

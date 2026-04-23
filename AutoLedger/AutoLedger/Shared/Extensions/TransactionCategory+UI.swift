@@ -15,3 +15,21 @@ extension TransactionCategory {
         }
     }
 }
+
+extension MonthlySnapshot.CategoryMetric {
+    var tint: Color {
+        if let category {
+            return category.tint
+        }
+
+        let palette: [Color] = [
+            Color(red: 0.12, green: 0.45, blue: 0.56),
+            Color(red: 0.56, green: 0.34, blue: 0.72),
+            Color(red: 0.67, green: 0.36, blue: 0.22),
+            Color(red: 0.22, green: 0.50, blue: 0.45),
+            Color(red: 0.63, green: 0.25, blue: 0.39)
+        ]
+        let seed = id.unicodeScalars.reduce(UInt64(0)) { ($0 &* 31) &+ UInt64($1.value) }
+        return palette[Int(seed % UInt64(palette.count))]
+    }
+}

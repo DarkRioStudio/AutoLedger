@@ -463,5 +463,41 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "Example Convenience Store · ¥16.80 · 2026-04-20 18:17:58"
         ),
+        SampleReceipt(
+            title: "云闪付付款成功截图",
+            source: .unionPay,
+            rawText: """
+            云闪付
+            付款成功
+            支付金额
+            ¥18.60
+            商户名称
+            示例咖啡（Example Station）
+            交易时间
+            2026-04-20 08:32:10
+            付款方式
+            Example Bank Card (1234)
+            订单号
+            ORDER-EXAMPLE-UNIONPAY-001
+            """,
+            preview: "示例咖啡（Example Station）· ¥18.60 · 2026-04-20 08:32:10"
+        ),
+        SampleReceipt(
+            title: "银联二维码支付详情截图",
+            source: .unionPay,
+            rawText: """
+            中国银联
+            交易详情
+            交易成功
+            商户名称：示例便利店（Example Road）
+            交易金额：¥12.80
+            交易时间：2026/04/21 20:15:33
+            支付方式
+            云闪付二维码
+            参考号
+            REF-EXAMPLE-001
+            """,
+            preview: "示例便利店（Example Road）· ¥12.80 · 2026-04-21 20:15:33"
+        ),
     ]
 }

@@ -104,6 +104,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    NavigationLink {
+                        AnalysisSettingsView()
+                    } label: {
+                        settingsRow(
+                            icon: "chart.line.uptrend.xyaxis",
+                            iconColor: Color(red: 0.20, green: 0.51, blue: 0.70),
+                            title: "消费分析",
+                            subtitle: "调整月报异常消费检测阈值"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     toggleCard(
                         icon: "doc.on.clipboard",
                         iconColor: .orange,
@@ -143,7 +155,7 @@ struct SettingsView: View {
 
                     infoCard(
                         title: "版本状态",
-                        body: "端侧 LLM 集成已落地，模型生命周期管理完成。接下来推进月报分析增强、新支付平台适配、订阅管理增强。"
+                        body: "端侧 LLM、月报分析、云闪付 / 银联基础适配、订阅管理增强、软删除持久化与回归门禁草稿已落地。接下来推进真机回归与发布判定。"
                     )
                 }
                 .padding(.horizontal, 20)

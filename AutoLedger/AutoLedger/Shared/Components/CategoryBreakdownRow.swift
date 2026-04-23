@@ -7,7 +7,7 @@ struct CategoryBreakdownRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label(metric.category.title, systemImage: metric.category.iconName)
+                Label(metric.title, systemImage: metric.iconName)
                     .font(.headline)
                     .foregroundStyle(AppTheme.ink)
 
@@ -21,9 +21,9 @@ struct CategoryBreakdownRow: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(metric.category.tint.opacity(0.14))
+                        .fill(metric.tint.opacity(0.14))
                     Capsule()
-                        .fill(metric.category.tint)
+                        .fill(metric.tint)
                         .frame(width: max(proxy.size.width * metric.ratio, 12))
                 }
             }

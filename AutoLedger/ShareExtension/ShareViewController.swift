@@ -16,6 +16,7 @@ class ShareViewController: UIViewController {
         "com.taobao.fleamarket": "taobao",
         "me.ele.ios.eleme": "eleme",
         "com.ss.iphone.ugc.Aweme": "douyin",
+        "com.unionpay.chsp": "unionPay",
     ]
 
     override func viewDidLoad() {

@@ -57,15 +57,15 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
             || lowered.contains("米线") || lowered.contains("面") || lowered.contains("饭") {
             return .dining
         }
+        if lowered.contains("盒马") || lowered.contains("超市") || lowered.contains("便利店") {
+            return .groceries
+        }
         if lowered.contains("apple") || lowered.contains("spotify") || lowered.contains("会员")
             || lowered.contains("app store") || lowered.contains("订阅") {
             return .digital
         }
         if lowered.contains("滴滴") || lowered.contains("地铁") || lowered.contains("出行") || lowered.contains("taxi") {
             return .transport
-        }
-        if lowered.contains("盒马") || lowered.contains("超市") || lowered.contains("便利店") {
-            return .groceries
         }
         if lowered.contains("电费") || lowered.contains("水费") || lowered.contains("燃气") {
             return .utilities

@@ -16,12 +16,57 @@ sed '/import AutoLedgerCore/d; /import UIKit/d; /import UserNotifications/d; /ty
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
+
+enum LLMProvider: String, Sendable {
+    case apple
+    case gemma
+
+    var displayName: String {
+        switch self {
+        case .apple: return "Apple Foundation Models"
+        case .gemma: return "Gemma"
+        }
+    }
+
+    static var userSelected: LLMProvider { .apple }
+    static var isEnhancementEnabled: Bool { false }
+}
+
 struct SmartReceiptParser {
-    struct LLMTrace { let prompt: String; let response: String }
+    struct LLMTrace {
+        let prompt: String
+        let response: String
+        let provider: LLMProvider
+        let latencyMs: Int
+    }
+
+    struct SmartResult {
+        let receipt: ImportedReceipt
+        let llmTrace: LLMTrace?
+        let usedRuleFallback: Bool
+    }
+
     private let parser = ReceiptParser()
-    func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) async -> (receipt: ImportedReceipt, llmTrace: LLMTrace?)? {
-        guard let receipt = parser.parse(text: text, source: source) else { return nil }
-        return (receipt, nil)
+
+    func parse(
+        text: String,
+        source: ReceiptSource,
+        fallbackMerchant: String? = nil,
+        ocrMinConfidence: Float? = nil,
+        provider: LLMProvider = .apple
+    ) async -> SmartResult? {
+        guard let receipt = parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {
+            return nil
+        }
+        return SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
+    }
+
+    func parseWithRules(
+        text: String,
+        source: ReceiptSource,
+        fallbackMerchant: String? = nil
+    ) -> ImportedReceipt? {
+        parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant)
     }
 }
 STUB
@@ -50,6 +95,10 @@ struct OCRResult: Sendable {
 struct OCRService: Sendable {
     func recognizeTextWithConfidence(from data: Data) throws -> OCRResult { OCRResult(text: "", minimumWordConfidence: 1.0) }
     func recognizeText(from data: Data) throws -> String { "" }
+}
+
+enum OCRTextCleaner {
+    static func clean(_ text: String) -> String { text }
 }
 
 // --- NotificationService stub (uses UserNotifications, iOS only) ---
