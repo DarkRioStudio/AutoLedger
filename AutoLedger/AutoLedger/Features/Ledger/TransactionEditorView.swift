@@ -31,10 +31,10 @@ struct TransactionEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("账单信息") {
-                    TextField("商户", text: $merchant)
+                Section("transaction_editor.section.basic") {
+                    TextField("transaction_editor.merchant", text: $merchant)
 
-                    Picker("来源", selection: $source) {
+                    Picker("transaction_editor.source", selection: $source) {
                         ForEach(ReceiptSource.allCases) { item in
                             Text(item.title).tag(item.rawValue)
                         }
@@ -45,14 +45,14 @@ struct TransactionEditorView: View {
                         }
                     }
 
-                    DatePicker("时间", selection: $occurredAt, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("transaction_editor.date", selection: $occurredAt, displayedComponents: [.date, .hourAndMinute])
                 }
 
-                Section("金额与分类") {
-                    TextField("金额", text: $amountText)
+                Section("transaction_editor.section.amount") {
+                    TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
 
-                    Picker("分类", selection: $category) {
+                    Picker("transaction_editor.category", selection: $category) {
                         ForEach(TransactionCategory.allCases) { item in
                             Text(item.title).tag(item.rawValue)
                         }
@@ -63,21 +63,21 @@ struct TransactionEditorView: View {
                         }
                     }
 
-                    TextField("备注", text: $note, axis: .vertical)
+                    TextField("transaction_editor.note", text: $note, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
                 }
             }
-            .navigationTitle(isNew ? "新增账单" : "编辑账单")
+            .navigationTitle(isNew ? String(localized: "transaction_editor.title.new") : String(localized: "transaction_editor.title.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button("common.cancel") {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button("common.save") {
                         let trimmedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
                         onSave(
                             Transaction(

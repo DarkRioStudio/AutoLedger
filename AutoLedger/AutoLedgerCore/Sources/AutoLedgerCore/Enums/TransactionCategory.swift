@@ -14,14 +14,14 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
 
     public var title: String {
         switch self {
-        case .groceries:     return "日用杂货"
-        case .dining:        return "餐饮"
-        case .transport:     return "出行"
-        case .shopping:      return "购物"
-        case .digital:       return "数字服务"
-        case .utilities:     return "生活缴费"
-        case .entertainment: return "娱乐"
-        case .other:         return "其他"
+        case .groceries:     return NSLocalizedString("category.groceries.title", comment: "")
+        case .dining:        return NSLocalizedString("category.dining.title", comment: "")
+        case .transport:     return NSLocalizedString("category.transport.title", comment: "")
+        case .shopping:      return NSLocalizedString("category.shopping.title", comment: "")
+        case .digital:       return NSLocalizedString("category.digital.title", comment: "")
+        case .utilities:     return NSLocalizedString("category.utilities.title", comment: "")
+        case .entertainment: return NSLocalizedString("category.entertainment.title", comment: "")
+        case .other:         return NSLocalizedString("category.other.title", comment: "")
         }
     }
 

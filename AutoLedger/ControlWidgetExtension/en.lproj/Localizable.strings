@@ -1,0 +1,5 @@
+"control.clipboard.title" = "Clipboard Ledger";
+"control.clipboard.description" = "Read a payment screenshot from the clipboard and save it automatically";
+"clipboard_import_intent.title" = "Clipboard Ledger";
+"clipboard_import_intent.description" = "Read a payment screenshot from the clipboard and save it automatically";
+"clipboard_import_intent.running" = "Importing from clipboard...";

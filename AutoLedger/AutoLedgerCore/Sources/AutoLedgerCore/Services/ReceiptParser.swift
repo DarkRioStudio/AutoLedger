@@ -3,6 +3,16 @@ import Foundation
 public struct ReceiptParser: Sendable {
     public init() {}
 
+    private struct PaperReceiptAnalysis {
+        let isMultiItemReceipt: Bool
+        let itemLineCount: Int
+        let hasReceiptKeyword: Bool
+        let hasCurrencySignal: Bool
+        let merchantCandidate: String?
+        let totalCandidates: [Double]
+        let priceCandidates: [Double]
+    }
+
     // MARK: - 多账单检测
 
     /// 检测 OCR 文本中是否疑似包含多笔独立账单。
@@ -45,6 +55,25 @@ public struct ReceiptParser: Sendable {
         return false
     }
 
+    /// 对英文/国际化纸质小票做轻量检测，仅输出脱敏诊断字段，供 UI/Intent 判断提示文案。
+    public func receiptDiagnostics(text: String) -> ReceiptParseDiagnostics? {
+        let lines = text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let analysis = analyzePaperReceipt(lines: lines)
+        guard analysis.isMultiItemReceipt else { return nil }
+        return ReceiptParseDiagnostics(
+            isMultiItemReceipt: true,
+            totalMatched: !analysis.totalCandidates.isEmpty,
+            merchantCandidate: analysis.merchantCandidate,
+            totalCandidates: analysis.totalCandidates,
+            itemLineCount: analysis.itemLineCount,
+            rule: analysis.totalCandidates.isEmpty ? "receipt_total_missing" : "receipt_total_priority",
+            note: analysis.totalCandidates.isEmpty ? "multi-item receipt without reliable total" : nil
+        )
+    }
+
     // MARK: - 单笔解析
 
     public func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) -> ImportedReceipt? {
@@ -57,12 +86,38 @@ public struct ReceiptParser: Sendable {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        // 滴滴行程结束页：优先使用专用金额提取器，避免将评价人数等无关数字误识别为车费
+        let paperReceipt = analyzePaperReceipt(lines: cleanedLines)
+
+        // 多商品纸质小票：必须优先取 TOTAL/AMOUNT DUE 等总额，避免把第一条商品价记成整单金额。
         let amount: Double
-        if let didiAmt = extractDidiTripAmount(lines: cleanedLines) {
+        let receiptDiagnostics: ReceiptParseDiagnostics?
+        if paperReceipt.isMultiItemReceipt, let total = paperReceipt.totalCandidates.first {
+            amount = total
+            receiptDiagnostics = ReceiptParseDiagnostics(
+                isMultiItemReceipt: true,
+                totalMatched: true,
+                merchantCandidate: paperReceipt.merchantCandidate,
+                totalCandidates: paperReceipt.totalCandidates,
+                itemLineCount: paperReceipt.itemLineCount,
+                rule: "receipt_total_priority"
+            )
+        } else if paperReceipt.isMultiItemReceipt, let fallbackAmount = paperReceipt.priceCandidates.sorted(by: >).first {
+            amount = fallbackAmount
+            receiptDiagnostics = ReceiptParseDiagnostics(
+                isMultiItemReceipt: true,
+                totalMatched: false,
+                merchantCandidate: paperReceipt.merchantCandidate,
+                totalCandidates: paperReceipt.totalCandidates,
+                itemLineCount: paperReceipt.itemLineCount,
+                rule: "receipt_total_missing",
+                note: "multi-item receipt without reliable total"
+            )
+        } else if let didiAmt = extractDidiTripAmount(lines: cleanedLines) {
             amount = didiAmt
+            receiptDiagnostics = nil
         } else if let genericAmt = extractAmount(from: normalized) {
             amount = genericAmt
+            receiptDiagnostics = nil
         } else {
             return nil
         }
@@ -85,19 +140,41 @@ public struct ReceiptParser: Sendable {
         // 云闪付 / 银联交易详情页：标签和值常分行展示，优先提取商户名称字段
         let unionPayMerchant = parseUnionPayVoucher(lines: cleanedLines)
 
-        let merchant = wechatDetail?.merchant
-            ?? douyinMerchant
-            ?? didiMerchant
-            ?? taobaoFlashMerchant
-            ?? wechatDeductionMerchant
-            ?? unionPayMerchant
-            ?? extractMerchant(from: normalized, source: source)
-            ?? fallbackMerchant
-            ?? "待确认商户"
+        let merchant: String
+        if paperReceipt.isMultiItemReceipt {
+            merchant = paperReceipt.merchantCandidate
+                ?? fallbackMerchant
+                ?? extractMerchant(from: normalized, source: source)
+                ?? "待确认商户"
+        } else {
+            merchant = wechatDetail?.merchant
+                ?? douyinMerchant
+                ?? didiMerchant
+                ?? taobaoFlashMerchant
+                ?? wechatDeductionMerchant
+                ?? unionPayMerchant
+                ?? extractMerchant(from: normalized, source: source)
+                ?? fallbackMerchant
+                ?? "待确认商户"
+        }
         let date = wechatDetail?.date
             ?? extractDate(from: normalized)
             ?? .now
-        let category = TransactionCategory.infer(from: "\(merchant)\n\(normalized)")
+        let category: TransactionCategory
+        if receiptDiagnostics != nil {
+            category = inferReceiptCategory(merchant: merchant, text: normalized)
+        } else {
+            category = TransactionCategory.infer(from: "\(merchant)\n\(normalized)")
+        }
+        let confidence: Double
+        let summary: String
+        if let receiptDiagnostics {
+            confidence = receiptDiagnostics.totalMatched ? 0.88 : 0.35
+            summary = receiptDiagnostics.totalMatched ? "纸质小票按总金额解析" : "纸质小票总金额待确认"
+        } else {
+            confidence = wechatDetail != nil ? 0.90 : 0.82
+            summary = "\(source.title) OCR 解析草稿"
+        }
 
         return ImportedReceipt(
             source: source,
@@ -105,10 +182,125 @@ public struct ReceiptParser: Sendable {
             amount: amount,
             occurredAt: date,
             rawText: normalized,
-            summary: "\(source.title) OCR 解析草稿",
-            confidence: wechatDetail != nil ? 0.90 : 0.82,
-            suggestedCategory: category
+            summary: summary,
+            confidence: confidence,
+            suggestedCategory: category,
+            parseDiagnostics: receiptDiagnostics
         )
+    }
+
+    private func analyzePaperReceipt(lines: [String]) -> PaperReceiptAnalysis {
+        let receiptSignalKeywords = [
+            "receipt", "subtotal", "sub total", "tax", "gst", "vat",
+            "total", "grand total", "amount due", "balance due", "cashier"
+        ]
+        let currencySignals = ["$", "USD", "SGD", "RM", "MYR", "£", "GBP", "€", "EUR"]
+        let strongTotalKeywords = [
+            "grand total", "amount due", "balance due", "total due",
+            "total amount", "amount payable", "total"
+        ]
+
+        let hasReceiptKeyword = lines.contains { line in
+            let lower = line.lowercased()
+            return receiptSignalKeywords.contains { lower.contains($0) }
+        }
+        let hasCurrencySignal = lines.contains { line in
+            currencySignals.contains { line.localizedCaseInsensitiveContains($0) }
+        }
+
+        let itemLines = lines.filter { isReceiptItemLine($0) }
+        var totalCandidates: [Double] = []
+        for line in lines {
+            let lower = line.lowercased()
+            guard strongTotalKeywords.contains(where: { lower.contains($0) }) else { continue }
+            guard !lower.contains("subtotal"), !lower.contains("sub total") else { continue }
+            totalCandidates.append(contentsOf: amountCandidates(in: line))
+        }
+
+        // 去重并保持出现顺序；小票同一 TOTAL 行可能被 OCR 拆出多个相同数字。
+        var seenTotals: Set<Int> = []
+        let uniqueTotals = totalCandidates.filter { amount in
+            let cents = Int((amount * 100).rounded())
+            guard !seenTotals.contains(cents) else { return false }
+            seenTotals.insert(cents)
+            return true
+        }
+
+        let itemPriceCandidates = itemLines.flatMap { amountCandidates(in: $0) }
+        let isMultiItemReceipt = itemLines.count >= 2 && (hasReceiptKeyword || hasCurrencySignal || !uniqueTotals.isEmpty)
+
+        return PaperReceiptAnalysis(
+            isMultiItemReceipt: isMultiItemReceipt,
+            itemLineCount: itemLines.count,
+            hasReceiptKeyword: hasReceiptKeyword,
+            hasCurrencySignal: hasCurrencySignal,
+            merchantCandidate: isMultiItemReceipt ? receiptHeaderMerchant(lines: lines) : nil,
+            totalCandidates: uniqueTotals.filter { $0 > 0 && $0 < 100000 },
+            priceCandidates: itemPriceCandidates.filter { $0 > 0 && $0 < 100000 }
+        )
+    }
+
+    private func isReceiptItemLine(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 5 else { return false }
+        guard trimmed.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) else { return false }
+
+        let lower = trimmed.lowercased()
+        let nonItemKeywords = [
+            "total", "subtotal", "sub total", "tax", "gst", "vat", "change", "cash",
+            "card", "visa", "mastercard", "debit", "credit", "amount due", "balance due"
+        ]
+        guard !nonItemKeywords.contains(where: { lower.contains($0) }) else { return false }
+
+        let trailingPricePattern = #"(?i).*(?:[$£€¥]\s*)?[0-9]+(?:\.[0-9]{2})\s*$"#
+        return (try? NSRegularExpression(pattern: trailingPricePattern))?
+            .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) != nil
+    }
+
+    private func receiptHeaderMerchant(lines: [String]) -> String? {
+        let headerLines = Array(lines.prefix(8))
+        let skipKeywords = [
+            "receipt", "tax invoice", "invoice", "tel", "phone", "address",
+            "cashier", "register", "date", "time", "gst", "vat", "tax id"
+        ]
+        let addressPattern = #"\b(?:st|street|road|rd|ave|avenue|drive|dr|mall|blk|block|unit)\b"#
+        let datePattern = #"\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}"#
+        let phonePattern = #"\+?\d[\d\s\-()]{7,}"#
+
+        for line in headerLines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lower = trimmed.lowercased()
+            guard trimmed.count >= 3 else { continue }
+            guard !skipKeywords.contains(where: { lower.contains($0) }) else { continue }
+            guard !isReceiptItemLine(trimmed) else { continue }
+            guard amountCandidate(in: trimmed) == nil else { continue }
+            guard (try? NSRegularExpression(pattern: datePattern))?
+                .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) == nil else { continue }
+            guard (try? NSRegularExpression(pattern: phonePattern))?
+                .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) == nil else { continue }
+            guard (try? NSRegularExpression(pattern: addressPattern, options: .caseInsensitive))?
+                .firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)) == nil else { continue }
+            return trimmed
+        }
+        return nil
+    }
+
+    private func inferReceiptCategory(merchant: String, text: String) -> TransactionCategory {
+        let lowered = "\(merchant)\n\(text)".lowercased()
+        if lowered.contains("restaurant") || lowered.contains("cafe") || lowered.contains("coffee")
+            || lowered.contains("mcdonald") || lowered.contains("kfc") || lowered.contains("burger")
+            || lowered.contains("noodle") || lowered.contains("tea") {
+            return .dining
+        }
+        if lowered.contains("fairprice") || lowered.contains("walmart") || lowered.contains("supermarket")
+            || lowered.contains("grocery") || lowered.contains("market") || lowered.contains("milk")
+            || lowered.contains("bread") || lowered.contains("apple") || lowered.contains("ntuc") {
+            return .groceries
+        }
+        if lowered.contains("mall") {
+            return .shopping
+        }
+        return .groceries
     }
 
     private func extractAmount(from text: String) -> Double? {
@@ -200,32 +392,34 @@ public struct ReceiptParser: Sendable {
     }
 
     private func amountCandidate(in line: String) -> Double? {
+        amountCandidates(in: line)
+            .filter { $0 < 100000 }
+            .sorted(by: >)
+            .first
+    }
+
+    private func amountCandidates(in line: String) -> [Double] {
         // 跳过疑似状态栏时间/信号格式，如 "10:131" 或 "9:41"
         let timeOnlyPattern = #"^\s*\d{1,2}:\d{2,3}\s*$"#
         if (try? NSRegularExpression(pattern: timeOnlyPattern))?
             .firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil {
-            return nil
+            return []
         }
 
-        let pattern = #"(?:(?:¥|￥|£|\$|€|RMB|CNY)\s*)?([0-9]+(?:\.[0-9]{1,2})?)"#
+        let pattern = #"(?:(?:¥|￥|£|\$|€|RMB|CNY|USD|SGD|RM|MYR|GBP|EUR)\s*)?([0-9]+(?:\.[0-9]{1,2})?)"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return nil
+            return []
         }
 
         let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
         let matches = regex.matches(in: line, range: nsRange)
 
-        let candidates = matches.compactMap { match -> Double? in
+        return matches.compactMap { match -> Double? in
             guard let range = Range(match.range(at: 1), in: line) else {
                 return nil
             }
             return Double(String(line[range]))
         }
-
-        return candidates
-            .filter { $0 < 100000 }
-            .sorted(by: >)
-            .first
     }
 
     /// 判断字符串是否是一个独立的金额（整行基本就是货币符号 + 数字）。

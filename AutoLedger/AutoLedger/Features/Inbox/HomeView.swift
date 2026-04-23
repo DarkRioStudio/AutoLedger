@@ -18,25 +18,25 @@ struct HomeView: View {
         TabView(selection: $selectedTab) {
             InboxView(selectedTab: $selectedTab)
                 .tabItem {
-                    Label("记账", systemImage: "tray.full.fill")
+                    Label("tab.inbox", systemImage: "tray.full.fill")
                 }
                 .tag(0)
 
             LedgerView()
                 .tabItem {
-                    Label("账本", systemImage: "list.bullet.rectangle.portrait.fill")
+                    Label("tab.ledger", systemImage: "list.bullet.rectangle.portrait.fill")
                 }
                 .tag(1)
 
             ReportView()
                 .tabItem {
-                    Label("月报", systemImage: "chart.bar.fill")
+                    Label("tab.report", systemImage: "chart.bar.fill")
                 }
                 .tag(2)
 
             SettingsView()
                 .tabItem {
-                    Label("设置", systemImage: "gearshape.fill")
+                    Label("tab.settings", systemImage: "gearshape.fill")
                 }
                 .tag(3)
         }
@@ -49,11 +49,10 @@ struct HomeView: View {
         }
     }
 
+    @MainActor
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
-        Task { @MainActor in
-            guard await QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
-            selectedTab = HomeTabIndex.ledger
-        }
+        guard QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
+        selectedTab = HomeTabIndex.ledger
     }
 }
 

@@ -1,0 +1,13 @@
+"share.status.recognizing" = "Recognizing...";
+"share.error.no_image" = "No image found";
+"share.error.read_image_failed" = "Failed to read the image";
+"share.error.ocr_failed_format" = "OCR failed: %@";
+"share.error.recognition_failed" = "Recognition failed. Open AutoLedger and import it manually.";
+"share.error.database_failed" = "Could not open the database";
+"share.duplicate_format" = "%@ ¥%.2f already exists";
+"share.note" = "Imported from Share Extension";
+"share.saved_format" = "Saved: %@ ¥%.2f";
+"share.multi_receipt_warning" = "\nThe image may contain multiple bills. Only one was recognized; consider importing separate screenshots.";
+"share.error.persistence_failed" = "Failed to save. Open AutoLedger to confirm.";
+"share.debug.parse_failed" = "Share Extension parsing failed";
+"share.debug.persistence_failed_format" = "Save failed: %@";

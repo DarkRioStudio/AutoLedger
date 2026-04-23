@@ -11,6 +11,9 @@
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
 		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C08D1AEB2F9A0A3B00CF2B9E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
+		C08D1AED2F9A0A3B00CF2B9E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
+		C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */; };
 /* End PBXBuildFile section */
@@ -22,6 +25,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C017EEAF2F875C1600639DC8;
 			remoteInfo = ShareExtension;
+		};
+		C08D1AFC2F9A0A3C00CF2B9E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C042FD6C2F76270200A01918 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C08D1AE82F9A0A3B00CF2B9E;
+			remoteInfo = AutoLedgerWidgetsExtension;
 		};
 		D0CC00082FA68B0000639DC8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -39,6 +49,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */,
 				C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */,
 				D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */,
 			);
@@ -52,6 +63,10 @@
 		4D9F0E98664337C76D7A2F0D /* Pods-AutoLedger.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.debug.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.debug.xcconfig"; sourceTree = "<group>"; };
 		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AutoLedger - 一键记账.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AutoLedgerWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AutoLedgerWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ControlWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3E9CB3BD1997D348E7B8304 /* Pods-AutoLedger.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.release.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,6 +101,13 @@
 			);
 			target = C042FD732F76270200A01918 /* AutoLedger */;
 		};
+		C08D1B022F9A0A3C00CF2B9E /* Exceptions for "AutoLedgerWidgets" folder in "AutoLedgerWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */;
+		};
 		D0CC00032FA68B0000639DC8 /* Exceptions for "ControlWidgetExtension" folder in "ControlWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -110,6 +132,14 @@
 				C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */,
 			);
 			path = AutoLedger;
+			sourceTree = "<group>";
+		};
+		C08D1AEE2F9A0A3B00CF2B9E /* AutoLedgerWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C08D1B022F9A0A3C00CF2B9E /* Exceptions for "AutoLedgerWidgets" folder in "AutoLedgerWidgetsExtension" target */,
+			);
+			path = AutoLedgerWidgets;
 			sourceTree = "<group>";
 		};
 		D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */ = {
@@ -140,6 +170,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C08D1AE62F9A0A3B00CF2B9E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C08D1AED2F9A0A3B00CF2B9E /* SwiftUI.framework in Frameworks */,
+				C08D1AEB2F9A0A3B00CF2B9E /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CC00052FA68B0000639DC8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -164,6 +203,8 @@
 			isa = PBXGroup;
 			children = (
 				3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */,
+				C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */,
+				C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -171,9 +212,11 @@
 		C042FD6B2F76270200A01918 = {
 			isa = PBXGroup;
 			children = (
+				C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */,
 				C042FD762F76270200A01918 /* AutoLedger */,
 				C017EEB12F875C1600639DC8 /* ShareExtension */,
 				D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */,
+				C08D1AEE2F9A0A3B00CF2B9E /* AutoLedgerWidgets */,
 				C042FD752F76270200A01918 /* Products */,
 				13BEB0B77CF0A0026FA94868 /* Pods */,
 				2372506559E3E54DCB779F64 /* Frameworks */,
@@ -186,6 +229,7 @@
 				C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */,
 				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
 				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
+				C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -231,6 +275,7 @@
 			dependencies = (
 				C017EEB92F875C1600639DC8 /* PBXTargetDependency */,
 				D0CC00092FA68B0000639DC8 /* PBXTargetDependency */,
+				C08D1AFD2F9A0A3C00CF2B9E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C042FD762F76270200A01918 /* AutoLedger */,
@@ -242,6 +287,28 @@
 			productName = AutoLedger;
 			productReference = C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C08D1B012F9A0A3C00CF2B9E /* Build configuration list for PBXNativeTarget "AutoLedgerWidgetsExtension" */;
+			buildPhases = (
+				C08D1AE52F9A0A3B00CF2B9E /* Sources */,
+				C08D1AE62F9A0A3B00CF2B9E /* Frameworks */,
+				C08D1AE72F9A0A3B00CF2B9E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C08D1AEE2F9A0A3B00CF2B9E /* AutoLedgerWidgets */,
+			);
+			name = AutoLedgerWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = AutoLedgerWidgetsExtension;
+			productReference = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */ = {
 			isa = PBXNativeTarget;
@@ -282,6 +349,9 @@
 					C042FD732F76270200A01918 = {
 						CreatedOnToolsVersion = 26.4;
 					};
+					C08D1AE82F9A0A3B00CF2B9E = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					D0CC00072FA68B0000639DC8 = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -292,6 +362,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = C042FD6B2F76270200A01918;
@@ -307,6 +378,7 @@
 				C042FD732F76270200A01918 /* AutoLedger */,
 				C017EEAF2F875C1600639DC8 /* ShareExtension */,
 				D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */,
+				C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -320,6 +392,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C042FD722F76270200A01918 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C08D1AE72F9A0A3B00CF2B9E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -375,6 +454,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C08D1AE52F9A0A3B00CF2B9E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CC00042FA68B0000639DC8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -389,6 +475,11 @@
 			isa = PBXTargetDependency;
 			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
 			targetProxy = C017EEB82F875C1600639DC8 /* PBXContainerItemProxy */;
+		};
+		C08D1AFD2F9A0A3C00CF2B9E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */;
+			targetProxy = C08D1AFC2F9A0A3C00CF2B9E /* PBXContainerItemProxy */;
 		};
 		D0CC00092FA68B0000639DC8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -665,6 +756,72 @@
 			};
 			name = Release;
 		};
+		C08D1AFF2F9A0A3C00CF2B9E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AutoLedgerWidgetsExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.AutoLedgerWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C08D1B002F9A0A3C00CF2B9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AutoLedgerWidgetsExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.AutoLedgerWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		D0CC000D2FA68B0000639DC8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -675,7 +832,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "剪切板记账";
+				INFOPLIST_KEY_CFBundleDisplayName = ClipboardLedge;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -706,7 +863,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "剪切板记账";
+				INFOPLIST_KEY_CFBundleDisplayName = ClipboardLedge;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -753,6 +910,15 @@
 			buildConfigurations = (
 				C042FD802F76270300A01918 /* Debug */,
 				C042FD812F76270300A01918 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C08D1B012F9A0A3C00CF2B9E /* Build configuration list for PBXNativeTarget "AutoLedgerWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C08D1AFF2F9A0A3C00CF2B9E /* Debug */,
+				C08D1B002F9A0A3C00CF2B9E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

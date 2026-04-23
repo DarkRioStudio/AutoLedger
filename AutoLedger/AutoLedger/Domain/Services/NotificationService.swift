@@ -6,6 +6,7 @@ import UserNotifications
 final class NotificationService: Sendable {
     static let shared = NotificationService()
     static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
+    static let openNewTransactionEvent = Notification.Name("AutoLedger.openNewTransactionEvent")
     /// Intent 入账成功后发送，通知 LedgerStore 刷新
     static let didSaveTransactionFromIntent = Notification.Name("AutoLedger.didSaveTransactionFromIntent")
     static let quickLedgerDestinationUserInfoKey = "destination"
@@ -52,8 +53,12 @@ final class NotificationService: Sendable {
         center.getNotificationSettings { settings in
             let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
-                content.title = "记账成功"
-                content.body = "记账成功：\(merchant) - \(formattedAmountText)。如有异常，请点击打开 App 确认。"
+                content.title = String(localized: "notification.quick_ledger.title")
+                content.body = String(
+                    format: String(localized: "notification.quick_ledger.body_format"),
+                    merchant,
+                    formattedAmountText
+                )
                 content.sound = .default
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
@@ -105,8 +110,13 @@ final class NotificationService: Sendable {
         guard reminderDate > .now else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "明日扣费提醒"
-        content.body = "\(sub.merchant) 将于明天扣费 \(formattedAmount(sub.amount))（\(sub.period.title)）"
+        content.title = String(localized: "notification.subscription.title")
+        content.body = String(
+            format: String(localized: "notification.subscription.body_format"),
+            sub.merchant,
+            formattedAmount(sub.amount),
+            sub.period.title
+        )
         content.sound = .default
 
         let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: reminderDate)
