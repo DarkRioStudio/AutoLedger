@@ -1,5 +1,41 @@
 import Foundation
 
+public struct ReceiptParseDiagnostics: Equatable, Sendable {
+    public let isMultiItemReceipt: Bool
+    public let totalMatched: Bool
+    public let merchantCandidate: String?
+    public let totalCandidates: [Double]
+    public let itemLineCount: Int
+    public let rule: String
+    public let note: String?
+
+    public init(
+        isMultiItemReceipt: Bool,
+        totalMatched: Bool,
+        merchantCandidate: String?,
+        totalCandidates: [Double],
+        itemLineCount: Int,
+        rule: String,
+        note: String? = nil
+    ) {
+        self.isMultiItemReceipt = isMultiItemReceipt
+        self.totalMatched = totalMatched
+        self.merchantCandidate = merchantCandidate
+        self.totalCandidates = totalCandidates
+        self.itemLineCount = itemLineCount
+        self.rule = rule
+        self.note = note
+    }
+
+    public var debugSummary: String {
+        let totals = totalCandidates
+            .prefix(5)
+            .map { String(format: "%.2f", $0) }
+            .joined(separator: ",")
+        return "receipt=\(isMultiItemReceipt) totalMatched=\(totalMatched) merchant=\(merchantCandidate ?? "-") totals=[\(totals)] itemLines=\(itemLineCount) rule=\(rule)"
+    }
+}
+
 public struct ImportedReceipt: Identifiable, Equatable, Sendable {
     public let id = UUID()
     public let source: ReceiptSource
@@ -10,6 +46,7 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
     public let summary: String
     public let confidence: Double
     public let suggestedCategory: TransactionCategory
+    public let parseDiagnostics: ReceiptParseDiagnostics?
 
     public init(
         source: ReceiptSource,
@@ -19,7 +56,8 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
         rawText: String,
         summary: String,
         confidence: Double,
-        suggestedCategory: TransactionCategory
+        suggestedCategory: TransactionCategory,
+        parseDiagnostics: ReceiptParseDiagnostics? = nil
     ) {
         self.source = source
         self.merchant = merchant
@@ -29,5 +67,6 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
         self.summary = summary
         self.confidence = confidence
         self.suggestedCategory = suggestedCategory
+        self.parseDiagnostics = parseDiagnostics
     }
 }

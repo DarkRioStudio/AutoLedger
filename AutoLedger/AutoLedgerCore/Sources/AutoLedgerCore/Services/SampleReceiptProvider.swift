@@ -499,5 +499,36 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             """,
             preview: "罗森便利店（南京西路店）· ¥12.80 · 2026-04-21 20:15:33"
         ),
+        SampleReceipt(
+            title: "英文超市纸质小票TOTAL",
+            source: .manual,
+            rawText: """
+            NTUC FAIRPRICE
+            100 AM STREET
+            SINGAPORE
+            FRESH MILK        2.00
+            BREAD             3.20
+            APPLES            7.10
+            SUBTOTAL         12.30
+            GST               0.00
+            TOTAL SGD 12.30
+            23/04/2026 18:02
+            """,
+            preview: "NTUC FAIRPRICE · SGD 12.30"
+        ),
+        SampleReceipt(
+            title: "英文超市纸质小票无TOTAL",
+            source: .manual,
+            rawText: """
+            WALMART
+            450 MARKET ST
+            FRESH MILK        2.00
+            BREAD             3.20
+            APPLES            7.10
+            CASHIER 12
+            04/23/2026 18:02
+            """,
+            preview: "WALMART · total missing"
+        ),
     ]
 }

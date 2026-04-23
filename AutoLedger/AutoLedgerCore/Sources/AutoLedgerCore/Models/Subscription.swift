@@ -9,9 +9,9 @@ public enum SubscriptionPeriod: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .weekly:  return "每周"
-        case .monthly: return "每月"
-        case .yearly:  return "每年"
+        case .weekly:  return NSLocalizedString("subscription.period.weekly", comment: "")
+        case .monthly: return NSLocalizedString("subscription.period.monthly", comment: "")
+        case .yearly:  return NSLocalizedString("subscription.period.yearly", comment: "")
         }
     }
 

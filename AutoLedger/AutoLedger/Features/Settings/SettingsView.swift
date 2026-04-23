@@ -18,8 +18,8 @@ struct SettingsView: View {
                             settingsRow(
                                 icon: "ladybug.fill",
                                 iconColor: AppTheme.accent,
-                                title: "调试与回归",
-                                subtitle: "查看 OCR 原文、解析结果、导入状态和最近账单"
+                                title: "settings.debug.title",
+                                subtitle: "settings.debug.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
@@ -31,8 +31,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "arrow.triangle.branch",
                             iconColor: Color(red: 0.07, green: 0.47, blue: 0.87),
-                            title: "来源管理",
-                            subtitle: "管理支付来源，查看或新增自定义来源"
+                            title: "settings.sources.title",
+                            subtitle: "settings.sources.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -43,8 +43,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "square.grid.2x2.fill",
                             iconColor: AppTheme.accentSecondary,
-                            title: "分类管理",
-                            subtitle: "管理支出分类，查看或新增自定义分类"
+                            title: "settings.categories.title",
+                            subtitle: "settings.categories.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -55,19 +55,20 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "person.text.rectangle.fill",
                             iconColor: Color(red: 0.33, green: 0.59, blue: 0.41),
-                            title: "商户别名",
-                            subtitle: "将解析到的商户全称映射为熟悉的短名称，如「广州骑安科技有限公司 → 青桔单车」"
+                            title: "settings.aliases.title",
+                            subtitle: "settings.aliases.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
+
                     NavigationLink {
                         SubscriptionListView()
                     } label: {
                         settingsRow(
                             icon: "repeat.circle.fill",
                             iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
-                            title: "订阅管理",
-                            subtitle: "查看已识别的周期性订阅，管理扣费提醒"
+                            title: "settings.subscriptions.title",
+                            subtitle: "settings.subscriptions.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -75,8 +76,8 @@ struct SettingsView: View {
                     toggleCard(
                         icon: "bell.badge.fill",
                         iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
-                        title: "订阅扣费提醒",
-                        subtitle: "开启后，在预测扣费前 1 天发送本地通知。",
+                        title: "settings.subscription_reminder.title",
+                        subtitle: "settings.subscription_reminder.subtitle",
                         key: "subscriptionReminder"
                     )
 
@@ -86,8 +87,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "brain.head.profile",
                             iconColor: Color(red: 0.55, green: 0.36, blue: 0.69),
-                            title: "分类学习",
-                            subtitle: "查看已学习的商户→分类偏好，支持删除"
+                            title: "settings.category_learning.title",
+                            subtitle: "settings.category_learning.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -98,8 +99,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "cpu.fill",
                             iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
-                            title: "AI 模型",
-                            subtitle: "选择端侧大模型，管理 Gemma 模型下载"
+                            title: "settings.ai_model.title",
+                            subtitle: "settings.ai_model.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -110,8 +111,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "chart.line.uptrend.xyaxis",
                             iconColor: Color(red: 0.20, green: 0.51, blue: 0.70),
-                            title: "消费分析",
-                            subtitle: "调整月报异常消费检测阈值"
+                            title: "settings.analysis.title",
+                            subtitle: "settings.analysis.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
@@ -119,8 +120,8 @@ struct SettingsView: View {
                     toggleCard(
                         icon: "doc.on.clipboard",
                         iconColor: .orange,
-                        title: "回到前台自动读取剪切板",
-                        subtitle: "开启后，每次回到 App 时自动检测剪切板中的支付截图并导入记账。",
+                        title: "settings.clipboard_auto_import.title",
+                        subtitle: "settings.clipboard_auto_import.subtitle",
                         key: "autoClipboardImport"
                     )
 
@@ -130,15 +131,15 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "envelope.fill",
                             iconColor: Color(red: 0.20, green: 0.56, blue: 0.82),
-                            title: "问题反馈",
-                            subtitle: "遇到问题？发送分级日志帮助我们快速定位"
+                            title: "settings.feedback.title",
+                            subtitle: "settings.feedback.subtitle"
                         )
                     }
                     .buttonStyle(.plain)
 
                     infoCard(
-                        title: "当前版本",
-                        body: "v1.2.0-dev — Gemma-2 2B 端侧 LLM 集成（CDN 分发 + SHA-256 校验）、LLM + 规则混合解析、模型异步加载与自动卸载、订阅识别、快捷指令一键记账、Share Extension 分享导入。"
+                        title: "settings.version.title",
+                        body: "settings.version.body"
                     )
                     .onTapGesture {
                         versionTapCount += 1
@@ -149,20 +150,20 @@ struct SettingsView: View {
                     }
 
                     infoCard(
-                        title: "隐私策略",
-                        body: "所有数据留在设备本地，不接入任何云端同步或第三方分析。OCR 与 LLM 推理均在本地完成。唯一网络请求：Gemma 模型版本检查与下载（CDN），不传输任何用户数据。"
+                        title: "settings.privacy.title",
+                        body: "settings.privacy.body"
                     )
 
                     infoCard(
-                        title: "版本状态",
-                        body: "端侧 LLM、月报分析、云闪付 / 银联基础适配、订阅管理增强、软删除持久化与回归门禁草稿已落地。接下来推进真机回归与发布判定。"
+                        title: "settings.release_status.title",
+                        body: "settings.release_status.body"
                     )
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("设置")
+            .navigationTitle("settings.title")
             .sheet(isPresented: $showFeedbackComposer) {
                 FeedbackComposerView()
                     .environmentObject(store)
@@ -170,7 +171,12 @@ struct SettingsView: View {
         }
     }
 
-    private func settingsRow(icon: String, iconColor: Color, title: String, subtitle: String) -> some View {
+    private func settingsRow(
+        icon: String,
+        iconColor: Color,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey
+    ) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
@@ -203,7 +209,13 @@ struct SettingsView: View {
         )
     }
 
-    private func toggleCard(icon: String, iconColor: Color, title: String, subtitle: String, key: String) -> some View {
+    private func toggleCard(
+        icon: String,
+        iconColor: Color,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey,
+        key: String
+    ) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
@@ -238,7 +250,7 @@ struct SettingsView: View {
         )
     }
 
-    private func infoCard(title: String, body: String) -> some View {
+    private func infoCard(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)

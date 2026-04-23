@@ -28,7 +28,7 @@ class ShareViewController: UIViewController {
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
-        statusLabel.text = "正在识别…"
+        statusLabel.text = String(localized: "share.status.recognizing")
 
         view.addSubview(activityIndicator)
         view.addSubview(statusLabel)
@@ -50,7 +50,7 @@ class ShareViewController: UIViewController {
         guard let item = extensionContext?.inputItems.first as? NSExtensionItem,
               let provider = item.attachments?.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) })
         else {
-            finish(message: "未找到图片")
+            finish(message: String(localized: "share.error.no_image"))
             return
         }
 
@@ -71,7 +71,7 @@ class ShareViewController: UIViewController {
             }
 
             guard let imageData, !imageData.isEmpty else {
-                DispatchQueue.main.async { self.finish(message: "读取图片失败") }
+                DispatchQueue.main.async { self.finish(message: String(localized: "share.error.read_image_failed")) }
                 return
             }
 
@@ -81,7 +81,8 @@ class ShareViewController: UIViewController {
             do {
                 text = try ocrService.recognizeText(from: imageData)
             } catch {
-                DispatchQueue.main.async { self.finish(message: "OCR 失败：\(error.localizedDescription)") }
+                let msg = String(format: String(localized: "share.error.ocr_failed_format"), error.localizedDescription)
+                DispatchQueue.main.async { self.finish(message: msg) }
                 return
             }
 
@@ -101,14 +102,14 @@ class ShareViewController: UIViewController {
 
             // 解析
             guard let receipt = parser.parse(text: text, source: source) else {
-                self.writeDebug(stage: .parseFailed, source: source, rawText: text, summary: "Share Extension 解析失败")
-                DispatchQueue.main.async { self.finish(message: "识别失败，请打开 App 手动导入") }
+                self.writeDebug(stage: .parseFailed, source: source, rawText: text, summary: String(localized: "share.debug.parse_failed"))
+                DispatchQueue.main.async { self.finish(message: String(localized: "share.error.recognition_failed")) }
                 return
             }
 
             // 去重 + 入账
             guard let store = try? SQLiteTransactionStore() else {
-                DispatchQueue.main.async { self.finish(message: "数据库打开失败") }
+                DispatchQueue.main.async { self.finish(message: String(localized: "share.error.database_failed")) }
                 return
             }
 
@@ -130,7 +131,7 @@ class ShareViewController: UIViewController {
             }()
 
             if isDuplicate || isOCRDuplicate {
-                let msg = "\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount)) 已存在"
+                let msg = String(format: String(localized: "share.duplicate_format"), receipt.merchant, receipt.amount)
                 self.writeDebug(stage: .duplicateSkipped, source: source, rawText: text, receipt: receipt, summary: msg)
                 DispatchQueue.main.async { self.finish(message: msg) }
                 return
@@ -142,21 +143,22 @@ class ShareViewController: UIViewController {
                 occurredAt: receipt.occurredAt,
                 category: receipt.suggestedCategory,
                 source: receipt.source,
-                note: "分享导入"
+                note: String(localized: "share.note")
             )
 
             do {
                 try store.save(transaction: transaction)
                 self.writeShareResult(ocrText: text, receipt: receipt)
-                var msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+                var msg = String(format: String(localized: "share.saved_format"), receipt.merchant, receipt.amount)
                 if multiReceipt {
-                    msg += "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图后分别导入"
+                    msg += String(localized: "share.multi_receipt_warning")
                 }
                 self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg)
                 DispatchQueue.main.async { self.finish(message: msg) }
             } catch {
-                self.writeDebug(stage: .persistenceFailed, source: source, rawText: text, receipt: receipt, summary: "入账失败：\(error.localizedDescription)")
-                DispatchQueue.main.async { self.finish(message: "入账失败，请打开 App 确认") }
+                let debugMessage = String(format: String(localized: "share.debug.persistence_failed_format"), error.localizedDescription)
+                self.writeDebug(stage: .persistenceFailed, source: source, rawText: text, receipt: receipt, summary: debugMessage)
+                DispatchQueue.main.async { self.finish(message: String(localized: "share.error.persistence_failed")) }
             }
         }
     }

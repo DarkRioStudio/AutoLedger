@@ -16,8 +16,8 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var subtitle: String {
         switch self {
-        case .appleFoundation: return "iOS 26+ 系统内置，无需下载"
-        case .gemma:           return "Google 端侧模型（MediaPipe），需下载约 2.5 GB"
+        case .appleFoundation: return String(localized: "llm.apple.subtitle")
+        case .gemma:           return String(localized: "llm.gemma.subtitle")
         }
     }
 
@@ -48,10 +48,10 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     var unavailableReason: String? {
         switch self {
         case .appleFoundation:
-            if !isAvailable { return "当前设备/地区不支持 Apple Intelligence" }
+            if !isAvailable { return String(localized: "llm.apple.unavailable") }
         case .gemma:
-            if GemmaService.isRunningInExtension { return "Extension 中不可用" }
-            if !isAvailable { return "模型尚未下载，请先下载" }
+            if GemmaService.isRunningInExtension { return String(localized: "llm.gemma.extension_unavailable") }
+            if !isAvailable { return String(localized: "llm.gemma.not_downloaded") }
         }
         return nil
     }
@@ -64,8 +64,8 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     /// 模型识别增强是否启用
     static var isEnhancementEnabled: Bool {
         get {
-            // 默认启用（首次安装 key 不存在时）
-            if UserDefaults.standard.object(forKey: enhancementKey) == nil { return true }
+            // 默认关闭（首次安装 key 不存在时）
+            if UserDefaults.standard.object(forKey: enhancementKey) == nil { return false }
             return UserDefaults.standard.bool(forKey: enhancementKey)
         }
         set {

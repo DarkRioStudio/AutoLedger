@@ -71,7 +71,9 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": "和府捞面（杭州空港新天地卫星店）",
             "微信支付全部账单截图（7-11）": "柒一拾壹（天津）商业有限公司",
             "云闪付付款成功截图": "瑞幸咖啡（杭州东站店）",
-            "银联二维码支付详情截图": "罗森便利店（南京西路店）"
+            "银联二维码支付详情截图": "罗森便利店（南京西路店）",
+            "英文超市纸质小票TOTAL": "NTUC FAIRPRICE",
+            "英文超市纸质小票无TOTAL": "WALMART"
         ]
 
         let expectedAmounts: [String: Double] = [
@@ -91,7 +93,9 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": 47.4,
             "微信支付全部账单截图（7-11）": 16.80,
             "云闪付付款成功截图": 18.60,
-            "银联二维码支付详情截图": 12.80
+            "银联二维码支付详情截图": 12.80,
+            "英文超市纸质小票TOTAL": 12.30,
+            "英文超市纸质小票无TOTAL": 7.10
         ]
 
         let expectedCategories: [String: TransactionCategory] = [
@@ -111,7 +115,9 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": .dining,
             "微信支付全部账单截图（7-11）": .other,
             "云闪付付款成功截图": .dining,
-            "银联二维码支付详情截图": .groceries
+            "银联二维码支付详情截图": .groceries,
+            "英文超市纸质小票TOTAL": .groceries,
+            "英文超市纸质小票无TOTAL": .groceries
         ]
 
         for sample in samples {
@@ -128,6 +134,18 @@ struct OfflineRegression {
                 receipt.suggestedCategory == expectedCategory,
                 "\(sample.title) category matches (got \(receipt.suggestedCategory.rawValue), expected \(expectedCategory?.rawValue ?? "nil"))"
             )
+
+            if sample.title == "英文超市纸质小票TOTAL" {
+                reporter.check(receipt.parseDiagnostics?.isMultiItemReceipt == true, "英文超市纸质小票TOTAL flagged as receipt")
+                reporter.check(receipt.parseDiagnostics?.totalMatched == true, "英文超市纸质小票TOTAL matches TOTAL")
+                reporter.check(receipt.merchant != "FRESH MILK", "英文超市纸质小票TOTAL does not use first item as merchant")
+            }
+
+            if sample.title == "英文超市纸质小票无TOTAL" {
+                reporter.check(receipt.parseDiagnostics?.isMultiItemReceipt == true, "英文超市纸质小票无TOTAL flagged as receipt")
+                reporter.check(receipt.parseDiagnostics?.totalMatched == false, "英文超市纸质小票无TOTAL stays low confidence")
+                reporter.check(receipt.confidence < 0.5, "英文超市纸质小票无TOTAL confidence stays low")
+            }
 
             if let expectedDate = expectedDates[sample.title],
                let parsedDate = AppFormatters.parseFlexibleDate(expectedDate) {
@@ -271,6 +289,23 @@ struct OfflineRegression {
         ledger.importRecognizedText(similarText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
+
+        let multiItemNoTotalText = """
+        WALMART
+        450 MARKET ST
+        FRESH MILK        2.00
+        BREAD             3.20
+        APPLES            7.10
+        CASHIER 12
+        04/23/2026 18:02
+        """
+        ledger.importRecognizedText(multiItemNoTotalText, preferredSource: .manual)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore does not persist multi-item receipt without reliable total")
+        reporter.check(
+            ledger.lastImportSummary?.contains("总金额") == true || ledger.lastImportSummary?.contains("total amount") == true,
+            "LedgerStore reports multi-item receipt total-missing guidance"
+        )
 
         // TextSimilarity 单元验证
         let sim = TextSimilarity.jaccard(rawText, similarText)

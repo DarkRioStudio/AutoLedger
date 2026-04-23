@@ -18,7 +18,8 @@ struct InboxView: View {
     private let ocrService = OCRService()
 
     private var hasShortcutEntries: Bool {
-        store.transactions.contains { $0.note == "快捷指令自动记账" }
+        let shortcutNote = localized("quick_ledger.note", fallback: "快捷指令自动记账")
+        return store.transactions.contains { $0.note == shortcutNote }
     }
 
     private var upcomingSubscriptions: [Subscription] {
@@ -53,7 +54,7 @@ struct InboxView: View {
                     }
 
                     if !store.recentImports.isEmpty {
-                        Text("最近解析")
+                        Text("inbox.recent_imports")
                             .font(.title3.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
 
@@ -82,23 +83,23 @@ struct InboxView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("随手记账，一拍即入")
+            Text("inbox.hero.title")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
 
             HStack(spacing: 12) {
                 MetricCard(
-                    title: "本月支出",
+                    title: localized("inbox.hero.monthly_expense.title", fallback: "This Month"),
                     value: AppFormatters.currency(store.monthlySnapshot.totalExpense),
-                    detail: "\(store.monthlySnapshot.transactionCount) 笔账单",
+                    detail: String(format: localized("inbox.hero.monthly_expense.detail", fallback: "%d transactions"), store.monthlySnapshot.transactionCount),
                     accent: AppTheme.accent
                 )
                 .onTapGesture { selectedTab = 2 }
 
                 MetricCard(
-                    title: "Top 商户",
+                    title: localized("inbox.hero.top_merchant.title", fallback: "Top Merchant"),
                     value: store.monthlySnapshot.topMerchant,
-                    detail: "\(store.monthlySnapshot.topMerchants.count) 家商户",
+                    detail: String(format: localized("inbox.hero.top_merchant.detail", fallback: "%d merchants"), store.monthlySnapshot.topMerchants.count),
                     accent: AppTheme.accentSecondary
                 )
                 .onTapGesture { showMerchantSheet = true }
@@ -115,11 +116,11 @@ struct InboxView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("一键记账")
+                    Text("inbox.quick_setup.title")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
-                    Text("将快捷指令绑定到操作按钮，长按一下即可截图记账。")
+                    Text("inbox.quick_setup.subtitle")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -134,14 +135,14 @@ struct InboxView: View {
             VStack(alignment: .leading, spacing: 12) {
                 setupStep(
                     number: "1",
-                    title: "获取快捷指令",
-                    detail: "点击下方按钮添加「一键记账」快捷指令到你的 iPhone。"
+                    title: localized("inbox.quick_setup.step1.title", fallback: "Get the Shortcut"),
+                    detail: localized("inbox.quick_setup.step1.detail", fallback: "Add the Quick Ledger shortcut to your iPhone.")
                 )
 
                 Link(destination: URL(string: "https://www.icloud.com/shortcuts/e64528fb5bc34afdab4d7c64242d537e")!) {
                     HStack {
                         Image(systemName: "square.and.arrow.down")
-                        Text("添加快捷指令")
+                        Text("inbox.quick_setup.add_shortcut")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -152,8 +153,8 @@ struct InboxView: View {
 
                 setupStep(
                     number: "2",
-                    title: "绑定操作按钮",
-                    detail: "前往「设置  →  操作按钮  →  快捷指令」，选择刚才添加的「一键记账」。"
+                    title: localized("inbox.quick_setup.step2.title", fallback: "Assign the Action Button"),
+                    detail: localized("inbox.quick_setup.step2.detail", fallback: "Go to Settings -> Action Button -> Shortcut, then choose Quick Ledger.")
                 )
 
                 Button {
@@ -163,7 +164,7 @@ struct InboxView: View {
                 } label: {
                     HStack {
                         Image(systemName: "gearshape")
-                        Text("打开系统设置")
+                        Text("inbox.quick_setup.open_settings")
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -174,16 +175,16 @@ struct InboxView: View {
 
                 setupStep(
                     number: "3",
-                    title: "长按操作按钮即可记账",
-                    detail: "截图支付页面后长按操作按钮，自动识别并记入账本。"
+                    title: localized("inbox.quick_setup.step3.title", fallback: "Press and hold to log"),
+                    detail: localized("inbox.quick_setup.step3.detail", fallback: "Take a payment screenshot, then press and hold the Action Button to log it.")
                 )
             }
 
-            Text("仅支持 iPhone 15 Pro 及以上带操作按钮的机型。")
+            Text("inbox.quick_setup.device_hint")
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
 
-            Text("你也可以复制支付截图后回到 App，自动读取剪切板记账（需在设置中开启）。")
+            Text("inbox.quick_setup.clipboard_hint")
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
         }
@@ -206,12 +207,13 @@ struct InboxView: View {
                     .foregroundStyle(AppTheme.accent)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("一键记账已开启")
+                    Text("inbox.quick_setup.enabled")
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    let count = store.transactions.filter { $0.note == "快捷指令自动记账" }.count
-                    Text("已通过快捷指令记录 \(count) 笔账单")
+                    let shortcutNote = localized("quick_ledger.note", fallback: "快捷指令自动记账")
+                    let count = store.transactions.filter { $0.note == shortcutNote }.count
+                    Text(String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -240,13 +242,13 @@ struct InboxView: View {
                     .font(.title3)
                     .foregroundStyle(AppTheme.accentSecondary)
 
-                Text("即将扣费")
+                Text("inbox.upcoming_subscriptions.title")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
                 Spacer()
 
-                Text("未来 7 天")
+                Text("inbox.upcoming_subscriptions.range")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -271,7 +273,7 @@ struct InboxView: View {
                             .foregroundStyle(AppTheme.ink)
 
                         let days = Calendar.current.dateComponents([.day], from: .now, to: sub.nextChargedAt).day ?? 0
-                        Text(days <= 0 ? "今天" : days == 1 ? "明天" : "\(days) 天后")
+                        Text(daysText(days))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.accentSecondary)
                     }
@@ -309,11 +311,11 @@ struct InboxView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("支付账单导入")
+                    Text("inbox.import.title")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
-                    Text("选择支付截图或拍照，自动识别金额和商户并记入账本。")
+                    Text("inbox.import.subtitle")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -338,7 +340,7 @@ struct InboxView: View {
                         Image(systemName: "photo.on.rectangle")
                     }
 
-                    Text(isImportingPhoto ? "识别中..." : "从相册选取")
+                    Text(isImportingPhoto ? String(localized: "inbox.import.processing") : String(localized: "inbox.import.photo"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -359,7 +361,7 @@ struct InboxView: View {
                             Image(systemName: "camera.fill")
                         }
 
-                        Text(isImportingCamera ? "识别中..." : "拍照识别")
+                        Text(isImportingCamera ? String(localized: "inbox.import.processing") : String(localized: "inbox.import.camera"))
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -380,7 +382,7 @@ struct InboxView: View {
                         Image(systemName: "doc.on.clipboard")
                     }
 
-                    Text(isImportingClipboard ? "识别中..." : "从剪切板粘贴")
+                    Text(isImportingClipboard ? String(localized: "inbox.import.processing") : String(localized: "inbox.import.clipboard"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -389,7 +391,7 @@ struct InboxView: View {
             .buttonStyle(.borderedProminent)
             .tint(AppTheme.accentSecondary)
 
-            Text("支持微信/支付宝等支付截图，可从相册选取、拍照或直接粘贴。")
+            Text("inbox.import.hint")
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
         }
@@ -460,7 +462,7 @@ struct InboxView: View {
 
     private var recognizedTextCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("最近 OCR 文本")
+            Text("inbox.recent_ocr")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
@@ -546,11 +548,11 @@ struct InboxView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("商户消费排名")
+            .navigationTitle("inbox.merchant_rankings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("关闭") { showMerchantSheet = false }
+                    Button("common.close") { showMerchantSheet = false }
                 }
             }
         }
@@ -563,7 +565,7 @@ struct InboxView: View {
 
         guard let image = UIPasteboard.general.image,
               let data = image.pngData() else {
-            store.setImportError("剪切板中没有图片。", imageSource: .clipboard)
+            store.setImportError(localized("inbox.clipboard.empty", fallback: "No image found in clipboard."), imageSource: .clipboard)
             return
         }
 
@@ -573,6 +575,19 @@ struct InboxView: View {
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .clipboard)
         }
+    }
+}
+
+private extension InboxView {
+    func localized(_ key: String, fallback: String) -> String {
+        let value = NSLocalizedString(key, comment: "")
+        return value == key ? fallback : value
+    }
+
+    func daysText(_ days: Int) -> String {
+        if days <= 0 { return String(localized: "common.today") }
+        if days == 1 { return String(localized: "common.tomorrow") }
+        return String(format: localized("common.days_later_format", fallback: "%d days later"), days)
     }
 }
 

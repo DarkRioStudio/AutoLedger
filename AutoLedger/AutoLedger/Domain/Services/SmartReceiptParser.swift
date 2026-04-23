@@ -45,6 +45,13 @@ struct SmartReceiptParser: Sendable {
         ocrMinConfidence: Float? = nil,
         provider: LLMProvider
     ) async -> SmartResult? {
+        if let diagnostics = ruleParser.receiptDiagnostics(text: text), diagnostics.isMultiItemReceipt {
+            logger.info("[规则优先] 命中多商品小票，直接使用 receipt total 规则。\(diagnostics.debugSummary)")
+            guard let receipt = ruleParser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {
+                return nil
+            }
+            return SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
+        }
 
         let providerAvailable = await provider.isAvailable
 

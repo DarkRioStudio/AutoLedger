@@ -14,27 +14,27 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
 
     public var title: String {
         switch self {
-        case .wechat:   return "微信支付"
-        case .alipay:   return "支付宝"
-        case .appStore: return "App Store"
-        case .taobao:   return "淘宝"
-        case .eleme:    return "饿了么"
-        case .douyin:   return "抖音团购"
-        case .unionPay: return "云闪付"
-        case .manual:   return "手动录入"
+        case .wechat:   return NSLocalizedString("source.wechat.title", comment: "")
+        case .alipay:   return NSLocalizedString("source.alipay.title", comment: "")
+        case .appStore: return NSLocalizedString("source.app_store.title", comment: "")
+        case .taobao:   return NSLocalizedString("source.taobao.title", comment: "")
+        case .eleme:    return NSLocalizedString("source.eleme.title", comment: "")
+        case .douyin:   return NSLocalizedString("source.douyin.title", comment: "")
+        case .unionPay: return NSLocalizedString("source.union_pay.title", comment: "")
+        case .manual:   return NSLocalizedString("source.manual.title", comment: "")
         }
     }
 
     public var shortTitle: String {
         switch self {
-        case .wechat:   return "微信"
-        case .alipay:   return "支付宝"
-        case .appStore: return "App Store"
-        case .taobao:   return "淘宝"
-        case .eleme:    return "饿了么"
-        case .douyin:   return "抖音"
-        case .unionPay: return "云闪付"
-        case .manual:   return "手动"
+        case .wechat:   return NSLocalizedString("source.wechat.short", comment: "")
+        case .alipay:   return NSLocalizedString("source.alipay.short", comment: "")
+        case .appStore: return NSLocalizedString("source.app_store.short", comment: "")
+        case .taobao:   return NSLocalizedString("source.taobao.short", comment: "")
+        case .eleme:    return NSLocalizedString("source.eleme.short", comment: "")
+        case .douyin:   return NSLocalizedString("source.douyin.short", comment: "")
+        case .unionPay: return NSLocalizedString("source.union_pay.short", comment: "")
+        case .manual:   return NSLocalizedString("source.manual.short", comment: "")
         }
     }
 

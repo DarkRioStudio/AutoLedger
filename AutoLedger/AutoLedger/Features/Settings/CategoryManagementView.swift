@@ -8,7 +8,7 @@ struct CategoryManagementView: View {
 
     var body: some View {
         List {
-            Section("内置分类") {
+            Section("category_management.built_in") {
                 ForEach(TransactionCategory.allCases) { category in
                     HStack(spacing: 12) {
                         Image(systemName: category.iconName)
@@ -46,20 +46,20 @@ struct CategoryManagementView: View {
                 Button {
                     showAddAlert = true
                 } label: {
-                    Label("添加分类", systemImage: "plus.circle.fill")
+                    Label("category_management.add", systemImage: "plus.circle.fill")
                         .foregroundStyle(AppTheme.accent)
                 }
             } header: {
-                Text("自定义分类")
+                Text("category_management.custom")
             } footer: {
-                Text("自定义分类可在手动记账时使用，内置分类由系统自动推断。")
+                Text("category_management.footer")
             }
         }
-        .navigationTitle("分类管理")
-        .alert("添加自定义分类", isPresented: $showAddAlert) {
-            TextField("分类名称", text: $newCategoryName)
-            Button("取消", role: .cancel) { newCategoryName = "" }
-            Button("添加") {
+        .navigationTitle("category_management.title")
+        .alert("category_management.alert.title", isPresented: $showAddAlert) {
+            TextField("category_management.alert.placeholder", text: $newCategoryName)
+            Button("common.cancel", role: .cancel) { newCategoryName = "" }
+            Button("common.add") {
                 let trimmed = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty && !store.customCategories.contains(trimmed) {
                     store.customCategories.append(trimmed)

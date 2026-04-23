@@ -3,16 +3,17 @@ import AutoLedgerCore
 import Foundation
 import OSLog
 import UniformTypeIdentifiers
+import WidgetKit
 
 nonisolated(unsafe) private let intentLogger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "QuickLedgerIntent")
 
 struct QuickLedgerIntent: AppIntent {
-    static var title: LocalizedStringResource = "快速记账"
-    static var description: IntentDescription = IntentDescription("从截图中识别支付信息并自动记账")
-    /// 需要前台运行以获取沙箱文件读取权限
-    static var openAppWhenRun: Bool = true
+    static var title: LocalizedStringResource = "quick_ledger.intent.title"
+    static var description: IntentDescription = IntentDescription("quick_ledger.intent.description")
+    /// 后台完成快捷指令记账，成功后仅发通知；用户点通知时再进入 App。
+    static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "截图", description: "微信支付成功页截图", supportedContentTypes: [.image])
+    @Parameter(title: "quick_ledger.screenshot.title", description: "quick_ledger.screenshot.description", supportedContentTypes: [.image])
     var screenshot: IntentFile
 
     static var parameterSummary: some ParameterSummary {
@@ -30,7 +31,7 @@ struct QuickLedgerIntent: AppIntent {
             imageData = d
         } catch {
             writeDebugEvent(stage: .ocrFailed, source: .manual, rawText: "", summary: "快捷指令读取截图失败：\(error.localizedDescription)")
-            return .result(value: "读取截图失败，请打开 App 手动导入")
+            return .result(value: String(localized: "quick_ledger.read_screenshot_failed"))
         }
 
         // 1. OCR 与模型预加载并行
@@ -49,7 +50,7 @@ struct QuickLedgerIntent: AppIntent {
         }
 
         // 冷启动时后台异步加载模型（与 OCR 并行）；已就绪时跳过，避免重复进入加载流程
-        if !modelAlreadyReady && selectedProvider == .gemma {
+        if enhancementOn && !modelAlreadyReady && selectedProvider == .gemma {
             Task { await GemmaService.shared.ensureLoaded() }
         }
 
@@ -59,7 +60,7 @@ struct QuickLedgerIntent: AppIntent {
             ocrResult = try ocrService.recognizeTextWithConfidence(from: imageData)
         } catch {
             writeDebugEvent(stage: .ocrFailed, source: .manual, rawText: "", summary: "快捷指令 OCR 失败：\(error.localizedDescription)")
-            return .result(value: "识别失败，请打开 App 确认")
+            return .result(value: String(localized: "quick_ledger.recognition_failed"))
         }
         let text = ocrResult.text
 
@@ -92,9 +93,13 @@ struct QuickLedgerIntent: AppIntent {
         let source = ReceiptSource.infer(from: text)
         let smartParser = await SmartReceiptParser()
         let cleanedText = await OCRTextCleaner.clean(text)
+        let ruleParser = ReceiptParser()
 
         // 多账单检测
-        let multiReceipt = ReceiptParser().detectMultipleReceipts(text: cleanedText)
+        let multiReceipt = ruleParser.detectMultipleReceipts(text: cleanedText)
+        if let diagnostics = ruleParser.receiptDiagnostics(text: cleanedText) {
+            intentLogger.info("[Intent][Receipt] \(diagnostics.debugSummary)")
+        }
 
         let result: SmartReceiptParser.SmartResult?
         if useModelInference {
@@ -114,16 +119,27 @@ struct QuickLedgerIntent: AppIntent {
 
         guard let result else {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
-            return .result(value: "识别失败，请打开 App 确认")
+            return .result(value: String(localized: "quick_ledger.recognition_failed"))
         }
         let receipt = result.receipt
+
+        if let diagnostics = receipt.parseDiagnostics,
+           diagnostics.isMultiItemReceipt,
+           !diagnostics.totalMatched {
+            let msg = localizedMessage(
+                "receipt.multi_item_total_missing",
+                fallback: "Multi-item receipt detected, but the total amount could not be reliably recognized. Please retake the receipt including the total section."
+            )
+            writeDebugEvent(stage: .parseFailed, source: source, rawText: text, receipt: receipt, summary: "\(msg)\n调试：\(diagnostics.debugSummary)", llmTrace: result.llmTrace)
+            return .result(value: msg)
+        }
 
         // 3. 去重 + 入账
         let store: SQLiteTransactionStore
         do {
             store = try SQLiteTransactionStore()
         } catch {
-            return .result(value: "数据库打开失败，请打开 App 确认")
+            return .result(value: String(localized: "quick_ledger.database_failed"))
         }
 
         let existing = (try? store.loadTransactions()) ?? []
@@ -144,8 +160,15 @@ struct QuickLedgerIntent: AppIntent {
         }()
 
         if isDuplicate || isOCRDuplicate {
-            let reason = isOCRDuplicate ? "OCR文本高度相似" : "同商户同金额"
-            let msg = "\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount)) 已存在（\(reason)），未重复记录"
+            let reason = isOCRDuplicate
+                ? String(localized: "quick_ledger.duplicate.reason.ocr")
+                : String(localized: "quick_ledger.duplicate.reason.fields")
+            let msg = String(
+                format: String(localized: "quick_ledger.duplicate_format"),
+                receipt.merchant,
+                receipt.amount,
+                reason
+            )
             writeDebugEvent(stage: .duplicateSkipped, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace)
             return .result(value: msg)
         }
@@ -156,15 +179,17 @@ struct QuickLedgerIntent: AppIntent {
             occurredAt: receipt.occurredAt,
             category: receipt.suggestedCategory,
             source: receipt.source,
-            note: "快捷指令自动记账"
+            note: String(localized: "quick_ledger.note")
         )
 
         do {
             try store.save(transaction: transaction)
         } catch {
             writeDebugEvent(stage: .persistenceFailed, source: source, rawText: text, receipt: receipt, summary: "快捷指令入账失败：\(error.localizedDescription)", llmTrace: result.llmTrace)
-            return .result(value: "入账失败，请打开 App 确认")
+            return .result(value: String(localized: "quick_ledger.persistence_failed"))
         }
+
+        WidgetCenter.shared.reloadAllTimelines()
 
         // 通知 App 内 LedgerStore 刷新（Intent 直写 SQLite，绕过了 LedgerStore）
         await MainActor.run {
@@ -177,9 +202,21 @@ struct QuickLedgerIntent: AppIntent {
             transactionID: transaction.id
         )
 
-        var msg = "已记好：\(receipt.merchant) ¥\(String(format: "%.2f", receipt.amount))"
+        var msg = String(
+            format: String(localized: "quick_ledger.saved_format"),
+            receipt.merchant,
+            receipt.amount
+        )
+        if let diagnostics = receipt.parseDiagnostics,
+           diagnostics.isMultiItemReceipt,
+           diagnostics.totalMatched {
+            msg += "\n" + localizedMessage(
+                "receipt.multi_item_single_expense_notice",
+                fallback: "Multi-item receipt detected. The current version will record the total amount as a single expense."
+            )
+        }
         if multiReceipt {
-            msg += "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图"
+            msg += String(localized: "quick_ledger.multi_receipt_warning")
         }
         writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace, transactionID: transaction.id)
         return .result(value: msg)
@@ -210,6 +247,11 @@ struct QuickLedgerIntent: AppIntent {
     }
 }
 
+private func localizedMessage(_ key: String, fallback: String) -> String {
+    let value = String(localized: String.LocalizationValue(key))
+    return value == key ? fallback : value
+}
+
 struct AutoLedgerShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -217,18 +259,22 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "用 \(.applicationName) 记一笔",
                 "用 \(.applicationName) 记账",
-                "\(.applicationName) 快速记账"
+                "\(.applicationName) 快速记账",
+                "Log with \(.applicationName)",
+                "Quick ledger with \(.applicationName)"
             ],
-            shortTitle: "快速记账",
+            shortTitle: "quick_ledger.intent.short_title",
             systemImageName: "doc.text.viewfinder"
         )
         AppShortcut(
             intent: ClipboardImportIntent(),
             phrases: [
                 "用 \(.applicationName) 从剪切板记账",
-                "\(.applicationName) 剪切板记账"
+                "\(.applicationName) 剪切板记账",
+                "Import from clipboard with \(.applicationName)",
+                "Clipboard ledger with \(.applicationName)"
             ],
-            shortTitle: "剪切板记账",
+            shortTitle: "quick_ledger.clipboard.short_title",
             systemImageName: "doc.on.clipboard"
         )
     }

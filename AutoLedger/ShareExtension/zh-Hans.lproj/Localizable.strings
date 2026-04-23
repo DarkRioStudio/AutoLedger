@@ -1,0 +1,13 @@
+"share.status.recognizing" = "正在识别…";
+"share.error.no_image" = "未找到图片";
+"share.error.read_image_failed" = "读取图片失败";
+"share.error.ocr_failed_format" = "OCR 失败：%@";
+"share.error.recognition_failed" = "识别失败，请打开 App 手动导入";
+"share.error.database_failed" = "数据库打开失败";
+"share.duplicate_format" = "%@ ¥%.2f 已存在";
+"share.note" = "分享导入";
+"share.saved_format" = "已记好：%@ ¥%.2f";
+"share.multi_receipt_warning" = "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图后分别导入";
+"share.error.persistence_failed" = "入账失败，请打开 App 确认";
+"share.debug.parse_failed" = "Share Extension 解析失败";
+"share.debug.persistence_failed_format" = "入账失败：%@";

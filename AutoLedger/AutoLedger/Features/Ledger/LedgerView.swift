@@ -202,7 +202,19 @@ struct LedgerView: View {
             .sheet(isPresented: $isShowingDeleted) {
                 DeletedTransactionsView()
             }
+            .onAppear {
+                consumePendingNewTransactionIfNeeded()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
+                consumePendingNewTransactionIfNeeded()
+            }
         }
+    }
+
+    @MainActor
+    private func consumePendingNewTransactionIfNeeded() {
+        guard QuickLedgerNavigationState.shared.consumeCreateTransactionPending() else { return }
+        isAddingTransaction = true
     }
 
     private func stepDate(_ date: Date, by value: Int) -> Date {

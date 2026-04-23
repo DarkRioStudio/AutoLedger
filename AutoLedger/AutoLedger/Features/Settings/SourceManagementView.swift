@@ -8,7 +8,7 @@ struct SourceManagementView: View {
 
     var body: some View {
         List {
-            Section("内置来源") {
+            Section("source_management.built_in") {
                 ForEach(ReceiptSource.allCases) { source in
                     HStack(spacing: 12) {
                         Image(systemName: "creditcard.fill")
@@ -46,20 +46,20 @@ struct SourceManagementView: View {
                 Button {
                     showAddAlert = true
                 } label: {
-                    Label("添加来源", systemImage: "plus.circle.fill")
+                    Label("source_management.add", systemImage: "plus.circle.fill")
                         .foregroundStyle(AppTheme.accent)
                 }
             } header: {
-                Text("自定义来源")
+                Text("source_management.custom")
             } footer: {
-                Text("自定义来源可在手动记账时使用，内置来源由系统自动识别。")
+                Text("source_management.footer")
             }
         }
-        .navigationTitle("来源管理")
-        .alert("添加自定义来源", isPresented: $showAddAlert) {
-            TextField("来源名称", text: $newSourceName)
-            Button("取消", role: .cancel) { newSourceName = "" }
-            Button("添加") {
+        .navigationTitle("source_management.title")
+        .alert("source_management.alert.title", isPresented: $showAddAlert) {
+            TextField("source_management.alert.placeholder", text: $newSourceName)
+            Button("common.cancel", role: .cancel) { newSourceName = "" }
+            Button("common.add") {
                 let trimmed = newSourceName.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty && !store.customSources.contains(trimmed) {
                     store.customSources.append(trimmed)

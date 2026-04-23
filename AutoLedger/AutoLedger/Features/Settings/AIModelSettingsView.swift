@@ -9,10 +9,10 @@ struct AIModelSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 infoCard(
-                    title: "端侧模型说明",
+                    title: "ai_model.info.title",
                     body: enhancementEnabled
-                        ? "所有推理均在设备本地完成，不上传任何数据。切换模型后立即生效。"
-                        : "模型识别增强已关闭，当前仅使用纯规则解析。打开右上角开关可启用 AI 模型增强识别。"
+                        ? "ai_model.info.enabled.body"
+                        : "ai_model.info.disabled.body"
                 )
 
                 ForEach(LLMProvider.allCases) { provider in
@@ -31,7 +31,7 @@ struct AIModelSettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "trash")
-                            Text("删除 Gemma-2 2B 模型")
+                            Text("ai_model.delete_gemma")
                         }
                         .font(.subheadline)
                         .foregroundStyle(.red)
@@ -49,7 +49,7 @@ struct AIModelSettingsView: View {
             .padding(.vertical, 12)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("AI 模型")
+        .navigationTitle("ai_model.title")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Toggle("", isOn: $enhancementEnabled)
@@ -100,7 +100,7 @@ struct AIModelSettingsView: View {
                         .foregroundStyle(AppTheme.ink)
 
                     if available {
-                        Text("可用")
+                        Text("ai_model.available")
                             .font(.caption2).bold()
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
@@ -152,7 +152,7 @@ struct AIModelSettingsView: View {
             Button {
                 Task { await gemmaService.downloadModel() }
             } label: {
-                Label("下载模型（~2.5 GB）", systemImage: "arrow.down.circle.fill")
+                Label("ai_model.download_gemma", systemImage: "arrow.down.circle.fill")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(AppTheme.accent)
             }
@@ -163,7 +163,7 @@ struct AIModelSettingsView: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("正在检查版本…")
+                Text("ai_model.checking_version")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -173,7 +173,7 @@ struct AIModelSettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: progress)
                     .tint(AppTheme.accent)
-                Text("下载中 \(Int(progress * 100))%…建议使用 Wi-Fi")
+                Text(String(format: String(localized: "ai_model.downloading_format"), Int(progress * 100)))
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -183,7 +183,7 @@ struct AIModelSettingsView: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("校验文件完整性…")
+                Text("ai_model.verifying")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -191,7 +191,7 @@ struct AIModelSettingsView: View {
 
         case .ready:
             HStack(spacing: 8) {
-                Label("模型已就绪", systemImage: "checkmark.seal.fill")
+                Label("ai_model.ready", systemImage: "checkmark.seal.fill")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(AppTheme.accent)
                 if let sizeMB = gemmaService.modelSizeMB {
@@ -209,13 +209,13 @@ struct AIModelSettingsView: View {
 
         case .updateAvailable(let remote, let local):
             VStack(alignment: .leading, spacing: 6) {
-                Text("新版本可用：\(remote)（当前 \(local)）")
+                Text(String(format: String(localized: "ai_model.update_available_format"), remote, local))
                     .font(.caption)
                     .foregroundStyle(.orange)
                 Button {
                     Task { await gemmaService.downloadModel() }
                 } label: {
-                    Label("更新模型", systemImage: "arrow.down.circle.fill")
+                    Label("ai_model.update_model", systemImage: "arrow.down.circle.fill")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(AppTheme.accent)
                 }
@@ -231,7 +231,7 @@ struct AIModelSettingsView: View {
                 Button {
                     Task { await gemmaService.downloadModel() }
                 } label: {
-                    Label("重试", systemImage: "arrow.clockwise")
+                    Label("ai_model.retry", systemImage: "arrow.clockwise")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(AppTheme.accent)
                 }
@@ -243,7 +243,7 @@ struct AIModelSettingsView: View {
 
     // MARK: - Info Card
 
-    private func infoCard(title: String, body: String) -> some View {
+    private func infoCard(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)

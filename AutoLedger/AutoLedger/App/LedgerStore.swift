@@ -3,6 +3,7 @@ import Combine
 import Foundation
 import os.log
 import UIKit
+import WidgetKit
 
 // Combine.Subscription 与 AutoLedgerCore.Subscription 同名，显式消歧义
 typealias Subscription = AutoLedgerCore.Subscription
@@ -89,14 +90,14 @@ final class LedgerStore: ObservableObject {
         }
 
         lastParsedReceipt = receipt
-        persistReceipt(receipt, rawText: normalizedText, notePrefix: "示例导入")
+        persistReceipt(receipt, rawText: normalizedText, notePrefix: localizedMessage("note.sample_import", fallback: "示例导入"))
     }
 
     func importRecognizedText(
         _ text: String,
         preferredSource: ReceiptSource? = nil,
         fallbackMerchant: String? = nil,
-        notePrefix: String = "支付截图照片导入",
+        notePrefix: String? = nil,
         imageSource: ImageSource = .photoLibrary,
         ocrMinConfidence: Float? = nil
     ) {
@@ -104,6 +105,7 @@ final class LedgerStore: ObservableObject {
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let source = preferredSource ?? ReceiptSource.infer(from: normalizedText)
+        let resolvedNotePrefix = notePrefix ?? localizedMessage("note.photo_import", fallback: "支付截图照片导入")
 
         lastRecognizedText = normalizedText
         lastParsedReceipt = nil
@@ -124,6 +126,10 @@ final class LedgerStore: ObservableObject {
             let multiReceiptDetected = self.parser.detectMultipleReceipts(text: cleanedText)
             if multiReceiptDetected {
                 logger.info("[解析] 检测到疑似多笔账单")
+            }
+            let receiptDiagnostics = self.parser.receiptDiagnostics(text: cleanedText)
+            if let receiptDiagnostics {
+                logger.info("[小票] \(receiptDiagnostics.debugSummary)")
             }
 
             let selectedProvider = LLMProvider.userSelected
@@ -163,6 +169,33 @@ final class LedgerStore: ObservableObject {
                 return
             }
 
+            if let diagnostics = result.receipt.parseDiagnostics,
+               diagnostics.isMultiItemReceipt,
+               !diagnostics.totalMatched {
+                let summary = localizedMessage(
+                    "receipt.multi_item_total_missing",
+                    fallback: "检测到多商品小票，但未能可靠识别总金额，请重新拍摄包含合计区域的小票"
+                )
+                logger.warning("[小票] 多商品小票未可靠命中 total，不自动入账。\(diagnostics.debugSummary)")
+                lastParsedReceipt = result.receipt
+                lastImportSummary = summary
+                recordDebugEvent(
+                    stage: .parseFailed,
+                    source: source,
+                    imageSource: imageSource,
+                    rawText: normalizedText,
+                    parsedReceipt: result.receipt,
+                    summary: "\(summary)\n调试：\(diagnostics.debugSummary)",
+                    llmPrompt: result.llmTrace?.prompt,
+                    llmResponse: result.llmTrace?.response,
+                    llmProvider: result.llmTrace?.provider.rawValue,
+                    llmLatencyMs: result.llmTrace?.latencyMs,
+                    llmConfidence: result.receipt.confidence,
+                    usedRuleFallback: result.usedRuleFallback
+                )
+                return
+            }
+
             lastParsedReceipt = result.receipt
             let providerName = result.llmTrace?.provider.displayName ?? "规则"
             let latency = result.llmTrace?.latencyMs ?? 0
@@ -170,11 +203,25 @@ final class LedgerStore: ObservableObject {
             persistReceipt(
                 result.receipt,
                 rawText: normalizedText,
-                notePrefix: notePrefix,
+                notePrefix: resolvedNotePrefix,
                 imageSource: imageSource,
                 llmTrace: result.llmTrace,
                 usedRuleFallback: result.usedRuleFallback
             )
+
+            if let diagnostics = result.receipt.parseDiagnostics,
+               diagnostics.isMultiItemReceipt,
+               diagnostics.totalMatched {
+                let notice = localizedMessage(
+                    "receipt.multi_item_single_expense_notice",
+                    fallback: "检测到多商品小票，当前版本将按总金额记录为一笔支出"
+                )
+                if let existing = lastImportSummary {
+                    lastImportSummary = existing + "\n" + notice
+                } else {
+                    lastImportSummary = notice
+                }
+            }
 
             // 多账单提示：入账后追加警告，让用户知道可能有遗漏
             if multiReceiptDetected {
@@ -233,6 +280,10 @@ final class LedgerStore: ObservableObject {
         loadShareExtensionResult()
     }
 
+    private func reloadWidgets() {
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// 从剪切板读取图片并尝试 OCR → 解析 → 记账
     /// - Parameter force: `true` 跳过 changeCount 去重（控制中心 / 快捷指令显式触发）
     func attemptClipboardImport(force: Bool = false) {
@@ -271,6 +322,7 @@ final class LedgerStore: ObservableObject {
                 deletedTransactions = Array(deletedTransactions.prefix(50))
             }
             lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+            reloadWidgets()
             return
         }
 
@@ -288,6 +340,7 @@ final class LedgerStore: ObservableObject {
             deletedTransactions = Array(deletedTransactions.prefix(50))
         }
         lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+        reloadWidgets()
     }
 
     /// 将已删除的账单恢复到账本
@@ -298,6 +351,7 @@ final class LedgerStore: ObservableObject {
             transactions.insert(transaction, at: 0)
             sortTransactions()
             lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+            reloadWidgets()
             return
         }
 
@@ -316,6 +370,7 @@ final class LedgerStore: ObservableObject {
         transactions.insert(transaction, at: 0)
         sortTransactions()
         lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+        reloadWidgets()
     }
 
     /// 从回收站永久删除（不再可恢复）
@@ -330,6 +385,7 @@ final class LedgerStore: ObservableObject {
         }
         deletedTransactions.removeAll { $0.id == transaction.id }
         lastImportSummary = "已彻底删除 \(transaction.merchant) 的记录。"
+        reloadWidgets()
     }
 
     /// 手动新增账单（账本右上角 + 入口）
@@ -339,6 +395,7 @@ final class LedgerStore: ObservableObject {
             transactions.insert(transaction, at: 0)
             sortTransactions()
             lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+            reloadWidgets()
             return
         }
 
@@ -352,6 +409,7 @@ final class LedgerStore: ObservableObject {
         transactions.insert(transaction, at: 0)
         sortTransactions()
         lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+        reloadWidgets()
     }
 
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
@@ -409,6 +467,7 @@ final class LedgerStore: ObservableObject {
         do {
             try transactionStore?.update(transaction: transaction)
             lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
+            reloadWidgets()
         } catch {
             lastImportSummary = "账单已更新到界面，但写入本地存储失败：\(error.localizedDescription)"
         }
@@ -428,7 +487,8 @@ final class LedgerStore: ObservableObject {
                 rawText: inReceipt.rawText,
                 summary: inReceipt.summary,
                 confidence: inReceipt.confidence,
-                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)", corrections: categoryCorrections)
+                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)", corrections: categoryCorrections),
+                parseDiagnostics: inReceipt.parseDiagnostics
             )
         } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
             receipt = ImportedReceipt(
@@ -439,7 +499,8 @@ final class LedgerStore: ObservableObject {
                 rawText: inReceipt.rawText,
                 summary: inReceipt.summary,
                 confidence: inReceipt.confidence,
-                suggestedCategory: correctedCategory
+                suggestedCategory: correctedCategory,
+                parseDiagnostics: inReceipt.parseDiagnostics
             )
         } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
             receipt = ImportedReceipt(
@@ -450,7 +511,8 @@ final class LedgerStore: ObservableObject {
                 rawText: inReceipt.rawText,
                 summary: inReceipt.summary,
                 confidence: inReceipt.confidence,
-                suggestedCategory: correctedCategory
+                suggestedCategory: correctedCategory,
+                parseDiagnostics: inReceipt.parseDiagnostics
             )
         } else {
             receipt = inReceipt
@@ -511,14 +573,16 @@ final class LedgerStore: ObservableObject {
         }
 
         let summary = "已导入 \(receipt.merchant)，金额 \(AppFormatters.currency(receipt.amount))。"
+        let debugSummary = receipt.parseDiagnostics.map { "\(summary)\n调试：\($0.debugSummary)" } ?? summary
         lastImportSummary = summary
+        reloadWidgets()
         recordDebugEvent(
             stage: .persisted,
             source: receipt.source,
             imageSource: imageSource,
             rawText: rawText,
             parsedReceipt: receipt,
-            summary: summary,
+            summary: debugSummary,
             llmPrompt: llmTrace?.prompt,
             llmResponse: llmTrace?.response,
             transactionID: transaction.id,
@@ -565,6 +629,11 @@ final class LedgerStore: ObservableObject {
             }
             return lhs.occurredAt > rhs.occurredAt
         }
+    }
+
+    private func localizedMessage(_ key: String, fallback: String) -> String {
+        let value = NSLocalizedString(key, comment: "")
+        return value == key ? fallback : value
     }
 
     private func recordDebugEvent(
