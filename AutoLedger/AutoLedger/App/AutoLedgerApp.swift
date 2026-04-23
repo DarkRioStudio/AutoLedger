@@ -17,7 +17,8 @@ struct AutoLedgerApp: App {
     init() {
         // 注册默认设置
         UserDefaults.standard.register(defaults: [
-            "subscriptionReminder": true
+            "subscriptionReminder": true,
+            "monthlyAnomalyThresholdPercent": 150.0
         ])
 
         ClipboardImportIntent.handler = {

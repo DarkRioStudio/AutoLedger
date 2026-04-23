@@ -53,7 +53,7 @@ public enum AppFormatters: Sendable {
         let normalized = rawValue
             .replacingOccurrences(of: "年", with: "-")
             .replacingOccurrences(of: "月", with: "-")
-            .replacingOccurrences(of: "日", with: "")
+            .replacingOccurrences(of: #"日\s*"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: "/", with: "-")
             // OCR 可能产出全角空格、不间断空格等 Unicode 空白，统一替换为 ASCII 空格
             .replacingOccurrences(of: #"[\u00A0\u2000-\u200B\u3000\uFEFF]"#, with: " ", options: .regularExpression)

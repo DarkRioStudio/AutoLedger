@@ -7,6 +7,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
     case taobao
     case eleme
     case douyin
+    case unionPay
     case manual
 
     public var id: String { rawValue }
@@ -19,6 +20,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .taobao:   return "淘宝"
         case .eleme:    return "饿了么"
         case .douyin:   return "抖音团购"
+        case .unionPay: return "云闪付"
         case .manual:   return "手动录入"
         }
     }
@@ -31,6 +33,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .taobao:   return "淘宝"
         case .eleme:    return "饿了么"
         case .douyin:   return "抖音"
+        case .unionPay: return "云闪付"
         case .manual:   return "手动"
         }
     }
@@ -52,6 +55,13 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         // 抖音团购券码页：含"待使用"加"券号"或"适用门店"
         if normalized.contains("待使用") && (normalized.contains("券号") || normalized.contains("适用门店")) {
             return .douyin
+        }
+        let paymentDetailKeywords = ["交易详情", "交易成功", "付款成功", "支付成功", "订单详情",
+                                     "付款记录", "支付金额", "交易金额", "商户名称", "商户名"]
+        let looksLikePaymentDetail = paymentDetailKeywords.contains { normalized.contains($0.lowercased()) }
+        if normalized.contains("云闪付")
+            || ((normalized.contains("银联") || normalized.contains("unionpay")) && looksLikePaymentDetail) {
+            return .unionPay
         }
         if normalized.contains("微信") || normalized.contains("wechat")
             || normalized.contains("收单机构") || normalized.contains("商户单号") {

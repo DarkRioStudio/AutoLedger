@@ -39,6 +39,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         SELECT id, merchant, amount, occurred_at, category, source, note
         FROM transactions
+        WHERE deleted_at IS NULL
         ORDER BY occurred_at DESC, created_at DESC;
         """
         var statement: OpaquePointer?
@@ -133,6 +134,69 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     }
 
     public func delete(transactionID: UUID) throws {
+        let sql = """
+        UPDATE transactions
+        SET deleted_at = ?, updated_at = ?
+        WHERE id = ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let now = Self.storageFormatter.string(from: .now)
+        sqlite3_bind_text(statement, 1, now, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, now, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, transactionID.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    public func loadDeletedTransactions(limit: Int = 50) throws -> [Transaction] {
+        let sql = """
+        SELECT id, merchant, amount, occurred_at, category, source, note
+        FROM transactions
+        WHERE deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC, occurred_at DESC
+        LIMIT ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_int(statement, 1, Int32(limit))
+        return try readTransactions(from: statement)
+    }
+
+    public func restoreTransaction(id: UUID) throws {
+        let sql = """
+        UPDATE transactions
+        SET deleted_at = NULL, updated_at = ?
+        WHERE id = ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, Self.storageFormatter.string(from: .now), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, id.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    public func permanentlyDeleteTransaction(id: UUID) throws {
         let sql = "DELETE FROM transactions WHERE id = ?;"
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -141,7 +205,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             throw SQLiteTransactionStoreError.prepareStatement(sql)
         }
 
-        sqlite3_bind_text(statement, 1, transactionID.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 1, id.uuidString, -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -177,6 +241,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         guard sqlite3_exec(db, transactionSQL, nil, nil, nil) == SQLITE_OK else {
             throw SQLiteTransactionStoreError.executeStatement(transactionSQL)
+        }
+
+        let transactionColumns = Self.columnNames(db: db, table: "transactions")
+        if !transactionColumns.contains("deleted_at") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN deleted_at TEXT;", nil, nil, nil)
         }
 
         let debugSQL = """
@@ -456,6 +525,38 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 7, transaction.note, -1, sqliteTransient)
         sqlite3_bind_text(statement, 8, now, -1, sqliteTransient)
         sqlite3_bind_text(statement, 9, now, -1, sqliteTransient)
+    }
+
+    private func readTransactions(from statement: OpaquePointer?) throws -> [Transaction] {
+        var items: [Transaction] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let idCString = sqlite3_column_text(statement, 0),
+                let merchantCString = sqlite3_column_text(statement, 1),
+                let occurredCString = sqlite3_column_text(statement, 3),
+                let categoryCString = sqlite3_column_text(statement, 4),
+                let sourceCString = sqlite3_column_text(statement, 5),
+                let noteCString = sqlite3_column_text(statement, 6),
+                let id = UUID(uuidString: String(cString: idCString)),
+                let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString))
+            else {
+                continue
+            }
+
+            items.append(
+                Transaction(
+                    id: id,
+                    merchant: String(cString: merchantCString),
+                    amount: sqlite3_column_double(statement, 2),
+                    occurredAt: occurredAt,
+                    categoryLabel: String(cString: categoryCString),
+                    sourceLabel: String(cString: sourceCString),
+                    note: String(cString: noteCString)
+                )
+            )
+        }
+
+        return items
     }
 
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"

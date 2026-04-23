@@ -41,6 +41,7 @@ final class LedgerStore: ObservableObject {
         self.sampleReceipts = sampleProvider.samples
         self.transactionStore = transactionStore
         self.transactions = LedgerStore.loadInitialTransactions(using: transactionStore)
+        self.deletedTransactions = LedgerStore.loadInitialDeletedTransactions(using: transactionStore)
         self.subscriptions = LedgerStore.loadInitialSubscriptions(using: transactionStore)
         self.categoryCorrections = LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
@@ -224,6 +225,7 @@ final class LedgerStore: ObservableObject {
             // 静默失败，保留内存中的数据
         }
         if let sqlStore = store as? SQLiteTransactionStore {
+            deletedTransactions = (try? sqlStore.loadDeletedTransactions())  ?? deletedTransactions
             debugRecords        = (try? sqlStore.loadDebugEvents())          ?? debugRecords
             subscriptions       = (try? sqlStore.loadSubscriptions())        ?? subscriptions
             categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
@@ -280,7 +282,7 @@ final class LedgerStore: ObservableObject {
         }
 
         transactions.removeAll { $0.id == transaction.id }
-        // 保留最近 50 条已删除记录，供用户本次会话内恢复
+        // 保留最近 50 条已删除记录，供用户恢复；SQLite 中会持久化 deleted_at。
         deletedTransactions.insert(transaction, at: 0)
         if deletedTransactions.count > 50 {
             deletedTransactions = Array(deletedTransactions.prefix(50))
@@ -299,28 +301,35 @@ final class LedgerStore: ObservableObject {
             return
         }
 
-        // 先更新内存状态，再落库
+        do {
+            if let sqlStore = store as? SQLiteTransactionStore {
+                try sqlStore.restoreTransaction(id: transaction.id)
+            } else {
+                try store.save(transaction: transaction)
+            }
+        } catch {
+            lastImportSummary = "恢复失败：\(error.localizedDescription)"
+            return
+        }
+
         deletedTransactions.removeAll { $0.id == transaction.id }
         transactions.insert(transaction, at: 0)
         sortTransactions()
-
-        do {
-            try store.save(transaction: transaction)
-            lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
-        } catch {
-            // 可能因主键冲突失败（之前删除 SQLite 不成功）——尝试 update 作为 fallback
-            do {
-                try store.update(transaction: transaction)
-                lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
-            } catch {
-                lastImportSummary = "界面已恢复，但写入本地存储失败：\(error.localizedDescription)"
-            }
-        }
+        lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
     }
 
     /// 从回收站永久删除（不再可恢复）
     func permanentlyDeleteTransaction(_ transaction: Transaction) {
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            do {
+                try sqlStore.permanentlyDeleteTransaction(id: transaction.id)
+            } catch {
+                lastImportSummary = "彻底删除失败：\(error.localizedDescription)"
+                return
+            }
+        }
         deletedTransactions.removeAll { $0.id == transaction.id }
+        lastImportSummary = "已彻底删除 \(transaction.merchant) 的记录。"
     }
 
     /// 手动新增账单（账本右上角 + 入口）
@@ -632,6 +641,16 @@ final class LedgerStore: ObservableObject {
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
     }
 
+    func updateSubscription(_ sub: Subscription) {
+        guard let idx = subscriptions.firstIndex(where: { $0.id == sub.id }) else { return }
+        subscriptions[idx] = sub
+        subscriptions.sort { $0.nextChargedAt < $1.nextChargedAt }
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.updateSubscription(sub)
+        }
+        NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+    }
+
     /// 扫描全部历史账单，自动识别并保存周期性订阅
     func detectAndUpsertSubscriptions() {
         let detected = subscriptionDetector.detectFromHistory(transactions)
@@ -641,6 +660,11 @@ final class LedgerStore: ObservableObject {
     private static func loadInitialSubscriptions(using store: TransactionStore?) -> [Subscription] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
         return (try? sqlStore.loadSubscriptions()) ?? []
+    }
+
+    private static func loadInitialDeletedTransactions(using store: TransactionStore?) -> [Transaction] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
+        return (try? sqlStore.loadDeletedTransactions()) ?? []
     }
 
     // MARK: - Category Corrections

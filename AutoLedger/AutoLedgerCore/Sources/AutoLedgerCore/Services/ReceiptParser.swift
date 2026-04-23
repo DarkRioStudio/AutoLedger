@@ -82,11 +82,15 @@ public struct ReceiptParser: Sendable {
         // 微信代扣凭证页：含"扣费凭证"+"扣费内容"，提取服务内容名称（如"先购后付"）
         let wechatDeductionMerchant = parseWeChatDeductionVoucher(lines: cleanedLines)
 
+        // 云闪付 / 银联交易详情页：标签和值常分行展示，优先提取商户名称字段
+        let unionPayMerchant = parseUnionPayVoucher(lines: cleanedLines)
+
         let merchant = wechatDetail?.merchant
             ?? douyinMerchant
             ?? didiMerchant
             ?? taobaoFlashMerchant
             ?? wechatDeductionMerchant
+            ?? unionPayMerchant
             ?? extractMerchant(from: normalized, source: source)
             ?? fallbackMerchant
             ?? "待确认商户"
@@ -245,7 +249,10 @@ public struct ReceiptParser: Sendable {
         // 这些是微信支付等平台的字段标签名，不是商户名
         let fieldLabels: Set<String> = [
             "商户全称", "收单机构", "支付方式", "交易单号", "商户单号",
-            "当前状态", "支付时间", "商品", "备注", "附言"
+            "当前状态", "支付时间", "商品", "备注", "附言",
+            "商户名称", "商户名", "收款商户", "收款方", "付款方式",
+            "交易金额", "订单金额", "交易时间", "订单号", "付款记录",
+            "交易详情", "订单详情"
         ]
 
         // ── 来源专用逻辑优先 ──
@@ -504,6 +511,80 @@ public struct ReceiptParser: Sendable {
         }
 
         return nil
+    }
+
+    // MARK: - 云闪付 / 银联交易详情解析
+
+    /// 云闪付、银联二维码支付详情页常见两种格式：
+    ///   1. "商户名称" 独立一行，下一行是商户名。
+    ///   2. "商户名称：XXX" 与商户值在同一行。
+    /// 该解析只在文本包含云闪付/银联信号时触发，避免把其他平台的通用字段误当作银联账单。
+    private func parseUnionPayVoucher(lines: [String]) -> String? {
+        let hasUnionPaySignal = lines.contains { line in
+            line.localizedCaseInsensitiveContains("云闪付")
+                || line.localizedCaseInsensitiveContains("银联")
+                || line.localizedCaseInsensitiveContains("unionpay")
+        }
+        guard hasUnionPaySignal else { return nil }
+
+        let merchantLabels = ["商户名称", "商户名", "收款商户", "收款方", "对方户名"]
+        let fieldLabels: Set<String> = [
+            "云闪付", "中国银联", "UnionPay", "交易详情", "订单详情", "交易成功",
+            "支付成功", "付款成功", "支付金额", "交易金额", "订单金额",
+            "交易时间", "支付方式", "付款方式", "银行卡", "优惠", "订单号",
+            "交易单号", "参考号", "凭证号", "收款方", "商户名称", "商户名",
+            "收款商户", "对方户名"
+        ]
+
+        for (idx, line) in lines.enumerated() {
+            guard let label = merchantLabels.first(where: { line.contains($0) }) else {
+                continue
+            }
+
+            if let colonRange = line.rangeOfCharacter(from: CharacterSet(charactersIn: ":：")) {
+                let inline = String(line[colonRange.upperBound...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if let candidate = cleanedUnionPayMerchantCandidate(inline, fieldLabels: fieldLabels) {
+                    return candidate
+                }
+            }
+
+            let suffix = line.replacingOccurrences(of: label, with: "")
+                .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ":：")))
+            if let candidate = cleanedUnionPayMerchantCandidate(suffix, fieldLabels: fieldLabels) {
+                return candidate
+            }
+
+            guard idx + 1 < lines.count else { continue }
+            for next in lines[(idx + 1)...].prefix(4) {
+                if let candidate = cleanedUnionPayMerchantCandidate(next, fieldLabels: fieldLabels) {
+                    return candidate
+                }
+            }
+        }
+
+        let companyKeywords = ["有限公司", "股份有限", "有限责任", "集团公司"]
+        return lines.first { line in
+            companyKeywords.contains(where: { line.contains($0) })
+                && cleanedUnionPayMerchantCandidate(line, fieldLabels: fieldLabels) != nil
+        }
+    }
+
+    private func cleanedUnionPayMerchantCandidate(_ value: String, fieldLabels: Set<String>) -> String? {
+        let candidate = value
+            .replacingOccurrences(of: #"^[·•\-\s]+"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !candidate.isEmpty else { return nil }
+        guard !fieldLabels.contains(candidate) else { return nil }
+        guard candidate.count >= 2 else { return nil }
+        guard candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) else { return nil }
+        guard amountCandidate(in: candidate) == nil else { return nil }
+
+        let skipContains = ["成功", "金额", "时间", "方式", "银行卡", "订单", "交易", "优惠", "退款", "详情", "记录"]
+        guard !skipContains.contains(where: { candidate.contains($0) }) else { return nil }
+
+        return candidate
     }
 
     // MARK: - 抖音团购券码页解析
