@@ -51,7 +51,8 @@ struct OfflineRegression {
             "微信支付详情个体工商户跨行截图": "2026-04-13 16:42:09",
             "支付宝出行截图": "2026-03-25 08:10",
             "App Store 订阅截图": "2026-03-22 12:14",
-            "微信支付全部账单截图（7-11）": "2026-04-20 18:17:58"
+            "微信支付全部账单截图（7-11）": "2026-04-20 18:17:58",
+            "云闪付账单详情截图": "2026-04-21 18:46:58"
         ]
 
         let expectedMerchants: [String: String] = [
@@ -71,6 +72,7 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": "Sample Restaurant（Example Branch）",
             "微信支付全部账单截图（7-11）": "Example Convenience Store",
             "云闪付付款成功截图": "示例咖啡（Example Station）",
+            "云闪付账单详情截图": "小谷姐姐麻辣烫（Example Store Branch）",
             "银联二维码支付详情截图": "示例便利店（Example Road）",
             "英文超市纸质小票TOTAL": "NTUC FAIRPRICE",
             "英文超市纸质小票无TOTAL": "WALMART"
@@ -93,6 +95,7 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": 47.4,
             "微信支付全部账单截图（7-11）": 16.80,
             "云闪付付款成功截图": 18.60,
+            "云闪付账单详情截图": 13.52,
             "银联二维码支付详情截图": 12.80,
             "英文超市纸质小票TOTAL": 12.30,
             "英文超市纸质小票无TOTAL": 7.10
@@ -115,6 +118,7 @@ struct OfflineRegression {
             "淘宝闪购订单进行中截图": .dining,
             "微信支付全部账单截图（7-11）": .other,
             "云闪付付款成功截图": .dining,
+            "云闪付账单详情截图": .dining,
             "银联二维码支付详情截图": .groceries,
             "英文超市纸质小票TOTAL": .groceries,
             "英文超市纸质小票无TOTAL": .groceries

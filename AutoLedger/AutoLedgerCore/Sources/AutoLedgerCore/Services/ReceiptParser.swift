@@ -723,12 +723,31 @@ public struct ReceiptParser: Sendable {
 
         let merchantLabels = ["商户名称", "商户名", "收款商户", "收款方", "对方户名"]
         let fieldLabels: Set<String> = [
-            "云闪付", "中国银联", "UnionPay", "交易详情", "订单详情", "交易成功",
+            "云闪付", "中国银联", "UnionPay", "交易详情", "订单详情", "账单详情", "交易成功",
             "支付成功", "付款成功", "支付金额", "交易金额", "订单金额",
             "交易时间", "支付方式", "付款方式", "银行卡", "优惠", "订单号",
             "交易单号", "参考号", "凭证号", "收款方", "商户名称", "商户名",
-            "收款商户", "对方户名"
+            "收款商户", "对方户名",
+            // "收款方全称" 是复合标签（"收款方" + "全称"），其后缀 "全称" 不是商户名
+            "全称"
         ]
+
+        // ── 云闪付"账单详情"页面专用格式 ──
+        // 商户名称出现在"账单详情"标题之后、支付金额（负数行）之前。
+        // 该格式由用户在云闪付 App 内点击某笔交易后进入账单详情页时产生。
+        if let detailIdx = lines.firstIndex(where: { $0 == "账单详情" }) {
+            let negAmountPattern = #"^-[0-9]+(?:\.[0-9]{1,2})?$"#
+            let negAmountRegex = try? NSRegularExpression(pattern: negAmountPattern)
+            for line in lines[(detailIdx + 1)...].prefix(5) {
+                if let re = negAmountRegex,
+                   re.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil {
+                    break
+                }
+                if let candidate = cleanedUnionPayMerchantCandidate(line, fieldLabels: fieldLabels) {
+                    return candidate
+                }
+            }
+        }
 
         for (idx, line) in lines.enumerated() {
             guard let label = merchantLabels.first(where: { line.contains($0) }) else {

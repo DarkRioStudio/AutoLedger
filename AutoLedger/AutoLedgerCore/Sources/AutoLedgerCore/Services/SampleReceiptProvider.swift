@@ -483,6 +483,43 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "示例咖啡（Example Station）· ¥18.60 · 2026-04-20 08:32:10"
         ),
         SampleReceipt(
+            title: "云闪付账单详情截图",
+            source: .unionPay,
+            rawText: """
+            13:17
+            •11 ⑥53
+            <
+            账单详情
+            小谷姐姐麻辣烫（Example Store Branch）
+            -13.52
+            交易成功
+            订单金额
+            碰一下立減
+            支付时间
+            付款方式
+            商品说明
+            支付奖励
+            收单机构
+            清算机构
+            收款方全称
+            推荐服务
+            13.58
+            -0.06
+            2026-04-21 18:46:58
+            Example Bank Card (1234)＞
+            Example Checkout Service
+            v 立即领取1积分
+            北京钱袋宝支付技术有限公司
+            中国银联股份有限公司
+            Sample Restaurant Service Center
+            点击查看今日可用信用卡优惠
+            更多～去查看〉账单管理
+            你因这笔消费解锁了"吃顿饭"贴纸
+            账单分类餐饮美食〉
+            """,
+            preview: "小谷姐姐麻辣烫（Example Store Branch）· ¥13.52 · 2026-04-21 18:46:58"
+        ),
+        SampleReceipt(
             title: "银联二维码支付详情截图",
             source: .unionPay,
             rawText: """
