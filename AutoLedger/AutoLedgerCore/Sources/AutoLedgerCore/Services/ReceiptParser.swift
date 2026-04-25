@@ -999,13 +999,15 @@ public struct ReceiptParser: Sendable {
 
     // 滴滴车费局部 OCR 共用的正则模式
     private static let fareCurrencyPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+    /// OCR 将"¥"误识别为数字"4"时的修正模式：整行形如"445"或"421.50"，
+    /// 去掉首位"4"后还原为实际金额（如 445 → 45，421.50 → 21.50）。
     private static let fareYenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
     private static let fareStandalonePattern = #"^([1-9][0-9]*\.[0-9]{2})$"#
 
     /// 从局部 OCR 文本中按优先级提取车费金额：
     ///   1. ¥/￥ 前缀金额；
-    ///   2. "¥→4" 误读修正；
-    ///   3. 独立十进制金额行。
+    ///   2. "¥" 被误读为数字 "4" 时的修正（如 OCR "¥45" → "445"，修正回 45）；
+    ///   3. 独立十进制金额行（如 "21.50"）。
     private func extractFareFromText(_ text: String) -> Double? {
         guard !text.isEmpty else { return nil }
         let lines = text.components(separatedBy: .newlines)
@@ -1021,7 +1023,7 @@ public struct ReceiptParser: Sendable {
             }
         }
 
-        // 2. "¥→4" 误读修正（参考 extractDidiTripAmount 相同逻辑）
+        // 2. "¥" 被误读为数字 "4" 时的修正（如 OCR "¥45" → "445"，修正回 45）
         if let yenRegex = try? NSRegularExpression(pattern: Self.fareYenArtifactPattern) {
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
