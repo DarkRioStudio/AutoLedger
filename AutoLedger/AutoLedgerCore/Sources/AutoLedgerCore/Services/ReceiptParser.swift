@@ -953,10 +953,7 @@ public struct ReceiptParser: Sendable {
 
     /// 对指定 Vision 归一化矩形区域进行 OCR 并提取车费金额。
     private func extractFareFromRegion(data: Data, region: CGRect) -> Double? {
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = false
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        let request = makeFareOCRRequest()
         request.regionOfInterest = region
 
         let handler = VNImageRequestHandler(data: data)
@@ -981,11 +978,7 @@ public struct ReceiptParser: Sendable {
         let cropped = ciImage.cropped(to: cropRect)
         let scaled = cropped.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
 
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = false
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
-
+        let request = makeFareOCRRequest()
         let handler = VNImageRequestHandler(ciImage: scaled)
         guard (try? handler.perform([request])) != nil else { return nil }
 
@@ -994,6 +987,20 @@ public struct ReceiptParser: Sendable {
             .joined(separator: "\n")
         return extractFareFromText(croppedText)
     }
+
+    /// 返回配置好的滴滴车费 OCR 请求（关闭语言校正，避免将纯数字误修正为词汇）。
+    private func makeFareOCRRequest() -> VNRecognizeTextRequest {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        return request
+    }
+
+    // 滴滴车费局部 OCR 共用的正则模式
+    private static let fareCurrencyPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+    private static let fareYenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
+    private static let fareStandalonePattern = #"^([1-9][0-9]*\.[0-9]{2})$"#
 
     /// 从局部 OCR 文本中按优先级提取车费金额：
     ///   1. ¥/￥ 前缀金额；
@@ -1004,8 +1011,7 @@ public struct ReceiptParser: Sendable {
         let lines = text.components(separatedBy: .newlines)
 
         // 1. ¥/￥ 前缀金额
-        let currencyPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
-        if let cpRegex = try? NSRegularExpression(pattern: currencyPattern) {
+        if let cpRegex = try? NSRegularExpression(pattern: Self.fareCurrencyPattern) {
             let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
             if let match = cpRegex.firstMatch(in: text, range: nsRange),
                let range = Range(match.range(at: 1), in: text),
@@ -1016,8 +1022,7 @@ public struct ReceiptParser: Sendable {
         }
 
         // 2. "¥→4" 误读修正（参考 extractDidiTripAmount 相同逻辑）
-        let yenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
-        if let yenRegex = try? NSRegularExpression(pattern: yenArtifactPattern) {
+        if let yenRegex = try? NSRegularExpression(pattern: Self.fareYenArtifactPattern) {
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
@@ -1031,8 +1036,7 @@ public struct ReceiptParser: Sendable {
         }
 
         // 3. 独立十进制金额行（如 "21.50"），要求整数部分 ≥ 1 位
-        let standalonePattern = #"^([1-9][0-9]*\.[0-9]{2})$"#
-        if let standaloneRegex = try? NSRegularExpression(pattern: standalonePattern) {
+        if let standaloneRegex = try? NSRegularExpression(pattern: Self.fareStandalonePattern) {
             for line in lines {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
