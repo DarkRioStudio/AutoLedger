@@ -26,8 +26,8 @@ struct SmartReceiptParser: Sendable {
 
     // MARK: - 同步规则解析（兜底）
 
-    func parseWithRules(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) -> ImportedReceipt? {
-        ruleParser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant)
+    func parseWithRules(text: String, source: ReceiptSource, imageData: Data? = nil, fallbackMerchant: String? = nil) -> ImportedReceipt? {
+        ruleParser.parse(text: text, source: source, imageData: imageData, fallbackMerchant: fallbackMerchant)
     }
 
     // MARK: - 置信度阈值
@@ -41,6 +41,7 @@ struct SmartReceiptParser: Sendable {
     func parse(
         text: String,
         source: ReceiptSource,
+        imageData: Data? = nil,
         fallbackMerchant: String? = nil,
         ocrMinConfidence: Float? = nil,
         provider: LLMProvider
@@ -92,6 +93,7 @@ struct SmartReceiptParser: Sendable {
                     // 低置信度 → 用规则引擎交叉验证
                     logger.info("[LLM] 置信度 \(String(format: "%.2f", confidence)) < \(Self.confidenceThreshold)，启用规则交叉验证")
                     let ruleResult = ruleParser.parse(text: text, source: source,
+                                                      imageData: imageData,
                                                       fallbackMerchant: fallbackMerchant)
                     let merged = mergeResults(llm: parsed, rule: ruleResult, source: source, rawText: text)
                     return SmartResult(
@@ -104,6 +106,7 @@ struct SmartReceiptParser: Sendable {
                     logger.warning("[LLM] JSON 解析失败，回退规则。响应: \(responseText.prefix(200))")
                     // LLM 返回了但无法解析 → 仍记录 trace 并走规则兜底
                     let ruleResult = ruleParser.parse(text: text, source: source,
+                                                      imageData: imageData,
                                                       fallbackMerchant: fallbackMerchant)
                     guard let ruleResult else { return nil }
                     return SmartResult(
@@ -123,6 +126,7 @@ struct SmartReceiptParser: Sendable {
 
         // ── Step 2: 纯规则兜底 ──
         guard let ruleResult = ruleParser.parse(text: text, source: source,
+                                                 imageData: imageData,
                                                  fallbackMerchant: fallbackMerchant) else {
             logger.warning("[规则] 规则解析也失败，无法提取可入账字段")
             return nil
