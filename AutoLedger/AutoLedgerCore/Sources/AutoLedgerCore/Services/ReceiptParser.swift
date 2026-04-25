@@ -1,4 +1,6 @@
+import CoreImage
 import Foundation
+import Vision
 
 public struct ReceiptParser: Sendable {
     public init() {}
@@ -76,7 +78,7 @@ public struct ReceiptParser: Sendable {
 
     // MARK: - 单笔解析
 
-    public func parse(text: String, source: ReceiptSource, fallbackMerchant: String? = nil) -> ImportedReceipt? {
+    public func parse(text: String, source: ReceiptSource, imageData: Data? = nil, fallbackMerchant: String? = nil) -> ImportedReceipt? {
         let normalized = text
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -113,6 +115,9 @@ public struct ReceiptParser: Sendable {
                 note: "multi-item receipt without reliable total"
             )
         } else if let didiAmt = extractDidiTripAmount(lines: cleanedLines) {
+            amount = didiAmt
+            receiptDiagnostics = nil
+        } else if let imageData, let didiAmt = extractDidiTripAmountFromImage(data: imageData, lines: cleanedLines) {
             amount = didiAmt
             receiptDiagnostics = nil
         } else if let genericAmt = extractAmount(from: normalized) {
@@ -901,6 +906,143 @@ public struct ReceiptParser: Sendable {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
                 if let match = yenRegex.firstMatch(in: trimmed, range: nsRange),
+                   let range = Range(match.range(at: 1), in: trimmed),
+                   let amt = Double(String(trimmed[range])),
+                   amt > 0 && amt < 10000 {
+                    return amt
+                }
+            }
+        }
+
+        return nil
+    }
+
+    // MARK: - 滴滴出行车费图像兜底提取
+
+    /// 当全图 OCR 无法从文本中定位滴滴车费时（例如大字号金额区域漏识别），
+    /// 对原始图像的顶部区域（行程结束页的车费显示区）进行局部重识别：
+    ///
+    /// 策略 1：通过 Vision `regionOfInterest` 仅扫描图像顶部 45%，
+    ///          减少低相关区域干扰，适用于 OCR 读取大字号数字时偏移的情形。
+    ///
+    /// 策略 2：使用 CoreImage 将图像顶部 35% 裁切后 2× 放大，
+    ///          再送入 Vision 重新识别，适用于字体装饰性强导致全图识别遗漏的情形。
+    ///
+    /// 两种策略的提取结果均依次通过：
+    ///   1. ¥/￥ 前缀金额；
+    ///   2. "¥→4"OCR 误读修正（如 "¥45" → "445"）；
+    ///   3. 独立十进制金额行（如 "21.50"）。
+    private func extractDidiTripAmountFromImage(data: Data, lines: [String]) -> Double? {
+        // 仅在确认为滴滴行程结束页时触发
+        guard lines.contains(where: { $0.contains("行程已") }),
+              lines.contains(where: { $0.contains("费用明细") }) else { return nil }
+
+        // 策略 1：regionOfInterest 聚焦图像顶部 45%（Vision 坐标系 y=0 在底部）
+        if let amt = extractFareFromRegion(data: data,
+                                           region: CGRect(x: 0, y: 0.55, width: 1.0, height: 0.45)) {
+            return amt
+        }
+
+        // 策略 2：CoreImage 裁切顶部 35% 后 2× 放大，再次 OCR
+        if let amt = extractFareFromCroppedImage(data: data, topFraction: 0.35, scale: 2.0) {
+            return amt
+        }
+
+        return nil
+    }
+
+    /// 对指定 Vision 归一化矩形区域进行 OCR 并提取车费金额。
+    private func extractFareFromRegion(data: Data, region: CGRect) -> Double? {
+        let request = makeFareOCRRequest()
+        request.regionOfInterest = region
+
+        let handler = VNImageRequestHandler(data: data)
+        guard (try? handler.perform([request])) != nil else { return nil }
+
+        let regionText = (request.results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
+        return extractFareFromText(regionText)
+    }
+
+    /// 裁切图像顶部指定比例后等比缩放，再对完整裁切图 OCR 并提取车费金额。
+    private func extractFareFromCroppedImage(data: Data, topFraction: Double, scale: Double) -> Double? {
+        guard let ciImage = CIImage(data: data) else { return nil }
+        let size = ciImage.extent
+        let cropRect = CGRect(
+            x: 0,
+            y: size.height * CGFloat(1.0 - topFraction),
+            width: size.width,
+            height: size.height * CGFloat(topFraction)
+        )
+        let cropped = ciImage.cropped(to: cropRect)
+        let scaled = cropped.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+
+        let request = makeFareOCRRequest()
+        let handler = VNImageRequestHandler(ciImage: scaled)
+        guard (try? handler.perform([request])) != nil else { return nil }
+
+        let croppedText = (request.results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
+        return extractFareFromText(croppedText)
+    }
+
+    /// 返回配置好的滴滴车费 OCR 请求（关闭语言校正，避免将纯数字误修正为词汇）。
+    private func makeFareOCRRequest() -> VNRecognizeTextRequest {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        return request
+    }
+
+    // 滴滴车费局部 OCR 共用的正则模式
+    private static let fareCurrencyPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+    /// OCR 将"¥"误识别为数字"4"时的修正模式：整行形如"445"或"421.50"，
+    /// 去掉首位"4"后还原为实际金额（如 445 → 45，421.50 → 21.50）。
+    private static let fareYenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
+    private static let fareStandalonePattern = #"^([1-9][0-9]*\.[0-9]{2})$"#
+
+    /// 从局部 OCR 文本中按优先级提取车费金额：
+    ///   1. ¥/￥ 前缀金额；
+    ///   2. "¥" 被误读为数字 "4" 时的修正（如 OCR "¥45" → "445"，修正回 45）；
+    ///   3. 独立十进制金额行（如 "21.50"）。
+    private func extractFareFromText(_ text: String) -> Double? {
+        guard !text.isEmpty else { return nil }
+        let lines = text.components(separatedBy: .newlines)
+
+        // 1. ¥/￥ 前缀金额
+        if let cpRegex = try? NSRegularExpression(pattern: Self.fareCurrencyPattern) {
+            let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+            if let match = cpRegex.firstMatch(in: text, range: nsRange),
+               let range = Range(match.range(at: 1), in: text),
+               let amt = Double(String(text[range])),
+               amt > 0 && amt < 10000 {
+                return amt
+            }
+        }
+
+        // 2. "¥" 被误读为数字 "4" 时的修正（如 OCR "¥45" → "445"，修正回 45）
+        if let yenRegex = try? NSRegularExpression(pattern: Self.fareYenArtifactPattern) {
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+                if let match = yenRegex.firstMatch(in: trimmed, range: nsRange),
+                   let range = Range(match.range(at: 1), in: trimmed),
+                   let amt = Double(String(trimmed[range])),
+                   amt > 0 && amt < 10000 {
+                    return amt
+                }
+            }
+        }
+
+        // 3. 独立十进制金额行（如 "21.50"），要求整数部分 ≥ 1 位
+        if let standaloneRegex = try? NSRegularExpression(pattern: Self.fareStandalonePattern) {
+            for line in lines {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                let nsRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+                if let match = standaloneRegex.firstMatch(in: trimmed, range: nsRange),
                    let range = Range(match.range(at: 1), in: trimmed),
                    let amt = Double(String(trimmed[range])),
                    amt > 0 && amt < 10000 {

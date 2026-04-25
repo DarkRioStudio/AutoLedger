@@ -104,11 +104,12 @@ struct QuickLedgerIntent: AppIntent {
         let result: SmartReceiptParser.SmartResult?
         if useModelInference {
             result = await smartParser.parse(text: cleanedText, source: source,
+                                             imageData: imageData,
                                              ocrMinConfidence: ocrResult.minimumWordConfidence,
                                              provider: selectedProvider)
         } else {
             // 冷启动模型超时 → 纯规则兜底，保留完整 SmartResult 包装
-            if let ruleReceipt = await smartParser.parseWithRules(text: cleanedText, source: source) {
+            if let ruleReceipt = await smartParser.parseWithRules(text: cleanedText, source: source, imageData: imageData) {
                 result = SmartReceiptParser.SmartResult(receipt: ruleReceipt,
                                                         llmTrace: nil,
                                                         usedRuleFallback: true)
