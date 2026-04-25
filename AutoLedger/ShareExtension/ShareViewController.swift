@@ -101,7 +101,7 @@ class ShareViewController: UIViewController {
             let multiReceipt = parser.detectMultipleReceipts(text: text)
 
             // 解析
-            guard let receipt = parser.parse(text: text, source: source) else {
+            guard let receipt = parser.parse(text: text, source: source, imageData: imageData) else {
                 self.writeDebug(stage: .parseFailed, source: source, rawText: text, summary: String(localized: "share.debug.parse_failed"))
                 DispatchQueue.main.async { self.finish(message: String(localized: "share.error.recognition_failed")) }
                 return
