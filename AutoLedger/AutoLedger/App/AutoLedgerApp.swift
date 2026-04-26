@@ -30,6 +30,27 @@ struct AutoLedgerApp: App {
         WindowGroup {
             HomeView()
                 .environmentObject(store)
+                .alert("检测到 iCloud 备份", isPresented: Binding(
+                    get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
+                    set: { if !$0 { store.detectedICloudBackup = nil } }
+                )) {
+                    Button("立即恢复") {
+                        do {
+                            try store.restoreDetectedICloudBackup()
+                        } catch {
+                            store.lastImportSummary = "iCloud 恢复失败：\(error.localizedDescription)"
+                        }
+                    }
+                    Button("暂不恢复", role: .cancel) {
+                        store.detectedICloudBackup = nil
+                    }
+                } message: {
+                    if let bundle = store.detectedICloudBackup {
+                        Text("备份时间：\(AppFormatters.exportDateTime(bundle.exportedAt))\n\(store.summaryText(for: bundle))")
+                    } else {
+                        Text("")
+                    }
+                }
                 .task {
                     // App 启动后台预热 Gemma（如已下载），避免首次推理时才加载
                     if LLMProvider.userSelected == .gemma {
@@ -42,6 +63,9 @@ struct AutoLedgerApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.refreshFromStore()
+                        if store.isLocalDataEmptyForRestore {
+                            store.detectICloudBackupForRestore()
+                        }
                         if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
                             store.attemptClipboardImport()
                         }
@@ -50,6 +74,8 @@ struct AutoLedgerApp: App {
                             NotificationService.shared.requestPermissionIfNeeded()
                             NotificationService.shared.scheduleUpcomingChargeReminders(for: store.subscriptions)
                         }
+                    } else if newPhase == .background {
+                        store.backupOnAppBackground()
                     }
                 }
         }

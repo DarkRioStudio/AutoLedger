@@ -23,6 +23,8 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
     @Published var lastImportSummary: String?
+    @Published private(set) var lastBackupSummary: String?
+    @Published var detectedICloudBackup: BackupBundle?
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
     @Published var merchantAliases: [String: String] = [:]
@@ -32,6 +34,8 @@ final class LedgerStore: ObservableObject {
     private let subscriptionDetector = SubscriptionDetector()
     private let transactionStore: TransactionStore?
     private var lastPasteboardChangeCount: Int
+    private var pendingBackupTask: Task<Void, Never>?
+    private let iCloudBackupService = ICloudBackupService()
 
     init(
         parser: ReceiptParser = ReceiptParser(),
@@ -59,14 +63,17 @@ final class LedgerStore: ObservableObject {
 
     func saveCustomSources() {
         UserDefaults.standard.set(customSources, forKey: "customSources")
+        requestAutomaticBackup()
     }
 
     func saveCustomCategories() {
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
+        requestAutomaticBackup()
     }
 
     func saveMerchantAliases() {
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        requestAutomaticBackup()
     }
 
     /// 如果商户名命中别名映射则返回别名，否则原样返回
@@ -341,6 +348,7 @@ final class LedgerStore: ObservableObject {
         }
         lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
         reloadWidgets()
+        requestAutomaticBackup()
     }
 
     /// 将已删除的账单恢复到账本
@@ -371,6 +379,7 @@ final class LedgerStore: ObservableObject {
         sortTransactions()
         lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
         reloadWidgets()
+        requestAutomaticBackup()
     }
 
     /// 从回收站永久删除（不再可恢复）
@@ -386,6 +395,7 @@ final class LedgerStore: ObservableObject {
         deletedTransactions.removeAll { $0.id == transaction.id }
         lastImportSummary = "已彻底删除 \(transaction.merchant) 的记录。"
         reloadWidgets()
+        requestAutomaticBackup()
     }
 
     /// 手动新增账单（账本右上角 + 入口）
@@ -410,6 +420,7 @@ final class LedgerStore: ObservableObject {
         sortTransactions()
         lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
         reloadWidgets()
+        requestAutomaticBackup()
     }
 
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
@@ -468,6 +479,7 @@ final class LedgerStore: ObservableObject {
             try transactionStore?.update(transaction: transaction)
             lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
             reloadWidgets()
+            requestAutomaticBackup()
         } catch {
             lastImportSummary = "账单已更新到界面，但写入本地存储失败：\(error.localizedDescription)"
         }
@@ -576,6 +588,7 @@ final class LedgerStore: ObservableObject {
         let debugSummary = receipt.parseDiagnostics.map { "\(summary)\n调试：\($0.debugSummary)" } ?? summary
         lastImportSummary = summary
         reloadWidgets()
+        requestAutomaticBackup()
         recordDebugEvent(
             stage: .persisted,
             source: receipt.source,
@@ -700,6 +713,7 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.saveSubscription(sub)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        requestAutomaticBackup()
     }
 
     func deleteSubscription(_ sub: Subscription) {
@@ -708,6 +722,7 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.deleteSubscription(id: sub.id)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        requestAutomaticBackup()
     }
 
     func updateSubscription(_ sub: Subscription) {
@@ -718,6 +733,7 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.updateSubscription(sub)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        requestAutomaticBackup()
     }
 
     /// 扫描全部历史账单，自动识别并保存周期性订阅
@@ -743,6 +759,7 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.saveCategoryCorrection(merchant: merchant, category: category)
         }
+        requestAutomaticBackup()
     }
 
     func deleteCategoryCorrection(merchant: String) {
@@ -750,11 +767,235 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.deleteCategoryCorrection(merchant: merchant)
         }
+        requestAutomaticBackup()
     }
 
     private static func loadInitialCategoryCorrections(using store: TransactionStore?) -> [String: TransactionCategory] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [:] }
         return (try? sqlStore.loadCategoryCorrections()) ?? [:]
+    }
+}
+
+extension LedgerStore {
+    private static let annualPriceKey = "subscriptionAnnualPriceOverrides"
+    private static let subscriptionNotesKey = "subscriptionNotes"
+    private static let iCloudBackupEnabledKey = "iCloudBackupEnabled"
+    private static let lastBackupAtKey = "lastBackupAt"
+    private static let lastBackupBundleIdKey = "lastBackupBundleId"
+    private static let lastBackupErrorKey = "lastBackupError"
+
+    var isLocalDataEmptyForRestore: Bool {
+        transactions.isEmpty &&
+        deletedTransactions.isEmpty &&
+        subscriptions.isEmpty &&
+        categoryCorrections.isEmpty &&
+        customCategories.isEmpty &&
+        customSources.isEmpty &&
+        merchantAliases.isEmpty
+    }
+
+    var iCloudBackupEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.iCloudBackupEnabledKey) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.iCloudBackupEnabledKey)
+            if newValue { requestAutomaticBackup(delayNanoseconds: 0) }
+        }
+    }
+
+    var lastBackupAt: Date? {
+        UserDefaults.standard.object(forKey: Self.lastBackupAtKey) as? Date
+    }
+
+    func makeBackupBundle() throws -> BackupBundle {
+        let backupTransactions: [BackupTransaction]
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            backupTransactions = try sqlStore.loadBackupTransactions()
+        } else {
+            backupTransactions = transactions.map { BackupTransaction(transaction: $0) } +
+                deletedTransactions.map { BackupTransaction(transaction: $0, deletedAt: .now) }
+        }
+
+        let annualPrices = UserDefaults.standard.dictionary(forKey: Self.annualPriceKey) as? [String: Double] ?? [:]
+        let subscriptionNotes = UserDefaults.standard.dictionary(forKey: Self.subscriptionNotesKey) as? [String: String] ?? [:]
+        let corrections = categoryCorrections
+            .map { BackupCategoryCorrection(merchant: $0.key, category: $0.value) }
+            .sorted { $0.merchant < $1.merchant }
+        let summary = BackupSummary(
+            transactionCount: backupTransactions.filter { $0.deletedAt == nil }.count,
+            deletedTransactionCount: backupTransactions.filter { $0.deletedAt != nil }.count,
+            subscriptionCount: subscriptions.count,
+            categoryCorrectionCount: corrections.count,
+            customCategoryCount: customCategories.count,
+            customSourceCount: customSources.count,
+            merchantAliasCount: merchantAliases.count
+        )
+
+        return BackupBundle(
+            app: BackupAppInfo(
+                name: Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "AutoLedger",
+                version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.0",
+                build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "dev"
+            ),
+            device: BackupDeviceInfo(
+                model: UIDevice.current.model,
+                systemName: UIDevice.current.systemName,
+                systemVersion: UIDevice.current.systemVersion
+            ),
+            summary: summary,
+            transactions: backupTransactions,
+            subscriptions: subscriptions,
+            categoryCorrections: corrections,
+            customCategories: customCategories,
+            customSources: customSources,
+            merchantAliases: merchantAliases,
+            subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: annualPrices, notes: subscriptionNotes),
+            appSettings: BackupAppSettings(
+                subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
+                monthlyAnomalyThresholdPercent: UserDefaults.standard.double(forKey: "monthlyAnomalyThresholdPercent"),
+                llmEnhancementEnabled: UserDefaults.standard.bool(forKey: "llmEnhancementEnabled"),
+                autoClipboardImportEnabled: UserDefaults.standard.bool(forKey: "autoClipboardImport"),
+                iCloudBackupEnabled: iCloudBackupEnabled
+            )
+        )
+    }
+
+    func writeManualBackupFile() throws -> URL {
+        let bundle = try makeBackupBundle()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(bundle)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let filename = "AutoLedger_backup_\(formatter.string(from: bundle.exportedAt)).json"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try data.write(to: url, options: [.atomic])
+        recordBackupSuccess(bundle)
+        lastBackupSummary = "已生成 JSON 备份：\(summaryText(for: bundle))"
+        return url
+    }
+
+    func importBackup(from url: URL) throws {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess { url.stopAccessingSecurityScopedResource() }
+        }
+
+        let data = try Data(contentsOf: url)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let bundle = try decoder.decode(BackupBundle.self, from: data)
+        try restoreBackup(bundle)
+    }
+
+    func restoreBackup(_ bundle: BackupBundle) throws {
+        try BackupValidator.validate(bundle)
+        let safetyBundle = try makeBackupBundle()
+
+        do {
+            try applyBackupBundle(bundle)
+            customCategories = bundle.customCategories
+            customSources = bundle.customSources
+            merchantAliases = bundle.merchantAliases
+            saveRestoredUserDefaults(from: bundle)
+            refreshFromStore()
+            reloadWidgets()
+            lastImportSummary = "已从备份恢复：\(summaryText(for: bundle))"
+            requestAutomaticBackup()
+        } catch {
+            try? applyBackupBundle(safetyBundle)
+            customCategories = safetyBundle.customCategories
+            customSources = safetyBundle.customSources
+            merchantAliases = safetyBundle.merchantAliases
+            saveRestoredUserDefaults(from: safetyBundle)
+            refreshFromStore()
+            throw error
+        }
+    }
+
+    func backupToICloudNow() throws {
+        let bundle = try makeBackupBundle()
+        _ = try iCloudBackupService.write(bundle: bundle)
+        recordBackupSuccess(bundle)
+        lastBackupSummary = "已备份到 iCloud：\(summaryText(for: bundle))"
+    }
+
+    func detectICloudBackupForRestore() {
+        do {
+            detectedICloudBackup = try iCloudBackupService.readBundleIfAvailable()
+        } catch {
+            detectedICloudBackup = nil
+            UserDefaults.standard.set(error.localizedDescription, forKey: Self.lastBackupErrorKey)
+        }
+    }
+
+    func restoreDetectedICloudBackup() throws {
+        guard let detectedICloudBackup else { return }
+        try restoreBackup(detectedICloudBackup)
+        self.detectedICloudBackup = nil
+    }
+
+    func requestAutomaticBackup(delayNanoseconds: UInt64 = 15_000_000_000) {
+        guard iCloudBackupEnabled else { return }
+        pendingBackupTask?.cancel()
+        pendingBackupTask = Task { [weak self] in
+            if delayNanoseconds > 0 {
+                try? await Task.sleep(nanoseconds: delayNanoseconds)
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                do {
+                    try self?.backupToICloudNow()
+                } catch {
+                    UserDefaults.standard.set(error.localizedDescription, forKey: Self.lastBackupErrorKey)
+                    self?.lastBackupSummary = "iCloud 自动备份失败：\(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    func backupOnAppBackground() {
+        requestAutomaticBackup(delayNanoseconds: 0)
+    }
+
+    func summaryText(for bundle: BackupBundle) -> String {
+        "\(bundle.summary.transactionCount) 笔账单，\(bundle.summary.deletedTransactionCount) 笔最近删除，\(bundle.summary.subscriptionCount) 个订阅，\(bundle.summary.merchantAliasCount) 个商户别名"
+    }
+
+    private func saveRestoredUserDefaults(from bundle: BackupBundle) {
+        UserDefaults.standard.set(customSources, forKey: "customSources")
+        UserDefaults.standard.set(customCategories, forKey: "customCategories")
+        UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        UserDefaults.standard.set(bundle.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
+        UserDefaults.standard.set(bundle.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
+        UserDefaults.standard.set(bundle.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
+        UserDefaults.standard.set(bundle.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
+        UserDefaults.standard.set(bundle.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
+        UserDefaults.standard.set(bundle.appSettings.autoClipboardImportEnabled, forKey: "autoClipboardImport")
+        UserDefaults.standard.set(bundle.appSettings.iCloudBackupEnabled, forKey: Self.iCloudBackupEnabledKey)
+    }
+
+    private func recordBackupSuccess(_ bundle: BackupBundle) {
+        UserDefaults.standard.set(bundle.exportedAt, forKey: Self.lastBackupAtKey)
+        UserDefaults.standard.set(bundle.bundleId.uuidString, forKey: Self.lastBackupBundleIdKey)
+        UserDefaults.standard.removeObject(forKey: Self.lastBackupErrorKey)
+    }
+
+    private func applyBackupBundle(_ bundle: BackupBundle) throws {
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try sqlStore.replaceForRestore(
+                transactions: bundle.transactions,
+                subscriptions: bundle.subscriptions,
+                categoryCorrections: bundle.categoryCorrections
+            )
+        } else {
+            transactions = bundle.transactions.filter { $0.deletedAt == nil }.map(\.transaction)
+            deletedTransactions = bundle.transactions.filter { $0.deletedAt != nil }.map(\.transaction)
+            subscriptions = bundle.subscriptions
+            categoryCorrections = Dictionary(uniqueKeysWithValues: bundle.categoryCorrections.map { ($0.merchant, $0.category) })
+        }
     }
 }
 
