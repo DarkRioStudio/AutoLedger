@@ -48,6 +48,7 @@ struct SubscriptionListView: View {
                 store.updateSubscription(updated)
                 saveAnnualPrice(annualPrice, for: updated)
                 saveNote(note, for: updated)
+                store.requestAutomaticBackup()
             }
         }
         .onAppear {

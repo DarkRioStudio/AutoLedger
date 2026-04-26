@@ -175,6 +175,85 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return try readTransactions(from: statement)
     }
 
+    public func loadBackupTransactions() throws -> [BackupTransaction] {
+        let sql = """
+        SELECT id, merchant, amount, occurred_at, category, source, note, deleted_at
+        FROM transactions
+        ORDER BY occurred_at DESC, created_at DESC;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        var items: [BackupTransaction] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let idCString = sqlite3_column_text(statement, 0),
+                let merchantCString = sqlite3_column_text(statement, 1),
+                let occurredCString = sqlite3_column_text(statement, 3),
+                let categoryCString = sqlite3_column_text(statement, 4),
+                let sourceCString = sqlite3_column_text(statement, 5),
+                let noteCString = sqlite3_column_text(statement, 6),
+                let id = UUID(uuidString: String(cString: idCString)),
+                let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString))
+            else {
+                continue
+            }
+
+            let deletedAt: Date? = {
+                guard sqlite3_column_type(statement, 7) != SQLITE_NULL,
+                      let deletedCString = sqlite3_column_text(statement, 7) else { return nil }
+                return Self.storageFormatter.date(from: String(cString: deletedCString))
+            }()
+
+            items.append(
+                BackupTransaction(
+                    id: id,
+                    merchant: String(cString: merchantCString),
+                    amount: sqlite3_column_double(statement, 2),
+                    occurredAt: occurredAt,
+                    category: String(cString: categoryCString),
+                    source: String(cString: sourceCString),
+                    note: String(cString: noteCString),
+                    deletedAt: deletedAt
+                )
+            )
+        }
+
+        return items
+    }
+
+    public func replaceForRestore(
+        transactions backupTransactions: [BackupTransaction],
+        subscriptions: [Subscription],
+        categoryCorrections: [BackupCategoryCorrection]
+    ) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try execute("DELETE FROM transactions;")
+            try execute("DELETE FROM subscriptions;")
+            try execute("DELETE FROM category_corrections;")
+
+            for transaction in backupTransactions {
+                try insertBackupTransaction(transaction)
+            }
+            for subscription in subscriptions {
+                try saveSubscription(subscription)
+            }
+            for correction in categoryCorrections {
+                try saveCategoryCorrection(merchant: correction.merchant, category: correction.category)
+            }
+
+            try execute("COMMIT;")
+        } catch {
+            try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
     public func restoreTransaction(id: UUID) throws {
         let sql = """
         UPDATE transactions
@@ -527,6 +606,39 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 9, now, -1, sqliteTransient)
     }
 
+    private func insertBackupTransaction(_ transaction: BackupTransaction) throws {
+        let sql = """
+        INSERT INTO transactions (id, merchant, amount, occurred_at, category, source, note, created_at, updated_at, deleted_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let now = Self.storageFormatter.string(from: .now)
+        sqlite3_bind_text(statement, 1, transaction.id.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, transaction.merchant, -1, sqliteTransient)
+        sqlite3_bind_double(statement, 3, transaction.amount)
+        sqlite3_bind_text(statement, 4, Self.storageFormatter.string(from: transaction.occurredAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, transaction.category, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, transaction.source, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 7, transaction.note, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 8, now, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 9, now, -1, sqliteTransient)
+        if let deletedAt = transaction.deletedAt {
+            sqlite3_bind_text(statement, 10, Self.storageFormatter.string(from: deletedAt), -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, 10)
+        }
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
     private func readTransactions(from statement: OpaquePointer?) throws -> [Transaction] {
         var items: [Transaction] = []
         while sqlite3_step(statement) == SQLITE_ROW {
@@ -605,6 +717,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return targetURL
     }
 
+    private func execute(_ sql: String) throws {
+        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
     // MARK: - Subscriptions
 
     public func loadSubscriptions() throws -> [Subscription] {
@@ -667,7 +785,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
 
         let now = Self.storageFormatter.string(from: .now)
-        bindSubscription(sub, to: statement, updatedAt: now, createdAt: now)
+        bindSubscription(
+            sub,
+            to: statement,
+            updatedAt: now,
+            createdAt: Self.storageFormatter.string(from: sub.createdAt)
+        )
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
