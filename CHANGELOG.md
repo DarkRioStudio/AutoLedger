@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.3.1）
+- [2026-04-26 +0800] ITER-037 v1.3.1 语音记账 + Siri 版本规划：新增 `versions/v1.3.1-plan.md`，承接根目录 `autoledger_voice_siri_design.md` 与现有 AppIntent / SQLite / 备份恢复工程基础，将下一版本定位为"语音记账 MVP + Siri 快捷入口"；明确本版只做"一句话 → 一笔支出"，Siri 高置信度直接保存，中低置信度失败重试，App 内入口承担确认与修改；规划 `VoiceLedgerParser`、`VoiceLedgerIntent`、语音来源标记、调试记录、本地化、备份联动、回归基线与发布门禁，并明确本版不做语音聊天、收入/转账、云端语音识别或多轮 Siri 确认。
+
 ### 新增（v1.3.0）
 - [2026-04-26 +0800] ITER-031~036 v1.3.0 数据备份与恢复实现：新增 `BackupBundle` v1 与校验器，覆盖账单、最近删除、订阅、分类学习、自定义分类/来源、商户别名、订阅年付价/备注和低风险设置；`SQLiteTransactionStore` 新增备份读取与覆盖恢复接口，恢复时保留软删除状态和订阅创建时间；设置页新增 `DataManagementView`，支持 JSON 导出、系统分享、JSON 文件导入、二次确认覆盖恢复；新增 `ICloudBackupService`，写入 iCloud Drive `Documents/AutoLedgerBackup.json`，支持立即备份、自动备份开关、后台自动备份和空库启动恢复提示；主 App entitlements 增加 iCloud Documents 容器；离线回归新增 `BackupBundle` 导出/恢复断言，覆盖 SQLite + UserDefaults 混合数据。
 - [2026-04-26 +0800] ITER-030 v1.3.0 版本规划：新增 `versions/v1.3.0-plan.md`，承接根目录 `autoledger_icloud_backup_design.md` 与当前工程进展，将下一版本定位为"数据备份 + 手动迁移 + iCloud 轻量恢复"；规划 `BackupBundle` v1、手动 JSON 导出/导入、iCloud 单文件自动备份、重装/换机恢复提示、冲突防护、回归基线与发布门禁，并明确本版不做 CloudKit 实时同步或静默覆盖。

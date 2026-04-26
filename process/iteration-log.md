@@ -44,6 +44,25 @@
 
 ## 日志条目
 
+### ITER-037 v1.3.1 语音记账 + Siri 版本规划
+- 日期：2026-04-26
+- 所属版本：v1.3.1
+- 所属阶段：Phase 0
+- 类型：文档 / 治理
+- 目标：分析根目录 `autoledger_voice_siri_design.md` 与现有 AppIntent、SQLite、分类和备份恢复能力，建立 v1.3.1 版本计划。
+- 改动范围：
+  - `versions/v1.3.1-plan.md`：新增版本定位、承接输入、设计约束、In Scope / Out of Scope、Phase 0-5 阶段拆分、ITER-037-042 迭代拆分、验收标准、测试计划、风险与回滚。
+  - `CHANGELOG.md`：新增 v1.3.1 / ITER-037 文档规划记录。
+  - `process/iteration-log.md`：新增本条迭代日志。
+- 未改动范围：未实现 `VoiceLedgerParser`、`VoiceLedgerIntent`、App 内语音入口、本地化文案或回归脚本；未调整既有 Xcode 工程版本号改动。
+- 完成内容：明确 v1.3.1 主题为"语音记账 MVP + Siri 快捷入口"；确认本版只做"一句话 → 一笔支出"，Siri 高置信度直接保存，中低置信度失败重试，App 内入口承接确认与修改；将语音来源、规则解析、Siri Intent、App 内确认、调试记录、备份联动和发布门禁拆成可执行迭代。
+- 未完成内容：语音解析模型、Siri 真机触发、App 内确认 UI、语音交易回归与 v1.3.1 发布门禁仍待后续 ITER-038+ 执行。
+- 测试情况：文档规划迭代，未运行代码测试。
+- 风险与注意事项：Siri AppIntent 参数短语需要真机验证；语音误识别可能误存，因此计划限定 Siri 仅 high 置信度保存；当前工作区已有 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 版本号改动，本轮保持不处理。
+- 回滚方式：删除 `versions/v1.3.1-plan.md`；移除 `CHANGELOG.md` 和 `process/iteration-log.md` 中 ITER-037 相关条目。
+- 结论：本轮完成。v1.3.1 版本计划草稿已建立。
+- 下一步建议：进入 ITER-038，新增 `ReceiptSource.voice`、语音调试来源与 `VoiceLedgerParser`，先用离线回归锁住解析边界。
+
 ### ITER-031~036 v1.3.0 数据备份与恢复实现
 - 日期：2026-04-26
 - 所属版本：v1.3.0
