@@ -87,6 +87,13 @@ struct UIPasteboardImage {
     func pngData() -> Data? { nil }
 }
 
+final class UIDevice {
+    static let current = UIDevice()
+    var model: String { "Offline" }
+    var systemName: String { "macOS" }
+    var systemVersion: String { "offline" }
+}
+
 // --- OCRService stub (uses Vision, iOS only) ---
 struct OCRResult: Sendable {
     let text: String
@@ -107,6 +114,18 @@ final class NotificationService: Sendable {
     func requestPermissionIfNeeded() {}
     func scheduleUpcomingChargeReminders(for subscriptions: [Subscription]) {}
 }
+
+enum ICloudBackupServiceError: Error {
+    case containerUnavailable
+}
+
+struct ICloudBackupService {
+    func write(bundle: BackupBundle) throws -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("AutoLedgerBackup.json")
+    }
+
+    func readBundleIfAvailable() throws -> BackupBundle? { nil }
+}
 IOSTUB
 
 swiftc \
@@ -120,6 +139,7 @@ swiftc \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
+  "$CORE/Models/BackupBundle.swift" \
   "$CORE/Services/ReceiptParser.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \

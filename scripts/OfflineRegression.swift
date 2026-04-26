@@ -37,6 +37,7 @@ struct OfflineRegression {
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
+        try verifyBackupRoundTrip(reporter: reporter)
 
         reporter.finish()
     }
@@ -322,6 +323,86 @@ struct OfflineRegression {
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
         reporter.check(reloadedTransactions.count == initialCount + 1, "SQLite store reload keeps imported transaction")
+    }
+
+    private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerBackupRegression-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        UserDefaults.standard.removeObject(forKey: "customSources")
+        UserDefaults.standard.removeObject(forKey: "customCategories")
+        UserDefaults.standard.removeObject(forKey: "merchantAliases")
+        UserDefaults.standard.removeObject(forKey: "subscriptionAnnualPriceOverrides")
+        UserDefaults.standard.removeObject(forKey: "subscriptionNotes")
+
+        let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
+        let sourceLedger = LedgerStore(transactionStore: sourceStore)
+        let active = Transaction(
+            merchant: "备份回归咖啡",
+            amount: 21.00,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-04-24 08:30") ?? .now,
+            categoryLabel: "咖啡",
+            sourceLabel: "测试来源",
+            note: "active"
+        )
+        let deleted = Transaction(
+            merchant: "备份回归删除",
+            amount: 9.90,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-04-23 18:30") ?? .now,
+            category: .dining,
+            source: .wechat,
+            note: "deleted"
+        )
+        sourceLedger.addTransaction(active)
+        sourceLedger.addTransaction(deleted)
+        sourceLedger.deleteTransaction(deleted)
+        sourceLedger.customCategories = ["咖啡"]
+        sourceLedger.customSources = ["测试来源"]
+        sourceLedger.merchantAliases = ["原始商户": "别名商户"]
+        sourceLedger.saveCustomCategories()
+        sourceLedger.saveCustomSources()
+        sourceLedger.saveMerchantAliases()
+        sourceLedger.recordCategoryCorrection(merchant: "备份回归咖啡", category: .dining)
+
+        let subscription = Subscription(
+            merchant: "备份订阅",
+            planName: "Pro",
+            period: .monthly,
+            amount: 18,
+            lastChargedAt: AppFormatters.parseFlexibleDate("2026-04-01 09:00") ?? .now
+        )
+        sourceLedger.upsertSubscription(subscription)
+        UserDefaults.standard.set([subscription.id.uuidString: 168.0], forKey: "subscriptionAnnualPriceOverrides")
+        UserDefaults.standard.set([subscription.id.uuidString: "年度价备注"], forKey: "subscriptionNotes")
+
+        let bundle = try sourceLedger.makeBackupBundle()
+        reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
+        reporter.check(bundle.summary.deletedTransactionCount == 1, "BackupBundle summary counts deleted transactions")
+        reporter.check(bundle.customCategories == ["咖啡"], "BackupBundle includes custom categories")
+        reporter.check(bundle.subscriptionMetadata.annualPriceOverrides[subscription.id.uuidString] == 168.0, "BackupBundle includes subscription annual price metadata")
+
+        let restoreStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "restore.sqlite3")
+        let restoreLedger = LedgerStore(transactionStore: restoreStore)
+        try restoreLedger.restoreBackup(bundle)
+
+        reporter.check(restoreLedger.transactions.contains(active), "Backup restore keeps active transaction")
+        reporter.check(restoreLedger.deletedTransactions.contains(deleted), "Backup restore keeps deleted transaction")
+        let restoredSubscription = restoreLedger.subscriptions.first { $0.id == subscription.id }
+        reporter.check(
+            restoredSubscription?.merchant == subscription.merchant &&
+            restoredSubscription?.planName == subscription.planName &&
+            restoredSubscription?.period == subscription.period &&
+            abs((restoredSubscription?.amount ?? 0) - subscription.amount) < 0.001,
+            "Backup restore keeps subscriptions"
+        )
+        reporter.check(restoreLedger.customCategories == ["咖啡"], "Backup restore keeps custom categories")
+        reporter.check(restoreLedger.customSources == ["测试来源"], "Backup restore keeps custom sources")
+        reporter.check(restoreLedger.merchantAliases["原始商户"] == "别名商户", "Backup restore keeps merchant aliases")
+        reporter.check(restoreLedger.categoryCorrections["备份回归咖啡"] == .dining, "Backup restore keeps category corrections")
     }
 
     private static func sameMinute(_ lhs: Date, _ rhs: Date) -> Bool {
