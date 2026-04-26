@@ -25,6 +25,8 @@
 "source.douyin.short" = "Douyin";
 "source.union_pay.title" = "UnionPay";
 "source.union_pay.short" = "UnionPay";
+"source.voice.title" = "Voice";
+"source.voice.short" = "Voice";
 "source.manual.title" = "Manual Entry";
 "source.manual.short" = "Manual";
 
@@ -128,11 +130,11 @@
 "settings.feedback.title" = "Feedback";
 "settings.feedback.subtitle" = "Found an issue? Send tiered logs to help us diagnose it quickly";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "v1.2.0-dev - Gemma-2 2B on-device LLM integration (CDN distribution + SHA-256 verification), LLM + rules hybrid parsing, async model loading and automatic unloading, subscription detection, one-tap Shortcuts ledger entry, and Share Extension import.";
+"settings.version.body" = "v1.3.1-dev - Voice ledger MVP, Siri/AppIntent entry, in-app review sheet, backup and restore, Gemma-2 2B on-device LLM, one-tap Shortcuts ledger entry, and Share Extension import.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "All data stays on your device. AutoLedger does not use cloud sync or third-party analytics. OCR and LLM inference both run locally. The only network request is Gemma model version checking and download via CDN; no user data is transmitted.";
 "settings.release_status.title" = "Release Status";
-"settings.release_status.body" = "On-device LLM, monthly reports, UnionPay basics, subscription management enhancements, persistent soft delete, and regression gate drafts are in place. Next: device regression and release readiness.";
+"settings.release_status.body" = "Voice ledger, Siri Intent, in-app review, backup and restore, on-device LLM, monthly reports, UnionPay basics, subscription management enhancements, and persistent soft delete are in place. Next: device Siri and iCloud regression.";
 
 "ai_model.title" = "AI Models";
 "ai_model.info.title" = "On-device Model Notes";
@@ -174,6 +176,25 @@
 "quick_ledger.persistence_failed" = "Failed to save. Open AutoLedger to confirm.";
 "quick_ledger.saved_format" = "Saved: %@ ¥%.2f";
 "quick_ledger.multi_receipt_warning" = "\nThe image may contain multiple bills. Only one was recognized; consider taking separate screenshots.";
+"voice_ledger.intent.title" = "Voice Ledger";
+"voice_ledger.intent.description" = "Save one expense from a short phrase";
+"voice_ledger.intent.short_title" = "Voice Ledger";
+"voice_ledger.content.title" = "Ledger Content";
+"voice_ledger.content.description" = "For example: lunch 28";
+"voice_ledger_title" = "Voice Ledger";
+"voice_ledger_example" = "For example: lunch 28";
+"voice_ledger_input_placeholder" = "Lunch 28";
+"voice_ledger_parse" = "Parse";
+"voice_ledger_success" = "Saved: %@ ¥%.2f";
+"voice_ledger_unclear" = "This phrase is not clear enough. Please try again, for example: lunch 28.";
+"voice_ledger_no_amount" = "No clear expense amount was recognized. Please try again.";
+"voice_ledger_multiple_amounts" = "Multiple amounts were detected. Please say only one expense.";
+"voice_ledger_income_not_supported" = "Voice ledger currently supports expenses only.";
+"voice_ledger_review_required" = "The result may be incomplete. Please review before saving.";
+"voice_ledger_ready_to_save" = "Parsed. Review and save when ready.";
+"voice_ledger_duplicate" = "%@ ¥%.2f already exists, so it was not saved again.";
+"voice_ledger_note" = "Voice ledger";
+"voice_ledger_persistence_failed" = "Failed to save the voice ledger entry";
 "receipt.multi_item_single_expense_notice" = "Multi-item receipt detected. The current version will record the total amount as a single expense.";
 "receipt.multi_item_total_missing" = "Multi-item receipt detected, but the total amount could not be reliably recognized. Please retake the receipt including the total section.";
 "home_quick_action.add_transaction.title" = "Add Expense";

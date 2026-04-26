@@ -8,6 +8,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
     case eleme
     case douyin
     case unionPay
+    case voice
     case manual
 
     public var id: String { rawValue }
@@ -21,6 +22,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .eleme:    return NSLocalizedString("source.eleme.title", comment: "")
         case .douyin:   return NSLocalizedString("source.douyin.title", comment: "")
         case .unionPay: return NSLocalizedString("source.union_pay.title", comment: "")
+        case .voice:    return NSLocalizedString("source.voice.title", comment: "")
         case .manual:   return NSLocalizedString("source.manual.title", comment: "")
         }
     }
@@ -34,6 +36,7 @@ public enum ReceiptSource: String, CaseIterable, Codable, Identifiable, Sendable
         case .eleme:    return NSLocalizedString("source.eleme.short", comment: "")
         case .douyin:   return NSLocalizedString("source.douyin.short", comment: "")
         case .unionPay: return NSLocalizedString("source.union_pay.short", comment: "")
+        case .voice:    return NSLocalizedString("source.voice.short", comment: "")
         case .manual:   return NSLocalizedString("source.manual.short", comment: "")
         }
     }
