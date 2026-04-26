@@ -9,6 +9,10 @@
 
 ## [Unreleased]
 
+### 新增（v1.3.0）
+- [2026-04-26 +0800] ITER-031~036 v1.3.0 数据备份与恢复实现：新增 `BackupBundle` v1 与校验器，覆盖账单、最近删除、订阅、分类学习、自定义分类/来源、商户别名、订阅年付价/备注和低风险设置；`SQLiteTransactionStore` 新增备份读取与覆盖恢复接口，恢复时保留软删除状态和订阅创建时间；设置页新增 `DataManagementView`，支持 JSON 导出、系统分享、JSON 文件导入、二次确认覆盖恢复；新增 `ICloudBackupService`，写入 iCloud Drive `Documents/AutoLedgerBackup.json`，支持立即备份、自动备份开关、后台自动备份和空库启动恢复提示；主 App entitlements 增加 iCloud Documents 容器；离线回归新增 `BackupBundle` 导出/恢复断言，覆盖 SQLite + UserDefaults 混合数据。
+- [2026-04-26 +0800] ITER-030 v1.3.0 版本规划：新增 `versions/v1.3.0-plan.md`，承接根目录 `autoledger_icloud_backup_design.md` 与当前工程进展，将下一版本定位为"数据备份 + 手动迁移 + iCloud 轻量恢复"；规划 `BackupBundle` v1、手动 JSON 导出/导入、iCloud 单文件自动备份、重装/换机恢复提示、冲突防护、回归基线与发布门禁，并明确本版不做 CloudKit 实时同步或静默覆盖。
+
 ### 新增（v1.2.0）
 - [2026-04-23 +0800] ITER-029 回归基线 + 发布门禁：新增 `versions/v1.2.0-regression-baseline.md`，覆盖端侧 LLM、月报图表、异常消费检测、云闪付 / 银联解析、订阅管理增强、软删除持久化和 v1.1.0 继承路径；新增 `versions/v1.2.0-RELEASE(draft).md`，记录发布前检查、门禁判定、版本亮点、回滚方案和发布后观察指标；`README.md` 与 `AutoLedger/README.md` 同步更新最近删除跨会话恢复描述。ITER-028 当前暂无 TestFlight 反馈输入，未产生代码修复。
 - [2026-04-23 +0800] ITER-027 软删除持久化：`SQLiteTransactionStore` 新增 `deleted_at` 安全迁移，账单删除由物理 `DELETE` 改为 `UPDATE SET deleted_at`，常规加载统一过滤 `deleted_at IS NULL`；新增 `loadDeletedTransactions(limit:)`、`restoreTransaction(id:)` 与 `permanentlyDeleteTransaction(id:)`，支持最近删除跨会话保留、恢复与彻底删除；`LedgerStore` 启动和刷新时同步加载 SQLite 最近删除列表，恢复/彻底删除操作写回 SQLite；`DeletedTransactionsView` 更新文案说明跨会话恢复；离线回归新增软删除隐藏、最近删除重启保留、恢复与彻底删除断言。
