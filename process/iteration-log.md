@@ -44,6 +44,31 @@
 
 ## 日志条目
 
+### ITER-038~042 v1.3.1 语音记账实现
+- 日期：2026-04-26
+- 所属版本：v1.3.1
+- 所属阶段：Phase 0-5
+- 类型：能力增强 / 前端 / AppIntent / 测试 / 治理
+- 目标：按 `v1.3.1-plan.md` 实施语音记账 MVP，覆盖语音来源、规则解析、Siri 入口、App 内确认、本地化、回归基线与发布门禁。
+- 改动范围：
+  - `ReceiptSource.swift` / `ImportDebugRecord.swift`：新增 `voice` 来源和 `voiceIntent` 调试入口。
+  - `VoiceLedgerParser.swift`：新增语音短句规则解析、置信度与失败原因。
+  - `VoiceLedgerIntent.swift` / `QuickLedgerIntent.swift`：新增 Siri/AppIntent 入口并注册 AppShortcut。
+  - `LedgerStore.swift` / `LedgerView.swift` / `VoiceLedgerConfirmView.swift`：新增 App 内语音/文本确认入口与保存路径。
+  - `Localizable.strings`：补充中英文语音记账文案。
+  - `OfflineRegression.swift` / `run_offline_regression.sh`：新增语音解析离线回归。
+  - `versions/v1.3.1-plan.md`、`versions/v1.3.1-regression-baseline.md`、`versions/v1.3.1-RELEASE(draft).md`、`README.md`、`AutoLedger/README.md`、`CHANGELOG.md`：同步实现与门禁状态。
+- 未改动范围：不做收入、转账、报销、多金额拆分；不做自研录音转写或云端语音识别；不做多轮 Siri 对话确认。
+- 完成内容：v1.3.1 代码实现完成；语音规则解析、失败边界、Siri Intent metadata、App 内确认入口、语音来源展示和调试记录已接入；离线回归与 generic iOS 构建通过。
+- 未完成内容：真机 Siri 发现、Siri 参数输入、高置信后台直写、App 回前台刷新和 App 内确认交互仍待人工验证。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：AppShortcut 固定短语不能直接内嵌 `String` 参数，当前通过无参数短语触发并由 Siri/快捷指令收集 `content`；真机体验可能受 Shortcuts 索引和系统语言影响。
+- 回滚方式：移除 `VoiceLedgerIntent` 的 AppShortcut 注册；隐藏账本页 `waveform` 入口；保留已有 `source = voice` 交易作为普通交易继续显示和备份。
+- 结论：本轮代码完成，发布判定待真机 Siri 验证。
+- 下一步建议：安装到真机后验证 Siri 能发现语音记账、`午饭 28 元` 可高置信直写、失败句式不会保存，以及 App 内确认页可通过系统听写输入并保存。
+
 ### ITER-037 v1.3.1 语音记账 + Siri 版本规划
 - 日期：2026-04-26
 - 所属版本：v1.3.1

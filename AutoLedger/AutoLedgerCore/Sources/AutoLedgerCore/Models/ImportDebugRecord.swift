@@ -26,6 +26,7 @@ public enum ImageSource: String, CaseIterable, Identifiable, Sendable {
     case camera            // 相机拍照
     case shareExtension    // 分享导入
     case shortcutIntent    // 快捷指令
+    case voiceIntent       // 语音快捷指令 / 语音输入
     case clipboard         // 剪切板粘贴
     case unknown           // 未知 / 兼容旧数据
 
@@ -37,6 +38,7 @@ public enum ImageSource: String, CaseIterable, Identifiable, Sendable {
         case .camera:         return "相机拍照"
         case .shareExtension: return "分享导入"
         case .shortcutIntent: return "快捷指令"
+        case .voiceIntent:    return "语音记账"
         case .clipboard:      return "剪切板粘贴"
         case .unknown:        return "未知"
         }

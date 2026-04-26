@@ -25,6 +25,8 @@
 "source.douyin.short" = "抖音";
 "source.union_pay.title" = "云闪付";
 "source.union_pay.short" = "云闪付";
+"source.voice.title" = "语音";
+"source.voice.short" = "语音";
 "source.manual.title" = "手动录入";
 "source.manual.short" = "手动";
 
@@ -128,11 +130,11 @@
 "settings.feedback.title" = "问题反馈";
 "settings.feedback.subtitle" = "遇到问题？发送分级日志帮助我们快速定位";
 "settings.version.title" = "当前版本";
-"settings.version.body" = "v1.2.0-dev — Gemma-2 2B 端侧 LLM 集成（CDN 分发 + SHA-256 校验）、LLM + 规则混合解析、模型异步加载与自动卸载、订阅识别、快捷指令一键记账、Share Extension 分享导入。";
+"settings.version.body" = "v1.3.1-dev — 语音记账 MVP、Siri/AppIntent 入口、App 内确认页、数据备份恢复、Gemma-2 2B 端侧 LLM、快捷指令一键记账与 Share Extension 分享导入。";
 "settings.privacy.title" = "隐私策略";
 "settings.privacy.body" = "所有数据留在设备本地，不接入任何云端同步或第三方分析。OCR 与 LLM 推理均在本地完成。唯一网络请求：Gemma 模型版本检查与下载（CDN），不传输任何用户数据。";
 "settings.release_status.title" = "版本状态";
-"settings.release_status.body" = "端侧 LLM、月报分析、云闪付 / 银联基础适配、订阅管理增强、软删除持久化与回归门禁草稿已落地。接下来推进真机回归与发布判定。";
+"settings.release_status.body" = "语音记账、Siri Intent、App 内确认、数据备份恢复、端侧 LLM、月报分析、云闪付 / 银联适配、订阅管理增强与软删除持久化已落地。接下来推进真机 Siri 与 iCloud 回归。";
 
 "ai_model.title" = "AI 模型";
 "ai_model.info.title" = "端侧模型说明";
@@ -174,6 +176,25 @@
 "quick_ledger.persistence_failed" = "入账失败，请打开 App 确认";
 "quick_ledger.saved_format" = "已记好：%@ ¥%.2f";
 "quick_ledger.multi_receipt_warning" = "\n⚠️ 图片中可能有多笔账单，仅识别了一笔，建议单独截图";
+"voice_ledger.intent.title" = "语音记账";
+"voice_ledger.intent.description" = "用一句话记录一笔支出";
+"voice_ledger.intent.short_title" = "语音记账";
+"voice_ledger.content.title" = "记账内容";
+"voice_ledger.content.description" = "例如：午饭 28 元";
+"voice_ledger_title" = "语音记账";
+"voice_ledger_example" = "例如：午饭 28 元";
+"voice_ledger_input_placeholder" = "午饭 28 元";
+"voice_ledger_parse" = "解析";
+"voice_ledger_success" = "已记好：%@ ¥%.2f";
+"voice_ledger_unclear" = "这句话不够明确，请再说一遍，例如：午饭 28 元。";
+"voice_ledger_no_amount" = "没有识别到明确支出金额，请再说一遍。";
+"voice_ledger_multiple_amounts" = "检测到多个金额，请只说一笔支出。";
+"voice_ledger_income_not_supported" = "当前语音记账仅支持支出，请换一种说法重试。";
+"voice_ledger_review_required" = "识别结果可能不完整，请确认后保存。";
+"voice_ledger_ready_to_save" = "已解析完成，确认无误后保存。";
+"voice_ledger_duplicate" = "%@ ¥%.2f 已存在，未重复记录";
+"voice_ledger_note" = "语音记账";
+"voice_ledger_persistence_failed" = "语音记账保存失败";
 "receipt.multi_item_single_expense_notice" = "检测到多商品小票，当前版本将按总金额记录为一笔支出";
 "receipt.multi_item_total_missing" = "检测到多商品小票，但未能可靠识别总金额，请重新拍摄包含合计区域的小票";
 "home_quick_action.add_transaction.title" = "记账";

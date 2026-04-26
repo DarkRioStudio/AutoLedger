@@ -423,6 +423,92 @@ final class LedgerStore: ObservableObject {
         requestAutomaticBackup()
     }
 
+    /// 保存 App 内语音记账确认后的账单，并记录可追溯调试信息。
+    func addVoiceTransaction(
+        merchant: String,
+        amount: Double,
+        occurredAt: Date,
+        category: TransactionCategory,
+        rawText: String
+    ) {
+        let receipt = ImportedReceipt(
+            source: .voice,
+            merchant: merchant,
+            amount: amount,
+            occurredAt: occurredAt,
+            rawText: rawText,
+            summary: "语音记账：\(rawText)",
+            confidence: 0.95,
+            suggestedCategory: category
+        )
+
+        if hasDuplicate(receipt, rawText: rawText) {
+            let summary = String(
+                format: localizedMessage("voice_ledger_duplicate", fallback: "%@ ¥%.2f 已存在，未重复记录"),
+                merchant,
+                amount
+            )
+            lastImportSummary = summary
+            recordDebugEvent(
+                stage: .duplicateSkipped,
+                source: .voice,
+                imageSource: .voiceIntent,
+                rawText: rawText,
+                parsedReceipt: receipt,
+                summary: summary
+            )
+            return
+        }
+
+        let transaction = Transaction(
+            merchant: merchant,
+            amount: amount,
+            occurredAt: occurredAt,
+            category: category,
+            source: .voice,
+            note: localizedMessage("voice_ledger_note", fallback: "语音记账")
+        )
+
+        guard let store = transactionStore else {
+            transactions.insert(transaction, at: 0)
+            sortTransactions()
+            lastImportSummary = String(format: localizedMessage("voice_ledger_success", fallback: "已记好：%@ ¥%.2f"), merchant, amount)
+            reloadWidgets()
+            return
+        }
+
+        do {
+            try store.save(transaction: transaction)
+        } catch {
+            let summary = localizedMessage("voice_ledger_persistence_failed", fallback: "语音记账保存失败：") + error.localizedDescription
+            lastImportSummary = summary
+            recordDebugEvent(
+                stage: .persistenceFailed,
+                source: .voice,
+                imageSource: .voiceIntent,
+                rawText: rawText,
+                parsedReceipt: receipt,
+                summary: summary
+            )
+            return
+        }
+
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
+        lastImportSummary = String(format: localizedMessage("voice_ledger_success", fallback: "已记好：%@ ¥%.2f"), merchant, amount)
+        reloadWidgets()
+        requestAutomaticBackup()
+        recordDebugEvent(
+            stage: .persisted,
+            source: .voice,
+            imageSource: .voiceIntent,
+            rawText: rawText,
+            parsedReceipt: receipt,
+            summary: lastImportSummary ?? "",
+            transactionID: transaction.id
+        )
+    }
+
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
     private func loadShareExtensionResult() {
         guard let defaults = UserDefaults(suiteName: "group.top.darkrio326.AutoLedger") else { return }

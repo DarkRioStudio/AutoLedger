@@ -278,5 +278,16 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             shortTitle: "quick_ledger.clipboard.short_title",
             systemImageName: "doc.on.clipboard"
         )
+        AppShortcut(
+            intent: VoiceLedgerIntent(),
+            phrases: [
+                "用 \(.applicationName) 语音记账",
+                "用 \(.applicationName) 语音记一笔",
+                "\(.applicationName) 语音记账",
+                "Voice ledger with \(.applicationName)"
+            ],
+            shortTitle: "voice_ledger.intent.short_title",
+            systemImageName: "waveform"
+        )
     }
 }

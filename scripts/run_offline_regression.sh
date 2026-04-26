@@ -141,6 +141,7 @@ swiftc \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \
   "$CORE/Services/ReceiptParser.swift" \
+  "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \

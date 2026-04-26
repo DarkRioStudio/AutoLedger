@@ -13,6 +13,7 @@ struct LedgerView: View {
     @State private var filter: LedgerFilter = .all
     @State private var filterDate = Date()
     @State private var isAddingTransaction = false
+    @State private var isShowingVoiceLedger = false
     @State private var isShowingDeleted = false
 
     private var filteredTransactions: [Transaction] {
@@ -163,6 +164,15 @@ struct LedgerView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
+                        isShowingVoiceLedger = true
+                    } label: {
+                        Image(systemName: "waveform")
+                            .fontWeight(.semibold)
+                    }
+                    .accessibilityLabel(Text(String(localized: "voice_ledger_title")))
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
                         isAddingTransaction = true
                     } label: {
                         Image(systemName: "plus")
@@ -198,6 +208,9 @@ struct LedgerView: View {
                 ) { newTransaction in
                     store.addTransaction(newTransaction)
                 }
+            }
+            .sheet(isPresented: $isShowingVoiceLedger) {
+                VoiceLedgerConfirmView()
             }
             .sheet(isPresented: $isShowingDeleted) {
                 DeletedTransactionsView()

@@ -35,11 +35,41 @@ struct OfflineRegression {
         let sampleProvider = SampleReceiptProvider()
 
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
+        verifyVoiceLedgerParsing(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
 
         reporter.finish()
+    }
+
+    private static func verifyVoiceLedgerParsing(reporter: RegressionReporter) {
+        let fixedNow = AppFormatters.parseFlexibleDate("2026-04-26 12:00") ?? Date(timeIntervalSince1970: 0)
+        let parser = VoiceLedgerParser(now: { fixedNow })
+
+        let lunch = parser.parse("午饭 28")
+        reporter.check(lunch.confidence == .high, "VoiceLedgerParser marks simple lunch as high confidence")
+        reporter.check(lunch.merchant == "午饭", "VoiceLedgerParser extracts lunch merchant")
+        reporter.check(abs((lunch.amount ?? 0) - 28) < 0.001, "VoiceLedgerParser extracts lunch amount")
+        reporter.check(lunch.category == .dining, "VoiceLedgerParser infers dining category")
+
+        let taxi = parser.parse("昨天打车 23.8")
+        let expectedYesterday = AppFormatters.parseFlexibleDate("2026-04-25 12:00") ?? fixedNow
+        reporter.check(taxi.confidence == .high, "VoiceLedgerParser marks taxi as high confidence")
+        reporter.check(taxi.category == .transport, "VoiceLedgerParser infers transport category")
+        reporter.check(sameMinute(taxi.occurredAt, expectedYesterday), "VoiceLedgerParser resolves yesterday")
+
+        let multiAmount = parser.parse("今天花了 20 和 30")
+        reporter.check(multiAmount.confidence == .failed, "VoiceLedgerParser rejects multiple amounts")
+        reporter.check(multiAmount.failureReason == .multipleAmounts, "VoiceLedgerParser reports multiple amount reason")
+
+        let income = parser.parse("收到报销 200")
+        reporter.check(income.confidence == .failed, "VoiceLedgerParser rejects income/refund phrases")
+        reporter.check(income.failureReason == .unsupportedIncomeOrTransfer, "VoiceLedgerParser reports income/transfer reason")
+
+        let noAmount = parser.parse("午饭")
+        reporter.check(noAmount.confidence == .failed, "VoiceLedgerParser rejects text without amount")
+        reporter.check(noAmount.failureReason == .noAmount, "VoiceLedgerParser reports no amount reason")
     }
 
     private static func verifySampleParsing(
