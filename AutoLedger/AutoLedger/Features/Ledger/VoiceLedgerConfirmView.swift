@@ -5,6 +5,7 @@ struct VoiceLedgerConfirmView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
 
+    @StateObject private var speechRecognizer = VoiceSpeechRecognizer()
     @State private var inputText = ""
     @State private var merchant = ""
     @State private var amountText = ""
@@ -31,10 +32,25 @@ struct VoiceLedgerConfirmView: View {
                     TextField(String(localized: "voice_ledger_input_placeholder"), text: $inputText, axis: .vertical)
                         .lineLimit(2...4)
 
-                    Button {
-                        parseInput()
-                    } label: {
-                        Label(String(localized: "voice_ledger_parse"), systemImage: "waveform")
+                    HStack(spacing: 12) {
+                        Button {
+                            speechRecognizer.toggle()
+                        } label: {
+                            Label(
+                                speechRecognizer.isListening
+                                    ? String(localized: "voice_ledger_stop_recording")
+                                    : String(localized: "voice_ledger_start_recording"),
+                                systemImage: speechRecognizer.isListening ? "stop.circle.fill" : "mic.circle.fill"
+                            )
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button {
+                            parseInput()
+                        } label: {
+                            Label(String(localized: "voice_ledger_parse"), systemImage: "text.magnifyingglass")
+                        }
+                        .buttonStyle(.bordered)
                     }
                 } header: {
                     Text(String(localized: "voice_ledger_title"))
@@ -80,6 +96,17 @@ struct VoiceLedgerConfirmView: View {
                 if inputText.isEmpty {
                     message = String(localized: "voice_ledger_example")
                 }
+            }
+            .onChange(of: speechRecognizer.transcript) { _, newValue in
+                guard !newValue.isEmpty else { return }
+                inputText = newValue
+                parseInput()
+            }
+            .onChange(of: speechRecognizer.state) { _, newValue in
+                updateSpeechMessage(for: newValue)
+            }
+            .onDisappear {
+                speechRecognizer.stop()
             }
         }
     }
@@ -132,6 +159,21 @@ struct VoiceLedgerConfirmView: View {
             return String(localized: "voice_ledger_example")
         default:
             return String(localized: "voice_ledger_unclear")
+        }
+    }
+
+    private func updateSpeechMessage(for state: VoiceSpeechRecognizer.RecognitionState) {
+        switch state {
+        case .idle:
+            if inputText.isEmpty {
+                message = String(localized: "voice_ledger_example")
+            }
+        case .requestingPermission:
+            message = String(localized: "voice_ledger_requesting_permission")
+        case .listening:
+            message = String(localized: "voice_ledger_listening")
+        case .unavailable(let reason):
+            message = reason
         }
     }
 }

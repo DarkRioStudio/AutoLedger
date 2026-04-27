@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.3.1）
+- [2026-04-27 +0800] ITER-043 App 内麦克风语音输入：保留原有文本“一句话记账”，新增 `VoiceSpeechRecognizer`，使用 Speech + AVFoundation 在 `VoiceLedgerConfirmView` 内提供开始/停止语音按钮；识别结果自动写入文本框并复用 `VoiceLedgerParser` 解析，用户仍可确认和修改后保存；主 App Info.plist build settings 新增麦克风与语音识别权限文案；补充中英文语音输入状态、权限失败和不可用提示。
 - [2026-04-26 +0800] ITER-038~042 v1.3.1 语音记账实现：新增 `ReceiptSource.voice` 与 `ImageSource.voiceIntent`，语音交易可在账本、来源管理、调试记录和备份恢复链路中识别；新增 `VoiceLedgerParser`，支持金额、描述、今天/昨天/前天、基础分类推断和 high/needsReview/failed 置信度，拒绝无金额、多金额、收入、报销和转账语句；新增 `VoiceLedgerIntent` 和 Siri/AppShortcuts 语音入口，高置信语句后台直写 SQLite，复用去重、Widget 刷新、成功通知与 App 前台刷新；账本页新增 `waveform` 语音入口和 `VoiceLedgerConfirmView`，支持文本/系统听写后确认并修改商户、金额、分类、时间；补充中英文 `voice_ledger_*` 文案；离线回归新增语音解析断言；新增 `versions/v1.3.1-regression-baseline.md` 与 `versions/v1.3.1-RELEASE(draft).md`。
 - [2026-04-26 +0800] ITER-037 v1.3.1 语音记账 + Siri 版本规划：新增 `versions/v1.3.1-plan.md`，承接根目录 `autoledger_voice_siri_design.md` 与现有 AppIntent / SQLite / 备份恢复工程基础，将下一版本定位为"语音记账 MVP + Siri 快捷入口"；明确本版只做"一句话 → 一笔支出"，Siri 高置信度直接保存，中低置信度失败重试，App 内入口承担确认与修改；规划 `VoiceLedgerParser`、`VoiceLedgerIntent`、语音来源标记、调试记录、本地化、备份联动、回归基线与发布门禁，并明确本版不做语音聊天、收入/转账、云端语音识别或多轮 Siri 确认。
 
