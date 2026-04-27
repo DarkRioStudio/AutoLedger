@@ -184,6 +184,13 @@
 "voice_ledger_title" = "语音记账";
 "voice_ledger_example" = "例如：午饭 28 元";
 "voice_ledger_input_placeholder" = "午饭 28 元";
+"voice_ledger_start_recording" = "开始语音";
+"voice_ledger_stop_recording" = "停止";
+"voice_ledger_listening" = "正在听写，说完后可停止并确认。";
+"voice_ledger_requesting_permission" = "正在请求语音识别和麦克风权限。";
+"voice_ledger_speech_permission_denied" = "未获得语音识别权限，请在系统设置中允许 AutoLedger 使用语音识别。";
+"voice_ledger_microphone_permission_denied" = "未获得麦克风权限，请在系统设置中允许 AutoLedger 使用麦克风。";
+"voice_ledger_speech_unavailable" = "当前语音识别不可用，请稍后重试或直接输入文字。";
 "voice_ledger_parse" = "解析";
 "voice_ledger_success" = "已记好：%@ ¥%.2f";
 "voice_ledger_unclear" = "这句话不够明确，请再说一遍，例如：午饭 28 元。";

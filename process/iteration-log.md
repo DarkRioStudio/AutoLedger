@@ -44,6 +44,29 @@
 
 ## 日志条目
 
+### ITER-043 App 内麦克风语音输入
+- 日期：2026-04-27
+- 所属版本：v1.3.1
+- 所属阶段：Phase 3-4
+- 类型：能力增强 / 前端 / 权限 / 测试
+- 目标：在保留文本“一句话记账”的基础上，为 App 内语音记账补充真正的麦克风语音输入。
+- 改动范围：
+  - `VoiceSpeechRecognizer.swift`：新增 Speech + AVFoundation 语音识别服务，处理语音识别权限、麦克风权限、开始/停止听写、部分识别结果回传。
+  - `VoiceLedgerConfirmView.swift`：新增开始/停止语音按钮，识别结果自动写入文本框并复用 `VoiceLedgerParser` 解析，保留手动输入和手动解析按钮。
+  - `AutoLedger.xcodeproj/project.pbxproj`：主 App build settings 新增 `NSMicrophoneUsageDescription` 与 `NSSpeechRecognitionUsageDescription`。
+  - `Localizable.strings`：补充中英文语音输入状态、权限失败和不可用文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`：同步本轮记录。
+- 未改动范围：不改变 Siri `VoiceLedgerIntent`；不存储录音文件；不引入云端语音识别；不移除文本一句话记账。
+- 完成内容：App 内入口现在支持点击麦克风开始听写，转写文本自动进入原有解析/确认/保存流程。
+- 未完成内容：真机麦克风权限弹窗、语音识别可用性、中文听写准确度仍需人工验证。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：Speech 识别可用性受系统语言、网络/系统服务状态和权限影响；权限被拒绝时用户仍可使用文本一句话记账。
+- 回滚方式：移除 `VoiceSpeechRecognizer` 和 `VoiceLedgerConfirmView` 中的语音按钮；保留文本输入与 Siri 入口不受影响。
+- 结论：代码已实现，代码门禁通过，真机语音输入确认待执行。
+- 下一步建议：在真机上首次点击语音按钮，确认麦克风/语音识别权限文案、开始/停止状态、识别文本自动解析和保存链路。
+
 ### ITER-038~042 v1.3.1 语音记账实现
 - 日期：2026-04-26
 - 所属版本：v1.3.1

@@ -184,6 +184,13 @@
 "voice_ledger_title" = "Voice Ledger";
 "voice_ledger_example" = "For example: lunch 28";
 "voice_ledger_input_placeholder" = "Lunch 28";
+"voice_ledger_start_recording" = "Start Voice";
+"voice_ledger_stop_recording" = "Stop";
+"voice_ledger_listening" = "Listening. Stop when finished, then review.";
+"voice_ledger_requesting_permission" = "Requesting speech recognition and microphone permissions.";
+"voice_ledger_speech_permission_denied" = "Speech recognition permission was not granted. Allow AutoLedger to use Speech Recognition in Settings.";
+"voice_ledger_microphone_permission_denied" = "Microphone permission was not granted. Allow AutoLedger to use the microphone in Settings.";
+"voice_ledger_speech_unavailable" = "Speech recognition is unavailable. Try again later or enter text directly.";
 "voice_ledger_parse" = "Parse";
 "voice_ledger_success" = "Saved: %@ ¥%.2f";
 "voice_ledger_unclear" = "This phrase is not clear enough. Please try again, for example: lunch 28.";
