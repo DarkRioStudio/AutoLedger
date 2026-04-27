@@ -19,6 +19,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
+    private var startToken: UUID?
 
     var isListening: Bool {
         if case .listening = state { return true }
@@ -35,21 +36,26 @@ final class VoiceSpeechRecognizer: ObservableObject {
 
     func start() {
         guard !isListening else { return }
+        let token = UUID()
+        startToken = token
         state = .requestingPermission
 
         Task {
             let speechAllowed = await requestSpeechAuthorization()
+            guard startToken == token else { return }
             guard speechAllowed else {
                 state = .unavailable(String(localized: "voice_ledger_speech_permission_denied"))
                 return
             }
 
             let microphoneAllowed = await requestMicrophoneAuthorization()
+            guard startToken == token else { return }
             guard microphoneAllowed else {
                 state = .unavailable(String(localized: "voice_ledger_microphone_permission_denied"))
                 return
             }
 
+            guard startToken == token else { return }
             do {
                 try startRecognition()
             } catch {
@@ -59,19 +65,30 @@ final class VoiceSpeechRecognizer: ObservableObject {
     }
 
     func stop() {
+        stopRecognition(cancelTask: false)
+    }
+
+    func cancel() {
+        stopRecognition(cancelTask: true)
+    }
+
+    private func stopRecognition(cancelTask: Bool) {
+        startToken = nil
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        recognitionTask = nil
+        if cancelTask {
+            recognitionTask?.cancel()
+            recognitionTask = nil
+        }
         recognitionRequest = nil
-        if isListening {
+        if isListening || state == .requestingPermission {
             state = .idle
         }
     }
 
     private func startRecognition() throws {
-        stop()
+        stopRecognition(cancelTask: true)
 
         guard let recognizer, recognizer.isAvailable else {
             state = .unavailable(String(localized: "voice_ledger_speech_unavailable"))
@@ -97,6 +114,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
         audioEngine.prepare()
         try audioEngine.start()
         state = .listening
+        startToken = nil
 
         recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
@@ -104,12 +122,14 @@ final class VoiceSpeechRecognizer: ObservableObject {
                 if let result {
                     self.transcript = result.bestTranscription.formattedString
                     if result.isFinal {
-                        self.stop()
+                        self.recognitionTask = nil
+                        self.recognitionRequest = nil
+                        self.state = .idle
                     }
                 }
                 if let error {
                     self.state = .unavailable(error.localizedDescription)
-                    self.stop()
+                    self.cancel()
                 }
             }
         }

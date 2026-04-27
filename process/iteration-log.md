@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-04-26
+更新日期：2026-04-27
 
 ## 记录规则
 
@@ -43,6 +43,51 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-045 一句话记账交互收敛
+- 日期：2026-04-27
+- 所属版本：v1.3.1
+- 所属阶段：Phase 3-4
+- 类型：能力增强 / 前端 / 交互 / 测试
+- 目标：收敛语音与文本入口边界，让首页只有圆形麦克风按钮响应长按，账本页改为纯文本“一句话记账”实时解析。
+- 改动范围：
+  - `VoiceLedgerQuickEntryView.swift`：长按识别手势从整块方框收窄到圆形麦克风按钮。
+  - `VoiceLedgerConfirmView.swift`：移除页内麦克风按钮和手动解析按钮；输入框内容变化时实时调用 `VoiceLedgerParser`，同步商户、金额、分类、时间和提示文案。
+  - `Localizable.strings`：账本页标题改为“一句话记账” / `One-Line Ledger`。
+  - README、v1.3.1 计划、回归基线、发布草稿、CHANGELOG：同步当前入口分工。
+- 未改动范围：未改变首页语音识别服务；未改变 Siri `VoiceLedgerIntent`；未改变语音交易保存、去重、备份和调试记录路径。
+- 完成内容：首页长按只响应圆形按钮；账本页成为纯文本一句话入口，用户输入后下方账本字段实时生成，保存时继续复用 `LedgerStore.addVoiceTransaction`。
+- 未完成内容：真机仍需确认圆形按钮命中区是否符合手感，输入实时解析是否足够顺滑。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：实时解析会在用户输入未完成时展示失败/待确认提示，文案需保持温和，避免让用户误以为已保存失败。
+- 回滚方式：恢复 `VoiceLedgerConfirmView` 的手动解析按钮；或把 `VoiceLedgerQuickEntryView` 的手势重新挂到更大的容器。
+- 结论：交互收敛完成，构建通过。
+- 下一步建议：真机验证首页圆形按钮长按、账本页输入 `午饭 28 元` 时字段实时生成并可保存。
+
+### ITER-044 首页按住语音快捷记账
+- 日期：2026-04-27
+- 所属版本：v1.3.1
+- 所属阶段：Phase 3-4
+- 类型：能力增强 / 前端 / 交互 / 测试
+- 目标：把 App 内语音记账从账本页入口前移到首页，支持打开 App 后按住录音、松手识别，并在高置信场景自动保存。
+- 改动范围：
+  - `VoiceLedgerQuickEntryView.swift`：新增首页快捷入口，支持按住输入、松手识别、高置信自动保存、低置信展示识别结果与保存按钮。
+  - `InboxView.swift`：首页 hero 下方新增语音快捷记账入口。
+  - `VoiceSpeechRecognizer.swift`：停止录音时结束音频输入，不直接取消识别任务，降低松手后最终转写丢失风险；新增 `cancel()` 用于页面退出清理。
+  - `VoiceLedgerConfirmView.swift`：将原“开始语音”按钮调整为“输入”，重做图标和按钮视觉，避免图标色与背景接近。
+  - `Localizable.strings`：补充中英文按住录音、松手识别、处理中、空结果、自动保存提示。
+- 未改动范围：未实现 Apple Watch 独立端；未存储音频文件；未放开收入、转账、报销或多金额语句自动保存。
+- 完成内容：首页已提供长按录音快捷路径；账本页保留文本一句话记账，输入时实时解析并生成下方账本字段；语音识别、解析、保存仍复用同一套服务与 `LedgerStore.addVoiceTransaction`。
+- 未完成内容：真机仍需验证长按手感、松手后的最终转写、自动保存与低置信保存按钮。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`bash scripts/run_offline_regression.sh`
+- 风险与注意事项：Speech 最终转写回调可能受系统状态影响；当前用短延迟等待松手后的最终结果，真机体验需继续观察。
+- 回滚方式：从 `InboxView` 移除 `VoiceLedgerQuickEntryView`，保留账本页 `VoiceLedgerConfirmView` 入口；或恢复 `VoiceSpeechRecognizer.stop()` 为立即取消。
+- 结论：代码门禁通过，首页语音快捷入口已落地。
+- 下一步建议：真机验证首页首次权限、按住录音、松手识别、高置信自动保存、低置信手动保存，并评估 Apple Watch 端复用同一解析/保存接口。
 
 ### ITER-043 App 内麦克风语音输入
 - 日期：2026-04-27

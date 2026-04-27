@@ -166,7 +166,7 @@ struct LedgerView: View {
                     Button {
                         isShowingVoiceLedger = true
                     } label: {
-                        Image(systemName: "waveform")
+                        Image(systemName: "square.and.pencil")
                             .fontWeight(.semibold)
                     }
                     .accessibilityLabel(Text(String(localized: "voice_ledger_title")))
