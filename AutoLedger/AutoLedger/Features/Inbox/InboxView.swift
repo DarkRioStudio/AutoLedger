@@ -45,6 +45,8 @@ struct InboxView: View {
 
                     liveImportCard
 
+                    VoiceLedgerQuickEntryView()
+
                     if let summary = store.lastImportSummary {
                         statusBanner(summary)
                     }
