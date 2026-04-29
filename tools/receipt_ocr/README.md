@@ -1,6 +1,6 @@
 # Receipt OCR Batch Tools
 
-Local-only tools for v1.3.3 receipt sample regression.
+Local-only tools for receipt sample regression.
 
 ## Batch OCR
 
@@ -22,3 +22,28 @@ bash scripts/run_receipt_batch_regression.sh \
 ```
 
 The parser uses `LedgerTextInterpreterCore`, including the `nonBillImage` relevance gate.
+
+## Batch Report
+
+Generate a Markdown summary report from parse results:
+
+```bash
+swift tools/receipt_ocr/batch_report.swift \
+  .tmp/receipt_ocr/scanned_receipts.parse.jsonl \
+  .tmp/receipt_ocr/scanned_receipts.report.md
+```
+
+Report metrics:
+- Total samples, amount hit rate, merchant non-empty rate
+- Confidence distribution (high/medium/low)
+- Non-bill images intercepted count
+- Category distribution
+- Warning frequency
+- Top amount failures (missing or zero)
+- Suspicious amounts (>10k or <0.5)
+
+## Golden Regression
+
+```bash
+bash scripts/run_golden_regression.sh
+```

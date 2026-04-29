@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+### 新增（v1.3.5）
+- [2026-04-29 +0800] ITER-059~064 v1.3.5 Worker API 评估 + 核心引擎批量验证：Track A — 提取 `AutoLedgerCoreKit` 纯 Foundation 独立 SwiftPM 包（7 文件），在 macOS 上独立编译通过；评估 Cloudflare Workers (swiftwasm)、Vapor + Docker、SwiftPM CLI、JS port 四个候选运行时；输出 `tools/worker/EVALUATION.md`，结论 CONDITIONAL GO（当前使用 SwiftPM CLI，待 swiftwasm Foundation 完善后重新评估），性能基准 712 样本 7.5s 完成。Track B — receiptsample 全量基线报告（712 样本）：金额命中率 100%、商户非空率 100%、高置信率 100%；分类映射从 7 组扩增到 28 组（shopping 60/groceries 27/dining 7/transport 2），非 other 分类从 14 提升到 96 条（6.6x）；修复注册号误作金额 P0、页眉/页脚商户 P0、TOTAL 跨行金额、CHANGE/CASH 误提取、商品代码行 61558/14960/20202 误作金额、全角括号注册号等故障模式；新增 5 条 Golden Case，总数 31→36 条。`bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`xcodebuild` 全部通过。
+
+### 新增（v1.3.4）
+- [2026-04-29 +0800] ITER-052~058 v1.3.4 规则解析质量提升：`LedgerTextInterpreterCore` 金额提取重写为合计行优先策略，支持中文/英文/马来文 TOTAL 关键词行优先提取金额，新增 `RM` 货币前缀识别（`rmAmountRegex`）；新增公司注册号/税号行排除（`lineLooksLikeRegistrationNumber`），修复公司注册号（如 `860671-D`）被误作金额的 P0 问题。商户提取重写为非商户黑名单过滤 + 注册号/单据类型行排除，新增 `tan woon yann`/`Cash Sale`/`TAX INVOICE` 等黑名单，修复 OCR 页眉/页脚被当作商户的 P0 问题；新增 `merchantMissing` warning。分类推断新增内置商户→分类映射表（MR D.I.Y.→shopping、McDonald's→dining 等），结合 `TransactionCategory.infer` 行业关键词。新增 `tools/receipt_ocr/batch_report.swift` Markdown 报告生成工具；`scripts/run_receipt_batch_regression.sh` 支持可选报告输出。Golden Case 从 25 条扩展到 31 条，新增 6 条 core 引擎用例覆盖 RM 小票、注册号排除、TOTAL 行优先、商户黑名单、分类映射。
+
 ### 新增（v1.3.3）
 - [2026-04-27 +0800] ITER-051 Sample Golden Case 扩展：`tools/receipt_ocr/golden_regression.swift` 新增 `engine` 与 `sampleTitle` 支持，可直接引用 `SampleReceiptProvider` 内置样本；`scripts/run_golden_regression.sh` 纳入 `SampleReceiptProvider`、`ReceiptParser` 与格式化依赖；`tests/golden/ledger_text_interpreter/cases.jsonl` 新增全部 20 个现有 Sample 样本，断言金额、商户、分类和来源，使现有样本解析行为进入 Golden 回归门禁。
 - [2026-04-27 +0800] ITER-050 Golden Case 回归门禁：新增 `tests/golden/ledger_text_interpreter/cases.jsonl` 与 README，首批覆盖语音短句、支付宝支付文本、英文小票、非账单文本和空 OCR；新增 `tools/receipt_ocr/golden_regression.swift` 与 `scripts/run_golden_regression.sh`，按字段断言 `draftExists`、金额、商户、分类、置信度、needsReview 和 warning，失败时输出 case id 与字段级 diff；英文超市关键词 `fairprice` / `walmart` / `supermarket` 归入 groceries，保证英文纸质小票 Golden Case 不回退。

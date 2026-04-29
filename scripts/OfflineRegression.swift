@@ -124,6 +124,122 @@ struct OfflineRegression {
             abs((noisyAmountInterpretation.draft?.amount ?? 0) - 23.80) < 0.001,
             "LedgerTextInterpreterCore ignores OCR list/quantity numbers before amount"
         )
+
+        // Phase 1: Amount extraction - RM receipts with registration numbers
+        let rmReceiptRegNumber = """
+        MR D.I.Y. (JOHOR) SDN BHD
+        (CO.REG:860671-D)
+        LOT 1851-A, JALAN KPB 6
+        KAWASAN PERINDUSTRIAN BALAKONG
+        CHOPPING BOARD 35.5×25.5CM 1 X 19.00
+        AIR PRESSURE SPRAYER 1.5L 1 X 8.02
+        BOPP TAPE 48MM*100M CLEAR 1 X 3.88
+        Item(s): 4
+        TOTAL RM 30.90
+        CASH RM 50.00
+        CHANGE RM 19.10
+        """
+        let rmResult = interpreter.interpret(
+            InterpretInput(rawText: rmReceiptRegNumber, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            abs((rmResult.draft?.amount ?? 0) - 30.90) < 0.01,
+            "LedgerTextInterpreterCore extracts TOTAL RM 30.90 from MR DIY receipt, not registration number 860671 (got \(rmResult.draft?.amount ?? -1))"
+        )
+        reporter.check(
+            rmResult.draft?.merchant == "MR D.I.Y. (JOHOR) SDN BHD",
+            "LedgerTextInterpreterCore extracts merchant from MR DIY receipt (got '\(rmResult.draft?.merchant ?? "")')"
+        )
+
+        // Phase 1: Amount extraction - TOTAL line priority
+        let multiItemTotal = """
+        NTUC FAIRPRICE
+        FRESH MILK 2.00
+        BREAD 3.20
+        TOTAL £8.08
+        """
+        let multiTotalResult = interpreter.interpret(
+            InterpretInput(rawText: multiItemTotal, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            abs((multiTotalResult.draft?.amount ?? 0) - 8.08) < 0.01,
+            "LedgerTextInterpreterCore extracts TOTAL line amount £8.08, not item prices (got \(multiTotalResult.draft?.amount ?? -1))"
+        )
+
+        // Phase 1: Amount extraction - Jumlah (Malay) total keyword
+        let malayReceipt = """
+        PERNIAGAAN ZHENG HUI
+        NO.59 JALAN PERMAS 9/5
+        BANDAR BARU PERMAS JAYA
+        GST NO: 000800589824
+        Silicone Gun G-D2 1 X 16.00
+        XTRASEAL RIVACETIC 3 X 7.00
+        Total Qty: 9
+        Total (RM): 112.45
+        CASH: 112.45
+        """
+        let malayResult = interpreter.interpret(
+            InterpretInput(rawText: malayReceipt, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            abs((malayResult.draft?.amount ?? 0) - 112.45) < 0.01,
+            "LedgerTextInterpreterCore extracts Total (RM): 112.45 with RM prefix (got \(malayResult.draft?.amount ?? -1))"
+        )
+
+        // Phase 2: Merchant extraction excludes blacklisted headers
+        let blacklistHeader = """
+        tan woon yann
+        INDAH GIFT & HOME DECO
+        27, JALAN DEDAP 13
+        TAMAN JOHOR JAYA
+        81100 JOHOR BAHRU, JOHOR
+        ST-PRIVILEGE CARD/SD INDAH 1 X 10.00
+        GF-TABLE LAMP/STITCH 1 X 55.90
+        TOTAL AMT. RM 60.30
+        CASH RM 70.00
+        CHANGE RM 9.70
+        """
+        let blacklistResult = interpreter.interpret(
+            InterpretInput(rawText: blacklistHeader, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            blacklistResult.draft?.merchant == "INDAH GIFT & HOME DECO",
+            "LedgerTextInterpreterCore picks INDAH GIFT as merchant, not 'tan woon yann' header (got '\(blacklistResult.draft?.merchant ?? "")')"
+        )
+
+        // Phase 2: Merchant extraction excludes INVOICE/RECEIPT headers
+        let invoiceHeader = """
+        TAX INVOICE
+        SOON HUAT MACHINERY ENTERPRISE
+        NO.53 JALAN PUTRA 1
+        TAMAN SRI PUTRA
+        81200 JOHOR BAHRU
+        REPAIR ENGINE 1 X 80.00
+        ENGINE OIL 1 X 17.00
+        Total Sales: RM 327.00
+        """
+        let invoiceResult = interpreter.interpret(
+            InterpretInput(rawText: invoiceHeader, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            invoiceResult.draft?.merchant == "SOON HUAT MACHINERY ENTERPRISE",
+            "LedgerTextInterpreterCore picks SOON HUAT as merchant, not 'TAX INVOICE' header (got '\(invoiceResult.draft?.merchant ?? "")')"
+        )
+
+        // Phase 3: Category inference for known merchants
+        let merchantCategoryText = """
+        McDonald's BHP Taman Melawati
+        2 ChicMcMuffin 11.00
+        1 M Porridge 5.60
+        TOTAL 26.60
+        """
+        let mcDResult = interpreter.interpret(
+            InterpretInput(rawText: merchantCategoryText, sourceType: .ocr, hints: LedgerInterpretHints(sourceHint: .receipt))
+        )
+        reporter.check(
+            mcDResult.draft?.category == "dining",
+            "LedgerTextInterpreterCore infers dining category for McDonald's receipt (got '\(mcDResult.draft?.category ?? "")')"
+        )
     }
 
     private static func verifySubscriptionDetection(reporter: RegressionReporter) {
