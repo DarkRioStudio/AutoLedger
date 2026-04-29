@@ -9,6 +9,18 @@
 
 ## [Unreleased]
 
+### 新增（v1.3.3）
+- [2026-04-27 +0800] ITER-051 Sample Golden Case 扩展：`tools/receipt_ocr/golden_regression.swift` 新增 `engine` 与 `sampleTitle` 支持，可直接引用 `SampleReceiptProvider` 内置样本；`scripts/run_golden_regression.sh` 纳入 `SampleReceiptProvider`、`ReceiptParser` 与格式化依赖；`tests/golden/ledger_text_interpreter/cases.jsonl` 新增全部 20 个现有 Sample 样本，断言金额、商户、分类和来源，使现有样本解析行为进入 Golden 回归门禁。
+- [2026-04-27 +0800] ITER-050 Golden Case 回归门禁：新增 `tests/golden/ledger_text_interpreter/cases.jsonl` 与 README，首批覆盖语音短句、支付宝支付文本、英文小票、非账单文本和空 OCR；新增 `tools/receipt_ocr/golden_regression.swift` 与 `scripts/run_golden_regression.sh`，按字段断言 `draftExists`、金额、商户、分类、置信度、needsReview 和 warning，失败时输出 case id 与字段级 diff；英文超市关键词 `fairprice` / `walmart` / `supermarket` 归入 groceries，保证英文纸质小票 Golden Case 不回退。
+- [2026-04-27 +0800] ITER-049 v1.3.3 首轮实现：新增 `LedgerInterpretationModels`、`BillRelevanceGate` 与 `LedgerTextInterpreterCore`，提供 `InterpretInput` / `InterpretResult` / `TransactionDraft`、`nonBillImage` / `emptyOCRText` 等 warning，并支持语音短句与简单账单文本生成草稿；App 层 `LedgerTextInterpreter` 接入核心 gate，OCR 文本缺少账单信号时直接返回非账单结果，`LedgerStore` 提示“图片没有有效的账单信息，请换一张支付截图或小票照片。”并写入调试记录；新增中英文 `receipt.non_bill_image` 文案；新增 `tools/receipt_ocr/batch_ocr.swift`、`tools/receipt_ocr/batch_parse.swift`、`scripts/run_receipt_batch_regression.sh` 与工具 README，支持本地小票图片 OCR JSONL 与批量解析 smoke；离线回归新增核心 gate / nonBillImage 断言。
+- [2026-04-27 +0800] ITER-048 v1.3.3 平台无关解释器核心与批量小票测试规划：新增 `versions/v1.3.3-plan.md`，承接根目录 `LedgerTextInterpreter.md` 与 v1.3.2 当前工程状态，将下一版本定位为“平台无关 `LedgerTextInterpreter` 核心 + 小票图片集批量 OCR/批量测试”；规划 `InterpretInput`、`InterpretResult`、`TransactionDraft`、`LedgerTextInterpreterCore`、App adapter、OCR 后账单相关性判断 `BillRelevanceGate`、非账单图片 `nonBillImage` warning、用户提示“图片没有有效的账单信息”、`receiptsample/` 本地图片 OCR JSONL、Golden Case JSONL、批量解析报告和字段级 diff 门禁；明确本版不提交原始测试图片、不上线 Worker API、不默认启用 LLM 批量测试。
+
+### 新增（v1.3.2）
+- [2026-04-27 +0800] ITER-047 统一文本转账单解析入口：新增 `LedgerTextInterpreter`，把 OCR 文本、订阅邮件文本、语音转文本、Siri 语音文本和账本页一句话输入收敛为统一的“文本 -> 结构化结果”解释层；`LedgerStore.importRecognizedText` 改为调用解释器处理订阅、普通账单、多商品总金额缺失和解析失败；新增 `LedgerStore.createTransaction(from:)` 作为结构化账单入库入口，语音/一句话保存也复用该入口，继续保留去重、商户别名、分类学习、调试记录、Widget 刷新和自动备份链路；新增 `versions/v1.3.2-plan.md` 并扩展离线回归覆盖解释器编译与商户别名场景。
+
+### 新增（App Store v1.2.0 补丁）
+- [2026-04-27 +0800] ITER-046 商户别名自动学习与历史账单回刷：用户编辑高置信自动入账账单时，若将较长商户名改为较短简称，自动学习 `原商户名 -> 简称` 的商户别名；商户别名新增或更新后会扫描当前账本，把完全匹配原商户名的历史账单同步更新为别名，并写回 SQLite、刷新 Widget 和触发自动备份；设置页商户别名新增/删除改为统一走 `LedgerStore` 方法；离线回归新增别名回刷和高置信编辑自动学习断言。
+
 ### 新增（v1.3.1）
 - [2026-04-27 +0800] ITER-045 一句话记账交互收敛：`VoiceLedgerQuickEntryView` 的长按识别命中区收窄到圆形麦克风按钮，避免整张卡片误触；账本页 `VoiceLedgerConfirmView` 改为“一句话记账”，去掉输入/解析按钮和页内麦克风控制，用户输入文本时实时解析并填充商户、金额、分类和时间，继续复用 `VoiceLedgerParser` + `LedgerStore.addVoiceTransaction` 的文本转账本链路。
 - [2026-04-27 +0800] ITER-044 首页按住语音快捷记账：新增 `VoiceLedgerQuickEntryView`，首页打开后可按住麦克风录音、松手停止并解析；高置信结果自动保存，需复核结果展示识别文本、商户、金额和分类并提供保存按钮；`VoiceSpeechRecognizer` 停止逻辑改为结束音频而非直接取消任务，减少松手丢失最后转写的风险；账本页语音按钮文案从“开始语音”调整为“输入”，重做按钮图标对比度和中英文状态文案；该快捷入口复用 `VoiceSpeechRecognizer` + `VoiceLedgerParser` + `LedgerStore.addVoiceTransaction`，为后续 Apple Watch 端长按录音入口保留服务层复用路径。

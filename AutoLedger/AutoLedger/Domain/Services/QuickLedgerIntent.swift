@@ -152,12 +152,12 @@ struct QuickLedgerIntent: AppIntent {
 
         // OCR 文本 Jaccard 相似度去重
         let isOCRDuplicate: Bool = {
-            guard !text.isEmpty else { return false }
-            let recentTexts = ((try? store.loadDebugEvents()) ?? [])
-                .filter { $0.stage == .persisted }
-                .prefix(30)
-                .map(\.rawText)
-            return recentTexts.contains { !$0.isEmpty && TextSimilarity.jaccard(text, $0) > 0.8 }
+            ImportDuplicateDetector.hasOCRTextDuplicate(
+                rawText: text,
+                debugRecords: (try? store.loadDebugEvents()) ?? [],
+                activeTransactionIDs: Set(existing.map(\.id)),
+                threshold: 0.8
+            )
         }()
 
         if isDuplicate || isOCRDuplicate {

@@ -16,8 +16,7 @@ struct VoiceLedgerQuickEntryView: View {
     @State private var isPressing = false
     @State private var didAutoSave = false
     @State private var finishTask: Task<Void, Never>?
-
-    private let parser = VoiceLedgerParser()
+    @State private var parseTask: Task<Void, Never>?
 
     private var amount: Double? {
         Double(amountText.replacingOccurrences(of: ",", with: "."))
@@ -66,6 +65,7 @@ struct VoiceLedgerQuickEntryView: View {
         }
         .onDisappear {
             finishTask?.cancel()
+            parseTask?.cancel()
             speechRecognizer.cancel()
         }
     }
@@ -180,17 +180,27 @@ struct VoiceLedgerQuickEntryView: View {
         finishTask?.cancel()
         finishTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 700_000_000)
-            parseInput()
-            if shouldAutoSave {
+            parseInput(autoSaveWhenReady: true)
+        }
+    }
+
+    private func parseInput(autoSaveWhenReady: Bool = false) {
+        parseTask?.cancel()
+        let currentText = inputText
+        parseTask = Task { @MainActor in
+            let parsed = await store.interpretVoiceText(currentText)
+            guard !Task.isCancelled, currentText == inputText else { return }
+            applyParsedResult(parsed)
+
+            if autoSaveWhenReady, shouldAutoSave {
                 save()
-            } else if inputText.isEmpty {
+            } else if autoSaveWhenReady, inputText.isEmpty {
                 message = String(localized: "voice_ledger_empty_result")
             }
         }
     }
 
-    private func parseInput() {
-        let parsed = parser.parse(inputText, corrections: store.categoryCorrections)
+    private func applyParsedResult(_ parsed: VoiceLedgerParseResult) {
         result = parsed
 
         if !parsed.merchant.isEmpty {

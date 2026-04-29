@@ -12,8 +12,7 @@ struct VoiceLedgerConfirmView: View {
     @State private var occurredAt = Date()
     @State private var result: VoiceLedgerParseResult?
     @State private var message = String(localized: "voice_ledger_example")
-
-    private let parser = VoiceLedgerParser()
+    @State private var parseTask: Task<Void, Never>?
 
     private var amount: Double? {
         Double(amountText.replacingOccurrences(of: ",", with: "."))
@@ -78,10 +77,15 @@ struct VoiceLedgerConfirmView: View {
             .onChange(of: inputText) { _, _ in
                 parseInput()
             }
+            .onDisappear {
+                parseTask?.cancel()
+            }
         }
     }
 
     private func parseInput() {
+        parseTask?.cancel()
+
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             result = nil
             merchant = ""
@@ -92,7 +96,15 @@ struct VoiceLedgerConfirmView: View {
             return
         }
 
-        let parsed = parser.parse(inputText, corrections: store.categoryCorrections)
+        let currentText = inputText
+        parseTask = Task { @MainActor in
+            let parsed = await store.interpretVoiceText(currentText)
+            guard !Task.isCancelled, currentText == inputText else { return }
+            applyParsedResult(parsed)
+        }
+    }
+
+    private func applyParsedResult(_ parsed: VoiceLedgerParseResult) {
         result = parsed
 
         merchant = parsed.merchant

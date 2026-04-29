@@ -44,6 +44,144 @@
 
 ## 日志条目
 
+### ITER-051 Sample Golden Case 扩展
+- 日期：2026-04-27
+- 所属版本：v1.3.3
+- 所属阶段：Phase 6-7
+- 类型：测试 / 工具 / 解析质量
+- 目标：把当前 `SampleReceiptProvider` 中所有既有样本纳入 Golden Case，防止后续文本转账单规则调整时破坏现有样本解析。
+- 改动范围：
+  - `tools/receipt_ocr/golden_regression.swift`：新增 `engine`、`sampleTitle`、`receiptSource` 支持，保留 `core` 引擎并新增 `receiptParser` 引擎。
+  - `scripts/run_golden_regression.sh`：纳入 `SampleReceipt`、`SampleReceiptProvider`、`ReceiptParser` 和 `AppFormatters` 编译依赖。
+  - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增 20 条内置 Sample 样本 Golden Case。
+  - `tests/golden/ledger_text_interpreter/README.md`：补充 `engine`、`sampleTitle` 与 `receiptSource` 字段说明。
+- 未改动范围：未提交原始截图；未把大批量 `receiptsample/` OCR 结果直接固化为 Golden Case；未调整解析规则本身。
+- 完成内容：Golden runner 现在可直接按 `sampleTitle` 从 `SampleReceiptProvider` 读取文本与来源，并断言金额、商户、分类和来源；现有 Golden Case 总数从 5 条扩展到 25 条。
+- 未完成内容：仍需后续从真实小票批量 OCR 结果中挑选脱敏样本，补充复杂纸质小票和失败样本。
+- 测试情况：
+  - PASS：`bash scripts/run_golden_regression.sh`，25 case(s)
+- 风险与注意事项：Sample Golden 先锁定当前成熟 `ReceiptParser` 行为，平台无关 `LedgerTextInterpreterCore` 仍只覆盖首批核心用例；后续迁移核心解释器时应逐步把 Sample 用例切换到 core 引擎。
+- 回滚方式：移除 `cases.jsonl` 中 `sample_*` 用例，并将 Golden runner 恢复为只调用 `LedgerTextInterpreterCore`。
+- 结论：现有 Sample 样本已全部进入 Golden 回归门禁。
+- 下一步建议：把 `scripts/run_golden_regression.sh` 接入常规离线回归或 CI，并在修复小票 total 误识别时先补 Golden Case。
+
+### ITER-050 Golden Case 回归门禁
+- 日期：2026-04-27
+- 所属版本：v1.3.3
+- 所属阶段：Phase 6-7
+- 类型：测试 / 工具 / 解析质量
+- 目标：建立文本转账单规则的 Golden Case 回归脚本，每次调整 `LedgerTextInterpreterCore` 后可跑字段级断言，防止已有识别回退。
+- 改动范围：
+  - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增首批 5 条 Golden Case。
+  - `tests/golden/ledger_text_interpreter/README.md`：说明 JSONL 格式和运行方式。
+  - `tools/receipt_ocr/golden_regression.swift`：新增 Golden Case runner，断言草稿存在性、金额、商户、分类、置信度、needsReview 和 warnings。
+  - `scripts/run_golden_regression.sh`：新增一键编译并运行 Golden 回归脚本。
+  - `LedgerTextInterpreterCore.swift`：补充基础标签提取，优先识别 `金额/Total` 行与 `商户：xxx`。
+  - `TransactionCategory.swift`：补充 `fairprice`、`walmart`、`supermarket` 到 groceries。
+- 未改动范围：未提交真实图片；未引入大规模 Golden Case；未把 Golden 回归接入 CI。
+- 完成内容：Golden Case 回归可独立运行，失败时输出 case id 和字段级差异；首批样本覆盖语音、支付文本、英文小票、非账单文本和空 OCR。
+- 未完成内容：还需要从 `receiptsample` 批量 OCR 结果中挑选、脱敏并沉淀更多公共样本；Markdown 报告仍未实现。
+- 测试情况：
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`bash scripts/run_receipt_batch_regression.sh .tmp/receipt_ocr/scanned_receipts.first10.ocr.jsonl .tmp/receipt_ocr/scanned_receipts.first10.parse.jsonl`
+- 风险与注意事项：Golden Case 应表达期望行为，不应盲目固化明显错误的解析结果；当前 first10 样本仍暴露出部分收据金额误取编号的问题，应通过新增期望样本推动规则修复。
+- 回滚方式：移除 Golden 脚本与 `tests/golden` 目录，不影响 App 主流程；分类关键词可单独回滚。
+- 结论：文本转账单规则已有最小 Golden 回归门禁。
+- 下一步建议：从批量 OCR 前 10 个失败/可疑样本中挑 3-5 个脱敏后加入 Golden Case，并修复小票 total 金额抽取。
+
+### ITER-049 v1.3.3 首轮实现：核心解释器、账单相关性 gate、批量工具骨架
+- 日期：2026-04-27
+- 所属版本：v1.3.3
+- 所属阶段：Phase 1-7
+- 类型：重构 / 能力增强 / 测试 / 工具
+- 目标：按 v1.3.3 计划落地首轮平台无关解释器核心、OCR 后非账单图片判断、App 提示和本地批量 OCR/解析工具骨架。
+- 改动范围：
+  - `AutoLedgerCore/Models/LedgerInterpretationModels.swift`：新增 `InterpretInput`、`InterpretResult`、`TransactionDraft`、`LedgerInputSourceType`、`InterpretWarning` 等核心模型。
+  - `AutoLedgerCore/Services/BillRelevanceGate.swift`：新增账单相关性判断，低账单信号文本返回 `nonBillImage`。
+  - `AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：新增核心解释器，支持非账单拦截、语音短句草稿、简单账单草稿。
+  - `LedgerTextInterpreter.swift`、`LedgerStore.swift`：App 解释器接入 core gate，非账单图片不进入 Smart parser，提示用户图片没有有效账单信息并记录 debug。
+  - `Localizable.strings`：新增中英文 `receipt.non_bill_image`。
+  - `tools/receipt_ocr/`、`scripts/run_receipt_batch_regression.sh`：新增本地批量 OCR JSONL 与批量解析 smoke 工具。
+  - `OfflineRegression.swift`、`run_offline_regression.sh`：新增 core/gate/nonBillImage 回归断言，并纳入离线编译。
+- 未改动范围：未提交 `receiptsample/` 原始图片；未提交 Golden Case 样本库；未上线 Worker API；未将 `SmartReceiptParser` 迁入平台无关核心；未改变 SQLite schema。
+- 完成内容：App OCR 文本已具备非账单拦截；核心解释器可独立跑基础解释；批量解析脚本可读取 OCR JSONL 并输出 parse JSONL。
+- 未完成内容：Golden Case JSONL 和 Markdown 汇总报告仍需后续补齐；当前核心账单草稿提取为基础规则，复杂 OCR 仍由 App adapter 继续使用 `SmartReceiptParser`。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_receipt_batch_regression.sh <smoke-ocr-jsonl> /tmp/receipt-parse.jsonl`
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：账单相关性 gate 目前保守放行支付/小票信号，避免误拦截弱格式小票；`ReceiptSource.manual` 在 OCR 导入里代表未知来源，因此仍映射到 OCR/payment 路径，只有 `.voice` 走短句分支。
+- 回滚方式：在 `LedgerTextInterpreter` 中移除 core gate 调用，恢复所有 OCR 文本直接进入 v1.3.2 的 Smart parser；工具文件可独立删除，不影响 App 主流程。
+- 结论：v1.3.3 首轮实现已落地，代码门禁通过。
+- 下一步建议：新增 Golden Case JSONL 和 Markdown 报告生成，拿 `receiptsample/scanned_receipts/data` 前 20 张跑一次基线。
+
+### ITER-048 v1.3.3 平台无关解释器核心与批量小票测试规划
+- 日期：2026-04-27
+- 所属版本：v1.3.3
+- 所属阶段：Phase 0
+- 类型：文档 / 架构规划 / 测试规划
+- 目标：基于根目录 `LedgerTextInterpreter.md` 与 v1.3.2 工程现状，规划下一版本将解释器抽象为平台无关核心，并建立小票图片集批量 OCR、OCR 后账单相关性判断与批量解析回归。
+- 改动范围：
+  - `versions/v1.3.3-plan.md`：新增版本定位、目标架构、核心类型草案、批量 OCR 工具、Golden Case 设计、阶段拆分、验收标准、风险与回滚。
+  - `CHANGELOG.md`、`process/iteration-log.md`：同步规划记录。
+- 未改动范围：本轮只做规划，不实现 `LedgerTextInterpreterCore`、批量 OCR CLI、Golden Case runner 或 App adapter 接入。
+- 完成内容：明确 v1.3.3 的三条主线：一是抽象 `InterpretInput` / `InterpretResult` / `TransactionDraft` / `LedgerTextInterpreterCore`，二是在 OCR 后增加 `BillRelevanceGate`，对无关图片输出 `nonBillImage` 并提示用户“图片没有有效的账单信息”，三是基于本地 `receiptsample/` 建立 OCR JSONL、解析 JSONL、Markdown 报告和字段级 diff 的批量测试链路。
+- 未完成内容：尚未冻结最终 Swift API；尚未决定新建独立 `AutoLedgerInterpreterCore` target 还是先在 `AutoLedgerCore` 中目录隔离。
+- 测试情况：
+  - PASS：`git diff --check`
+- 风险与注意事项：`AutoLedgerCore` 当前仍含 Vision 依赖，若要严格平台无关，应优先考虑拆出更小的纯 Swift target；`receiptsample/` 已被 Git ignore，原始图片不得提交。
+- 回滚方式：删除 `versions/v1.3.3-plan.md`，并移除 CHANGELOG / iteration-log 中的 ITER-048 记录即可，不影响代码。
+- 结论：v1.3.3 版本规划已形成，可进入接口冻结和工具链实现。
+- 下一步建议：先落 `TransactionDraft` 与 `InterpretResult` 的最小可编译模型，再做前 20 张小票的 OCR JSONL smoke test。
+
+### ITER-047 统一文本转账单解析入口
+- 日期：2026-04-27
+- 所属版本：v1.3.2
+- 所属阶段：Phase 0-4
+- 类型：重构 / 能力增强 / 测试 / 文档
+- 目标：把 OCR、语音转文本和一句话输入之后的账单结构化流程收敛到统一文本解释入口，再由统一新建账单入口写入账本。
+- 改动范围：
+  - `versions/v1.3.2-plan.md`：新增版本计划、架构边界、阶段拆分、验收标准和回滚方式。
+  - `LedgerTextInterpreter.swift`：新增统一解释器，输出订阅、普通账单、多商品总金额缺失、语音短句结果和解析失败。
+  - `LedgerStore.swift`：`importRecognizedText` 改为调用统一解释器；新增 `interpretVoiceText` 和 `createTransaction(from:)`；语音/一句话保存复用结构化账单入库链路。
+  - `VoiceLedgerQuickEntryView.swift`、`VoiceLedgerConfirmView.swift`、`VoiceLedgerIntent.swift`：语音快捷入口、账本页一句话入口和 Siri 语音入口改为通过统一解释器的 `.voice` 分支生成账单草稿。
+  - `OfflineRegression.swift`、`run_offline_regression.sh`：离线编译纳入新解释器，并保留 OCR、语音、备份、商户别名回归断言。
+- 未改动范围：不重写 OCR、语音识别或短句解析规则；不合并 `VoiceLedgerParser` 与小票解析器；不做多账单拆分、收入、转账、报销或 SQLite schema 变更。
+- 完成内容：图片 OCR/剪切板/分享/订阅邮件/语音/一句话输入/Siri 语音文本均进入统一文本解释层；App 内结构化账单统一通过 `createTransaction(from:)` 进入入库、去重、调试和备份链路。
+- 未完成内容：Siri `VoiceLedgerIntent` 的保存仍是 AppIntent 内的轻量直写路径，后续可抽出 AppIntent 可复用的非 UI 入库适配器。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：语音短句接入统一解释器后，UI 解析变为异步任务，需要真机确认连续输入和长按松手自动保存的手感。
+- 回滚方式：让语音 UI 恢复直接调用 `VoiceLedgerParser`，并将 `LedgerStore.importRecognizedText` 恢复为原内联解析逻辑。
+- 结论：v1.3.2 统一文本转账单架构已落地，代码门禁通过。
+- 下一步建议：真机点验 OCR 导入、一句话输入实时解析、首页长按语音自动保存和重复导入提示。
+
+### ITER-046 商户别名自动学习与历史账单回刷
+- 日期：2026-04-27
+- 所属版本：App Store v1.2.0 补丁
+- 所属阶段：商户规范化增强
+- 类型：能力增强 / 持久化 / 测试
+- 目标：用户把高置信自动入账账单的长商户名改为简称时，自动学习商户别名，并把已有账单中完全匹配的长商户名统一刷新为别名。
+- 改动范围：
+  - `LedgerStore.swift`：新增 `setMerchantAlias`、`deleteMerchantAliases`、`applyMerchantAliasesToExistingTransactions` 和高置信编辑自动学习逻辑；商户别名保存后回刷当前账单并写回 SQLite。
+  - `MerchantAliasView.swift`：新增/删除商户别名改为调用 `LedgerStore` 方法，确保设置页变更也触发历史账单刷新。
+  - `OfflineRegression.swift`：新增手动别名刷新历史账单、编辑高置信账单自动学习别名的断言。
+  - `CHANGELOG.md`、`process/iteration-log.md`：同步本轮记录。
+- 未改动范围：不做模糊匹配；不回滚删除别名后的历史账单名称；不修改分类学习规则。
+- 完成内容：别名新增/更新会把所有完全匹配原商户名的当前账单更新为别名；用户编辑高置信自动入账账单并将商户改短名时，会自动记录别名规则。
+- 未完成内容：真机 UI 仍需点验设置页新增别名后的刷新提示和账本列表展示。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：当前只做完全匹配，避免把相似但不同的商户误合并；删除别名不会自动恢复历史账单原名。
+- 回滚方式：移除 `updateTransaction` 中的自动学习调用，并让设置页恢复直接修改 `merchantAliases` 后保存。
+- 结论：商户别名自动学习与历史账单回刷已实现，代码门禁通过。
+- 下一步建议：在真机上导入一笔高置信账单，将商户名改短，确认设置页出现别名且历史同名账单被刷新。
+
 ### ITER-045 一句话记账交互收敛
 - 日期：2026-04-27
 - 所属版本：v1.3.1

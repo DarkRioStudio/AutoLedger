@@ -5,6 +5,7 @@ let package = Package(
     name: "AutoLedgerCore",
     platforms: [
         .iOS(.v18),
+        .macOS(.v14),
         .watchOS(.v11),
     ],
     products: [

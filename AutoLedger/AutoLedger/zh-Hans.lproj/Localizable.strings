@@ -213,6 +213,7 @@
 "voice_ledger_persistence_failed" = "语音记账保存失败";
 "receipt.multi_item_single_expense_notice" = "检测到多商品小票，当前版本将按总金额记录为一笔支出";
 "receipt.multi_item_total_missing" = "检测到多商品小票，但未能可靠识别总金额，请重新拍摄包含合计区域的小票";
+"receipt.non_bill_image" = "图片没有有效的账单信息，请换一张支付截图或小票照片。";
 "home_quick_action.add_transaction.title" = "记账";
 "home_quick_action.add_transaction.subtitle" = "打开账本并新建一笔";
 

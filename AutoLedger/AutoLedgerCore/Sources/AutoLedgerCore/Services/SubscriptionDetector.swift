@@ -39,7 +39,7 @@ public struct SubscriptionDetector: Sendable {
     /// 扫描历史账单，返回检测到的周期性订阅列表。
     /// 同商户需至少 2 笔记录，且间隔变异系数 < 20%、金额波动 < 5%。
     public func detectFromHistory(_ transactions: [Transaction]) -> [Subscription] {
-        let grouped = Dictionary(grouping: transactions) { $0.merchant }
+        let grouped = Dictionary(grouping: transactions.filter(isDigitalServiceCandidate)) { $0.merchant }
         return grouped.compactMap { merchant, txs -> Subscription? in
             guard txs.count >= 2 else { return nil }
             let sorted = txs.sorted { $0.occurredAt < $1.occurredAt }
@@ -174,6 +174,28 @@ public struct SubscriptionDetector: Sendable {
     }
 
     // MARK: - Private: Periodic Pattern Detection
+
+    private func isDigitalServiceCandidate(_ transaction: Transaction) -> Bool {
+        switch transaction.categoryEnum {
+        case .dining, .transport, .groceries:
+            return false
+        case .digital:
+            return true
+        case .shopping, .utilities, .entertainment, .other:
+            return hasDigitalServiceSignal(transaction)
+        }
+    }
+
+    private func hasDigitalServiceSignal(_ transaction: Transaction) -> Bool {
+        let text = "\(transaction.merchant)\n\(transaction.note)\n\(transaction.source)".lowercased()
+        let positiveKeywords = [
+            "apple", "app store", "icloud", "spotify", "netflix", "youtube", "premium",
+            "disney", "chatgpt", "openai", "microsoft", "office 365", "notion",
+            "订阅", "自动续费", "自动续期", "会员", "云服务", "网盘", "视频会员",
+            "腾讯视频", "爱奇艺", "优酷", "哔哩哔哩", "bilibili",
+        ]
+        return positiveKeywords.contains { text.contains($0) }
+    }
 
     private func detectPeriodic(merchant: String, transactions: [Transaction]) -> Subscription? {
         let dates = transactions.map { $0.occurredAt }

@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "container:../ReceiptDebugTool/ReceiptDebugTool.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:AutoLedger.xcodeproj">
    </FileRef>
    <FileRef
