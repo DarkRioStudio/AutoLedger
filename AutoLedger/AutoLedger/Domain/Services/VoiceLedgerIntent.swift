@@ -29,7 +29,21 @@ struct VoiceLedgerIntent: AppIntent {
         }
 
         let corrections = (try? store.loadCategoryCorrections()) ?? [:]
-        let result = VoiceLedgerParser().parse(normalizedText, corrections: corrections)
+        let interpretation = await LedgerTextInterpreter().interpret(
+            LedgerTextInterpretationInput(
+                text: normalizedText,
+                preferredSource: .voice,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil,
+                categoryCorrections: corrections
+            )
+        )
+        let result: VoiceLedgerParseResult
+        if case .voice(let parsed, _, _) = interpretation {
+            result = parsed
+        } else {
+            result = VoiceLedgerParser().parse(normalizedText, corrections: corrections)
+        }
 
         guard result.confidence == .high,
               result.failureReason == nil,
@@ -46,10 +60,13 @@ struct VoiceLedgerIntent: AppIntent {
             abs($0.amount - amount) < 0.01 &&
             abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 60
         }
-        let isTextDuplicate = ((try? store.loadDebugEvents()) ?? [])
-            .filter { $0.stage == .persisted && $0.imageSource == .voiceIntent }
-            .prefix(30)
-            .contains { !$0.rawText.isEmpty && TextSimilarity.jaccard(normalizedText, $0.rawText) > 0.95 }
+        let isTextDuplicate = ImportDuplicateDetector.hasOCRTextDuplicate(
+            rawText: normalizedText,
+            debugRecords: (try? store.loadDebugEvents()) ?? [],
+            activeTransactionIDs: Set(existing.map(\.id)),
+            imageSource: .voiceIntent,
+            threshold: 0.95
+        )
 
         if isDuplicate || isTextDuplicate {
             let message = String(

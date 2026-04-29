@@ -213,6 +213,7 @@
 "voice_ledger_persistence_failed" = "Failed to save the voice ledger entry";
 "receipt.multi_item_single_expense_notice" = "Multi-item receipt detected. The current version will record the total amount as a single expense.";
 "receipt.multi_item_total_missing" = "Multi-item receipt detected, but the total amount could not be reliably recognized. Please retake the receipt including the total section.";
+"receipt.non_bill_image" = "No valid bill information was found in this image. Please try a payment screenshot or receipt photo.";
 "home_quick_action.add_transaction.title" = "Add Expense";
 "home_quick_action.add_transaction.subtitle" = "Open Ledger and create a new entry";
 

@@ -36,6 +36,8 @@ struct OfflineRegression {
 
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
+        verifyLedgerTextInterpreterCore(reporter: reporter)
+        verifySubscriptionDetection(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -70,6 +72,124 @@ struct OfflineRegression {
         let noAmount = parser.parse("午饭")
         reporter.check(noAmount.confidence == .failed, "VoiceLedgerParser rejects text without amount")
         reporter.check(noAmount.failureReason == .noAmount, "VoiceLedgerParser reports no amount reason")
+    }
+
+    private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
+        let gate = BillRelevanceGate()
+        let billText = """
+        支付宝
+        交易成功
+        商户：测试咖啡
+        金额：￥12.50
+        """
+        let billResult = gate.evaluate(billText, sourceHint: .payment)
+        reporter.check(billResult.isRelevant, "BillRelevanceGate accepts payment-like OCR text")
+
+        let nonBillText = """
+        今天风很大
+        记得下班后买牛奶
+        """
+        let nonBillResult = gate.evaluate(nonBillText)
+        reporter.check(!nonBillResult.isRelevant, "BillRelevanceGate rejects unrelated text")
+
+        let interpreter = LedgerTextInterpreterCore()
+        let nonBillInterpretation = interpreter.interpret(
+            InterpretInput(rawText: nonBillText, sourceType: .ocr)
+        )
+        reporter.check(nonBillInterpretation.draft == nil, "LedgerTextInterpreterCore does not draft non-bill image text")
+        reporter.check(nonBillInterpretation.warnings.contains(.nonBillImage), "LedgerTextInterpreterCore reports nonBillImage")
+
+        let voiceInterpretation = interpreter.interpret(
+            InterpretInput(rawText: "午饭 28 元", sourceType: .voice)
+        )
+        reporter.check(voiceInterpretation.draft?.merchant == "午饭", "LedgerTextInterpreterCore drafts voice merchant")
+        reporter.check(abs((voiceInterpretation.draft?.amount ?? 0) - 28) < 0.001, "LedgerTextInterpreterCore drafts voice amount")
+
+        let noisyAmountText = """
+        支付宝
+        交易成功
+        1
+        数量 1
+        商户：测试咖啡
+        支付金额：23.80
+        """
+        let noisyAmountInterpretation = interpreter.interpret(
+            InterpretInput(
+                rawText: noisyAmountText,
+                sourceType: .ocr,
+                hints: LedgerInterpretHints(sourceHint: .payment)
+            )
+        )
+        reporter.check(
+            abs((noisyAmountInterpretation.draft?.amount ?? 0) - 23.80) < 0.001,
+            "LedgerTextInterpreterCore ignores OCR list/quantity numbers before amount"
+        )
+    }
+
+    private static func verifySubscriptionDetection(reporter: RegressionReporter) {
+        let detector = SubscriptionDetector()
+        let base = AppFormatters.parseFlexibleDate("2026-01-05 09:00") ?? .now
+        let calendar = Calendar(identifier: .gregorian)
+
+        func date(monthOffset: Int) -> Date {
+            calendar.date(byAdding: .month, value: monthOffset, to: base) ?? base
+        }
+
+        let transactions = [
+            Transaction(
+                merchant: "Apple Services",
+                amount: 28,
+                occurredAt: date(monthOffset: 0),
+                category: .digital,
+                source: .appStore,
+                note: "订阅"
+            ),
+            Transaction(
+                merchant: "Apple Services",
+                amount: 28,
+                occurredAt: date(monthOffset: 1),
+                category: .digital,
+                source: .appStore,
+                note: "订阅"
+            ),
+            Transaction(
+                merchant: "麦当劳",
+                amount: 19.9,
+                occurredAt: date(monthOffset: 0),
+                category: .dining,
+                source: .alipay,
+                note: "午餐"
+            ),
+            Transaction(
+                merchant: "麦当劳",
+                amount: 19.9,
+                occurredAt: date(monthOffset: 1),
+                category: .dining,
+                source: .alipay,
+                note: "午餐"
+            ),
+            Transaction(
+                merchant: "地铁：ExampleStationA → ExampleStationB",
+                amount: 2.7,
+                occurredAt: date(monthOffset: 0),
+                category: .transport,
+                source: .manual,
+                note: "地铁"
+            ),
+            Transaction(
+                merchant: "地铁：ExampleStationA → ExampleStationB",
+                amount: 2.7,
+                occurredAt: date(monthOffset: 1),
+                category: .transport,
+                source: .manual,
+                note: "地铁"
+            )
+        ]
+
+        let detected = detector.detectFromHistory(transactions)
+        reporter.check(detected.contains { $0.merchant == "Apple Services" }, "SubscriptionDetector scans digital service subscriptions")
+        reporter.check(!detected.contains { $0.merchant == "麦当劳" }, "SubscriptionDetector excludes dining transactions")
+        reporter.check(!detected.contains { $0.merchant.contains("地铁") }, "SubscriptionDetector excludes transport transactions")
     }
 
     private static func verifySampleParsing(
@@ -290,6 +410,7 @@ struct OfflineRegression {
         }
 
         let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
+        UserDefaults.standard.removeObject(forKey: "merchantAliases")
         let ledger = LedgerStore(transactionStore: store)
 
         let initialCount = ledger.transactions.count
@@ -308,6 +429,9 @@ struct OfflineRegression {
         try await Task.sleep(nanoseconds: 200_000_000)  // 等待 Task 完成
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore imports unique OCR text")
 
+        ledger.setMerchantAlias(original: "离线回归咖啡", alias: "回归咖啡")
+        reporter.check(ledger.transactions.first?.merchant == "回归咖啡", "Merchant alias refreshes existing transactions")
+
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips duplicate OCR text")
@@ -325,6 +449,76 @@ struct OfflineRegression {
         try await Task.sleep(nanoseconds: 200_000_000)
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
 
+        do {
+            let legacyStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "legacy-debug.sqlite3")
+            let legacyLedger = LedgerStore(transactionStore: legacyStore)
+            legacyLedger.importRecognizedText(rawText, preferredSource: .alipay)
+            try await Task.sleep(nanoseconds: 200_000_000)
+            if let importedCoffee = legacyLedger.transactions.first(where: { abs($0.amount - 12.50) < 0.01 }) {
+                try legacyStore.saveDebugEvent(
+                    ImportDebugRecord(
+                        stage: .persisted,
+                        source: .alipay,
+                        rawText: similarText,
+                        parsedReceipt: nil,
+                        summary: "legacy persisted debug event without transaction id"
+                    )
+                )
+                legacyLedger.deleteTransaction(importedCoffee)
+                legacyLedger.permanentlyDeleteTransaction(importedCoffee)
+
+                reporter.check(
+                    !ImportDuplicateDetector.hasOCRTextDuplicate(
+                        rawText: rawText,
+                        debugRecords: (try? legacyStore.loadDebugEvents()) ?? [],
+                        activeTransactionIDs: [],
+                        threshold: 0.8
+                    ),
+                    "ImportDuplicateDetector ignores deleted and legacy debug text"
+                )
+
+                let reloadedLedger = LedgerStore(transactionStore: legacyStore)
+                reloadedLedger.importRecognizedText(rawText, preferredSource: .alipay)
+                try await Task.sleep(nanoseconds: 200_000_000)
+                reporter.check(
+                    reloadedLedger.transactions.count == 1,
+                    "LedgerStore reimports after permanent delete despite legacy debug text"
+                )
+            } else {
+                reporter.check(false, "LedgerStore finds imported coffee transaction for delete/reimport regression")
+            }
+        }
+
+        let aliasLearningText = """
+        支付宝
+        交易成功
+        商户：杭州测试餐饮管理有限公司
+        金额：￥18.80
+        时间：2026/03/28 12:15
+        备注：商户别名学习
+        """
+        ledger.importRecognizedText(aliasLearningText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        let importedForAlias = ledger.transactions.first { $0.merchant == "杭州测试餐饮管理有限公司" }
+        reporter.check(importedForAlias != nil, "LedgerStore imports full merchant before alias learning")
+        if let importedForAlias {
+            ledger.updateTransaction(
+                Transaction(
+                    id: importedForAlias.id,
+                    merchant: "测试餐饮",
+                    amount: importedForAlias.amount,
+                    occurredAt: importedForAlias.occurredAt,
+                    categoryLabel: importedForAlias.category,
+                    sourceLabel: importedForAlias.source,
+                    note: importedForAlias.note
+                )
+            )
+            reporter.check(
+                ledger.merchantAliases["杭州测试餐饮管理有限公司"] == "测试餐饮",
+                "LedgerStore learns merchant alias from high-confidence edit"
+            )
+        }
+
         let multiItemNoTotalText = """
         WALMART
         450 MARKET ST
@@ -336,7 +530,7 @@ struct OfflineRegression {
         """
         ledger.importRecognizedText(multiItemNoTotalText, preferredSource: .manual)
         try await Task.sleep(nanoseconds: 200_000_000)
-        reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore does not persist multi-item receipt without reliable total")
+        reporter.check(ledger.transactions.count == initialCount + 2, "LedgerStore does not persist multi-item receipt without reliable total")
         reporter.check(
             ledger.lastImportSummary?.contains("总金额") == true || ledger.lastImportSummary?.contains("total amount") == true,
             "LedgerStore reports multi-item receipt total-missing guidance"
@@ -352,7 +546,7 @@ struct OfflineRegression {
 
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
-        reporter.check(reloadedTransactions.count == initialCount + 1, "SQLite store reload keeps imported transaction")
+        reporter.check(reloadedTransactions.count == initialCount + 2, "SQLite store reload keeps imported transactions")
     }
 
     private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {

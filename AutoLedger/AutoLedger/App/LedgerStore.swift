@@ -32,6 +32,7 @@ final class LedgerStore: ObservableObject {
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
     private let subscriptionDetector = SubscriptionDetector()
+    private let textInterpreter = LedgerTextInterpreter()
     private let transactionStore: TransactionStore?
     private var lastPasteboardChangeCount: Int
     private var pendingBackupTask: Task<Void, Never>?
@@ -73,12 +74,36 @@ final class LedgerStore: ObservableObject {
 
     func saveMerchantAliases() {
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        let updatedCount = applyMerchantAliasesToExistingTransactions()
+        if updatedCount > 0 {
+            lastImportSummary = "已更新商户别名，并刷新 \(updatedCount) 笔历史账单。"
+        }
         requestAutomaticBackup()
     }
 
     /// 如果商户名命中别名映射则返回别名，否则原样返回
     func resolveMerchant(_ merchant: String) -> String {
         merchantAliases[merchant] ?? merchant
+    }
+
+    func setMerchantAlias(original: String, alias: String) {
+        let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAlias = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedOriginal.isEmpty,
+              !trimmedAlias.isEmpty,
+              trimmedOriginal != trimmedAlias else {
+            return
+        }
+
+        merchantAliases[trimmedOriginal] = trimmedAlias
+        saveMerchantAliases()
+    }
+
+    func deleteMerchantAliases(for originals: [String]) {
+        for original in originals {
+            merchantAliases.removeValue(forKey: original)
+        }
+        saveMerchantAliases()
     }
 
     func importSample(_ sample: SampleReceipt) {
@@ -111,57 +136,46 @@ final class LedgerStore: ObservableObject {
         let normalizedText = text
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let source = preferredSource ?? ReceiptSource.infer(from: normalizedText)
         let resolvedNotePrefix = notePrefix ?? localizedMessage("note.photo_import", fallback: "支付截图照片导入")
 
         lastRecognizedText = normalizedText
         lastParsedReceipt = nil
 
-        // 尝试智能解析（异步）
         Task { @MainActor in
-            // 高置信订阅续期邮件检测（优先于普通交易解析）
-            if let subscription = subscriptionDetector.detectFromText(normalizedText) {
+            let interpretation = await textInterpreter.interpret(
+                LedgerTextInterpretationInput(
+                    text: normalizedText,
+                    preferredSource: preferredSource,
+                    fallbackMerchant: fallbackMerchant,
+                    ocrMinConfidence: ocrMinConfidence
+                )
+            )
+
+            switch interpretation {
+            case .voice:
+                lastImportSummary = localizedMessage("voice_ledger_unclear", fallback: "还没听清这笔账，请补充商户和金额。")
+
+            case .nonBillImage(let normalizedText, let source, let debugTrace):
+                let summary = localizedMessage(
+                    "receipt.non_bill_image",
+                    fallback: "图片没有有效的账单信息，请换一张支付截图或小票照片。"
+                )
+                logger.warning("[解析] OCR 文本缺少有效账单信号：\(debugTrace.joined(separator: " | "))")
+                lastImportSummary = summary
+                recordDebugEvent(
+                    stage: .parseFailed,
+                    source: source,
+                    imageSource: imageSource,
+                    rawText: normalizedText,
+                    parsedReceipt: nil,
+                    summary: debugTrace.isEmpty ? summary : "\(summary)\n调试：\(debugTrace.joined(separator: " | "))"
+                )
+
+            case .subscription(let subscription, _, _):
                 upsertSubscription(subscription)
                 lastImportSummary = "已识别为订阅：\(subscription.merchant) \(AppFormatters.currency(subscription.amount))/\(subscription.period.title)"
-                return
-            }
 
-            // OCR 文本预清洗（去噪 + 缩短 token）
-            let cleanedText = OCRTextCleaner.clean(normalizedText)
-
-            // 多账单检测：在解析前检查是否疑似包含多笔交易
-            let multiReceiptDetected = self.parser.detectMultipleReceipts(text: cleanedText)
-            if multiReceiptDetected {
-                logger.info("[解析] 检测到疑似多笔账单")
-            }
-            let receiptDiagnostics = self.parser.receiptDiagnostics(text: cleanedText)
-            if let receiptDiagnostics {
-                logger.info("[小票] \(receiptDiagnostics.debugSummary)")
-            }
-
-            let selectedProvider = LLMProvider.userSelected
-            let enhancementOn = LLMProvider.isEnhancementEnabled
-            logger.info("[解析] 使用模型: \(selectedProvider.displayName), 增强: \(enhancementOn ? "开" : "关")")
-
-            let result: SmartReceiptParser.SmartResult?
-            if enhancementOn {
-                result = await smartParser.parse(
-                    text: cleanedText,
-                    source: source,
-                    fallbackMerchant: fallbackMerchant,
-                    ocrMinConfidence: ocrMinConfidence,
-                    provider: selectedProvider
-                )
-            } else {
-                // 模型增强关闭 → 纯规则解析
-                if let ruleReceipt = smartParser.parseWithRules(text: cleanedText, source: source, fallbackMerchant: fallbackMerchant) {
-                    result = SmartReceiptParser.SmartResult(receipt: ruleReceipt, llmTrace: nil, usedRuleFallback: true)
-                } else {
-                    result = nil
-                }
-            }
-
-            guard let result else {
+            case .parseFailed(let normalizedText, let source):
                 let summary = "OCR 已完成，但还没解析出可入账字段。"
                 logger.warning("[解析] 智能解析失败，无可入账字段")
                 lastImportSummary = summary
@@ -173,17 +187,16 @@ final class LedgerStore: ObservableObject {
                     parsedReceipt: nil,
                     summary: summary
                 )
-                return
-            }
 
-            if let diagnostics = result.receipt.parseDiagnostics,
-               diagnostics.isMultiItemReceipt,
-               !diagnostics.totalMatched {
+            case .multiItemTotalMissing(let result, let normalizedText, let source):
+                let diagnostics = result.receipt.parseDiagnostics
+                let diagnosticSummary = diagnostics?.debugSummary ?? ""
+
                 let summary = localizedMessage(
                     "receipt.multi_item_total_missing",
                     fallback: "检测到多商品小票，但未能可靠识别总金额，请重新拍摄包含合计区域的小票"
                 )
-                logger.warning("[小票] 多商品小票未可靠命中 total，不自动入账。\(diagnostics.debugSummary)")
+                logger.warning("[小票] 多商品小票未可靠命中 total，不自动入账。\(diagnosticSummary)")
                 lastParsedReceipt = result.receipt
                 lastImportSummary = summary
                 recordDebugEvent(
@@ -192,7 +205,7 @@ final class LedgerStore: ObservableObject {
                     imageSource: imageSource,
                     rawText: normalizedText,
                     parsedReceipt: result.receipt,
-                    summary: "\(summary)\n调试：\(diagnostics.debugSummary)",
+                    summary: diagnosticSummary.isEmpty ? summary : "\(summary)\n调试：\(diagnosticSummary)",
                     llmPrompt: result.llmTrace?.prompt,
                     llmResponse: result.llmTrace?.response,
                     llmProvider: result.llmTrace?.provider.rawValue,
@@ -200,46 +213,54 @@ final class LedgerStore: ObservableObject {
                     llmConfidence: result.receipt.confidence,
                     usedRuleFallback: result.usedRuleFallback
                 )
-                return
-            }
 
-            lastParsedReceipt = result.receipt
-            let providerName = result.llmTrace?.provider.displayName ?? "规则"
-            let latency = result.llmTrace?.latencyMs ?? 0
-            logger.info("[解析] 模型=\(providerName) 耗时=\(latency)ms 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) 规则兜底=\(result.usedRuleFallback ? "是" : "否")")
-            persistReceipt(
-                result.receipt,
-                rawText: normalizedText,
-                notePrefix: resolvedNotePrefix,
-                imageSource: imageSource,
-                llmTrace: result.llmTrace,
-                usedRuleFallback: result.usedRuleFallback
-            )
-
-            if let diagnostics = result.receipt.parseDiagnostics,
-               diagnostics.isMultiItemReceipt,
-               diagnostics.totalMatched {
-                let notice = localizedMessage(
-                    "receipt.multi_item_single_expense_notice",
-                    fallback: "检测到多商品小票，当前版本将按总金额记录为一笔支出"
+            case .transaction(let result, let normalizedText, _, let multiReceiptDetected):
+                lastParsedReceipt = result.receipt
+                let providerName = result.llmTrace?.provider.displayName ?? "规则"
+                let latency = result.llmTrace?.latencyMs ?? 0
+                logger.info("[解析] 模型=\(providerName) 耗时=\(latency)ms 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) 规则兜底=\(result.usedRuleFallback ? "是" : "否")")
+                createTransaction(
+                    from: result.receipt,
+                    rawText: normalizedText,
+                    notePrefix: resolvedNotePrefix,
+                    imageSource: imageSource,
+                    llmTrace: result.llmTrace,
+                    usedRuleFallback: result.usedRuleFallback
                 )
-                if let existing = lastImportSummary {
-                    lastImportSummary = existing + "\n" + notice
-                } else {
-                    lastImportSummary = notice
-                }
-            }
 
-            // 多账单提示：入账后追加警告，让用户知道可能有遗漏
-            if multiReceiptDetected {
-                let warning = "⚠️ 检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。"
-                if let existing = lastImportSummary {
-                    lastImportSummary = existing + "\n" + warning
-                } else {
-                    lastImportSummary = warning
+                if let diagnostics = result.receipt.parseDiagnostics,
+                   diagnostics.isMultiItemReceipt,
+                   diagnostics.totalMatched {
+                    let notice = localizedMessage(
+                        "receipt.multi_item_single_expense_notice",
+                        fallback: "检测到多商品小票，当前版本将按总金额记录为一笔支出"
+                    )
+                    appendImportSummary(notice)
+                }
+
+                if multiReceiptDetected {
+                    appendImportSummary("⚠️ 检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。")
                 }
             }
         }
+    }
+
+    func interpretVoiceText(_ text: String) async -> VoiceLedgerParseResult {
+        let interpretation = await textInterpreter.interpret(
+            LedgerTextInterpretationInput(
+                text: text,
+                preferredSource: .voice,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil,
+                categoryCorrections: categoryCorrections
+            )
+        )
+
+        if case .voice(let result, _, _) = interpretation {
+            return result
+        }
+
+        return VoiceLedgerParser().parse(text, corrections: categoryCorrections)
     }
 
     func prepareForLiveImport() {
@@ -442,70 +463,12 @@ final class LedgerStore: ObservableObject {
             suggestedCategory: category
         )
 
-        if hasDuplicate(receipt, rawText: rawText) {
-            let summary = String(
-                format: localizedMessage("voice_ledger_duplicate", fallback: "%@ ¥%.2f 已存在，未重复记录"),
-                merchant,
-                amount
-            )
-            lastImportSummary = summary
-            recordDebugEvent(
-                stage: .duplicateSkipped,
-                source: .voice,
-                imageSource: .voiceIntent,
-                rawText: rawText,
-                parsedReceipt: receipt,
-                summary: summary
-            )
-            return
-        }
-
-        let transaction = Transaction(
-            merchant: merchant,
-            amount: amount,
-            occurredAt: occurredAt,
-            category: category,
-            source: .voice,
-            note: localizedMessage("voice_ledger_note", fallback: "语音记账")
-        )
-
-        guard let store = transactionStore else {
-            transactions.insert(transaction, at: 0)
-            sortTransactions()
-            lastImportSummary = String(format: localizedMessage("voice_ledger_success", fallback: "已记好：%@ ¥%.2f"), merchant, amount)
-            reloadWidgets()
-            return
-        }
-
-        do {
-            try store.save(transaction: transaction)
-        } catch {
-            let summary = localizedMessage("voice_ledger_persistence_failed", fallback: "语音记账保存失败：") + error.localizedDescription
-            lastImportSummary = summary
-            recordDebugEvent(
-                stage: .persistenceFailed,
-                source: .voice,
-                imageSource: .voiceIntent,
-                rawText: rawText,
-                parsedReceipt: receipt,
-                summary: summary
-            )
-            return
-        }
-
-        transactions.insert(transaction, at: 0)
-        sortTransactions()
-        lastImportSummary = String(format: localizedMessage("voice_ledger_success", fallback: "已记好：%@ ¥%.2f"), merchant, amount)
-        reloadWidgets()
-        requestAutomaticBackup()
-        recordDebugEvent(
-            stage: .persisted,
-            source: .voice,
-            imageSource: .voiceIntent,
+        createTransaction(
+            from: receipt,
             rawText: rawText,
-            parsedReceipt: receipt,
-            summary: lastImportSummary ?? "",
-            transactionID: transaction.id
+            notePrefix: localizedMessage("voice_ledger_note", fallback: "语音记账"),
+            imageSource: .voiceIntent,
+            usedRuleFallback: true
         )
     }
 
@@ -551,6 +514,7 @@ final class LedgerStore: ObservableObject {
         }
 
         let original = transactions[index]
+        learnMerchantAliasIfNeeded(from: original, to: transaction)
 
         // 检测分类修正——仅对内置分类记录用户偏好（自定义分类直接以字符串存储在 Transaction）
         if original.category != transaction.category,
@@ -571,6 +535,83 @@ final class LedgerStore: ObservableObject {
         }
     }
 
+    @discardableResult
+    private func applyMerchantAliasesToExistingTransactions() -> Int {
+        guard !merchantAliases.isEmpty else { return 0 }
+
+        var updatedCount = 0
+        for index in transactions.indices {
+            let transaction = transactions[index]
+            if let updated = transaction.applyingMerchantAlias(merchantAliases) {
+                transactions[index] = updated
+                do {
+                    try transactionStore?.update(transaction: updated)
+                    updatedCount += 1
+                } catch {
+                    lastImportSummary = "商户别名已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                }
+            }
+        }
+
+        for index in deletedTransactions.indices {
+            let transaction = deletedTransactions[index]
+            if let updated = transaction.applyingMerchantAlias(merchantAliases) {
+                deletedTransactions[index] = updated
+                do {
+                    try transactionStore?.update(transaction: updated)
+                    updatedCount += 1
+                } catch {
+                    lastImportSummary = "商户别名已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                }
+            }
+        }
+
+        if updatedCount > 0 {
+            sortTransactions()
+            reloadWidgets()
+        }
+        return updatedCount
+    }
+
+    private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {
+        let originalMerchant = original.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        let updatedMerchant = updated.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard originalMerchant != updatedMerchant,
+              updatedMerchant.count < originalMerchant.count,
+              isHighConfidenceGeneratedTransaction(original.id) else {
+            return
+        }
+
+        merchantAliases[originalMerchant] = updatedMerchant
+        saveMerchantAliases()
+    }
+
+    private func isHighConfidenceGeneratedTransaction(_ id: UUID) -> Bool {
+        debugRecords.contains {
+            $0.stage == .persisted &&
+            $0.transactionID == id &&
+            ($0.llmConfidence ?? $0.parsedReceipt?.confidence ?? 0) >= 0.7
+        }
+    }
+
+    private func createTransaction(
+        from receipt: ImportedReceipt,
+        rawText: String,
+        notePrefix: String,
+        imageSource: ImageSource = .unknown,
+        llmTrace: SmartReceiptParser.LLMTrace? = nil,
+        usedRuleFallback: Bool = true
+    ) {
+        persistReceipt(
+            receipt,
+            rawText: rawText,
+            notePrefix: notePrefix,
+            imageSource: imageSource,
+            llmTrace: llmTrace,
+            usedRuleFallback: usedRuleFallback
+        )
+    }
+
     private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil, usedRuleFallback: Bool = true) {
         // 商户别名映射
         let resolvedMerchant = resolveMerchant(inReceipt.merchant)
@@ -586,18 +627,6 @@ final class LedgerStore: ObservableObject {
                 summary: inReceipt.summary,
                 confidence: inReceipt.confidence,
                 suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)", corrections: categoryCorrections),
-                parseDiagnostics: inReceipt.parseDiagnostics
-            )
-        } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
-            receipt = ImportedReceipt(
-                source: inReceipt.source,
-                merchant: inReceipt.merchant,
-                amount: inReceipt.amount,
-                occurredAt: inReceipt.occurredAt,
-                rawText: inReceipt.rawText,
-                summary: inReceipt.summary,
-                confidence: inReceipt.confidence,
-                suggestedCategory: correctedCategory,
                 parseDiagnostics: inReceipt.parseDiagnostics
             )
         } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
@@ -702,21 +731,16 @@ final class LedgerStore: ObservableObject {
         if windowMatch { return true }
 
         // 增强策略：OCR 文本 Jaccard 相似度 > 0.8 视为同一来源
-        // 注意：排除已被用户删除的账单对应的调试记录，避免删除后重试被误判为重复
-        guard !rawText.isEmpty else { return false }
-        let activeTransactionIDs = Set(transactions.map(\.id))
-        let recentTexts = debugRecords
-            .filter {
-                $0.stage == .persisted &&
-                ($0.transactionID.map { activeTransactionIDs.contains($0) } ?? true)
-            }
-            .prefix(30)
-            .map(\.rawText)
-        for existingText in recentTexts where !existingText.isEmpty {
-            if TextSimilarity.jaccard(rawText, existingText) > 0.8 {
-                logger.info("[去重] OCR Jaccard 相似度命中（>0.8），判定为重复来源")
-                return true
-            }
+        // 注意：只使用仍指向活跃账单的调试记录，避免删除/彻底删除后重试被误判为重复。
+        // 旧版本调试记录可能没有 transactionID，这类记录无法证明账单仍然存在，因此不参与 OCR 相似度去重。
+        if ImportDuplicateDetector.hasOCRTextDuplicate(
+            rawText: rawText,
+            debugRecords: debugRecords,
+            activeTransactionIDs: Set(transactions.map(\.id)),
+            threshold: 0.8
+        ) {
+            logger.info("[去重] OCR Jaccard 相似度命中（>0.8），判定为重复来源")
+            return true
         }
         return false
     }
@@ -733,6 +757,14 @@ final class LedgerStore: ObservableObject {
     private func localizedMessage(_ key: String, fallback: String) -> String {
         let value = NSLocalizedString(key, comment: "")
         return value == key ? fallback : value
+    }
+
+    private func appendImportSummary(_ text: String) {
+        if let existing = lastImportSummary {
+            lastImportSummary = existing + "\n" + text
+        } else {
+            lastImportSummary = text
+        }
     }
 
     private func recordDebugEvent(
@@ -859,6 +891,21 @@ final class LedgerStore: ObservableObject {
     private static func loadInitialCategoryCorrections(using store: TransactionStore?) -> [String: TransactionCategory] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [:] }
         return (try? sqlStore.loadCategoryCorrections()) ?? [:]
+    }
+}
+
+private extension Transaction {
+    func applyingMerchantAlias(_ aliases: [String: String]) -> Transaction? {
+        guard let alias = aliases[merchant], alias != merchant else { return nil }
+        return Transaction(
+            id: id,
+            merchant: alias,
+            amount: amount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note
+        )
     }
 }
 

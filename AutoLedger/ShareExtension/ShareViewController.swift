@@ -122,12 +122,12 @@ class ShareViewController: UIViewController {
 
             // OCR 文本 Jaccard 相似度去重
             let isOCRDuplicate: Bool = {
-                guard !text.isEmpty else { return false }
-                let recentTexts = ((try? store.loadDebugEvents()) ?? [])
-                    .filter { $0.stage == .persisted }
-                    .prefix(30)
-                    .map(\.rawText)
-                return recentTexts.contains { !$0.isEmpty && TextSimilarity.jaccard(text, $0) > 0.8 }
+                ImportDuplicateDetector.hasOCRTextDuplicate(
+                    rawText: text,
+                    debugRecords: (try? store.loadDebugEvents()) ?? [],
+                    activeTransactionIDs: Set(existing.map(\.id)),
+                    threshold: 0.8
+                )
             }()
 
             if isDuplicate || isOCRDuplicate {
@@ -153,7 +153,7 @@ class ShareViewController: UIViewController {
                 if multiReceipt {
                     msg += String(localized: "share.multi_receipt_warning")
                 }
-                self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg)
+                self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, transactionID: transaction.id)
                 DispatchQueue.main.async { self.finish(message: msg) }
             } catch {
                 let debugMessage = String(format: String(localized: "share.debug.persistence_failed_format"), error.localizedDescription)
@@ -168,7 +168,8 @@ class ShareViewController: UIViewController {
         source: ReceiptSource,
         rawText: String,
         receipt: ImportedReceipt? = nil,
-        summary: String
+        summary: String,
+        transactionID: UUID? = nil
     ) {
         let record = ImportDebugRecord(
             stage: stage,
@@ -176,7 +177,8 @@ class ShareViewController: UIViewController {
             imageSource: .shareExtension,
             rawText: rawText,
             parsedReceipt: receipt,
-            summary: summary
+            summary: summary,
+            transactionID: transactionID
         )
         guard let store = try? SQLiteTransactionStore() else { return }
         try? store.saveDebugEvent(record)

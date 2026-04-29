@@ -36,10 +36,7 @@ struct MerchantAliasView: View {
                 }
                 .onDelete { indices in
                     let keys = sortedKeys
-                    for i in indices {
-                        store.merchantAliases.removeValue(forKey: keys[i])
-                    }
-                    store.saveMerchantAliases()
+                    store.deleteMerchantAliases(for: indices.map { keys[$0] })
                 }
 
                 Button {
@@ -65,10 +62,7 @@ struct MerchantAliasView: View {
             Button("添加") {
                 let original = newOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
                 let alias = newAlias.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !original.isEmpty && !alias.isEmpty {
-                    store.merchantAliases[original] = alias
-                    store.saveMerchantAliases()
-                }
+                store.setMerchantAlias(original: original, alias: alias)
                 newOriginal = ""
                 newAlias = ""
             }

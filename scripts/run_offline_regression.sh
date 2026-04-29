@@ -13,6 +13,7 @@ CORE="$ROOT/AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore"
 PREP_DIR="$(mktemp -d /tmp/autoledger-prep.XXXXXX)"
 trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
 sed '/import AutoLedgerCore/d; /import UIKit/d; /import UserNotifications/d; /typealias Subscription/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
+sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift" > "$PREP_DIR/LedgerTextInterpreter.swift"
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
@@ -135,6 +136,7 @@ swiftc \
   "$CORE/Enums/TransactionCategory.swift" \
   "$CORE/Models/ImportedReceipt.swift" \
   "$CORE/Models/ImportDebugRecord.swift" \
+  "$CORE/Models/LedgerInterpretationModels.swift" \
   "$CORE/Models/SampleReceipt.swift" \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/Transaction.swift" \
@@ -142,14 +144,18 @@ swiftc \
   "$CORE/Models/BackupBundle.swift" \
   "$CORE/Services/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
+  "$CORE/Services/BillRelevanceGate.swift" \
+  "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \
   "$CORE/Persistence/SQLiteTransactionStore.swift" \
+  "$PREP_DIR/LedgerTextInterpreter.swift" \
   "$PREP_DIR/LedgerStore.swift" \
   "$PREP_DIR/SmartReceiptParserStub.swift" \
   "$PREP_DIR/IOSStubs.swift" \
   "$CORE/Utils/AppFormatters.swift" \
+  "$CORE/Utils/ImportDuplicateDetector.swift" \
   "$CORE/Utils/TextSimilarity.swift" \
   "$ROOT/scripts/OfflineRegression.swift"
 

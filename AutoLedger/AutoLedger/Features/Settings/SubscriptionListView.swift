@@ -201,18 +201,48 @@ struct SubscriptionListView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(AppFormatters.currency(sub.amount))
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(AppTheme.ink)
+            VStack(alignment: .trailing, spacing: 8) {
+                HStack(spacing: 6) {
+                    Button {
+                        editingSubscription = sub
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption.weight(.bold))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.accent)
+                    .background(AppTheme.accent.opacity(0.10))
+                    .clipShape(Circle())
+                    .help("编辑订阅")
 
-                if highlight {
-                    Text(daysUntil(sub.nextChargedAt))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(AppTheme.accentSecondary))
+                    Button(role: .destructive) {
+                        deleteSubscription(sub)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption.weight(.bold))
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                    .background(Color.red.opacity(0.10))
+                    .clipShape(Circle())
+                    .help("删除订阅")
+                }
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(AppFormatters.currency(sub.amount))
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+
+                    if highlight {
+                        Text(daysUntil(sub.nextChargedAt))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(AppTheme.accentSecondary))
+                    }
                 }
             }
         }
@@ -242,7 +272,7 @@ struct SubscriptionListView: View {
             }
 
             Button(role: .destructive) {
-                store.deleteSubscription(sub)
+                deleteSubscription(sub)
             } label: {
                 Label("删除", systemImage: "trash")
             }
@@ -345,6 +375,15 @@ struct SubscriptionListView: View {
             subscriptionNotes[sub.id.uuidString] = note
         }
         UserDefaults.standard.set(subscriptionNotes, forKey: subscriptionNotesKey)
+    }
+
+    private func deleteSubscription(_ sub: Subscription) {
+        store.deleteSubscription(sub)
+        annualPriceOverrides.removeValue(forKey: sub.id.uuidString)
+        subscriptionNotes.removeValue(forKey: sub.id.uuidString)
+        UserDefaults.standard.set(annualPriceOverrides, forKey: annualPriceKey)
+        UserDefaults.standard.set(subscriptionNotes, forKey: subscriptionNotesKey)
+        store.requestAutomaticBackup()
     }
 
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
