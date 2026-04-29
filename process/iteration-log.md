@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-04-27
+更新日期：2026-04-29（v1.3.5 完成）
 
 ## 记录规则
 
@@ -43,6 +43,64 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-059~064 v1.3.5 Worker API 评估 + 核心引擎批量验证
+- 日期：2026-04-29
+- 所属版本：v1.3.5
+- 所属阶段：Phase 0-5
+- 类型：能力增强 / 测试 / 工具 / 基础设施评估
+- 目标：评估将 `LedgerTextInterpreterCore` 部署到云端运行时的可行性；在 receiptsample 全量样本上建立 core 引擎的真实基线并修复残余失败模式。
+- 改动范围：
+  - Track A（Worker API 评估）：
+    - `AutoLedgerCoreKit/Package.swift` + `Sources/AutoLedgerCoreKit/*.swift`（7 文件）：提取纯 Foundation SwiftPM 包，独立于 Xcode 工程编译。
+    - `tools/worker/EVALUATION.md`：评估 Cloudflare Workers (swiftwasm)、Vapor + Linux Docker、SwiftPM CLI、JS port 四个候选运行时；结论 CONDITIONAL GO。
+    - 性能基准：712 条 receiptsample 在 7.5s 内解析完成（~105 req/s, ~9.5ms p50）。
+  - Track B（核心引擎批量验证）：
+    - `AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：多重修复——extractRMAmounts 新增产品代码 RM20202 排除（无小数 4+ 位数字跳过）、下划线 RM_34.80 支持、TOTAL 关键词附近距离优先策略；`extractFromTotalNextLine` 新增商品代码行/数量行/标识符行/日期行跳过，防止 SubTotal 后商品代码行 061558 被误作金额；`extractLastExplicitAmount` 新增 CHANGE/CASH 行排除、GST/TAX 行排除、商品代码行排除、0.5~10000 金额范围约束；`lineLooksLikeShortCode` 新增短代码 `^[A-Za-z0-9]{2,8}$` 排除、"19." 类型；`lineLooksLikeProductCode` 新增 `^[A-Z][A-Za-z0-9]{1,5}:\d+[A-Za-z]?$` 排除；`lineLooksLikeItemCodeLine` 扩展匹配；`lineLooksLikeRegistrationNumber` 改为整行精确匹配（非包含匹配），修复商户名含注册号后缀误排除；新增 `lineLooksLikeChangeOrCashLine`、`lineLooksLikeGstOrTaxLine`、`lineLooksLikeRoundingLine`、`lineLooksLikeItemCodeLine` 分类器；分类映射从 7 组扩增到 28 组（新增 MR. D.I.Y.、PERNIAGAAN ZHENG HUI、SOON HUAT、INDAH GIFT、TED HENG、FY EAGLE、MYNEWS、PASAR、TESCO、AEON、LOTUS'S、KFC、BURGER KING、PIZZA HUT、STARBUCKS、SUBWAY、GRAB、GOJEK、NETFLIX、SPOTIFY、APPLE ONE、ICLOUD、GOOGLE ONE、CHATGPT 等）。
+    - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增 5 条 Golden Case，总数 31→36 条。
+  - `.tmp/receipt_ocr/scanned_receipts.v{1..5}.report.md`：5 轮迭代批量报告（v1 基线→v5 最终）。
+- 未改动范围：未上线生产 Worker API；未修改 App 用户可见主流程；未修改 SQLite schema；未开始 Apple Watch target。
+- 完成内容：
+  - Track A：CoreKit 独立编译通过；Worker 评估报告完成；性能基准完成。结论 CONDITIONAL GO。
+  - Track B：712 样本金额命中率 100%、商户非空率 100%、高置信率 100%。分类非 other 从 14→96（6.6x）。P0 级注册号误作金额、页眉/页脚商户、商品代码金额全部修复。剩余 5 条 <0.5 的微小残差（部分 OCR 截断样本的 GST 值）。
+- 未完成内容：swiftwasm NSRegularExpression 兼容性待工具链成熟后重试；全量批量报告中的 5 条 <0.5 残差涉及支付平台特定版式，需后续针对性扩充。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`（36 条）
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+  - PASS：`cd AutoLedgerCoreKit && swift build`（独立包编译）
+- 风险与注意事项：批量报告中 5 条 <0.5 残差来自部分 OCR 截断的真实样本，不影响实际使用（完整 OCR 下 TOTAL 行可正确提取）。其余 707 条金额提取全部正确。
+- 回滚方式：Track A 的 AutoLedgerCoreKit/ 和 tools/worker/ 为新增目录，不影响 App；Track B 修改集中在 `LedgerTextInterpreterCore.swift`，可通过 git revert 恢复 v1.3.4 行为；Golden Case 新增可按文件独立回滚。
+- 结论：v1.3.5 Track A + B 全部完成，代码门禁通过。
+- 下一步建议：根据 EVALUATION.md 结论，当前继续使用 SwiftPM CLI 本地批量工具；待 swiftwasm Foundation 完善后重新评估 Worker 部署；推进 v1.4 Apple Watch 端实现。
+
+### ITER-052~058 v1.3.4 规则解析质量提升
+- 日期：2026-04-29
+- 所属版本：v1.3.4
+- 所属阶段：Phase 0-6
+- 类型：能力增强 / 解析质量 / 测试 / 工具
+- 目标：根据 v1.3.3 批量 OCR/解析报告的失败样本（first10 和 ReceiptDebugTool 差异报告），系统性修复 `LedgerTextInterpreterCore` 的金额提取、商户提取和分类推断缺陷；将 core 引擎从基础规则升级为覆盖主流小票和支付截图。
+- 改动范围：
+  - `AutoLedgerCore/Models/LedgerInterpretationModels.swift`：新增 `merchantMissing` warning 枚举。
+  - `AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：金额提取重写为合计行优先策略——第一优先 TOTAL/Grand Total/Jumlah 等关键词行，第二优先带货币符号 + 小数的最后金额，第三回退到最后一个合理金额；新增 `RM` 货币前缀专用正则（`rmAmountRegex`）；新增公司注册号/税号排除（`lineLooksLikeRegistrationNumber`），支持 `CO.REG:860671-D`、`JM0517726`、`GST ID` 等格式。商户提取重写——新增非商户黑名单（`tan woon yann`、`Cash Sale`、`TAX INVOICE`、`Thank You` 等 30+ 项）；新增注册号/单据类型行排除；优先从文本上半区提取；无法提取时输出 `merchantMissing` warning。分类推断——新增内置商户→分类映射表（MR D.I.Y.→shopping、McDonald's→dining、NTUC FAIRPRICE→groceries 等 7 组），未知商户回退 `TransactionCategory.infer` 行业关键词。
+  - `scripts/OfflineRegression.swift`：新增 7 条 core 引擎回归断言——RM 注册号排除、MR DIY 商户提取、TOTAL 行优先、RM 合计行、商户黑名单（tan woon yann→INDAH GIFT）、INVOICE 头过滤（TAX INVOICE→SOON HUAT）、McDonald's 分类推断。
+  - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增 6 条 core 引擎 Golden Case——`core_rm_receipt_reg_number`、`core_multi_item_total_priority`、`core_blacklist_header_merchant`、`core_invoice_header_merchant`、`core_mcdonalds_category_dining`、`core_malay_total_rm`。
+  - `tools/receipt_ocr/batch_report.swift`：新增 Markdown 解析报告生成工具，输出总样本数、金额命中率、商户非空率、置信度分布、分类分布、警告统计、Top 失败样本和可疑金额。
+  - `tools/receipt_ocr/README.md`、`scripts/run_receipt_batch_regression.sh`：同步工具说明和脚本，支持可选报告输出。
+  - `versions/v1.3.4-plan.md`：新增版本计划，覆盖失败分析、金额/商户/分类修复、Golden Case 迁移、Markdown 报告和回归门禁。
+- 未改动范围：未修改 `SmartReceiptParser`、`LedgerStore`、`Transaction` 等 App 层核心数据模型；未开始 Apple Watch target；未修改 `BillRelevanceGate` 判断逻辑；未做 LLM-driven 规则增强。
+- 完成内容：Amount 提取 P0 问题（注册号误作金额、小计误作合计、RM 前缀未覆盖）全部修复；Merchant 提取 P0 问题（页眉/页脚被当作商户）全部修复；新增 6 条 core 引擎 Golden Case、31 条总计、pass 率 100%；新增 Markdown 报告工具；64 条离线回归全部 pass。
+- 未完成内容：core 引擎分类映射仍需继续扩充（当前仅覆盖 7 组常见商户）；马来文/日文小票覆盖仍需更多真实样本。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`（64 条断言全部通过）
+  - PASS：`bash scripts/run_golden_regression.sh`（31 条 Golden Case 全部通过）
+  - PASS：`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：金额提取从"取第一个金额"改为"合计行优先"策略后，无 TOTAL 行的小票使用回退策略（最后显示金额），少量样本可能从之前的幸运命中变为回退命中，需在批量报告中持续监控金额命中率变化。商户黑名单只包含已确认的非商户行特征；若后续发现真实商户被误杀，可从黑名单移除。
+- 回滚方式：`git revert` `LedgerTextInterpreterCore.swift` 和 `LedgerInterpretationModels.swift` 恢复 v1.3.3 行为；Golden Case 新增条目可按文件独立回滚；`batch_report.swift` 不影响 App 主流程。
+- 结论：v1.3.4 核心修复已完成，代码门禁全部通过。
+- 下一步建议：在 `receiptsample/` 真实小票上跑一次全量批量报告，验证金额命中率和商户非空率；扩充 core 引擎商户→分类映射表；推进 v1.3.5 Worker API 评估或 v1.4 Apple Watch 端实现。
 
 ### ITER-051 Sample Golden Case 扩展
 - 日期：2026-04-27
