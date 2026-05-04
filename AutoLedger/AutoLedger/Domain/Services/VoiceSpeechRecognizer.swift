@@ -16,7 +16,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
     @Published private(set) var transcript = ""
 
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh_CN"))
-    private let audioEngine = AVAudioEngine()
+    private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var startToken: UUID?
@@ -74,14 +74,25 @@ final class VoiceSpeechRecognizer: ObservableObject {
 
     private func stopRecognition(cancelTask: Bool) {
         startToken = nil
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        let hadActiveEngine = audioEngine != nil
+        if let engine = audioEngine {
+            engine.stop()
+            engine.inputNode.removeTap(onBus: 0)
+            audioEngine = nil
+        }
         recognitionRequest?.endAudio()
         if cancelTask {
             recognitionTask?.cancel()
             recognitionTask = nil
         }
         recognitionRequest = nil
+        if hadActiveEngine {
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            } catch {
+                assertionFailure("AVAudioSession deactivation failed: \(error)")
+            }
+        }
         if isListening || state == .requestingPermission {
             state = .idle
         }
@@ -105,14 +116,16 @@ final class VoiceSpeechRecognizer: ObservableObject {
         request.shouldReportPartialResults = true
         recognitionRequest = request
 
-        let inputNode = audioEngine.inputNode
+        let engine = AVAudioEngine()
+        audioEngine = engine
+        let inputNode = engine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
 
-        audioEngine.prepare()
-        try audioEngine.start()
+        engine.prepare()
+        try engine.start()
         state = .listening
         startToken = nil
 
@@ -122,9 +135,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
                 if let result {
                     self.transcript = result.bestTranscription.formattedString
                     if result.isFinal {
-                        self.recognitionTask = nil
-                        self.recognitionRequest = nil
-                        self.state = .idle
+                        self.stopRecognition(cancelTask: false)
                     }
                 }
                 if let error {
