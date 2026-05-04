@@ -74,6 +74,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
 
     private func stopRecognition(cancelTask: Bool) {
         startToken = nil
+        let hadActiveEngine = audioEngine != nil
         if let engine = audioEngine {
             engine.stop()
             engine.inputNode.removeTap(onBus: 0)
@@ -85,7 +86,13 @@ final class VoiceSpeechRecognizer: ObservableObject {
             recognitionTask = nil
         }
         recognitionRequest = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if hadActiveEngine {
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            } catch {
+                assertionFailure("AVAudioSession deactivation failed: \(error)")
+            }
+        }
         if isListening || state == .requestingPermission {
             state = .idle
         }
@@ -128,9 +135,7 @@ final class VoiceSpeechRecognizer: ObservableObject {
                 if let result {
                     self.transcript = result.bestTranscription.formattedString
                     if result.isFinal {
-                        self.recognitionTask = nil
-                        self.recognitionRequest = nil
-                        self.state = .idle
+                        self.stopRecognition(cancelTask: false)
                     }
                 }
                 if let error {
