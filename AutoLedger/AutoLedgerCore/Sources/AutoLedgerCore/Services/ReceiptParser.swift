@@ -1115,7 +1115,12 @@ public struct ReceiptParser: Sendable {
 
         let valueStart = lastLabelIdx + 1
         var merchant: String?
+        var productName: String?   // value of 商品 label, used as fallback
         var date: Date?
+
+        // Bare POS terminal ID pattern, e.g. （8285）— a payment terminal number, not a merchant name
+        let terminalIDPattern = #"^[（(]\s*\d+\s*[）)]$"#
+        let terminalIDRegex = try? NSRegularExpression(pattern: terminalIDPattern)
 
         for (offset, item) in bestRun.enumerated() {
             let valueIdx = valueStart + offset
@@ -1123,10 +1128,38 @@ public struct ReceiptParser: Sendable {
             let value = normalizedLines[valueIdx]
 
             if item.label == "商户全称" && !value.isEmpty {
-                merchant = value
+                let isTerminalID = terminalIDRegex?
+                    .firstMatch(in: value, range: NSRange(value.startIndex..<value.endIndex, in: value)) != nil
+                if !isTerminalID {
+                    merchant = value
+                }
+            }
+            if item.label == "商品" && !value.isEmpty {
+                productName = value
             }
             if item.label == "支付时间" && !value.isEmpty {
                 date = AppFormatters.parseFlexibleDate(value)
+            }
+        }
+
+        // When 商户全称 was a bare terminal ID (or absent), try the display title shown at the
+        // top of the WeChat page (the line immediately before the negative amount line),
+        // then fall back to the 商品 value.
+        if merchant == nil {
+            let negAmountPattern = #"^\s*-[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+            if let negRegex = try? NSRegularExpression(pattern: negAmountPattern),
+               let negIdx = normalizedLines.indices.first(where: { i in
+                   let ln = normalizedLines[i]
+                   return negRegex.firstMatch(in: ln, range: NSRange(ln.startIndex..<ln.endIndex, in: ln)) != nil
+               }),
+               negIdx > 0 {
+                let titleCandidate = normalizedLines[negIdx - 1]
+                if titleCandidate.count >= 2 && !knownLabels.contains(titleCandidate) {
+                    merchant = titleCandidate
+                }
+            }
+            if merchant == nil {
+                merchant = productName
             }
         }
 

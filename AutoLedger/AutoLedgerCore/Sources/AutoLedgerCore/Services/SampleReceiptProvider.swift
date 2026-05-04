@@ -537,6 +537,39 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "示例便利店（Example Road）· ¥12.80 · 2026-04-21 20:15:33"
         ),
         SampleReceipt(
+            title: "微信支付全部账单截图（羊汤）",
+            source: .wechat,
+            rawText: """
+            08:13
+            ④2
+            全部账单
+            示例餐厅
+            -20.00
+            当前状态
+            支付时间
+            商品
+            商户全称
+            收单机构
+            支付方式
+            交易单号
+            商户单号
+            支付成功
+            2026年5月4日 07:03:35
+            示例餐厅个体店
+            （8285）
+            示例餐厅个体店
+            Example Acquiring Services Co.
+            Example Bank Card (1234)
+            ORDER-EXAMPLE-WECHAT-003
+            MERCHANT-ORDER-003
+            20260504CCdtrkdd
+            商家小程序
+            〇掌银收银台＞
+            账单服务
+            """,
+            preview: "示例餐厅 · ¥20.00 · 2026-05-04 07:03:35"
+        ),
+        SampleReceipt(
             title: "英文超市纸质小票TOTAL",
             source: .manual,
             rawText: """
