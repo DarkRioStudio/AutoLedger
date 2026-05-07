@@ -7,6 +7,10 @@ struct SettingsView: View {
     @State private var showDebugUnlocked = false
     @State private var showFeedbackComposer = false
 
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -149,9 +153,19 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
-                    infoCard(
-                        title: "settings.version.title",
-                        body: "settings.version.body"
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("settings.version.title")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
+                        Text("v\(appVersion) — \(String(localized: "settings.version.body"))")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(AppTheme.card)
                     )
                     .onTapGesture {
                         versionTapCount += 1
@@ -279,7 +293,9 @@ struct SettingsView: View {
                 .fill(AppTheme.card)
         )
     }
+
 }
+
 
 #Preview {
     SettingsView()

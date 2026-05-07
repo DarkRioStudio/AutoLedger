@@ -130,11 +130,11 @@
 "settings.feedback.title" = "Feedback";
 "settings.feedback.subtitle" = "Found an issue? Send tiered logs to help us diagnose it quickly";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "v1.3.1-dev - Voice ledger MVP, Siri/AppIntent entry, in-app review sheet, backup and restore, Gemma-2 2B on-device LLM, one-tap Shortcuts ledger entry, and Share Extension import.";
+"settings.version.body" = "Voice ledger MVP, Siri/AppIntent entry, in-app review sheet, backup and restore, Gemma-2 2B on-device LLM, one-tap Shortcuts ledger entry, and Share Extension import.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "All data stays on your device. AutoLedger does not use cloud sync or third-party analytics. OCR and LLM inference both run locally. The only network request is Gemma model version checking and download via CDN; no user data is transmitted.";
-"settings.release_status.title" = "Release Status";
-"settings.release_status.body" = "Voice ledger, Siri Intent, in-app review, backup and restore, on-device LLM, monthly reports, UnionPay basics, subscription management enhancements, and persistent soft delete are in place. Next: device Siri and iCloud regression.";
+"settings.release_status.title" = "Coming Next";
+"settings.release_status.body" = "Apple Watch support, multi-ledger, and more payment parser improvements.";
 
 "ai_model.title" = "AI Models";
 "ai_model.info.title" = "On-device Model Notes";

@@ -130,11 +130,11 @@
 "settings.feedback.title" = "问题反馈";
 "settings.feedback.subtitle" = "遇到问题？发送分级日志帮助我们快速定位";
 "settings.version.title" = "当前版本";
-"settings.version.body" = "v1.3.1-dev — 语音记账 MVP、Siri/AppIntent 入口、App 内确认页、数据备份恢复、Gemma-2 2B 端侧 LLM、快捷指令一键记账与 Share Extension 分享导入。";
+"settings.version.body" = "识别稳定性优化、兼容更多场景； iCloud 自动备份； 备份文件导入导出；语音快捷记账； 一句话记账";
 "settings.privacy.title" = "隐私策略";
 "settings.privacy.body" = "所有数据留在设备本地，不接入任何云端同步或第三方分析。OCR 与 LLM 推理均在本地完成。唯一网络请求：Gemma 模型版本检查与下载（CDN），不传输任何用户数据。";
-"settings.release_status.title" = "版本状态";
-"settings.release_status.body" = "语音记账、Siri Intent、App 内确认、数据备份恢复、端侧 LLM、月报分析、云闪付 / 银联适配、订阅管理增强与软删除持久化已落地。接下来推进真机 Siri 与 iCloud 回归。";
+"settings.release_status.title" = "后续计划";
+"settings.release_status.body" = "Apple Watch 支持、多账本、更多支付场景适配。";
 
 "ai_model.title" = "AI 模型";
 "ai_model.info.title" = "端侧模型说明";
