@@ -44,6 +44,25 @@
 
 ## 日志条目
 
+### ITER-065 商户别名迁移至 SQLite + 自动学习对齐分类学习逻辑
+- 日期：2026-05-12
+- 所属版本：v1.3.5
+- 所属阶段：Phase 6
+- 类型：能力增强 / 重构
+- 目标：将商户别名持久化从 UserDefaults 迁移至 SQLite，并把自动学习条件与分类学习完全对齐，消除两套学习机制的行为不一致。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/.../SQLiteTransactionStore.swift`：新增 `merchant_aliases` 表；新增 `loadMerchantAliases() / saveMerchantAlias(original:alias:) / deleteMerchantAlias(original:)` 方法；`replaceForRestore` 新增 `merchantAliases` 参数，在事务内原子写入。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`merchantAliases` 改为 `@Published private(set)`；初始化改为调用 `loadInitialMerchantAliases`（含 UserDefaults→SQLite 首次迁移）；新增 `recordMerchantAlias(original:alias:)`；`setMerchantAlias` / `deleteMerchantAliases` 补充 SQLite 写入；`learnMerchantAliasIfNeeded` 移除"必须更短"与"高置信度"两项限制；`refreshFromStore` 从 SQLite 重载别名；`applyBackupBundle` 传入 `merchantAliases` 参数。
+  - `scripts/OfflineRegression.swift`：改用 `setMerchantAlias(original:alias:)` 替代直接赋值，移除多余的 `saveMerchantAliases()` 调用。
+- 未改动范围：未修改 UI；未修改 `saveMerchantAliases()`（保留 UserDefaults 兼容）；未修改 OCR / LLM 流程。
+- 完成内容：SQLite 表与 3 个 CRUD 方法；LedgerStore 全链路对齐；备份/还原原子性；UserDefaults→SQLite 升级迁移路径。
+- 未完成内容：无。
+- 测试情况：`bash scripts/run_offline_regression.sh` 28 条 PASS（"羊汤"分类残差为预存在问题，与本次改动无关）。
+- 风险与注意事项：`isHighConfidenceGeneratedTransaction` 方法可能已无调用方，下一轮可酌情清理。
+- 回滚方式：`git revert` 三个改动文件；UserDefaults 旧数据保留，可无损回退。
+- 结论：代码门禁通过，商户别名学习行为与分类学习完全对齐。
+- 下一步建议：持续观察自动学习质量；可在设置页展示已学习别名条数。
+
 ### ITER-059~064 v1.3.5 Worker API 评估 + 核心引擎批量验证
 - 日期：2026-04-29
 - 所属版本：v1.3.5

@@ -706,10 +706,9 @@ struct OfflineRegression {
         sourceLedger.deleteTransaction(deleted)
         sourceLedger.customCategories = ["咖啡"]
         sourceLedger.customSources = ["测试来源"]
-        sourceLedger.merchantAliases = ["原始商户": "别名商户"]
+        sourceLedger.setMerchantAlias(original: "原始商户", alias: "别名商户")
         sourceLedger.saveCustomCategories()
         sourceLedger.saveCustomSources()
-        sourceLedger.saveMerchantAliases()
         sourceLedger.recordCategoryCorrection(merchant: "备份回归咖啡", category: .dining)
 
         let subscription = Subscription(

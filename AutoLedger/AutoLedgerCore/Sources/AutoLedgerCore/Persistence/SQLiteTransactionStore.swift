@@ -229,13 +229,15 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func replaceForRestore(
         transactions backupTransactions: [BackupTransaction],
         subscriptions: [Subscription],
-        categoryCorrections: [BackupCategoryCorrection]
+        categoryCorrections: [BackupCategoryCorrection],
+        merchantAliases: [String: String] = [:]
     ) throws {
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
             try execute("DELETE FROM transactions;")
             try execute("DELETE FROM subscriptions;")
             try execute("DELETE FROM category_corrections;")
+            try execute("DELETE FROM merchant_aliases;")
 
             for transaction in backupTransactions {
                 try insertBackupTransaction(transaction)
@@ -245,6 +247,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             }
             for correction in categoryCorrections {
                 try saveCategoryCorrection(merchant: correction.merchant, category: correction.category)
+            }
+            for (original, alias) in merchantAliases {
+                try saveMerchantAlias(original: original, alias: alias)
             }
 
             try execute("COMMIT;")
@@ -391,6 +396,18 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         guard sqlite3_exec(db, correctionsSQL, nil, nil, nil) == SQLITE_OK else {
             throw SQLiteTransactionStoreError.executeStatement(correctionsSQL)
+        }
+
+        let merchantAliasesSQL = """
+        CREATE TABLE IF NOT EXISTS merchant_aliases (
+            original TEXT PRIMARY KEY,
+            alias TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """
+
+        guard sqlite3_exec(db, merchantAliasesSQL, nil, nil, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.executeStatement(merchantAliasesSQL)
         }
     }
 
@@ -913,6 +930,66 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             throw SQLiteTransactionStoreError.prepareStatement(sql)
         }
         sqlite3_bind_text(statement, 1, merchant, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    // MARK: - Merchant Aliases
+
+    public func loadMerchantAliases() throws -> [String: String] {
+        let sql = "SELECT original, alias FROM merchant_aliases;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        var map: [String: String] = [:]
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let originalCStr = sqlite3_column_text(statement, 0),
+                let aliasCStr    = sqlite3_column_text(statement, 1)
+            else { continue }
+            map[String(cString: originalCStr)] = String(cString: aliasCStr)
+        }
+        return map
+    }
+
+    public func saveMerchantAlias(original: String, alias: String) throws {
+        let sql = """
+        INSERT INTO merchant_aliases (original, alias, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(original) DO UPDATE SET alias = excluded.alias, updated_at = excluded.updated_at;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let now = Self.storageFormatter.string(from: .now)
+        sqlite3_bind_text(statement, 1, original, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, alias,    -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, now,      -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    public func deleteMerchantAlias(original: String) throws {
+        let sql = "DELETE FROM merchant_aliases WHERE original = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, original, -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)

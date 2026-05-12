@@ -27,7 +27,7 @@ final class LedgerStore: ObservableObject {
     @Published var detectedICloudBackup: BackupBundle?
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
-    @Published var merchantAliases: [String: String] = [:]
+    @Published private(set) var merchantAliases: [String: String] = [:]
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -53,7 +53,7 @@ final class LedgerStore: ObservableObject {
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
-        self.merchantAliases = UserDefaults.standard.dictionary(forKey: "merchantAliases") as? [String: String] ?? [:]
+        self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         LedgerStore.shared = self
     }
@@ -81,6 +81,14 @@ final class LedgerStore: ObservableObject {
         requestAutomaticBackup()
     }
 
+    func recordMerchantAlias(original: String, alias: String) {
+        merchantAliases[original] = alias
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.saveMerchantAlias(original: original, alias: alias)
+        }
+        requestAutomaticBackup()
+    }
+
     /// 如果商户名命中别名映射则返回别名，否则原样返回
     func resolveMerchant(_ merchant: String) -> String {
         merchantAliases[merchant] ?? merchant
@@ -95,13 +103,16 @@ final class LedgerStore: ObservableObject {
             return
         }
 
-        merchantAliases[trimmedOriginal] = trimmedAlias
+        recordMerchantAlias(original: trimmedOriginal, alias: trimmedAlias)
         saveMerchantAliases()
     }
 
     func deleteMerchantAliases(for originals: [String]) {
         for original in originals {
             merchantAliases.removeValue(forKey: original)
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                try? sqlStore.deleteMerchantAlias(original: original)
+            }
         }
         saveMerchantAliases()
     }
@@ -304,6 +315,7 @@ final class LedgerStore: ObservableObject {
             debugRecords        = (try? sqlStore.loadDebugEvents())          ?? debugRecords
             subscriptions       = (try? sqlStore.loadSubscriptions())        ?? subscriptions
             categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
+            merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
         }
         loadShareExtensionResult()
     }
@@ -576,14 +588,8 @@ final class LedgerStore: ObservableObject {
     private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {
         let originalMerchant = original.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
         let updatedMerchant = updated.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard originalMerchant != updatedMerchant,
-              updatedMerchant.count < originalMerchant.count,
-              isHighConfidenceGeneratedTransaction(original.id) else {
-            return
-        }
-
-        merchantAliases[originalMerchant] = updatedMerchant
-        saveMerchantAliases()
+        guard originalMerchant != updatedMerchant else { return }
+        recordMerchantAlias(original: originalMerchant, alias: updatedMerchant)
     }
 
     private func isHighConfidenceGeneratedTransaction(_ id: UUID) -> Bool {
@@ -892,6 +898,22 @@ final class LedgerStore: ObservableObject {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [:] }
         return (try? sqlStore.loadCategoryCorrections()) ?? [:]
     }
+
+    private static func loadInitialMerchantAliases(using store: TransactionStore?) -> [String: String] {
+        guard let sqlStore = store as? SQLiteTransactionStore else {
+            return UserDefaults.standard.dictionary(forKey: "merchantAliases") as? [String: String] ?? [:]
+        }
+        let fromSQL = (try? sqlStore.loadMerchantAliases()) ?? [:]
+        if fromSQL.isEmpty {
+            // 首次升级迁移：将 UserDefaults 中的旧数据写入 SQLite
+            let fromDefaults = UserDefaults.standard.dictionary(forKey: "merchantAliases") as? [String: String] ?? [:]
+            for (original, alias) in fromDefaults {
+                try? sqlStore.saveMerchantAlias(original: original, alias: alias)
+            }
+            return fromDefaults
+        }
+        return fromSQL
+    }
 }
 
 private extension Transaction {
@@ -1121,13 +1143,15 @@ extension LedgerStore {
             try sqlStore.replaceForRestore(
                 transactions: bundle.transactions,
                 subscriptions: bundle.subscriptions,
-                categoryCorrections: bundle.categoryCorrections
+                categoryCorrections: bundle.categoryCorrections,
+                merchantAliases: bundle.merchantAliases
             )
         } else {
             transactions = bundle.transactions.filter { $0.deletedAt == nil }.map(\.transaction)
             deletedTransactions = bundle.transactions.filter { $0.deletedAt != nil }.map(\.transaction)
             subscriptions = bundle.subscriptions
             categoryCorrections = Dictionary(uniqueKeysWithValues: bundle.categoryCorrections.map { ($0.merchant, $0.category) })
+            merchantAliases = bundle.merchantAliases
         }
     }
 }
