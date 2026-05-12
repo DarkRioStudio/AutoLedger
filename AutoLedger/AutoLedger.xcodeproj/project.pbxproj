@@ -62,7 +62,7 @@
 		3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AutoLedger.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D9F0E98664337C76D7A2F0D /* Pods-AutoLedger.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.debug.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.debug.xcconfig"; sourceTree = "<group>"; };
 		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AutoLedger - 一键记账.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C042FD742F76270200A01918 /* AutoLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AutoLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AutoLedgerWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -226,7 +226,7 @@
 		C042FD752F76270200A01918 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */,
+				C042FD742F76270200A01918 /* AutoLedger.app */,
 				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
 				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
 				C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */,
@@ -285,7 +285,7 @@
 				AABB00020000000200000002 /* AutoLedgerCore */,
 			);
 			productName = AutoLedger;
-			productReference = C042FD742F76270200A01918 /* AutoLedger - 一键记账.app */;
+			productReference = C042FD742F76270200A01918 /* AutoLedger.app */;
 			productType = "com.apple.product-type.application";
 		};
 		C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */ = {
@@ -704,7 +704,7 @@
 				);
 				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
-				PRODUCT_NAME = "AutoLedger - 一键记账";
+				PRODUCT_NAME = AutoLedger;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -748,7 +748,7 @@
 				);
 				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
-				PRODUCT_NAME = "AutoLedger - 一键记账";
+				PRODUCT_NAME = AutoLedger;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
