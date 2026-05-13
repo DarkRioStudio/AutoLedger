@@ -11,6 +11,8 @@
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
 		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C030418E2FB4240500F02850 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C030418D2FB4240500F02850 /* AutoLedgerCore */; };
 		C08D1AEB2F9A0A3B00CF2B9E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
 		C08D1AED2F9A0A3B00CF2B9E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
 		C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -25,6 +27,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C017EEAF2F875C1600639DC8;
 			remoteInfo = ShareExtension;
+		};
+		C03041862FB4235100F02850 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C042FD6C2F76270200A01918 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C030417D2FB4235000F02850;
+			remoteInfo = "AutoLedgerWatch Watch App";
 		};
 		C08D1AFC2F9A0A3C00CF2B9E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -56,12 +65,24 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C03041892FB4235100F02850 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AutoLedger.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D9F0E98664337C76D7A2F0D /* Pods-AutoLedger.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.debug.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.debug.xcconfig"; sourceTree = "<group>"; };
 		C017EEB02F875C1600639DC8 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AutoLedgerWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C042FD742F76270200A01918 /* AutoLedger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AutoLedger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AutoLedgerWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -76,6 +97,14 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+			);
+			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
+		};
+		C03041992FB4271000F02850 /* Exceptions for "AutoLedger" folder in "ShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Domain/Services/OCRService.swift,
+				Domain/Services/ReceiptParser.swift,
 			);
 			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
 		};
@@ -126,10 +155,16 @@
 			path = ShareExtension;
 			sourceTree = "<group>";
 		};
+		C030417F2FB4235000F02850 /* AutoLedgerWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "AutoLedgerWatch Watch App";
+			sourceTree = "<group>";
+		};
 		C042FD762F76270200A01918 /* AutoLedger */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				C042FD752F76270200A01919 /* Exceptions for "AutoLedger" folder in "AutoLedger" target */,
+				C03041992FB4271000F02850 /* Exceptions for "AutoLedger" folder in "ShareExtension" target */,
 			);
 			path = AutoLedger;
 			sourceTree = "<group>";
@@ -158,6 +193,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				AABB00050000000500000005 /* AutoLedgerCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C030417B2FB4235000F02850 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C030418E2FB4240500F02850 /* AutoLedgerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +260,7 @@
 				C017EEB12F875C1600639DC8 /* ShareExtension */,
 				D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */,
 				C08D1AEE2F9A0A3B00CF2B9E /* AutoLedgerWidgets */,
+				C030417F2FB4235000F02850 /* AutoLedgerWatch Watch App */,
 				C042FD752F76270200A01918 /* Products */,
 				13BEB0B77CF0A0026FA94868 /* Pods */,
 				2372506559E3E54DCB779F64 /* Frameworks */,
@@ -230,6 +274,7 @@
 				C017EEB02F875C1600639DC8 /* ShareExtension.appex */,
 				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
 				C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */,
+				C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -260,6 +305,29 @@
 			productReference = C017EEB02F875C1600639DC8 /* ShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C030417D2FB4235000F02850 /* AutoLedgerWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C030418C2FB4235100F02850 /* Build configuration list for PBXNativeTarget "AutoLedgerWatch Watch App" */;
+			buildPhases = (
+				C030417A2FB4235000F02850 /* Sources */,
+				C030417B2FB4235000F02850 /* Frameworks */,
+				C030417C2FB4235000F02850 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C030417F2FB4235000F02850 /* AutoLedgerWatch Watch App */,
+			);
+			name = "AutoLedgerWatch Watch App";
+			packageProductDependencies = (
+				C030418D2FB4240500F02850 /* AutoLedgerCore */,
+			);
+			productName = "AutoLedgerWatch Watch App";
+			productReference = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
 		C042FD732F76270200A01918 /* AutoLedger */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C042FD7F2F76270300A01918 /* Build configuration list for PBXNativeTarget "AutoLedger" */;
@@ -269,6 +337,7 @@
 				C042FD712F76270200A01918 /* Frameworks */,
 				C042FD722F76270200A01918 /* Resources */,
 				C017EEBF2F875C1600639DC8 /* Embed Foundation Extensions */,
+				C03041892FB4235100F02850 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
@@ -276,6 +345,7 @@
 				C017EEB92F875C1600639DC8 /* PBXTargetDependency */,
 				D0CC00092FA68B0000639DC8 /* PBXTargetDependency */,
 				C08D1AFD2F9A0A3C00CF2B9E /* PBXTargetDependency */,
+				C03041872FB4235100F02850 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C042FD762F76270200A01918 /* AutoLedger */,
@@ -346,6 +416,9 @@
 					C017EEAF2F875C1600639DC8 = {
 						CreatedOnToolsVersion = 26.5;
 					};
+					C030417D2FB4235000F02850 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					C042FD732F76270200A01918 = {
 						CreatedOnToolsVersion = 26.4;
 					};
@@ -379,12 +452,20 @@
 				C017EEAF2F875C1600639DC8 /* ShareExtension */,
 				D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */,
 				C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */,
+				C030417D2FB4235000F02850 /* AutoLedgerWatch Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		C017EEAE2F875C1600639DC8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C030417C2FB4235000F02850 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -447,6 +528,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C030417A2FB4235000F02850 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C042FD702F76270200A01918 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -476,6 +564,11 @@
 			target = C017EEAF2F875C1600639DC8 /* ShareExtension */;
 			targetProxy = C017EEB82F875C1600639DC8 /* PBXContainerItemProxy */;
 		};
+		C03041872FB4235100F02850 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C030417D2FB4235000F02850 /* AutoLedgerWatch Watch App */;
+			targetProxy = C03041862FB4235100F02850 /* PBXContainerItemProxy */;
+		};
 		C08D1AFD2F9A0A3C00CF2B9E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */;
@@ -501,13 +594,13 @@
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ShareExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -532,13 +625,13 @@
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ShareExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -548,6 +641,74 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		C030418A2FB4235100F02850 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = top.darkrio326.AutoLedger;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		C030418B2FB4235100F02850 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = top.darkrio326.AutoLedger;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -702,7 +863,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
 				PRODUCT_NAME = AutoLedger;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -746,7 +907,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger;
 				PRODUCT_NAME = AutoLedger;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -780,7 +941,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.AutoLedgerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -813,7 +974,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.AutoLedgerWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -844,7 +1005,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -875,7 +1036,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -896,6 +1057,15 @@
 			buildConfigurations = (
 				C017EEBD2F875C1600639DC8 /* Debug */,
 				C017EEBE2F875C1600639DC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C030418C2FB4235100F02850 /* Build configuration list for PBXNativeTarget "AutoLedgerWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C030418A2FB4235100F02850 /* Debug */,
+				C030418B2FB4235100F02850 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -952,6 +1122,11 @@
 		};
 		AABB00030000000300000003 /* AutoLedgerCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			productName = AutoLedgerCore;
+		};
+		C030418D2FB4240500F02850 /* AutoLedgerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AABB00010000000100000001 /* XCLocalSwiftPackageReference "AutoLedgerCore" */;
 			productName = AutoLedgerCore;
 		};
 		D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */ = {

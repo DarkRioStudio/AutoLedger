@@ -6,14 +6,27 @@ struct ReportView: View {
     @EnvironmentObject private var store: LedgerStore
     @AppStorage("monthlyAnomalyThresholdPercent") private var anomalyThresholdPercent = 150.0
     @State private var selectedCategoryID: String?
+    @State private var selectedMonth: Date = .now
+    @State private var selectedTrendLabel: String?
     private let insightService = MonthlyInsightService()
 
+    private var isCurrentMonth: Bool {
+        AppFormatters.calendar.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
+    }
+
+    private func stepMonth(by value: Int) {
+        guard let next = AppFormatters.calendar.date(byAdding: .month, value: value, to: selectedMonth) else { return }
+        selectedMonth = next
+        selectedCategoryID = nil
+        selectedTrendLabel = nil
+    }
+
     var body: some View {
-        let snapshot = store.monthlySnapshot
-        let anomalyAlerts = insightService.detectAnomalies(
+        let snapshot = MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)
+        let anomalyAlerts = isCurrentMonth ? insightService.detectAnomalies(
             transactions: store.transactions,
             thresholdPercent: anomalyThresholdPercent
-        )
+        ) : []
 
         NavigationStack {
             ScrollView {
@@ -26,7 +39,7 @@ struct ReportView: View {
 
                     sectionTitle("分类占比")
                     if snapshot.categoryBreakdown.isEmpty {
-                        emptyState("还没有可用于汇总的数据。")
+                        emptyState("这个月还没有记录。")
                     } else {
                         categoryDonut(snapshot)
 
@@ -40,7 +53,7 @@ struct ReportView: View {
                     }
 
                     sectionTitle("近 6 个月趋势")
-                    monthlyTrendChart(snapshot)
+                    monthlyTrendChart(snapshot, selectedLabel: $selectedTrendLabel)
 
                     sectionTitle("TOP5 商户")
                     topMerchantRanking(snapshot)
@@ -51,6 +64,22 @@ struct ReportView: View {
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("月报")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { withAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
+                        Image(systemName: "chevron.left")
+                            .fontWeight(.semibold)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { withAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: 1) } } label: {
+                        Image(systemName: "chevron.right")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(isCurrentMonth)
+                    .opacity(isCurrentMonth ? 0.35 : 1)
+                }
+            }
         }
     }
 
@@ -205,14 +234,35 @@ struct ReportView: View {
         )
     }
 
-    private func monthlyTrendChart(_ snapshot: MonthlySnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func monthlyTrendChart(_ snapshot: MonthlySnapshot, selectedLabel: Binding<String?>) -> some View {
+        let activeLabel = selectedLabel.wrappedValue
+        let activeMetric = activeLabel.flatMap { label in snapshot.monthlyTrend.first { $0.label == label } }
+
+        return VStack(alignment: .leading, spacing: 14) {
             Chart(snapshot.monthlyTrend) { metric in
                 BarMark(
                     x: .value("月份", metric.label),
                     y: .value("支出", metric.total)
                 )
                 .foregroundStyle(metric.isCurrentMonth ? AppTheme.accentSecondary : AppTheme.accent)
+                .opacity(activeLabel == nil || metric.label == activeLabel ? 1 : 0.30)
+                .annotation(position: .top, alignment: .center, spacing: 4) {
+                    if metric.label == activeLabel {
+                        Text(AppFormatters.currency(metric.total))
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(AppTheme.card)
+                                    .shadow(color: .black.opacity(0.10), radius: 4, x: 0, y: 1)
+                            )
+                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    }
+                }
             }
             .chartYAxis {
                 AxisMarks(position: .leading)
@@ -220,17 +270,51 @@ struct ReportView: View {
             .chartXAxis {
                 AxisMarks()
             }
-            .frame(height: 190)
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onEnded { value in
+                                    let xInPlot = value.location.x - geo[proxy.plotAreaFrame].origin.x
+                                    if let tapped: String = proxy.value(atX: xInPlot) {
+                                        withAnimation(.spring(duration: 0.18)) {
+                                            selectedLabel.wrappedValue = selectedLabel.wrappedValue == tapped ? nil : tapped
+                                        }
+                                    }
+                                }
+                        )
+                }
+            }
+            .frame(height: 210)
 
             HStack {
-                Text("本月")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.mutedInk)
-                Spacer()
-                Text(AppFormatters.currency(snapshot.totalExpense))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.ink)
+                if let metric = activeMetric {
+                    Text(metric.label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(AppFormatters.currency(metric.total))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text("\(metric.transactionCount) 笔")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                } else {
+                    Text(snapshot.monthLabel)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                    Spacer()
+                    Text(AppFormatters.currency(snapshot.totalExpense))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                }
             }
+            .animation(.easeInOut(duration: 0.15), value: activeLabel)
         }
         .padding(18)
         .background(

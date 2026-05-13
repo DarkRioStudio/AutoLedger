@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C042FD732F76270200A01918"
-               BuildableName = "AutoLedger - &#x4e00;&#x952e;&#x8bb0;&#x8d26;.app"
+               BuildableName = "AutoLedger.app"
                BlueprintName = "AutoLedger"
                ReferencedContainer = "container:AutoLedger.xcodeproj">
             </BuildableReference>
@@ -46,7 +46,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C042FD732F76270200A01918"
-            BuildableName = "AutoLedger - &#x4e00;&#x952e;&#x8bb0;&#x8d26;.app"
+            BuildableName = "AutoLedger.app"
             BlueprintName = "AutoLedger"
             ReferencedContainer = "container:AutoLedger.xcodeproj">
          </BuildableReference>
@@ -63,7 +63,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C042FD732F76270200A01918"
-            BuildableName = "AutoLedger - &#x4e00;&#x952e;&#x8bb0;&#x8d26;.app"
+            BuildableName = "AutoLedger.app"
             BlueprintName = "AutoLedger"
             ReferencedContainer = "container:AutoLedger.xcodeproj">
          </BuildableReference>

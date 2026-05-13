@@ -44,6 +44,68 @@
 
 ## 日志条目
 
+### ITER-075 Report 月报历史月份浏览
+- 日期：2026-05-20
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4
+- 类型：能力增强 / UX
+- 目标：月报 Tab 支持翻页查看历史月份，6 个月趋势图正确显示历史数据。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Report/ReportView.swift`：新增 `@State private var selectedMonth: Date = .now`；新增 `isCurrentMonth`、`stepMonth(by:)` 辅助方法；`store.monthlySnapshot` 改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算；`anomalyAlerts` 仅在 `isCurrentMonth` 时触发；NavigationBar 新增左右翻页箭头（`chevron.left` / `chevron.right`）；当月时右箭头 disabled；趋势图底部文案改为 `snapshot.monthLabel`；分类为空时提示文案更新。
+- 未改动范围：未改动 `MonthlySnapshot.swift`（已原生支持任意 referenceDate）；未改动 `LedgerStore.monthlySnapshot`（保留供其他调用方使用）；未改动 Core 层。
+- 完成内容：月份翻页 UI 实现；历史月份分类占比、TOP5 商户、6 个月趋势全部正确展示；切换月份自动清空分类选中状态；带动画翻页。
+- 未完成内容：无。
+- 测试情况：
+  - PASS：`xcodebuild ... build`（无编译错误）
+  - PASS：`bash scripts/run_offline_regression.sh`（28/29，唯一失败为预存"羊汤"分类残差）
+- 风险与注意事项：异常提醒（AnomalyAlert）基于"当前月 vs 近 3 个月均值"，查看历史月时隐藏，避免误导。
+- 回滚方式：还原 `ReportView.swift` 的 `body` 与 `stepMonth` 相关改动。
+- 结论：代码门禁通过，月报历史浏览功能上线。
+
+### ITER-073~074 Watch VoiceOver + App Intents 三件套
+- 日期：2026-05-20
+- 所属版本：v1.4.0
+- 所属阶段：Phase 3–4
+- 类型：能力增强 / 辅助功能 / App Intents
+- 目标：
+  - ITER-073：为 Watch app 四个视图补全 VoiceOver 标注，与 iPhone 端无障碍策略对齐。
+  - ITER-074：新增 `AddTransactionIntent`、`ParseLedgerTextIntent`、`OpenQuickAddIntent` 三个 App Intent，注册到 `AutoLedgerShortcuts`，补充中英文本地化。
+- 改动范围：
+  - `AutoLedgerWatch Watch App/ContentView.swift`：交易行 `.accessibilityElement(children: .combine)` + 合并标签；toast 动画 Reduce Motion 降级。
+  - `AutoLedgerWatch Watch App/QuickAddView.swift`：分类按钮 icon 隐藏 + 按钮级别 accessibilityLabel/addTraits；TextField accessibilityLabel。
+  - `AutoLedgerWatch Watch App/WatchVoiceRecorderView.swift`：mic icon 隐藏；TextField 标签+提示；解析按钮标签。
+  - `AutoLedgerWatch Watch App/WatchVoiceConfirmView.swift`：金额+商户组合标签；分类按钮无障碍；保存按钮标签+提示。
+  - `AutoLedger/Domain/Services/AddTransactionIntent.swift`（新增）：`CategoryAppEnum: AppEnum`；`AddTransactionIntent: AppIntent`；直写 SQLite，刷新 Widget。
+  - `AutoLedger/Domain/Services/ParseLedgerTextIntent.swift`（新增）：`ParseLedgerTextIntent: AppIntent`；调用 `VoiceLedgerParser`；返回结构化摘要。
+  - `AutoLedger/Domain/Services/OpenQuickAddIntent.swift`（新增）：`OpenQuickAddIntent: AppIntent`；通过 `QuickLedgerNavigationState` + NotificationCenter 打开快速记账页。
+  - `AutoLedger/Domain/Services/QuickLedgerIntent.swift`：`AutoLedgerShortcuts.appShortcuts` 新增三个 Shortcut 条目。
+  - `AutoLedger/zh-Hans.lproj/Localizable.strings` + `en.lproj/Localizable.strings`：三个 Intent 的本地化键。
+- 未改动范围：未修改现有 `VoiceLedgerIntent`；未修改 iPhone 端 VoiceOver（已在 ITER-072 完成）；未修改 Core 层。
+- 完成内容：全部 8 个改动文件（含 3 个新增）完成；三个 Intent 已注册快捷指令短语；中英文本地化齐全。
+- 未完成内容：无。
+- 测试情况：
+  - PASS：`xcodebuild ... build`（无编译错误）
+  - PASS：`bash scripts/run_offline_regression.sh`（28/29，唯一失败为预存"羊汤"分类残差）
+- 风险与注意事项：`CategoryAppEnum` rawValue 须与 `TransactionCategory` rawValue 严格一一对应；`VoiceLedgerConfidence` 为顶层枚举（非嵌套），`ParseLedgerTextIntent` 中已正确引用。
+- 回滚方式：删除三个新 Intent 文件；回滚 `QuickLedgerIntent.swift` 的 Shortcut 新增段；回滚 Localizable.strings 新增段。
+- 结论：代码门禁通过，Watch VoiceOver + App Intents 三件套全部上线。
+- 下一步建议：TestFlight 验证 Shortcuts 可触发；推进 ITER-075 App Store 截图与 ITER-076 发布门禁。
+
+### ITER-066~072 v1.4.0 Watch Support + iPhone VoiceOver
+- 日期：2026-05-19
+- 所属版本：v1.4.0
+- 所属阶段：Phase 1–2
+- 类型：能力增强 / 辅助功能
+- 目标：实现 Apple Watch 伴侣应用骨架（快速记账 + 语音记账），iPhone↔Watch 双向同步，以及 iPhone 端 VoiceOver / Reduce Motion 无障碍支持。
+- 改动范围：
+  - Watch App 骨架：`AutoLedgerWatch Watch App/`（ContentView、QuickAddView、WatchVoiceRecorderView、WatchVoiceConfirmView、WatchLedgerViewModel、WatchSessionManager、AutoLedgerWatchApp）。
+  - iPhone 端：`WatchConnectivityHost.swift`（新增）；`AutoLedgerApp.swift`（注入 host）；`LedgerStore.swift`（`handleWatchQuickAdd` 从 Watch 消息创建 Transaction）。
+  - iPhone VoiceOver：`LedgerView.swift`（交易行合并标签 + 分类 badge 隐藏）；`InboxView.swift`（识别结果行标签）；`MetricCard.swift`（数值+趋势合并标签）；Reduce Motion：`InboxView.swift` 动画降级。
+- 未改动范围：未修改 Core 解析层；未修改 Watch Complications；未修改 App Store 资产。
+- 完成内容：Watch target 可独立编译；iPhone↔Watch WatchConnectivity 握手与消息转发；iPhone VoiceOver / Reduce Motion 全量覆盖。
+- 测试情况：PASS（构建 + 离线回归 28/29）。
+- 结论：v1.4.0 基础 Watch 支持已落地，代码门禁通过。
+
 ### ITER-065 商户别名迁移至 SQLite + 自动学习对齐分类学习逻辑
 - 日期：2026-05-12
 - 所属版本：v1.3.5

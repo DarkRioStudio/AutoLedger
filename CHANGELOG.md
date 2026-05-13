@@ -9,6 +9,11 @@
 
 ## [Unreleased]
 
+### 新增（v1.4.0）
+- [2026-05-20 +0800] ITER-075 月报历史月份浏览：`ReportView` 新增 `@State selectedMonth` + NavigationBar 左右翻页箭头；月报数据改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算，6 个月趋势图现可显示选中月前 6 个月历史；查看历史月时自动隐藏异常消费提醒（仅当月有效）；切换月份自动清空分类选中状态；趋势图底部文案改为 `snapshot.monthLabel`。
+- [2026-05-20 +0800] ITER-073 Watch VoiceOver：`ContentView`（交易行合并标签+Reduce Motion 降级）、`QuickAddView`（分类按钮标签/选中态）、`WatchVoiceRecorderView`（TextField 标签+提示+解析按钮标签）、`WatchVoiceConfirmView`（金额+商户合并标签、分类选中态、保存按钮标签+提示）全部补全 VoiceOver 标注。
+- [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
+
 ### 新增（v1.3.5）
 - [2026-05-12 +0800] ITER-065 商户别名迁移至 SQLite + 自动学习对齐分类学习逻辑：新增 SQLite `merchant_aliases` 表，提供 `loadMerchantAliases / saveMerchantAlias / deleteMerchantAlias` 三个 API 与 `replaceForRestore` 原子还原支持；`LedgerStore` 初始化优先从 SQLite 加载，首次升级自动将 UserDefaults 旧数据迁移入库；新增 `recordMerchantAlias(original:alias:)` 写入入口（平行 `recordCategoryCorrection`），`merchantAliases` 改为 `@Published private(set)`；`learnMerchantAliasIfNeeded` 移除"必须更短"与"高置信度"两项限制，与分类学习条件完全对齐；`refreshFromStore` 与 `applyBackupBundle` 同步读写 SQLite；离线回归 28 条全部通过。
 - [2026-04-29 +0800] ITER-059~064 v1.3.5 Worker API 评估 + 核心引擎批量验证：Track A — 提取 `AutoLedgerCoreKit` 纯 Foundation 独立 SwiftPM 包（7 文件），在 macOS 上独立编译通过；评估 Cloudflare Workers (swiftwasm)、Vapor + Docker、SwiftPM CLI、JS port 四个候选运行时；输出 `tools/worker/EVALUATION.md`，结论 CONDITIONAL GO（当前使用 SwiftPM CLI，待 swiftwasm Foundation 完善后重新评估），性能基准 712 样本 7.5s 完成。Track B — receiptsample 全量基线报告（712 样本）：金额命中率 100%、商户非空率 100%、高置信率 100%；分类映射从 7 组扩增到 28 组（shopping 60/groceries 27/dining 7/transport 2），非 other 分类从 14 提升到 96 条（6.6x）；修复注册号误作金额 P0、页眉/页脚商户 P0、TOTAL 跨行金额、CHANGE/CASH 误提取、商品代码行 61558/14960/20202 误作金额、全角括号注册号等故障模式；新增 5 条 Golden Case，总数 31→36 条。`bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`xcodebuild` 全部通过。

@@ -14,6 +14,7 @@ PREP_DIR="$(mktemp -d /tmp/autoledger-prep.XXXXXX)"
 trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
 sed '/import AutoLedgerCore/d; /import UIKit/d; /import UserNotifications/d; /typealias Subscription/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
 sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift" > "$PREP_DIR/LedgerTextInterpreter.swift"
+sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift" > "$PREP_DIR/ReceiptParser.swift"
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
@@ -142,7 +143,7 @@ swiftc \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \
-  "$CORE/Services/ReceiptParser.swift" \
+  "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
