@@ -6,6 +6,7 @@ import UIKit
 struct InboxView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject private var store: LedgerStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImportingPhoto = false
     @State private var isImportingClipboard = false
@@ -97,6 +98,9 @@ struct InboxView: View {
                     accent: AppTheme.accent
                 )
                 .onTapGesture { selectedTab = 2 }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(String(format: localized("inbox.hero.monthly_expense.detail", fallback: "%d transactions"), store.monthlySnapshot.transactionCount) + "，" + AppFormatters.currency(store.monthlySnapshot.totalExpense))
+                .accessibilityHint("点击查看月度报表")
 
                 MetricCard(
                     title: localized("inbox.hero.top_merchant.title", fallback: "Top Merchant"),
@@ -105,6 +109,9 @@ struct InboxView: View {
                     accent: AppTheme.accentSecondary
                 )
                 .onTapGesture { showMerchantSheet = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel("最常去 " + store.monthlySnapshot.topMerchant)
+                .accessibilityHint("点击查看商户排行")
             }
         }
         .padding(22)
@@ -132,6 +139,7 @@ struct InboxView: View {
                 Image(systemName: "bolt.fill")
                     .font(.title2)
                     .foregroundStyle(AppTheme.accentSecondary)
+                    .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 12) {
@@ -199,14 +207,19 @@ struct InboxView: View {
 
     private var quickSetupCollapsed: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.25)) {
+            if reduceMotion {
                 isQuickSetupExpanded = true
+            } else {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    isQuickSetupExpanded = true
+                }
             }
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.title3)
                     .foregroundStyle(AppTheme.accent)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("inbox.quick_setup.enabled")
@@ -225,6 +238,7 @@ struct InboxView: View {
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.mutedInk)
+                    .accessibilityHidden(true)
             }
             .padding(18)
             .background(
@@ -243,6 +257,7 @@ struct InboxView: View {
                 Image(systemName: "bell.badge.fill")
                     .font(.title3)
                     .foregroundStyle(AppTheme.accentSecondary)
+                    .accessibilityHidden(true)
 
                 Text("inbox.upcoming_subscriptions.title")
                     .font(.title3.weight(.bold))
@@ -327,6 +342,7 @@ struct InboxView: View {
                 Image(systemName: "doc.text.viewfinder")
                     .font(.title2)
                     .foregroundStyle(AppTheme.accent)
+                    .accessibilityHidden(true)
             }
 
             PhotosPicker(
@@ -449,6 +465,7 @@ struct InboxView: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
                 .foregroundStyle(AppTheme.accent)
+                .accessibilityHidden(true)
 
             Text(summary)
                 .font(.subheadline)

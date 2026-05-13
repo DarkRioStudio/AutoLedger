@@ -67,6 +67,7 @@ struct LedgerView: View {
                                         .font(.subheadline.weight(.semibold))
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(filter == .month ? "上月" : "上年")
 
                                 Spacer()
 
@@ -84,6 +85,7 @@ struct LedgerView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(isAtOrAfterToday)
+                                .accessibilityLabel(filter == .month ? "下月" : "下年")
                             }
                             .foregroundStyle(AppTheme.accent)
                         }
@@ -135,8 +137,11 @@ struct LedgerView: View {
                                 Image(systemName: "slider.horizontal.3")
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(AppTheme.mutedInk)
+                                    .accessibilityHidden(true)
                             }
                         }
+                        .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                        .accessibilityHint("点击编辑")
                         .buttonStyle(.plain)
                         .padding(.vertical, 6)
                         .listRowBackground(AppTheme.card)
@@ -178,6 +183,7 @@ struct LedgerView: View {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityLabel("新增账单")
                 }
                 if !store.deletedTransactions.isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {

@@ -24,6 +24,9 @@ struct AutoLedgerApp: App {
         ClipboardImportIntent.handler = {
             LedgerStore.shared?.attemptClipboardImport(force: true)
         }
+
+        // 激活 WatchConnectivity 会话（Watch 端连接前预备）
+        _ = WatchConnectivityHost.shared
     }
 
     var body: some Scene {
@@ -63,6 +66,7 @@ struct AutoLedgerApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         store.refreshFromStore()
+                        WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
                         if store.isLocalDataEmptyForRestore {
                             store.detectICloudBackupForRestore()
                         }

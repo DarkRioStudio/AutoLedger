@@ -13,10 +13,10 @@ struct MetricCard: View {
                 .foregroundStyle(.white.opacity(0.78))
 
             Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.title.bold())
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.4)
+                .minimumScaleFactor(0.55)
 
             Text(detail)
                 .font(.subheadline)

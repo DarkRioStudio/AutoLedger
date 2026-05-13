@@ -289,5 +289,35 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             shortTitle: "voice_ledger.intent.short_title",
             systemImageName: "waveform"
         )
+        AppShortcut(
+            intent: AddTransactionIntent(),
+            phrases: [
+                "用 \(.applicationName) 手动记账",
+                "\(.applicationName) 新增账单",
+                "Add transaction with \(.applicationName)"
+            ],
+            shortTitle: "add_transaction.intent.short_title",
+            systemImageName: "plus.circle.fill"
+        )
+        AppShortcut(
+            intent: ParseLedgerTextIntent(),
+            phrases: [
+                "用 \(.applicationName) 解析账单",
+                "\(.applicationName) 识别账单文字",
+                "Parse ledger text with \(.applicationName)"
+            ],
+            shortTitle: "parse_ledger.intent.short_title",
+            systemImageName: "text.viewfinder"
+        )
+        AppShortcut(
+            intent: OpenQuickAddIntent(),
+            phrases: [
+                "打开 \(.applicationName) 快速记账",
+                "\(.applicationName) 快速记账",
+                "Open quick add in \(.applicationName)"
+            ],
+            shortTitle: "open_quick_add.intent.short_title",
+            systemImageName: "bolt.fill"
+        )
     }
 }

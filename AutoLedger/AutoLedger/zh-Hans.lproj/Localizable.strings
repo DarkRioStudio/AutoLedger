@@ -221,3 +221,43 @@
 "notification.quick_ledger.body_format" = "记账成功：%@ - %@。如有异常，请点击打开 App 确认。";
 "notification.subscription.title" = "明日扣费提醒";
 "notification.subscription.body_format" = "%@ 将于明天扣费 %@（%@）";
+
+// MARK: - AddTransactionIntent
+"add_transaction.intent.title" = "手动记账";
+"add_transaction.intent.description" = "指定金额、商户和分类，直接将一笔支出入账";
+"add_transaction.intent.short_title" = "手动入账";
+"add_transaction.amount.title" = "金额";
+"add_transaction.amount.description" = "支出金额（元）";
+"add_transaction.category.title" = "分类";
+"add_transaction.category.description" = "支出分类";
+"add_transaction.merchant.title" = "商户";
+"add_transaction.merchant.description" = "商户名称，例如：星巴克";
+"add_transaction.note.title" = "备注";
+"add_transaction.note.description" = "可选，附加备注信息";
+"add_transaction.date.title" = "日期";
+"add_transaction.date.description" = "可选，默认为今天";
+"add_transaction.merchant_empty" = "请输入商户名称";
+"add_transaction.amount_invalid" = "金额必须大于 0";
+"add_transaction.save_failed" = "保存失败，请重试";
+"add_transaction.success_format" = "已记录：%@ ¥%.2f（%@）";
+
+// MARK: - ParseLedgerTextIntent
+"parse_ledger.intent.title" = "解析账单文字";
+"parse_ledger.intent.description" = "将自然语言账单描述解析为结构化摘要，不自动入账";
+"parse_ledger.intent.short_title" = "解析账单";
+"parse_ledger.text.title" = "账单描述";
+"parse_ledger.text.description" = "一句话描述，例如：午饭 28 元";
+"parse_ledger.empty_input" = "请输入账单描述";
+"parse_ledger.parse_failed_format" = "解析失败（%@），请修改描述重试";
+"parse_ledger.result_format" = "商户：%@\n金额：¥%.2f\n分类：%@\n日期：%@\n置信度：%@";
+"parse_ledger.unknown_merchant" = "未知商户";
+"parse_ledger.today" = "今天";
+"parse_ledger.confidence.high" = "高";
+"parse_ledger.confidence.medium" = "中";
+"parse_ledger.confidence.low" = "低";
+
+// MARK: - OpenQuickAddIntent
+"open_quick_add.intent.title" = "打开快速记账";
+"open_quick_add.intent.description" = "打开 AutoLedger 并直接进入新建账单界面";
+"open_quick_add.intent.short_title" = "快速记账";
+"open_quick_add.launched" = "已打开 AutoLedger 快速记账";

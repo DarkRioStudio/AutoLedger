@@ -221,3 +221,43 @@
 "notification.quick_ledger.body_format" = "Saved: %@ - %@. Tap to review it in AutoLedger if anything looks off.";
 "notification.subscription.title" = "Charge Reminder for Tomorrow";
 "notification.subscription.body_format" = "%@ will charge %@ tomorrow (%@)";
+
+// MARK: - AddTransactionIntent
+"add_transaction.intent.title" = "Add Transaction";
+"add_transaction.intent.description" = "Specify amount, merchant, and category to log an expense";
+"add_transaction.intent.short_title" = "Add Transaction";
+"add_transaction.amount.title" = "Amount";
+"add_transaction.amount.description" = "Expense amount in your local currency";
+"add_transaction.category.title" = "Category";
+"add_transaction.category.description" = "Expense category";
+"add_transaction.merchant.title" = "Merchant";
+"add_transaction.merchant.description" = "Merchant name, e.g. Starbucks";
+"add_transaction.note.title" = "Note";
+"add_transaction.note.description" = "Optional note";
+"add_transaction.date.title" = "Date";
+"add_transaction.date.description" = "Optional, defaults to today";
+"add_transaction.merchant_empty" = "Please enter a merchant name";
+"add_transaction.amount_invalid" = "Amount must be greater than 0";
+"add_transaction.save_failed" = "Save failed, please try again";
+"add_transaction.success_format" = "Saved: %@ \u00a5%.2f (%@)";
+
+// MARK: - ParseLedgerTextIntent
+"parse_ledger.intent.title" = "Parse Ledger Text";
+"parse_ledger.intent.description" = "Parse a natural language expense description and return a structured summary without saving";
+"parse_ledger.intent.short_title" = "Parse Ledger";
+"parse_ledger.text.title" = "Description";
+"parse_ledger.text.description" = "One sentence, e.g. Lunch 28 yuan";
+"parse_ledger.empty_input" = "Please enter an expense description";
+"parse_ledger.parse_failed_format" = "Parse failed (%@), please revise and retry";
+"parse_ledger.result_format" = "Merchant: %@\nAmount: \u00a5%.2f\nCategory: %@\nDate: %@\nConfidence: %@";
+"parse_ledger.unknown_merchant" = "Unknown merchant";
+"parse_ledger.today" = "Today";
+"parse_ledger.confidence.high" = "High";
+"parse_ledger.confidence.medium" = "Medium";
+"parse_ledger.confidence.low" = "Low";
+
+// MARK: - OpenQuickAddIntent
+"open_quick_add.intent.title" = "Open Quick Add";
+"open_quick_add.intent.description" = "Open AutoLedger and go directly to the new transaction screen";
+"open_quick_add.intent.short_title" = "Quick Add";
+"open_quick_add.launched" = "AutoLedger opened for quick add";
