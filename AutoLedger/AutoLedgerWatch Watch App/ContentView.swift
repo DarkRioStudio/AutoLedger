@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
 
     @Environment(WatchLedgerViewModel.self) private var viewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var vm = viewModel
@@ -37,25 +38,48 @@ struct ContentView: View {
                                 .font(.headline)
                                 .foregroundStyle(.primary)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(tx.merchant)，\(tx.formattedAmount)，\(tx.formattedDate)")
                     }
                 }
             }
             .navigationTitle("账本")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        viewModel.isVoiceRecorderPresented = true
+                    } label: {
+                        Image(systemName: "mic")
+                    }
+                    .accessibilityLabel("语音记账")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.isQuickAddPresented = true
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel("快速记账")
                 }
             }
             .refreshable {
                 viewModel.refreshTransactions()
             }
+            .safeAreaInset(edge: .bottom) {
+                if viewModel.pendingCount > 0 {
+                    Text("\(viewModel.pendingCount) 笔待同步")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 4)
+                }
+            }
         }
         .sheet(isPresented: $vm.isQuickAddPresented) {
             QuickAddView()
+                .environment(viewModel)
+        }
+        .sheet(isPresented: $vm.isVoiceRecorderPresented) {
+            WatchVoiceRecorderView()
                 .environment(viewModel)
         }
         .overlay(alignment: .bottom) {
@@ -66,10 +90,10 @@ struct ContentView: View {
                     .padding(.vertical, 6)
                     .background(.ultraThinMaterial, in: Capsule())
                     .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.opacity)
             }
         }
-        .animation(.easeInOut, value: viewModel.lastFeedback)
+        .animation(reduceMotion ? nil : .easeInOut, value: viewModel.lastFeedback)
     }
 }
 
