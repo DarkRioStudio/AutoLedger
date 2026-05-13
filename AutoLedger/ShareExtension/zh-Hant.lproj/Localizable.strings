@@ -1,0 +1,13 @@
+"share.status.recognizing" = "正在識別…";
+"share.error.no_image" = "未找到圖片";
+"share.error.read_image_failed" = "讀取圖片失敗";
+"share.error.ocr_failed_format" = "OCR 失敗：%@";
+"share.error.recognition_failed" = "識別失敗，請開啟 App 手動匯入";
+"share.error.database_failed" = "資料庫開啟失敗";
+"share.duplicate_format" = "%@ ¥%.2f 已存在";
+"share.note" = "分享匯入";
+"share.saved_format" = "已記好：%@ ¥%.2f";
+"share.multi_receipt_warning" = "\n⚠️ 圖片中可能有多筆帳單，僅識別了一筆，建議單獨截圖後分別匯入";
+"share.error.persistence_failed" = "入帳失敗，請開啟 App 確認";
+"share.debug.parse_failed" = "Share Extension 解析失敗";
+"share.debug.persistence_failed_format" = "入帳失敗：%@";
