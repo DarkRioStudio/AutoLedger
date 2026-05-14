@@ -37,6 +37,7 @@
 | 📊 | **月度报告** | 分类统计、消费趋势、商户排名一目了然 |
 | 📤 | **Share Extension** | 在任意 App 中分享截图直接导入 |
 | 🕹️ | **控制中心 Widget** | 从控制中心直接触发剪切板记账，无需解锁进 App |
+| ⌚ | **Apple Watch** | 腕上语音记账、今日支出、最近账单、快速分类记账，通过 WatchConnectivity 与 iPhone 同步 |
 | 🔒 | **完全离线** | 所有识别和分析在本地完成，唯一网络请求为 Gemma 模型版本检查与下载（CDN），零用户数据上传 |
 
 ## Quick Start
@@ -63,6 +64,8 @@
 | 依赖管理 | CocoaPods (MediaPipe), SPM (AutoLedgerCore) |
 | 快捷指令 | AppIntents / `ForegroundContinuableIntent` |
 | 分享 | Share Extension |
+| Watch | watchOS 11, WatchConnectivity |
+| Widget | WidgetKit (主屏 & 控制中心) |
 | CI | Xcode Cloud |
 
 ## Project Structure
@@ -77,11 +80,13 @@ AutoLedgerRio/
 │   │   ├── Data/                # 持久化、DTO、Mapper
 │   │   ├── Shared/              # 通用组件、常量、扩展
 │   │   └── Assets.xcassets/     # 图标 & 资源
-│   ├── AutoLedgerCore/          # 本地 Swift Package (共享模型)
-│   ├── Pods/                    # CocoaPods 依赖 (MediaPipe, gitignored)
-│   ├── ci_scripts/              # Xcode Cloud CI 脚本
+│   ├── AutoLedgerCore/          # 本地 Swift Package (纯 Foundation，跨平台)
+│   ├── AutoLedgerWatch Watch App/ # Apple Watch App 源码
+│   ├── AutoLedgerWidgets/       # 主屏 Widget Extension
+│   ├── ControlWidgetExtension/  # 控制中心 Widget Extension
 │   ├── ShareExtension/          # Share Extension
-│   └── ControlWidgetExtension/  # 控制中心 Widget Extension
+│   ├── Pods/                    # CocoaPods 依赖 (MediaPipe, gitignored)
+│   └── ci_scripts/              # Xcode Cloud CI 脚本
 ├── versions/                    # 版本计划 & 回归基线
 ├── process/                     # 迭代工作流文档
 ├── scripts/                     # 回归测试脚本
@@ -112,14 +117,19 @@ bash scripts/run_offline_regression.sh
 
 ## Roadmap
 
-| 版本 | 状态 | 主要内容 |
-|------|------|----------|
-| v0.1.0 | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
-| v1.0.0 | ✅ 已发布 | 一键记账引导、LLM 智能解析、操作按钮集成、图标、TestFlight 外测就绪 |
-| v1.1.0 | ✅ 外测基线完成 | 订阅识别 & 扣费提醒、分类学习、自定义分类 / 来源、用户反馈闭环、去重增强、最近删除、手动记账、控制中心 Widget |
-| v1.2.0 | ✅ 代码完成 | Gemma-2 2B 端侧 LLM 集成（CDN + SHA-256）、模型生命周期管理、月报图表增强（Swift Charts）、异常消费检测、云闪付 / 银联适配、订阅管理增强、软删除持久化 |
-| v1.3.0 | ✅ 代码完成 | BackupBundle、JSON 导出/导入、覆盖恢复、iCloud 单文件自动备份、重装恢复提示 |
-| v1.3.1 | ✅ 代码完成 | 语音记账 MVP、首页按住语音入口、Siri/AppIntent 入口、App 内确认页、语音来源与调试记录、语音解析回归 |
+| 内部版本 | App Store | 状态 | 主要内容 |
+|---------|-----------|------|----------|
+| v0.1.0 | — | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
+| v1.0.0 | — | ✅ 已发布 | 一键记账引导、LLM 智能解析、操作按钮集成、图标、TestFlight 外测就绪 |
+| v1.1.0 | — | ✅ 已发布 | 订阅识别 & 扣费提醒、分类学习、自定义分类 / 来源、用户反馈闭环、去重增强、最近删除、手动记账、控制中心 Widget |
+| v1.2.0 | **1.1.0** | ✅ 已发布 | Gemma-2 2B 端侧 LLM 集成（CDN + SHA-256）、模型生命周期管理、月报图表增强（Swift Charts）、异常消费检测、云闪付 / 银联适配、订阅管理增强、软删除持久化 |
+| v1.3.0 | **1.2.0** | ✅ 已发布 | BackupBundle、JSON 导出/导入、覆盖恢复、iCloud 单文件自动备份、重装恢复提示 |
+| v1.3.1 | **1.2.0** | ✅ 已发布 | 语音记账 MVP、首页按住语音入口、Siri/AppIntent 入口、App 内确认页、语音来源与调试记录、语音解析回归 |
+| v1.3.2 | **1.2.0** | ✅ 已发布 | 统一 `LedgerTextInterpreter` 解析入口，收敛 OCR / 剪切板 / 分享 / 语音 / Siri 多路径 |
+| v1.3.3 | **1.2.0** | ✅ 已发布 | 平台无关 `LedgerTextInterpreterCore` 提取为 AutoLedgerCore 模块，批量 OCR 测试框架 |
+| v1.3.4 | **1.2.0** | ✅ 已发布 | 规则解析质量提升（合计行优先、商户黑名单、分类映射）、批量报告驱动修复 |
+| v1.3.5 | **1.2.0** | ✅ 已发布 | Worker API 可行性评估、712 样本批量回归（金额命中率 100%）、商户别名迁移 |
+| v1.4.0 | **1.3.0** | 🚧 TestFlight | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强 |
 
 ## License
 
