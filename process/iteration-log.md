@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-04-29（v1.3.5 完成）
+更新日期：2026-05-25（v1.4.0 UI 文案全球化）
 
 ## 记录规则
 
@@ -43,6 +43,52 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-079 UI 文案全球化收口
+- 日期：2026-05-25
+- 所属版本：v1.4.0
+- 所属阶段：Release Notes / 发布准备
+- 类型：能力增强 / 本地化 / 文档
+- 目标：补齐 v1.4.x 用户可见主路径的简体中文、繁体中文、英文 UI 文案资源，并更新 RN 中的本地化结论。
+- 改动范围：
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：扩展主 App 本地化键至 457 个，覆盖账本筛选、最近删除、月报、分类刷新、商户别名、消费分析、数据管理、订阅管理、问题反馈、反馈邮件预览、OCR / iCloud 用户错误、App Intents 参数摘要等主路径。
+  - `AutoLedger/AutoLedger/Features/*` 与 `AutoLedger/AutoLedger/Domain/Services/*Intent.swift`：将新增用户可见文案迁移到本地化 key。
+  - `AutoLedger/AutoLedgerWatch Watch App/*.lproj/Localizable.strings`：新增 Watch App 简体中文、繁体中文、英文三套资源。
+  - `AutoLedger/AutoLedgerWatch Watch App/*.swift`：将 Watch 首页、快速记账、语音记账、确认页、同步反馈等文案迁移到本地化 key。
+  - `versions/v1.4.0-RELEASE(draft).md`、`CHANGELOG.md`、`process/iteration-log.md`：更新本地化状态与验证结论。
+- 未改动范围：未本地化 DebugView、调试记录导出文本、日志、解析规则关键词、LLM prompt、OCR 识别标签；未新增真机多语言截图和 App Store 审核材料。
+- 完成内容：主 App、Watch App、ControlWidgetExtension、ShareExtension 的 zh-Hans / zh-Hant / en `Localizable.strings` key 集合已对齐；用户可见主路径三语文案补齐；v1.4.0 RN 本地化结论已从“UI 文案未齐全”更新为“主路径已补齐，Debug/开发者工具保留中文”。
+- 未完成内容：DebugView 和调试导出记录仍以中文为主；未做真机语言切换、Watch 真机、大字号、VoiceOver 截图验收。
+- 测试情况：
+  - PASS：`find AutoLedger -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
+  - PASS：`git diff --check`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`bash scripts/run_offline_regression.sh`
+- 风险与注意事项：UI 全球化范围按用户可见主路径收口，不把调试/开发者导出文本纳入本轮；部分日期和金额展示仍依赖系统 Locale，需要真机多语言环境点验。
+- 回滚方式：回退本轮 Swift 文案迁移、三套 `Localizable.strings` 新增键、Watch `.lproj` 资源，以及 RN / CHANGELOG / iteration-log 更新。
+- 结论：主路径 UI 文案全球化完成，代码门禁通过。
+- 下一步建议：进入 TestFlight 前补一轮真机语言切换截图验收，并单独决定是否把 DebugView 做成开发者模式本地化。
+
+### ITER-078 v1.4.0 / v1.4.x RN 草稿与本地化状态核查
+- 日期：2026-05-25
+- 所属版本：v1.4.0
+- 所属阶段：Release Notes / 发布准备
+- 类型：文档 / 发布门禁 / 本地化核查
+- 目标：汇总 v1.4.x 当前已实现功能，判断简体中文、繁体中文、英文三套本地化是否齐全，并产出可用于 TestFlight / 发布评审的 RN 草稿。
+- 改动范围：
+  - `versions/v1.4.0-RELEASE(draft).md`：新增 RN 草稿，覆盖功能清单、测试重点、已知限制、本地化结论与 TestFlight 文案。
+  - `CHANGELOG.md`：新增 ITER-078 条目。
+  - `process/iteration-log.md`：记录本轮文档与本地化核查结果。
+- 未改动范围：未修改代码；未补齐本地化资源；未新增 Watch 截图、App Store Review Notes 或真机验证材料。
+- 完成内容：确认 v1.4.x 已实现 Watch 伴侣 App、Watch/iPhone 辅助功能主路径、App Intents 三件套、月报历史月份、微信拼多多解析修复、分类/商户别名批量刷新；确认主 App / Widget / ShareExtension 的 `.strings` key 在 zh-Hans、zh-Hant、en 三套资源中对齐。
+- 未完成内容：Watch App 尚无独立三语 `.lproj` 资源；v1.4.x 新增 Watch UI、分类刷新弹窗、商户别名刷新入口、月报及部分旧页面仍有硬编码中文，不能声明三语 UI 本地化齐全。
+- 测试情况：
+  - 本轮为文档整理与静态核查，未重新运行构建。
+  - 最近一轮已通过：`bash scripts/run_golden_regression.sh`、`bash scripts/run_offline_regression.sh`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`git diff --check`。
+- 风险与注意事项：RN 对外发布时需避免混淆“v1.4.x 内部开发线”和“App Store 对外 v1.3.0”；本地化只能写成 key 对齐，不能写成三语完整体验已完成。
+- 回滚方式：删除 `versions/v1.4.0-RELEASE(draft).md`，回退本轮 CHANGELOG 与 iteration-log 条目。
+- 结论：RN 草稿完成；本地化结论为“key 对齐，UI 文案未齐全”。
+- 下一步建议：补齐 Watch App 与 v1.4.x 新增 UI 的 zh-Hans / zh-Hant / en 本地化资源后，再更新 RN 的发布结论并做真机辅助功能点验。
 
 ### ITER-077 分类/商户别名批量刷新交互
 - 日期：2026-05-25

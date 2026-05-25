@@ -1,0 +1,40 @@
+"common.cancel" = "Cancel";
+"common.save" = "Save";
+
+"transaction_editor.amount" = "Amount";
+"transaction_editor.category" = "Category";
+"transaction_editor.merchant" = "Merchant";
+
+"category.groceries.title" = "Groceries";
+"category.dining.title" = "Dining";
+"category.transport.title" = "Transport";
+"category.shopping.title" = "Shopping";
+"category.digital.title" = "Digital Services";
+"category.utilities.title" = "Utilities";
+"category.entertainment.title" = "Entertainment";
+"category.other.title" = "Other";
+
+"voice_ledger_parse" = "Parse";
+
+"watch.ledger.title" = "Ledger";
+"watch.empty.title" = "No Records";
+"watch.empty.description" = "Entries appear here after you save them on iPhone";
+"watch.transaction.accessibility_format" = "%@, %@, %@";
+"watch.pending_sync_format" = "%d pending sync";
+"watch.quick_add.title" = "Quick Add";
+"watch.quick_add.merchant_optional" = "Merchant (Optional)";
+"watch.quick_add.submit" = "Save Entry";
+"watch.voice_ledger.title" = "Voice Ledger";
+"watch.voice.input_hint" = "Tap the input field and choose Dictation";
+"watch.voice.placeholder" = "Example: coffee 28";
+"watch.voice.content" = "Voice content";
+"watch.voice.content_hint" = "Enter an expense phrase, such as coffee 28";
+"watch.voice.parse_accessibility" = "Parse and continue to review";
+"watch.voice.amount_missing" = "No amount recognized. Please try again.";
+"watch.voice.confirm.title" = "Review";
+"watch.voice.confirm.amount_accessibility_format" = "Expense %.2f, %@";
+"watch.voice.confirm.save_accessibility" = "Save this transaction";
+"watch.voice.confirm.save_hint" = "After confirmation, it will sync to iPhone";
+"watch.voice.confirm.empty" = "Nothing to save";
+"watch.feedback.queued" = "Saved offline and will sync later";
+"watch.feedback.sent" = "Sent to iPhone";

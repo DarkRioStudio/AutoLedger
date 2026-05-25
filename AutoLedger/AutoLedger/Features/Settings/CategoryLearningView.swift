@@ -17,24 +17,24 @@ struct CategoryLearningView: View {
             .padding(.vertical, 20)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("分类学习")
+        .navigationTitle("settings.category_learning.title")
     }
 
     private var correctionsList: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("已学习的分类偏好")
+                Text("category_learning.learned_title")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
                 Spacer()
 
-                Text("\(store.categoryCorrections.count) 条")
+                Text(String(format: String(localized: "category_learning.count_format"), store.categoryCorrections.count))
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
 
-            Text("当同一商户的账单再次导入时，将自动使用您修正后的分类。")
+            Text("category_learning.description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
 
@@ -75,7 +75,7 @@ struct CategoryLearningView: View {
             Button(role: .destructive) {
                 store.deleteCategoryCorrection(merchant: merchant)
             } label: {
-                Label("删除", systemImage: "trash")
+                Label("common.delete", systemImage: "trash")
             }
         }
     }
@@ -86,11 +86,11 @@ struct CategoryLearningView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(AppTheme.mutedInk.opacity(0.5))
 
-            Text("暂无分类学习记录")
+            Text("category_learning.empty.title")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            Text("在账本中修改某笔账单的分类后，系统会自动记住该商户的分类偏好，后续导入时自动应用。")
+            Text("category_learning.empty.description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
                 .multilineTextAlignment(.center)

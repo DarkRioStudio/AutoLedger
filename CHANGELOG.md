@@ -9,14 +9,16 @@
 
 ## [Unreleased]
 
-### 修复（v1.4.0）
-- [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。
-- [2026-05-25 +0800] ITER-076 微信拼多多先用后付详情页解析：`ReceiptParser` 在微信详情页缺少"商户全称"时，不再直接取负数金额上一行作为商户；新增附近展示商户扫描与微信 UI 噪声过滤，避免 `• 交易详情` 被误入账，并将 `拼多多` 归入购物分类；补齐既有"羊汤"餐饮分类残留；新增对应 Golden Case，`run_golden_regression.sh` 同步修复为当前 App 版解析器路径。
-
 ### 新增（v1.4.0）
+- [2026-05-25 +0800] ITER-079 UI 文案全球化收口：补齐主 App v1.4 主路径与 Watch App 的简体中文 / 繁体中文 / 英文 UI 文案资源；Watch App 新增独立 `zh-Hans.lproj`、`zh-Hant.lproj`、`en.lproj`；主 App `Localizable.strings` 扩展至 457 个 key，覆盖账本筛选、最近删除、月报、分类刷新、商户别名、消费分析、数据管理、订阅管理、问题反馈、反馈邮件预览、OCR / iCloud 用户错误与 App Intents 参数摘要等用户可见入口。DebugView 与调试导出文本继续保留中文，作为开发者 / 回归工具暂不纳入本轮 UI 全球化范围。
+- [2026-05-25 +0800] ITER-078 v1.4.0 / v1.4.x Release Notes 草稿：新增 `versions/v1.4.0-RELEASE(draft).md`，汇总 Watch 伴侣 App、辅助功能、App Intents、月报历史月份、微信拼多多解析修复、分类/商户别名批量刷新等已实现能力；补充简体中文 / 繁体中文 / 英文本地化检查结论，明确 `.strings` key 已对齐但 Watch 与部分新增 UI 仍存在硬编码中文，暂不建议声明三语完整本地化。
 - [2026-05-20 +0800] ITER-075 月报历史月份浏览：`ReportView` 新增 `@State selectedMonth` + NavigationBar 左右翻页箭头；月报数据改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算，6 个月趋势图现可显示选中月前 6 个月历史；查看历史月时自动隐藏异常消费提醒（仅当月有效）；切换月份自动清空分类选中状态；趋势图底部文案改为 `snapshot.monthLabel`。
 - [2026-05-20 +0800] ITER-073 Watch VoiceOver：`ContentView`（交易行合并标签+Reduce Motion 降级）、`QuickAddView`（分类按钮标签/选中态）、`WatchVoiceRecorderView`（TextField 标签+提示+解析按钮标签）、`WatchVoiceConfirmView`（金额+商户合并标签、分类选中态、保存按钮标签+提示）全部补全 VoiceOver 标注。
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
+
+### 修复（v1.4.0）
+- [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。
+- [2026-05-25 +0800] ITER-076 微信拼多多先用后付详情页解析：`ReceiptParser` 在微信详情页缺少"商户全称"时，不再直接取负数金额上一行作为商户；新增附近展示商户扫描与微信 UI 噪声过滤，避免 `• 交易详情` 被误入账，并将 `拼多多` 归入购物分类；补齐既有"羊汤"餐饮分类残留；新增对应 Golden Case，`run_golden_regression.sh` 同步修复为当前 App 版解析器路径。
 
 ### 新增（v1.3.5）
 - [2026-05-12 +0800] ITER-065 商户别名迁移至 SQLite + 自动学习对齐分类学习逻辑：新增 SQLite `merchant_aliases` 表，提供 `loadMerchantAliases / saveMerchantAlias / deleteMerchantAlias` 三个 API 与 `replaceForRestore` 原子还原支持；`LedgerStore` 初始化优先从 SQLite 加载，首次升级自动将 UserDefaults 旧数据迁移入库；新增 `recordMerchantAlias(original:alias:)` 写入入口（平行 `recordCategoryCorrection`），`merchantAliases` 改为 `@Published private(set)`；`learnMerchantAliasIfNeeded` 移除"必须更短"与"高置信度"两项限制，与分类学习条件完全对齐；`refreshFromStore` 与 `applyBackupBundle` 同步读写 SQLite；离线回归 28 条全部通过。

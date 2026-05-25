@@ -18,9 +18,9 @@ struct ContentView: View {
             List {
                 if viewModel.recentTransactions.isEmpty {
                     ContentUnavailableView(
-                        "暂无记录",
+                        "watch.empty.title",
                         systemImage: "tray",
-                        description: Text("在 iPhone 上记账后同步显示")
+                        description: Text("watch.empty.description")
                     )
                 } else {
                     ForEach(viewModel.recentTransactions) { tx in
@@ -39,11 +39,13 @@ struct ContentView: View {
                                 .foregroundStyle(.primary)
                         }
                         .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(tx.merchant)，\(tx.formattedAmount)，\(tx.formattedDate)")
+                        .accessibilityLabel(
+                            Text(String(format: String(localized: "watch.transaction.accessibility_format"), tx.merchant, tx.formattedAmount, tx.formattedDate))
+                        )
                     }
                 }
             }
-            .navigationTitle("账本")
+            .navigationTitle("watch.ledger.title")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -51,7 +53,7 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "mic")
                     }
-                    .accessibilityLabel("语音记账")
+                    .accessibilityLabel(Text("watch.voice_ledger.title"))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -59,7 +61,7 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("快速记账")
+                    .accessibilityLabel(Text("watch.quick_add.title"))
                 }
             }
             .refreshable {
@@ -67,7 +69,7 @@ struct ContentView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 if viewModel.pendingCount > 0 {
-                    Text("\(viewModel.pendingCount) 笔待同步")
+                    Text(String(format: String(localized: "watch.pending_sync_format"), viewModel.pendingCount))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.bottom, 4)

@@ -167,92 +167,54 @@ enum FeedbackBundleBuilder {
     ) -> String {
         let device = collectDeviceInfo()
         let nowLocal = AppFormatters.exportDateTime(.now)
+        let extra = extraNote.isEmpty ? String(localized: "feedback.email.none") : extraNote
 
-        var body = ""
-        switch level {
-        case .L1:
-            body = """
-            你好，我在使用 AutoLedger 时遇到了问题，已附带标准反馈日志。
-
-            【问题描述】
-            \(userDescription)
-
-            【预期结果】
-            \(expectedResult)
-
-            【实际结果】
-            \(actualResult)
-
-            【是否可复现】
-            \(reproducible)
-
-            【发生时间】
-            \(nowLocal)
-
-            【补充说明】
-            \(extraNote.isEmpty ? "无" : extraNote)
-            """
-        case .L2:
-            body = """
-            你好，我在使用 AutoLedger 时遇到了需要进一步排查的问题，已附带增强调试日志。
-
-            【问题描述】
-            \(userDescription)
-
-            【预期结果】
-            \(expectedResult)
-
-            【实际结果】
-            \(actualResult)
-
-            【是否可复现】
-            \(reproducible)
-
-            【发生时间】
-            \(nowLocal)
-
-            【本次已附加内容】
-            - 增强调试日志
-            - 脱敏后的识别上下文
-            - 解析结果摘要
-            - 流程轨迹
-
-            【补充说明】
-            \(extraNote.isEmpty ? "无" : extraNote)
-            """
-        case .L3:
-            body = """
-            你好，我在使用 AutoLedger 时遇到了严重或持续性问题。本次邮件附带完整诊断包，用于协助进一步排查。
-
-            【问题描述】
-            \(userDescription)
-
-            【预期结果】
-            \(expectedResult)
-
-            【实际结果】
-            \(actualResult)
-
-            【是否可复现】
-            \(reproducible)
-
-            【发生时间】
-            \(nowLocal)
-
-            【本次已附加内容】
-            - 完整调试日志
-            - 解析轨迹
-            - 可选原始截图/图片
-            - 识别原文（如已勾选）
-
-            【重要提示】
-            本次诊断包可能包含更多账单上下文信息，仅建议在你明确知情并同意的情况下发送。
-
-            【补充说明】
-            \(extraNote.isEmpty ? "无" : extraNote)
-            """
+        func section(_ labelKey: String, _ value: String) -> String {
+            "\(String(localized: String.LocalizationValue(labelKey)))\n\(value)"
         }
 
+        func bulletList(_ keys: [String]) -> String {
+            keys
+                .map { "- \(String(localized: String.LocalizationValue($0)))" }
+                .joined(separator: "\n")
+        }
+
+        var sections: [String] = []
+        switch level {
+        case .L1:
+            sections.append(String(localized: "feedback.email.intro.l1"))
+        case .L2:
+            sections.append(String(localized: "feedback.email.intro.l2"))
+        case .L3:
+            sections.append(String(localized: "feedback.email.intro.l3"))
+        }
+
+        sections.append(section("feedback.email.label.problem", userDescription))
+        sections.append(section("feedback.email.label.expected", expectedResult))
+        sections.append(section("feedback.email.label.actual", actualResult))
+        sections.append(section("feedback.email.label.reproducible", reproducible))
+        sections.append(section("feedback.email.label.event_time", nowLocal))
+
+        if level == .L2 {
+            sections.append(section("feedback.email.label.attachments", bulletList([
+                "feedback.email.attachment.l2.debug_log",
+                "feedback.email.attachment.l2.redacted_context",
+                "feedback.email.attachment.l2.parse_summary",
+                "feedback.email.attachment.l2.trace"
+            ])))
+        } else if level == .L3 {
+            sections.append(section("feedback.email.label.attachments", bulletList([
+                "feedback.email.attachment.l3.full_debug_log",
+                "feedback.email.attachment.l3.trace",
+                "feedback.email.attachment.l3.optional_screenshot",
+                "feedback.email.attachment.l3.ocr_text"
+            ])))
+            sections.append(section("feedback.email.label.important", String(localized: "feedback.email.important.l3")))
+        }
+
+        sections.append(section("feedback.email.label.note", extra))
+
+        var body = sections.joined(separator: "\n\n")
         body += """
 
         \n--------------------------------

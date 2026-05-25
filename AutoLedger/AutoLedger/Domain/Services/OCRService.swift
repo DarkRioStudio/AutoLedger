@@ -8,9 +8,9 @@ public enum OCRServiceError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .loadFailed:
-            return "未能读取所选图片，请换一张截图再试。"
+            return String(localized: "ocr.error.load_failed")
         case .emptyText:
-            return "OCR 没识别到文本，请确认截图清晰且包含支付结果信息。"
+            return String(localized: "ocr.error.empty_text")
         }
     }
 }

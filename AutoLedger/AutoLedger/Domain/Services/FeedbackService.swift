@@ -29,12 +29,18 @@ final class FeedbackService: NSObject, ObservableObject {
 
         var message: String {
             switch self {
-            case .sent:              return "反馈已发送，感谢你的帮助！"
-            case .saved:             return "邮件已保存为草稿。"
-            case .cancelled:         return "已取消发送。"
-            case .failed(let msg):   return "发送失败：\(msg)"
-            case .copiedToClipboard: return "反馈内容已复制到剪切板，请手动发送至 \(supportEmail)。"
-            case .sharedViaSheet:    return "已通过系统分享导出反馈包。"
+            case .sent:
+                return String(localized: "feedback.result.sent")
+            case .saved:
+                return String(localized: "feedback.result.saved")
+            case .cancelled:
+                return String(localized: "feedback.result.cancelled")
+            case .failed(let msg):
+                return String(format: String(localized: "feedback.result.failed_format"), msg)
+            case .copiedToClipboard:
+                return String(format: String(localized: "feedback.result.copied_format"), FeedbackService.supportEmail)
+            case .sharedViaSheet:
+                return String(localized: "feedback.result.shared")
             }
         }
     }
@@ -87,8 +93,8 @@ extension FeedbackService: @preconcurrency MFMailComposeViewControllerDelegate {
             case .sent:      self?.sendResult = .sent
             case .saved:     self?.sendResult = .saved
             case .cancelled: self?.sendResult = .cancelled
-            case .failed:    self?.sendResult = .failed(error?.localizedDescription ?? "未知错误")
-            @unknown default: self?.sendResult = .failed("未知状态")
+            case .failed:    self?.sendResult = .failed(error?.localizedDescription ?? String(localized: "common.unknown_error"))
+            @unknown default: self?.sendResult = .failed(String(localized: "common.unknown_state"))
             }
         }
     }

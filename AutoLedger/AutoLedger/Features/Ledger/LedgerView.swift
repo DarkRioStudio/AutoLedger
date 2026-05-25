@@ -2,9 +2,33 @@ import AutoLedgerCore
 import SwiftUI
 
 private enum LedgerFilter: String, CaseIterable {
-    case all = "全部"
-    case month = "本月"
-    case year = "本年"
+    case all
+    case month
+    case year
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .all: return "ledger.filter.all"
+        case .month: return "ledger.filter.month"
+        case .year: return "ledger.filter.year"
+        }
+    }
+
+    var previousAccessibilityKey: LocalizedStringKey {
+        switch self {
+        case .all: return "ledger.filter.previous"
+        case .month: return "ledger.filter.previous_month"
+        case .year: return "ledger.filter.previous_year"
+        }
+    }
+
+    var nextAccessibilityKey: LocalizedStringKey {
+        switch self {
+        case .all: return "ledger.filter.next"
+        case .month: return "ledger.filter.next_month"
+        case .year: return "ledger.filter.next_year"
+        }
+    }
 }
 
 struct LedgerView: View {
@@ -34,13 +58,14 @@ struct LedgerView: View {
 
     private var filterLabel: String {
         let fmt = DateFormatter()
+        fmt.locale = .current
         switch filter {
-        case .all: return "全部账单"
+        case .all: return String(localized: "ledger.filter.all_transactions")
         case .month:
-            fmt.dateFormat = "yyyy年M月"
+            fmt.setLocalizedDateFormatFromTemplate("yMMM")
             return fmt.string(from: filterDate)
         case .year:
-            fmt.dateFormat = "yyyy年"
+            fmt.setLocalizedDateFormatFromTemplate("y")
             return fmt.string(from: filterDate)
         }
     }
@@ -51,9 +76,9 @@ struct LedgerView: View {
                 Section {
                     // Filter controls
                     VStack(alignment: .leading, spacing: 10) {
-                        Picker("筛选", selection: $filter) {
+                        Picker("ledger.filter.picker", selection: $filter) {
                             ForEach(LedgerFilter.allCases, id: \.self) { f in
-                                Text(f.rawValue).tag(f)
+                                Text(f.titleKey).tag(f)
                             }
                         }
                         .pickerStyle(.segmented)
@@ -67,7 +92,7 @@ struct LedgerView: View {
                                         .font(.subheadline.weight(.semibold))
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(filter == .month ? "上月" : "上年")
+                                .accessibilityLabel(Text(filter.previousAccessibilityKey))
 
                                 Spacer()
 
@@ -85,7 +110,7 @@ struct LedgerView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(isAtOrAfterToday)
-                                .accessibilityLabel(filter == .month ? "下月" : "下年")
+                                .accessibilityLabel(Text(filter.nextAccessibilityKey))
                             }
                             .foregroundStyle(AppTheme.accent)
                         }
@@ -141,7 +166,7 @@ struct LedgerView: View {
                             }
                         }
                         .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
-                        .accessibilityHint("点击编辑")
+                        .accessibilityHint(Text("ledger.transaction.edit_hint"))
                         .buttonStyle(.plain)
                         .padding(.vertical, 6)
                         .listRowBackground(AppTheme.card)
@@ -149,7 +174,7 @@ struct LedgerView: View {
                             Button(role: .destructive) {
                                 store.deleteTransaction(transaction)
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label("common.delete", systemImage: "trash")
                             }
                         }
                     }
@@ -157,7 +182,7 @@ struct LedgerView: View {
                     Text(filterLabel)
                 } footer: {
                     let count = filteredTransactions.count
-                    Text("共 \(count) 笔，点按任一账单可修正金额、分类和备注。")
+                    Text(String(format: String(localized: "ledger.footer_format"), count))
                 }
             }
             .scrollContentBackground(.hidden)
@@ -165,7 +190,7 @@ struct LedgerView: View {
             .refreshable {
                 store.refreshFromStore()
             }
-            .navigationTitle("账本")
+            .navigationTitle("tab.ledger")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -183,7 +208,7 @@ struct LedgerView: View {
                         Image(systemName: "plus")
                             .fontWeight(.semibold)
                     }
-                    .accessibilityLabel("新增账单")
+                    .accessibilityLabel(Text("transaction_editor.title.new"))
                 }
                 if !store.deletedTransactions.isEmpty {
                     ToolbarItem(placement: .navigationBarTrailing) {

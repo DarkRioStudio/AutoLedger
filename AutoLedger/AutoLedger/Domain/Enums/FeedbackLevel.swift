@@ -9,17 +9,17 @@ enum FeedbackLevel: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .L1: return "L1 标准反馈"
-        case .L2: return "L2 增强调试"
-        case .L3: return "L3 完整诊断"
+        case .L1: return String(localized: "feedback.level.l1.title")
+        case .L2: return String(localized: "feedback.level.l2.title")
+        case .L3: return String(localized: "feedback.level.l3.title")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .L1: return "脱敏日志，不含原始截图和 OCR 原文"
-        case .L2: return "含脱敏 OCR 上下文和解析轨迹"
-        case .L3: return "含完整 OCR 原文和可选截图（需二次确认）"
+        case .L1: return String(localized: "feedback.level.l1.subtitle")
+        case .L2: return String(localized: "feedback.level.l2.subtitle")
+        case .L3: return String(localized: "feedback.level.l3.subtitle")
         }
     }
 

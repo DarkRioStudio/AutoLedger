@@ -656,7 +656,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedger;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = top.darkrio326.AutoLedger;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -690,7 +690,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedger;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = top.darkrio326.AutoLedger;
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -1,0 +1,40 @@
+"common.cancel" = "取消";
+"common.save" = "儲存";
+
+"transaction_editor.amount" = "金額";
+"transaction_editor.category" = "分類";
+"transaction_editor.merchant" = "商家";
+
+"category.groceries.title" = "日用雜貨";
+"category.dining.title" = "餐飲";
+"category.transport.title" = "出行";
+"category.shopping.title" = "購物";
+"category.digital.title" = "數位服務";
+"category.utilities.title" = "生活繳費";
+"category.entertainment.title" = "娛樂";
+"category.other.title" = "其他";
+
+"voice_ledger_parse" = "解析";
+
+"watch.ledger.title" = "帳本";
+"watch.empty.title" = "暫無記錄";
+"watch.empty.description" = "在 iPhone 上記帳後同步顯示";
+"watch.transaction.accessibility_format" = "%@，%@，%@";
+"watch.pending_sync_format" = "%d 筆待同步";
+"watch.quick_add.title" = "快速記帳";
+"watch.quick_add.merchant_optional" = "商家（可選）";
+"watch.quick_add.submit" = "記帳";
+"watch.voice_ledger.title" = "語音記帳";
+"watch.voice.input_hint" = "點擊輸入框後選擇聽寫";
+"watch.voice.placeholder" = "如：咖啡 28 元";
+"watch.voice.content" = "語音內容";
+"watch.voice.content_hint" = "輸入記帳語句，如咖啡 28 元";
+"watch.voice.parse_accessibility" = "解析並進入確認";
+"watch.voice.amount_missing" = "未能識別金額，請重試";
+"watch.voice.confirm.title" = "確認";
+"watch.voice.confirm.amount_accessibility_format" = "支出 %.2f 元，%@";
+"watch.voice.confirm.save_accessibility" = "儲存此筆帳單";
+"watch.voice.confirm.save_hint" = "確認後將同步至 iPhone";
+"watch.voice.confirm.empty" = "無可儲存內容";
+"watch.feedback.queued" = "已暫存，連線後同步";
+"watch.feedback.sent" = "已傳送到 iPhone";

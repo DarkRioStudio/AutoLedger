@@ -10,9 +10,9 @@ struct DeletedTransactionsView: View {
             Group {
                 if store.deletedTransactions.isEmpty {
                     ContentUnavailableView(
-                        "暂无已删除账单",
+                        "deleted_transactions.empty.title",
                         systemImage: "trash",
-                        description: Text("删除的账单会暂存于此，重启 App 后仍可恢复。")
+                        description: Text("deleted_transactions.empty.description")
                     )
                 } else {
                     List {
@@ -54,7 +54,7 @@ struct DeletedTransactionsView: View {
                                     Button {
                                         store.restoreTransaction(transaction)
                                     } label: {
-                                        Label("恢复", systemImage: "arrow.uturn.backward")
+                                        Label("deleted_transactions.restore", systemImage: "arrow.uturn.backward")
                                     }
                                     .tint(.green)
                                 }
@@ -62,27 +62,27 @@ struct DeletedTransactionsView: View {
                                     Button(role: .destructive) {
                                         store.permanentlyDeleteTransaction(transaction)
                                     } label: {
-                                        Label("彻底删除", systemImage: "trash.slash")
+                                        Label("deleted_transactions.delete_permanently", systemImage: "trash.slash")
                                     }
                                 }
                             }
                         } footer: {
-                            Text("右滑恢复，左滑彻底删除。最近删除会跨会话保留。")
+                            Text("deleted_transactions.footer")
                         }
                     }
                     .scrollContentBackground(.hidden)
                     .background(AppTheme.screenGradient.ignoresSafeArea())
                 }
             }
-            .navigationTitle("最近删除")
+            .navigationTitle("deleted_transactions.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
+                    Button("common.done") { dismiss() }
                 }
                 if !store.deletedTransactions.isEmpty {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("全部清空", role: .destructive) {
+                        Button("deleted_transactions.clear_all", role: .destructive) {
                             let snapshot = store.deletedTransactions
                             for transaction in snapshot {
                                 store.permanentlyDeleteTransaction(transaction)

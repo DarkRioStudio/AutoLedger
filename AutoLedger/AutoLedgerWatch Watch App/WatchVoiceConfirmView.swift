@@ -26,12 +26,14 @@ struct WatchVoiceConfirmView: View {
                             .lineLimit(1)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("支出 \(String(format: "%.2f", draft.amount)) 元，\(draft.merchant)")
+                    .accessibilityLabel(
+                        Text(String(format: String(localized: "watch.voice.confirm.amount_accessibility_format"), draft.amount, draft.merchant))
+                    )
 
                     Divider()
 
                     // MARK: 分类选择
-                    Text("分类")
+                    Text("transaction_editor.category")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -80,28 +82,28 @@ struct WatchVoiceConfirmView: View {
                     Button {
                         confirmAndSave()
                     } label: {
-                        if viewModel.isSubmitting {
-                            ProgressView()
-                        } else {
-                            Label("保存", systemImage: "checkmark")
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                    } else {
+                            Label("common.save", systemImage: "checkmark")
                         }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(viewModel.isSubmitting)
-                    .accessibilityLabel("保存此笔账单")
-                    .accessibilityHint("确认后将同步至 iPhone")
+                    .accessibilityLabel(Text("watch.voice.confirm.save_accessibility"))
+                    .accessibilityHint(Text("watch.voice.confirm.save_hint"))
 
-                    Button("取消", role: .cancel) {
+                    Button("common.cancel", role: .cancel) {
                         viewModel.voiceDraft = nil
                         dismiss()
                     }
                     .foregroundStyle(.secondary)
                 }
             } else {
-                ContentUnavailableView("无可保存内容", systemImage: "exclamationmark.triangle")
+                ContentUnavailableView("watch.voice.confirm.empty", systemImage: "exclamationmark.triangle")
             }
         }
-        .navigationTitle("确认")
+        .navigationTitle("watch.voice.confirm.title")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if let d = viewModel.voiceDraft {

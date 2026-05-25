@@ -20,11 +20,11 @@ struct FeedbackPreviewView: View {
                 .padding(.vertical, 20)
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("预览反馈")
+            .navigationTitle("feedback.preview.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("返回") { dismiss() }
+                    Button("feedback.preview.back") { dismiss() }
                         .foregroundStyle(AppTheme.accent)
                 }
             }
@@ -37,18 +37,18 @@ struct FeedbackPreviewView: View {
                 Image(systemName: "eye")
                     .font(.title3)
                     .foregroundStyle(AppTheme.accent)
-                Text("发送前预览")
+                Text("feedback.preview.header")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
             }
 
-            Text("以下是即将发送的全部内容，请确认后点击底部按钮发送。")
+            Text("feedback.preview.description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
 
             HStack(spacing: 16) {
                 previewTag("ID", bundle.feedbackID)
-                previewTag("收件人", FeedbackService.supportEmail)
+                previewTag(String(localized: "feedback.preview.recipient"), FeedbackService.supportEmail)
             }
         }
         .padding(18)
@@ -57,7 +57,7 @@ struct FeedbackPreviewView: View {
 
     private var subjectCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("邮件标题")
+            Text("feedback.preview.email_subject")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
             Text(bundle.subject)
@@ -74,7 +74,7 @@ struct FeedbackPreviewView: View {
 
     private var bodyCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("邮件正文")
+            Text("feedback.preview.email_body")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
             Text(bundle.body)
@@ -91,7 +91,7 @@ struct FeedbackPreviewView: View {
 
     private var bundleCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("附件包")
+            Text("feedback.preview.bundle")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
@@ -109,7 +109,7 @@ struct FeedbackPreviewView: View {
             }
 
             if let contents = bundleContents {
-                Text("包含文件：")
+                Text("feedback.preview.included_files")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.mutedInk)
                 ForEach(contents, id: \.self) { file in
@@ -134,7 +134,7 @@ struct FeedbackPreviewView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: FeedbackService.shared.canSendMail ? "envelope.fill" : "doc.on.clipboard.fill")
-                Text(FeedbackService.shared.canSendMail ? "确认发送邮件" : "复制到剪切板")
+                Text(FeedbackService.shared.canSendMail ? String(localized: "feedback.preview.send_email") : String(localized: "feedback.preview.copy_clipboard"))
             }
             .font(.headline)
             .foregroundStyle(.white)

@@ -1,0 +1,40 @@
+"common.cancel" = "取消";
+"common.save" = "保存";
+
+"transaction_editor.amount" = "金额";
+"transaction_editor.category" = "分类";
+"transaction_editor.merchant" = "商户";
+
+"category.groceries.title" = "日用杂货";
+"category.dining.title" = "餐饮";
+"category.transport.title" = "出行";
+"category.shopping.title" = "购物";
+"category.digital.title" = "数字服务";
+"category.utilities.title" = "生活缴费";
+"category.entertainment.title" = "娱乐";
+"category.other.title" = "其他";
+
+"voice_ledger_parse" = "解析";
+
+"watch.ledger.title" = "账本";
+"watch.empty.title" = "暂无记录";
+"watch.empty.description" = "在 iPhone 上记账后同步显示";
+"watch.transaction.accessibility_format" = "%@，%@，%@";
+"watch.pending_sync_format" = "%d 笔待同步";
+"watch.quick_add.title" = "快速记账";
+"watch.quick_add.merchant_optional" = "商户（可选）";
+"watch.quick_add.submit" = "记账";
+"watch.voice_ledger.title" = "语音记账";
+"watch.voice.input_hint" = "点击输入框后选择听写";
+"watch.voice.placeholder" = "如：咖啡 28 元";
+"watch.voice.content" = "语音内容";
+"watch.voice.content_hint" = "输入记账语句，如咖啡 28 元";
+"watch.voice.parse_accessibility" = "解析并进入确认";
+"watch.voice.amount_missing" = "未能识别金额，请重试";
+"watch.voice.confirm.title" = "确认";
+"watch.voice.confirm.amount_accessibility_format" = "支出 %.2f 元，%@";
+"watch.voice.confirm.save_accessibility" = "保存此笔账单";
+"watch.voice.confirm.save_hint" = "确认后将同步至 iPhone";
+"watch.voice.confirm.empty" = "无可保存内容";
+"watch.feedback.queued" = "已暂存，连接后同步";
+"watch.feedback.sent" = "已发送到 iPhone";

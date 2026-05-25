@@ -14,7 +14,7 @@ struct OpenQuickAddIntent: AppIntent {
     static var openAppWhenRun: Bool = true
 
     static var parameterSummary: some ParameterSummary {
-        Summary("打开快速记账")
+        Summary("open_quick_add.parameter_summary")
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

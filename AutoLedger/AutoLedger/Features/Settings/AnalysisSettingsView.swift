@@ -9,11 +9,11 @@ struct AnalysisSettingsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("异常消费阈值")
+                            Text("analysis.threshold.title")
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.ink)
 
-                            Text("本月分类支出高于近 3 个月月均值时提醒。")
+                            Text("analysis.threshold.subtitle")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.mutedInk)
                         }
@@ -30,9 +30,9 @@ struct AnalysisSettingsView: View {
                         .tint(AppTheme.accentSecondary)
 
                     HStack {
-                        Text("敏感")
+                        Text("analysis.threshold.sensitive")
                         Spacer()
-                        Text("稳健")
+                        Text("analysis.threshold.stable")
                     }
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
@@ -48,7 +48,7 @@ struct AnalysisSettingsView: View {
                 } label: {
                     HStack {
                         Image(systemName: "arrow.counterclockwise")
-                        Text("恢复默认阈值")
+                        Text("analysis.threshold.reset")
                     }
                     .font(.headline)
                     .foregroundStyle(AppTheme.accent)
@@ -62,11 +62,11 @@ struct AnalysisSettingsView: View {
                 .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("当前口径")
+                    Text("analysis.method.title")
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    Text("仅当分类在过去 3 个完整月份中有历史支出，且本月金额达到阈值时展示提示。")
+                    Text("analysis.method.body")
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -81,7 +81,7 @@ struct AnalysisSettingsView: View {
             .padding(.vertical, 20)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("消费分析")
+        .navigationTitle("settings.analysis.title")
     }
 }
 

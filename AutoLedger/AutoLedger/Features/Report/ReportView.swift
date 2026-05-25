@@ -37,9 +37,9 @@ struct ReportView: View {
                         anomalySection(anomalyAlerts)
                     }
 
-                    sectionTitle("分类占比")
+                    sectionTitle("report.category_breakdown.title")
                     if snapshot.categoryBreakdown.isEmpty {
-                        emptyState("这个月还没有记录。")
+                        emptyState("report.empty.month")
                     } else {
                         categoryDonut(snapshot)
 
@@ -52,10 +52,10 @@ struct ReportView: View {
                         }
                     }
 
-                    sectionTitle("近 6 个月趋势")
+                    sectionTitle("report.six_month_trend.title")
                     monthlyTrendChart(snapshot, selectedLabel: $selectedTrendLabel)
 
-                    sectionTitle("TOP5 商户")
+                    sectionTitle("report.top_merchants.title")
                     topMerchantRanking(snapshot)
                 }
                 .padding(.horizontal, 20)
@@ -63,7 +63,7 @@ struct ReportView: View {
                 .padding(.bottom, 28)
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("月报")
+            .navigationTitle("tab.report")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
@@ -88,22 +88,22 @@ struct ReportView: View {
             HStack(spacing: 10) {
                 Image(systemName: "bell.badge.fill")
                     .foregroundStyle(AppTheme.accentSecondary)
-                Text("消费提醒")
+                Text("report.anomaly.title")
                     .font(.headline)
                     .foregroundStyle(AppTheme.ink)
                 Spacer()
-                Text("阈值 \(Int(anomalyThresholdPercent))%")
+                Text(String(format: String(localized: "report.anomaly.threshold_format"), Int(anomalyThresholdPercent)))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.mutedInk)
             }
 
             ForEach(alerts.prefix(3)) { alert in
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("本月 \(alert.categoryTitle) 支出偏高")
+                    Text(String(format: String(localized: "report.anomaly.category_high_format"), alert.categoryTitle))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
-                    Text("\(AppFormatters.currency(alert.currentTotal))，约为近 3 个月月均 \(AppFormatters.currency(alert.baselineAverage)) 的 \(alert.ratioPercent)%")
+                    Text(String(format: String(localized: "report.anomaly.detail_format"), AppFormatters.currency(alert.currentTotal), AppFormatters.currency(alert.baselineAverage), alert.ratioPercent))
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -137,11 +137,11 @@ struct ReportView: View {
             }
 
             HStack(spacing: 12) {
-                summaryPill(title: "账单", value: "\(snapshot.transactionCount) 笔")
-                summaryPill(title: "TOP1", value: snapshot.topMerchant)
+                summaryPill(titleKey: "report.summary.transactions", value: transactionCountText(snapshot.transactionCount))
+                summaryPill(titleKey: "report.summary.top1", value: snapshot.topMerchant)
                 summaryPill(
-                    title: "商户数",
-                    value: "\(snapshot.topMerchantMetrics.count) 家"
+                    titleKey: "report.summary.merchant_count",
+                    value: merchantCountText(snapshot.topMerchantMetrics.count)
                 )
             }
         }
@@ -153,9 +153,9 @@ struct ReportView: View {
         )
     }
 
-    private func summaryPill(title: String, value: String) -> some View {
+    private func summaryPill(titleKey: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
+            Text(titleKey)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.68))
             Text(value)
@@ -173,14 +173,14 @@ struct ReportView: View {
         )
     }
 
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title)
+    private func sectionTitle(_ titleKey: LocalizedStringKey) -> some View {
+        Text(titleKey)
             .font(.title3.weight(.bold))
             .foregroundStyle(AppTheme.ink)
     }
 
-    private func emptyState(_ text: String) -> some View {
-        Text(text)
+    private func emptyState(_ textKey: LocalizedStringKey) -> some View {
+        Text(textKey)
             .font(.subheadline)
             .foregroundStyle(AppTheme.mutedInk)
             .padding(18)
@@ -197,7 +197,7 @@ struct ReportView: View {
         return ZStack {
             Chart(snapshot.categoryBreakdown) { metric in
                 SectorMark(
-                    angle: .value("支出", metric.total),
+                    angle: .value(String(localized: "report.chart.expense"), metric.total),
                     innerRadius: .ratio(0.62),
                     angularInset: 1.5
                 )
@@ -208,7 +208,7 @@ struct ReportView: View {
             .frame(height: 220)
 
             VStack(spacing: 4) {
-                Text(highlighted?.title ?? "全部分类")
+                Text(highlighted?.title ?? String(localized: "report.all_categories"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppTheme.mutedInk)
                     .lineLimit(1)
@@ -241,8 +241,8 @@ struct ReportView: View {
         return VStack(alignment: .leading, spacing: 14) {
             Chart(snapshot.monthlyTrend) { metric in
                 BarMark(
-                    x: .value("月份", metric.label),
-                    y: .value("支出", metric.total)
+                    x: .value(String(localized: "report.chart.month"), metric.label),
+                    y: .value(String(localized: "report.chart.expense"), metric.total)
                 )
                 .foregroundStyle(metric.isCurrentMonth ? AppTheme.accentSecondary : AppTheme.accent)
                 .opacity(activeLabel == nil || metric.label == activeLabel ? 1 : 0.30)
@@ -300,7 +300,7 @@ struct ReportView: View {
                         Text(AppFormatters.currency(metric.total))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppTheme.ink)
-                        Text("\(metric.transactionCount) 笔")
+                        Text(transactionCountText(metric.transactionCount))
                             .font(.caption2)
                             .foregroundStyle(AppTheme.mutedInk)
                     }
@@ -326,7 +326,7 @@ struct ReportView: View {
     private func topMerchantRanking(_ snapshot: MonthlySnapshot) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             if snapshot.topMerchantMetrics.isEmpty {
-                Text("本月还没有商户排行。")
+                Text("report.top_merchants.empty")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             } else {
@@ -345,7 +345,7 @@ struct ReportView: View {
                                     .foregroundStyle(AppTheme.ink)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.65)
-                                Text("\(metric.transactionCount) 笔")
+                                Text(transactionCountText(metric.transactionCount))
                                     .font(.caption)
                                     .foregroundStyle(AppTheme.mutedInk)
                             }
@@ -405,6 +405,14 @@ struct ReportView: View {
             return 1
         }
         return metric.id == activeID ? 1 : 0.28
+    }
+
+    private func transactionCountText(_ count: Int) -> String {
+        String(format: String(localized: "report.transaction_count_format"), count)
+    }
+
+    private func merchantCountText(_ count: Int) -> String {
+        String(format: String(localized: "report.merchant_count_format"), count)
     }
 }
 

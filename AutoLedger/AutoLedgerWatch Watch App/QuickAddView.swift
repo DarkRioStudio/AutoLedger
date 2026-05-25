@@ -13,7 +13,7 @@ struct QuickAddView: View {
             VStack(spacing: 10) {
 
                 // MARK: 分类选择
-                Text("分类")
+                Text("transaction_editor.category")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -57,17 +57,17 @@ struct QuickAddView: View {
                 Divider()
 
                 // MARK: 金额
-                Text("金额")
+                Text("transaction_editor.amount")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 TextField("0.00", text: $vm.quickAddAmountText)
                     .font(.system(size: 20, design: .monospaced))
-                    .accessibilityLabel("金额")
+                    .accessibilityLabel(Text("transaction_editor.amount"))
 
                 // MARK: 商户（可选）
-                Text("商户（可选）")
+                Text("watch.quick_add.merchant_optional")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,7 +75,7 @@ struct QuickAddView: View {
                 TextField(vm.quickAddCategory.title, text: $vm.quickAddMerchant)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
-                    .accessibilityLabel("商户")
+                    .accessibilityLabel(Text("transaction_editor.merchant"))
 
                 Divider()
 
@@ -86,13 +86,13 @@ struct QuickAddView: View {
                     if viewModel.isSubmitting {
                         ProgressView()
                     } else {
-                        Label("记账", systemImage: "checkmark")
+                        Label("watch.quick_add.submit", systemImage: "checkmark")
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!viewModel.quickAddAmountValid || viewModel.isSubmitting)
 
-                Button("取消", role: .cancel) {
+                Button("common.cancel", role: .cancel) {
                     viewModel.resetQuickAddInput()
                     dismiss()
                 }

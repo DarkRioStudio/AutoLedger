@@ -91,15 +91,15 @@ struct TransactionEditorView: View {
                     .disabled(parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .alert("刷新同商户账单分类？", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
-                Button("仅保存本笔", role: .cancel) {
+            .alert("transaction_editor.category_refresh.title", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
+                Button("transaction_editor.category_refresh.current_only", role: .cancel) {
                     save(updated, refreshSameMerchantCategory: false)
                 }
-                Button("刷新全部") {
+                Button("transaction_editor.category_refresh.refresh_all") {
                     save(updated, refreshSameMerchantCategory: true)
                 }
             } message: { updated in
-                Text("是否将“\(updated.merchant)”所有现存账单的分类更新为“\(updated.categoryTitle)”？")
+                Text(String(format: String(localized: "transaction_editor.category_refresh.message_format"), updated.merchant, updated.categoryTitle))
             }
         }
     }

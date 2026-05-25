@@ -41,7 +41,7 @@ struct MerchantAliasView: View {
                             }
                             .buttonStyle(.borderless)
                             .foregroundStyle(AppTheme.accent)
-                            .accessibilityLabel("刷新 \(key) 的历史账单商户名")
+                            .accessibilityLabel(Text(String(format: String(localized: "merchant_alias.refresh_accessibility_format"), key)))
                         }
                     }
                 }
@@ -53,24 +53,24 @@ struct MerchantAliasView: View {
                 Button {
                     showAddAlert = true
                 } label: {
-                    Label("添加映射", systemImage: "plus.circle.fill")
+                    Label("merchant_alias.add_mapping", systemImage: "plus.circle.fill")
                         .foregroundStyle(AppTheme.accent)
                 }
             } header: {
-                Text("商户别名")
+                Text("merchant_alias.title")
             } footer: {
-                Text("解析到的商户名与左侧完全匹配时，自动替换为右侧显示名，分类也会重新推断。")
+                Text("merchant_alias.footer")
             }
         }
-        .navigationTitle("商户别名")
-        .alert("添加商户别名", isPresented: $showAddAlert) {
-            TextField("原始商户名", text: $newOriginal)
-            TextField("显示别名", text: $newAlias)
-            Button("取消", role: .cancel) {
+        .navigationTitle("merchant_alias.title")
+        .alert("merchant_alias.alert.title", isPresented: $showAddAlert) {
+            TextField("merchant_alias.original.placeholder", text: $newOriginal)
+            TextField("merchant_alias.alias.placeholder", text: $newAlias)
+            Button("common.cancel", role: .cancel) {
                 newOriginal = ""
                 newAlias = ""
             }
-            Button("添加") {
+            Button("common.add") {
                 let original = newOriginal.trimmingCharacters(in: .whitespacesAndNewlines)
                 let alias = newAlias.trimmingCharacters(in: .whitespacesAndNewlines)
                 store.setMerchantAlias(original: original, alias: alias)

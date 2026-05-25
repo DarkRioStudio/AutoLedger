@@ -19,7 +19,7 @@ struct InboxView: View {
     private let ocrService = OCRService()
 
     private var hasShortcutEntries: Bool {
-        let shortcutNote = localized("quick_ledger.note", fallback: "快捷指令自动记账")
+        let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
         return store.transactions.contains { $0.note == shortcutNote }
     }
 
@@ -100,7 +100,7 @@ struct InboxView: View {
                 .onTapGesture { selectedTab = 2 }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel(String(format: localized("inbox.hero.monthly_expense.detail", fallback: "%d transactions"), store.monthlySnapshot.transactionCount) + "，" + AppFormatters.currency(store.monthlySnapshot.totalExpense))
-                .accessibilityHint("点击查看月度报表")
+                .accessibilityHint(Text("inbox.hero.monthly_expense.accessibility_hint"))
 
                 MetricCard(
                     title: localized("inbox.hero.top_merchant.title", fallback: "Top Merchant"),
@@ -110,8 +110,8 @@ struct InboxView: View {
                 )
                 .onTapGesture { showMerchantSheet = true }
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel("最常去 " + store.monthlySnapshot.topMerchant)
-                .accessibilityHint("点击查看商户排行")
+                .accessibilityLabel(String(format: localized("inbox.hero.top_merchant.accessibility_label_format", fallback: "Top merchant %@"), store.monthlySnapshot.topMerchant))
+                .accessibilityHint(Text("inbox.hero.top_merchant.accessibility_hint"))
             }
         }
         .padding(22)
@@ -226,7 +226,7 @@ struct InboxView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    let shortcutNote = localized("quick_ledger.note", fallback: "快捷指令自动记账")
+                    let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
                     let count = store.transactions.filter { $0.note == shortcutNote }.count
                     Text(String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count))
                         .font(.subheadline)

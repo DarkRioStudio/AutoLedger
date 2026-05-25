@@ -83,8 +83,8 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "externaldrive.fill.badge.icloud",
                             iconColor: Color(red: 0.16, green: 0.45, blue: 0.73),
-                            title: "数据管理",
-                            subtitle: "导出 JSON、从备份恢复，并管理 iCloud 自动备份"
+                            title: "settings.data_management.title",
+                            subtitle: "settings.data_management.subtitle"
                         )
                     }
                     .buttonStyle(.plain)

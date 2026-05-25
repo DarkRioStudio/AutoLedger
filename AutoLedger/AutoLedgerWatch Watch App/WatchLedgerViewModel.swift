@@ -91,7 +91,7 @@ final class WatchLedgerViewModel {
             self.isQuickAddPresented = false
             self.pendingCount = self.session.pendingCount
             let offline = !self.isReachable
-            self.lastFeedback = offline ? "已暂存，连接后同步" : "已发送到 iPhone"
+            self.lastFeedback = offline ? String(localized: "watch.feedback.queued") : String(localized: "watch.feedback.sent")
             try? await Task.sleep(for: .seconds(2.5))
             self.lastFeedback = nil
         }
@@ -123,7 +123,7 @@ final class WatchLedgerViewModel {
             self.isVoiceRecorderPresented = false
             self.pendingCount = self.session.pendingCount
             let offline = !self.isReachable
-            self.lastFeedback = offline ? "已暂存，连接后同步" : "已发送到 iPhone"
+            self.lastFeedback = offline ? String(localized: "watch.feedback.queued") : String(localized: "watch.feedback.sent")
             try? await Task.sleep(for: .seconds(2.5))
             self.lastFeedback = nil
         }

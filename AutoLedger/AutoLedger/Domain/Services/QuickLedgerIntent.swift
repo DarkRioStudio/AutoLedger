@@ -17,7 +17,7 @@ struct QuickLedgerIntent: AppIntent {
     var screenshot: IntentFile
 
     static var parameterSummary: some ParameterSummary {
-        Summary("从 \(\.$screenshot) 识别并记账")
+        Summary("quick_ledger.parameter_summary")
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

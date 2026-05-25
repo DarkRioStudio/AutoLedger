@@ -26,17 +26,18 @@ struct WatchVoiceRecorderView: View {
                         .padding(.top, 4)
                         .accessibilityHidden(true)
 
-                    Text("点击输入框后选择听写")
+                    Text("watch.voice.input_hint")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
                 // MARK: 输入框（触发系统输入/听写）
-                TextField("如：咖啡 28 元", text: $inputText)
+                TextField(String(localized: "watch.voice.placeholder"), text: $inputText)
                     .textInputAutocapitalization(.never)
-                    .disableAutocorrection(true)                    .accessibilityLabel("语音内容")
-                    .accessibilityHint("输入记账语句，如和啊 28 元")
+                    .disableAutocorrection(true)
+                    .accessibilityLabel(Text("watch.voice.content"))
+                    .accessibilityHint(Text("watch.voice.content_hint"))
                 // MARK: 错误提示
                 if let err = parseError {
                     Text(err)
@@ -52,12 +53,12 @@ struct WatchVoiceRecorderView: View {
                     if isParsing {
                         ProgressView()
                     } else {
-                        Label("解析", systemImage: "arrow.right")
+                        Label("voice_ledger_parse", systemImage: "arrow.right")
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isParsing)
-                .accessibilityLabel("解析并进入确认")
+                .accessibilityLabel(Text("watch.voice.parse_accessibility"))
 
                 // MARK: 跳转确认页（解析成功后）
                 NavigationLink(
@@ -67,12 +68,12 @@ struct WatchVoiceRecorderView: View {
                 ) { EmptyView() }
                     .hidden()
 
-                Button("取消") {
+                Button("common.cancel") {
                     dismiss()
                 }
                 .foregroundStyle(.secondary)
             }
-            .navigationTitle("语音记账")
+            .navigationTitle("watch.voice_ledger.title")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -89,7 +90,7 @@ struct WatchVoiceRecorderView: View {
         isParsing = false
 
         guard result.isSaveable, let amount = result.amount else {
-            parseError = "未能识别金额，请重试"
+            parseError = String(localized: "watch.voice.amount_missing")
             return
         }
 

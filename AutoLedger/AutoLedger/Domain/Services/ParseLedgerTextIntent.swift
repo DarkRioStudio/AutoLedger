@@ -18,7 +18,7 @@ struct ParseLedgerTextIntent: AppIntent {
     var text: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("解析账单描述 \(\.$text)")
+        Summary("parse_ledger.parameter_summary")
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

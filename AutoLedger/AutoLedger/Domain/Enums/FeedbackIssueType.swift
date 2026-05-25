@@ -20,20 +20,20 @@ enum FeedbackIssueType: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .feedback:             return "一般反馈"
-        case .ocr_parse_wrong:      return "OCR 识别错误"
-        case .merchant_parse_wrong: return "商户识别错误"
-        case .amount_parse_wrong:   return "金额识别错误"
-        case .time_parse_wrong:     return "时间解析错误"
-        case .save_failed:          return "保存失败"
-        case .shortcut_flow:        return "快捷指令异常"
-        case .share_extension:      return "分享导入异常"
-        case .camera_import:        return "相机导入异常"
-        case .clipboard_import:     return "剪切板导入异常"
-        case .ui_bug:               return "界面问题"
-        case .performance:          return "性能问题"
-        case .crash:                return "崩溃"
-        case .other:                return "其他"
+        case .feedback:             return String(localized: "feedback.issue.feedback")
+        case .ocr_parse_wrong:      return String(localized: "feedback.issue.ocr_parse_wrong")
+        case .merchant_parse_wrong: return String(localized: "feedback.issue.merchant_parse_wrong")
+        case .amount_parse_wrong:   return String(localized: "feedback.issue.amount_parse_wrong")
+        case .time_parse_wrong:     return String(localized: "feedback.issue.time_parse_wrong")
+        case .save_failed:          return String(localized: "feedback.issue.save_failed")
+        case .shortcut_flow:        return String(localized: "feedback.issue.shortcut_flow")
+        case .share_extension:      return String(localized: "feedback.issue.share_extension")
+        case .camera_import:        return String(localized: "feedback.issue.camera_import")
+        case .clipboard_import:     return String(localized: "feedback.issue.clipboard_import")
+        case .ui_bug:               return String(localized: "feedback.issue.ui_bug")
+        case .performance:          return String(localized: "feedback.issue.performance")
+        case .crash:                return String(localized: "feedback.issue.crash")
+        case .other:                return String(localized: "feedback.issue.other")
         }
     }
 

@@ -26,7 +26,7 @@ struct DataManagementView: View {
             .padding(.vertical, 20)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("数据管理")
+        .navigationTitle("settings.data_management.title")
         .sheet(isPresented: $showShareSheet) {
             if let exportedURL {
                 ActivityShareSheet(activityItems: [exportedURL])
@@ -42,22 +42,22 @@ struct DataManagementView: View {
                 pendingImportURL = urls.first
                 showRestoreConfirmation = pendingImportURL != nil
             case let .failure(error):
-                statusMessage = "选择文件失败：\(error.localizedDescription)"
+                statusMessage = String(format: String(localized: "data_management.file_selection_failed_format"), error.localizedDescription)
             }
         }
         .confirmationDialog(
-            "覆盖恢复会替换当前本地数据",
+            "data_management.restore.confirm_title",
             isPresented: $showRestoreConfirmation,
             titleVisibility: .visible
         ) {
-            Button("覆盖恢复", role: .destructive) {
+            Button("data_management.restore.confirm_action", role: .destructive) {
                 importPendingBackup()
             }
-            Button("取消", role: .cancel) {
+            Button("common.cancel", role: .cancel) {
                 pendingImportURL = nil
             }
         } message: {
-            Text("恢复前会生成一份内存安全备份；如果导入失败，将尝试恢复当前数据。")
+            Text("data_management.restore.confirm_message")
         }
         .onAppear {
             store.detectICloudBackupForRestore()
@@ -66,19 +66,19 @@ struct DataManagementView: View {
 
     private var overviewCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("当前数据")
+            Text("data_management.current_data")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.ink)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                metric("账单", "\(store.transactions.count)")
-                metric("最近删除", "\(store.deletedTransactions.count)")
-                metric("订阅", "\(store.subscriptions.count)")
-                metric("商户别名", "\(store.merchantAliases.count)")
+                metric("data_management.metric.transactions", "\(store.transactions.count)")
+                metric("data_management.metric.deleted", "\(store.deletedTransactions.count)")
+                metric("data_management.metric.subscriptions", "\(store.subscriptions.count)")
+                metric("data_management.metric.aliases", "\(store.merchantAliases.count)")
             }
 
             if let lastBackupAt = store.lastBackupAt {
-                Text("上次备份：\(AppFormatters.exportDateTime(lastBackupAt))")
+                Text(String(format: String(localized: "data_management.last_backup_format"), AppFormatters.exportDateTime(lastBackupAt)))
                     .font(.footnote)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -94,45 +94,45 @@ struct DataManagementView: View {
                 get: { store.iCloudBackupEnabled },
                 set: { store.iCloudBackupEnabled = $0 }
             )) {
-                Label("iCloud 自动备份", systemImage: "icloud.and.arrow.up.fill")
+                Label("data_management.icloud_auto_backup", systemImage: "icloud.and.arrow.up.fill")
                     .font(.headline)
                     .foregroundStyle(AppTheme.ink)
             }
 
-            Text("开启后会把最新备份写入 iCloud Drive 的 AutoLedgerBackup.json。它是恢复文件，不会作为主数据库实时同步。")
+            Text("data_management.icloud_description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
 
             if let bundle = store.detectedICloudBackup {
                 Divider()
-                Text("检测到 iCloud 备份：\(store.summaryText(for: bundle))")
+                Text(String(format: String(localized: "data_management.icloud_detected_format"), store.summaryText(for: bundle)))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
 
                 actionButton(
-                    title: "恢复 iCloud 备份",
+                    titleKey: "data_management.restore_icloud",
                     systemImage: "icloud.and.arrow.down.fill",
                     style: .primary
                 ) {
                     do {
                         try store.restoreDetectedICloudBackup()
-                        statusMessage = "已从 iCloud 备份恢复。"
+                        statusMessage = String(localized: "data_management.restore_icloud_success")
                     } catch {
-                        statusMessage = "iCloud 恢复失败：\(error.localizedDescription)"
+                        statusMessage = String(format: String(localized: "data_management.restore_icloud_failed_format"), error.localizedDescription)
                     }
                 }
             }
 
             actionButton(
-                title: "立即备份",
+                titleKey: "data_management.backup_now",
                 systemImage: "arrow.triangle.2.circlepath",
                 style: .secondary
             ) {
                 do {
                     try store.backupToICloudNow()
-                    statusMessage = store.lastBackupSummary ?? "已备份到 iCloud。"
+                    statusMessage = store.lastBackupSummary ?? String(localized: "data_management.backup_icloud_success")
                 } catch {
-                    statusMessage = "iCloud 备份失败：\(error.localizedDescription)"
+                    statusMessage = String(format: String(localized: "data_management.backup_icloud_failed_format"), error.localizedDescription)
                 }
             }
         }
@@ -143,17 +143,17 @@ struct DataManagementView: View {
 
     private var manualBackupCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("JSON 备份", systemImage: "doc.zipper")
+            Label("data_management.json_backup", systemImage: "doc.zipper")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            Text("手动导出的 JSON 可保存到 Files、iCloud Drive 或 AirDrop。导入时会覆盖当前本地账本和用户配置。")
+            Text("data_management.json_description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
 
             HStack(spacing: 12) {
                 actionButton(
-                    title: "导出 JSON",
+                    titleKey: "data_management.export_json",
                     systemImage: "square.and.arrow.up",
                     style: .primary
                 ) {
@@ -162,13 +162,13 @@ struct DataManagementView: View {
                         statusMessage = store.lastBackupSummary
                         showShareSheet = true
                     } catch {
-                        statusMessage = "导出失败：\(error.localizedDescription)"
+                        statusMessage = String(format: String(localized: "data_management.export_failed_format"), error.localizedDescription)
                     }
                 }
                 .frame(maxWidth: .infinity)
 
                 actionButton(
-                    title: "导入 JSON",
+                    titleKey: "data_management.import_json",
                     systemImage: "square.and.arrow.down",
                     style: .secondary
                 ) {
@@ -182,12 +182,12 @@ struct DataManagementView: View {
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(AppTheme.card))
     }
 
-    private func metric(_ title: String, _ value: String) -> some View {
+    private func metric(_ titleKey: LocalizedStringKey, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(value)
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.ink)
-            Text(title)
+            Text(titleKey)
                 .font(.footnote)
                 .foregroundStyle(AppTheme.mutedInk)
         }
@@ -211,14 +211,14 @@ struct DataManagementView: View {
     }
 
     private func actionButton(
-        title: String,
+        titleKey: LocalizedStringKey,
         systemImage: String,
         style: ActionButtonStyle,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Label {
-                Text(title)
+                Text(titleKey)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
             } icon: {
@@ -242,9 +242,9 @@ struct DataManagementView: View {
         guard let pendingImportURL else { return }
         do {
             try store.importBackup(from: pendingImportURL)
-            statusMessage = store.lastImportSummary ?? "已从 JSON 备份恢复。"
+            statusMessage = store.lastImportSummary ?? String(localized: "data_management.restore_json_success")
         } catch {
-            statusMessage = "恢复失败：\(error.localizedDescription)"
+            statusMessage = String(format: String(localized: "data_management.restore_failed_format"), error.localizedDescription)
         }
         self.pendingImportURL = nil
     }

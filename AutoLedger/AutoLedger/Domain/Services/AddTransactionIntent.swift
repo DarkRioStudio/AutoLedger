@@ -19,7 +19,7 @@ enum CategoryAppEnum: String, AppEnum {
     case entertainment
     case other
 
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "分类"
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "add_transaction.category.type"
 
     static var caseDisplayRepresentations: [CategoryAppEnum: DisplayRepresentation] = [
         .groceries:     DisplayRepresentation(title: "category.groceries.title",
@@ -77,7 +77,7 @@ struct AddTransactionIntent: AppIntent {
     var date: Date?
 
     static var parameterSummary: some ParameterSummary {
-        Summary("记录 \(\.$amount) 元 \(\.$merchant) 至 \(\.$category)")
+        Summary("add_transaction.parameter_summary")
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

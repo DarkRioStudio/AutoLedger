@@ -7,7 +7,7 @@ enum ICloudBackupServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .containerUnavailable:
-            return "iCloud Drive 当前不可用，请确认已登录 Apple ID 并开启 iCloud Drive。"
+            return String(localized: "icloud.error.container_unavailable")
         }
     }
 }

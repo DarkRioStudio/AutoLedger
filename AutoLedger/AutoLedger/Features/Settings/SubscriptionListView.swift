@@ -28,7 +28,7 @@ struct SubscriptionListView: View {
             .padding(.vertical, 20)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("订阅管理")
+        .navigationTitle("settings.subscriptions.title")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -36,7 +36,7 @@ struct SubscriptionListView: View {
                 } label: {
                     Image(systemName: "arrow.triangle.2.circlepath")
                 }
-                .help("扫描历史账单自动识别订阅")
+                .help(String(localized: "subscriptions.scan_history_help"))
             }
         }
         .sheet(item: $editingSubscription) { subscription in
@@ -67,7 +67,7 @@ struct SubscriptionListView: View {
     private var upcomingSection: some View {
         let upcoming = upcomingSubscriptions
         if !upcoming.isEmpty {
-            Text("即将扣费")
+            Text("subscriptions.upcoming")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(AppTheme.ink)
 
@@ -82,13 +82,13 @@ struct SubscriptionListView: View {
     private var allSubscriptionsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("全部订阅")
+                Text("subscriptions.all")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
                 Spacer()
 
-                Text("\(store.subscriptions.count) 项")
+                Text(String(format: String(localized: "subscriptions.count_format"), store.subscriptions.count))
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -100,7 +100,7 @@ struct SubscriptionListView: View {
                 case .yearly:  return sum + sub.amount / 12.0
                 }
             }
-            Text("预估月均 \(AppFormatters.currency(monthlyCost))")
+            Text(String(format: String(localized: "subscriptions.monthly_estimate_format"), AppFormatters.currency(monthlyCost)))
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.accentSecondary)
 
@@ -123,10 +123,10 @@ struct SubscriptionListView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("年度总览")
+                    Text("subscriptions.annual_overview")
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                    Text("预估年度订阅开销")
+                    Text("subscriptions.annual_estimate")
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -139,8 +139,8 @@ struct SubscriptionListView: View {
             }
 
             HStack(spacing: 10) {
-                summaryPill(title: "月均", value: AppFormatters.currency(monthlyCost))
-                summaryPill(title: "可优化", value: knownSavings > 0 ? AppFormatters.currency(knownSavings) : "暂无")
+                summaryPill(titleKey: "subscriptions.monthly_average", value: AppFormatters.currency(monthlyCost))
+                summaryPill(titleKey: "subscriptions.optimizable", value: knownSavings > 0 ? AppFormatters.currency(knownSavings) : String(localized: "common.none"))
             }
         }
         .padding(18)
@@ -150,9 +150,9 @@ struct SubscriptionListView: View {
         )
     }
 
-    private func summaryPill(title: String, value: String) -> some View {
+    private func summaryPill(titleKey: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(titleKey)
                 .font(.caption2)
                 .foregroundStyle(AppTheme.mutedInk)
             Text(value)
@@ -193,7 +193,7 @@ struct SubscriptionListView: View {
                 HStack(spacing: 8) {
                     Text(sub.period.title)
                     Text("·")
-                    Text("下次 \(AppFormatters.shortDateTime(sub.nextChargedAt))")
+                    Text(String(format: String(localized: "subscriptions.next_charge_format"), AppFormatters.shortDateTime(sub.nextChargedAt)))
                 }
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
@@ -214,7 +214,7 @@ struct SubscriptionListView: View {
                     .foregroundStyle(AppTheme.accent)
                     .background(AppTheme.accent.opacity(0.10))
                     .clipShape(Circle())
-                    .help("编辑订阅")
+                    .help(String(localized: "subscriptions.edit_help"))
 
                     Button(role: .destructive) {
                         deleteSubscription(sub)
@@ -227,7 +227,7 @@ struct SubscriptionListView: View {
                     .foregroundStyle(.red)
                     .background(Color.red.opacity(0.10))
                     .clipShape(Circle())
-                    .help("删除订阅")
+                    .help(String(localized: "subscriptions.delete_help"))
                 }
 
                 VStack(alignment: .trailing, spacing: 4) {
@@ -250,7 +250,7 @@ struct SubscriptionListView: View {
             if let suggestion = savingsSuggestion(for: sub), suggestion.savings > 0 {
                 HStack(spacing: 6) {
                     Image(systemName: "lightbulb.fill")
-                    Text("切换年付可省 \(AppFormatters.currency(suggestion.savings))/年")
+                    Text(String(format: String(localized: "subscriptions.annual_savings_short_format"), AppFormatters.currency(suggestion.savings)))
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
@@ -268,13 +268,13 @@ struct SubscriptionListView: View {
             Button {
                 editingSubscription = sub
             } label: {
-                Label("编辑", systemImage: "pencil")
+                Label("common.edit", systemImage: "pencil")
             }
 
             Button(role: .destructive) {
                 deleteSubscription(sub)
             } label: {
-                Label("删除", systemImage: "trash")
+                Label("common.delete", systemImage: "trash")
             }
         }
     }
@@ -287,11 +287,11 @@ struct SubscriptionListView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(AppTheme.mutedInk.opacity(0.5))
 
-            Text("暂无订阅记录")
+            Text("subscriptions.empty.title")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            Text("导入订阅续期邮件截图，或点击右上角扫描历史账单自动识别周期性订阅。")
+            Text("subscriptions.empty.description")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
                 .multilineTextAlignment(.center)
@@ -307,7 +307,7 @@ struct SubscriptionListView: View {
                     } else {
                         Image(systemName: "envelope.open.fill")
                     }
-                    Text(isImporting ? "识别中..." : "上传续期邮件截图")
+                    Text(isImporting ? String(localized: "inbox.import.processing") : String(localized: "subscriptions.upload_renewal_screenshot"))
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -331,9 +331,9 @@ struct SubscriptionListView: View {
 
     private func daysUntil(_ date: Date) -> String {
         let days = Calendar.current.dateComponents([.day], from: .now, to: date).day ?? 0
-        if days <= 0 { return "今天" }
-        if days == 1 { return "明天" }
-        return "\(days) 天后"
+        if days <= 0 { return String(localized: "common.today") }
+        if days == 1 { return String(localized: "common.tomorrow") }
+        return String(format: String(localized: "common.days_later_format"), days)
     }
 
     private func estimatedAnnualCost(for sub: Subscription) -> Double {
@@ -395,7 +395,7 @@ struct SubscriptionListView: View {
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
             let text = try ocrService.recognizeText(from: data)
-            store.importRecognizedText(text, notePrefix: "订阅续期邮件截图")
+            store.importRecognizedText(text, notePrefix: String(localized: "subscriptions.renewal_screenshot_note"))
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
         }
@@ -438,25 +438,25 @@ private struct SubscriptionEditView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("订阅") {
-                    TextField("商户", text: $merchant)
-                    TextField("方案名称", text: $planName)
-                    Picker("周期", selection: $period) {
+                Section("subscriptions.edit.section.subscription") {
+                    TextField("transaction_editor.merchant", text: $merchant)
+                    TextField("subscriptions.edit.plan_name", text: $planName)
+                    Picker("subscriptions.edit.period", selection: $period) {
                         ForEach(SubscriptionPeriod.allCases, id: \.self) { item in
                             Text(item.title).tag(item)
                         }
                     }
-                    TextField("金额", text: $amountText)
+                    TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
                 }
 
-                Section("扣费日期") {
-                    DatePicker("最近扣费", selection: $lastChargedAt, displayedComponents: [.date, .hourAndMinute])
-                    DatePicker("下次扣费", selection: $nextChargedAt, displayedComponents: [.date, .hourAndMinute])
+                Section("subscriptions.edit.section.charge_dates") {
+                    DatePicker("subscriptions.edit.last_charged", selection: $lastChargedAt, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("subscriptions.edit.next_charge", selection: $nextChargedAt, displayedComponents: [.date, .hourAndMinute])
                 }
 
-                Section("费用优化") {
-                    TextField("年付价格（可选）", text: $annualPriceText)
+                Section("subscriptions.edit.section.optimization") {
+                    TextField("subscriptions.edit.annual_price_optional", text: $annualPriceText)
                         .keyboardType(.decimalPad)
 
                     if let savingsText {
@@ -466,19 +466,19 @@ private struct SubscriptionEditView: View {
                     }
                 }
 
-                Section("备注") {
-                    TextField("备注（可选）", text: $note, axis: .vertical)
+                Section("transaction_editor.note") {
+                    TextField("subscriptions.edit.note_optional", text: $note, axis: .vertical)
                         .lineLimit(3...5)
                 }
             }
-            .navigationTitle("编辑订阅")
+            .navigationTitle("subscriptions.edit.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") { save() }
+                    Button("common.save") { save() }
                         .disabled(!canSave)
                 }
             }
@@ -507,9 +507,9 @@ private struct SubscriptionEditView: View {
         guard period == .monthly, let amount, let annualPrice, annualPrice > 0 else { return nil }
         let savings = amount * 12.0 - annualPrice
         if savings > 0 {
-            return "切换年付可节省 \(AppFormatters.currency(savings))/年"
+            return String(format: String(localized: "subscriptions.annual_savings_full_format"), AppFormatters.currency(savings))
         }
-        return "当前年付价格不低于月付累计。"
+        return String(localized: "subscriptions.no_annual_savings")
     }
 
     private func save() {

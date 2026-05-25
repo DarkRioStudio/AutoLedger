@@ -11,7 +11,7 @@ struct FeedbackComposerView: View {
     @State private var userDescription = ""
     @State private var expectedResult = ""
     @State private var actualResult = ""
-    @State private var reproducible = "是"
+    @State private var reproducible = "yes"
     @State private var extraNote = ""
     @State private var includeScreenshot = false
 
@@ -44,11 +44,11 @@ struct FeedbackComposerView: View {
                 .padding(.vertical, 20)
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("问题反馈")
+            .navigationTitle("settings.feedback.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
+                    Button("common.cancel") { dismiss() }
                         .foregroundStyle(AppTheme.accent)
                 }
             }
@@ -58,11 +58,11 @@ struct FeedbackComposerView: View {
                 }
                 .environmentObject(store)
             }
-            .alert("发送结果", isPresented: Binding(
+            .alert("feedback.result.title", isPresented: Binding(
                 get: { feedbackService.sendResult != nil },
                 set: { if !$0 { feedbackService.sendResult = nil } }
             )) {
-                Button("好的") {
+                Button("feedback.result.ok") {
                     if case .sent = feedbackService.sendResult { dismiss() }
                     feedbackService.sendResult = nil
                 }
@@ -76,7 +76,7 @@ struct FeedbackComposerView: View {
 
     private var issueTypeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("问题类型")
+            Text("feedback.issue_type")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
@@ -115,7 +115,7 @@ struct FeedbackComposerView: View {
 
     private var levelSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("反馈级别")
+            Text("feedback.level")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
@@ -162,47 +162,47 @@ struct FeedbackComposerView: View {
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
-        .alert("确认使用 L3 完整诊断？", isPresented: $showL3Confirmation) {
-            Button("确认", role: .destructive) { level = .L3 }
-            Button("取消", role: .cancel) {}
+        .alert("feedback.l3.confirm_title", isPresented: $showL3Confirmation) {
+            Button("feedback.l3.confirm", role: .destructive) { level = .L3 }
+            Button("common.cancel", role: .cancel) {}
         } message: {
-            Text("L3 级别可能包含完整的 OCR 识别文本和原始截图，请确认你了解并同意。")
+            Text("feedback.l3.confirm_message")
         }
     }
 
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("问题描述")
+            Text("feedback.description")
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            feedbackField("描述你遇到的问题…", text: $userDescription, minHeight: 80)
-            feedbackField("预期结果（可选）", text: $expectedResult)
-            feedbackField("实际结果（可选）", text: $actualResult)
+            feedbackField(String(localized: "feedback.field.problem_placeholder"), text: $userDescription, minHeight: 80)
+            feedbackField(String(localized: "feedback.field.expected_placeholder"), text: $expectedResult)
+            feedbackField(String(localized: "feedback.field.actual_placeholder"), text: $actualResult)
 
             HStack(spacing: 12) {
-                Text("是否可复现")
+                Text("feedback.reproducible")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.ink)
                 Spacer()
                 Picker("", selection: $reproducible) {
-                    Text("是").tag("是")
-                    Text("否").tag("否")
-                    Text("不确定").tag("不确定")
+                    Text("feedback.reproducible.yes").tag("yes")
+                    Text("feedback.reproducible.no").tag("no")
+                    Text("feedback.reproducible.unsure").tag("unsure")
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 200)
             }
 
-            feedbackField("补充说明（可选）", text: $extraNote)
+            feedbackField(String(localized: "feedback.field.extra_placeholder"), text: $extraNote)
 
             if level == .L3 {
                 Toggle(isOn: $includeScreenshot) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("附带最近截图")
+                        Text("feedback.include_screenshot")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.ink)
-                        Text("将最近导入的截图附加到诊断包中")
+                        Text("feedback.include_screenshot.subtitle")
                             .font(.caption)
                             .foregroundStyle(AppTheme.mutedInk)
                     }
@@ -217,7 +217,7 @@ struct FeedbackComposerView: View {
         HStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-            Text("L3 完整诊断包可能包含更多个人账单信息，仅建议在你明确知情并同意的情况下使用。")
+            Text("feedback.l3.warning")
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
         }
@@ -232,7 +232,7 @@ struct FeedbackComposerView: View {
         Button {
             buildPreview()
         } label: {
-            Text("预览并发送")
+            Text("feedback.preview_and_send")
                 .font(.headline)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -283,14 +283,22 @@ struct FeedbackComposerView: View {
             let body = FeedbackBundleBuilder.emailBody(
                 level: level, issueType: issueType, feedbackID: feedbackID,
                 userDescription: userDescription, expectedResult: expectedResult,
-                actualResult: actualResult, reproducible: reproducible, extraNote: extraNote
+                actualResult: actualResult, reproducible: reproducibleDisplay, extraNote: extraNote
             )
             previewBundle = PreviewBundle(
                 feedbackID: feedbackID, subject: subject, body: body,
                 bundleDir: bundleDir, zipURL: zipURL, zipData: zipData
             )
         } catch {
-            feedbackService.sendResult = .failed("无法构建反馈包：\(error.localizedDescription)")
+            feedbackService.sendResult = .failed(String(format: String(localized: "feedback.build_failed_format"), error.localizedDescription))
+        }
+    }
+
+    private var reproducibleDisplay: String {
+        switch reproducible {
+        case "yes": return String(localized: "feedback.reproducible.yes")
+        case "no": return String(localized: "feedback.reproducible.no")
+        default: return String(localized: "feedback.reproducible.unsure")
         }
     }
 

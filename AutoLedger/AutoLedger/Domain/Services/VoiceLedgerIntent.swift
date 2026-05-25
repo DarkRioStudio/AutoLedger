@@ -15,7 +15,7 @@ struct VoiceLedgerIntent: AppIntent {
     var content: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("记录 \(\.$content)")
+        Summary("voice_ledger.parameter_summary")
     }
 
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
