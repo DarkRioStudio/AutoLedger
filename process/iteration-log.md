@@ -44,6 +44,53 @@
 
 ## 日志条目
 
+### ITER-077 分类/商户别名批量刷新交互
+- 日期：2026-05-25
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4
+- 类型：能力增强 / Bugfix / 测试
+- 目标：用户修改单笔账单分类时可选择是否刷新同商户历史账单分类；商户别名设置页支持对单条别名手动刷新历史账单商户名。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`updateTransaction` 新增 `refreshSameMerchantCategory` 参数；新增同商户分类批量更新、单条商户别名刷新方法，并继续写回 SQLite、刷新 Widget、触发自动备份。
+  - `AutoLedger/AutoLedger/Features/Ledger/TransactionEditorView.swift`：编辑模式下检测分类变更，保存前弹出"仅保存本笔 / 刷新全部"确认。
+  - `AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift`：编辑账单保存时把批量刷新选择传给 `LedgerStore`；新增账单不触发该确认。
+  - `AutoLedger/AutoLedger/Features/Settings/MerchantAliasView.swift`：每条商户别名增加刷新按钮，按单条映射更新历史账单商户名。
+  - `scripts/OfflineRegression.swift`：新增同商户分类批量刷新和单条商户别名刷新断言。
+- 未改动范围：未新增全局设置开关；未改变商户别名自动学习规则；未改变 OCR/LLM 解析流程。
+- 完成内容：分类变更可由用户确认是否批量套用；商户别名可在设置页逐条刷新已有账单；批量更新均持久化到 SQLite。
+- 未完成内容：未做真机 UI 点按回归；本轮以编译和离线逻辑回归为准。
+- 测试情况：
+  - PASS：`bash scripts/run_golden_regression.sh`（32 case）
+  - PASS：`bash scripts/run_offline_regression.sh`（新增同商户分类刷新和单条别名刷新断言通过）
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：批量刷新按最终商户名精确匹配，不做模糊匹配，避免误改相似商户。
+- 回滚方式：回退本轮 `LedgerStore.swift`、`TransactionEditorView.swift`、`LedgerView.swift`、`MerchantAliasView.swift` 和离线回归新增断言。
+- 结论：本轮完成，代码门禁通过。
+- 下一步建议：后续可在设置页增加"分类学习"逐条刷新入口，但本轮先以编辑时确认覆盖主路径。
+
+### ITER-076 微信拼多多先用后付详情页解析修复
+- 日期：2026-05-25
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4
+- 类型：Bugfix / 测试
+- 目标：处理 2026-05-25 导出的单条微信支付调试记录，修复商户被解析为 `• 交易详情` 的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift`：微信详情页缺少 `商户全称` 时，改为在负数金额上方附近扫描展示商户，并过滤 `交易详情`、`服务`、`小程序`、喜欢数、平台 slogan 等 UI 噪声。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Enums/TransactionCategory.swift`：将 `拼多多` 纳入购物分类关键词；补齐既有 `羊汤/羊肉汤` 餐饮关键词残留。
+  - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增 `wechat_pinduoduo_pay_later_detail`，覆盖金额 69.90、商户 `拼多多`、分类 `shopping`、来源 `wechat`。
+  - `scripts/run_golden_regression.sh`：修复当前仓库布局下 Golden 脚本仍引用不存在 Core 版 `ReceiptParser.swift` 的问题，改为临时使用 App 版解析器。
+- 未改动范围：未调整 LLM / SmartReceiptParser 流程；未改动 QuickLedgerIntent、调试记录 UI、SQLite 入账和商户别名学习逻辑；未处理既有 `AutoLedger.xcodeproj` 未提交显示名改动。
+- 完成内容：该调试记录现在可按纯规则解析为 `拼多多 · ¥69.90 · 购物 · 2026-05-25 10:52:44`，不再生成 `• 交易详情` 商户；离线回归中既有"羊汤"分类残差同步修复。
+- 未完成内容：未做真实快捷指令端到端截图导入；本轮只覆盖文本回归。
+- 测试情况：
+  - PASS：`bash scripts/run_golden_regression.sh`（32 case，通过新增 `wechat_pinduoduo_pay_later_detail`）
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：该修复通过近邻候选过滤识别顶部展示商户；若后续支付页顶部只有平台 slogan 而无商户名，会继续回退到 `商品` 字段。
+- 回滚方式：回退本轮 `ReceiptParser.swift`、`TransactionCategory.swift`、Golden case 和脚本改动。
+- 结论：本轮完成，代码门禁通过。
+- 下一步建议：将相似"先用后付/先享后付"详情页继续沉淀为 Golden Case。
+
 ### ITER-075 Report 月报历史月份浏览
 - 日期：2026-05-20
 - 所属版本：v1.4.0

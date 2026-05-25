@@ -5,7 +5,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CASES="${1:-$ROOT/tests/golden/ledger_text_interpreter/cases.jsonl}"
 CORE="$ROOT/AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore"
 TMP_BIN="$(mktemp /tmp/autoledger-golden.XXXXXX)"
-trap 'rm -f "$TMP_BIN"' EXIT
+PREP_DIR="$(mktemp -d /tmp/autoledger-golden-prep.XXXXXX)"
+trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
+
+sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift" > "$PREP_DIR/ReceiptParser.swift"
 
 swiftc \
   -o "$TMP_BIN" \
@@ -16,7 +19,7 @@ swiftc \
   "$CORE/Models/LedgerInterpretationModels.swift" \
   "$CORE/Utils/AppFormatters.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
-  "$CORE/Services/ReceiptParser.swift" \
+  "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \

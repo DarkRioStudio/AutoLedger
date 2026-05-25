@@ -9,6 +9,10 @@
 
 ## [Unreleased]
 
+### 修复（v1.4.0）
+- [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。
+- [2026-05-25 +0800] ITER-076 微信拼多多先用后付详情页解析：`ReceiptParser` 在微信详情页缺少"商户全称"时，不再直接取负数金额上一行作为商户；新增附近展示商户扫描与微信 UI 噪声过滤，避免 `• 交易详情` 被误入账，并将 `拼多多` 归入购物分类；补齐既有"羊汤"餐饮分类残留；新增对应 Golden Case，`run_golden_regression.sh` 同步修复为当前 App 版解析器路径。
+
 ### 新增（v1.4.0）
 - [2026-05-20 +0800] ITER-075 月报历史月份浏览：`ReportView` 新增 `@State selectedMonth` + NavigationBar 左右翻页箭头；月报数据改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算，6 个月趋势图现可显示选中月前 6 个月历史；查看历史月时自动隐藏异常消费提醒（仅当月有效）；切换月份自动清空分类选中状态；趋势图底部文案改为 `snapshot.monthLabel`。
 - [2026-05-20 +0800] ITER-073 Watch VoiceOver：`ContentView`（交易行合并标签+Reduce Motion 降级）、`QuickAddView`（分类按钮标签/选中态）、`WatchVoiceRecorderView`（TextField 标签+提示+解析按钮标签）、`WatchVoiceConfirmView`（金额+商户合并标签、分类选中态、保存按钮标签+提示）全部补全 VoiceOver 标注。

@@ -520,29 +520,42 @@ final class LedgerStore: ObservableObject {
         }
     }
 
-    func updateTransaction(_ transaction: Transaction) {
+    func updateTransaction(_ transaction: Transaction, refreshSameMerchantCategory: Bool = false) {
         guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
             return
         }
 
         let original = transactions[index]
+        let categoryChanged = original.category != transaction.category
         learnMerchantAliasIfNeeded(from: original, to: transaction)
 
         // 检测分类修正——仅对内置分类记录用户偏好（自定义分类直接以字符串存储在 Transaction）
-        if original.category != transaction.category,
+        if categoryChanged,
            let builtIn = TransactionCategory(rawValue: transaction.category) {
             recordCategoryCorrection(merchant: transaction.merchant, category: builtIn)
         }
 
         transactions[index] = transaction
-        sortTransactions()
 
         do {
             try transactionStore?.update(transaction: transaction)
-            lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
+            let refreshedCount = refreshSameMerchantCategory && categoryChanged
+                ? applyCategoryToExistingTransactions(
+                    merchant: transaction.merchant,
+                    category: transaction.category,
+                    excluding: transaction.id
+                )
+                : 0
+            sortTransactions()
+            if refreshedCount > 0 {
+                lastImportSummary = "已保存 \(transaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
+            } else {
+                lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
+            }
             reloadWidgets()
             requestAutomaticBackup()
         } catch {
+            sortTransactions()
             lastImportSummary = "账单已更新到界面，但写入本地存储失败：\(error.localizedDescription)"
         }
     }
@@ -552,29 +565,113 @@ final class LedgerStore: ObservableObject {
         guard !merchantAliases.isEmpty else { return 0 }
 
         var updatedCount = 0
+        for (original, alias) in merchantAliases {
+            updatedCount += applyMerchantAlias(original: original, alias: alias)
+        }
+        return updatedCount
+    }
+
+    @discardableResult
+    func refreshTransactionsForMerchantAlias(original: String) -> Int {
+        let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let alias = merchantAliases[trimmedOriginal] else { return 0 }
+
+        let updatedCount = applyMerchantAlias(original: trimmedOriginal, alias: alias)
+        if updatedCount > 0 {
+            lastImportSummary = "已将 \(updatedCount) 笔历史账单商户名刷新为 \(alias)。"
+            requestAutomaticBackup()
+        } else {
+            lastImportSummary = "没有需要刷新的 \(trimmedOriginal) 账单。"
+        }
+        return updatedCount
+    }
+
+    @discardableResult
+    private func applyMerchantAlias(original: String, alias: String) -> Int {
+        let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAlias = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedOriginal.isEmpty,
+              !trimmedAlias.isEmpty,
+              trimmedOriginal != trimmedAlias else {
+            return 0
+        }
+
+        var updatedCount = 0
         for index in transactions.indices {
             let transaction = transactions[index]
-            if let updated = transaction.applyingMerchantAlias(merchantAliases) {
-                transactions[index] = updated
-                do {
-                    try transactionStore?.update(transaction: updated)
-                    updatedCount += 1
-                } catch {
-                    lastImportSummary = "商户别名已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
-                }
+            guard let updated = transaction.applyingMerchantAlias(original: trimmedOriginal, alias: trimmedAlias) else {
+                continue
+            }
+            transactions[index] = updated
+            do {
+                try transactionStore?.update(transaction: updated)
+                updatedCount += 1
+            } catch {
+                lastImportSummary = "商户别名已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
             }
         }
 
         for index in deletedTransactions.indices {
             let transaction = deletedTransactions[index]
-            if let updated = transaction.applyingMerchantAlias(merchantAliases) {
-                deletedTransactions[index] = updated
-                do {
-                    try transactionStore?.update(transaction: updated)
-                    updatedCount += 1
-                } catch {
-                    lastImportSummary = "商户别名已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
-                }
+            guard let updated = transaction.applyingMerchantAlias(original: trimmedOriginal, alias: trimmedAlias) else {
+                continue
+            }
+            deletedTransactions[index] = updated
+            do {
+                try transactionStore?.update(transaction: updated)
+                updatedCount += 1
+            } catch {
+                lastImportSummary = "商户别名已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+            }
+        }
+
+        if updatedCount > 0 {
+            sortTransactions()
+            reloadWidgets()
+        }
+        return updatedCount
+    }
+
+    @discardableResult
+    private func applyCategoryToExistingTransactions(
+        merchant: String,
+        category: String,
+        excluding transactionID: UUID? = nil
+    ) -> Int {
+        let trimmedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedMerchant.isEmpty else { return 0 }
+
+        var updatedCount = 0
+        for index in transactions.indices {
+            let transaction = transactions[index]
+            guard transaction.id != transactionID,
+                  transaction.merchant == trimmedMerchant,
+                  transaction.category != category else {
+                continue
+            }
+            let updated = transaction.replacingCategory(category)
+            transactions[index] = updated
+            do {
+                try transactionStore?.update(transaction: updated)
+                updatedCount += 1
+            } catch {
+                lastImportSummary = "分类偏好已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+            }
+        }
+
+        for index in deletedTransactions.indices {
+            let transaction = deletedTransactions[index]
+            guard transaction.merchant == trimmedMerchant,
+                  transaction.category != category else {
+                continue
+            }
+            let updated = transaction.replacingCategory(category)
+            deletedTransactions[index] = updated
+            do {
+                try transactionStore?.update(transaction: updated)
+                updatedCount += 1
+            } catch {
+                lastImportSummary = "分类偏好已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
             }
         }
 
@@ -917,11 +1014,23 @@ final class LedgerStore: ObservableObject {
 }
 
 private extension Transaction {
-    func applyingMerchantAlias(_ aliases: [String: String]) -> Transaction? {
-        guard let alias = aliases[merchant], alias != merchant else { return nil }
+    func applyingMerchantAlias(original: String, alias: String) -> Transaction? {
+        guard merchant == original, alias != merchant else { return nil }
         return Transaction(
             id: id,
             merchant: alias,
+            amount: amount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note
+        )
+    }
+
+    func replacingCategory(_ category: String) -> Transaction {
+        Transaction(
+            id: id,
+            merchant: merchant,
             amount: amount,
             occurredAt: occurredAt,
             categoryLabel: category,

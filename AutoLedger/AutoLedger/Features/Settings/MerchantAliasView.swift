@@ -29,9 +29,20 @@ struct MerchantAliasView: View {
 
                         Spacer()
 
-                        Image(systemName: "arrow.right")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.mutedInk)
+                        HStack(spacing: 10) {
+                            Image(systemName: "arrow.right")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.mutedInk)
+
+                            Button {
+                                store.refreshTransactionsForMerchantAlias(original: key)
+                            } label: {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(AppTheme.accent)
+                            .accessibilityLabel("刷新 \(key) 的历史账单商户名")
+                        }
                     }
                 }
                 .onDelete { indices in

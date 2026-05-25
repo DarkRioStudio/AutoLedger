@@ -54,7 +54,8 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
             || lowered.contains("火锅") || lowered.contains("烧烤") || lowered.contains("面包")
             || lowered.contains("奶") || lowered.contains("茶饮") || lowered.contains("mcdonald")
             || lowered.contains("闪购") || lowered.contains("骑士") || lowered.contains("粉")
-            || lowered.contains("米线") || lowered.contains("面") || lowered.contains("饭") {
+            || lowered.contains("米线") || lowered.contains("面") || lowered.contains("饭")
+            || lowered.contains("羊汤") || lowered.contains("羊肉汤") {
             return .dining
         }
         if lowered.contains("盒马") || lowered.contains("超市") || lowered.contains("便利店")
@@ -76,7 +77,8 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
         if lowered.contains("影院") || lowered.contains("电影") || lowered.contains("游戏") {
             return .entertainment
         }
-        if lowered.contains("淘宝") || lowered.contains("京东") || lowered.contains("mall") {
+        if lowered.contains("淘宝") || lowered.contains("京东") || lowered.contains("拼多多")
+            || lowered.contains("mall") {
             return .shopping
         }
 

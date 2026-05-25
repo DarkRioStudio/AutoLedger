@@ -3,7 +3,7 @@ import SwiftUI
 
 struct TransactionEditorView: View {
     let transaction: Transaction
-    let onSave: (Transaction) -> Void
+    let onSave: (Transaction, Bool) -> Void
     /// `true` 表示新增模式，导航栏标题显示"新增账单"；`false` 为编辑模式
     var isNew: Bool = false
 
@@ -15,8 +15,10 @@ struct TransactionEditorView: View {
     @State private var source: String
     @State private var occurredAt: Date
     @State private var note: String
+    @State private var pendingSave: Transaction?
+    @State private var showCategoryRefreshPrompt = false
 
-    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction) -> Void) {
+    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool) -> Void) {
         self.transaction = transaction
         self.isNew = isNew
         self.onSave = onSave
@@ -78,27 +80,54 @@ struct TransactionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
-                        let trimmedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
-                        onSave(
-                            Transaction(
-                                id: transaction.id,
-                                merchant: trimmedMerchant.isEmpty ? transaction.merchant : trimmedMerchant,
-                                amount: parsedAmount,
-                                occurredAt: occurredAt,
-                                categoryLabel: category,
-                                sourceLabel: source,
-                                note: note.trimmingCharacters(in: .whitespacesAndNewlines)
-                            )
-                        )
-                        dismiss()
+                        let updated = editedTransaction()
+                        if shouldPromptCategoryRefresh(for: updated) {
+                            pendingSave = updated
+                            showCategoryRefreshPrompt = true
+                        } else {
+                            save(updated, refreshSameMerchantCategory: false)
+                        }
                     }
                     .disabled(parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+            }
+            .alert("刷新同商户账单分类？", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
+                Button("仅保存本笔", role: .cancel) {
+                    save(updated, refreshSameMerchantCategory: false)
+                }
+                Button("刷新全部") {
+                    save(updated, refreshSameMerchantCategory: true)
+                }
+            } message: { updated in
+                Text("是否将“\(updated.merchant)”所有现存账单的分类更新为“\(updated.categoryTitle)”？")
             }
         }
     }
 
     private var parsedAmount: Double {
         Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+
+    private func editedTransaction() -> Transaction {
+        let trimmedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Transaction(
+            id: transaction.id,
+            merchant: trimmedMerchant.isEmpty ? transaction.merchant : trimmedMerchant,
+            amount: parsedAmount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    private func shouldPromptCategoryRefresh(for updated: Transaction) -> Bool {
+        !isNew && transaction.category != updated.category
+    }
+
+    private func save(_ updated: Transaction, refreshSameMerchantCategory: Bool) {
+        onSave(updated, refreshSameMerchantCategory)
+        pendingSave = nil
+        dismiss()
     }
 }

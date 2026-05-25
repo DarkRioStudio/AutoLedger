@@ -1143,9 +1143,10 @@ public struct ReceiptParser: Sendable {
             }
         }
 
-        // When 商户全称 was a bare terminal ID (or absent), try the display title shown at the
-        // top of the WeChat page (the line immediately before the negative amount line),
-        // then fall back to the 商品 value.
+        // When 商户全称 was a bare terminal ID (or absent), try the display merchant shown above
+        // the amount. Some mini-program pages put a UI title such as "• 交易详情" right there, so
+        // scan upward through nearby lines and filter known WeChat chrome/noise before falling
+        // back to the 商品 value.
         if merchant == nil {
             let negAmountPattern = #"^\s*-[0-9]+(?:\.[0-9]{1,2})?\s*$"#
             if let negRegex = try? NSRegularExpression(pattern: negAmountPattern),
@@ -1154,10 +1155,7 @@ public struct ReceiptParser: Sendable {
                    return negRegex.firstMatch(in: ln, range: NSRange(ln.startIndex..<ln.endIndex, in: ln)) != nil
                }),
                negIdx > 0 {
-                let titleCandidate = normalizedLines[negIdx - 1]
-                if titleCandidate.count >= 2 && !knownLabels.contains(titleCandidate) {
-                    merchant = titleCandidate
-                }
+                merchant = nearbyWeChatDisplayMerchant(before: negIdx, in: normalizedLines, knownLabels: knownLabels)
             }
             if merchant == nil {
                 merchant = productName
@@ -1165,6 +1163,40 @@ public struct ReceiptParser: Sendable {
         }
 
         return (merchant, date)
+    }
+
+    private func nearbyWeChatDisplayMerchant(
+        before amountIndex: Int,
+        in lines: [String],
+        knownLabels: Set<String>
+    ) -> String? {
+        let lowerBound = max(0, amountIndex - 12)
+        for index in stride(from: amountIndex - 1, through: lowerBound, by: -1) {
+            if let candidate = cleanedWeChatDisplayMerchantCandidate(lines[index], knownLabels: knownLabels) {
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    private func cleanedWeChatDisplayMerchantCandidate(_ value: String, knownLabels: Set<String>) -> String? {
+        let candidate = value
+            .replacingOccurrences(of: #"^[·•\-\s]+"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "＞>》")))
+
+        guard candidate.count >= 2 else { return nil }
+        guard !knownLabels.contains(candidate) else { return nil }
+        guard amountCandidate(in: candidate) == nil else { return nil }
+        guard candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) else { return nil }
+
+        let skipContains = [
+            "交易详情", "订单详情", "账单详情", "付款详情", "支付详情",
+            "当前状态", "支付时间", "支付成功", "服务", "小程序",
+            "喜欢", "拼着买才便宜", "查看", "商家订单"
+        ]
+        guard !skipContains.contains(where: { candidate.contains($0) }) else { return nil }
+
+        return candidate
     }
 
     /// 合并被 OCR 拆成多行的括号内容，避免标签块值映射被换行错位。

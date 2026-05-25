@@ -667,6 +667,58 @@ struct OfflineRegression {
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
         reporter.check(reloadedTransactions.count == initialCount + 2, "SQLite store reload keeps imported transactions")
+
+        let categoryRefreshA = Transaction(
+            merchant: "批量分类商户",
+            amount: 11,
+            occurredAt: .now,
+            category: .other,
+            source: .manual,
+            note: "分类批量刷新 A"
+        )
+        let categoryRefreshB = Transaction(
+            merchant: "批量分类商户",
+            amount: 12,
+            occurredAt: .now.addingTimeInterval(-60),
+            category: .other,
+            source: .manual,
+            note: "分类批量刷新 B"
+        )
+        ledger.addTransaction(categoryRefreshA)
+        ledger.addTransaction(categoryRefreshB)
+        ledger.updateTransaction(
+            Transaction(
+                id: categoryRefreshA.id,
+                merchant: categoryRefreshA.merchant,
+                amount: categoryRefreshA.amount,
+                occurredAt: categoryRefreshA.occurredAt,
+                categoryLabel: TransactionCategory.dining.rawValue,
+                sourceLabel: categoryRefreshA.source,
+                note: categoryRefreshA.note
+            ),
+            refreshSameMerchantCategory: true
+        )
+        reporter.check(
+            ledger.transactions.filter { $0.merchant == "批量分类商户" }.allSatisfy { $0.category == TransactionCategory.dining.rawValue },
+            "LedgerStore refreshes same-merchant categories after edit"
+        )
+
+        let aliasRefresh = Transaction(
+            merchant: "别名刷新原商户",
+            amount: 9,
+            occurredAt: .now,
+            category: .shopping,
+            source: .manual,
+            note: "单条别名刷新"
+        )
+        ledger.addTransaction(aliasRefresh)
+        ledger.recordMerchantAlias(original: "别名刷新原商户", alias: "别名刷新后")
+        let aliasRefreshCount = ledger.refreshTransactionsForMerchantAlias(original: "别名刷新原商户")
+        reporter.check(aliasRefreshCount == 1, "LedgerStore refreshes a single merchant alias count")
+        reporter.check(
+            ledger.transactions.contains { $0.id == aliasRefresh.id && $0.merchant == "别名刷新后" },
+            "LedgerStore refreshes a single merchant alias merchant name"
+        )
     }
 
     private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {
