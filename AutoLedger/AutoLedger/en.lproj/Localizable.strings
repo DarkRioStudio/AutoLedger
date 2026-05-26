@@ -118,6 +118,14 @@
 "report.all_categories" = "All Categories";
 "report.chart.expense" = "Expense";
 "report.chart.month" = "Month";
+"report.percentage_format" = "%d%%";
+"report.summary.accessibility_format" = "%@, total spending %@, %@, top merchant %@, %@";
+"report.category.percentage_format" = "%d%% of total";
+"report.category.accessibility_format" = "%@, %@, %@";
+"report.category.accessibility_hint" = "Tap to filter this category";
+"report.trend.accessibility_format" = "Last 6 months: %@";
+"report.trend.accessibility_item_format" = "%@, %@, %@";
+"report.merchant.accessibility_format" = "Rank %d, %@, %@, %@, %@";
 
 "merchant_alias.title" = "Merchant Aliases";
 "merchant_alias.add_mapping" = "Add Mapping";

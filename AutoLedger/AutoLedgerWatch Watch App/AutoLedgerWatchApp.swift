@@ -10,12 +10,22 @@ import SwiftUI
 @main
 struct AutoLedgerWatch_Watch_AppApp: App {
 
-    @State private var viewModel = WatchLedgerViewModel()
-
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(viewModel)
+            if WatchScreenshotModeConfig.isEnabled {
+                WatchScreenshotHostView(scene: WatchScreenshotModeConfig.scene)
+            } else {
+                WatchAppRootView()
+            }
         }
+    }
+}
+
+private struct WatchAppRootView: View {
+    @State private var viewModel = WatchLedgerViewModel()
+
+    var body: some View {
+        ContentView()
+            .environment(viewModel)
     }
 }

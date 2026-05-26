@@ -121,6 +121,14 @@
 "report.all_categories" = "全部分類";
 "report.chart.expense" = "支出";
 "report.chart.month" = "月份";
+"report.percentage_format" = "%d%%";
+"report.summary.accessibility_format" = "%@，總支出 %@，%@，最常去 %@，%@";
+"report.category.percentage_format" = "占比 %d%%";
+"report.category.accessibility_format" = "%@，%@，%@";
+"report.category.accessibility_hint" = "點擊篩選該分類";
+"report.trend.accessibility_format" = "近 6 個月趨勢：%@";
+"report.trend.accessibility_item_format" = "%@，%@，%@";
+"report.merchant.accessibility_format" = "第 %d 名，%@，%@，%@，%@";
 
 "merchant_alias.title" = "商家別名";
 "merchant_alias.add_mapping" = "新增映射";

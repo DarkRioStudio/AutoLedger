@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+CONFIG="$ROOT/tools/appstore-screenshots/config/screenshots.json"
+
+LOCALE_FILTERS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --locale)
+      LOCALE_FILTERS+=("${2:?missing locale after --locale}")
+      shift 2
+      ;;
+    *)
+      echo "Unknown export_ios.sh argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+IFS=$'\t' read -r WORKSPACE SCHEME BUNDLE_ID DERIVED_REL WAIT_SECONDS APP_NAME < <(
+  python3 - "$CONFIG" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+print(
+    cfg["app"]["workspace"],
+    cfg["app"]["ios"]["scheme"],
+    cfg["app"]["ios"]["bundleId"],
+    cfg.get("capture", {}).get("derivedDataPath", "tools/appstore-screenshots/.derivedData"),
+    cfg.get("capture", {}).get("stabilizeSeconds", 2),
+    cfg["app"]["name"],
+    sep="\t",
+)
+PY
+)
+
+DERIVED_PATH="$ROOT/$DERIVED_REL"
+WORKSPACE_PATH="$ROOT/$WORKSPACE"
+
+read -r DEVICE_UDID DEVICE_NAME < <(
+  python3 - "$CONFIG" <<'PY'
+import json, re, subprocess, sys
+cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+text = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available"], text=True)
+devices = []
+for line in text.splitlines():
+    m = re.match(r"\s+(.+?) \(([0-9A-F-]{36})\) \((Booted|Shutdown)\)", line)
+    if m and m.group(1).startswith("iPhone"):
+        devices.append((m.group(1), m.group(2)))
+for candidate in cfg["app"]["ios"].get("deviceCandidates", []):
+    for name, udid in devices:
+        if name == candidate:
+            print(udid, name, sep="\t")
+            raise SystemExit(0)
+if devices:
+    print(devices[0][1], devices[0][0], sep="\t")
+    raise SystemExit(0)
+print("No available iPhone simulator found.", file=sys.stderr)
+raise SystemExit(1)
+PY
+)
+
+echo "==> Building iOS app"
+echo "workspace: $WORKSPACE"
+echo "scheme: $SCHEME"
+echo "bundle id: $BUNDLE_ID"
+echo "device: $DEVICE_NAME ($DEVICE_UDID)"
+
+xcodebuild \
+  -workspace "$WORKSPACE_PATH" \
+  -scheme "$SCHEME" \
+  -configuration Debug \
+  -destination "id=$DEVICE_UDID" \
+  -derivedDataPath "$DERIVED_PATH" \
+  build
+
+APP_PATH="$DERIVED_PATH/Build/Products/Debug-iphonesimulator/$APP_NAME.app"
+if [[ ! -d "$APP_PATH" ]]; then
+  echo "Could not find built iOS app at: $APP_PATH" >&2
+  exit 1
+fi
+
+echo "==> Booting and installing on $DEVICE_NAME"
+xcrun simctl boot "$DEVICE_UDID" 2>/dev/null || true
+xcrun simctl bootstatus "$DEVICE_UDID" -b
+xcrun simctl install "$DEVICE_UDID" "$APP_PATH"
+xcrun simctl status_bar "$DEVICE_UDID" override \
+  --time 9:41 \
+  --dataNetwork wifi \
+  --wifiBars 3 \
+  --cellularBars 4 \
+  --batteryState charged \
+  --batteryLevel 100 >/dev/null 2>&1 || true
+
+echo "==> Capturing iOS raw screenshots"
+while IFS=$'\t' read -r LOCALE APPLE_LANG APPLE_LOCALE SHOT_ID SCENE; do
+  OUT_DIR="$ROOT/tools/appstore-screenshots/output/raw/ios/$LOCALE"
+  mkdir -p "$OUT_DIR"
+  OUT_PATH="$OUT_DIR/$SHOT_ID.png"
+  echo "capture ios/$LOCALE/$SHOT_ID ($SCENE)"
+  xcrun simctl terminate "$DEVICE_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+  xcrun simctl launch --terminate-running-process "$DEVICE_UDID" "$BUNDLE_ID" \
+    --screenshot-mode \
+    --screenshot-platform ios \
+    --screenshot-scene "$SCENE" \
+    -AppleLanguages "$APPLE_LANG" \
+    -AppleLocale "$APPLE_LOCALE" >/dev/null
+  sleep "$WAIT_SECONDS"
+  xcrun simctl io "$DEVICE_UDID" screenshot "$OUT_PATH" >/dev/null
+done < <(
+  python3 - "$CONFIG" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"} <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+filters = set(sys.argv[2:])
+for locale, locale_cfg in cfg["locales"].items():
+    if filters and locale not in filters:
+        continue
+    for shot in cfg["iosShots"]:
+        print(locale, locale_cfg["appleLanguages"], locale_cfg["appleLocale"], shot["id"], shot["scene"], sep="\t")
+PY
+)
+
+python3 "$SCRIPT_DIR/render_marketing.py" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"}

@@ -1,14 +1,92 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "AppIcon.png",
-      "idiom" : "universal",
-      "platform" : "watchos",
-      "size" : "1024x1024"
+      "size": "24x24",
+      "idiom": "watch",
+      "filename": "AppIcon-24x24@2x.png",
+      "scale": "2x",
+      "role": "notificationCenter",
+      "subtype": "38mm"
+    },
+    {
+      "size": "27.5x27.5",
+      "idiom": "watch",
+      "filename": "AppIcon-27.5x27.5@2x.png",
+      "scale": "2x",
+      "role": "notificationCenter",
+      "subtype": "42mm"
+    },
+    {
+      "size": "29x29",
+      "idiom": "watch",
+      "filename": "AppIcon-29x29@2x.png",
+      "scale": "2x",
+      "role": "companionSettings"
+    },
+    {
+      "size": "29x29",
+      "idiom": "watch",
+      "filename": "AppIcon-29x29@3x.png",
+      "scale": "3x",
+      "role": "companionSettings"
+    },
+    {
+      "size": "40x40",
+      "idiom": "watch",
+      "filename": "AppIcon-40x40@2x.png",
+      "scale": "2x",
+      "role": "appLauncher",
+      "subtype": "38mm"
+    },
+    {
+      "size": "44x44",
+      "idiom": "watch",
+      "filename": "AppIcon-44x44@2x.png",
+      "scale": "2x",
+      "role": "appLauncher",
+      "subtype": "40mm"
+    },
+    {
+      "size": "50x50",
+      "idiom": "watch",
+      "filename": "AppIcon-50x50@2x.png",
+      "scale": "2x",
+      "role": "appLauncher",
+      "subtype": "44mm"
+    },
+    {
+      "size": "86x86",
+      "idiom": "watch",
+      "filename": "AppIcon-86x86@2x.png",
+      "scale": "2x",
+      "role": "quickLook",
+      "subtype": "38mm"
+    },
+    {
+      "size": "98x98",
+      "idiom": "watch",
+      "filename": "AppIcon-98x98@2x.png",
+      "scale": "2x",
+      "role": "quickLook",
+      "subtype": "42mm"
+    },
+    {
+      "size": "108x108",
+      "idiom": "watch",
+      "filename": "AppIcon-108x108@2x.png",
+      "scale": "2x",
+      "role": "quickLook",
+      "subtype": "44mm"
+    },
+    {
+      "size": "1024x1024",
+      "idiom": "watch-marketing",
+      "filename": "AppIcon.png",
+      "scale": "1x"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }

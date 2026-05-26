@@ -130,6 +130,7 @@ struct LedgerView: View {
                                     .frame(width: 34, height: 34)
                                     .background(transaction.categoryEnum.tint.opacity(0.12))
                                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
@@ -217,6 +218,7 @@ struct LedgerView: View {
                         } label: {
                             Image(systemName: "trash")
                         }
+                        .accessibilityLabel(Text("deleted_transactions.title"))
                     }
                 }
             }

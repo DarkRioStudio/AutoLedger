@@ -26,11 +26,16 @@ struct QuickAddView: View {
                         } label: {
                             VStack(spacing: 2) {
                                 Image(systemName: cat.iconName)
-                                    .font(.system(size: 14))
+                                    .font(.caption)
                                     .accessibilityHidden(true)
                                 Text(cat.title)
-                                    .font(.system(size: 9))
+                                    .font(.caption2)
                                     .lineLimit(1)
+                                if vm.quickAddCategory == cat {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption2)
+                                        .accessibilityHidden(true)
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
@@ -63,7 +68,7 @@ struct QuickAddView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 TextField("0.00", text: $vm.quickAddAmountText)
-                    .font(.system(size: 20, design: .monospaced))
+                    .font(.title3.monospacedDigit())
                     .accessibilityLabel(Text("transaction_editor.amount"))
 
                 // MARK: 商户（可选）
@@ -91,6 +96,7 @@ struct QuickAddView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!viewModel.quickAddAmountValid || viewModel.isSubmitting)
+                .accessibilityLabel(Text("watch.quick_add.submit"))
 
                 Button("common.cancel", role: .cancel) {
                     viewModel.resetQuickAddInput()

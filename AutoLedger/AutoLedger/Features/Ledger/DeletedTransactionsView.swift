@@ -25,6 +25,7 @@ struct DeletedTransactionsView: View {
                                         .frame(width: 34, height: 34)
                                         .background(transaction.categoryEnum.tint.opacity(0.12))
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .accessibilityHidden(true)
 
                                     VStack(alignment: .leading, spacing: 6) {
                                         HStack {
@@ -50,6 +51,9 @@ struct DeletedTransactionsView: View {
                                 }
                                 .padding(.vertical, 6)
                                 .listRowBackground(AppTheme.card)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                                .accessibilityHint(Text("deleted_transactions.footer"))
                                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                     Button {
                                         store.restoreTransaction(transaction)

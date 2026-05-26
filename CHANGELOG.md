@@ -10,6 +10,8 @@
 ## [Unreleased]
 
 ### 新增（v1.4.0）
+- [2026-05-26 +0800] ITER-081 辅助功能发布收口：报表页新增 VoiceOver 图表摘要、分类占比 / Top 商户行级可读标签、Reduce Motion 动画降级、增强对比度下的图表弱化态调整，并在分类筛选选中态增加非颜色符号；账本与最近删除行隐藏装饰图标并补齐删除入口 / 已删除账单行标签；Watch 快速记账与语音确认分类网格改用动态字体并增加可见勾选态，降低大字号和 VoiceOver 场景下的识别成本。
+- [2026-05-26 +0800] ITER-080 Watch App Icon 小尺寸优化：基于现有 iPhone 图标生成 Apple Watch 专用图标，保留白色钱包、金币、闪电和蓝绿渐变背景，去除星星 / 小圆点等复杂装饰，简化钱包高光与阴影并加粗闪电主视觉；`AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset` 从单张 1024 universal 图扩展为完整 watchOS app icon set（notification / companion settings / app launcher / quick look / marketing），并新增 `versions/assets/watch-app-icon/` 下的 1024、128、64、48 预览图。
 - [2026-05-25 +0800] ITER-079 UI 文案全球化收口：补齐主 App v1.4 主路径与 Watch App 的简体中文 / 繁体中文 / 英文 UI 文案资源；Watch App 新增独立 `zh-Hans.lproj`、`zh-Hant.lproj`、`en.lproj`；主 App `Localizable.strings` 扩展至 457 个 key，覆盖账本筛选、最近删除、月报、分类刷新、商户别名、消费分析、数据管理、订阅管理、问题反馈、反馈邮件预览、OCR / iCloud 用户错误与 App Intents 参数摘要等用户可见入口。DebugView 与调试导出文本继续保留中文，作为开发者 / 回归工具暂不纳入本轮 UI 全球化范围。
 - [2026-05-25 +0800] ITER-078 v1.4.0 / v1.4.x Release Notes 草稿：新增 `versions/v1.4.0-RELEASE(draft).md`，汇总 Watch 伴侣 App、辅助功能、App Intents、月报历史月份、微信拼多多解析修复、分类/商户别名批量刷新等已实现能力；补充简体中文 / 繁体中文 / 英文本地化检查结论，明确 `.strings` key 已对齐但 Watch 与部分新增 UI 仍存在硬编码中文，暂不建议声明三语完整本地化。
 - [2026-05-20 +0800] ITER-075 月报历史月份浏览：`ReportView` 新增 `@State selectedMonth` + NavigationBar 左右翻页箭头；月报数据改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算，6 个月趋势图现可显示选中月前 6 个月历史；查看历史月时自动隐藏异常消费提醒（仅当月有效）；切换月份自动清空分类选中状态；趋势图底部文案改为 `snapshot.monthLabel`。

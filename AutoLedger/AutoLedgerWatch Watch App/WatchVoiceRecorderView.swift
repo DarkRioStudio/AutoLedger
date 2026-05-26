@@ -21,7 +21,7 @@ struct WatchVoiceRecorderView: View {
                 // MARK: 图标提示
                 if !isParsing {
                     Image(systemName: "mic.circle.fill")
-                        .font(.system(size: 40))
+                        .font(.largeTitle)
                         .foregroundStyle(Color.accentColor)
                         .padding(.top, 4)
                         .accessibilityHidden(true)

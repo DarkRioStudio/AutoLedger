@@ -48,11 +48,16 @@ struct WatchVoiceConfirmView: View {
                             } label: {
                                 VStack(spacing: 2) {
                                     Image(systemName: cat.iconName)
-                                        .font(.system(size: 13))
+                                        .font(.caption)
                                         .accessibilityHidden(true)
                                     Text(cat.title)
-                                        .font(.system(size: 8))
+                                        .font(.caption2)
                                         .lineLimit(1)
+                                    if selectedCategory == cat {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.caption2)
+                                            .accessibilityHidden(true)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 5)

@@ -1,0 +1,197 @@
+{
+  "app": {
+    "name": "AutoLedger",
+    "workspace": "AutoLedger/AutoLedger.xcworkspace",
+    "ios": {
+      "scheme": "AutoLedger",
+      "bundleId": "top.darkrio326.AutoLedger",
+      "deviceCandidates": [
+        "iPhone 17 Pro Max",
+        "iPhone 16 Pro Max",
+        "iPhone 15 Pro Max",
+        "iPhone 14 Pro Max",
+        "iPhone 13 Pro Max"
+      ]
+    },
+    "watch": {
+      "enabled": "auto",
+      "scheme": "AutoLedgerWatch Watch App",
+      "bundleId": "top.darkrio326.AutoLedger.watchkitapp",
+      "deviceCandidates": [
+        "Apple Watch Series 11 (46mm)",
+        "Apple Watch Ultra 3 (49mm)",
+        "Apple Watch Ultra 2 (49mm)",
+        "Apple Watch Series 10 (46mm)",
+        "Apple Watch Series 9 (45mm)",
+        "Apple Watch Series 8 (45mm)"
+      ]
+    }
+  },
+  "targets": {
+    "ios_65": {
+      "width": 1242,
+      "height": 2688,
+      "enabled": true
+    },
+    "ios_69": {
+      "width": 1320,
+      "height": 2868,
+      "enabled": false
+    },
+    "watch": {
+      "width": 410,
+      "height": 502,
+      "enabled": "auto"
+    }
+  },
+  "capture": {
+    "derivedDataPath": "tools/appstore-screenshots/.derivedData",
+    "stabilizeSeconds": 2
+  },
+  "locales": {
+    "zh-Hans": {
+      "appleLanguages": "(zh-Hans)",
+      "appleLocale": "zh_CN"
+    },
+    "en": {
+      "appleLanguages": "(en)",
+      "appleLocale": "en_US"
+    }
+  },
+  "iosShots": [
+    {
+      "id": "00_preview",
+      "scene": "preview",
+      "title": {
+        "zh-Hans": "随手记账，一拍即入",
+        "en": "Track expenses in one tap"
+      },
+      "subtitle": {
+        "zh-Hans": "截图、文本、收据都能快速识别",
+        "en": "Capture screenshots, receipts, and text with ease"
+      }
+    },
+    {
+      "id": "01_quick_capture",
+      "scene": "quick_capture",
+      "title": {
+        "zh-Hans": "随手记账，一拍即入",
+        "en": "Track expenses in one tap"
+      },
+      "subtitle": {
+        "zh-Hans": "从截图、拍照或剪切板快速生成账单",
+        "en": "Turn screenshots, photos, and clipboard text into records"
+      }
+    },
+    {
+      "id": "02_import_methods",
+      "scene": "import_methods",
+      "title": {
+        "zh-Hans": "支持多种导入方式",
+        "en": "Multiple import methods"
+      },
+      "subtitle": {
+        "zh-Hans": "支付截图、拍照识别、剪切板文本都能处理",
+        "en": "Read payment screenshots, receipt photos, and copied text"
+      }
+    },
+    {
+      "id": "03_auto_extract",
+      "scene": "auto_extract",
+      "title": {
+        "zh-Hans": "自动识别关键信息",
+        "en": "Extract key details automatically"
+      },
+      "subtitle": {
+        "zh-Hans": "金额、商户、来源与时间自动填充",
+        "en": "Amount, merchant, source, and time filled in for you"
+      }
+    },
+    {
+      "id": "04_review_edit",
+      "scene": "review_edit",
+      "title": {
+        "zh-Hans": "自动入账，随时可改",
+        "en": "Review before saving"
+      },
+      "subtitle": {
+        "zh-Hans": "识别后的金额、商户、来源清晰可见",
+        "en": "Keep every amount, merchant, and source under your control"
+      }
+    },
+    {
+      "id": "05_monthly_report",
+      "scene": "monthly_report",
+      "title": {
+        "zh-Hans": "月度支出一目了然",
+        "en": "Monthly spending at a glance"
+      },
+      "subtitle": {
+        "zh-Hans": "分类占比、月度总额与高频商户自动汇总",
+        "en": "See categories, totals, and frequent merchants clearly"
+      }
+    },
+    {
+      "id": "06_settings_management",
+      "scene": "settings_management",
+      "title": {
+        "zh-Hans": "分类、来源与商户统一管理",
+        "en": "Manage categories and merchants"
+      },
+      "subtitle": {
+        "zh-Hans": "让自动识别结果越来越贴合你的使用习惯",
+        "en": "Make recognition results fit your own habits over time"
+      }
+    }
+  ],
+  "watchShots": [
+    {
+      "id": "00_watch_quick_add",
+      "scene": "watch_quick_add",
+      "title": {
+        "zh-Hans": "抬腕快速记一笔",
+        "en": "Log from your wrist"
+      },
+      "subtitle": {
+        "zh-Hans": "在 Apple Watch 上快速开始记录",
+        "en": "Start a record quickly on Apple Watch"
+      }
+    },
+    {
+      "id": "01_watch_recent",
+      "scene": "watch_recent",
+      "title": {
+        "zh-Hans": "最近账单随手查看",
+        "en": "Recent records at a glance"
+      },
+      "subtitle": {
+        "zh-Hans": "常用消费记录一眼可见",
+        "en": "Check everyday spending without pulling out your phone"
+      }
+    },
+    {
+      "id": "02_watch_confirm",
+      "scene": "watch_confirm",
+      "title": {
+        "zh-Hans": "关键信息清楚确认",
+        "en": "Confirm key details"
+      },
+      "subtitle": {
+        "zh-Hans": "金额、分类与来源尽量少操作",
+        "en": "Keep amount, category, and source easy to review"
+      }
+    },
+    {
+      "id": "03_watch_sync",
+      "scene": "watch_sync",
+      "title": {
+        "zh-Hans": "与 iPhone 保持同步",
+        "en": "Sync with iPhone"
+      },
+      "subtitle": {
+        "zh-Hans": "手机端继续编辑和查看统计",
+        "en": "Continue editing and viewing reports on your phone"
+      }
+    }
+  ]
+}

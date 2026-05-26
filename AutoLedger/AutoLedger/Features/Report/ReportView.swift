@@ -4,7 +4,12 @@ import SwiftUI
 
 struct ReportView: View {
     @EnvironmentObject private var store: LedgerStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @AppStorage("monthlyAnomalyThresholdPercent") private var anomalyThresholdPercent = 150.0
+    @ScaledMetric(relativeTo: .largeTitle) private var totalAmountFontSize: CGFloat = 36
+    @ScaledMetric(relativeTo: .caption) private var rankBadgeSize: CGFloat = 26
     @State private var selectedCategoryID: String?
     @State private var selectedMonth: Date = .now
     @State private var selectedTrendLabel: String?
@@ -44,10 +49,14 @@ struct ReportView: View {
                         categoryDonut(snapshot)
 
                         ForEach(snapshot.categoryBreakdown) { metric in
-                            CategoryBreakdownRow(metric: metric)
-                                .opacity(activeCategoryID(in: snapshot) == nil || activeCategoryID(in: snapshot) == metric.id ? 1 : 0.58)
+                            let activeID = activeCategoryID(in: snapshot)
+                            CategoryBreakdownRow(
+                                metric: metric,
+                                isSelected: activeID == metric.id,
+                                isDimmed: activeID != nil && activeID != metric.id
+                            )
                                 .onTapGesture {
-                                    selectedCategoryID = selectedCategoryID == metric.id ? nil : metric.id
+                                    changeSelectedCategory(to: selectedCategoryID == metric.id ? nil : metric.id)
                                 }
                         }
                     }
@@ -66,18 +75,20 @@ struct ReportView: View {
             .navigationTitle("tab.report")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button { withAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
+                    Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
                         Image(systemName: "chevron.left")
                             .fontWeight(.semibold)
                     }
+                    .accessibilityLabel(Text("ledger.filter.previous_month"))
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { withAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: 1) } } label: {
+                    Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: 1) } } label: {
                         Image(systemName: "chevron.right")
                             .fontWeight(.semibold)
                     }
                     .disabled(isCurrentMonth)
                     .opacity(isCurrentMonth ? 0.35 : 1)
+                    .accessibilityLabel(Text("ledger.filter.next_month"))
                 }
             }
         }
@@ -130,7 +141,7 @@ struct ReportView: View {
                     .foregroundStyle(.white.opacity(0.76))
 
                 Text(AppFormatters.currency(snapshot.totalExpense))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: totalAmountFontSize, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.62)
@@ -151,6 +162,8 @@ struct ReportView: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .fill(AppTheme.heroGradient)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(summaryAccessibilityLabel(snapshot)))
     }
 
     private func summaryPill(titleKey: LocalizedStringKey, value: String) -> some View {
@@ -232,6 +245,8 @@ struct ReportView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(AppTheme.card)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(categoryChartAccessibilityLabel(snapshot)))
     }
 
     private func monthlyTrendChart(_ snapshot: MonthlySnapshot, selectedLabel: Binding<String?>) -> some View {
@@ -245,9 +260,9 @@ struct ReportView: View {
                     y: .value(String(localized: "report.chart.expense"), metric.total)
                 )
                 .foregroundStyle(metric.isCurrentMonth ? AppTheme.accentSecondary : AppTheme.accent)
-                .opacity(activeLabel == nil || metric.label == activeLabel ? 1 : 0.30)
+                .opacity(activeLabel == nil || metric.label == activeLabel ? 1 : dimmedChartOpacity)
                 .annotation(position: .top, alignment: .center, spacing: 4) {
-                    if metric.label == activeLabel {
+                    if metric.label == activeLabel || (differentiateWithoutColor && metric.isCurrentMonth) {
                         Text(AppFormatters.currency(metric.total))
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
@@ -258,9 +273,9 @@ struct ReportView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                                     .fill(AppTheme.card)
-                                    .shadow(color: .black.opacity(0.10), radius: 4, x: 0, y: 1)
+                                    .shadow(color: .black.opacity(reduceMotion ? 0 : 0.10), radius: reduceMotion ? 0 : 4, x: 0, y: 1)
                             )
-                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                            .transition(reduceMotion ? .identity : .scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
             }
@@ -278,9 +293,10 @@ struct ReportView: View {
                         .gesture(
                             DragGesture(minimumDistance: 0)
                                 .onEnded { value in
-                                    let xInPlot = value.location.x - geo[proxy.plotAreaFrame].origin.x
+                                    guard let plotFrame = proxy.plotFrame else { return }
+                                    let xInPlot = value.location.x - geo[plotFrame].origin.x
                                     if let tapped: String = proxy.value(atX: xInPlot) {
-                                        withAnimation(.spring(duration: 0.18)) {
+                                        withOptionalAnimation(.spring(duration: 0.18)) {
                                             selectedLabel.wrappedValue = selectedLabel.wrappedValue == tapped ? nil : tapped
                                         }
                                     }
@@ -314,13 +330,15 @@ struct ReportView: View {
                         .foregroundStyle(AppTheme.ink)
                 }
             }
-            .animation(.easeInOut(duration: 0.15), value: activeLabel)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: activeLabel)
         }
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(AppTheme.card)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(trendChartAccessibilityLabel(snapshot)))
     }
 
     private func topMerchantRanking(_ snapshot: MonthlySnapshot) -> some View {
@@ -336,8 +354,9 @@ struct ReportView: View {
                             Text("\(index + 1)")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
-                                .frame(width: 26, height: 26)
+                                .frame(width: rankBadgeSize, height: rankBadgeSize)
                                 .background(Circle().fill(index == 0 ? AppTheme.accentSecondary : AppTheme.accent))
+                                .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(metric.merchant)
@@ -369,7 +388,10 @@ struct ReportView: View {
                             }
                         }
                         .frame(height: 8)
+                        .accessibilityHidden(true)
                     }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(merchantAccessibilityLabel(metric, rank: index + 1)))
 
                     if index < min(snapshot.topMerchantMetrics.count, 5) - 1 {
                         Divider()
@@ -407,12 +429,85 @@ struct ReportView: View {
         return metric.id == activeID ? 1 : 0.28
     }
 
+    private var dimmedChartOpacity: Double {
+        colorSchemeContrast == .increased ? 0.46 : 0.30
+    }
+
+    private func changeSelectedCategory(to id: String?) {
+        withOptionalAnimation(.easeInOut(duration: 0.16)) {
+            selectedCategoryID = id
+        }
+    }
+
+    private func withOptionalAnimation(_ animation: Animation, _ body: () -> Void) {
+        if reduceMotion {
+            body()
+        } else {
+            withAnimation(animation, body)
+        }
+    }
+
     private func transactionCountText(_ count: Int) -> String {
         String(format: String(localized: "report.transaction_count_format"), count)
     }
 
     private func merchantCountText(_ count: Int) -> String {
         String(format: String(localized: "report.merchant_count_format"), count)
+    }
+
+    private func percentageText(_ ratio: Double) -> String {
+        String(format: String(localized: "report.percentage_format"), Int((ratio * 100).rounded()))
+    }
+
+    private func summaryAccessibilityLabel(_ snapshot: MonthlySnapshot) -> String {
+        String(
+            format: String(localized: "report.summary.accessibility_format"),
+            snapshot.monthLabel,
+            AppFormatters.currency(snapshot.totalExpense),
+            transactionCountText(snapshot.transactionCount),
+            snapshot.topMerchant,
+            merchantCountText(snapshot.topMerchantMetrics.count)
+        )
+    }
+
+    private func categoryChartAccessibilityLabel(_ snapshot: MonthlySnapshot) -> String {
+        let items = snapshot.categoryBreakdown.prefix(5).map { metric in
+            String(
+                format: String(localized: "report.category.accessibility_format"),
+                metric.title,
+                AppFormatters.currency(metric.total),
+                percentageText(metric.ratio)
+            )
+        }
+        return [String(localized: "report.category_breakdown.title"), items.joined(separator: "，")]
+            .filter { !$0.isEmpty }
+            .joined(separator: "：")
+    }
+
+    private func trendChartAccessibilityLabel(_ snapshot: MonthlySnapshot) -> String {
+        let items = snapshot.monthlyTrend.map { metric in
+            String(
+                format: String(localized: "report.trend.accessibility_item_format"),
+                metric.label,
+                AppFormatters.currency(metric.total),
+                transactionCountText(metric.transactionCount)
+            )
+        }
+        return String(
+            format: String(localized: "report.trend.accessibility_format"),
+            items.joined(separator: "，")
+        )
+    }
+
+    private func merchantAccessibilityLabel(_ metric: MonthlySnapshot.MerchantMetric, rank: Int) -> String {
+        String(
+            format: String(localized: "report.merchant.accessibility_format"),
+            rank,
+            metric.merchant,
+            AppFormatters.currency(metric.total),
+            transactionCountText(metric.transactionCount),
+            percentageText(metric.ratio)
+        )
     }
 }
 

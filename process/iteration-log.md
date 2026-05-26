@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-25（v1.4.0 UI 文案全球化）
+更新日期：2026-05-26（v1.4.0 辅助功能发布收口）
 
 ## 记录规则
 
@@ -43,6 +43,52 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-081 辅助功能发布收口
+- 日期：2026-05-26
+- 所属版本：v1.4.0
+- 所属阶段：Release Notes / 发布准备
+- 类型：能力增强 / 辅助功能
+- 目标：继续完善 v1.4.0 主路径辅助功能，让报表、账本和 Watch 轻量记账路径更适合 VoiceOver、大字号、Reduce Motion、增强对比度和非颜色区分场景。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Report/ReportView.swift`：新增 Reduce Motion 条件动画、`accessibilityDifferentiateWithoutColor` / `colorSchemeContrast` 适配、报表摘要 / 分类图 / 趋势图 / Top 商户可读标签。
+  - `AutoLedger/AutoLedger/Shared/Components/CategoryBreakdownRow.swift`：分类占比行新增选中勾选态、选中边框、本地化占比文案和 VoiceOver 标签。
+  - `AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift`、`DeletedTransactionsView.swift`：隐藏装饰图标，补齐最近删除入口与已删除账单行的辅助功能标签。
+  - `AutoLedger/AutoLedgerWatch Watch App/QuickAddView.swift`、`WatchVoiceRecorderView.swift`、`WatchVoiceConfirmView.swift`：Watch 分类网格和语音入口改用动态字体，并为选中分类增加可见勾选态。
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：新增报表辅助功能摘要、分类占比、趋势图和商户排行三语文案。
+  - `versions/v1.4.0-RELEASE(draft).md`、`CHANGELOG.md`、`process/iteration-log.md`：同步辅助功能发布口径。
+- 未改动范围：未新增字幕 / 口述影像能力；未修改 DebugView；未做真机 VoiceOver、大字号、Switch Control、语音控制实机点验；未改 Core 层或解析逻辑。
+- 完成内容：报表图表不再只依赖视觉图形，可被 VoiceOver 读出摘要；分类筛选和 Watch 分类选择增加非颜色选中信号；Watch 小字号固定文本减少；账本和最近删除主路径减少装饰图标噪声。
+- 未完成内容：仍需真机验证 VoiceOver rotor 顺序、大字号 200% 布局、语音控制可说名称、增强对比度视觉结果。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`find AutoLedger -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
+  - PASS：`git diff --check`
+- 风险与注意事项：本轮以主路径静态代码与编译验证为准，未替代真机辅助功能审核；报表页仍保留一个既有 `plotAreaFrame` deprecation warning，未影响构建。
+- 回滚方式：回退本轮 SwiftUI 辅助功能改动、三套 `Localizable.strings` 新增键，以及 RN / CHANGELOG / iteration-log 记录。
+- 结论：v1.4.0 主路径辅助功能从“VoiceOver 基础覆盖”推进到“报表可读、状态非颜色化、减动和大字号更友好”，代码门禁通过。
+- 下一步建议：进入 TestFlight 前按 App Store Connect 辅助功能项逐项做真机点验，尤其是大字号 200%、语音控制、增强对比度和 Switch Control。
+
+### ITER-080 Watch App Icon 小尺寸优化
+- 日期：2026-05-26
+- 所属版本：v1.4.0
+- 所属阶段：Release Notes / 发布准备
+- 类型：视觉资产 / 发布门禁
+- 目标：基于现有 AutoLedger iPhone App Icon 设计 Apple Watch 小尺寸优化版，并补齐完整 watchOS app icon set。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset/`：重绘 Watch 专用 `AppIcon.png`，新增 notification、companion settings、app launcher、quick look 等 watchOS 尺寸图，并更新 `Contents.json`。
+  - `versions/assets/watch-app-icon/`：新增 1024、128、64、48 小尺寸预览图。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮视觉资产与验证结果。
+- 未改动范围：未改动 iPhone 主 App 图标；未改动 Widget / Share Extension 图标；未改动 Watch UI 代码、Bundle ID、签名配置或 App Store 元数据。
+- 完成内容：Watch 图标保留白色钱包、金币、闪电、蓝绿渐变背景；去除星星、小圆点和复杂装饰；简化钱包高光、阴影与内部细节；加粗闪电主视觉以提升 48px 下识别度；金币保留为半露辅助元素并使用简化 `￥`。
+- 未完成内容：未做真机 Apple Watch 安装后的主屏图标截图确认；本轮以资产编译和 iOS archive 构建为验证口径。
+- 测试情况：
+  - PASS：`xcrun actool --compile /tmp/AutoLedgerWatchIconCheck --platform watchos --minimum-deployment-target 26.0 --app-icon AppIcon --output-partial-info-plist /tmp/AutoLedgerWatchIconCheck/Info.plist 'AutoLedger/AutoLedgerWatch Watch App/Assets.xcassets'`
+  - PASS：`assetutil --info /tmp/AutoLedgerWatchIconCheck/Assets.car` 可见 40/44/50 launcher、86/98/108 quick look、notification、settings 与 1024 marketing 图标。
+- 风险与注意事项：watchOS 真机图标仍可能受设备缓存影响，若本机仍显示旧图标需删除 App / Watch companion 后重新安装；最终发布前建议补一次真机截图。
+- 回滚方式：回退 `AppIcon.appiconset` 与 `versions/assets/watch-app-icon/`，恢复上一版单张 1024 Watch 图标。
+- 结论：Watch App 图标资产已从“复用 iPhone 复杂图”升级为小尺寸优化版，watchOS icon set 编译通过。
+- 下一步建议：重新安装到 Apple Watch 真机，确认主屏、通知、Watch App 列表中的图标刷新。
 
 ### ITER-079 UI 文案全球化收口
 - 日期：2026-05-25
