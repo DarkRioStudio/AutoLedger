@@ -19,6 +19,7 @@
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
 
 ### 修复（v1.4.0）
+- [2026-05-26 +0800] ITER-082 商户别名新入账即时生效：新增 `MerchantAliasResolver` 统一处理商户别名解析；OCR 入账、手动新增、AddTransactionIntent、QuickLedgerIntent、VoiceLedgerIntent 与 Share Extension 均在保存前套用既有商户别名，避免新账单先保存原商户、必须手动点刷新后才替换；离线回归新增 OCR 新入账与手动新增别名生效断言。
 - [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。
 - [2026-05-25 +0800] ITER-076 微信拼多多先用后付详情页解析：`ReceiptParser` 在微信详情页缺少"商户全称"时，不再直接取负数金额上一行作为商户；新增附近展示商户扫描与微信 UI 噪声过滤，避免 `• 交易详情` 被误入账，并将 `拼多多` 归入购物分类；补齐既有"羊汤"餐饮分类残留；新增对应 Golden Case，`run_golden_regression.sh` 同步修复为当前 App 版解析器路径。
 

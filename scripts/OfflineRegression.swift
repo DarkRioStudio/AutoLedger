@@ -552,9 +552,43 @@ struct OfflineRegression {
         ledger.setMerchantAlias(original: "离线回归咖啡", alias: "回归咖啡")
         reporter.check(ledger.transactions.first?.merchant == "回归咖啡", "Merchant alias refreshes existing transactions")
 
+        let aliasedNewText = """
+        支付宝
+        交易成功
+        商户：离线回归咖啡
+        金额：￥13.50
+        时间：2026/03/27 10:15
+        备注：离线回归别名新账单
+        """
+        ledger.importRecognizedText(aliasedNewText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        reporter.check(
+            ledger.transactions.contains { abs($0.amount - 13.50) < 0.01 && $0.merchant == "回归咖啡" },
+            "LedgerStore applies merchant aliases before persisting newly imported OCR transactions"
+        )
+        reporter.check(
+            !ledger.transactions.contains { abs($0.amount - 13.50) < 0.01 && $0.merchant == "离线回归咖啡" },
+            "LedgerStore does not persist raw merchant when alias exists"
+        )
+
+        ledger.recordMerchantAlias(original: "手动原商户", alias: "手动别名")
+        let manualAliased = Transaction(
+            merchant: "手动原商户",
+            amount: 14.50,
+            occurredAt: .now,
+            category: .other,
+            source: .manual,
+            note: "手动别名新账单"
+        )
+        ledger.addTransaction(manualAliased)
+        reporter.check(
+            ledger.transactions.contains { $0.id == manualAliased.id && $0.merchant == "手动别名" },
+            "LedgerStore applies merchant aliases before persisting manual transactions"
+        )
+
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)
-        reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips duplicate OCR text")
+        reporter.check(ledger.transactions.count == initialCount + 3, "LedgerStore skips duplicate OCR text")
 
         // Jaccard 相似度去重：略微修改的文本应被判定为重复
         let similarText = """
@@ -567,7 +601,7 @@ struct OfflineRegression {
         """
         ledger.importRecognizedText(similarText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)
-        reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
+        reporter.check(ledger.transactions.count == initialCount + 3, "LedgerStore skips OCR-similar duplicate (Jaccard > 0.8)")
 
         do {
             let legacyStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "legacy-debug.sqlite3")
@@ -650,7 +684,7 @@ struct OfflineRegression {
         """
         ledger.importRecognizedText(multiItemNoTotalText, preferredSource: .manual)
         try await Task.sleep(nanoseconds: 200_000_000)
-        reporter.check(ledger.transactions.count == initialCount + 2, "LedgerStore does not persist multi-item receipt without reliable total")
+        reporter.check(ledger.transactions.count == initialCount + 4, "LedgerStore does not persist multi-item receipt without reliable total")
         reporter.check(
             ledger.lastImportSummary?.contains("总金额") == true || ledger.lastImportSummary?.contains("total amount") == true,
             "LedgerStore reports multi-item receipt total-missing guidance"
@@ -666,7 +700,7 @@ struct OfflineRegression {
 
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
-        reporter.check(reloadedTransactions.count == initialCount + 2, "SQLite store reload keeps imported transactions")
+        reporter.check(reloadedTransactions.count == initialCount + 4, "SQLite store reload keeps imported transactions")
 
         let categoryRefreshA = Transaction(
             merchant: "批量分类商户",

@@ -122,16 +122,16 @@ struct QuickLedgerIntent: AppIntent {
             writeDebugEvent(stage: .parseFailed, source: source, rawText: text, summary: "快捷指令解析失败")
             return .result(value: String(localized: "quick_ledger.recognition_failed"))
         }
-        let receipt = result.receipt
+        let parsedReceipt = result.receipt
 
-        if let diagnostics = receipt.parseDiagnostics,
+        if let diagnostics = parsedReceipt.parseDiagnostics,
            diagnostics.isMultiItemReceipt,
            !diagnostics.totalMatched {
             let msg = localizedMessage(
                 "receipt.multi_item_total_missing",
                 fallback: "Multi-item receipt detected, but the total amount could not be reliably recognized. Please retake the receipt including the total section."
             )
-            writeDebugEvent(stage: .parseFailed, source: source, rawText: text, receipt: receipt, summary: "\(msg)\n调试：\(diagnostics.debugSummary)", llmTrace: result.llmTrace)
+            writeDebugEvent(stage: .parseFailed, source: source, rawText: text, receipt: parsedReceipt, summary: "\(msg)\n调试：\(diagnostics.debugSummary)", llmTrace: result.llmTrace)
             return .result(value: msg)
         }
 
@@ -142,6 +142,12 @@ struct QuickLedgerIntent: AppIntent {
         } catch {
             return .result(value: String(localized: "quick_ledger.database_failed"))
         }
+        let receipt = MerchantAliasResolver.applyingAlias(
+            to: parsedReceipt,
+            aliases: (try? store.loadMerchantAliases()) ?? [:],
+            categoryCorrections: (try? store.loadCategoryCorrections()) ?? [:],
+            contextText: text
+        )
 
         let existing = (try? store.loadTransactions()) ?? []
         let isDuplicate = existing.contains {

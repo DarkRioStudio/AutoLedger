@@ -112,12 +112,18 @@ class ShareViewController: UIViewController {
                 DispatchQueue.main.async { self.finish(message: String(localized: "share.error.database_failed")) }
                 return
             }
+            let receiptForSave = MerchantAliasResolver.applyingAlias(
+                to: receipt,
+                aliases: (try? store.loadMerchantAliases()) ?? [:],
+                categoryCorrections: (try? store.loadCategoryCorrections()) ?? [:],
+                contextText: text
+            )
 
             let existing = (try? store.loadTransactions()) ?? []
             let isDuplicate = existing.contains {
-                $0.merchant == receipt.merchant &&
-                abs($0.amount - receipt.amount) < 0.01 &&
-                abs($0.occurredAt.timeIntervalSince(receipt.occurredAt)) < 60
+                $0.merchant == receiptForSave.merchant &&
+                abs($0.amount - receiptForSave.amount) < 0.01 &&
+                abs($0.occurredAt.timeIntervalSince(receiptForSave.occurredAt)) < 60
             }
 
             // OCR 文本 Jaccard 相似度去重
@@ -131,33 +137,33 @@ class ShareViewController: UIViewController {
             }()
 
             if isDuplicate || isOCRDuplicate {
-                let msg = String(format: String(localized: "share.duplicate_format"), receipt.merchant, receipt.amount)
-                self.writeDebug(stage: .duplicateSkipped, source: source, rawText: text, receipt: receipt, summary: msg)
+                let msg = String(format: String(localized: "share.duplicate_format"), receiptForSave.merchant, receiptForSave.amount)
+                self.writeDebug(stage: .duplicateSkipped, source: source, rawText: text, receipt: receiptForSave, summary: msg)
                 DispatchQueue.main.async { self.finish(message: msg) }
                 return
             }
 
             let transaction = Transaction(
-                merchant: receipt.merchant,
-                amount: receipt.amount,
-                occurredAt: receipt.occurredAt,
-                category: receipt.suggestedCategory,
-                source: receipt.source,
+                merchant: receiptForSave.merchant,
+                amount: receiptForSave.amount,
+                occurredAt: receiptForSave.occurredAt,
+                category: receiptForSave.suggestedCategory,
+                source: receiptForSave.source,
                 note: String(localized: "share.note")
             )
 
             do {
                 try store.save(transaction: transaction)
-                self.writeShareResult(ocrText: text, receipt: receipt)
-                var msg = String(format: String(localized: "share.saved_format"), receipt.merchant, receipt.amount)
+                self.writeShareResult(ocrText: text, receipt: receiptForSave)
+                var msg = String(format: String(localized: "share.saved_format"), receiptForSave.merchant, receiptForSave.amount)
                 if multiReceipt {
                     msg += String(localized: "share.multi_receipt_warning")
                 }
-                self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, transactionID: transaction.id)
+                self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receiptForSave, summary: msg, transactionID: transaction.id)
                 DispatchQueue.main.async { self.finish(message: msg) }
             } catch {
                 let debugMessage = String(format: String(localized: "share.debug.persistence_failed_format"), error.localizedDescription)
-                self.writeDebug(stage: .persistenceFailed, source: source, rawText: text, receipt: receipt, summary: debugMessage)
+                self.writeDebug(stage: .persistenceFailed, source: source, rawText: text, receipt: receiptForSave, summary: debugMessage)
                 DispatchQueue.main.async { self.finish(message: String(localized: "share.error.persistence_failed")) }
             }
         }

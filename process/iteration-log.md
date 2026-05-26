@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-26（v1.4.0 辅助功能发布收口）
+更新日期：2026-05-26（v1.4.0 商户别名新入账即时生效修复）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-082 商户别名新入账即时生效修复
+- 日期：2026-05-26
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：Bugfix / 测试
+- 目标：修复用户已在设置中配置商户别名后，新记账记录仍先保存原商户名，必须手动点单条刷新才替换为别名的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/MerchantAliasResolver.swift`：新增纯 Core 别名解析工具，支持精确匹配与首尾空白容错，并提供 `ImportedReceipt` / `Transaction` 两类保存前归一化方法。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`resolveMerchant`、`persistReceipt`、`addTransaction` 统一调用别名解析工具，OCR 导入与手动新增在写入 SQLite 前就替换商户名。
+  - `AutoLedger/AutoLedger/Domain/Services/AddTransactionIntent.swift`、`QuickLedgerIntent.swift`、`VoiceLedgerIntent.swift`：快捷指令手动记账、截图快捷记账、语音快捷记账均加载 SQLite 商户别名并在保存前套用。
+  - `AutoLedger/ShareExtension/ShareViewController.swift`：分享扩展解析后先套用商户别名，再做重复判断、保存、调试记录与共享结果回写。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增 OCR 新入账别名即时生效、原商户不落库、手动新增别名即时生效断言，并纳入新 Core 文件编译。
+- 未改动范围：未改变设置页单条历史刷新按钮；未新增模糊匹配或全局自动重写开关；未修改商户别名学习触发条件；未改变用户手动选择的分类。
+- 完成内容：所有当前直写新账单的主要入口都在入库前套用既有商户别名；用户不再需要依赖设置页“刷新”来修正之后新产生的账单。
+- 未完成内容：未做真机快捷指令 / Share Extension 端到端点验；本轮以离线逻辑回归和 iOS 全构建为准。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`git diff --check`
+- 风险与注意事项：别名匹配仍按精确商户名为主，仅增加首尾空白容错，避免误改相似商户；历史账单仍需要用户使用既有单条刷新入口主动整理。
+- 回滚方式：删除 `MerchantAliasResolver.swift`，回退 LedgerStore、三个 App Intent、Share Extension 和离线回归脚本改动。
+- 结论：问题确认为保存路径绕过别名解析导致；本轮已在保存前统一别名归一化并通过门禁。
+- 下一步建议：如后续发现 Watch 独立本地保存路径或新增 Extension 入口，需要继续复用 `MerchantAliasResolver`，避免再次分叉。
 
 ### ITER-081 辅助功能发布收口
 - 日期：2026-05-26

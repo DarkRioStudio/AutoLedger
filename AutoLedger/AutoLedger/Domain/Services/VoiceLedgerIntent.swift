@@ -29,6 +29,7 @@ struct VoiceLedgerIntent: AppIntent {
         }
 
         let corrections = (try? store.loadCategoryCorrections()) ?? [:]
+        let aliases = (try? store.loadMerchantAliases()) ?? [:]
         let interpretation = await LedgerTextInterpreter().interpret(
             LedgerTextInterpretationInput(
                 text: normalizedText,
@@ -47,12 +48,18 @@ struct VoiceLedgerIntent: AppIntent {
 
         guard result.confidence == .high,
               result.failureReason == nil,
-              let receipt = result.makeReceipt(),
+              let parsedReceipt = result.makeReceipt(),
               let amount = result.amount else {
             let message = failureMessage(for: result.failureReason)
             writeDebugEvent(stage: .parseFailed, rawText: normalizedText, receipt: result.makeReceipt(), summary: message)
             return .result(value: message)
         }
+        let receipt = MerchantAliasResolver.applyingAlias(
+            to: parsedReceipt,
+            aliases: aliases,
+            categoryCorrections: corrections,
+            contextText: normalizedText
+        )
 
         let existing = (try? store.loadTransactions()) ?? []
         let isDuplicate = existing.contains {

@@ -91,7 +91,7 @@ final class LedgerStore: ObservableObject {
 
     /// 如果商户名命中别名映射则返回别名，否则原样返回
     func resolveMerchant(_ merchant: String) -> String {
-        merchantAliases[merchant] ?? merchant
+        MerchantAliasResolver.resolvedMerchant(for: merchant, aliases: merchantAliases)
     }
 
     func setMerchantAlias(original: String, alias: String) {
@@ -433,25 +433,30 @@ final class LedgerStore: ObservableObject {
 
     /// 手动新增账单（账本右上角 + 入口）
     func addTransaction(_ transaction: Transaction) {
+        let resolvedTransaction = MerchantAliasResolver.applyingAlias(
+            to: transaction,
+            aliases: merchantAliases
+        )
+
         guard let store = transactionStore else {
             // 无持久化层（预览/测试场景）：直接更新内存
-            transactions.insert(transaction, at: 0)
+            transactions.insert(resolvedTransaction, at: 0)
             sortTransactions()
-            lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+            lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
             reloadWidgets()
             return
         }
 
         do {
-            try store.save(transaction: transaction)
+            try store.save(transaction: resolvedTransaction)
         } catch {
             lastImportSummary = "记账失败：\(error.localizedDescription)"
             return
         }
 
-        transactions.insert(transaction, at: 0)
+        transactions.insert(resolvedTransaction, at: 0)
         sortTransactions()
-        lastImportSummary = "已手动记账：\(transaction.merchant) \(AppFormatters.currency(transaction.amount))。"
+        lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
         reloadWidgets()
         requestAutomaticBackup()
     }
@@ -716,36 +721,14 @@ final class LedgerStore: ObservableObject {
     }
 
     private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil, usedRuleFallback: Bool = true) {
-        // 商户别名映射
-        let resolvedMerchant = resolveMerchant(inReceipt.merchant)
-        let receipt: ImportedReceipt
-        if resolvedMerchant != inReceipt.merchant {
-            logger.info("[别名] \(inReceipt.merchant) → \(resolvedMerchant)")
-            receipt = ImportedReceipt(
-                source: inReceipt.source,
-                merchant: resolvedMerchant,
-                amount: inReceipt.amount,
-                occurredAt: inReceipt.occurredAt,
-                rawText: inReceipt.rawText,
-                summary: inReceipt.summary,
-                confidence: inReceipt.confidence,
-                suggestedCategory: TransactionCategory.infer(from: "\(resolvedMerchant)\n\(rawText)", corrections: categoryCorrections),
-                parseDiagnostics: inReceipt.parseDiagnostics
-            )
-        } else if let correctedCategory = categoryCorrections[inReceipt.merchant] {
-            receipt = ImportedReceipt(
-                source: inReceipt.source,
-                merchant: inReceipt.merchant,
-                amount: inReceipt.amount,
-                occurredAt: inReceipt.occurredAt,
-                rawText: inReceipt.rawText,
-                summary: inReceipt.summary,
-                confidence: inReceipt.confidence,
-                suggestedCategory: correctedCategory,
-                parseDiagnostics: inReceipt.parseDiagnostics
-            )
-        } else {
-            receipt = inReceipt
+        let receipt = MerchantAliasResolver.applyingAlias(
+            to: inReceipt,
+            aliases: merchantAliases,
+            categoryCorrections: categoryCorrections,
+            contextText: rawText
+        )
+        if receipt.merchant != inReceipt.merchant {
+            logger.info("[别名] \(inReceipt.merchant) → \(receipt.merchant)")
         }
 
         if hasDuplicate(receipt, rawText: rawText) {

@@ -96,10 +96,14 @@ struct AddTransactionIntent: AppIntent {
             addTxLogger.error("[AddTx] 数据库初始化失败：\(error.localizedDescription)")
             return .result(value: String(localized: "quick_ledger.database_failed"))
         }
+        let merchantForSave = MerchantAliasResolver.resolvedMerchant(
+            for: merchantTrimmed,
+            aliases: (try? store.loadMerchantAliases()) ?? [:]
+        )
 
         let occurredAt = date ?? Date()
         let transaction = Transaction(
-            merchant: merchantTrimmed,
+            merchant: merchantForSave,
             amount: amount,
             occurredAt: occurredAt,
             category: category.coreCategory,
@@ -115,11 +119,11 @@ struct AddTransactionIntent: AppIntent {
         }
 
         WidgetCenter.shared.reloadAllTimelines()
-        addTxLogger.info("[AddTx] 已记录：\(merchantTrimmed) ¥\(amount)")
+        addTxLogger.info("[AddTx] 已记录：\(merchantForSave) ¥\(amount)")
 
         let msg = String(
             format: String(localized: "add_transaction.success_format"),
-            merchantTrimmed,
+            merchantForSave,
             amount,
             category.coreCategory.title
         )
