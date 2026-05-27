@@ -22,6 +22,7 @@ struct DebugView: View {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
                 systemInfoCard
+                supportDebugCard
                 gemmaMetricsCard
                 containerInfoCard
 
@@ -154,6 +155,45 @@ struct DebugView: View {
             infoRow("设备", device.deviceModel)
             infoRow("内存使用", formatMemory())
             infoRow("磁盘可用", formatDiskSpace())
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    private var supportDebugCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Support IAP")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            infoRow("支持次数", "\(SupportPurchaseManager.shared.supportPurchaseCount)")
+
+            if let productID = SupportPurchaseManager.shared.lastSupportProductId {
+                infoRow("最近产品", productID)
+            } else {
+                infoRow("最近产品", "无")
+            }
+
+            if let date = SupportPurchaseManager.shared.lastSupportDate {
+                infoRow("最近时间", AppFormatters.exportDateTime(date))
+            } else {
+                infoRow("最近时间", "无")
+            }
+
+            Button(role: .destructive) {
+                SupportPurchaseManager.shared.resetSupportStateForDebug()
+                copyStatusMessage = "已清空本地支持状态，可用于拍摄未支持状态截图。"
+            } label: {
+                Label("Reset Support State", systemImage: "arrow.counterclockwise.circle")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.red.opacity(0.08))
+                    )
+            }
+            .buttonStyle(.plain)
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))

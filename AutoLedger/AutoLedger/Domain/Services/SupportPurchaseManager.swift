@@ -145,6 +145,16 @@ final class SupportPurchaseManager: ObservableObject {
         }
     }
 
+    func resetSupportStateForDebug() {
+        supportPurchaseCount = 0
+        lastSupportProductId = nil
+        lastSupportDate = nil
+
+        userDefaults.removeObject(forKey: DefaultsKey.supportPurchaseCount)
+        userDefaults.removeObject(forKey: DefaultsKey.lastSupportProductId)
+        userDefaults.removeObject(forKey: DefaultsKey.lastSupportDate)
+    }
+
     private enum TransactionSource {
         case directPurchase
         case transactionUpdates
