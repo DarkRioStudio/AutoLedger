@@ -24,13 +24,20 @@ final class WatchConnectivityHost: NSObject {
 
     // MARK: - Public API
 
-    /// App 进入前台时调用：将最近 20 条账单推送给 Watch（如可达）。
+    /// App 进入前台或账单变化时调用：将最近 20 条账单同步给 Watch。
     func pushRecentTransactionsIfReachable() {
-        guard WCSession.default.activationState == .activated,
-              WCSession.default.isReachable else { return }
-        let payload = makeRecentPayload()
+        guard WCSession.default.activationState == .activated else { return }
+        let payload = makeSyncPayload()
+
+        do {
+            try WCSession.default.updateApplicationContext(payload)
+        } catch {
+            // sendMessage below still covers the foreground reachable case.
+        }
+
+        guard WCSession.default.isReachable else { return }
         WCSession.default.sendMessage(
-            ["action": "syncTransactions", "transactions": payload],
+            payload,
             replyHandler: nil,
             errorHandler: nil
         )
@@ -53,6 +60,14 @@ final class WatchConnectivityHost: NSObject {
         return store.transactions.prefix(20).map { serialize($0) }
     }
 
+    private func makeSyncPayload() -> [String: Any] {
+        [
+            "action": "syncTransactions",
+            "transactions": makeRecentPayload(),
+            "customCategories": LedgerStore.shared?.customCategories ?? []
+        ]
+    }
+
     /// 将 Watch 发来的 addTransaction 字典转换为 Transaction 并保存。
     /// 使用 draftId 作为 Transaction.id 以实现幂等去重（重试不重复入库）。
     private func handleAddTransaction(_ message: [String: Any]) {
@@ -67,19 +82,19 @@ final class WatchConnectivityHost: NSObject {
         let txId = UUID(uuidString: draftIdStr) ?? UUID()
 
         let note = message["note"] as? String ?? ""
-        let categoryStr = message["category"] as? String ?? ""
-        let category = TransactionCategory(rawValue: categoryStr) ?? .other
+        let categoryLabel = message["category"] as? String ?? TransactionCategory.other.rawValue
 
         let transaction = Transaction(
             id: txId,
             merchant: merchant,
             amount: amount,
             occurredAt: Date(timeIntervalSince1970: ts),
-            category: category,
-            source: .manual,
+            categoryLabel: categoryLabel,
+            sourceLabel: ReceiptSource.manual.rawValue,
             note: note.isEmpty ? "[Watch]" : "[Watch] \(note)"
         )
         LedgerStore.shared?.addTransaction(transaction)
+        pushRecentTransactionsIfReachable()
     }
 }
 
@@ -89,7 +104,11 @@ extension WatchConnectivityHost: WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession,
                              activationDidCompleteWith activationState: WCSessionActivationState,
-                             error: (any Error)?) {}
+                             error: (any Error)?) {
+        Task { @MainActor in
+            self.pushRecentTransactionsIfReachable()
+        }
+    }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
 
@@ -98,7 +117,12 @@ extension WatchConnectivityHost: WCSessionDelegate {
         WCSession.default.activate()
     }
 
-    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {}
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else { return }
+        Task { @MainActor in
+            self.pushRecentTransactionsIfReachable()
+        }
+    }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveMessage message: [String: Any]) {
@@ -119,11 +143,20 @@ extension WatchConnectivityHost: WCSessionDelegate {
         }
         if action == "fetchRecent" {
             Task { @MainActor in
-                let payload = self.makeRecentPayload()
-                replyHandler(["transactions": payload])
+                replyHandler(self.makeSyncPayload())
             }
         } else {
             replyHandler([:])
+        }
+    }
+
+    nonisolated func session(_ session: WCSession,
+                             didReceiveUserInfo userInfo: [String: Any]) {
+        guard let action = userInfo["action"] as? String else { return }
+        if action == "fetchRecent" {
+            Task { @MainActor in
+                self.pushRecentTransactionsIfReachable()
+            }
         }
     }
 }

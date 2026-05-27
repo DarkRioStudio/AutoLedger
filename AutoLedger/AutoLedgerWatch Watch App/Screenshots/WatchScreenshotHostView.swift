@@ -65,15 +65,17 @@ private enum WatchScreenshotFixtures {
 
     static func quickAddViewModel() -> WatchLedgerViewModel {
         let viewModel = WatchLedgerViewModel()
-        viewModel.quickAddCategory = .dining
+        viewModel.quickAddCategoryRaw = TransactionCategory.dining.rawValue
         viewModel.quickAddAmountText = "36.00"
         viewModel.quickAddMerchant = "Blue Bottle"
+        viewModel.customCategories = ["咖啡"]
         return viewModel
     }
 
     static func confirmViewModel() -> WatchLedgerViewModel {
         let viewModel = WatchLedgerViewModel()
         viewModel.voiceDraft = WatchLedgerDraft(merchant: "Blue Bottle", amount: 36, category: .dining, occurredAt: baseDate)
+        viewModel.customCategories = ["咖啡"]
         return viewModel
     }
 }
@@ -85,7 +87,6 @@ private struct WatchQuickAddScreenshot: View {
         NavigationStack {
             QuickAddView()
                 .environment(viewModel)
-                .navigationTitle("watch.quick_add.title")
         }
     }
 }

@@ -23,6 +23,10 @@ struct WatchLedgerDraft: Identifiable, Codable, Sendable {
         TransactionCategory(rawValue: categoryRaw) ?? .other
     }
 
+    var categoryTitle: String {
+        TransactionCategory(rawValue: categoryRaw)?.title ?? categoryRaw
+    }
+
     init(
         merchant: String,
         amount: Double,
@@ -30,10 +34,26 @@ struct WatchLedgerDraft: Identifiable, Codable, Sendable {
         note: String = "",
         occurredAt: Date = .now
     ) {
+        self.init(
+            merchant: merchant,
+            amount: amount,
+            categoryRaw: category.rawValue,
+            note: note,
+            occurredAt: occurredAt
+        )
+    }
+
+    init(
+        merchant: String,
+        amount: Double,
+        categoryRaw: String,
+        note: String = "",
+        occurredAt: Date = .now
+    ) {
         self.id = UUID()
         self.merchant = merchant
         self.amount = amount
-        self.categoryRaw = category.rawValue
+        self.categoryRaw = categoryRaw
         self.note = note
         self.occurredAt = occurredAt
         self.syncStatus = .pending

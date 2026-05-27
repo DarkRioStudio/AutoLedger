@@ -12,6 +12,7 @@ private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "L
 
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
+    static var watchSyncHandler: (() -> Void)?
 
     @Published private(set) var transactions: [Transaction]
     @Published private(set) var deletedTransactions: [Transaction] = []
@@ -69,6 +70,7 @@ final class LedgerStore: ObservableObject {
 
     func saveCustomCategories() {
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
+        Self.watchSyncHandler?()
         requestAutomaticBackup()
     }
 
@@ -322,6 +324,7 @@ final class LedgerStore: ObservableObject {
 
     private func reloadWidgets() {
         WidgetCenter.shared.reloadAllTimelines()
+        Self.watchSyncHandler?()
     }
 
     /// 从剪切板读取图片并尝试 OCR → 解析 → 记账

@@ -9,7 +9,7 @@ struct WatchVoiceConfirmView: View {
     @Environment(\.dismiss) private var dismiss
 
     /// 解析后的分类（允许用户在确认页修改）
-    @State private var selectedCategory: TransactionCategory = .dining
+    @State private var selectedCategoryRaw: String = TransactionCategory.dining.rawValue
 
     var body: some View {
         ScrollView {
@@ -38,48 +38,7 @@ struct WatchVoiceConfirmView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    LazyVGrid(
-                        columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 6
-                    ) {
-                        ForEach(TransactionCategory.allCases) { cat in
-                            Button {
-                                selectedCategory = cat
-                            } label: {
-                                VStack(spacing: 2) {
-                                    Image(systemName: cat.iconName)
-                                        .font(.caption)
-                                        .accessibilityHidden(true)
-                                    Text(cat.title)
-                                        .font(.caption2)
-                                        .lineLimit(1)
-                                    if selectedCategory == cat {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption2)
-                                            .accessibilityHidden(true)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 5)
-                                .background(
-                                    selectedCategory == cat
-                                        ? Color.accentColor.opacity(0.25)
-                                        : Color.secondary.opacity(0.10),
-                                    in: RoundedRectangle(cornerRadius: 7)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7)
-                                        .strokeBorder(
-                                            selectedCategory == cat ? Color.accentColor : .clear,
-                                            lineWidth: 1.5
-                                        )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(cat.title)
-                            .accessibilityAddTraits(selectedCategory == cat ? [.isSelected] : [])
-                        }
-                    }
+                    WatchCategoryGrid(options: viewModel.categoryOptions, selection: $selectedCategoryRaw)
 
                     Divider()
 
@@ -112,7 +71,7 @@ struct WatchVoiceConfirmView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if let d = viewModel.voiceDraft {
-                selectedCategory = d.category
+                selectedCategoryRaw = d.categoryRaw
             }
         }
     }
@@ -121,7 +80,7 @@ struct WatchVoiceConfirmView: View {
 
     private func confirmAndSave() {
         guard var draft = viewModel.voiceDraft else { return }
-        draft.categoryRaw = selectedCategory.rawValue
+        draft.categoryRaw = selectedCategoryRaw
         viewModel.submitVoiceDraft(draft)
         dismiss()
     }

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-26（v1.4.0 商户别名新入账即时生效修复）
+更新日期：2026-05-27（v1.4.0 Watch 记账 UI 与同步修复）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-083 Watch 记账 UI 与同步修复
+- 日期：2026-05-27
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：Bugfix / UI / 同步
+- 目标：修复 Apple Watch 端数据不同步、快速记账和语音入口布局偏移、分类选择对勾撑高 UI、金额输入弹出文本输入、截图资产与实际 Watch UI 不一致，以及 Watch 分类缺少用户自定义分类的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/WatchConnectivityHost.swift`：最近账单同步 payload 扩展为 `transactions + customCategories`，通过 `updateApplicationContext` 保留离线可取状态，并在 Watch 可达时继续 `sendMessage` 即时推送；Watch 保存入账时使用 `Transaction(categoryLabel:sourceLabel:)`，保留自定义分类字符串。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`、`AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：自定义分类保存、账单新增/更新/导入触发 Widget 刷新时，通过 App 注入的 Watch 同步 handler 刷新 Watch payload，避免 `LedgerStore` 在离线回归编译中直接依赖 WatchConnectivity。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchSessionManager.swift`、`WatchLedgerViewModel.swift`、`ContentView.swift`：Watch session 收到最近账单和自定义分类后通知 ViewModel；激活/可达变化和首屏空数据时自动请求最近账单并重试 pending；iPhone 不可达时通过 `transferUserInfo` 排队后台拉取请求。
+  - `AutoLedger/AutoLedgerWatch Watch App/QuickAddView.swift`、`WatchCategoryGrid.swift`、`WatchCategoryOption.swift`：快速记账改为金额优先，金额点击打开自定义数字面板，不再弹系统文本输入；分类网格固定高度、移除对勾，用边框/底色表达选中，并合并内置分类和用户自定义分类。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchVoiceConfirmView.swift`、`WatchVoiceRecorderView.swift`：语音确认分类复用同一固定网格并支持自定义分类；语音录入页改为可滚动紧凑布局，减少顶部标题/图标挤压。
+  - `AutoLedger/AutoLedgerWatch Watch App/Screenshots/WatchScreenshotHostView.swift`：Watch 快速记账截图改为真实快速记账 UI，不再额外加大标题；截图 fixtures 覆盖自定义分类。
+- 未改动范围：未改动 iPhone 主 App 记账 UI；未新增 CloudKit/后台实时同步；未改变 Watch pending 队列的持久化格式；未自动上传 App Store Connect 截图。
+- 完成内容：Watch 最近账单和自定义分类可随 iPhone 账单/分类变化同步；Watch 首屏无账单或无自定义分类时会主动触发同步请求，iPhone 不可达时也会排队后台请求；Watch 自定义分类入账不再落到“其他”；快速记账和语音确认分类选择不会因对勾改变 cell 高度；金额录入避免系统文本输入；zh-Hans Watch 截图重新生成并与当前 Watch UI 对齐。
+- 未完成内容：未做 Apple Watch 真机端到端同步点验；本轮以 watchOS 构建、Simulator screenshot-mode 和截图人工查看为准。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -destination 'generic/platform=watchOS' build`
+  - PASS：`bash tools/appstore-screenshots/scripts/export_watch.sh --locale zh-Hans`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`find 'AutoLedger/AutoLedgerWatch Watch App' -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
+  - PASS：`git diff --check`
+  - PASS：人工查看 `tools/appstore-screenshots/output/raw/watch/zh-Hans/00_watch_quick_add.png` 与 `02_watch_confirm.png`
+- 风险与注意事项：快速记账页曾尝试使用 watchOS toolbar 放“确认”，但 screenshot-mode quick_add 会黑屏，已回退为页内提交按钮；最终上架前仍建议用真机 Watch 点验同步延迟与金额输入手感。
+- 回滚方式：回退 WatchConnectivityHost / LedgerStore 同步改动、Watch session/view model 状态监听、Watch 快速记账/语音确认 UI 文件和新增的 WatchCategoryGrid / WatchCategoryOption。
+- 结论：本轮修复了 Watch 端同步分叉、自定义分类丢失和主要 UI 偏移问题，并让 App Store Watch 截图重新来自当前真实 Watch UI。
+- 下一步建议：在真机 Apple Watch + iPhone 上验证四件事：Watch 首屏空数据时是否主动拉取最近账单和自定义分类；iPhone 新增自定义分类后 Watch 是否出现；Watch 选择自定义分类入账后 iPhone 账本分类是否原样保留；断开手机后 pending 队列恢复连接是否自动清空。
 
 ### ITER-082 商户别名新入账即时生效修复
 - 日期：2026-05-26

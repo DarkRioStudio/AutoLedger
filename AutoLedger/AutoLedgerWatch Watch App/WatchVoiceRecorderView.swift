@@ -16,64 +16,72 @@ struct WatchVoiceRecorderView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 10) {
+            ScrollView {
+                VStack(spacing: 9) {
 
-                // MARK: 图标提示
-                if !isParsing {
-                    Image(systemName: "mic.circle.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.top, 4)
-                        .accessibilityHidden(true)
+                    // MARK: 图标提示
+                    if !isParsing {
+                        Image(systemName: "mic.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.accentColor)
+                            .accessibilityHidden(true)
 
-                    Text("watch.voice.input_hint")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                // MARK: 输入框（触发系统输入/听写）
-                TextField(String(localized: "watch.voice.placeholder"), text: $inputText)
-                    .textInputAutocapitalization(.never)
-                    .disableAutocorrection(true)
-                    .accessibilityLabel(Text("watch.voice.content"))
-                    .accessibilityHint(Text("watch.voice.content_hint"))
-                // MARK: 错误提示
-                if let err = parseError {
-                    Text(err)
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                }
-
-                // MARK: 解析按钮
-                Button {
-                    parseDictatedText()
-                } label: {
-                    if isParsing {
-                        ProgressView()
-                    } else {
-                        Label("voice_ledger_parse", systemImage: "arrow.right")
+                        Text("watch.voice.input_hint")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isParsing)
-                .accessibilityLabel(Text("watch.voice.parse_accessibility"))
 
-                // MARK: 跳转确认页（解析成功后）
-                NavigationLink(
-                    destination: WatchVoiceConfirmView()
-                        .environment(viewModel),
-                    isActive: $navigateToConfirm
-                ) { EmptyView() }
-                    .hidden()
+                    // MARK: 输入框（触发系统输入/听写）
+                    TextField(String(localized: "watch.voice.placeholder"), text: $inputText)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                        .font(.body)
+                        .frame(minHeight: 44)
+                        .accessibilityLabel(Text("watch.voice.content"))
+                        .accessibilityHint(Text("watch.voice.content_hint"))
+                    // MARK: 错误提示
+                    if let err = parseError {
+                        Text(err)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-                Button("common.cancel") {
-                    dismiss()
+                    // MARK: 解析按钮
+                    Button {
+                        parseDictatedText()
+                    } label: {
+                        if isParsing {
+                            ProgressView()
+                        } else {
+                            Label("voice_ledger_parse", systemImage: "arrow.right")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isParsing)
+                    .accessibilityLabel(Text("watch.voice.parse_accessibility"))
+
+                    // MARK: 跳转确认页（解析成功后）
+                    NavigationLink(
+                        destination: WatchVoiceConfirmView()
+                            .environment(viewModel),
+                        isActive: $navigateToConfirm
+                    ) { EmptyView() }
+                        .hidden()
+
+                    Button("common.cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+                .padding(.top, 6)
             }
-            .navigationTitle("watch.voice_ledger.title")
+            .scrollIndicators(.hidden)
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

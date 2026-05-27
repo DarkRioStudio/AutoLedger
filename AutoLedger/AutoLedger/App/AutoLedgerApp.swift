@@ -25,6 +25,9 @@ struct AutoLedgerApp: App {
 
         if !ScreenshotModeConfig.isEnabled {
             // 激活 WatchConnectivity 会话（Watch 端连接前预备）
+            LedgerStore.watchSyncHandler = {
+                WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+            }
             _ = WatchConnectivityHost.shared
         }
     }

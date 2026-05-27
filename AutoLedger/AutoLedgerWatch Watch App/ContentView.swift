@@ -95,6 +95,9 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
+        .task {
+            viewModel.requestInitialSyncIfNeeded()
+        }
         .animation(reduceMotion ? nil : .easeInOut, value: viewModel.lastFeedback)
     }
 }

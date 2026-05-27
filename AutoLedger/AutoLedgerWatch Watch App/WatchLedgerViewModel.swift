@@ -16,6 +16,8 @@ final class WatchLedgerViewModel {
     var isReachable: Bool = false
     var pendingCount: Int = 0
 
+    var customCategories: [String] = []
+
     /// 快速记账面板是否展开
     var isQuickAddPresented: Bool = false
 
@@ -24,8 +26,8 @@ final class WatchLedgerViewModel {
 
     // MARK: - Quick Add Input State
 
-    /// 选中分类（默认餐饮，最高频）
-    var quickAddCategory: TransactionCategory = .dining
+    /// 选中分类 rawValue 或自定义分类名称（默认餐饮，最高频）
+    var quickAddCategoryRaw: String = TransactionCategory.dining.rawValue
 
     /// 金额字符串（TextField 绑定，提交时转 Double）
     var quickAddAmountText: String = ""
@@ -46,11 +48,15 @@ final class WatchLedgerViewModel {
 
     // MARK: - Init
 
-    init(session: WatchSessionManager = .shared) {
-        self.session = session
-        self.isReachable = session.isReachable
-        self.recentTransactions = session.recentTransactions
-        self.pendingCount = session.pendingCount
+    init(session: WatchSessionManager? = nil) {
+        let resolvedSession = session ?? .shared
+        self.session = resolvedSession
+        resolvedSession.onStateChanged = { [weak self] in
+            self?.syncFromSession()
+        }
+        syncFromSession()
+        resolvedSession.requestInitialSyncIfNeeded()
+        resolvedSession.retryPending()
     }
 
     // MARK: - Actions
@@ -60,10 +66,13 @@ final class WatchLedgerViewModel {
         session.requestRecentTransactions()
         Task {
             try? await Task.sleep(for: .seconds(1))
-            self.recentTransactions = session.recentTransactions
-            self.isReachable = session.isReachable
-            self.pendingCount = session.pendingCount
+            self.syncFromSession()
         }
+    }
+
+    /// Watch 首屏无账单或无自定义分类时，主动触发一次同步请求。
+    func requestInitialSyncIfNeeded() {
+        session.requestInitialSyncIfNeeded()
     }
 
     /// 快速记账提交（创建 WatchLedgerDraft，入 pending 队列）
@@ -76,9 +85,9 @@ final class WatchLedgerViewModel {
 
         let merchant = quickAddMerchant.trimmingCharacters(in: .whitespaces)
         let draft = WatchLedgerDraft(
-            merchant: merchant.isEmpty ? quickAddCategory.title : merchant,
+            merchant: merchant.isEmpty ? quickAddCategoryOption.title : merchant,
             amount: amount,
-            category: quickAddCategory
+            categoryRaw: quickAddCategoryOption.rawValue
         )
 
         isSubmitting = true
@@ -89,7 +98,7 @@ final class WatchLedgerViewModel {
             self.isSubmitting = false
             self.resetQuickAddInput()
             self.isQuickAddPresented = false
-            self.pendingCount = self.session.pendingCount
+            self.syncFromSession()
             let offline = !self.isReachable
             self.lastFeedback = offline ? String(localized: "watch.feedback.queued") : String(localized: "watch.feedback.sent")
             try? await Task.sleep(for: .seconds(2.5))
@@ -102,7 +111,16 @@ final class WatchLedgerViewModel {
     func resetQuickAddInput() {
         quickAddAmountText = ""
         quickAddMerchant = ""
-        quickAddCategory = .dining
+        quickAddCategoryRaw = TransactionCategory.dining.rawValue
+    }
+
+    var categoryOptions: [WatchCategoryOption] {
+        WatchCategoryOption.all(customCategories: customCategories)
+    }
+
+    var quickAddCategoryOption: WatchCategoryOption {
+        categoryOptions.first { $0.rawValue == quickAddCategoryRaw }
+            ?? WatchCategoryOption(rawValue: TransactionCategory.dining.rawValue, title: TransactionCategory.dining.title, iconName: TransactionCategory.dining.iconName)
     }
 
     var quickAddAmountValid: Bool {
@@ -121,11 +139,18 @@ final class WatchLedgerViewModel {
             try? await Task.sleep(for: .milliseconds(400))
             self.isSubmitting = false
             self.isVoiceRecorderPresented = false
-            self.pendingCount = self.session.pendingCount
+            self.syncFromSession()
             let offline = !self.isReachable
             self.lastFeedback = offline ? String(localized: "watch.feedback.queued") : String(localized: "watch.feedback.sent")
             try? await Task.sleep(for: .seconds(2.5))
             self.lastFeedback = nil
         }
+    }
+
+    private func syncFromSession() {
+        recentTransactions = session.recentTransactions
+        isReachable = session.isReachable
+        pendingCount = session.pendingCount
+        customCategories = session.customCategories
     }
 }

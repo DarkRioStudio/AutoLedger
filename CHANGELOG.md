@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.4.0）
+- [2026-05-27 +0800] ITER-083 Watch 记账 UI 与同步修复：Apple Watch 快速记账改为金额优先布局，金额点击不再弹系统文本输入，改用 Watch 内自定义数字金额面板；分类网格移除对勾图标，改用固定高度按钮、边框和底色表示选中，避免布局被撑开；Watch 分类列表同步 iPhone 用户自定义分类，Watch 入账保存时保留自定义分类字符串；WatchConnectivity 改为账单/分类变化后通过 applicationContext + 可达 sendMessage 同步最近账单和自定义分类，Watch 首屏无账单或无自定义分类时主动触发同步请求，iPhone 不可达时通过 transferUserInfo 排队后台拉取；Watch ViewModel 监听 session 状态变化自动刷新，主 App 通过注入 handler 触发 Watch 同步以保持离线回归可编译；重新导出 zh-Hans Watch 截图，快速记账与确认页截图使用真实 Watch UI。
 - [2026-05-26 +0800] ITER-081 辅助功能发布收口：报表页新增 VoiceOver 图表摘要、分类占比 / Top 商户行级可读标签、Reduce Motion 动画降级、增强对比度下的图表弱化态调整，并在分类筛选选中态增加非颜色符号；账本与最近删除行隐藏装饰图标并补齐删除入口 / 已删除账单行标签；Watch 快速记账与语音确认分类网格改用动态字体并增加可见勾选态，降低大字号和 VoiceOver 场景下的识别成本。
 - [2026-05-26 +0800] ITER-080 Watch App Icon 小尺寸优化：基于现有 iPhone 图标生成 Apple Watch 专用图标，保留白色钱包、金币、闪电和蓝绿渐变背景，去除星星 / 小圆点等复杂装饰，简化钱包高光与阴影并加粗闪电主视觉；`AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset` 从单张 1024 universal 图扩展为完整 watchOS app icon set（notification / companion settings / app launcher / quick look / marketing），并新增 `versions/assets/watch-app-icon/` 下的 1024、128、64、48 预览图。
 - [2026-05-25 +0800] ITER-079 UI 文案全球化收口：补齐主 App v1.4 主路径与 Watch App 的简体中文 / 繁体中文 / 英文 UI 文案资源；Watch App 新增独立 `zh-Hans.lproj`、`zh-Hant.lproj`、`en.lproj`；主 App `Localizable.strings` 扩展至 457 个 key，覆盖账本筛选、最近删除、月报、分类刷新、商户别名、消费分析、数据管理、订阅管理、问题反馈、反馈邮件预览、OCR / iCloud 用户错误与 App Intents 参数摘要等用户可见入口。DebugView 与调试导出文本继续保留中文，作为开发者 / 回归工具暂不纳入本轮 UI 全球化范围。

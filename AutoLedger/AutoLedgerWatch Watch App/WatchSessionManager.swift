@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import WatchConnectivity
 
 /// Watch 侧 WatchConnectivity 会话管理器。
@@ -16,6 +17,9 @@ final class WatchSessionManager: NSObject {
     /// 最近从 iPhone 同步的账单摘要（用于 Watch 列表展示）
     private(set) var recentTransactions: [WatchTransaction] = []
 
+    /// iPhone 端用户自定义分类。
+    private(set) var customCategories: [String] = []
+
     /// iPhone 是否可达
     private(set) var isReachable: Bool = false
 
@@ -24,9 +28,15 @@ final class WatchSessionManager: NSObject {
 
     var pendingCount: Int { pendingDrafts.count }
 
+    @ObservationIgnored
+    var onStateChanged: (() -> Void)?
+
     // MARK: - Private constants
 
     private static let pendingKey = "WatchLedgerDraftsPending"
+    private static let backgroundFetchInterval: TimeInterval = 60
+
+    private var lastBackgroundFetchRequestAt: Date?
 
     // MARK: - Init
 
@@ -44,19 +54,42 @@ final class WatchSessionManager: NSObject {
     func enqueue(_ draft: WatchLedgerDraft) {
         pendingDrafts.append(draft)
         savePending()
+        notifyStateChanged()
         if WCSession.default.isReachable {
             flushPending()
         }
     }
 
     /// 向 iPhone 请求同步最近账单列表
-    func requestRecentTransactions() {
-        guard WCSession.default.isReachable else { return }
+    func requestRecentTransactions(allowBackgroundFallback: Bool = true) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+
+        if !WCSession.default.isReachable {
+            if allowBackgroundFallback {
+                enqueueBackgroundFetchRequest(force: false)
+            }
+            return
+        }
+
         WCSession.default.sendMessage(["action": "fetchRecent"], replyHandler: { [weak self] reply in
             Task { @MainActor in
                 self?.handleRecentTransactionsReply(reply)
             }
-        }, errorHandler: nil)
+        }, errorHandler: { [weak self] _ in
+            Task { @MainActor in
+                self?.isReachable = false
+                if allowBackgroundFallback {
+                    self?.enqueueBackgroundFetchRequest(force: true)
+                }
+                self?.notifyStateChanged()
+            }
+        })
+    }
+
+    /// Watch 列表为空或分类为空时，主动向 iPhone 拉取一次同步数据。
+    func requestInitialSyncIfNeeded() {
+        guard recentTransactions.isEmpty || customCategories.isEmpty else { return }
+        requestRecentTransactions(allowBackgroundFallback: true)
     }
 
     // MARK: - Flush / Retry
@@ -69,6 +102,7 @@ final class WatchSessionManager: NSObject {
             pendingDrafts[idx].syncStatus = .pending
         }
         savePending()
+        notifyStateChanged()
         flushPending()
     }
 
@@ -92,6 +126,7 @@ final class WatchSessionManager: NSObject {
     private func markSynced(draftId: UUID) {
         pendingDrafts.removeAll { $0.id == draftId }
         savePending()
+        notifyStateChanged()
     }
 
     private func markFailed(draftId: UUID) {
@@ -99,6 +134,7 @@ final class WatchSessionManager: NSObject {
         pendingDrafts[idx].syncStatus = .failed
         pendingDrafts[idx].retryCount += 1
         savePending()
+        notifyStateChanged()
     }
 
     // MARK: - Persistence
@@ -128,6 +164,34 @@ final class WatchSessionManager: NSObject {
     private func handleRecentTransactionsReply(_ reply: [String: Any]) {
         guard let list = reply["transactions"] as? [[String: Any]] else { return }
         recentTransactions = list.compactMap { WatchTransaction(from: $0) }
+        customCategories = reply["customCategories"] as? [String] ?? customCategories
+        notifyStateChanged()
+    }
+
+    private func handleSyncPayload(_ payload: [String: Any]) {
+        if let list = payload["transactions"] as? [[String: Any]] {
+            recentTransactions = list.compactMap { WatchTransaction(from: $0) }
+        }
+        customCategories = payload["customCategories"] as? [String] ?? customCategories
+        notifyStateChanged()
+    }
+
+    private func enqueueBackgroundFetchRequest(force: Bool) {
+        let now = Date()
+        if !force,
+           let lastBackgroundFetchRequestAt,
+           now.timeIntervalSince(lastBackgroundFetchRequestAt) < Self.backgroundFetchInterval {
+            return
+        }
+        lastBackgroundFetchRequestAt = now
+        WCSession.default.transferUserInfo([
+            "action": "fetchRecent",
+            "requestedAt": now.timeIntervalSince1970
+        ])
+    }
+
+    private func notifyStateChanged() {
+        onStateChanged?()
     }
 }
 
@@ -140,26 +204,45 @@ extension WatchSessionManager: WCSessionDelegate {
                              error: (any Error)?) {
         Task { @MainActor in
             self.isReachable = session.isReachable
-            if session.isReachable { self.retryPending() }
+            if session.isReachable {
+                self.retryPending()
+                self.requestRecentTransactions()
+            } else {
+                self.requestInitialSyncIfNeeded()
+            }
+            self.notifyStateChanged()
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
             self.isReachable = session.isReachable
-            if session.isReachable { self.retryPending() }
+            if session.isReachable {
+                self.retryPending()
+                self.requestRecentTransactions()
+            } else {
+                self.requestInitialSyncIfNeeded()
+            }
+            self.notifyStateChanged()
         }
     }
 
     nonisolated func session(_ session: WCSession,
                              didReceiveMessage message: [String: Any]) {
         guard let action = message["action"] as? String else { return }
-        if action == "syncTransactions",
-           let list = message["transactions"] as? [[String: Any]] {
-            let parsed = list.compactMap { WatchTransaction(from: $0) }
-            Task { @MainActor in
-                self.recentTransactions = parsed
+        if action == "syncTransactions" {
+           Task { @MainActor in
+                self.handleSyncPayload(message)
             }
+        }
+    }
+
+    nonisolated func session(_ session: WCSession,
+                             didReceiveApplicationContext applicationContext: [String: Any]) {
+        guard let action = applicationContext["action"] as? String,
+              action == "syncTransactions" else { return }
+        Task { @MainActor in
+            self.handleSyncPayload(applicationContext)
         }
     }
 }
