@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-27（v1.4.0 Watch 记账 UI 与同步修复）
+更新日期：2026-05-27（v1.4.0 Support Developer 消耗型内购首版）
 
 ## 记录规则
 
@@ -43,6 +43,59 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-085 Support Developer 消耗型内购首版
+- 日期：2026-05-27
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：能力增强 / StoreKit / 文档
+- 目标：为 AutoLedger 增加第一版“支持独立开发者”消耗型 IAP，走通 StoreKit 2、App Store Connect 和 TestFlight IAP 测试链路，但不做订阅、不做 Pro 解锁、不回收任何现有免费功能。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/SupportPurchaseManager.swift`：新增 StoreKit 2 支持服务，拉取 3 个 consumable 产品、发起购买、处理 verified / unverified / pending / userCancelled / unknown，并监听 `StoreKit.Transaction.updates`。
+  - `AutoLedger/AutoLedger/Features/Settings/SupportAutoLedgerView.swift`：新增支持页面，展示说明、3 个支持档位、本地化价格、购买中状态、错误重试、感谢状态和本地支持记录。
+  - `AutoLedger/AutoLedger/Features/Settings/SettingsView.swift`、`AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：设置页接入“支持 AutoLedger”入口；App 启动时启动 transaction updates 监听。
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：补齐支持页面、购买状态和错误提示三语文案。
+  - `AutoLedger/AutoLedgerSupport.storekit`、`AutoLedger.xcscheme`、`AutoLedger.xcodeproj/project.pbxproj`：新增本地 StoreKit 配置并挂到 Run scheme，3 个产品均覆盖英文、简体中文、繁体中文展示名 / 说明。
+  - `docs/iap-support.md`：新增本地测试、App Store Connect 配置、三语内购说明和 Review Notes 文档。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未实现订阅；未实现 Pro entitlement；未增加 restore entitlement；未改变记账、OCR、JSON 导出、iCloud、Watch、快捷指令、商户别名、分类和月报等现有免费功能边界；未引导外部支付。
+- 完成内容：3 个产品 ID 已统一为 `top.darkrio326.AutoLedger.support.coffee/lunch/sponsor`；verified support transaction 会记录本地支持次数、最近产品和最近时间并调用 `finish()`；unverified transaction 不记录支持状态；pending 会给出明确提示；取消购买不会显示成功；已处理 transaction id 会保留最近 50 条避免重复计数；UI 使用现有设置页卡片风格并支持 Dynamic Type / VoiceOver 的基础可读性。
+- 未完成内容：未在真实 App Store Connect / TestFlight 沙盒账号中点验；未在交互式 Xcode StoreKit 购买弹窗中完成本地购买；`.storekit` 配置需在 Xcode Scheme Editor 中人工确认是否被当前 Xcode 版本正确识别；3 个 IAP 仍需在 App Store Connect 手动创建并随新版本提交审核。
+- 测试情况：
+  - PASS：`find AutoLedger/AutoLedger -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
+  - PASS：`ruby -rjson -e 'JSON.parse(File.read("AutoLedger/AutoLedgerSupport.storekit"))'`
+  - PASS：`ruby -rrexml/document -e 'REXML::Document.new(File.read("AutoLedger/AutoLedger.xcodeproj/xcshareddata/xcschemes/AutoLedger.xcscheme"))'`
+  - PASS：`git diff --check`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+- 风险与注意事项：本轮是 consumable support，不提供权益恢复；如果未来扩展到一次性 Pro 或订阅，需要新增 entitlement 模型和 restore/sync 逻辑，不能复用当前“只记录支持次数”的语义。
+- 回滚方式：删除 `SupportPurchaseManager.swift`、`SupportAutoLedgerView.swift`、`AutoLedgerSupport.storekit` 和 `docs/iap-support.md`，回退设置页入口、App 启动监听、scheme/project 配置、本地化 key、CHANGELOG 与迭代日志。
+- 结论：本轮完成，AutoLedger 已具备第一版 Support Developer consumable IAP 代码链路、本地 StoreKit 配置和 App Store Connect 配置文档；真实 IAP 购买仍需在 Xcode StoreKit / TestFlight 沙盒中人工点验。
+- 下一步建议：完成本地 StoreKit 购买点验后，在 App Store Connect 创建 3 个 consumable IAP，并随下一版 App 一起提交审核。
+
+### ITER-084 设置页版本状态文案更新
+- 日期：2026-05-27
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：文案 / 本地化 / 治理
+- 目标：让设置页“当前版本”与 App Store v1.3.0 发布候选状态一致，并让“后续计划”保持用户可读的产品路线表达，同时保持版本号继续同步工程/App Store 版本。
+- 改动范围：
+  - `AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings`：更新 `settings.version.body` 与 `settings.release_status.body`。
+  - `AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`：更新同两条繁体中文文案。
+  - `AutoLedger/AutoLedger/en.lproj/Localizable.strings`：更新同两条英文文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未改 `SettingsView` 版本号渲染逻辑；未改 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`；未改 Watch、解析器、SQLite、App Intents 或截图导出逻辑。
+- 完成内容：当前版本正文已覆盖 Apple Watch 轻量记账、快捷指令与语音记账、月报历史月份、iCloud 备份恢复、商户别名与分类批量整理；后续计划改为面向用户的产品路线表达，包含更多支付场景识别优化、更多专业版功能和更灵活的账单整理能力；版本号仍由 `Bundle.main.infoDictionary["CFBundleShortVersionString"]` 读取。
+- 未完成内容：未做真机设置页截图点验；本轮只做本地化资源与静态校验。
+- 测试情况：
+  - PASS：`find AutoLedger/AutoLedger -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
+  - PASS：`git diff --check`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：文案为用户可见产品路线口径，若专业版功能范围或后续支付场景支持范围调整，需要同步更新这两条 key。
+- 回滚方式：回退三套 `Localizable.strings` 中 `settings.version.body` / `settings.release_status.body` 以及本轮文档记录。
+- 结论：本轮完成，设置页版本状态文案已同步到当前发布候选能力与用户可见产品路线口径，版本号仍保持工程配置读取。
+- 下一步建议：在真机或截图脚本中确认设置页长文案不溢出。
 
 ### ITER-083 Watch 记账 UI 与同步修复
 - 日期：2026-05-27

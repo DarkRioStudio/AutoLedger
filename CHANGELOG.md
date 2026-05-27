@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.4.0）
+- [2026-05-27 +0800] ITER-085 Support Developer 消耗型内购首版：新增 StoreKit 2 `SupportPurchaseManager`，拉取 `top.darkrio326.AutoLedger.support.coffee/lunch/sponsor` 三个 consumable 支持档位，处理 verified / unverified / pending / userCancelled 购买结果并对 verified transaction 调用 `finish()`；监听 `Transaction.updates` 处理延迟完成交易；本地记录 `supportPurchaseCount`、`lastSupportProductId`、`lastSupportDate` 和已处理 transaction id，避免重复计数；设置页新增“支持 AutoLedger”入口与三语支持页面，明确支持不会解锁额外功能；新增 `AutoLedgerSupport.storekit`、scheme StoreKit 配置和 `docs/iap-support.md`，说明本地 StoreKit 测试与 App Store Connect 配置，并要求内购展示名 / 说明覆盖英文、简体中文、繁体中文。
 - [2026-05-27 +0800] ITER-083 Watch 记账 UI 与同步修复：Apple Watch 快速记账改为金额优先布局，金额点击不再弹系统文本输入，改用 Watch 内自定义数字金额面板；分类网格移除对勾图标，改用固定高度按钮、边框和底色表示选中，避免布局被撑开；Watch 分类列表同步 iPhone 用户自定义分类，Watch 入账保存时保留自定义分类字符串；WatchConnectivity 改为账单/分类变化后通过 applicationContext + 可达 sendMessage 同步最近账单和自定义分类，Watch 首屏无账单或无自定义分类时主动触发同步请求，iPhone 不可达时通过 transferUserInfo 排队后台拉取；Watch ViewModel 监听 session 状态变化自动刷新，主 App 通过注入 handler 触发 Watch 同步以保持离线回归可编译；重新导出 zh-Hans Watch 截图，快速记账与确认页截图使用真实 Watch UI。
 - [2026-05-26 +0800] ITER-081 辅助功能发布收口：报表页新增 VoiceOver 图表摘要、分类占比 / Top 商户行级可读标签、Reduce Motion 动画降级、增强对比度下的图表弱化态调整，并在分类筛选选中态增加非颜色符号；账本与最近删除行隐藏装饰图标并补齐删除入口 / 已删除账单行标签；Watch 快速记账与语音确认分类网格改用动态字体并增加可见勾选态，降低大字号和 VoiceOver 场景下的识别成本。
 - [2026-05-26 +0800] ITER-080 Watch App Icon 小尺寸优化：基于现有 iPhone 图标生成 Apple Watch 专用图标，保留白色钱包、金币、闪电和蓝绿渐变背景，去除星星 / 小圆点等复杂装饰，简化钱包高光与阴影并加粗闪电主视觉；`AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset` 从单张 1024 universal 图扩展为完整 watchOS app icon set（notification / companion settings / app launcher / quick look / marketing），并新增 `versions/assets/watch-app-icon/` 下的 1024、128、64、48 预览图。
@@ -18,6 +19,9 @@
 - [2026-05-20 +0800] ITER-075 月报历史月份浏览：`ReportView` 新增 `@State selectedMonth` + NavigationBar 左右翻页箭头；月报数据改为 `MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)` 动态计算，6 个月趋势图现可显示选中月前 6 个月历史；查看历史月时自动隐藏异常消费提醒（仅当月有效）；切换月份自动清空分类选中状态；趋势图底部文案改为 `snapshot.monthLabel`。
 - [2026-05-20 +0800] ITER-073 Watch VoiceOver：`ContentView`（交易行合并标签+Reduce Motion 降级）、`QuickAddView`（分类按钮标签/选中态）、`WatchVoiceRecorderView`（TextField 标签+提示+解析按钮标签）、`WatchVoiceConfirmView`（金额+商户合并标签、分类选中态、保存按钮标签+提示）全部补全 VoiceOver 标注。
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
+
+### 变更（v1.4.0）
+- [2026-05-27 +0800] ITER-084 设置页版本状态文案更新：设置页“当前版本”正文同步到当前 App Store v1.3.0 发布候选能力，覆盖 Apple Watch 轻量记账、快捷指令与语音记账、月报历史月份、iCloud 备份恢复、商户别名与分类批量整理；“后续计划”改为面向用户的产品路线表达，包含更多支付场景识别优化、更多专业版功能和更灵活的账单整理能力；版本号继续读取 `CFBundleShortVersionString`，不改 `MARKETING_VERSION`。
 
 ### 修复（v1.4.0）
 - [2026-05-26 +0800] ITER-082 商户别名新入账即时生效：新增 `MerchantAliasResolver` 统一处理商户别名解析；OCR 入账、手动新增、AddTransactionIntent、QuickLedgerIntent、VoiceLedgerIntent 与 Share Extension 均在保存前套用既有商户别名，避免新账单先保存原商户、必须手动点刷新后才替换；离线回归新增 OCR 新入账与手动新增别名生效断言。

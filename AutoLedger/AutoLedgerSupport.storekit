@@ -1,0 +1,101 @@
+{
+  "identifier" : "8D5A09B1-5066-4825-AF27-2DB5B441B661",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "8B1112D3-0B30-4824-9C20-30E26EA41C01",
+      "localizations" : [
+        {
+          "description" : "Support the independent development of AutoLedger.",
+          "displayName" : "Coffee Support",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "支持 AutoLedger 的独立开发。",
+          "displayName" : "支持一杯咖啡",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "支持 AutoLedger 的獨立開發。",
+          "displayName" : "支持一杯咖啡",
+          "locale" : "zh_TW"
+        }
+      ],
+      "productID" : "top.darkrio326.AutoLedger.support.coffee",
+      "referenceName" : "Coffee Support",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "C3F10C7D-BCC7-4F17-B1F2-49D511E342C9",
+      "localizations" : [
+        {
+          "description" : "Support future improvements to AutoLedger.",
+          "displayName" : "Lunch Support",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "支持 AutoLedger 后续改进。",
+          "displayName" : "支持一顿午餐",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "支持 AutoLedger 後續改進。",
+          "displayName" : "支持一頓午餐",
+          "locale" : "zh_TW"
+        }
+      ],
+      "productID" : "top.darkrio326.AutoLedger.support.lunch",
+      "referenceName" : "Lunch Support",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "5BDDC2FD-D9A5-4F47-9C0B-43D490E51789",
+      "localizations" : [
+        {
+          "description" : "A generous way to support AutoLedger's development.",
+          "displayName" : "Sponsor Support",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "更慷慨地支持 AutoLedger 的后续开发。",
+          "displayName" : "赞助开发者",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "更慷慨地支持 AutoLedger 的後續開發。",
+          "displayName" : "贊助開發者",
+          "locale" : "zh_TW"
+        }
+      ],
+      "productID" : "top.darkrio326.AutoLedger.support.sponsor",
+      "referenceName" : "Sponsor Support",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "5QM62E2M2R",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

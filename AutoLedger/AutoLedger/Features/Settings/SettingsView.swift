@@ -153,6 +153,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    NavigationLink {
+                        SupportAutoLedgerView()
+                    } label: {
+                        settingsRow(
+                            icon: "heart.circle.fill",
+                            iconColor: AppTheme.accentSecondary,
+                            title: "settings.support.title",
+                            subtitle: "settings.support.subtitle"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     VStack(alignment: .leading, spacing: 12) {
                         Text("settings.version.title")
                             .font(.headline)

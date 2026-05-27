@@ -88,6 +88,7 @@
 		C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AutoLedgerWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		D0AA00012FC70E0000639DC8 /* AutoLedgerSupport.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AutoLedgerSupport.storekit; sourceTree = "<group>"; };
 		D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ControlWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3E9CB3BD1997D348E7B8304 /* Pods-AutoLedger.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.release.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -255,6 +256,7 @@
 		C042FD6B2F76270200A01918 = {
 			isa = PBXGroup;
 			children = (
+				D0AA00012FC70E0000639DC8 /* AutoLedgerSupport.storekit */,
 				C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */,
 				C042FD762F76270200A01918 /* AutoLedger */,
 				C017EEB12F875C1600639DC8 /* ShareExtension */,
