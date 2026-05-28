@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-05-28 +0800] 当前项目切换到内部 v1.5.0 / App Store v1.4.0：Xcode 全 target `MARKETING_VERSION` 从 `1.3.0` 更新为 `1.4.0`；根 README / 英文 README 将 v1.5.0 状态标记为开发中；设置页后续计划文案切换到 iPad 工作台、批量导入与识别、多账本整理和 Watch 今日支出小组件方向。
 - [2026-05-28 +0800] v1.5.0 规划承接关系更新：在根 README / 英文 README Roadmap 中标记内部 v1.4.0（App Store v1.3.0）已过审发布，并新增内部 v1.5.0 规划行；`versions/v1.5.0-plan.md` 明确承接内部 v1.4.0 发布基准，面向下一轮 App Store v1.4.0 开发。
 - [2026-05-28 +0800] 文档记录 v1.5.0 iPad 截图管线扩展：明确当前 `tools/appstore-screenshots` 仅覆盖 iPhone 与 Apple Watch，不生成 iPad 截图；将 iPad App Store 截图纳入 v1.5.0 发布资产规划，要求补齐 `--ipad-only`、iPad target size、横屏工作台画布、稳定演示数据、多语言输出目录和 `preview.html` 分组目检。
 

@@ -309,7 +309,7 @@
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "All data stays on your device. AutoLedger does not use cloud sync or third-party analytics. OCR and LLM inference both run locally. The only network request is Gemma model version checking and download via CDN; no user data is transmitted.";
 "settings.release_status.title" = "Coming Next";
-"settings.release_status.body" = "More payment scenario improvements, more Pro features, and more flexible ledger cleanup tools.";
+"settings.release_status.body" = "Internal 1.5.0 development has started, focused on the iPad workspace, batch import and recognition, multi-ledger cleanup, and Watch daily-spend widgets.";
 
 "support.title" = "Support AutoLedger";
 "support.description" = "AutoLedger is currently free to use. If it saves you time, you can support future development here.";

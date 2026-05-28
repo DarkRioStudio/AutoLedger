@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-28（内部 v1.4.0 发布基准与 v1.5.0 规划承接）
+更新日期：2026-05-28（项目切换到内部 v1.5.0 / App Store v1.4.0）
 
 ## 记录规则
 
@@ -43,6 +43,27 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-093 切换到内部 v1.5.0 / App Store v1.4.0
+- 日期：2026-05-28
+- 所属版本：v1.5.0
+- 所属阶段：版本切换
+- 类型：版本治理 / 文档 / 配置
+- 目标：将当前项目从内部 v1.4.0 发布基准切换到内部 v1.5.0 开发线，并把 App Store 对外版本推进到 v1.4.0。
+- 改动范围：
+  - `AutoLedger/AutoLedger.xcodeproj/project.pbxproj`：全 target `MARKETING_VERSION` 从 `1.3.0` 更新为 `1.4.0`。
+  - `README.md`、`README.en.md`：Roadmap 将内部 v1.5.0 状态更新为开发中。
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：设置页“后续计划”文案切换到 v1.5.0 方向。
+  - `versions/v1.5.0-plan.md`：记录当前项目版本值。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充追溯记录。
+- 未改动范围：未修改 Bundle Identifier、DEVELOPMENT_TEAM、App Groups、iCloud Container、entitlements、scheme、target、Xcode Cloud 脚本或业务功能代码。
+- 完成内容：工程商店版本已切到 `1.4.0`，内部开发线文档与 App 设置页文案已进入 v1.5.0 口径。
+- 未完成内容：未实现 v1.5.0 功能；本轮只做版本切换。
+- 测试情况：待执行 `xcodebuild -list` 和 Debug build 验证。
+- 风险与注意事项：`CURRENT_PROJECT_VERSION` 仍保持现有值，构建号继续交给 Xcode Cloud / 发布流程处理；如果 App Store Connect 要求本地递增 build number，需要在发布前单独处理。
+- 回滚方式：将 `MARKETING_VERSION` 恢复为 `1.3.0`，并回退本轮 README / Localizable / 版本文档改动。
+- 结论：本轮完成后，后续代码工作应按内部 v1.5.0 规划推进。
+- 下一步建议：运行构建验证后提交推送。
 
 ### ITER-092 内部 v1.4.0 发布基准与 v1.5.0 规划承接
 - 日期：2026-05-28

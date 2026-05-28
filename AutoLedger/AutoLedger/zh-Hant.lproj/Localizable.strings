@@ -312,7 +312,7 @@
 "settings.privacy.title" = "隱私政策";
 "settings.privacy.body" = "所有資料保留在裝置本機，不接入任何雲端同步或第三方分析。OCR 與 LLM 推理均在本機完成。唯一網路請求：Gemma 模型版本檢查與下載（CDN），不傳輸任何使用者資料。";
 "settings.release_status.title" = "後續計畫";
-"settings.release_status.body" = "更多支付場景識別最佳化、更多專業版功能，以及更彈性的帳單整理能力。";
+"settings.release_status.body" = "內部 1.5.0 開發線已開啟，重點推進 iPad 工作台、批次匯入與識別、多帳本整理和 Watch 今日支出小工具。";
 
 "support.title" = "支持 AutoLedger";
 "support.description" = "AutoLedger 目前保持免費使用。如果它幫你節省了記帳時間，可以透過這裡支持後續開發。";
