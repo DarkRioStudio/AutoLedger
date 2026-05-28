@@ -1128,7 +1128,7 @@
   ＜ 行程已给束
   71
   您对我的服务满意吗？
-  Example Driver EX-0002 4.5分
+  示例司机 EX-0002 4.5分
   匿名
   发红包
   很糟糕
@@ -1241,9 +1241,9 @@
   X
   周六2
   11
-  乘坐列车G876次杭州东..•30分钟后
+  乘坐列车G000次Example East Station..•30分钟后
   交通严重拥堵。经德胜快速路前往
-  杭州东站需要19分钟。
+  Example East Station需要19分钟。
   3
   小红书
   PLUS抽签购权益过期提醒
@@ -1274,7 +1274,7 @@
 - 未改动范围：数据层 schema、UI 层、订阅识别、去重逻辑均无改动。
 - 完成内容：
   - 版式 (C)（`地铁：CN¥X.XX` 单行）现可正确识别，商户输出 "地铁：ExampleAirport → ExampleEastStation"。
-  - 版式 (A)（独立 `地铁：` 行 + 金额行 + 站点行）回归通过，输出仍为 "地铁：ExampleStationA → ExampleStationB"。
+  - 版式 (A)（独立 `地铁：` 行 + 金额行 + 站点行）回归通过，输出仍为 "地铁：Example Station A → Example Station B"。
   - 版式 (B)（`地铁：站A 站B` 同行）回归通过，输出不变。
   - 站名含空格+连字符分隔符（如 " -ExampleEastStation"）现可正确规范化，前导"-"被去除。
   - 离线回归（Swift 逻辑单测）5 项全 PASS。

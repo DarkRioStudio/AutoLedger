@@ -15,6 +15,7 @@ DerivedData/
 *.mode2v3
 *.perspectivev3
 *.xcworkspace/xcuserdata/
+*.hmap
 
 # Swift Package Manager
 .build/
@@ -25,6 +26,10 @@ Pods/
 
 # Build
 build/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcarchive
 
 # Temp
 *.sqlite3
@@ -32,10 +37,30 @@ build/
 *.sqlite3-wal
 .offline-markdown-preview/
 .tmp/
+*.local
+*.local.xcconfig
+Config.local.xcconfig
+Secrets.xcconfig
+.env
+.env.*
 
 # Python
 __pycache__/
 *.py[cod]
+
+# Signing / private Apple developer material
+*.mobileprovision
+*.cer
+*.p12
+*.p8
+
+# fastlane generated reports
+fastlane/report.xml
+fastlane/Preview.html
+
+# Local private samples and generated store assets
 *.zip
 autoledger_store_assets_*/
 receiptsample/
+tools/appstore-screenshots/output/
+tools/appstore-screenshots/output-*/

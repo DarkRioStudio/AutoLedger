@@ -168,7 +168,7 @@ pip install -r tools/feedback/requirements.txt
 ## 7. 本地运行方式
 
 ```bash
-export GMAIL_USERNAME="yourgmail@gmail.com"
+export GMAIL_USERNAME="user@example.com"
 export GMAIL_APP_PASSWORD="your-app-password"
 export FEEDBACK_SUBJECT_PREFIX="[AutoLedger]"
 export GITHUB_TOKEN="YOUR_GITHUB_TOKEN"

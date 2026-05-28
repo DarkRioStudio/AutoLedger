@@ -48,16 +48,15 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             商户单号
             支付成功
             2026年04月13日 16:42:09
-            示例便利店（个
-            Fictional Sole Proprietor
-            宜春市Example Mini Market商贸有限公司
+            示例便利店
+            示例便利店商贸有限公司
             Example Acquiring Services Co.
             Example Bank Card (1234)
             ORDER-EXAMPLE-WECHAT-001
             MERCHANT-ORDER-001
             可在支持的商户扫码退款
             """,
-            preview: "宜春市Example Mini Market商贸有限公司 · ¥6.15 · 2026-04-13 16:42:09"
+            preview: "示例便利店商贸有限公司 · ¥6.15 · 2026-04-13 16:42:09"
         ),
         SampleReceipt(
             title: "支付宝出行截图",
@@ -137,9 +136,9 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             X
             周六2
             11
-            乘坐列车G876次杭州东..•30分钟后
+            乘坐列车G000次Example East Station..•30分钟后
             交通严重拥堵。经德胜快速路前往
-            杭州东站需要19分钟。
+            Example East Station需要19分钟。
             3
             小红书
             PLUS抽签购权益过期提醒
@@ -180,7 +179,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "Example Convenience Store · ¥4.30"
         ),
         SampleReceipt(
-            title: "抖音团购麦当劳截图",
+            title: "抖音团购示例汉堡截图",
             source: .douyin,
             rawText: """
             12:34
@@ -235,7 +234,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             ＜ 行程已给束
             ：！！⑦9
             您对我的服务满意吗？
-            Example Driver EX-0001 5.0分
+            示例司机 EX-0001 5.0分
             匿名
             发红包
             很糟糕
@@ -270,7 +269,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             title: "滴滴出行通知截图",
             source: .manual,
             rawText: """
-            中国联通
+            Example Carrier
             39
             4月11日周六，丙午年二月廿四
             SAMPLE-NOTIFICATION-ID
@@ -302,7 +301,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             ＜ 行程已给束
             71
             您对我的服务满意吗？
-            Example Driver EX-0002 4.5分
+            示例司机 EX-0002 4.5分
             匿名
             发红包
             很糟糕
@@ -359,7 +358,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             preview: "滴滴出行 · ¥24.90"
         ),
         SampleReceipt(
-            title: "支付宝麦当劳支付成功截图",
+            title: "支付宝示例汉堡支付成功截图",
             source: .alipay,
             rawText: """
             18:20
@@ -453,7 +452,6 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             2026年4月20日18:17:58
             Example Store Branch
             Example Convenience Store
-            公司
             财付通支付科技有限公司
             Example Bank Card (1234)
             ORDER-EXAMPLE-WECHAT-002
@@ -490,7 +488,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             •11 ⑥53
             <
             账单详情
-            小谷姐姐麻辣烫（Example Store Branch）
+            Sample Restaurant（Example Branch）
             -13.52
             交易成功
             订单金额
@@ -511,13 +509,13 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             v 立即领取1积分
             北京钱袋宝支付技术有限公司
             中国银联股份有限公司
-            Sample Restaurant Service Center
+            Sample Noodle House Service Center
             点击查看今日可用信用卡优惠
             更多～去查看〉账单管理
             你因这笔消费解锁了"吃顿饭"贴纸
             账单分类餐饮美食〉
             """,
-            preview: "小谷姐姐麻辣烫（Example Store Branch）· ¥13.52 · 2026-04-21 18:46:58"
+            preview: "Sample Restaurant（Example Branch）· ¥13.52 · 2026-04-21 18:46:58"
         ),
         SampleReceipt(
             title: "银联二维码支付详情截图",
@@ -562,7 +560,7 @@ public struct SampleReceiptProvider: SampleReceiptProviding {
             Example Bank Card (1234)
             ORDER-EXAMPLE-WECHAT-003
             MERCHANT-ORDER-003
-            20260504CCdtrkdd
+            MERCHANT-REF-EXAMPLE-003
             商家小程序
             〇掌银收银台＞
             账单服务

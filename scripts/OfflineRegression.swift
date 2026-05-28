@@ -269,7 +269,7 @@ struct OfflineRegression {
                 note: "订阅"
             ),
             Transaction(
-                merchant: "麦当劳",
+                merchant: "Demo Burger",
                 amount: 19.9,
                 occurredAt: date(monthOffset: 0),
                 category: .dining,
@@ -277,7 +277,7 @@ struct OfflineRegression {
                 note: "午餐"
             ),
             Transaction(
-                merchant: "麦当劳",
+                merchant: "Demo Burger",
                 amount: 19.9,
                 occurredAt: date(monthOffset: 1),
                 category: .dining,
@@ -304,7 +304,7 @@ struct OfflineRegression {
 
         let detected = detector.detectFromHistory(transactions)
         reporter.check(detected.contains { $0.merchant == "Apple Services" }, "SubscriptionDetector scans digital service subscriptions")
-        reporter.check(!detected.contains { $0.merchant == "麦当劳" }, "SubscriptionDetector excludes dining transactions")
+        reporter.check(!detected.contains { $0.merchant == "Demo Burger" }, "SubscriptionDetector excludes dining transactions")
         reporter.check(!detected.contains { $0.merchant.contains("地铁") }, "SubscriptionDetector excludes transport transactions")
     }
 
@@ -325,23 +325,23 @@ struct OfflineRegression {
 
         let expectedMerchants: [String: String] = [
             "微信买菜截图": "Example Supermarket",
-            "微信支付详情个体工商户跨行截图": "宜春市Example Mini Market商贸有限公司",
+            "微信支付详情个体工商户跨行截图": "示例便利店商贸有限公司",
             "支付宝出行截图": "滴滴出行",
             "App Store 订阅截图": "Apple Services",
             "天津地铁储值卡截图": "地铁：ExampleStationA → ExampleStationB",
             "互联互通城市卡CN¥嵌入格式截图": "地铁：ExampleAirport → ExampleEastStation",
-            "抖音团购麦当劳截图": "Demo Burger (Example Branch)",
+            "抖音团购示例汉堡截图": "Demo Burger (Example Branch)",
             "支付宝碰一下支付截图（7-11）": "Example Convenience Store",
             "滴滴出行结束订单截图": "滴滴出行",
             "滴滴出行通知截图": "滴滴出行",
             "滴滴出行优享出租车截图": "滴滴出行",
             "滴滴出行微信扣费凭证截图": "滴滴出行",
-            "支付宝麦当劳支付成功截图": "Demo Burger Restaurant",
+            "支付宝示例汉堡支付成功截图": "Demo Burger Restaurant",
             "淘宝闪购订单进行中截图": "Sample Restaurant（Example Branch）",
             "微信支付全部账单截图（7-11）": "Example Convenience Store",
             "微信支付全部账单截图（羊汤）": "示例餐厅",
             "云闪付付款成功截图": "示例咖啡（Example Station）",
-            "云闪付账单详情截图": "小谷姐姐麻辣烫（Example Store Branch）",
+            "云闪付账单详情截图": "Sample Restaurant（Example Branch）",
             "银联二维码支付详情截图": "示例便利店（Example Road）",
             "英文超市纸质小票TOTAL": "NTUC FAIRPRICE",
             "英文超市纸质小票无TOTAL": "WALMART"
@@ -354,13 +354,13 @@ struct OfflineRegression {
             "App Store 订阅截图": 28.00,
             "天津地铁储值卡截图": 2.70,
             "互联互通城市卡CN¥嵌入格式截图": 7.00,
-            "抖音团购麦当劳截图": 26.90,
+            "抖音团购示例汉堡截图": 26.90,
             "支付宝碰一下支付截图（7-11）": 4.30,
             "滴滴出行结束订单截图": 19.60,
             "滴滴出行通知截图": 9.70,
             "滴滴出行优享出租车截图": 45.00,
             "滴滴出行微信扣费凭证截图": 24.90,
-            "支付宝麦当劳支付成功截图": 60.80,
+            "支付宝示例汉堡支付成功截图": 60.80,
             "淘宝闪购订单进行中截图": 47.4,
             "微信支付全部账单截图（7-11）": 16.80,
             "微信支付全部账单截图（羊汤）": 20.00,
@@ -378,13 +378,13 @@ struct OfflineRegression {
             "App Store 订阅截图": .digital,
             "天津地铁储值卡截图": .transport,
             "互联互通城市卡CN¥嵌入格式截图": .transport,
-            "抖音团购麦当劳截图": .dining,
+            "抖音团购示例汉堡截图": .dining,
             "支付宝碰一下支付截图（7-11）": .other,
             "滴滴出行结束订单截图": .transport,
             "滴滴出行通知截图": .transport,
             "滴滴出行优享出租车截图": .transport,
             "滴滴出行微信扣费凭证截图": .transport,
-            "支付宝麦当劳支付成功截图": .dining,
+            "支付宝示例汉堡支付成功截图": .dining,
             "淘宝闪购订单进行中截图": .dining,
             "微信支付全部账单截图（7-11）": .other,
             "微信支付全部账单截图（羊汤）": .dining,
@@ -646,20 +646,20 @@ struct OfflineRegression {
         let aliasLearningText = """
         支付宝
         交易成功
-        商户：杭州测试餐饮管理有限公司
+        商户：Example Restaurant Management Co.
         金额：￥18.80
         时间：2026/03/28 12:15
         备注：商户别名学习
         """
         ledger.importRecognizedText(aliasLearningText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)
-        let importedForAlias = ledger.transactions.first { $0.merchant == "杭州测试餐饮管理有限公司" }
+        let importedForAlias = ledger.transactions.first { $0.merchant == "Example Restaurant Management Co." }
         reporter.check(importedForAlias != nil, "LedgerStore imports full merchant before alias learning")
         if let importedForAlias {
             ledger.updateTransaction(
                 Transaction(
                     id: importedForAlias.id,
-                    merchant: "测试餐饮",
+                    merchant: "Example Dining",
                     amount: importedForAlias.amount,
                     occurredAt: importedForAlias.occurredAt,
                     categoryLabel: importedForAlias.category,
@@ -668,7 +668,7 @@ struct OfflineRegression {
                 )
             )
             reporter.check(
-                ledger.merchantAliases["杭州测试餐饮管理有限公司"] == "测试餐饮",
+                ledger.merchantAliases["Example Restaurant Management Co."] == "Example Dining",
                 "LedgerStore learns merchant alias from high-confidence edit"
             )
         }
@@ -694,7 +694,7 @@ struct OfflineRegression {
         let sim = TextSimilarity.jaccard(rawText, similarText)
         reporter.check(sim > 0.8, "TextSimilarity.jaccard returns > 0.8 for similar texts (got \(String(format: "%.3f", sim)))")
 
-        let unrelatedText = "美团外卖订单 金额 ¥88.00 商户 麦当劳"
+        let unrelatedText = "Example delivery order amount ¥88.00 merchant Demo Burger"
         let lowSim = TextSimilarity.jaccard(rawText, unrelatedText)
         reporter.check(lowSim < 0.5, "TextSimilarity.jaccard returns < 0.5 for unrelated texts (got \(String(format: "%.3f", lowSim)))")
 
