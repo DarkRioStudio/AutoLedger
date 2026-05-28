@@ -52,9 +52,9 @@
 
 ## Screenshot Preview
 
-App Store 截图预览：[`tools/appstore-screenshots/output/preview.html`](tools/appstore-screenshots/output/preview.html)
+App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/appstore-screenshots/README.md)
 
-如需刷新截图，运行 `bash tools/appstore-screenshots/scripts/export.sh`。
+如需刷新本地截图预览，运行 `bash tools/appstore-screenshots/scripts/export.sh`，然后打开本地生成的 `tools/appstore-screenshots/output/preview.html`。
 
 ## Tech Stack
 
