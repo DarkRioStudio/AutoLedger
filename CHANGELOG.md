@@ -9,6 +9,10 @@
 
 ## [Unreleased]
 
+### 变更（v1.5.0）
+- [2026-05-28 +0800] v1.5.0 规划承接关系更新：在根 README / 英文 README Roadmap 中标记内部 v1.4.0（App Store v1.3.0）已过审发布，并新增内部 v1.5.0 规划行；`versions/v1.5.0-plan.md` 明确承接内部 v1.4.0 发布基准，面向下一轮 App Store v1.4.0 开发。
+- [2026-05-28 +0800] 文档记录 v1.5.0 iPad 截图管线扩展：明确当前 `tools/appstore-screenshots` 仅覆盖 iPhone 与 Apple Watch，不生成 iPad 截图；将 iPad App Store 截图纳入 v1.5.0 发布资产规划，要求补齐 `--ipad-only`、iPad target size、横屏工作台画布、稳定演示数据、多语言输出目录和 `preview.html` 分组目检。
+
 ### 变更（public-ready）
 - [2026-05-28 +0800] public-ready README 入口调整：根目录 `README.md` 恢复为中文主入口，尽量保留原项目介绍、功能表、技术栈、构建方式和 Roadmap；新增 `README.en.md` 作为英文 public-ready 说明，并在中英文 README 之间互相链接。
 - [2026-05-28 +0800] 准备 public repository 首轮整理：补充公开 README、MIT License、贡献指南、安全报告说明、示例 xcconfig 和更完整的 ignore 规则；明确源码授权与 AutoLedger 名称、图标、App Store 截图、营销/品牌素材的授权边界；公开协作说明要求使用虚构账单与 mock 数据，避免在 Issue / PR 中上传真实小票、支付截图或个人财务信息。
@@ -25,6 +29,7 @@
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
 
 ### 变更（v1.4.0）
+- [2026-05-28 +0800] 内部 v1.4.0 发布基准收口：App Store 对外版本 v1.3.0 已过审发布，`versions/v1.4.0-RELEASE(draft).md` 更新为已发布基准记录，后续开发转入 v1.5.0 规划线。
 - [2026-05-28 +0800] ITER-089 App Store 截图管线繁体中文输出：截图配置新增 `zh-Hant` locale（`appleLanguages=(zh-Hant)`、`appleLocale=zh_TW`），iPhone 与 Apple Watch 全部截图场景补齐繁体中文标题 / 副标题；截图宿主 SwiftUI 文案从简中 / 英文扩展为简中 / 繁中 / 英文三语选择；`export.sh`、截图 README 和输出目录说明同步更新，支持 `--locale zh-Hant` 单独导出繁体截图。
 - [2026-05-28 +0800] ITER-087 v1.4.x Release Notes 更新：`versions/v1.4.0-RELEASE(draft).md` 同步到 2026-05-28 当前状态，补入 Watch 语音记账离线优先入口、Support Developer 可选支持入口、设置页版本状态文案、最新三语本地化 key 数、watchOS 构建与 StoreKit 本地配置验证结果，并更新 TestFlight RN 建议文案、测试重点、已知限制和发布结论。
 - [2026-05-28 +0800] ITER-086 Watch 语音记账离线优先入口：Apple Watch 语音记账页从“点击输入框后选择听写”调整为主按钮“语音输入”，通过 WatchKit 系统文本输入控制器触发听写；听写完成后自动复用 `VoiceLedgerParser` 解析并进入确认保存页，解析失败时保留识别文本供用户修改后重新解析；补齐简体中文、繁体中文、英文 Watch 文案，提示未连接 iPhone 时会先暂存，继续保留 Watch 本地 pending 队列能力。

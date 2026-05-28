@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-28（v1.4.0 App Store 截图管线稳定性修复）
+更新日期：2026-05-28（内部 v1.4.0 发布基准与 v1.5.0 规划承接）
 
 ## 记录规则
 
@@ -43,6 +43,45 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-092 内部 v1.4.0 发布基准与 v1.5.0 规划承接
+- 日期：2026-05-28
+- 所属版本：v1.4.0 / v1.5.0
+- 所属阶段：发布基准 / 下一轮规划
+- 类型：文档 / 版本治理
+- 目标：记录内部 v1.4.0 对应的 App Store v1.3.0 已过审发布，并把后续开发承接到内部 v1.5.0。
+- 改动范围：
+  - `README.md`、`README.en.md`：Roadmap 标记内部 v1.4.0 / App Store v1.3.0 为已发布，并新增内部 v1.5.0 规划行。
+  - `versions/v1.4.0-RELEASE(draft).md`：从发布前草稿状态更新为已发布基准记录。
+  - `versions/v1.5.0-plan.md`：明确承接内部 v1.4.0 发布基准，面向下一轮 App Store v1.4.0 开发。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充追溯记录。
+- 未改动范围：未修改 Xcode 工程、Bundle ID、签名、entitlements、截图脚本或业务代码。
+- 完成内容：根目录 Roadmap、英文 README Roadmap、v1.4 发布基准文档和 v1.5 规划文档已对齐当前发布状态。
+- 未完成内容：本轮不实现 v1.5.0 功能；iPad 截图管线、iPad 工作台、Watch 表盘小组件等仍停留在规划阶段。
+- 测试情况：仅文档变更，未运行构建；执行 `git diff --check` 作为文档格式门禁。
+- 风险与注意事项：`versions/v1.4.0-RELEASE(draft).md` 文件名仍保留 draft 字样以避免路径重命名影响既有链接，但标题和内容已标记为已发布基准。
+- 回滚方式：回退本轮文档改动，并删除对应 tag 即可。
+- 结论：本轮完成，内部 v1.4.0 可作为 App Store v1.3.0 已发布基准打 tag，后续开发进入 v1.5.0。
+- 下一步建议：打 `v1.4.0` tag 并推送 main / tag；新功能开发从 v1.5.0 规划拆分任务。
+
+### ITER-091 v1.5.0 iPad 截图管线规划记录
+- 日期：2026-05-28
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 设计与数据口径校准
+- 类型：文档 / 发布资产规划
+- 目标：记录当前 App Store 截图管线尚未覆盖 iPad，并把 iPad 截图扩展明确纳入 v1.5.0 规划。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：修正“现有截图管线已经覆盖 iPad 端”的错误表述，明确当前仅覆盖 iPhone 与 Apple Watch；补充 v1.5.0 iPad 截图管线扩展范围、验收口径和施工前清单。
+  - `tools/appstore-screenshots/README.md`：在 Not Implemented 中保留 iPad screenshots 限制，并指向 v1.5.0 规划。
+  - `CHANGELOG.md`：补充本轮文档变更记录。
+- 未改动范围：未修改截图导出脚本、截图 host、Xcode 工程、target、scheme、Bundle ID、entitlements 或 Xcode Cloud 配置。
+- 完成内容：v1.5.0 规划已明确要求补齐 `--ipad-only`、iPad target size、横屏工作台画布、稳定演示数据、多语言输出目录和 `preview.html` 分组目检。
+- 未完成内容：iPad 截图管线尚未实现；iPad 工作台 UI、截图 fixture、渲染模板和导出脚本仍待 v1.5.0 实施阶段处理。
+- 测试情况：仅文档变更，未运行构建；执行文档 diff / whitespace 检查即可。
+- 风险与注意事项：在 iPad 管线实现前，不应把 App Store iPad 截图资产标记为已准备完成；后续若决定发布 iPad 端，需要预留截图实现、导出和人工目检时间。
+- 回滚方式：回退本轮文档记录即可，不影响现有 iPhone / Watch 截图管线。
+- 结论：本轮完成，iPad 截图管线缺口已记录为 v1.5.0 正式规划项。
+- 下一步建议：v1.5.0 开工前先确认 iPad 信息架构、首屏横屏布局、演示数据口径和 App Store 截图尺寸，再进入脚本实现。
 
 ### ITER-090 App Store 截图管线稳定性修复
 - 日期：2026-05-28

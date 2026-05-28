@@ -161,6 +161,6 @@ python3 tools/appstore-screenshots/scripts/build_preview.py
 
 - App Store Connect API upload.
 - Official App Preview video.
-- iPad screenshots.
+- iPad screenshots. This is now tracked as a v1.5.0 planning item in `versions/v1.5.0-plan.md`; the current pipeline remains iPhone + Apple Watch only.
 - Figma or Canva integration.
 - Real OCR or real user data capture.
