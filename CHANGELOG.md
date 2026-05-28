@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（public-ready）
+- [2026-05-28 +0800] public-ready README 入口调整：根目录 `README.md` 恢复为中文主入口，尽量保留原项目介绍、功能表、技术栈、构建方式和 Roadmap；新增 `README.en.md` 作为英文 public-ready 说明，并在中英文 README 之间互相链接。
 - [2026-05-28 +0800] 准备 public repository 首轮整理：补充公开 README、MIT License、贡献指南、安全报告说明、示例 xcconfig 和更完整的 ignore 规则；明确源码授权与 AutoLedger 名称、图标、App Store 截图、营销/品牌素材的授权边界；公开协作说明要求使用虚构账单与 mock 数据，避免在 Issue / PR 中上传真实小票、支付截图或个人财务信息。
 
 ### 新增（v1.4.0）
