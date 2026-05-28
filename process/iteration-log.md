@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-27（v1.4.0 Support Developer 消耗型内购首版）
+更新日期：2026-05-28（v1.4.0 Support IAP 价格刷新修复）
 
 ## 记录规则
 
@@ -43,6 +43,66 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-088 Support IAP 价格刷新修复
+- 日期：2026-05-28
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：Bugfix / StoreKit
+- 目标：修复 TestFlight 中切换 App Store 商店区域后，Support AutoLedger 页面可能仍显示旧币种价格，而 App Store 购买弹窗显示新商店区域价格的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/SupportPurchaseManager.swift`：新增 `Storefront.updates` 监听，商店区域变化时强制重新拉取 StoreKit 产品并清空旧 `Product` 列表。
+  - `AutoLedger/AutoLedger/Features/Settings/SupportAutoLedgerView.swift`：页面启动 storefront 监听，并在 App 回到前台时强制刷新产品，降低 TestFlight / 沙盒切区后继续显示旧 `displayPrice` 的概率。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未写死价格；未改变 IAP product id、App Store Connect 配置、购买 / 交易校验 / 交易完成逻辑；未实现 Pro 或订阅权益。
+- 完成内容：Support 页面价格继续使用 StoreKit `Product.displayPrice`，但会在 storefront 变化和 App 回前台时重新请求 `Product.products(for:)`，让 UI 价格更及时地跟随当前 App Store 商店区域。
+- 未完成内容：未在 TestFlight 沙盒账号中实测切换商店区域后的刷新表现；App Store / StoreKit 侧仍可能有短时间缓存，必要时需要重新打开页面或重启 App。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+- 风险与注意事项：购买弹窗始终以 App Store 当前结算 storefront 为准；页面展示依赖 `Product.displayPrice` 的返回值，如果 Apple 沙盒缓存未及时刷新，可能需要重新进入页面或重启 TestFlight App。
+- 回滚方式：回退 `SupportPurchaseManager.swift` 的 storefront listener 和 `SupportAutoLedgerView.swift` 的 scenePhase 刷新逻辑，并回退本条文档记录。
+- 结论：本轮完成，代码已避免 Support 页面长期持有旧币种 `Product` 价格。
+- 下一步建议：重新发一个 TestFlight 构建后，用中国区沙盒账号验证页面价格和购买弹窗是否同为人民币。
+
+### ITER-087 v1.4.x Release Notes 更新
+- 日期：2026-05-28
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：文档 / Release Notes
+- 目标：更新 v1.4.0 / v1.4.x Release Notes 草稿，使其反映当前 Watch 语音入口、Support Developer IAP、设置页版本状态文案、本地化 key 数、验证结果和 TestFlight 测试重点。
+- 改动范围：
+  - `versions/v1.4.0-RELEASE(draft).md`：更新日期、迭代范围、发布状态、已实现功能、Support IAP 说明、本地化 key 数、回归验证、TestFlight RN 建议文案、测试重点、已知限制和发布结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未修改 App 代码；未修改版本号、App Store Connect 元数据或 `.storekit` 配置；未新增真机截图或上传 TestFlight 构建。
+- 完成内容：RN 已补入 Watch 语音记账离线优先入口，说明系统听写完成后自动解析并进入确认保存；补入 Support AutoLedger 可选支持入口，明确 consumable IAP 不解锁功能、不改变免费边界，真实沙盒购买需 App Store Connect 创建产品后点验；本地化 key 数更新为主 App 495、Watch App 43；测试重点新增 Watch 离线暂存和 Support IAP 本地 / 沙盒购买点验。
+- 未完成内容：未做 Markdown 渲染截图；未做真机多语言 / Watch / IAP 沙盒人工验证；未提交或推送。
+- 测试情况：
+  - PASS：`ruby -e 'ARGV.each do |dir|; files=Dir[File.join(dir,"*.lproj/Localizable.strings")]; puts dir; files.sort.each do |f|; keys=File.readlines(f).grep(/^\s*"/).map{|l| l[/^\s*"([^"]+)"/,1]}.compact; puts "  #{File.basename(File.dirname(f))}: #{keys.uniq.size}"; end; end' 'AutoLedger/AutoLedger' 'AutoLedger/AutoLedgerWatch Watch App' 'AutoLedger/ControlWidgetExtension' 'AutoLedger/ShareExtension'`
+- 风险与注意事项：RN 仍是草稿，TestFlight 对外文案需要在真实 App Store Connect IAP 配置和 Watch 真机点验后再最终冻结。
+- 回滚方式：回退 `versions/v1.4.0-RELEASE(draft).md`、`CHANGELOG.md` 和本条迭代日志。
+- 结论：本轮完成，v1.4.x RN 已同步到当前实现与待验证状态。
+- 下一步建议：在真机 Apple Watch、TestFlight 沙盒账号和 App Store Connect IAP 配置完成后，再把 RN 从草稿调整为发布候选。
+
+### ITER-086 Watch 语音记账离线优先入口
+- 日期：2026-05-28
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：能力增强 / Watch UI / 本地化
+- 目标：在 Apple Watch 端保持离线可用优先的前提下，把语音记账入口从点击 TextField 触发系统输入，调整为更明确的“语音输入”按钮，并在听写完成后进入既有确认保存链路。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchVoiceRecorderView.swift`：引入 WatchKit `presentTextInputController`，新增语音输入按钮、输入中状态、系统文本输入不可用错误提示；听写返回文本后自动调用 `VoiceLedgerParser` 解析，成功后进入 `WatchVoiceConfirmView`，失败时保留识别文本供用户修改后重新解析。
+  - `AutoLedger/AutoLedgerWatch Watch App/zh-Hans.lproj/Localizable.strings`、`zh-Hant.lproj/Localizable.strings`、`en.lproj/Localizable.strings`：更新 Watch 语音入口说明，新增按钮、辅助功能、错误与建议短句三语文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未把 Watch 端录音转发到 iPhone；未引入 Watch 端自研离线 ASR 模型；未改 iPhone 端 `VoiceSpeechRecognizer`；未改 Watch pending 队列、确认页保存和同步协议。
+- 完成内容：Watch 语音页主路径改为“语音输入”按钮；系统听写完成后自动解析并跳转确认；文本输入仍保留为识别失败或用户修正的兜底；文案明确未连接 iPhone 时会先暂存，符合离线优先产品口径。
+- 未完成内容：未在真实 Apple Watch 上点验系统听写弹层和离线听写可用性；系统听写是否完全离线取决于 watchOS / 语言包 / 设备状态，App 不再额外依赖 iPhone 识别。
+- 测试情况：
+  - PASS：`plutil -lint 'AutoLedger/AutoLedgerWatch Watch App/zh-Hans.lproj/Localizable.strings' 'AutoLedger/AutoLedgerWatch Watch App/zh-Hant.lproj/Localizable.strings' 'AutoLedger/AutoLedgerWatch Watch App/en.lproj/Localizable.strings'`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -destination 'generic/platform=watchOS' build`
+- 风险与注意事项：`presentTextInputController` 是系统输入界面而不是 App 自己录音识别；如果真机上系统听写入口受语言包或网络影响，需要保留手动文本输入和快速记账作为兜底。
+- 回滚方式：回退 `WatchVoiceRecorderView.swift` 中 WatchKit 文本输入按钮逻辑和三套 Watch `Localizable.strings` 新增 key，并回退本轮文档记录。
+- 结论：本轮完成，Watch 语音记账入口已更贴近“点语音输入 -> 听写 -> 确认保存”的用户心智，同时不牺牲未连接 iPhone 时的本地暂存能力。
+- 下一步建议：用真机 Apple Watch 分别在连接 iPhone / 未连接 iPhone 场景下验证系统听写、解析跳转和 pending 同步反馈。
 
 ### ITER-085 Support Developer 消耗型内购首版
 - 日期：2026-05-27

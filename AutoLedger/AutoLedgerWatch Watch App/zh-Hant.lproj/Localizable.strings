@@ -25,7 +25,14 @@
 "watch.quick_add.merchant_optional" = "商家（可選）";
 "watch.quick_add.submit" = "記帳";
 "watch.voice_ledger.title" = "語音記帳";
-"watch.voice.input_hint" = "點擊輸入框後選擇聽寫";
+"watch.voice.input_hint" = "點擊語音輸入，完成系統聽寫後確認儲存。未連接 iPhone 時也會先暫存。";
+"watch.voice.dictate_button" = "語音輸入";
+"watch.voice.dictate_again" = "重新輸入";
+"watch.voice.dictate_accessibility" = "開啟語音輸入";
+"watch.voice.input_unavailable" = "暫時無法開啟語音輸入，請稍後重試";
+"watch.voice.suggestion.coffee" = "咖啡 28 元";
+"watch.voice.suggestion.lunch" = "午餐 24 元";
+"watch.voice.suggestion.taxi" = "搭車 36 元";
 "watch.voice.placeholder" = "如：咖啡 28 元";
 "watch.voice.content" = "語音內容";
 "watch.voice.content_hint" = "輸入記帳語句，如咖啡 28 元";

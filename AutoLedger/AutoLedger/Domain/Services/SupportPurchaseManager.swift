@@ -68,6 +68,7 @@ final class SupportPurchaseManager: ObservableObject {
 
     private let userDefaults: UserDefaults
     private var transactionUpdatesTask: Task<Void, Never>?
+    private var storefrontUpdatesTask: Task<Void, Never>?
 
     private enum DefaultsKey {
         static let supportPurchaseCount = "supportPurchaseCount"
@@ -93,8 +94,21 @@ final class SupportPurchaseManager: ObservableObject {
         }
     }
 
-    func loadProducts() async {
+    func startStorefrontListener() {
+        guard storefrontUpdatesTask == nil else { return }
+        storefrontUpdatesTask = Task { [weak self] in
+            for await _ in Storefront.updates {
+                guard !Task.isCancelled else { return }
+                await self?.loadProducts(forceRefresh: true)
+            }
+        }
+    }
+
+    func loadProducts(forceRefresh: Bool = false) async {
         guard loadState != .loading else { return }
+        if forceRefresh {
+            products = []
+        }
 
         loadState = .loading
         do {

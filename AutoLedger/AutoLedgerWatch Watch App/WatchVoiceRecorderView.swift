@@ -1,15 +1,17 @@
 import AutoLedgerCore
 import SwiftUI
+import WatchKit
 
 /// Watch 侧语音记账录入视图。
-/// 点击输入框即触发系统输入 UI（含听写），
-/// 提交后调用 VoiceLedgerParser 解析，将草稿写入 ViewModel。
+/// 点击语音输入按钮触发系统听写，提交后调用 VoiceLedgerParser 解析，
+/// 将草稿写入 ViewModel 并进入确认页。
 struct WatchVoiceRecorderView: View {
 
     @Environment(WatchLedgerViewModel.self) private var viewModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var inputText: String = ""
+    @State private var isRequestingInput = false
     @State private var isParsing = false
     @State private var parseError: String? = nil
     @State private var navigateToConfirm = false
@@ -33,7 +35,23 @@ struct WatchVoiceRecorderView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    // MARK: 输入框（触发系统输入/听写）
+                    // MARK: 语音输入按钮（触发系统听写）
+                    Button {
+                        presentVoiceInput()
+                    } label: {
+                        if isRequestingInput {
+                            ProgressView()
+                        } else if inputText.isEmpty {
+                            Label("watch.voice.dictate_button", systemImage: "mic.fill")
+                        } else {
+                            Label("watch.voice.dictate_again", systemImage: "mic.fill")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isRequestingInput || isParsing)
+                    .accessibilityLabel(Text("watch.voice.dictate_accessibility"))
+
+                    // MARK: 识别文本（可修改后重新解析）
                     TextField(String(localized: "watch.voice.placeholder"), text: $inputText)
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
@@ -88,6 +106,33 @@ struct WatchVoiceRecorderView: View {
 
     // MARK: - Private
 
+    private func presentVoiceInput() {
+        parseError = nil
+        isRequestingInput = true
+
+        guard let controller = WKExtension.shared().visibleInterfaceController ?? WKExtension.shared().rootInterfaceController else {
+            isRequestingInput = false
+            parseError = String(localized: "watch.voice.input_unavailable")
+            return
+        }
+
+        controller.presentTextInputController(
+            withSuggestions: voiceInputSuggestions,
+            allowedInputMode: .plain
+        ) { results in
+            Task { @MainActor in
+                isRequestingInput = false
+
+                guard let recognizedText = Self.firstRecognizedText(from: results) else {
+                    return
+                }
+
+                inputText = recognizedText
+                parseDictatedText()
+            }
+        }
+    }
+
     private func parseDictatedText() {
         let text = inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty else { return }
@@ -111,5 +156,20 @@ struct WatchVoiceRecorderView: View {
         )
         viewModel.voiceDraft = draft
         navigateToConfirm = true
+    }
+
+    private var voiceInputSuggestions: [String] {
+        [
+            String(localized: "watch.voice.suggestion.coffee"),
+            String(localized: "watch.voice.suggestion.lunch"),
+            String(localized: "watch.voice.suggestion.taxi")
+        ]
+    }
+
+    private static func firstRecognizedText(from results: [Any]?) -> String? {
+        results?
+            .compactMap { $0 as? String }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
     }
 }

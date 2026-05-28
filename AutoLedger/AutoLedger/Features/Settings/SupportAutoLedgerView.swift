@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SupportAutoLedgerView: View {
     @ObservedObject private var purchaseManager = SupportPurchaseManager.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ScrollView {
@@ -25,7 +26,12 @@ struct SupportAutoLedgerView: View {
         .navigationTitle("support.title")
         .task {
             purchaseManager.startTransactionListener()
+            purchaseManager.startStorefrontListener()
             await purchaseManager.loadProducts()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await purchaseManager.loadProducts(forceRefresh: true) }
         }
         .alert(item: $purchaseManager.notice) { notice in
             Alert(

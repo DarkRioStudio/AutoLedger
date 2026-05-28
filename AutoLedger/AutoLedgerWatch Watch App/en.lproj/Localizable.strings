@@ -25,7 +25,14 @@
 "watch.quick_add.merchant_optional" = "Merchant (Optional)";
 "watch.quick_add.submit" = "Save Entry";
 "watch.voice_ledger.title" = "Voice Ledger";
-"watch.voice.input_hint" = "Tap the input field and choose Dictation";
+"watch.voice.input_hint" = "Tap Voice Input, finish dictation, then review and save. Entries are queued when iPhone is not connected.";
+"watch.voice.dictate_button" = "Voice Input";
+"watch.voice.dictate_again" = "Dictate Again";
+"watch.voice.dictate_accessibility" = "Open voice input";
+"watch.voice.input_unavailable" = "Voice input is not available right now. Please try again.";
+"watch.voice.suggestion.coffee" = "Coffee 28";
+"watch.voice.suggestion.lunch" = "Lunch 24";
+"watch.voice.suggestion.taxi" = "Taxi 36";
 "watch.voice.placeholder" = "Example: coffee 28";
 "watch.voice.content" = "Voice content";
 "watch.voice.content_hint" = "Enter an expense phrase, such as coffee 28";

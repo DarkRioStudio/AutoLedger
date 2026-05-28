@@ -21,9 +21,12 @@
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
 
 ### 变更（v1.4.0）
+- [2026-05-28 +0800] ITER-087 v1.4.x Release Notes 更新：`versions/v1.4.0-RELEASE(draft).md` 同步到 2026-05-28 当前状态，补入 Watch 语音记账离线优先入口、Support Developer 可选支持入口、设置页版本状态文案、最新三语本地化 key 数、watchOS 构建与 StoreKit 本地配置验证结果，并更新 TestFlight RN 建议文案、测试重点、已知限制和发布结论。
+- [2026-05-28 +0800] ITER-086 Watch 语音记账离线优先入口：Apple Watch 语音记账页从“点击输入框后选择听写”调整为主按钮“语音输入”，通过 WatchKit 系统文本输入控制器触发听写；听写完成后自动复用 `VoiceLedgerParser` 解析并进入确认保存页，解析失败时保留识别文本供用户修改后重新解析；补齐简体中文、繁体中文、英文 Watch 文案，提示未连接 iPhone 时会先暂存，继续保留 Watch 本地 pending 队列能力。
 - [2026-05-27 +0800] ITER-084 设置页版本状态文案更新：设置页“当前版本”正文同步到当前 App Store v1.3.0 发布候选能力，覆盖 Apple Watch 轻量记账、快捷指令与语音记账、月报历史月份、iCloud 备份恢复、商户别名与分类批量整理；“后续计划”改为面向用户的产品路线表达，包含更多支付场景识别优化、更多专业版功能和更灵活的账单整理能力；版本号继续读取 `CFBundleShortVersionString`，不改 `MARKETING_VERSION`。
 
 ### 修复（v1.4.0）
+- [2026-05-28 +0800] ITER-088 Support IAP 价格刷新修复：Support AutoLedger 页面价格本身未写死，使用 StoreKit `Product.displayPrice`；修复切换 App Store storefront / 沙盒商店区域后页面可能继续显示旧 `Product` 价格的问题，新增 `Storefront.updates` 监听并在 App 回到前台时强制重新拉取产品，避免 UI 价格币种与 App Store 购买弹窗不一致。
 - [2026-05-26 +0800] ITER-082 商户别名新入账即时生效：新增 `MerchantAliasResolver` 统一处理商户别名解析；OCR 入账、手动新增、AddTransactionIntent、QuickLedgerIntent、VoiceLedgerIntent 与 Share Extension 均在保存前套用既有商户别名，避免新账单先保存原商户、必须手动点刷新后才替换；离线回归新增 OCR 新入账与手动新增别名生效断言。
 - [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。
 - [2026-05-25 +0800] ITER-076 微信拼多多先用后付详情页解析：`ReceiptParser` 在微信详情页缺少"商户全称"时，不再直接取负数金额上一行作为商户；新增附近展示商户扫描与微信 UI 噪声过滤，避免 `• 交易详情` 被误入账，并将 `拼多多` 归入购物分类；补齐既有"羊汤"餐饮分类残留；新增对应 Golden Case，`run_golden_regression.sh` 同步修复为当前 App 版解析器路径。

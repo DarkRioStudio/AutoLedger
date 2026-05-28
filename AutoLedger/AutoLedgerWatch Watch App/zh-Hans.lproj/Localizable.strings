@@ -25,7 +25,14 @@
 "watch.quick_add.merchant_optional" = "商户（可选）";
 "watch.quick_add.submit" = "记账";
 "watch.voice_ledger.title" = "语音记账";
-"watch.voice.input_hint" = "点击输入框后选择听写";
+"watch.voice.input_hint" = "点击语音输入，完成系统听写后确认保存。未连接 iPhone 时也会先暂存。";
+"watch.voice.dictate_button" = "语音输入";
+"watch.voice.dictate_again" = "重新输入";
+"watch.voice.dictate_accessibility" = "打开语音输入";
+"watch.voice.input_unavailable" = "暂时无法打开语音输入，请稍后重试";
+"watch.voice.suggestion.coffee" = "咖啡 28 元";
+"watch.voice.suggestion.lunch" = "午饭 24 元";
+"watch.voice.suggestion.taxi" = "打车 36 元";
 "watch.voice.placeholder" = "如：咖啡 28 元";
 "watch.voice.content" = "语音内容";
 "watch.voice.content_hint" = "输入记账语句，如咖啡 28 元";
