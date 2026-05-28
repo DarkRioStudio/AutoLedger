@@ -21,11 +21,13 @@
 - [2026-05-20 +0800] ITER-074 App Intents 三件套：新增 `AddTransactionIntent`（手动记账，直写 SQLite，刷新 Widget）、`ParseLedgerTextIntent`（解析文字账单，调用 `VoiceLedgerParser`，返回结构化摘要）、`OpenQuickAddIntent`（打开快速记账，通过 `QuickLedgerNavigationState` + NotificationCenter 导航）；三个 Intent 均注册到 `AutoLedgerShortcuts.appShortcuts`；中英文本地化全量覆盖。
 
 ### 变更（v1.4.0）
+- [2026-05-28 +0800] ITER-089 App Store 截图管线繁体中文输出：截图配置新增 `zh-Hant` locale（`appleLanguages=(zh-Hant)`、`appleLocale=zh_TW`），iPhone 与 Apple Watch 全部截图场景补齐繁体中文标题 / 副标题；截图宿主 SwiftUI 文案从简中 / 英文扩展为简中 / 繁中 / 英文三语选择；`export.sh`、截图 README 和输出目录说明同步更新，支持 `--locale zh-Hant` 单独导出繁体截图。
 - [2026-05-28 +0800] ITER-087 v1.4.x Release Notes 更新：`versions/v1.4.0-RELEASE(draft).md` 同步到 2026-05-28 当前状态，补入 Watch 语音记账离线优先入口、Support Developer 可选支持入口、设置页版本状态文案、最新三语本地化 key 数、watchOS 构建与 StoreKit 本地配置验证结果，并更新 TestFlight RN 建议文案、测试重点、已知限制和发布结论。
 - [2026-05-28 +0800] ITER-086 Watch 语音记账离线优先入口：Apple Watch 语音记账页从“点击输入框后选择听写”调整为主按钮“语音输入”，通过 WatchKit 系统文本输入控制器触发听写；听写完成后自动复用 `VoiceLedgerParser` 解析并进入确认保存页，解析失败时保留识别文本供用户修改后重新解析；补齐简体中文、繁体中文、英文 Watch 文案，提示未连接 iPhone 时会先暂存，继续保留 Watch 本地 pending 队列能力。
 - [2026-05-27 +0800] ITER-084 设置页版本状态文案更新：设置页“当前版本”正文同步到当前 App Store v1.3.0 发布候选能力，覆盖 Apple Watch 轻量记账、快捷指令与语音记账、月报历史月份、iCloud 备份恢复、商户别名与分类批量整理；“后续计划”改为面向用户的产品路线表达，包含更多支付场景识别优化、更多专业版功能和更灵活的账单整理能力；版本号继续读取 `CFBundleShortVersionString`，不改 `MARKETING_VERSION`。
 
 ### 修复（v1.4.0）
+- [2026-05-28 +0800] ITER-090 App Store 截图管线稳定性修复：截图宿主视图固定 Dynamic Type 为默认 `.large`，避免模拟器曾开启大字体后营销截图继承异常字号；Watch 截图模式跳过真实 WatchConnectivity 同步，避免最近账单 fixture 被空会话覆盖；iPhone 与 Watch 捕获脚本增加 `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryL` 启动参数，并对 mostly black raw PNG 进行最多 5 次重试，修复 `00_preview` 首帧黑屏被写入最终截图的问题；截图 README 补充黑屏与大字体排查说明；根 README 增加截图预览 HTML 入口。
 - [2026-05-28 +0800] ITER-088 Support IAP 价格刷新修复：Support AutoLedger 页面价格本身未写死，使用 StoreKit `Product.displayPrice`；修复切换 App Store storefront / 沙盒商店区域后页面可能继续显示旧 `Product` 价格的问题，新增 `Storefront.updates` 监听并在 App 回到前台时强制重新拉取产品，避免 UI 价格币种与 App Store 购买弹窗不一致。
 - [2026-05-26 +0800] ITER-082 商户别名新入账即时生效：新增 `MerchantAliasResolver` 统一处理商户别名解析；OCR 入账、手动新增、AddTransactionIntent、QuickLedgerIntent、VoiceLedgerIntent 与 Share Extension 均在保存前套用既有商户别名，避免新账单先保存原商户、必须手动点刷新后才替换；离线回归新增 OCR 新入账与手动新增别名生效断言。
 - [2026-05-25 +0800] ITER-077 分类/商户别名批量刷新：编辑账单分类时新增确认弹窗，可选择仅保存本笔或刷新同商户所有现存账单分类；`LedgerStore.updateTransaction` 支持 `refreshSameMerchantCategory` 批量更新并写回 SQLite；设置页"商户别名"每条映射新增刷新按钮，可单独把历史账单商户名更新为对应别名；离线回归新增同商户分类刷新和单条别名刷新断言。

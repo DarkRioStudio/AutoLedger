@@ -20,6 +20,7 @@ struct WatchScreenshotHostView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .dynamicTypeSize(.large)
     }
 }
 
@@ -27,15 +28,25 @@ private struct WatchScreenshotCopy {
     let languageCode: String
 
     static var current: WatchScreenshotCopy {
-        WatchScreenshotModeConfig.localeIdentifier.lowercased().hasPrefix("en")
-            ? WatchScreenshotCopy(languageCode: "en")
-            : WatchScreenshotCopy(languageCode: "zh")
+        let locale = WatchScreenshotModeConfig.localeIdentifier.lowercased()
+        if locale.hasPrefix("en") {
+            return WatchScreenshotCopy(languageCode: "en")
+        }
+        if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
+            return WatchScreenshotCopy(languageCode: "zh-Hant")
+        }
+        return WatchScreenshotCopy(languageCode: "zh-Hans")
     }
 
-    var isEnglish: Bool { languageCode == "en" }
-
-    func text(_ zh: String, _ en: String) -> String {
-        isEnglish ? en : zh
+    func text(_ zhHans: String, _ zhHant: String, _ en: String) -> String {
+        switch languageCode {
+        case "en":
+            en
+        case "zh-Hant":
+            zhHant
+        default:
+            zhHans
+        }
     }
 }
 
@@ -123,11 +134,11 @@ private struct WatchSyncScreenshot: View {
                             .font(.system(size: 34, weight: .semibold))
                             .foregroundStyle(.green)
                             .frame(maxWidth: .infinity)
-                        Text(copy.text("与 iPhone 保持同步", "Syncs with iPhone"))
+                        Text(copy.text("与 iPhone 保持同步", "與 iPhone 保持同步", "Syncs with iPhone"))
                             .font(.headline)
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
-                        Text(copy.text("手机端继续编辑和查看统计", "Continue editing and reviewing reports on iPhone"))
+                        Text(copy.text("手机端继续编辑和查看统计", "手機端繼續編輯和查看統計", "Continue editing and reviewing reports on iPhone"))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -137,13 +148,13 @@ private struct WatchSyncScreenshot: View {
                     .frame(maxWidth: .infinity)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    WatchField(label: copy.text("待同步", "Pending"), value: "1", icon: "arrow.triangle.2.circlepath")
-                    WatchField(label: copy.text("最近更新", "Latest"), value: "10:24", icon: "clock.badge.checkmark")
+                    WatchField(label: copy.text("待同步", "待同步", "Pending"), value: "1", icon: "arrow.triangle.2.circlepath")
+                    WatchField(label: copy.text("最近更新", "最近更新", "Latest"), value: "10:24", icon: "clock.badge.checkmark")
                 }
                 .padding(.horizontal, 4)
             }
             .scrollIndicators(.hidden)
-            .navigationTitle(copy.text("同步", "Sync"))
+            .navigationTitle(copy.text("同步", "同步", "Sync"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }

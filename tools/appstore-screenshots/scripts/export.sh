@@ -37,7 +37,7 @@ Options:
   --ios-only       Capture and render iPhone screenshots only.
   --watch-only     Capture and render Apple Watch screenshots only.
   --render-only    Re-render store images and preview.html from existing raw screenshots.
-  --locale LOCALE  Limit capture to zh-Hans or en. Can be repeated.
+  --locale LOCALE  Limit capture to zh-Hans, zh-Hant, or en. Can be repeated.
 EOF
       exit 0
       ;;

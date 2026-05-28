@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-28（v1.4.0 Support IAP 价格刷新修复）
+更新日期：2026-05-28（v1.4.0 App Store 截图管线稳定性修复）
 
 ## 记录规则
 
@@ -43,6 +43,57 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-090 App Store 截图管线稳定性修复
+- 日期：2026-05-28
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：Bugfix / 截图工具 / 本地化
+- 目标：修复繁体截图导出时页面继承模拟器大字体，以及 `00_preview` 首张 raw screenshot 可能捕获到模拟器黑屏的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Screenshots/ScreenshotHostView.swift`：截图宿主根视图固定 Dynamic Type 为默认 `.large`，避免继承模拟器辅助功能大字体设置。
+  - `AutoLedger/AutoLedgerWatch Watch App/Screenshots/WatchScreenshotHostView.swift`：Watch 截图宿主同样固定 Dynamic Type，保持自动截图输出稳定。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchLedgerViewModel.swift`：截图模式下跳过真实 WatchConnectivity 初始同步和刷新，避免最近账单 fixture 被空会话状态覆盖。
+  - `tools/appstore-screenshots/scripts/export_ios.sh`、`tools/appstore-screenshots/scripts/export_watch.sh`：启动截图模式时传入 `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryL`，并在写入 raw PNG 前检测 mostly black 画面，最多重试 5 次。
+  - `tools/appstore-screenshots/README.md`：补充黑屏与大字体排查说明。
+  - `README.md`：新增截图预览 HTML 入口，方便从根目录 README 打开本地生成的截图总览。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未修改实际 App 正常运行时的 Dynamic Type 支持；未修改营销图模板字体大小、截图场景内容、OCR、账本、IAP 或 Watch 同步逻辑；未把生成 PNG 纳入 Git 跟踪。
+- 完成内容：截图模式不再受模拟器全局文字大小影响；首张截图若遇到黑屏首帧会自动重试；本轮重新导出 `zh-Hant` iPhone 截图后，`00_preview` 已不再黑屏，页面内字体恢复为默认尺寸；重新导出本版计划上传的 `zh-Hans` / `en` iPhone 与 Watch 截图，Watch 最近账单截图已恢复为三条 fixture 记录；根 README 可直接跳转到本地 `preview.html` 总览。
+- 未完成内容：繁体中文截图本版暂不作为 App Store 上传资产；Watch 自动截图仍需在最终上传前按 `preview.html` 做人工目检。
+- 测试情况：
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --locale zh-Hans --locale en`
+  - PASS：黑屏像素检查确认 `tools/appstore-screenshots/output/raw/ios/zh-Hant/00_preview.png` dark pixel 约 1.23%，不是黑屏。
+  - PASS：目检 `tools/appstore-screenshots/output/store/ios/zh-Hant/00_preview.png`，页面内字体已恢复默认尺寸。
+- 风险与注意事项：黑屏检测依赖 Pillow；若本机缺少 Pillow，脚本会跳过黑屏判断并在后续渲染步骤失败提示安装。生成截图仍需要最终人工目检布局、文案和裁切。
+- 回滚方式：回退两个 ScreenshotHostView 的 Dynamic Type 固定、两个 export 脚本的 content size 参数与黑屏重试逻辑，以及 README / CHANGELOG / 本条日志。
+- 结论：本轮完成，繁体 iPhone 截图管线已修复大字体继承和 `00_preview` 黑屏问题。
+- 下一步建议：继续执行 `--locale zh-Hans`、`--locale en` 与 Watch 截图导出，确认三语言最终成品都无黑屏和异常字号。
+
+### ITER-089 App Store 截图管线繁体中文输出
+- 日期：2026-05-28
+- 所属版本：v1.4.0
+- 所属阶段：Phase 4 / 发布准备
+- 类型：能力增强 / 本地化 / 截图工具
+- 目标：在现有简体中文与英文 App Store 截图管线基础上，新增一套繁体中文截图输出，匹配 App UI 已覆盖中英繁三语的发布口径。
+- 改动范围：
+  - `tools/appstore-screenshots/config/screenshots.json`：新增 `zh-Hant` locale（`appleLanguages=(zh-Hant)`、`appleLocale=zh_TW`），并为 iPhone 与 Apple Watch 所有截图场景补齐繁体中文标题 / 副标题。
+  - `AutoLedger/AutoLedger/Screenshots/ScreenshotHostView.swift`：截图宿主文案选择从简中 / 英文扩展为简中 / 繁中 / 英文三语，补齐导入方式等硬编码截图文案的繁体版本。
+  - `AutoLedger/AutoLedgerWatch Watch App/Screenshots/WatchScreenshotHostView.swift`：Watch 截图宿主同样识别 `zh-Hant`，补齐同步状态等截图内文案的繁体版本。
+  - `tools/appstore-screenshots/scripts/export.sh`、`tools/appstore-screenshots/README.md`：更新 CLI 帮助、支持语言、导出示例和输出目录说明，支持 `--locale zh-Hant` 单独导出。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未修改 OCR、账本、IAP、设置页本地化资源、Watch 记账 / 同步逻辑，也未重新导出实际截图 PNG。
+- 完成内容：截图配置、iPhone 截图宿主、Watch 截图宿主和截图工具文档已统一支持 `zh-Hant`；繁体截图可与 `zh-Hans`、`en` 一起批量导出，也可通过 `--locale zh-Hant` 单独导出。
+- 未完成内容：未在本轮实际跑完整截图导出脚本生成 `tools/appstore-screenshots/output/zh-Hant` 图片；未上传 App Store Connect 截图。
+- 测试情况：
+  - PASS：截图配置 locale 覆盖检查，确认 `zh-Hans`、`zh-Hant`、`en` 均覆盖所有 iPhone / Watch 截图标题和副标题。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -destination 'generic/platform=watchOS' build`
+- 风险与注意事项：实际营销截图仍需跑导出脚本并目检繁体标题、副标题、设备截图裁切和 Watch 尺寸输出；App Store Connect 侧繁体截图需要按对应 locale 单独上传。
+- 回滚方式：回退 `screenshots.json` 的 `zh-Hant` locale 与文案、两个 ScreenshotHostView 的三语选择改动，以及截图 README / export help 和本条文档记录。
+- 结论：本轮完成，截图管线已具备繁体中文输出能力。
+- 下一步建议：在发版截图前执行 `tools/appstore-screenshots/scripts/export.sh --locale zh-Hant`，检查输出图片后再上传到 App Store Connect 繁体中文 locale。
 
 ### ITER-088 Support IAP 价格刷新修复
 - 日期：2026-05-28

@@ -5,20 +5,23 @@ struct ScreenshotHostView: View {
     let scene: ScreenshotScene
 
     var body: some View {
-        switch scene {
-        case .preview, .quickCapture:
-            ScreenshotAppPage(scene: .inbox)
-        case .importMethods:
-            ScreenshotImportMethodsHost()
-        case .autoExtract:
-            ScreenshotAppPage(scene: .ledger)
-        case .reviewEdit:
-            ScreenshotTransactionEditorHost()
-        case .monthlyReport:
-            ScreenshotAppPage(scene: .report)
-        case .settingsManagement:
-            ScreenshotAppPage(scene: .settings)
+        Group {
+            switch scene {
+            case .preview, .quickCapture:
+                ScreenshotAppPage(scene: .inbox)
+            case .importMethods:
+                ScreenshotImportMethodsHost()
+            case .autoExtract:
+                ScreenshotAppPage(scene: .ledger)
+            case .reviewEdit:
+                ScreenshotTransactionEditorHost()
+            case .monthlyReport:
+                ScreenshotAppPage(scene: .report)
+            case .settingsManagement:
+                ScreenshotAppPage(scene: .settings)
+            }
         }
+        .dynamicTypeSize(.large)
     }
 }
 
@@ -93,13 +96,13 @@ private struct ScreenshotImportMethodsHost: View {
                     ImportMethodRow(
                         icon: "photo.on.rectangle",
                         title: String(localized: "inbox.import.photo"),
-                        subtitle: copy.text("读取支付截图和相册收据", "Read payment screenshots and saved receipts"),
+                        subtitle: copy.text("读取支付截图和相册收据", "讀取支付截圖和相簿收據", "Read payment screenshots and saved receipts"),
                         tint: AppTheme.accent
                     )
                     ImportMethodRow(
                         icon: "camera.fill",
                         title: String(localized: "inbox.import.camera"),
-                        subtitle: copy.text("现场拍摄纸质小票", "Capture paper receipts on the spot"),
+                        subtitle: copy.text("现场拍摄纸质小票", "現場拍攝紙本收據", "Capture paper receipts on the spot"),
                         tint: AppTheme.accent
                     )
                     ImportMethodRow(
@@ -155,13 +158,25 @@ private struct ScreenshotCopy {
     let languageCode: String
 
     static var current: ScreenshotCopy {
-        ScreenshotModeConfig.localeIdentifier.lowercased().hasPrefix("en")
-            ? ScreenshotCopy(languageCode: "en")
-            : ScreenshotCopy(languageCode: "zh")
+        let locale = ScreenshotModeConfig.localeIdentifier.lowercased()
+        if locale.hasPrefix("en") {
+            return ScreenshotCopy(languageCode: "en")
+        }
+        if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
+            return ScreenshotCopy(languageCode: "zh-Hant")
+        }
+        return ScreenshotCopy(languageCode: "zh-Hans")
     }
 
-    func text(_ zh: String, _ en: String) -> String {
-        languageCode == "en" ? en : zh
+    func text(_ zhHans: String, _ zhHant: String, _ en: String) -> String {
+        switch languageCode {
+        case "en":
+            en
+        case "zh-Hant":
+            zhHant
+        default:
+            zhHans
+        }
     }
 }
 

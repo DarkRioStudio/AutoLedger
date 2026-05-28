@@ -50,6 +50,12 @@
 
 **分享扩展** — 在微信/支付宝中分享截图 → 选择 AutoLedger
 
+## Screenshot Preview
+
+App Store 截图预览：[`tools/appstore-screenshots/output/preview.html`](tools/appstore-screenshots/output/preview.html)
+
+如需刷新截图，运行 `bash tools/appstore-screenshots/scripts/export.sh`。
+
 ## Tech Stack
 
 | 层级 | 技术 |
@@ -90,6 +96,7 @@ AutoLedgerRio/
 ├── versions/                    # 版本计划 & 回归基线
 ├── process/                     # 迭代工作流文档
 ├── scripts/                     # 回归测试脚本
+├── tools/appstore-screenshots/  # App Store 截图导出管线（zh-Hans / zh-Hant / en）
 └── template/                    # 文档模板
 ```
 
@@ -129,7 +136,7 @@ bash scripts/run_offline_regression.sh
 | v1.3.3 | **1.2.0** | ✅ 已发布 | 平台无关 `LedgerTextInterpreterCore` 提取为 AutoLedgerCore 模块，批量 OCR 测试框架 |
 | v1.3.4 | **1.2.0** | ✅ 已发布 | 规则解析质量提升（合计行优先、商户黑名单、分类映射）、批量报告驱动修复 |
 | v1.3.5 | **1.2.0** | ✅ 已发布 | Worker API 可行性评估、712 样本批量回归（金额命中率 100%）、商户别名迁移 |
-| v1.4.0 | **1.3.0** | 🚧 TestFlight | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强 |
+| v1.4.0 | **1.3.0** | 🚧 TestFlight | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强、中英繁本地化与截图管线、可选 Support Developer 内购 |
 
 ## License
 

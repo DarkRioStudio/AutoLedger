@@ -93,21 +93,78 @@ xcrun simctl status_bar "$DEVICE_UDID" override \
   --batteryState charged \
   --batteryLevel 100 >/dev/null 2>&1 || true
 
+is_mostly_black_png() {
+  python3 - "$1" <<'PY'
+import sys
+try:
+    from PIL import Image
+except ImportError:
+    raise SystemExit(1)
+
+path = sys.argv[1]
+try:
+    with Image.open(path) as image:
+        image = image.convert("RGB")
+        width = 120
+        height = max(1, round(width * image.height / image.width))
+        image = image.resize((width, height))
+        data = image.tobytes()
+except OSError:
+    raise SystemExit(0)
+
+pixel_count = len(data) // 3
+dark_pixels = 0
+total = 0
+for index in range(0, len(data), 3):
+    red, green, blue = data[index], data[index + 1], data[index + 2]
+    if red < 24 and green < 24 and blue < 24:
+        dark_pixels += 1
+    total += red + green + blue
+mean = total / (pixel_count * 3)
+raise SystemExit(0 if dark_pixels / pixel_count > 0.92 and mean < 32 else 1)
+PY
+}
+
+capture_ios_screenshot() {
+  local locale="$1"
+  local apple_lang="$2"
+  local apple_locale="$3"
+  local shot_id="$4"
+  local scene="$5"
+  local out_path="$6"
+  local tmp_path="$out_path.tmp"
+  local attempts=5
+
+  for attempt in $(seq 1 "$attempts"); do
+    xcrun simctl terminate "$DEVICE_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    xcrun simctl launch --terminate-running-process "$DEVICE_UDID" "$BUNDLE_ID" \
+      --screenshot-mode \
+      --screenshot-platform ios \
+      --screenshot-scene "$scene" \
+      -AppleLanguages "$apple_lang" \
+      -AppleLocale "$apple_locale" \
+      -UIPreferredContentSizeCategoryName UICTContentSizeCategoryL >/dev/null
+    sleep "$WAIT_SECONDS"
+    xcrun simctl io "$DEVICE_UDID" screenshot "$tmp_path" >/dev/null
+    if ! is_mostly_black_png "$tmp_path"; then
+      mv "$tmp_path" "$out_path"
+      return 0
+    fi
+    echo "warning: ios/$locale/$shot_id captured mostly black frame; retry $attempt/$attempts" >&2
+    sleep 1
+  done
+
+  mv "$tmp_path" "$out_path"
+  echo "warning: ios/$locale/$shot_id still looks mostly black after retries" >&2
+}
+
 echo "==> Capturing iOS raw screenshots"
 while IFS=$'\t' read -r LOCALE APPLE_LANG APPLE_LOCALE SHOT_ID SCENE; do
   OUT_DIR="$ROOT/tools/appstore-screenshots/output/raw/ios/$LOCALE"
   mkdir -p "$OUT_DIR"
   OUT_PATH="$OUT_DIR/$SHOT_ID.png"
   echo "capture ios/$LOCALE/$SHOT_ID ($SCENE)"
-  xcrun simctl terminate "$DEVICE_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
-  xcrun simctl launch --terminate-running-process "$DEVICE_UDID" "$BUNDLE_ID" \
-    --screenshot-mode \
-    --screenshot-platform ios \
-    --screenshot-scene "$SCENE" \
-    -AppleLanguages "$APPLE_LANG" \
-    -AppleLocale "$APPLE_LOCALE" >/dev/null
-  sleep "$WAIT_SECONDS"
-  xcrun simctl io "$DEVICE_UDID" screenshot "$OUT_PATH" >/dev/null
+  capture_ios_screenshot "$LOCALE" "$APPLE_LANG" "$APPLE_LOCALE" "$SHOT_ID" "$SCENE" "$OUT_PATH"
 done < <(
   python3 - "$CONFIG" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"} <<'PY'
 import json, sys

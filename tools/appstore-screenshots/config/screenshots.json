@@ -53,6 +53,10 @@
       "appleLanguages": "(zh-Hans)",
       "appleLocale": "zh_CN"
     },
+    "zh-Hant": {
+      "appleLanguages": "(zh-Hant)",
+      "appleLocale": "zh_TW"
+    },
     "en": {
       "appleLanguages": "(en)",
       "appleLocale": "en_US"
@@ -64,10 +68,12 @@
       "scene": "preview",
       "title": {
         "zh-Hans": "随手记账，一拍即入",
+        "zh-Hant": "隨手記帳，一拍即入",
         "en": "Track expenses in one tap"
       },
       "subtitle": {
         "zh-Hans": "截图、文本、收据都能快速识别",
+        "zh-Hant": "截圖、文字、收據都能快速識別",
         "en": "Capture screenshots, receipts, and text with ease"
       }
     },
@@ -76,10 +82,12 @@
       "scene": "quick_capture",
       "title": {
         "zh-Hans": "随手记账，一拍即入",
+        "zh-Hant": "隨手記帳，一拍即入",
         "en": "Track expenses in one tap"
       },
       "subtitle": {
         "zh-Hans": "从截图、拍照或剪切板快速生成账单",
+        "zh-Hant": "從截圖、拍照或剪貼簿快速生成帳單",
         "en": "Turn screenshots, photos, and clipboard text into records"
       }
     },
@@ -88,10 +96,12 @@
       "scene": "import_methods",
       "title": {
         "zh-Hans": "支持多种导入方式",
+        "zh-Hant": "支援多種匯入方式",
         "en": "Multiple import methods"
       },
       "subtitle": {
         "zh-Hans": "支付截图、拍照识别、剪切板文本都能处理",
+        "zh-Hant": "支付截圖、拍照識別、剪貼簿文字都能處理",
         "en": "Read payment screenshots, receipt photos, and copied text"
       }
     },
@@ -100,10 +110,12 @@
       "scene": "auto_extract",
       "title": {
         "zh-Hans": "自动识别关键信息",
+        "zh-Hant": "自動識別關鍵資訊",
         "en": "Extract key details automatically"
       },
       "subtitle": {
         "zh-Hans": "金额、商户、来源与时间自动填充",
+        "zh-Hant": "金額、商家、來源與時間自動填入",
         "en": "Amount, merchant, source, and time filled in for you"
       }
     },
@@ -112,10 +124,12 @@
       "scene": "review_edit",
       "title": {
         "zh-Hans": "自动入账，随时可改",
+        "zh-Hant": "自動入帳，隨時可改",
         "en": "Review before saving"
       },
       "subtitle": {
         "zh-Hans": "识别后的金额、商户、来源清晰可见",
+        "zh-Hant": "識別後的金額、商家、來源清楚可見",
         "en": "Keep every amount, merchant, and source under your control"
       }
     },
@@ -124,10 +138,12 @@
       "scene": "monthly_report",
       "title": {
         "zh-Hans": "月度支出一目了然",
+        "zh-Hant": "月度支出一目了然",
         "en": "Monthly spending at a glance"
       },
       "subtitle": {
         "zh-Hans": "分类占比、月度总额与高频商户自动汇总",
+        "zh-Hant": "分類占比、月度總額與高頻商家自動彙總",
         "en": "See categories, totals, and frequent merchants clearly"
       }
     },
@@ -136,10 +152,12 @@
       "scene": "settings_management",
       "title": {
         "zh-Hans": "分类、来源与商户统一管理",
+        "zh-Hant": "分類、來源與商家統一管理",
         "en": "Manage categories and merchants"
       },
       "subtitle": {
         "zh-Hans": "让自动识别结果越来越贴合你的使用习惯",
+        "zh-Hant": "讓自動識別結果越來越貼合你的使用習慣",
         "en": "Make recognition results fit your own habits over time"
       }
     }
@@ -150,10 +168,12 @@
       "scene": "watch_quick_add",
       "title": {
         "zh-Hans": "抬腕快速记一笔",
+        "zh-Hant": "抬腕快速記一筆",
         "en": "Log from your wrist"
       },
       "subtitle": {
         "zh-Hans": "在 Apple Watch 上快速开始记录",
+        "zh-Hant": "在 Apple Watch 上快速開始記錄",
         "en": "Start a record quickly on Apple Watch"
       }
     },
@@ -162,10 +182,12 @@
       "scene": "watch_recent",
       "title": {
         "zh-Hans": "最近账单随手查看",
+        "zh-Hant": "最近帳單隨手查看",
         "en": "Recent records at a glance"
       },
       "subtitle": {
         "zh-Hans": "常用消费记录一眼可见",
+        "zh-Hant": "常用消費記錄一眼可見",
         "en": "Check everyday spending without pulling out your phone"
       }
     },
@@ -174,10 +196,12 @@
       "scene": "watch_confirm",
       "title": {
         "zh-Hans": "关键信息清楚确认",
+        "zh-Hant": "關鍵資訊清楚確認",
         "en": "Confirm key details"
       },
       "subtitle": {
         "zh-Hans": "金额、分类与来源尽量少操作",
+        "zh-Hant": "金額、分類與來源盡量少操作",
         "en": "Keep amount, category, and source easy to review"
       }
     },
@@ -186,10 +210,12 @@
       "scene": "watch_sync",
       "title": {
         "zh-Hans": "与 iPhone 保持同步",
+        "zh-Hant": "與 iPhone 保持同步",
         "en": "Sync with iPhone"
       },
       "subtitle": {
         "zh-Hans": "手机端继续编辑和查看统计",
+        "zh-Hant": "手機端繼續編輯和查看統計",
         "en": "Continue editing and viewing reports on your phone"
       }
     }

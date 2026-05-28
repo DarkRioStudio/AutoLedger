@@ -51,6 +51,7 @@ final class WatchLedgerViewModel {
     init(session: WatchSessionManager? = nil) {
         let resolvedSession = session ?? .shared
         self.session = resolvedSession
+        guard !WatchScreenshotModeConfig.isEnabled else { return }
         resolvedSession.onStateChanged = { [weak self] in
             self?.syncFromSession()
         }
@@ -63,6 +64,7 @@ final class WatchLedgerViewModel {
 
     /// 拉取最近账单（下拉刷新触发）
     func refreshTransactions() {
+        guard !WatchScreenshotModeConfig.isEnabled else { return }
         session.requestRecentTransactions()
         Task {
             try? await Task.sleep(for: .seconds(1))
@@ -72,6 +74,7 @@ final class WatchLedgerViewModel {
 
     /// Watch 首屏无账单或无自定义分类时，主动触发一次同步请求。
     func requestInitialSyncIfNeeded() {
+        guard !WatchScreenshotModeConfig.isEnabled else { return }
         session.requestInitialSyncIfNeeded()
     }
 

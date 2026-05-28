@@ -4,9 +4,8 @@ This folder contains a repeatable local pipeline for App Store screenshots. It c
 
 ## Supported Output
 
-- iPhone: zh-Hans and en, default 6.5-inch App Store size `1242x2688`.
-- Apple Watch: zh-Hans and en when the Watch scheme and a usable Watch simulator pair are available.
-- zh-Hant is reserved in the structure but is not generated in this first pass.
+- iPhone: zh-Hans, zh-Hant, and en, default 6.5-inch App Store size `1242x2688`.
+- Apple Watch: zh-Hans, zh-Hant, and en when the Watch scheme and a usable Watch simulator pair are available.
 
 The pipeline does not upload to App Store Connect, create official App Preview videos, or generate iPad screenshots.
 
@@ -34,6 +33,7 @@ Limit to one locale:
 
 ```bash
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale en
 ```
 
@@ -58,11 +58,11 @@ Generated files are written under `tools/appstore-screenshots/output/`, which is
 ```text
 output/
   raw/
-    ios/{zh-Hans,en}/
-    watch/{zh-Hans,en}/
+    ios/{zh-Hans,zh-Hant,en}/
+    watch/{zh-Hans,zh-Hant,en}/
   store/
-    ios/{zh-Hans,en}/
-    watch/{zh-Hans,en}/
+    ios/{zh-Hans,zh-Hant,en}/
+    watch/{zh-Hans,zh-Hant,en}/
   preview.html
 ```
 
@@ -122,7 +122,7 @@ Watch screenshot mode is isolated from `WatchSessionManager`, so it does not dep
 
 iPhone defaults to `ios_65` (`1242x2688`). To switch to the reserved 6.9-inch target, enable `targets.ios_69`, update `render_marketing.py` target selection if needed, and ensure the selected simulator produces suitable raw screenshots.
 
-Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans and en Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
+Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, and en Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
 
 ## Manual Watch Fallback
 
@@ -135,7 +135,7 @@ If automatic Watch launch fails, iPhone export still succeeds and `preview.html`
    - `output/raw/watch/zh-Hans/01_watch_recent.png`
    - `output/raw/watch/zh-Hans/02_watch_confirm.png`
    - `output/raw/watch/zh-Hans/03_watch_sync.png`
-   - same names under `output/raw/watch/en/`
+   - same names under `output/raw/watch/zh-Hant/` and `output/raw/watch/en/`
 4. Run:
 
 ```bash
@@ -150,6 +150,8 @@ python3 tools/appstore-screenshots/scripts/build_preview.py
 - `xcodebuild` failure: open `AutoLedger/AutoLedger.xcworkspace`, not the `.xcodeproj`, and verify CocoaPods are installed.
 - App opens the real home screen: confirm `--screenshot-mode --screenshot-platform ios --screenshot-scene ...` is passed to `simctl launch`.
 - Watch does not enter screenshot mode: confirm the Watch app bundle ID and launch arguments in `screenshots.json`.
+- First screenshot is black: capture scripts retry mostly black frames before writing raw PNGs; if it still happens, increase `capture.stabilizeSeconds`.
+- UI text looks oversized: screenshot hosts pin Dynamic Type to the default `.large` size, independent of the simulator's Accessibility text size.
 - Permission prompts appear: screenshot host should not call camera, photo library, OCR, notifications, iCloud, or network paths; check any newly added scene for live dependencies.
 - Chinese font looks wrong: install or restore the macOS system PingFang fonts. The renderer falls back with a warning.
 - English copy overflows: edit `screenshots.json`; `render_marketing.py` wraps text, but very long words may still need shorter copy.
