@@ -151,6 +151,8 @@
 "ledger.filter.next_year" = "下年";
 "ledger.transaction.edit_hint" = "點擊編輯";
 "ledger.footer_format" = "共 %d 筆，點按任一帳單可修正金額、分類和備註。";
+"ledger.search.prompt" = "搜尋帳單";
+"ledger.search.no_results" = "沒有找到符合的帳單";
 
 "deleted_transactions.title" = "最近刪除";
 "deleted_transactions.empty.title" = "暫無已刪除帳單";
