@@ -5,13 +5,25 @@ struct WatchTransaction: Identifiable, Hashable {
     let id: UUID
     let merchant: String
     let amount: Double
+    let category: String
+    let source: String
     let note: String
     let occurredAt: Date
 
-    init(id: UUID = UUID(), merchant: String, amount: Double, note: String = "", occurredAt: Date = .now) {
+    init(
+        id: UUID = UUID(),
+        merchant: String,
+        amount: Double,
+        category: String = "",
+        source: String = "",
+        note: String = "",
+        occurredAt: Date = .now
+    ) {
         self.id = id
         self.merchant = merchant
         self.amount = amount
+        self.category = category
+        self.source = source
         self.note = note
         self.occurredAt = occurredAt
     }
@@ -26,6 +38,8 @@ struct WatchTransaction: Identifiable, Hashable {
         self.id = UUID()
         self.merchant = merchant
         self.amount = amount
+        self.category = dict["category"] as? String ?? ""
+        self.source = dict["source"] as? String ?? ""
         self.note = dict["note"] as? String ?? ""
         self.occurredAt = Date(timeIntervalSince1970: ts)
     }
@@ -38,6 +52,53 @@ struct WatchTransaction: Identifiable, Hashable {
         let f = DateFormatter()
         f.dateFormat = "MM/dd HH:mm"
         return f.string(from: occurredAt)
+    }
+
+    var formattedTime: String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: occurredAt)
+    }
+
+    var formattedDetailDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy/MM/dd HH:mm"
+        return f.string(from: occurredAt)
+    }
+
+    var relativeDateText: String {
+        let calendar = Calendar.autoupdatingCurrent
+        if calendar.isDateInToday(occurredAt) {
+            return String(localized: "watch.date.today")
+        }
+        if calendar.isDateInYesterday(occurredAt) {
+            return String(localized: "watch.date.yesterday")
+        }
+        let f = DateFormatter()
+        f.dateFormat = "MM/dd"
+        return f.string(from: occurredAt)
+    }
+
+    var compactDateText: String {
+        "\(relativeDateText) \(formattedTime)"
+    }
+
+    var displayCategory: String {
+        category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? String(localized: "category.other.title")
+            : category
+    }
+
+    var displaySource: String {
+        source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? String(localized: "watch.transaction.source_unknown")
+            : source
+    }
+
+    var displayNote: String {
+        note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? String(localized: "watch.transaction.no_note")
+            : note
     }
 }
 

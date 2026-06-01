@@ -28,6 +28,15 @@
 "watch.empty.title" = "暂无记录";
 "watch.empty.description" = "在 iPhone 上记账后同步显示";
 "watch.transaction.accessibility_format" = "%@，%@，%@";
+"watch.transaction.detail_title" = "详情";
+"watch.transaction.category" = "分类";
+"watch.transaction.source" = "来源";
+"watch.transaction.source_unknown" = "AutoLedger";
+"watch.transaction.time" = "时间";
+"watch.transaction.note" = "备注";
+"watch.transaction.no_note" = "无备注";
+"watch.date.today" = "今天";
+"watch.date.yesterday" = "昨天";
 "watch.pending_sync_format" = "%d 笔待同步";
 "watch.quick_add.title" = "快速记账";
 "watch.quick_add.merchant_optional" = "商户（可选）";

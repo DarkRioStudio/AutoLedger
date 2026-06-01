@@ -50,6 +50,8 @@ final class WatchConnectivityHost: NSObject {
         [
             "merchant": t.merchant,
             "amount": t.amount,
+            "category": t.categoryTitle,
+            "source": t.sourceTitle,
             "note": t.note,
             "occurredAt": t.occurredAt.timeIntervalSince1970
         ]

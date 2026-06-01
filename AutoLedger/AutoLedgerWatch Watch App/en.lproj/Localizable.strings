@@ -28,6 +28,15 @@
 "watch.empty.title" = "No Records";
 "watch.empty.description" = "Entries appear here after you save them on iPhone";
 "watch.transaction.accessibility_format" = "%@, %@, %@";
+"watch.transaction.detail_title" = "Detail";
+"watch.transaction.category" = "Category";
+"watch.transaction.source" = "Source";
+"watch.transaction.source_unknown" = "AutoLedger";
+"watch.transaction.time" = "Time";
+"watch.transaction.note" = "Note";
+"watch.transaction.no_note" = "No note";
+"watch.date.today" = "Today";
+"watch.date.yesterday" = "Yesterday";
 "watch.pending_sync_format" = "%d pending sync";
 "watch.quick_add.title" = "Quick Add";
 "watch.quick_add.merchant_optional" = "Merchant (Optional)";

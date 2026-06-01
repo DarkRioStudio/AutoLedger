@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-01（v1.5.0 GOAL-1511 Watch 首屏今日支出）
+更新日期：2026-06-01（v1.5.0 GOAL-1512 Watch 最近支出第二屏）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-105 GOAL-1512 Watch 最近支出第二屏
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 1 / Watch 今日支出与最近支出
+- 类型：能力增强 / Watch UI / WatchConnectivity
+- 目标：完善 Watch 左滑第二屏，让最近支出列表具备当前账本提示、短时间文案和单笔只读详情入口，方便真机点验同步结果。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/WatchConnectivityHost.swift`：最近账单 payload 增加分类和来源展示字段。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchTransaction.swift`：扩展 Watch 侧交易模型，增加分类、来源、相对日期、详情时间、备注兜底等只读展示属性。
+  - `AutoLedger/AutoLedgerWatch Watch App/ContentView.swift`：第二页增加当前账本提示，最近支出行改为 `NavigationLink`，新增单笔只读详情页。
+  - `AutoLedger/AutoLedgerWatch Watch App/*.lproj/Localizable.strings`：补齐详情页、来源、备注、今天 / 昨天三语文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：回填 GOAL-1512 执行结果。
+- 未改动范围：未实现 Watch 端编辑、删除、批量操作或账本切换；未修改 Watch pending 队列格式；未新增 Watch complication target；未修改 Xcode project、scheme、target、Bundle ID、signing、entitlements、App Group 或 iCloud Container。
+- 完成内容：
+  - Watch 第二页顶部显示最近支出标题和当前默认账本名。
+  - 最近支出列表仍限制最近 5 笔，保持 Watch 小屏可扫读。
+  - 行内时间改为“今天 / 昨天 / MM/dd + HH:mm”，减少完整日期占用。
+  - 点按最近支出可进入只读详情，查看金额、商户、分类、来源、时间和备注。
+  - 旧 payload 未带分类或来源时，Watch 详情页会显示兜底分类 / 来源，不影响解析。
+- 未完成内容：未在真实 Apple Watch 上点验左右滑、详情返回和大字号；未实现详情页编辑或跳转 iPhone 深链。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`find 'AutoLedger/AutoLedgerWatch Watch App' -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：详情页目前是只读，不处理账单编辑或删除；分类和来源来自 iPhone 端展示标题，后续若做 Watch 多语言动态分类，需要再统一本地化来源。
+- 回滚方式：回退 WatchConnectivityHost 的分类 / 来源 payload 字段、WatchTransaction 展示扩展、ContentView 第二页导航详情、本地化 key 和对应文档记录。
+- 结论：GOAL-1512 完成；Watch 小闭环已具备今日支出首页、最近支出第二页和单笔详情。
+- 下一步建议：进入 GOAL-1521 或重新拆分 Watch complication 目标，开始表盘小组件 UI 与跳转；同时建议用真机 Apple Watch 点验 GOAL-1511 / GOAL-1512 的滑动和同步手感。
 
 ### ITER-104 GOAL-1511 Watch 首屏今日支出
 - 日期：2026-06-01

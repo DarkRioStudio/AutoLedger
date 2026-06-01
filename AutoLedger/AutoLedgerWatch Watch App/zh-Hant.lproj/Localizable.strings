@@ -28,6 +28,15 @@
 "watch.empty.title" = "暫無記錄";
 "watch.empty.description" = "在 iPhone 上記帳後同步顯示";
 "watch.transaction.accessibility_format" = "%@，%@，%@";
+"watch.transaction.detail_title" = "詳情";
+"watch.transaction.category" = "分類";
+"watch.transaction.source" = "來源";
+"watch.transaction.source_unknown" = "AutoLedger";
+"watch.transaction.time" = "時間";
+"watch.transaction.note" = "備註";
+"watch.transaction.no_note" = "無備註";
+"watch.date.today" = "今天";
+"watch.date.yesterday" = "昨天";
 "watch.pending_sync_format" = "%d 筆待同步";
 "watch.quick_add.title" = "快速記帳";
 "watch.quick_add.merchant_optional" = "商家（可選）";

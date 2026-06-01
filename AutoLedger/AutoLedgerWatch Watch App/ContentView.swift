@@ -175,8 +175,14 @@ private struct WatchRecentTransactionsPage: View {
                     Image(systemName: "list.bullet.rectangle")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Text("watch.recent.title")
-                        .font(.headline)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("watch.recent.title")
+                            .font(.headline)
+                        Text(viewModel.todaySummary.ledgerName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
 
                 if viewModel.recentTransactions.isEmpty {
@@ -188,7 +194,12 @@ private struct WatchRecentTransactionsPage: View {
                     .font(.caption)
                 } else {
                     ForEach(viewModel.recentTransactions.prefix(5)) { tx in
-                        WatchTransactionRow(tx: tx)
+                        NavigationLink {
+                            WatchTransactionDetailView(tx: tx)
+                        } label: {
+                            WatchTransactionRow(tx: tx)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -207,7 +218,7 @@ private struct WatchTransactionRow: View {
                 Text(tx.merchant)
                     .font(.headline)
                     .lineLimit(1)
-                Text(tx.formattedDate)
+                Text(tx.compactDateText)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -221,8 +232,83 @@ private struct WatchTransactionRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            Text(String(format: String(localized: "watch.transaction.accessibility_format"), tx.merchant, tx.formattedAmount, tx.formattedDate))
+            Text(String(format: String(localized: "watch.transaction.accessibility_format"), tx.merchant, tx.formattedAmount, tx.compactDateText))
         )
+    }
+}
+
+private struct WatchTransactionDetailView: View {
+    let tx: WatchTransaction
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tx.formattedAmount)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+                    Text(tx.merchant)
+                        .font(.headline)
+                        .lineLimit(2)
+                }
+                .padding(.bottom, 2)
+
+                WatchTransactionDetailRow(
+                    title: String(localized: "watch.transaction.category"),
+                    value: tx.displayCategory,
+                    icon: "tag"
+                )
+                WatchTransactionDetailRow(
+                    title: String(localized: "watch.transaction.source"),
+                    value: tx.displaySource,
+                    icon: "tray.and.arrow.down"
+                )
+                WatchTransactionDetailRow(
+                    title: String(localized: "watch.transaction.time"),
+                    value: tx.formattedDetailDate,
+                    icon: "clock"
+                )
+                WatchTransactionDetailRow(
+                    title: String(localized: "watch.transaction.note"),
+                    value: tx.displayNote,
+                    icon: "note.text"
+                )
+            }
+            .padding(.horizontal, 4)
+        }
+        .scrollIndicators(.hidden)
+        .navigationTitle("watch.transaction.detail_title")
+        .navigationBarTitleDisplayMode(.inline)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct WatchTransactionDetailRow: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 7) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
