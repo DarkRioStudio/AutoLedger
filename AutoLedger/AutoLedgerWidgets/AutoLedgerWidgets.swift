@@ -18,6 +18,8 @@ private enum WidgetCopy {
     static var monthSummaryCountFormat: String { isChinese ? "%d 笔记录" : "%d entries" }
     static var todaySummaryCountFormat: String { isChinese ? "今日共 %d 笔" : "%d today" }
     static var todayCountCompactFormat: String { isChinese ? "%d 笔" : "%d items" }
+    static var watchAccessoryInlineFormat: String { isChinese ? "今日支出 %@" : "Today %@" }
+    static var watchAccessoryCountFormat: String { isChinese ? "%d 笔" : "%d entries" }
     static var fallbackMerchant: String { isChinese ? "暂无" : "None" }
     static var fallbackCategory: String { isChinese ? "暂无" : "None" }
 
@@ -316,8 +318,66 @@ private struct MonthlyReportProvider: TimelineProvider {
 
 private struct DailyExpenseWidgetView: View {
     let entry: DailyExpenseEntry
+    @Environment(\.widgetFamily) private var family
 
+    @ViewBuilder
     var body: some View {
+        switch family {
+        case .accessoryInline:
+            accessoryInline
+        case .accessoryCircular:
+            accessoryCircular
+        case .accessoryRectangular:
+            accessoryRectangular
+        default:
+            systemSmall
+        }
+    }
+
+    private var accessoryInline: some View {
+        Text(String(format: WidgetCopy.watchAccessoryInlineFormat, compactCurrency(entry.metrics.todayTotal)))
+            .widgetAccentable()
+    }
+
+    private var accessoryCircular: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            VStack(spacing: 2) {
+                Text(compactCurrency(entry.metrics.todayTotal))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.58)
+                Text(String(format: WidgetCopy.watchAccessoryCountFormat, entry.metrics.todayCount))
+                    .font(.system(size: 9, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(4)
+        }
+        .widgetAccentable()
+    }
+
+    private var accessoryRectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(WidgetCopy.todayExpenseTitle)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Text(compactCurrency(entry.metrics.todayTotal))
+                .font(.headline.weight(.bold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            Text(String(format: WidgetCopy.todaySummaryCountFormat, entry.metrics.todayCount))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .widgetAccentable()
+    }
+
+    private var systemSmall: some View {
         GeometryReader { proxy in
             let size = proxy.size
             let compact = size.height < 160
@@ -422,6 +482,16 @@ private struct DailyExpenseWidgetView: View {
                 endPoint: .bottomTrailing
             )
         }
+    }
+
+    private func compactCurrency(_ value: Double) -> String {
+        if value >= 10_000 {
+            return String(format: "¥%.1f万", value / 10_000)
+        }
+        if value >= 1_000 {
+            return String(format: "¥%.0f", value)
+        }
+        return String(format: "¥%.0f", value)
     }
 
     private func smallBadge(icon: String, text: String, compact: Bool) -> some View {
@@ -626,7 +696,7 @@ struct DailyExpenseWidget: Widget {
         }
         .configurationDisplayName(WidgetCopy.todayExpenseTitle)
         .description(WidgetCopy.todayExpenseTitle)
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .accessoryInline, .accessoryCircular, .accessoryRectangular])
         .contentMarginsDisabled()
     }
 }
@@ -646,6 +716,24 @@ struct MonthlyReportWidget: Widget {
 }
 
 #Preview(as: .systemSmall) {
+    DailyExpenseWidget()
+} timeline: {
+    DailyExpenseEntry(
+        date: .now,
+        metrics: WidgetLedgerMetrics(
+            todayTotal: 68.5,
+            todayCount: 3,
+            latestMerchant: "Example Supermarket",
+            monthTotal: 1250.8,
+            monthCount: 26,
+            topMerchant: "Example Supermarket",
+            topCategory: "日用杂货",
+            updatedAt: .now
+        )
+    )
+}
+
+#Preview(as: .accessoryRectangular) {
     DailyExpenseWidget()
 } timeline: {
     DailyExpenseEntry(

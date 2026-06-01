@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-01 +0800] 部分完成 GOAL-1521 表盘小组件 UI 基础：现有 `DailyExpenseWidget` 新增 `.accessoryInline`、`.accessoryCircular`、`.accessoryRectangular` 三种 accessory family 展示，复用今日支出数据口径，支持 inline 文案、圆形金额 / 笔数、矩形金额 / 笔数摘要；当前工程仍无独立 watchOS WidgetKit complication target，因此 Apple Watch 表盘上线仍需后续 target / embedding / signing 收口。
 - [2026-06-01 +0800] 完成 GOAL-1512 Watch 左滑最近支出第二屏：最近支出页补充当前账本提示，列表行显示今天 / 昨天 / 日期 + 时间，最近账单可点入只读详情；iPhone -> Watch 同步 payload 增加分类和来源展示字段，Watch 详情页展示金额、商户、分类、来源、时间和备注；补齐 Watch 三语本地化 key，Watch generic watchOS Debug build 通过。
 - [2026-06-01 +0800] 完成 GOAL-1511 Watch 首屏今日支出：iPhone `WatchConnectivityHost` 同步 payload 新增 `todaySummary`，Watch session / view model 接收今日总额、笔数、最近展示名和更新时间；Watch App 首屏切换为“今日支出”摘要卡，保留语音记账与快速记账入口，并将最近 5 笔支出保留为左滑第二页；补齐简体中文、繁体中文、英文 Watch 本地化 key，Watch generic watchOS Debug build 通过。
 - [2026-06-01 +0800] 部分完成 GOAL-1520 iPhone / Watch Widget 今日支出数据源统一：现有 `DailyExpenseWidget` 已覆盖 iPhone 桌面小组件和负一屏 / Today View，小组件数据口径对齐 GOAL-1510，按本地日区间、`amount > 0`、未删除正式账单统计今日支出；日期查询改为匹配 SQLite ISO8601 存储格式，并为最近展示名增加商户 -> 分类 -> 来源回退。Watch 表盘小组件 target / UI 仍留待后续。

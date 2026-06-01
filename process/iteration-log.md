@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-01（v1.5.0 GOAL-1512 Watch 最近支出第二屏）
+更新日期：2026-06-01（v1.5.0 GOAL-1521A Widget accessory UI）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-106 GOAL-1521A Widget accessory UI
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / 表盘小组件
+- 类型：能力增强 / Widget / UI
+- 目标：在不新增 Xcode target 的前提下，先为现有 `DailyExpenseWidget` 补齐可复用的 accessory inline / circular / rectangular 今日支出 UI。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWidgets/AutoLedgerWidgets.swift`：`DailyExpenseWidgetView` 根据 `widgetFamily` 分流系统小组件和 accessory family；新增 inline、circular、rectangular 三种今日支出展示；`DailyExpenseWidget` 支持 `.accessoryInline`、`.accessoryCircular`、`.accessoryRectangular`。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1521A 的完成范围和 true Watch complication target 缺口。
+- 未改动范围：未新增 watchOS WidgetKit extension target；未修改 Xcode project、scheme、target、Bundle ID、signing、entitlements、App Group 或 iCloud Container；未实现表盘点击深链；未新增隐私隐藏开关。
+- 完成内容：
+  - Accessory Inline 显示 `今日支出 ¥xx` / `Today ¥xx`。
+  - Accessory Circular 显示压缩金额和今日笔数。
+  - Accessory Rectangular 显示标题、压缩金额和今日笔数。
+  - 三种 accessory family 复用现有 `WidgetLedgerStore.loadMetrics()` 今日支出口径。
+  - 当前实现可覆盖 iPhone 锁屏 / 待机等 accessory widget 场景，并可作为后续 Watch complication target 的 UI 复用基础。
+- 未完成内容：Apple Watch 表盘 complication 尚未真正接入，因为当前工程没有独立 watchOS WidgetKit extension target，也没有 Watch App 嵌入该 extension 的配置。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerWidgetsExtension -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：不要把本轮描述为“Watch 表盘小组件已上线”；它只是完成 accessory UI 和数据口径复用。真正 Watch 表盘能力需要后续谨慎新增 target、bundle id、entitlements、embedding 和 Xcode Cloud 验证。
+- 回滚方式：回退 `DailyExpenseWidgetView` 的 `widgetFamily` 分流、三种 accessory view、`.supportedFamilies` 扩展和对应文档记录。
+- 结论：GOAL-1521A 部分完成；Widget accessory UI 已有可复用实现，但 Watch complication target 仍是后续工程任务。
+- 下一步建议：拆分 GOAL-1521B，专门新增 watchOS WidgetKit extension target，并在不破坏 Xcode Cloud 的前提下做 Watch / iOS 双构建验证。
 
 ### ITER-105 GOAL-1512 Watch 最近支出第二屏
 - 日期：2026-06-01
