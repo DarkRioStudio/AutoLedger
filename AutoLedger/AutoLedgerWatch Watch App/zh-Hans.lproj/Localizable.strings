@@ -17,6 +17,14 @@
 "voice_ledger_parse" = "解析";
 
 "watch.ledger.title" = "账本";
+"watch.today.title" = "今日支出";
+"watch.today.default_ledger" = "本地账本";
+"watch.today.count_format" = "今日共 %d 笔";
+"watch.today.latest_format" = "最近一笔：%@";
+"watch.today.updated_format" = "更新于 %@";
+"watch.today.accessibility_format" = "今日支出 %@，共 %d 笔";
+"watch.today.empty.description" = "今天还没有支出，可直接在手表上快速记一笔。";
+"watch.recent.title" = "最近支出";
 "watch.empty.title" = "暂无记录";
 "watch.empty.description" = "在 iPhone 上记账后同步显示";
 "watch.transaction.accessibility_format" = "%@，%@，%@";

@@ -70,6 +70,13 @@ private enum WatchScreenshotFixtures {
             WatchTransaction(merchant: "City Metro", amount: 7, note: "Transport", occurredAt: baseDate.addingTimeInterval(-18_000)),
             WatchTransaction(merchant: "App Store", amount: 68, note: "Digital", occurredAt: baseDate.addingTimeInterval(-86_400))
         ]
+        viewModel.todaySummary = WatchTodaySummary(
+            ledgerName: "Local Ledger",
+            totalExpense: 43,
+            transactionCount: 2,
+            recentDisplayName: "Blue Bottle",
+            updatedAt: baseDate
+        )
         viewModel.pendingCount = 0
         return viewModel
     }

@@ -15,37 +15,15 @@ struct ContentView: View {
     var body: some View {
         @Bindable var vm = viewModel
         NavigationStack {
-            List {
-                if viewModel.recentTransactions.isEmpty {
-                    ContentUnavailableView(
-                        "watch.empty.title",
-                        systemImage: "tray",
-                        description: Text("watch.empty.description")
-                    )
-                } else {
-                    ForEach(viewModel.recentTransactions) { tx in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(tx.merchant)
-                                    .font(.headline)
-                                    .lineLimit(1)
-                                Text(tx.formattedDate)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(tx.formattedAmount)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(
-                            Text(String(format: String(localized: "watch.transaction.accessibility_format"), tx.merchant, tx.formattedAmount, tx.formattedDate))
-                        )
-                    }
-                }
+            TabView {
+                WatchTodaySummaryPage()
+                    .tag(0)
+
+                WatchRecentTransactionsPage()
+                    .tag(1)
             }
-            .navigationTitle("watch.ledger.title")
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .navigationTitle("watch.today.title")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -99,6 +77,152 @@ struct ContentView: View {
             viewModel.requestInitialSyncIfNeeded()
         }
         .animation(reduceMotion ? nil : .easeInOut, value: viewModel.lastFeedback)
+    }
+}
+
+private struct WatchTodaySummaryPage: View {
+    @Environment(WatchLedgerViewModel.self) private var viewModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(viewModel.todaySummary.ledgerName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Text("watch.today.title")
+                        .font(.headline)
+
+                    Text(viewModel.todaySummary.formattedAmount)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+
+                    Text(String(format: String(localized: "watch.today.count_format"), viewModel.todaySummary.transactionCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if let recentDisplayName = viewModel.todaySummary.recentDisplayName {
+                        Label(recentDisplayName, systemImage: "clock")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .accessibilityLabel(
+                                Text(String(format: String(localized: "watch.today.latest_format"), recentDisplayName))
+                            )
+                    } else if viewModel.todaySummary.isEmpty {
+                        Text("watch.today.empty.description")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if let updatedAt = viewModel.todaySummary.formattedUpdatedAt {
+                        Text(String(format: String(localized: "watch.today.updated_format"), updatedAt))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(
+                    Text(String(format: String(localized: "watch.today.accessibility_format"), viewModel.todaySummary.formattedAmount, viewModel.todaySummary.transactionCount))
+                )
+
+                HStack(spacing: 8) {
+                    Button {
+                        viewModel.isVoiceRecorderPresented = true
+                    } label: {
+                        Image(systemName: "mic.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .accessibilityLabel(Text("watch.voice_ledger.title"))
+
+                    Button {
+                        viewModel.isQuickAddPresented = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityLabel(Text("watch.quick_add.title"))
+                }
+                .labelStyle(.iconOnly)
+            }
+            .padding(.horizontal, 4)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+private struct WatchRecentTransactionsPage: View {
+    @Environment(WatchLedgerViewModel.self) private var viewModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text("watch.recent.title")
+                        .font(.headline)
+                }
+
+                if viewModel.recentTransactions.isEmpty {
+                    ContentUnavailableView(
+                        "watch.empty.title",
+                        systemImage: "tray",
+                        description: Text("watch.empty.description")
+                    )
+                    .font(.caption)
+                } else {
+                    ForEach(viewModel.recentTransactions.prefix(5)) { tx in
+                        WatchTransactionRow(tx: tx)
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+private struct WatchTransactionRow: View {
+    let tx: WatchTransaction
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tx.merchant)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(tx.formattedDate)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 6)
+            Text(tx.formattedAmount)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            Text(String(format: String(localized: "watch.transaction.accessibility_format"), tx.merchant, tx.formattedAmount, tx.formattedDate))
+        )
     }
 }
 

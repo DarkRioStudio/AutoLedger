@@ -40,3 +40,92 @@ struct WatchTransaction: Identifiable, Hashable {
         return f.string(from: occurredAt)
     }
 }
+
+/// Watch 侧今日支出摘要，来自 iPhone 的 WatchConnectivity payload。
+struct WatchTodaySummary: Equatable, Hashable {
+    var ledgerName: String
+    var totalExpense: Double
+    var transactionCount: Int
+    var recentDisplayName: String?
+    var updatedAt: Date?
+
+    static let empty = WatchTodaySummary(
+        ledgerName: String(localized: "watch.today.default_ledger"),
+        totalExpense: 0,
+        transactionCount: 0,
+        recentDisplayName: nil,
+        updatedAt: nil
+    )
+
+    init(
+        ledgerName: String,
+        totalExpense: Double,
+        transactionCount: Int,
+        recentDisplayName: String?,
+        updatedAt: Date?
+    ) {
+        self.ledgerName = ledgerName
+        self.totalExpense = totalExpense
+        self.transactionCount = transactionCount
+        self.recentDisplayName = recentDisplayName
+        self.updatedAt = updatedAt
+    }
+
+    init?(from dict: [String: Any]) {
+        guard
+            let totalExpense = dict["totalExpense"] as? Double,
+            let transactionCount = dict["transactionCount"] as? Int
+        else { return nil }
+
+        let ledgerName = (dict["ledgerName"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        self.ledgerName = ledgerName == "本地账本" || ledgerName?.isEmpty != false
+            ? String(localized: "watch.today.default_ledger")
+            : ledgerName ?? String(localized: "watch.today.default_ledger")
+        self.totalExpense = totalExpense
+        self.transactionCount = transactionCount
+
+        let recent = (dict["recentDisplayName"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        self.recentDisplayName = recent?.isEmpty == false ? recent : nil
+
+        if let ts = dict["updatedAt"] as? Double {
+            self.updatedAt = Date(timeIntervalSince1970: ts)
+        } else {
+            self.updatedAt = nil
+        }
+    }
+
+    static func fallback(from transactions: [WatchTransaction], referenceDate: Date = .now) -> WatchTodaySummary {
+        guard let day = Calendar.autoupdatingCurrent.dateInterval(of: .day, for: referenceDate) else {
+            return .empty
+        }
+
+        let today = transactions
+            .filter { $0.amount > 0 && $0.occurredAt >= day.start && $0.occurredAt < day.end }
+            .sorted { $0.occurredAt > $1.occurredAt }
+
+        return WatchTodaySummary(
+            ledgerName: String(localized: "watch.today.default_ledger"),
+            totalExpense: today.reduce(0) { $0 + $1.amount },
+            transactionCount: today.count,
+            recentDisplayName: today.first?.merchant,
+            updatedAt: today.isEmpty ? nil : Date()
+        )
+    }
+
+    var isEmpty: Bool {
+        transactionCount == 0
+    }
+
+    var formattedAmount: String {
+        String(format: "¥%.2f", totalExpense)
+    }
+
+    var formattedUpdatedAt: String? {
+        guard let updatedAt else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: updatedAt)
+    }
+}

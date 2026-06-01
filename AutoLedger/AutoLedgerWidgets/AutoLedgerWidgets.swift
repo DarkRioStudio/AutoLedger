@@ -66,14 +66,15 @@ private enum WidgetLedgerStore {
         }
         defer { sqlite3_close(db) }
 
-        let calendar = Calendar(identifier: .gregorian)
-        let todayStart = calendar.startOfDay(for: referenceDate)
-        let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: todayStart) ?? referenceDate
+        let calendar = Calendar.autoupdatingCurrent
+        let todayInterval = calendar.dateInterval(of: .day, for: referenceDate)
+        let todayStart = todayInterval?.start ?? calendar.startOfDay(for: referenceDate)
+        let tomorrowStart = todayInterval?.end ?? calendar.date(byAdding: .day, value: 1, to: todayStart) ?? referenceDate
         let monthInterval = calendar.dateInterval(of: .month, for: referenceDate)
         let monthStart = monthInterval?.start ?? todayStart
         let monthEnd = monthInterval?.end ?? tomorrowStart
 
-        let todayTransactions = loadTransactions(db: db, from: todayStart, to: tomorrowStart)
+        let todayTransactions = loadTransactions(db: db, from: todayStart, to: tomorrowStart, positiveOnly: true)
         let monthTransactions = loadTransactions(db: db, from: monthStart, to: monthEnd)
 
         let todayTotal = todayTransactions.reduce(0) { $0 + $1.amount }
@@ -84,7 +85,7 @@ private enum WidgetLedgerStore {
         return WidgetLedgerMetrics(
             todayTotal: todayTotal,
             todayCount: todayTransactions.count,
-            latestMerchant: todayTransactions.first?.merchant,
+            latestMerchant: todayTransactions.first.map(displayName(for:)),
             monthTotal: monthTotal,
             monthCount: monthTransactions.count,
             topMerchant: topMerchant,
@@ -100,11 +101,17 @@ private enum WidgetLedgerStore {
             .appendingPathComponent(databaseFilename)
     }
 
-    private static func loadTransactions(db: OpaquePointer?, from start: Date, to end: Date) -> [WidgetTransaction] {
+    private static func loadTransactions(
+        db: OpaquePointer?,
+        from start: Date,
+        to end: Date,
+        positiveOnly: Bool = false
+    ) -> [WidgetTransaction] {
         let sql = """
-        SELECT merchant, amount, category, occurred_at
+        SELECT merchant, amount, category, source, occurred_at
         FROM transactions
         WHERE deleted_at IS NULL
+          \(positiveOnly ? "AND amount > 0" : "")
           AND occurred_at >= ?
           AND occurred_at < ?
         ORDER BY occurred_at DESC, created_at DESC;
@@ -124,13 +131,15 @@ private enum WidgetLedgerStore {
             guard
                 let merchantCString = sqlite3_column_text(statement, 0),
                 let categoryCString = sqlite3_column_text(statement, 2),
-                let occurredCString = sqlite3_column_text(statement, 3)
+                let sourceCString = sqlite3_column_text(statement, 3),
+                let occurredCString = sqlite3_column_text(statement, 4)
             else {
                 continue
             }
 
             let merchant = String(cString: merchantCString)
             let category = String(cString: categoryCString)
+            let source = String(cString: sourceCString)
             let amount = sqlite3_column_double(statement, 1)
             let occurredAt = parseStorageDate(String(cString: occurredCString)) ?? start
 
@@ -139,6 +148,7 @@ private enum WidgetLedgerStore {
                     merchant: merchant,
                     amount: amount,
                     category: category,
+                    source: source,
                     occurredAt: occurredAt
                 )
             )
@@ -161,19 +171,19 @@ private enum WidgetLedgerStore {
     }
 
     private static func storageDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: date)
+        storageFormatter.string(from: date)
     }
 
     private static func parseStorageDate(_ value: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.date(from: value)
+        if let storageDate = storageFormatter.date(from: value) {
+            return storageDate
+        }
+
+        let legacyFormatter = DateFormatter()
+        legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.timeZone = .current
+        legacyFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return legacyFormatter.date(from: value)
     }
 
     private static func categoryTitle(_ rawValue: String) -> String {
@@ -189,12 +199,52 @@ private enum WidgetLedgerStore {
         default: return rawValue
         }
     }
+
+    private static func sourceTitle(_ rawValue: String) -> String {
+        switch rawValue {
+        case "wechat": return WidgetCopy.isChinese ? "微信支付" : "WeChat Pay"
+        case "alipay": return WidgetCopy.isChinese ? "支付宝" : "Alipay"
+        case "unionPay": return WidgetCopy.isChinese ? "云闪付" : "UnionPay"
+        case "appStore": return "App Store"
+        case "manual": return WidgetCopy.isChinese ? "手动记录" : "Manual"
+        case "shortcut": return WidgetCopy.isChinese ? "快捷指令" : "Shortcuts"
+        case "clipboard": return WidgetCopy.isChinese ? "剪贴板" : "Clipboard"
+        case "camera": return WidgetCopy.isChinese ? "拍照识别" : "Camera"
+        default: return rawValue
+        }
+    }
+
+    private static func displayName(for transaction: WidgetTransaction) -> String {
+        let merchant = transaction.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !merchant.isEmpty {
+            return merchant
+        }
+
+        let category = categoryTitle(transaction.category).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !category.isEmpty {
+            return category
+        }
+
+        let source = sourceTitle(transaction.source).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !source.isEmpty {
+            return source
+        }
+
+        return WidgetCopy.isChinese ? "待确认" : "Needs Review"
+    }
+
+    nonisolated(unsafe) private static let storageFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 }
 
 private struct WidgetTransaction {
     let merchant: String
     let amount: Double
     let category: String
+    let source: String
     let occurredAt: Date
 }
 

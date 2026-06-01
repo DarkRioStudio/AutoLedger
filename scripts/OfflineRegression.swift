@@ -38,6 +38,7 @@ struct OfflineRegression {
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
+        verifyTodaySpendingSummary(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -306,6 +307,153 @@ struct OfflineRegression {
         reporter.check(detected.contains { $0.merchant == "Apple Services" }, "SubscriptionDetector scans digital service subscriptions")
         reporter.check(!detected.contains { $0.merchant == "Demo Burger" }, "SubscriptionDetector excludes dining transactions")
         reporter.check(!detected.contains { $0.merchant.contains("地铁") }, "SubscriptionDetector excludes transport transactions")
+    }
+
+    private static func verifyTodaySpendingSummary(reporter: RegressionReporter) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? .current
+
+        func date(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {
+            calendar.date(from: DateComponents(
+                timeZone: calendar.timeZone,
+                year: year,
+                month: month,
+                day: day,
+                hour: hour,
+                minute: minute
+            )) ?? Date(timeIntervalSince1970: 0)
+        }
+
+        let referenceDate = date(2026, 6, 1, 12, 0)
+        let coffee = Transaction(
+            merchant: "Demo Coffee",
+            amount: 18.50,
+            occurredAt: date(2026, 6, 1, 9, 30),
+            category: .dining,
+            source: .alipay,
+            note: "today coffee"
+        )
+        let market = Transaction(
+            merchant: "Example Market",
+            amount: 30.00,
+            occurredAt: date(2026, 6, 1, 20, 15),
+            category: .groceries,
+            source: .wechat,
+            note: "today market"
+        )
+        let customCategory = Transaction(
+            merchant: "Sample Store",
+            amount: 12.34,
+            occurredAt: date(2026, 6, 1, 11, 0),
+            categoryLabel: "宠物",
+            sourceLabel: "家庭账本",
+            note: "custom category/source"
+        )
+        let yesterday = Transaction(
+            merchant: "Yesterday Store",
+            amount: 100,
+            occurredAt: date(2026, 5, 31, 23, 59),
+            category: .shopping,
+            source: .manual,
+            note: "yesterday"
+        )
+        let zeroAmount = Transaction(
+            merchant: "Zero Amount",
+            amount: 0,
+            occurredAt: date(2026, 6, 1, 13, 0),
+            category: .other,
+            source: .manual,
+            note: "zero"
+        )
+        let negativeAmount = Transaction(
+            merchant: "Refund",
+            amount: -5,
+            occurredAt: date(2026, 6, 1, 14, 0),
+            category: .other,
+            source: .manual,
+            note: "negative"
+        )
+        let deletedOutsideActiveInput = Transaction(
+            merchant: "Deleted Store",
+            amount: 99,
+            occurredAt: date(2026, 6, 1, 15, 0),
+            category: .shopping,
+            source: .manual,
+            note: "deleted"
+        )
+
+        let summary = TodaySpendingSummary.build(
+            from: [yesterday, coffee, zeroAmount, customCategory, negativeAmount, market],
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+
+        reporter.check(summary.ledgerID == TodaySpendingSummary.defaultLedgerID, "TodaySpendingSummary uses default ledger id")
+        reporter.check(summary.ledgerName == TodaySpendingSummary.defaultLedgerName, "TodaySpendingSummary uses default ledger name")
+        reporter.check(summary.transactionCount == 3, "TodaySpendingSummary includes today's positive active expenses only")
+        reporter.check(abs(summary.totalExpense - 60.84) < 0.001, "TodaySpendingSummary totals today's positive expenses")
+        reporter.check(summary.recentTransaction?.id == market.id, "TodaySpendingSummary picks latest occurredAt transaction as recent")
+        reporter.check(summary.recentDisplayName == "Example Market", "TodaySpendingSummary exposes recent merchant display name")
+        reporter.check(!summary.isEmpty, "TodaySpendingSummary non-empty state is false when today has expenses")
+
+        let activeOnlySummary = TodaySpendingSummary.build(
+            from: [coffee],
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+        reporter.check(
+            abs(activeOnlySummary.totalExpense - deletedOutsideActiveInput.amount) > 0.001 &&
+            activeOnlySummary.transactionCount == 1,
+            "TodaySpendingSummary excludes deleted transactions by active input contract"
+        )
+
+        let emptySummary = TodaySpendingSummary.build(
+            from: [yesterday, zeroAmount, negativeAmount],
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+        reporter.check(emptySummary.isEmpty, "TodaySpendingSummary reports empty state when no valid today expenses exist")
+        reporter.check(emptySummary.totalExpense == 0, "TodaySpendingSummary empty total is zero")
+        reporter.check(emptySummary.recentTransaction == nil, "TodaySpendingSummary empty recent transaction is nil")
+
+        let dayStart = Transaction(
+            merchant: "Day Start",
+            amount: 1,
+            occurredAt: date(2026, 6, 1, 0, 0),
+            category: .other,
+            source: .manual,
+            note: "start included"
+        )
+        let nextDayStart = Transaction(
+            merchant: "Next Day Start",
+            amount: 2,
+            occurredAt: date(2026, 6, 2, 0, 0),
+            category: .other,
+            source: .manual,
+            note: "end excluded"
+        )
+        let boundarySummary = TodaySpendingSummary.build(
+            from: [dayStart, nextDayStart],
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+        reporter.check(boundarySummary.transactionCount == 1, "TodaySpendingSummary uses [localStartOfDay, nextLocalStartOfDay) boundary")
+        reporter.check(boundarySummary.recentTransaction?.id == dayStart.id, "TodaySpendingSummary includes local day start")
+
+        let fallbackDisplay = Transaction(
+            merchant: "   ",
+            amount: 8,
+            occurredAt: date(2026, 6, 1, 16, 0),
+            categoryLabel: "交通",
+            sourceLabel: "快捷指令",
+            note: "fallback display"
+        )
+        let fallbackSummary = TodaySpendingSummary.build(
+            from: [fallbackDisplay],
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+        reporter.check(fallbackSummary.recentDisplayName == "交通", "TodaySpendingSummary falls back to category when merchant is blank")
     }
 
     private static func verifySampleParsing(

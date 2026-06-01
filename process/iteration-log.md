@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-01（v1.5.0 GOAL-1531 iPad 工作台深化）
+更新日期：2026-06-01（v1.5.0 GOAL-1511 Watch 首屏今日支出）
 
 ## 记录规则
 
@@ -43,6 +43,182 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-104 GOAL-1511 Watch 首屏今日支出
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 1 / Watch 今日支出与最近支出
+- 类型：能力增强 / Watch UI / WatchConnectivity
+- 目标：将 Watch App 打开后的第一屏从最近账单列表切换为今日支出摘要，同时保留快速记账、语音记账和最近支出入口。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/WatchConnectivityHost.swift`：同步 payload 新增 `todaySummary`。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchTransaction.swift`：新增 Watch 侧 `WatchTodaySummary` 轻量模型和旧 payload fallback。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchSessionManager.swift`、`WatchLedgerViewModel.swift`：接收并暴露今日支出摘要。
+  - `AutoLedger/AutoLedgerWatch Watch App/ContentView.swift`：首屏改为今日支出摘要，最近 5 笔保留为左滑第二页。
+  - `AutoLedger/AutoLedgerWatch Watch App/*.lproj/Localizable.strings`：补齐今日支出和最近支出三语文案。
+  - `AutoLedger/AutoLedgerWatch Watch App/Screenshots/WatchScreenshotHostView.swift`：更新 Watch 截图 fixture 的今日支出摘要。
+- 未改动范围：未新增 Watch complication / 表盘小组件 target，未修改 Watch pending 队列格式，未修改 SQLite schema、BackupBundle、Xcode project、scheme、target、Bundle ID、signing、entitlements、App Group 或 iCloud Container。
+- 完成内容：
+  - iPhone 端 `syncTransactions` 仍保留 `transactions` 与 `customCategories`，并新增 `todaySummary` 字典。
+  - Watch 端收到新 payload 时展示今日总额、今日笔数、最近展示名和更新时间。
+  - 旧 iPhone payload 未带 `todaySummary` 时，Watch 可从最近账单做本地今日摘要 fallback。
+  - Watch 首屏提供语音记账和快速记账图标按钮；Toolbar 中的既有入口继续保留。
+  - 最近支出列表移到第二页，展示最近 5 笔，不引入复杂编辑。
+- 未完成内容：未实现单笔只读详情页；未做真实 Apple Watch 实机点验；未新增表盘小组件。
+- 测试情况：
+  - PASS：`find 'AutoLedger/AutoLedgerWatch Watch App' -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：Watch 首屏信息密度比旧列表更高，仍需要真机大字号 / VoiceOver / 小表盘尺寸目检；当前默认账本名在 Watch 侧做本地化兜底，多账本上线后仍需统一真实账本名的跨端显示策略。
+- 回滚方式：回退 WatchConnectivityHost 的 `todaySummary` payload、WatchTodaySummary、Watch session/view model 状态、ContentView 首屏改造、本地化 key 和截图 fixture。
+- 结论：GOAL-1511 完成；Watch App 已具备“抬腕看今日支出”的第一屏。
+- 下一步建议：继续 GOAL-1512，补单笔只读详情与第二页实机手感，或进入 GOAL-1521 规划 Watch 表盘小组件。
+
+### ITER-103 GOAL-1520 iPhone Widget 今日支出口径
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / Widget 今日支出
+- 类型：能力增强 / Widget / 数据口径
+- 目标：回答并落实“今日支出是否覆盖 iPhone 桌面小组件与负一屏”，将现有 `DailyExpenseWidget` 纳入 GOAL-1510 今日支出口径。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWidgets/AutoLedgerWidgets.swift`：调整 Widget 数据读取、日期边界、正金额过滤和最近展示名回退。
+  - `versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：记录 GOAL-1520 范围调整和执行结果。
+- 未改动范围：未新增 Watch complication / 表盘小组件 target，未修改 Widget UI 视觉布局，未修改 Watch App UI，未改 Xcode project、Bundle ID、signing、App Group、iCloud 或 entitlements。
+- 完成内容：
+  - 确认现有 `DailyExpenseWidget` 覆盖 iPhone 桌面小组件和 iPhone 负一屏 / Today View。
+  - 今日支出查询改为 `deleted_at IS NULL` + `amount > 0`。
+  - 今日边界使用 `Calendar.autoupdatingCurrent` 的本地日区间。
+  - Widget SQLite 日期查询对齐 `SQLiteTransactionStore` 的 ISO8601 fractional seconds 存储格式，并保留旧格式解析 fallback。
+  - 最近展示名按商户 -> 分类 -> 来源回退，避免商户为空时空白。
+- 未完成内容：Watch 表盘小组件仍未创建 target / UI；Widget extension 当前没有直接 import `AutoLedgerCore`，本轮通过同口径规则保持一致。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：Widget extension 仍有一份本地 SQLite 读取逻辑，后续如果允许调整 target 依赖，可评估让 Widget 直接复用 Core 层 summary / transaction decoder，进一步减少口径漂移。
+- 回滚方式：回退 `AutoLedgerWidgets.swift` 的数据读取改动和对应文档记录。
+- 结论：iPhone 桌面小组件与负一屏已纳入今日支出口径；GOAL-1520 先记为 PARTIAL DONE，Watch 表盘小组件后续单独收口。
+- 下一步建议：继续 GOAL-1511，把 Watch App 首屏切换为今日支出。
+
+### ITER-102 GOAL-1510 Watch 今日支出数据服务
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 1 / Watch 今日支出与最近支出
+- 类型：能力增强 / Core / 测试
+- 目标：完成 GOAL-1510，在 Core 或 App 层提供今日支出 summary，包含总金额、笔数、最近商户 / 展示名、空状态和本地日边界，为 Watch 首屏、Widget 和后续展示平台提供统一数据口径。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/TodaySpendingSummary.swift`：新增 Core 级今日支出 summary。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `todaySpendingSummary` 只读属性。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增并接入今日支出口径回归。
+  - `versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填执行结果。
+- 未改动范围：未修改 Watch UI、Widget、WatchConnectivity payload、SQLite schema、BackupBundle、多账本字段、Xcode project 或发布链配置。
+- 完成内容：
+  - `TodaySpendingSummary.build` 接受活跃正式账单数组、reference date 和 calendar，返回默认账本、日区间、总金额、笔数、最近交易、最近展示名和空状态。
+  - 今日支出按 `amount > 0` 与 `[localStartOfDay, nextLocalStartOfDay)` 过滤。
+  - 最近交易按 `occurredAt` 倒序；商户为空时展示名回退到分类，再回退来源。
+  - `LedgerStore.todaySpendingSummary` 使用当前 `transactions`，因此已删除账单不会进入 summary。
+  - 离线回归覆盖今日 / 昨日 / 零负金额 / 自定义分类来源 / active input contract / 日边界 / 展示名回退。
+- 未完成内容：Watch 首屏尚未切换到今日支出；表盘小组件尚未接该数据；多账本上线后还需由调用方按账本过滤输入。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前 `Transaction` 仍没有 `createdAt` / `updatedAt`，同一 `occurredAt` 的最近排序只能按展示名做稳定兜底；多账本上线前 summary 默认视为 `default-local-ledger`。
+- 回滚方式：回退 `TodaySpendingSummary.swift`、`LedgerStore.todaySpendingSummary`、离线回归新增用例和对应文档记录。
+- 结论：GOAL-1510 完成，可以进入 GOAL-1511 Watch 首屏 UI。
+- 下一步建议：执行 GOAL-1511，将 Watch App 首屏从最近账单列表切换为今日支出摘要，并保留快速记账入口。
+
+### ITER-101 GOAL-1503 SQLite / BackupBundle schema 缺口评估
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 设计与数据口径校准
+- 类型：文档 / schema 设计 / 治理
+- 目标：完成 GOAL-1503，基于当前 `Transaction`、`SQLiteTransactionStore`、`BackupBundle` 和 `LedgerStore` 备份恢复实现，评估多账本与候选账单所需 schema 缺口，输出兼容旧数据和 v1 备份的迁移方案。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增“SQLite / BackupBundle 迁移方案（GOAL-1503）”，记录当前 schema 事实、迁移原则、schema version 策略、多账本表、候选区表、BackupBundle v2 草案、推荐实施顺序和回归要求。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮执行结果。
+- 未改动范围：未修改 `Transaction`、未新增 `Ledger` model、未新增或迁移 SQLite 表、未升级 BackupBundle、未修改备份恢复实现、未接 UI、未修改 Xcode project 或发布链配置。
+- 完成内容：
+  - 确认当前正式账单模型缺少 `ledgerId`、`currencyCode`、`transactionType` 等字段，SQLite `transactions` 表已有 timestamp / soft delete 但无账本归属。
+  - 确认 `debug_events` 是调试日志，不适合作为 iPad / Mac 候选队列。
+  - 建议引入 `PRAGMA user_version` 管理复杂 schema 迁移，保留列存在性检测作为兼容小迁移。
+  - 规划 `ledgers` 表，并将旧账单全部回填到固定默认账本 `default-local-ledger`。
+  - 规划独立候选区表：`import_batches`、`raw_inputs`、`candidate_transactions`、`candidate_events`。
+  - 规划 BackupBundle v2：支持 ledgers、transaction extensions、optional candidates，并继续兼容 v1 恢复。
+  - 明确自动 iCloud backup 默认不包含原始图片、PDF 或 OCR 全文。
+- 未完成内容：schema 尚未编码；BackupBundle v2 尚未实现；候选队列、多账本 UI、CSV / JSON 导入导出仍待后续 GOAL。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，仅有既有 Swift warning。
+- 风险与注意事项：BackupBundle 新增非可选字段会破坏旧 JSON 解码，后续实现 v2 时必须使用 optional/default/custom Decodable；候选区 raw input 涉及敏感财务数据，自动备份和公开样例必须默认排除。
+- 回滚方式：如后续 schema 方向调整，可回退 `versions/v1.5.0-plan.md` 中 GOAL-1503 段落和对应日志 / changelog 条目，不影响代码。
+- 结论：GOAL-1503 完成，可以进入 GOAL-1510 今日支出数据服务，或进入 GOAL-1560 多账本模型与默认账本迁移实现。
+- 下一步建议：优先执行 GOAL-1510，把 GOAL-1501 的今日支出口径落成可测试服务，为 Watch 首屏和 Widget 提供数据基础。
+
+### ITER-100 GOAL-1502 候选账单状态模型设计
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 设计与数据口径校准
+- 类型：文档 / 模型设计 / 治理
+- 目标：完成 GOAL-1502，定义 Raw Input / Candidate / Reviewed / Transaction / Rejected 状态流、失败原因、置信度策略、重复提示字段和隐私边界，为 iPad / Mac 批量导入、复核、清洗和正式入账提供统一契约。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增“候选账单状态模型（GOAL-1502）”，定义状态流、最小字段草案、失败原因枚举、置信度与复核策略、重复提示策略、后续落库 / BackupBundle 边界和测试用例设计。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮执行结果。
+- 未改动范围：未新增 Swift model、未新增 SQLite 表、未升级 BackupBundle、未实现批量导入队列、未接 iPad / Mac 候选区真实 UI、未修改 Xcode project 或发布链配置。
+- 完成内容：
+  - 明确 `rawInput -> candidate -> reviewed -> transaction` 主路径，以及 raw / candidate 转 `rejected`、candidate 重试和 reviewed 提交失败回退路径。
+  - 明确只有正式 `transaction` 写入当前账本并进入今日支出、月报、Top 商户和展示平台统计。
+  - 给出候选记录字段组：身份与批次、原始输入、解析草稿、扩展草稿、状态与质量、重复提示、复核与入账、隐私与清理。
+  - 定义 `emptyInput`、`ocrFailed`、`nonBillImage`、`missingAmount`、`missingMerchant`、`missingDate`、`lowConfidence`、`multipleReceipts`、`duplicateSuspected` 等失败原因。
+  - 定义 High / Medium / Low 置信度策略：置信度只影响复核优先级，批量导入场景不绕过用户确认自动入账。
+  - 明确重复检测只提示和分组，不自动删除候选或正式账单。
+  - 标出原图、OCR 全文、PDF 文本等原始输入的隐私边界，以及 BackupBundle schema v2 的后续评估点。
+- 未完成内容：候选模型尚未编码；SQLite / BackupBundle 迁移尚未设计；批量导入队列、iPad 候选列表和数据清洗执行逻辑仍待后续 GOAL。
+- 测试情况：执行 `git diff --check`，结果 PASS；本轮只改文档，未运行构建。
+- 风险与注意事项：后续实现时不能让候选记录复用正式 `Transaction` 表并参与统计；如果备份候选区或原始输入，必须显式处理隐私和 schema 兼容。
+- 回滚方式：如后续模型口径调整，可回退 `versions/v1.5.0-plan.md` 中 GOAL-1502 段落和对应日志 / changelog 条目，不影响代码。
+- 结论：GOAL-1502 完成，可以进入 GOAL-1503 SQLite / BackupBundle schema 缺口评估。
+- 下一步建议：执行 GOAL-1503，评估 `Transaction`、SQLite、BackupBundle、默认账本和候选区落库的兼容迁移方案。
+
+### ITER-099 GOAL-1501 默认账本与今日支出口径
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 设计与数据口径校准
+- 类型：文档 / 口径定义 / 治理
+- 目标：完成 GOAL-1501，明确默认账本、全部账本、今日支出、最近支出、币种和后续测试用例口径，为 Watch 今日支出、Widget、iPad 总览、Mac Catalyst、tvOS 和 visionOS 展示提供同一套统计基础。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增“默认账本与今日支出口径（GOAL-1501）”，定义虚拟默认账本 `default-local-ledger`、今日支出统计范围、日期边界、最近支出、币种边界和 GOAL-1510 测试用例设计。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮执行结果。
+- 未改动范围：未新增 `Ledger` 模型、未修改 `Transaction` / SQLite / BackupBundle、未实现今日支出数据服务、未改 Watch / Widget / iPad UI、未改 Xcode project 或发布链配置。
+- 完成内容：
+  - 在多账本上线前，所有活跃正式账单视为属于虚拟默认账本；多账本迁移后旧账单统一进入 `default-local-ledger`。
+  - 今日支出只统计本地日历日内、`occurredAt` 命中、金额大于 0、未删除、已确认的正式账单。
+  - 候选账单、已删除账单、零 / 负金额、订阅元数据和未确认多币种不进入今日支出。
+  - Watch / Widget / tvOS / visionOS 首版默认展示默认账本；iPad / Mac 工作台可在后续显式选择当前账本或全部账本。
+  - 为 GOAL-1510 列出 today / yesterday / deleted / candidate / zero-negative / custom category / timezone boundary / default ledger scope 等离线测试设计。
+- 未完成内容：统计服务尚未编码；测试用例尚未落地到脚本；多账本 schema 和 BackupBundle 迁移仍待 GOAL-1503 / GOAL-1560。
+- 测试情况：执行 `git diff --check`，结果 PASS；本轮只改文档，未运行构建。
+- 风险与注意事项：当前 `AppFormatters.calendar` 是固定 Gregorian calendar，后续编码今日支出服务时应显式注入用户本地 calendar / timezone，避免 UTC 或测试环境差异；当前 `Transaction` 没有币种和类型字段，未来收入 / 退款 / 多币种能力需要单独 schema 设计。
+- 回滚方式：如后续产品口径调整，可回退 `versions/v1.5.0-plan.md` 中 GOAL-1501 段落和对应日志 / changelog 条目，不影响代码。
+- 结论：GOAL-1501 完成，可以进入 GOAL-1502 候选账单状态模型设计，或在需要 Watch UI 前进入 GOAL-1510 今日支出数据服务实现。
+- 下一步建议：执行 GOAL-1502，定义 Raw Input / Candidate / Reviewed / Transaction / Rejected 状态和失败 / 置信度 / 重复提示字段。
+
+### ITER-098 v1.5.0 全平台扩展路线规划
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7+ / 全平台扩展规划
+- 类型：文档 / 产品规划 / 治理
+- 目标：更新当前 v1.5.0 版本计划，把 iPad 完善后的路线扩展到 Mac Catalyst、tvOS 和 visionOS，明确平台定位、首版能力、边界和 GOAL 拆解。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：将版本定位从多设备工作流扩展为全平台本地优先账单工作流；补充 Mac Catalyst、tvOS、visionOS 的产品定位、能力范围、验收口径、风险和 GOAL 队列。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮文档规划更新。
+- 未改动范围：未修改 Xcode project、target、scheme、Bundle ID、signing、entitlements、App Group、iCloud Container、业务代码、截图脚本或构建配置。
+- 完成内容：
+  - Mac Catalyst 路线明确为 iPad 工作台稳定后的生产力扩展，首版覆盖拖拽截图 / 文件导入、CSV / JSON 导入导出、快捷键、基础菜单栏、大表格、批量选择、批量修正和重复账单检查。
+  - tvOS 路线明确为只读家庭大屏看板，覆盖本月支出总览、分类占比、最近消费趋势、年度 / 月度摘要和隐私模式。
+  - visionOS 路线明确为空间展示版本，覆盖月度空间看板、漂浮分类卡片、年度时间线墙和最近账单悬浮列表。
+  - GOAL 队列扩展到 GOAL-1570～GOAL-1592，拆分 Mac Catalyst、tvOS、visionOS、全平台截图与发布回归。
+- 未完成内容：未开启 Mac Catalyst、tvOS 或 visionOS target；未实现任何新平台代码；未新增截图管线实现。
+- 测试情况：文档更新；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：全平台规划不等于当前发布承诺；Mac 需等待 iPad 工作台、候选队列、数据清洗和多账本稳定后再接入；tvOS / visionOS 首版必须保持只读展示，避免新增写入链路和同步口径分叉。
+- 回滚方式：如后续决定收窄范围，可回退 `versions/v1.5.0-plan.md` 的全平台扩展段落和 GOAL 队列增量，保留 iPad / Watch 原计划。
+- 结论：本轮完成，v1.5.0 计划已从 iPhone / Watch / iPad 扩展为 iPad → Mac Catalyst → tvOS / visionOS 的全平台路线。
+- 下一步建议：继续按现有顺序完成 iPad 工作台、候选队列、批量导入、数据清洗和多账本，再启动 GOAL-1570 Mac Catalyst 接入评估。
 
 ### ITER-097 GOAL-1531 iPad 工作台深化与部署烟测
 - 日期：2026-06-01

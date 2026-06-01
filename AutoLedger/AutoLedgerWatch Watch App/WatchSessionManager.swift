@@ -4,7 +4,7 @@ import WatchConnectivity
 
 /// Watch 侧 WatchConnectivity 会话管理器。
 /// 负责：
-///  - 接收来自 iPhone 的 syncTransactions 推送（近期账单列表）
+///  - 接收来自 iPhone 的 syncTransactions 推送（今日支出摘要与近期账单列表）
 ///  - 向 iPhone 发送新记账草稿，支持离线 pending 队列与重试
 @Observable
 @MainActor
@@ -16,6 +16,9 @@ final class WatchSessionManager: NSObject {
 
     /// 最近从 iPhone 同步的账单摘要（用于 Watch 列表展示）
     private(set) var recentTransactions: [WatchTransaction] = []
+
+    /// 今日支出摘要（用于 Watch 首屏展示）
+    private(set) var todaySummary: WatchTodaySummary = .empty
 
     /// iPhone 端用户自定义分类。
     private(set) var customCategories: [String] = []
@@ -88,7 +91,7 @@ final class WatchSessionManager: NSObject {
 
     /// Watch 列表为空或分类为空时，主动向 iPhone 拉取一次同步数据。
     func requestInitialSyncIfNeeded() {
-        guard recentTransactions.isEmpty || customCategories.isEmpty else { return }
+        guard recentTransactions.isEmpty || customCategories.isEmpty || todaySummary.updatedAt == nil else { return }
         requestRecentTransactions(allowBackgroundFallback: true)
     }
 
@@ -164,6 +167,7 @@ final class WatchSessionManager: NSObject {
     private func handleRecentTransactionsReply(_ reply: [String: Any]) {
         guard let list = reply["transactions"] as? [[String: Any]] else { return }
         recentTransactions = list.compactMap { WatchTransaction(from: $0) }
+        todaySummary = makeTodaySummary(from: reply)
         customCategories = reply["customCategories"] as? [String] ?? customCategories
         notifyStateChanged()
     }
@@ -172,8 +176,17 @@ final class WatchSessionManager: NSObject {
         if let list = payload["transactions"] as? [[String: Any]] {
             recentTransactions = list.compactMap { WatchTransaction(from: $0) }
         }
+        todaySummary = makeTodaySummary(from: payload)
         customCategories = payload["customCategories"] as? [String] ?? customCategories
         notifyStateChanged()
+    }
+
+    private func makeTodaySummary(from payload: [String: Any]) -> WatchTodaySummary {
+        if let dict = payload["todaySummary"] as? [String: Any],
+           let summary = WatchTodaySummary(from: dict) {
+            return summary
+        }
+        return WatchTodaySummary.fallback(from: recentTransactions)
     }
 
     private func enqueueBackgroundFetchRequest(force: Bool) {

@@ -140,6 +140,7 @@ swiftc \
   "$CORE/Models/LedgerInterpretationModels.swift" \
   "$CORE/Models/SampleReceipt.swift" \
   "$CORE/Models/MonthlySnapshot.swift" \
+  "$CORE/Models/TodaySpendingSummary.swift" \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \

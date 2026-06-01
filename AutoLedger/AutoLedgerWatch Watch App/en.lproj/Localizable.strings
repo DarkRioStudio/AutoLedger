@@ -17,6 +17,14 @@
 "voice_ledger_parse" = "Parse";
 
 "watch.ledger.title" = "Ledger";
+"watch.today.title" = "Today";
+"watch.today.default_ledger" = "Local Ledger";
+"watch.today.count_format" = "%d entries today";
+"watch.today.latest_format" = "Latest: %@";
+"watch.today.updated_format" = "Updated %@";
+"watch.today.accessibility_format" = "Today spending %@, %d entries";
+"watch.today.empty.description" = "No spending today yet. Add one quickly from your watch.";
+"watch.recent.title" = "Recent";
 "watch.empty.title" = "No Records";
 "watch.empty.description" = "Entries appear here after you save them on iPhone";
 "watch.transaction.accessibility_format" = "%@, %@, %@";

@@ -6,7 +6,7 @@ import WatchConnectivity
 ///
 /// 职责：
 /// 1. 接收来自 Apple Watch 的 `addTransaction` 消息，直接构建 `Transaction` 并写入 `LedgerStore`。
-/// 2. 响应 Watch 的 `fetchRecent` 请求，返回最近 20 条账单。
+/// 2. 响应 Watch 的 `fetchRecent` 请求，返回今日支出摘要与最近 20 条账单。
 /// 3. 在 App 进入前台时主动向 Watch 推送 `syncTransactions` 消息。
 @MainActor
 final class WatchConnectivityHost: NSObject {
@@ -60,10 +60,35 @@ final class WatchConnectivityHost: NSObject {
         return store.transactions.prefix(20).map { serialize($0) }
     }
 
+    private func makeTodaySummaryPayload() -> [String: Any] {
+        guard let summary = LedgerStore.shared?.todaySpendingSummary else {
+            return [
+                "ledgerName": TodaySpendingSummary.defaultLedgerName,
+                "totalExpense": 0.0,
+                "transactionCount": 0,
+                "updatedAt": Date().timeIntervalSince1970
+            ]
+        }
+
+        var payload: [String: Any] = [
+            "ledgerName": summary.ledgerName,
+            "totalExpense": summary.totalExpense,
+            "transactionCount": summary.transactionCount,
+            "updatedAt": Date().timeIntervalSince1970
+        ]
+
+        if let recentDisplayName = summary.recentDisplayName {
+            payload["recentDisplayName"] = recentDisplayName
+        }
+
+        return payload
+    }
+
     private func makeSyncPayload() -> [String: Any] {
         [
             "action": "syncTransactions",
             "transactions": makeRecentPayload(),
+            "todaySummary": makeTodaySummaryPayload(),
             "customCategories": LedgerStore.shared?.customCategories ?? []
         ]
     }

@@ -13,6 +13,7 @@ final class WatchLedgerViewModel {
     // MARK: - List State
 
     var recentTransactions: [WatchTransaction] = []
+    var todaySummary: WatchTodaySummary = .empty
     var isReachable: Bool = false
     var pendingCount: Int = 0
 
@@ -152,6 +153,7 @@ final class WatchLedgerViewModel {
 
     private func syncFromSession() {
         recentTransactions = session.recentTransactions
+        todaySummary = session.todaySummary
         isReachable = session.isReachable
         pendingCount = session.pendingCount
         customCategories = session.customCategories

@@ -63,6 +63,10 @@ final class LedgerStore: ObservableObject {
         MonthlySnapshot.build(from: transactions, referenceDate: .now)
     }
 
+    var todaySpendingSummary: TodaySpendingSummary {
+        TodaySpendingSummary.build(from: transactions, referenceDate: .now)
+    }
+
     func saveCustomSources() {
         UserDefaults.standard.set(customSources, forKey: "customSources")
         requestAutomaticBackup()
