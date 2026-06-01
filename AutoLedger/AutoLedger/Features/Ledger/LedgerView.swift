@@ -39,6 +39,7 @@ struct LedgerView: View {
     @State private var isAddingTransaction = false
     @State private var isShowingVoiceLedger = false
     @State private var isShowingDeleted = false
+    @State private var searchText = ""
 
     private var filteredTransactions: [Transaction] {
         let cal = Calendar.current
@@ -53,6 +54,16 @@ struct LedgerView: View {
             return store.transactions.filter {
                 cal.isDate($0.occurredAt, equalTo: filterDate, toGranularity: .year)
             }
+        }
+    }
+
+    private var searchFilteredTransactions: [Transaction] {
+        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return filteredTransactions }
+        return filteredTransactions.filter {
+            $0.merchant.localizedCaseInsensitiveContains(trimmed) ||
+            $0.note.localizedCaseInsensitiveContains(trimmed) ||
+            $0.categoryTitle.localizedCaseInsensitiveContains(trimmed)
         }
     }
 
@@ -72,125 +83,146 @@ struct LedgerView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    // Filter controls
-                    VStack(alignment: .leading, spacing: 10) {
-                        Picker("ledger.filter.picker", selection: $filter) {
-                            ForEach(LedgerFilter.allCases, id: \.self) { f in
-                                Text(f.titleKey).tag(f)
+            ScrollViewReader { proxy in
+                List {
+                    Section {
+                        // Filter controls
+                        VStack(alignment: .leading, spacing: 10) {
+                            Picker("ledger.filter.picker", selection: $filter) {
+                                ForEach(LedgerFilter.allCases, id: \.self) { f in
+                                    Text(f.titleKey).tag(f)
+                                }
                             }
-                        }
-                        .pickerStyle(.segmented)
+                            .pickerStyle(.segmented)
 
-                        if filter != .all {
-                            HStack {
-                                Button {
-                                    filterDate = stepDate(filterDate, by: -1)
-                                } label: {
-                                    Image(systemName: "chevron.left")
+                            if filter != .all {
+                                HStack {
+                                    Button {
+                                        filterDate = stepDate(filterDate, by: -1)
+                                    } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.subheadline.weight(.semibold))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(Text(filter.previousAccessibilityKey))
+
+                                    Spacer()
+
+                                    Text(filterLabel)
                                         .font(.subheadline.weight(.semibold))
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(Text(filter.previousAccessibilityKey))
+                                        .foregroundStyle(AppTheme.ink)
 
-                                Spacer()
+                                    Spacer()
 
-                                Text(filterLabel)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppTheme.ink)
-
-                                Spacer()
-
-                                Button {
-                                    filterDate = stepDate(filterDate, by: 1)
-                                } label: {
-                                    Image(systemName: "chevron.right")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(isAtOrAfterToday)
-                                .accessibilityLabel(Text(filter.nextAccessibilityKey))
-                            }
-                            .foregroundStyle(AppTheme.accent)
-                        }
-                    }
-                    .listRowBackground(AppTheme.card)
-                }
-
-                Section {
-                    ForEach(filteredTransactions) { transaction in
-                        Button {
-                            selectedTransaction = transaction
-                        } label: {
-                            HStack(alignment: .top, spacing: 14) {
-                                Image(systemName: transaction.categoryEnum.iconName)
-                                    .font(.headline)
-                                    .foregroundStyle(transaction.categoryEnum.tint)
-                                    .frame(width: 34, height: 34)
-                                    .background(transaction.categoryEnum.tint.opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    .accessibilityHidden(true)
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text(transaction.merchant)
-                                            .font(.headline)
-                                            .foregroundStyle(AppTheme.ink)
-
-                                        Spacer()
-
-                                        Text(AppFormatters.currency(transaction.amount))
-                                            .font(.headline.weight(.bold))
-                                            .foregroundStyle(AppTheme.ink)
+                                    Button {
+                                        filterDate = stepDate(filterDate, by: 1)
+                                    } label: {
+                                        Image(systemName: "chevron.right")
+                                            .font(.subheadline.weight(.semibold))
                                     }
-
-                                    HStack(spacing: 10) {
-                                        Text(transaction.categoryTitle)
-                                        Text(transaction.sourceTitle)
-                                        Text(AppFormatters.shortDateTime(transaction.occurredAt))
-                                    }
-                                    .font(.caption)
-                                    .foregroundStyle(AppTheme.mutedInk)
-
-                                    if !transaction.note.isEmpty {
-                                        Text(transaction.note)
-                                            .font(.footnote)
-                                            .foregroundStyle(AppTheme.mutedInk)
-                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(isAtOrAfterToday)
+                                    .accessibilityLabel(Text(filter.nextAccessibilityKey))
                                 }
-
-                                Image(systemName: "slider.horizontal.3")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(AppTheme.mutedInk)
-                                    .accessibilityHidden(true)
+                                .foregroundStyle(AppTheme.accent)
                             }
                         }
-                        .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
-                        .accessibilityHint(Text("ledger.transaction.edit_hint"))
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 6)
                         .listRowBackground(AppTheme.card)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                store.deleteTransaction(transaction)
-                            } label: {
-                                Label("common.delete", systemImage: "trash")
+                    }
+
+                    Section {
+                        let results = searchFilteredTransactions
+                        if results.isEmpty && !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                            Text("ledger.search.no_results")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.mutedInk)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 20)
+                                .listRowBackground(AppTheme.card)
+                        } else {
+                            ForEach(results) { transaction in
+                                Button {
+                                    selectedTransaction = transaction
+                                } label: {
+                                    HStack(alignment: .top, spacing: 14) {
+                                        Image(systemName: transaction.categoryEnum.iconName)
+                                            .font(.headline)
+                                            .foregroundStyle(transaction.categoryEnum.tint)
+                                            .frame(width: 34, height: 34)
+                                            .background(transaction.categoryEnum.tint.opacity(0.12))
+                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .accessibilityHidden(true)
+
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            HStack {
+                                                Text(transaction.merchant)
+                                                    .font(.headline)
+                                                    .foregroundStyle(AppTheme.ink)
+
+                                                Spacer()
+
+                                                Text(AppFormatters.currency(transaction.amount))
+                                                    .font(.headline.weight(.bold))
+                                                    .foregroundStyle(AppTheme.ink)
+                                            }
+
+                                            HStack(spacing: 10) {
+                                                Text(transaction.categoryTitle)
+                                                Text(transaction.sourceTitle)
+                                                Text(AppFormatters.shortDateTime(transaction.occurredAt))
+                                            }
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.mutedInk)
+
+                                            if !transaction.note.isEmpty {
+                                                Text(transaction.note)
+                                                    .font(.footnote)
+                                                    .foregroundStyle(AppTheme.mutedInk)
+                                            }
+                                        }
+
+                                        Image(systemName: "slider.horizontal.3")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(AppTheme.mutedInk)
+                                            .accessibilityHidden(true)
+                                    }
+                                }
+                                .id(transaction.id)
+                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                                .accessibilityHint(Text("ledger.transaction.edit_hint"))
+                                .buttonStyle(.plain)
+                                .padding(.vertical, 6)
+                                .listRowBackground(AppTheme.card)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        store.deleteTransaction(transaction)
+                                    } label: {
+                                        Label("common.delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
+                    } header: {
+                        Text(filterLabel)
+                    } footer: {
+                        let count = searchFilteredTransactions.count
+                        Text(String(format: String(localized: "ledger.footer_format"), count))
                     }
-                } header: {
-                    Text(filterLabel)
-                } footer: {
-                    let count = filteredTransactions.count
-                    Text(String(format: String(localized: "ledger.footer_format"), count))
+                }
+                .scrollContentBackground(.hidden)
+                .background(AppTheme.screenGradient.ignoresSafeArea())
+                .refreshable {
+                    store.refreshFromStore()
+                }
+                .onChange(of: searchText) { _, _ in
+                    if let first = searchFilteredTransactions.first {
+                        withAnimation {
+                            proxy.scrollTo(first.id, anchor: .top)
+                        }
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.screenGradient.ignoresSafeArea())
-            .refreshable {
-                store.refreshFromStore()
-            }
+            .searchable(text: $searchText, prompt: Text("ledger.search.prompt"))
             .navigationTitle("tab.ledger")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -177,6 +177,8 @@
 "ledger.filter.next_year" = "Next year";
 "ledger.transaction.edit_hint" = "Tap to edit";
 "ledger.footer_format" = "%d entries. Tap any transaction to correct amount, category, or note.";
+"ledger.search.prompt" = "Search transactions";
+"ledger.search.no_results" = "No matching transactions";
 
 "deleted_transactions.title" = "Recently Deleted";
 "deleted_transactions.empty.title" = "No Deleted Transactions";
