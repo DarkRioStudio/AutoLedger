@@ -4,14 +4,33 @@
 "tab.settings" = "设置";
 
 "ipad.workspace.title" = "工作台";
+"ipad.workspace.overview" = "总览";
 "ipad.workspace.capture" = "导入";
 "ipad.workspace.ledger" = "账本";
 "ipad.workspace.reports" = "分析";
 "ipad.workspace.review_queue" = "候选账单";
 "ipad.workspace.cleaning" = "数据清洗";
 "ipad.workspace.settings" = "设置";
+"ipad.workspace.metric.month" = "本月";
+"ipad.workspace.metric.recent" = "全部账单";
+"ipad.workspace.metric.recent.detail" = "当前本地账本";
+"ipad.workspace.metric.top_merchant" = "Top 商户";
+"ipad.workspace.recent_transactions" = "最近账单";
+"ipad.workspace.next_steps" = "整理工作流";
+"ipad.workspace.next.import" = "从截图、拍照或剪贴板继续导入。";
+"ipad.workspace.next.review" = "后续批量识别结果将在这里复核。";
+"ipad.workspace.next.cleaning" = "后续商户、分类和重复项整理将在这里处理。";
+"ipad.workspace.detail" = "详情";
+"ipad.workspace.ledger.empty" = "还没有账单";
+"ipad.workspace.ledger.empty.placeholder" = "先导入或手动新增一笔账单，再在这里查看详情。";
 "ipad.workspace.review_queue.placeholder" = "批量识别结果将在这里复核。";
 "ipad.workspace.cleaning.placeholder" = "商户、分类和重复项整理将在这里处理。";
+"ipad.workspace.review_queue.item.raw_input" = "Raw Input：图片、文件或文本先进入原始输入区。";
+"ipad.workspace.review_queue.item.candidate" = "Candidate：识别后生成候选账单，不直接污染正式账本。";
+"ipad.workspace.review_queue.item.reviewed" = "Reviewed：用户确认字段后再转入正式账本。";
+"ipad.workspace.cleaning.item.merchant" = "商户统一：合并不同写法。";
+"ipad.workspace.cleaning.item.category" = "分类修正：批量调整同类账单。";
+"ipad.workspace.cleaning.item.duplicates" = "重复检测：按金额、时间和商户提示疑似重复。";
 
 "common.close" = "关闭";
 "common.cancel" = "取消";

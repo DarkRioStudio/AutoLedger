@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-01（v1.5.0 GOAL-1530 iPad 入口线）
+更新日期：2026-06-01（v1.5.0 GOAL-1531 iPad 工作台深化）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-097 GOAL-1531 iPad 工作台深化与部署烟测
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 3 / iPad 信息架构与入口策略
+- 类型：能力增强 / iPad / SwiftUI / 文档
+- 目标：继续完成 iPad 线，让当前 main 可以构建到 iPad 目标并具备可上真机测试的 iPad 工作台主路径。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：把 iPad 工作台从首版壳层深化为总览、导入、账本、分析、候选账单、数据清洗和设置结构；账本区采用 iPad 原生列表 + 详情检查器，接入真实 `LedgerStore` 交易数据与编辑 / 删除 / 新增 / 语音入口。
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：补齐总览指标、最近账单、整理工作流、详情检查器、候选账单和数据清洗规划项的中英繁三语文案。
+  - `versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填执行结果与部署验证方式。
+- 未改动范围：未新增候选账单状态模型、批量 OCR、数据清洗执行器、多账本、SQLite schema 迁移、BackupBundle schema 升级、iPad 截图导出脚本或 Mac Catalyst。
+- 完成内容：iPad 首屏进入工作台总览；账本在 iPad 上不再只是复用手机列表，而是具备宽屏列表和右侧检查器；空状态下可继续通过导入 / 新增 / 语音入口进入现有账单链路；候选账单与数据清洗以规划工作区形式留出后续落点。
+- 未完成内容：真机 iPad 还需用户在 Xcode 设备列表中完成签名部署验证；通知权限、相册权限、相机权限、Share Extension 和 Watch 配套仍需真机人工回归。
+- 测试情况：
+  - `git diff --check`：PASS。
+  - `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`：PASS。
+  - `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' build`：PASS。
+  - `xcrun simctl install 5784B992-36AB-4721-9537-5C24E8DD2D86 .../AutoLedger.app` + `xcrun simctl launch ... top.darkrio326.AutoLedger`：PASS，iPad 工作台截图已确认侧边栏与总览渲染。
+  - `bash scripts/run_offline_regression.sh`：PASS，仅有既有 Swift warning。
+  - `bash scripts/run_golden_regression.sh`：PASS，32 case(s)，仅有既有 Swift warning。
+- 风险与注意事项：当前 iPad 工作台仍是 v1.5.0 的第一版真实工作区，候选账单和数据清洗尚未接数据模型；真机签名可能受本机证书、设备注册、Apple Developer Team 或 Xcode 26 beta 环境影响，但本轮未修改这些发布链配置。
+- 回滚方式：如 iPad 工作台在真机出现阻断，可回退 `IPadWorkspaceView.swift` 和本地化文案到 GOAL-1530 状态；iPhone 原 `HomeView` 主路径未被改动。
+- 结论：本轮完成，main 已具备 iPad Simulator build/install/launch 证据，可以进入真机 iPad 部署测试。
+- 下一步建议：在真机 iPad 上用 Xcode 选择 `AutoLedger.xcworkspace` / `AutoLedger` scheme / 目标 iPad 直接 Run；通过后进入 GOAL-1501 / GOAL-1502 / GOAL-1503，补默认账本、候选账单模型和持久化迁移方案。
 
 ### ITER-096 GOAL-1530 iPad 线第一版入口
 - 日期：2026-06-01

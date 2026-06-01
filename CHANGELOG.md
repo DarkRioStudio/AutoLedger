@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-01 +0800] 完成 GOAL-1531 iPad 工作台深化与部署烟测：iPad 入口从占位侧边栏推进为真实工作台，总览页显示本月支出、账单总数、Top 商户、最近账单和整理工作流入口；账本页提供 iPad 原生列表 + 详情检查器，支持新增、编辑、删除、语音记账和刷新；候选账单与数据清洗保留为规划工作区清单。已通过 generic iOS Debug build、iPad Pro 13-inch (M5) Simulator build / install / launch、离线回归、Golden 回归和 `git diff --check`。
 - [2026-06-01 +0800] 完成 GOAL-1530 iPad 线第一版入口：主 App target 切到 iPhone + iPad，保持 Mac Catalyst 关闭；iPad 设备进入新增 `IPadWorkspaceView`，使用 `NavigationSplitView` 侧边栏组织导入、账本、分析、候选账单、数据清洗和设置；iPhone 继续使用原 `HomeView` Tab；候选账单和数据清洗只做规划入口，不接真实队列或 schema；补齐中英繁三语 iPad 工作台文案，并通过主 App generic iOS Debug build、离线回归与 Golden 回归。
 - [2026-06-01 +0800] 完成 GOAL-1500 v1.5.0 基线审计：记录当前 `main` / `v1.4.0` tag / `MARKETING_VERSION=1.4.0` / target 设备族配置，确认 `Transaction`、SQLite 与 BackupBundle 对多账本、候选账单、批量导入队列和清洗历史仍有 schema 缺口；记录截图管线当前只覆盖 iPhone 与 Apple Watch、不覆盖 iPad；`xcodebuild -list`、离线回归、Golden 回归和主 App generic iOS Debug build 均通过。
 - [2026-06-01 +0800] 评审 v1.5.0 当前版本计划并补充 GOAL 目标拆解：将 Watch 今日支出、表盘小组件、iPad 工作台、批量导入与识别、数据清洗、多账本、Mac 复用评估、iPad 截图管线和发布回归拆成可独立执行、回归和回滚的 GOAL-1500～GOAL-1590 队列，并明确推荐推进顺序与首个可执行 GOAL。

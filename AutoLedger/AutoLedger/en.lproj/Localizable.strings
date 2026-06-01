@@ -4,14 +4,33 @@
 "tab.settings" = "Settings";
 
 "ipad.workspace.title" = "Workspace";
+"ipad.workspace.overview" = "Overview";
 "ipad.workspace.capture" = "Import";
 "ipad.workspace.ledger" = "Ledger";
 "ipad.workspace.reports" = "Analysis";
 "ipad.workspace.review_queue" = "Candidates";
 "ipad.workspace.cleaning" = "Cleanup";
 "ipad.workspace.settings" = "Settings";
+"ipad.workspace.metric.month" = "This Month";
+"ipad.workspace.metric.recent" = "All Transactions";
+"ipad.workspace.metric.recent.detail" = "Current local ledger";
+"ipad.workspace.metric.top_merchant" = "Top Merchant";
+"ipad.workspace.recent_transactions" = "Recent Transactions";
+"ipad.workspace.next_steps" = "Cleanup Workflow";
+"ipad.workspace.next.import" = "Continue importing from screenshots, camera, or clipboard.";
+"ipad.workspace.next.review" = "Batch recognition results will be reviewed here next.";
+"ipad.workspace.next.cleaning" = "Merchant, category, and duplicate cleanup will be handled here next.";
+"ipad.workspace.detail" = "Details";
+"ipad.workspace.ledger.empty" = "No Transactions Yet";
+"ipad.workspace.ledger.empty.placeholder" = "Import or add a transaction first, then inspect it here.";
 "ipad.workspace.review_queue.placeholder" = "Batch recognition results will be reviewed here.";
 "ipad.workspace.cleaning.placeholder" = "Merchant, category, and duplicate cleanup will be handled here.";
+"ipad.workspace.review_queue.item.raw_input" = "Raw Input: images, files, or text enter the raw input area first.";
+"ipad.workspace.review_queue.item.candidate" = "Candidate: recognition creates draft transactions before they reach the ledger.";
+"ipad.workspace.review_queue.item.reviewed" = "Reviewed: users confirm fields before saving official transactions.";
+"ipad.workspace.cleaning.item.merchant" = "Merchant unification: merge different merchant spellings.";
+"ipad.workspace.cleaning.item.category" = "Category cleanup: adjust related transactions in batches.";
+"ipad.workspace.cleaning.item.duplicates" = "Duplicate detection: flag likely duplicates by amount, time, and merchant.";
 
 "common.close" = "Close";
 "common.cancel" = "Cancel";
