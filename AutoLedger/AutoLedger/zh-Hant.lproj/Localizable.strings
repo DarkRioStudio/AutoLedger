@@ -3,6 +3,16 @@
 "tab.report" = "月報";
 "tab.settings" = "設定";
 
+"ipad.workspace.title" = "工作台";
+"ipad.workspace.capture" = "匯入";
+"ipad.workspace.ledger" = "帳本";
+"ipad.workspace.reports" = "分析";
+"ipad.workspace.review_queue" = "候選帳單";
+"ipad.workspace.cleaning" = "資料清理";
+"ipad.workspace.settings" = "設定";
+"ipad.workspace.review_queue.placeholder" = "批次識別結果將在這裡複核。";
+"ipad.workspace.cleaning.placeholder" = "商戶、分類和重複項整理將在這裡處理。";
+
 "common.close" = "關閉";
 "common.cancel" = "取消";
 "common.save" = "儲存";

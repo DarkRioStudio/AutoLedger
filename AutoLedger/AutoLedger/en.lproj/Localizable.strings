@@ -3,6 +3,16 @@
 "tab.report" = "Reports";
 "tab.settings" = "Settings";
 
+"ipad.workspace.title" = "Workspace";
+"ipad.workspace.capture" = "Import";
+"ipad.workspace.ledger" = "Ledger";
+"ipad.workspace.reports" = "Analysis";
+"ipad.workspace.review_queue" = "Candidates";
+"ipad.workspace.cleaning" = "Cleanup";
+"ipad.workspace.settings" = "Settings";
+"ipad.workspace.review_queue.placeholder" = "Batch recognition results will be reviewed here.";
+"ipad.workspace.cleaning.placeholder" = "Merchant, category, and duplicate cleanup will be handled here.";
+
 "common.close" = "Close";
 "common.cancel" = "Cancel";
 "common.save" = "Save";

@@ -10,6 +10,9 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-01 +0800] 完成 GOAL-1530 iPad 线第一版入口：主 App target 切到 iPhone + iPad，保持 Mac Catalyst 关闭；iPad 设备进入新增 `IPadWorkspaceView`，使用 `NavigationSplitView` 侧边栏组织导入、账本、分析、候选账单、数据清洗和设置；iPhone 继续使用原 `HomeView` Tab；候选账单和数据清洗只做规划入口，不接真实队列或 schema；补齐中英繁三语 iPad 工作台文案，并通过主 App generic iOS Debug build、离线回归与 Golden 回归。
+- [2026-06-01 +0800] 完成 GOAL-1500 v1.5.0 基线审计：记录当前 `main` / `v1.4.0` tag / `MARKETING_VERSION=1.4.0` / target 设备族配置，确认 `Transaction`、SQLite 与 BackupBundle 对多账本、候选账单、批量导入队列和清洗历史仍有 schema 缺口；记录截图管线当前只覆盖 iPhone 与 Apple Watch、不覆盖 iPad；`xcodebuild -list`、离线回归、Golden 回归和主 App generic iOS Debug build 均通过。
+- [2026-06-01 +0800] 评审 v1.5.0 当前版本计划并补充 GOAL 目标拆解：将 Watch 今日支出、表盘小组件、iPad 工作台、批量导入与识别、数据清洗、多账本、Mac 复用评估、iPad 截图管线和发布回归拆成可独立执行、回归和回滚的 GOAL-1500～GOAL-1590 队列，并明确推荐推进顺序与首个可执行 GOAL。
 - [2026-05-28 +0800] 当前项目切换到内部 v1.5.0 / App Store v1.4.0：Xcode 全 target `MARKETING_VERSION` 从 `1.3.0` 更新为 `1.4.0`；根 README / 英文 README 将 v1.5.0 状态标记为开发中；设置页后续计划文案切换到 iPad 工作台、批量导入与识别、多账本整理和 Watch 今日支出小组件方向。
 - [2026-05-28 +0800] v1.5.0 规划承接关系更新：在根 README / 英文 README Roadmap 中标记内部 v1.4.0（App Store v1.3.0）已过审发布，并新增内部 v1.5.0 规划行；`versions/v1.5.0-plan.md` 明确承接内部 v1.4.0 发布基准，面向下一轮 App Store v1.4.0 开发。
 - [2026-05-28 +0800] 文档记录 v1.5.0 iPad 截图管线扩展：明确当前 `tools/appstore-screenshots` 仅覆盖 iPhone 与 Apple Watch，不生成 iPad 截图；将 iPad App Store 截图纳入 v1.5.0 发布资产规划，要求补齐 `--ipad-only`、iPad target size、横屏工作台画布、稳定演示数据、多语言输出目录和 `preview.html` 分组目检。

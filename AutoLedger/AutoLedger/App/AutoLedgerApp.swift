@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 import AutoLedgerCore
 
 @main
@@ -48,7 +49,7 @@ private struct AutoLedgerRootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        HomeView()
+        rootContent
             .environmentObject(store)
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
@@ -100,5 +101,14 @@ private struct AutoLedgerRootView: View {
                     store.backupOnAppBackground()
                 }
             }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            IPadWorkspaceView()
+        } else {
+            HomeView()
+        }
     }
 }

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-05-28（项目切换到内部 v1.5.0 / App Store v1.4.0）
+更新日期：2026-06-01（v1.5.0 GOAL-1530 iPad 入口线）
 
 ## 记录规则
 
@@ -43,6 +43,89 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-096 GOAL-1530 iPad 线第一版入口
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 3 / iPad 信息架构与入口策略
+- 类型：能力增强 / iPad / SwiftUI / 文档
+- 目标：执行 GOAL-1530，先建立 iPad 线入口：主 App 支持 iPad 设备族，iPad 使用侧边栏工作台结构，iPhone 继续保持原 Tab 主路径。
+- 改动范围：
+  - `AutoLedger/AutoLedger.xcodeproj/project.pbxproj`：主 App target Debug / Release 设备族切为 iPhone + iPad，并显式保持 iOS / iPadOS 平台与 Mac Catalyst 关闭。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：根视图按 iPad / 非 iPad 分流，iPad 进入 `IPadWorkspaceView`，iPhone 继续进入 `HomeView`。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：新增 iPad `NavigationSplitView` 工作台壳层。
+  - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：补齐 iPad 工作台中英繁三语文案。
+  - `versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填执行结果。
+  - `LICENSE`：保留本轮开始前已有的版权主体更新。
+- 未改动范围：未实现候选账单真实数据模型、批量 OCR、数据清洗执行、多账本、SQLite schema 迁移、BackupBundle schema 升级、iPad 截图导出脚本或 Mac Catalyst。
+- 完成内容：
+  - iPad 设备进入 `IPadWorkspaceView`，采用 sidebar + detail 工作台结构。
+  - Sidebar 当前包含导入、账本、分析、候选账单、数据清洗、设置。
+  - 导入、账本、分析、设置复用现有 `InboxView` / `LedgerView` / `ReportView` / `SettingsView`。
+  - 候选账单与数据清洗仅为规划入口，使用占位页，不写入正式账本或本地数据库。
+  - Quick Ledger 导航事件在 iPad 工作台中会切到账本。
+  - 三语本地化已补齐。
+- 未完成内容：GOAL-1501 / GOAL-1502 / GOAL-1503 仍未执行；iPad 后续真实工作台骨架应进入 GOAL-1531。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`git diff --check`
+- 风险与注意事项：
+  - 本轮没有运行 iPad Simulator 人工目检；需要在 GOAL-1531 前用真实 iPad 模拟器检查 sidebar / detail 嵌套导航体验。
+  - 当前 iPad 工作台复用的 iPhone 页面内部仍各自持有 `NavigationStack`，后续深化时应逐步拆出更适合 iPad 的列表 / 详情 / 检查器组件。
+  - 候选账单和数据清洗入口是占位，不应在发布文案中声明为已完成能力。
+- 回滚方式：回退 `IPadWorkspaceView.swift`、`AutoLedgerApp.swift` 的 iPad 分流、三语 iPad 文案、主 App target 设备族改动和对应文档记录。
+- 结论：GOAL-1530 已完成，AutoLedger 已具备 iPad 线第一版入口，仍可保持 iPhone 发布主路径。
+- 下一步建议：进入 GOAL-1501 / GOAL-1502 / GOAL-1503 补底层口径与 schema，再推进 GOAL-1531 iPad 工作台真实骨架。
+
+### ITER-095 GOAL-1500 v1.5.0 基线审计
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 基线审计
+- 类型：文档 / 版本治理 / 回归验证
+- 目标：执行 GOAL-1500，建立当前 v1.5.0 工程事实基线，记录版本号、设备族配置、数据模型/SQLite/BackupBundle 缺口、截图管线现状和最小回归结果。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增 GOAL-1500 执行记录，记录 Git / 版本 / workspace / scheme / target / 数据模型 / 截图管线 / 验证结果。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未实现 Watch、Widget、iPad、批量导入、多账本、数据清洗或截图管线功能；未修改 Swift 源码、SQLite schema、截图脚本、Bundle Identifier、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme 或 target 名称。
+- 完成内容：
+  - 确认当前分支为 `main`，HEAD 为 `ce6c054 chore: switch to internal 1.5.0 development`，`v1.4.0` tag 指向内部 v1.4.0 / App Store v1.3.0 发布基准。
+  - 确认全 target `MARKETING_VERSION = 1.4.0`，`CURRENT_PROJECT_VERSION = 1`。
+  - 确认主 App 当前工作区设备族为 iPhone + iPad，Watch target、Widget、Share Extension、Control Widget target 仍存在。
+  - 记录 `Transaction`、SQLite 与 `BackupBundle.schemaVersion = 1` 对多账本、候选账单、导入批次和清洗历史的缺口。
+  - 记录 `tools/appstore-screenshots` 当前只覆盖 iPhone / Apple Watch，不包含 iPad target、iPad scenes 或 iPad preview 分组。
+- 未完成内容：GOAL-1501 默认账本与今日支出口径、GOAL-1502 候选账单状态模型、GOAL-1503 SQLite / BackupBundle 迁移方案尚未执行。
+- 测试情况：
+  - PASS：`xcodebuild -list -workspace AutoLedger/AutoLedger.xcworkspace`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：
+  - 本轮开始前已有未提交的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 与 `LICENSE` 改动，GOAL-1500 仅记录其当前事实，不回退、不混入业务实现。
+  - `LedgerStore.makeBackupBundle()` 读取不到 bundle 版本时仍有 `"1.3.0"` fallback，后续版本治理可清理。
+  - 多账本、候选账单、导入队列和数据清洗动作进入实现前，应先完成 schema / backup / migration 设计。
+- 回滚方式：回退 `versions/v1.5.0-plan.md` 的 GOAL-1500 执行记录，以及 `CHANGELOG.md` / `process/iteration-log.md` 对应条目。
+- 结论：GOAL-1500 已完成，当前 v1.5.0 可进入 GOAL-1501 / GOAL-1502 的口径与模型设计。
+- 下一步建议：先执行 GOAL-1501 定义默认账本与今日支出口径，再执行 GOAL-1502 候选账单状态模型；不要直接跳到 iPad 或 Watch UI。
+
+### ITER-094 v1.5.0 GOAL 目标拆解
+- 日期：2026-06-01
+- 所属版本：v1.5.0
+- 所属阶段：Phase 0 / 计划评审
+- 类型：文档 / 版本治理
+- 目标：评审当前 v1.5.0 版本计划，把大范围规划拆成可由 agent 按轮驱动的 GOAL 目标。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增“计划评审与 GOAL 拆解”，补充评审结论、GOAL 执行规则、GOAL-1500～GOAL-1590 队列、推荐推进顺序和首个可执行 GOAL 建议。
+  - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
+- 未改动范围：未实现任何 v1.5.0 功能；未修改 Xcode project、业务代码、截图脚本、数据库 schema 或本地化文案。
+- 完成内容：已把 Watch 今日支出、表盘小组件、iPad 工作台、批量导入与识别、数据清洗、多账本、Mac 复用评估、iPad 截图管线和发布回归拆成独立 GOAL，并为每个 GOAL 记录范围、验收标准、最小回归和依赖。
+- 未完成内容：GOAL-1500 及后续目标尚未执行；本轮只完成计划拆解。
+- 测试情况：仅文档变更，执行 `git diff --check` 作为格式门禁。
+- 风险与注意事项：当前工作区另有未提交的 `project.pbxproj` 和 `LICENSE` 改动，本轮文档拆解不应混入这些无关变更。
+- 回滚方式：回退 `versions/v1.5.0-plan.md` 的新增 GOAL 章节，以及 CHANGELOG / iteration-log 对应记录。
+- 结论：本轮完成，v1.5.0 已具备可按 GOAL 分步驱动的执行队列。
+- 下一步建议：从 GOAL-1500 建立工程事实基线开始，不直接跳到 iPad 或 Watch UI 实现。
 
 ### ITER-093 切换到内部 v1.5.0 / App Store v1.4.0
 - 日期：2026-05-28
