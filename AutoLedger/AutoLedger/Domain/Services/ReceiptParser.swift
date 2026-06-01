@@ -134,6 +134,9 @@ public struct ReceiptParser: Sendable {
         // 抖音团购券码页：从"适用门店"区块提取门店名称
         let douyinMerchant = parseDouyinVoucher(lines: cleanedLines)
 
+        // 美团团购券码页：优先提取门店名并去除分店后缀
+        let meituanMerchant = parseMeituanVoucher(lines: cleanedLines)
+
         // 滴滴出行结束订单页：含"行程已结束"特征，直接返回"滴滴出行"
         let didiMerchant = parseDidiTrip(lines: cleanedLines)
 
@@ -155,6 +158,7 @@ public struct ReceiptParser: Sendable {
         } else {
             merchant = wechatDetail?.merchant
                 ?? douyinMerchant
+                ?? meituanMerchant
                 ?? didiMerchant
                 ?? taobaoFlashMerchant
                 ?? wechatDeductionMerchant
@@ -856,6 +860,58 @@ public struct ReceiptParser: Sendable {
             if isNoise { continue }
 
             return candidate
+        }
+
+        return nil
+    }
+
+    // MARK: - 美团团购券码页解析
+
+    /// 美团团购"已使用/团购详情"页面会展示"商户名（分店）"格式；
+    /// 记账优先使用主商户名，去掉括号中的分店后缀。
+    private func parseMeituanVoucher(lines: [String]) -> String? {
+        let hasMeituanSignal = lines.contains { line in
+            line.contains("美团") || line.contains("团购详情") || line.contains("已使用")
+        }
+        let hasPaymentSignal = lines.contains { $0.contains("实付") }
+        guard hasMeituanSignal && hasPaymentSignal else { return nil }
+
+        func normalizeMerchant(_ line: String) -> String? {
+            let candidate = line
+                .replacingOccurrences(of: #"^[◎•·\-\s]+"#, with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !candidate.isEmpty else { return nil }
+            guard candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }) else { return nil }
+            guard amountCandidate(in: candidate) == nil else { return nil }
+
+            let skipKeywords = ["门店", "详情", "评价", "已使用", "营业中", "安心吃保障", "保险"]
+            guard !skipKeywords.contains(where: { candidate.contains($0) }) else { return nil }
+
+            if let parenRange = candidate.range(of: "（") ?? candidate.range(of: "(") {
+                let base = String(candidate[..<parenRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if base.count >= 2 { return base }
+            }
+            return candidate
+        }
+
+        if let bizIdx = lines.firstIndex(where: { $0.contains("营业中") }) {
+            let windowStart = max(0, bizIdx - 2)
+            for idx in stride(from: bizIdx - 1, through: windowStart, by: -1) {
+                if let merchant = normalizeMerchant(lines[idx]) {
+                    return merchant
+                }
+            }
+        }
+
+        let storeSuffixPattern = #".+[（(][^（）()]{1,20}店[）)]"#
+        let storeRegex = try? NSRegularExpression(pattern: storeSuffixPattern)
+        for line in lines {
+            let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+            guard storeRegex?.firstMatch(in: line, range: nsRange) != nil else { continue }
+            if let merchant = normalizeMerchant(line) {
+                return merchant
+            }
         }
 
         return nil
