@@ -142,6 +142,7 @@ swiftc \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/TodaySpendingSummary.swift" \
   "$CORE/Models/SyncMetadata.swift" \
+  "$CORE/Models/LedgerSyncPlan.swift" \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \

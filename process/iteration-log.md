@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1564 同步元数据与冲突模型）
+更新日期：2026-06-02（v1.5.0 GOAL-1565A 同步计划层）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-110 GOAL-1565A 基础账本同步计划层
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 数据 / 同步底座
+- 目标：在不接入 CloudKit、不修改 entitlements 的前提下，先固定正式账单同步的 record schema、record name、push batch 拆分和 tombstone 保留边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/LedgerSyncPlan.swift`：新增 `CloudLedgerSyncSchema`、`LedgerTransactionSyncPayload`、`LedgerSyncPushBatch`、`LedgerSyncPlanner`。
+  - `scripts/OfflineRegression.swift`：新增 record type、record name、upsert / tombstone / expired tombstone、`changedAfter` 增量过滤回归。
+  - `scripts/run_offline_regression.sh`：加入 `LedgerSyncPlan.swift`。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1565A，GOAL-1565 标记为部分完成。
+- 未改动范围：未 import CloudKit；未修改 CloudKit capability、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、scheme、target、WatchConnectivity payload、Widget SQL、iCloud Drive BackupBundle 或 App Store 发布脚本。
+- 完成内容：
+  - 正式账单 CloudKit record type 固定为 `LedgerTransaction`。
+  - 交易 record name 固定为 `transaction-<uuid-lowercased>`，后续多设备可对同一账单写入同一条 record。
+  - payload 覆盖正式账单字段与 GOAL-1564 sync metadata。
+  - 本地 push batch 可拆分 active upserts、retained tombstones、expired tombstone IDs。
+  - 支持 `changedAfter` 增量过滤，避免未变化 active record 进入 push batch。
+- 未完成内容：未实现 CloudKit adapter；未做真实 iCloud private database 读写；未实现 pull / merge / applyRemote；未同步自定义分类 / 来源、商户别名、分类修正或多账本元数据；未实现同步健康 UI、冲突解决 UI或同步 smoke。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+- 风险与注意事项：GOAL-1565 仍为部分完成，不能对用户或发布说明声明多设备真实同步；后续接 CloudKit 前仍需人工验证 capability、provisioning profile、Xcode Cloud signing 和隐私披露。
+- 回滚方式：回退 `LedgerSyncPlan.swift`、离线回归新增用例和文档记录；该层尚未接运行时服务，回滚不影响现有账本。
+- 结论：GOAL-1565A 完成，正式账单同步的本地计划层已固定。
+- 下一步建议：进入 GOAL-1565B，增加 CloudKit adapter 的 disabled / dry-run 包装和 record mapping；真实 capability 与 Xcode Cloud signing 单独验证。
 
 ### ITER-109 GOAL-1564 基础同步元数据与冲突模型
 - 日期：2026-06-02

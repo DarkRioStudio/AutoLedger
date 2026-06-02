@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565 基础账本同步闭环：新增 `CloudLedgerSyncSchema`、`LedgerTransactionSyncPayload`、`LedgerSyncPushBatch` 和 `LedgerSyncPlanner`，固定正式账单 CloudKit record type、record name、字段映射、upsert / tombstone / expired tombstone 拆分和 `changedAfter` 增量过滤；当前为本地计划层，不 import CloudKit、不修改 entitlements、不声明真实多端同步已完成。
 - [2026-06-02 +0800] 完成 GOAL-1564 基础同步元数据与冲突模型底座：新增 `TransactionSyncMetadata` / `TransactionSyncRecord`、`SyncConflictState` 和基础冲突判定器；SQLite `transactions` 增量补齐 `sync_revision`、`sync_device_id`、`sync_idempotency_key`、`sync_conflict_state`，保存 / 更新 / 软删除 / 恢复会维护 revision 与 tombstone；`BackupTransaction` 新增可选 `syncMetadata` 并保持旧 v1 JSON 兼容；离线回归新增 sync metadata、tombstone、active/deleted sync record 和旧备份解码用例。
 - [2026-06-02 +0800] 完成 GOAL-1563 多端同步现状审计与策略冻结：确认当前 iCloud 为 CloudDocuments 单文件 BackupBundle 备份、Watch 为 WatchConnectivity 轻量同步、Widget 为 App Group 本机 SQLite 只读；冻结 v1.5.0 最小策略为 local-first + CloudKit private database 结构化同步优先，iCloud Drive BackupBundle 保留备份 / 导出 / 恢复角色，原始截图、OCR 全文、支付截图、小票图片、raw input 和调试包默认不进入同步。
 - [2026-06-02 +0800] 文档补充 v1.5.0 基础多端数据同步要求：将 iPhone / iPad / Mac 可写端、Apple Watch 轻写入端、Widget / tvOS / visionOS 只读端的数据一致性列为本版本底座问题；明确 iCloud Drive 单文件备份、WatchConnectivity 和本机 App Group Widget 读取都不等同于完整多端同步；新增 GOAL-1563～1566 作为多端同步审计、元数据 / 冲突模型、基础账本同步闭环和展示端快照同步任务。

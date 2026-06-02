@@ -40,6 +40,7 @@ struct OfflineRegression {
         verifySubscriptionDetection(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
+        verifyLedgerSyncPlanner(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -515,6 +516,99 @@ struct OfflineRegression {
             TransactionSyncConflictResolver.resolve(local: local, remote: remoteConflict) == .conflictPendingReview,
             "TransactionSyncConflictResolver flags same-revision divergent records"
         )
+    }
+
+    private static func verifyLedgerSyncPlanner(reporter: RegressionReporter) {
+        let activeID = UUID(uuidString: "00000000-0000-0000-0000-000000001565") ?? UUID()
+        let deletedID = UUID(uuidString: "00000000-0000-0000-0000-000000001566") ?? UUID()
+        let expiredID = UUID(uuidString: "00000000-0000-0000-0000-000000001567") ?? UUID()
+        let activeTransaction = Transaction(
+            id: activeID,
+            merchant: "Demo Coffee",
+            amount: 18,
+            occurredAt: Date(timeIntervalSince1970: 1_780_000_000),
+            category: .dining,
+            source: .manual,
+            note: "active sync"
+        )
+        let deletedTransaction = Transaction(
+            id: deletedID,
+            merchant: "Example Market",
+            amount: 26,
+            occurredAt: Date(timeIntervalSince1970: 1_780_000_100),
+            category: .groceries,
+            source: .wechat,
+            note: "deleted sync"
+        )
+        let expiredTransaction = Transaction(
+            id: expiredID,
+            merchant: "Old Store",
+            amount: 9,
+            occurredAt: Date(timeIntervalSince1970: 1_780_000_200),
+            category: .shopping,
+            source: .manual,
+            note: "expired tombstone"
+        )
+        let activeRecord = TransactionSyncRecord(
+            transaction: activeTransaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: activeID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_010_000),
+                syncRevision: 1,
+                deviceID: "local-device",
+                idempotencyKey: "transaction:\(activeID.uuidString)"
+            )
+        )
+        let deletedRecord = TransactionSyncRecord(
+            transaction: deletedTransaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: deletedID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_020_000),
+                syncRevision: 2,
+                deviceID: "local-device",
+                idempotencyKey: "transaction:\(deletedID.uuidString)",
+                deletedAt: Date(timeIntervalSince1970: 1_780_020_000)
+            )
+        )
+        let expiredRecord = TransactionSyncRecord(
+            transaction: expiredTransaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: expiredID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_030_000),
+                syncRevision: 3,
+                deviceID: "local-device",
+                idempotencyKey: "transaction:\(expiredID.uuidString)",
+                deletedAt: Date(timeIntervalSince1970: 1_770_000_000)
+            )
+        )
+
+        reporter.check(
+            CloudLedgerSyncSchema.RecordType.transaction == "LedgerTransaction",
+            "CloudLedgerSyncSchema keeps transaction record type stable"
+        )
+        reporter.check(
+            CloudLedgerSyncSchema.recordName(for: activeID) == "transaction-00000000-0000-0000-0000-000000001565",
+            "CloudLedgerSyncSchema derives deterministic transaction record name"
+        )
+
+        let batch = LedgerSyncPlanner.makePushBatch(
+            from: [deletedRecord, activeRecord, expiredRecord],
+            tombstoneRetentionDays: 30,
+            referenceDate: Date(timeIntervalSince1970: 1_780_040_000)
+        )
+        reporter.check(batch.upserts.map(\.transactionID) == [activeID], "LedgerSyncPlanner places active records in upsert batch")
+        reporter.check(batch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps retained tombstones in delete batch")
+        reporter.check(batch.expiredTombstoneIDs == [expiredID], "LedgerSyncPlanner separates expired tombstones")
+        reporter.check(batch.upserts.first?.recordName == CloudLedgerSyncSchema.recordName(for: activeID), "LedgerSyncPlanner payload carries record name")
+
+        let incrementalBatch = LedgerSyncPlanner.makePushBatch(
+            from: [activeRecord, deletedRecord],
+            changedAfter: Date(timeIntervalSince1970: 1_780_015_000),
+            tombstoneRetentionDays: 30,
+            referenceDate: Date(timeIntervalSince1970: 1_780_040_000)
+        )
+        reporter.check(incrementalBatch.upserts.isEmpty, "LedgerSyncPlanner filters unchanged active records by changedAfter")
+        reporter.check(incrementalBatch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps changed tombstones after changedAfter")
     }
 
     private static func verifySampleParsing(
