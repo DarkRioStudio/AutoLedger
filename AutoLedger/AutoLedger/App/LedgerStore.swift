@@ -1198,8 +1198,23 @@ extension LedgerStore {
 
             let localRecords = try sqlStore.loadTransactionSyncRecords(includeDeleted: true)
             let batch = LedgerSyncPlanner.makePushBatch(from: localRecords)
-            let pushResult = try await adapter.push(batch: batch)
-            let remotePayloads = try await adapter.fetchAllTransactionRecords()
+            ledgerCloudSyncStatus = "正在推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录..."
+            let pushResult: LedgerCloudKitPushResult
+            do {
+                pushResult = try await adapter.push(batch: batch)
+            } catch {
+                ledgerCloudSyncStatus = "CloudKit 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))"
+                return
+            }
+
+            ledgerCloudSyncStatus = "推送完成，正在拉取远端账单..."
+            let remotePayloads: [LedgerTransactionSyncPayload]
+            do {
+                remotePayloads = try await adapter.fetchAllTransactionRecords()
+            } catch {
+                ledgerCloudSyncStatus = "CloudKit 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))"
+                return
+            }
 
             var inserted = 0
             var updated = 0
@@ -1207,26 +1222,31 @@ extension LedgerStore {
             var keptLocal = 0
             var conflicts = 0
 
-            for payload in remotePayloads {
-                switch try sqlStore.applyRemoteSyncRecord(payload.syncRecord) {
-                case .inserted:
-                    inserted += 1
-                case .updated:
-                    updated += 1
-                case .deleted:
-                    deleted += 1
-                case .keptLocal:
-                    keptLocal += 1
-                case .conflictPendingReview:
-                    conflicts += 1
+            do {
+                for payload in remotePayloads {
+                    switch try sqlStore.applyRemoteSyncRecord(payload.syncRecord) {
+                    case .inserted:
+                        inserted += 1
+                    case .updated:
+                        updated += 1
+                    case .deleted:
+                        deleted += 1
+                    case .keptLocal:
+                        keptLocal += 1
+                    case .conflictPendingReview:
+                        conflicts += 1
+                    }
                 }
+            } catch {
+                ledgerCloudSyncStatus = "CloudKit 拉取完成，但写入本地 SQLite 失败：\(error.localizedDescription)"
+                return
             }
 
             refreshFromStore()
             reloadWidgets()
             ledgerCloudSyncStatus = "CloudKit 同步完成：推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。"
         } catch {
-            ledgerCloudSyncStatus = "CloudKit 同步失败：\(error.localizedDescription)"
+            ledgerCloudSyncStatus = "CloudKit 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))"
         }
     }
 

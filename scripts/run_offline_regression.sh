@@ -147,6 +147,11 @@ struct LedgerCloudKitPushResult {
 struct LedgerCloudKitSyncAdapter {
     init(mode: LedgerCloudKitSyncMode = .disabled, allowsLiveCloudKitWrites: Bool = false) {}
 
+    static func describe(_ error: Error) -> String {
+        let nsError = error as NSError
+        return "\(nsError.domain) \(nsError.code): \(nsError.localizedDescription)"
+    }
+
     func checkAccountStatus() async -> LedgerCloudKitAccountCheck {
         LedgerCloudKitAccountCheck(canUsePrivateDatabase: false, message: "Offline CloudKit stub")
     }

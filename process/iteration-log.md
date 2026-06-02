@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565D 手动 CloudKit 同步入口）
+更新日期：2026-06-02（v1.5.0 GOAL-1565E CloudKit 真机错误诊断）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-114 GOAL-1565E CloudKit 真机错误诊断
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 诊断 / 同步底座
+- 目标：处理两台真机手动 CloudKit 同步 smoke 中出现的 `CKErrorDomain` code 15，并把原先不可定位的“同步失败”拆成可判断 push / fetch / 本地写入阶段的错误信息。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：新增 CloudKit 错误描述工具，提取 CKError code、localized 信息、partial error 和 underlying error；push 保存和删除操作按 100 条一组分批提交。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：手动同步状态拆分为推送、拉取和本地 SQLite 写入阶段；失败时保留阶段信息。
+  - `scripts/run_offline_regression.sh`：补齐离线 CloudKit stub 的错误描述 API，保持离线回归可编译。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`：记录真机错误、诊断边界和复测步骤。
+- 未改动范围：未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、CloudKit record schema、SQLite schema、Watch target、Widget target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 明确用户日志中的 `WCSession counterpart app not installed` 属于 Watch app 未安装 / 未配对场景，不是 iPad CloudKit 拉取阻断。
+  - 手动同步按钮现在会显示 `CloudKit 推送失败` 或 `CloudKit 拉取失败`，方便判断服务端拒绝发生在写入还是查询阶段。
+  - CKError 15 后续可在 App UI 中看到更完整的错误描述，而不是只看到 code。
+  - push operation 已分批，降低单次 modify records 请求过大导致服务端拒绝的概率。
+- 未完成内容：未完成用户真机复测；未确认 CKError 15 的最终服务端原因；未配置 CloudKit Dashboard schema / index；未实现后台自动同步、增量 token、冲突解决 UI 或同步健康页。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：如果下一次状态显示推送失败，优先检查 CloudKit record type / field schema / capability / provisioning；如果显示拉取失败，优先检查 `LedgerTransaction` query、CloudKit index 或 private database schema 部署状态。当前同步仍为手动全量 query，不是最终后台增量同步。
+- 回滚方式：回退本轮 `LedgerCloudKitSyncAdapter` 分批与错误描述、`LedgerStore` 状态文案、离线 stub 和文档记录；已存在的本地 SQLite 数据不受影响。
+- 结论：GOAL-1565E 诊断增强完成，可以重新安装到 iPhone / iPad 真机并复测手动同步。
+- 下一步建议：重新运行新构建后，先在 iPhone 点击 CloudKit 同步一次；若失败，回填完整状态文案，尤其是 `CloudKit 推送失败` 或 `CloudKit 拉取失败` 后面的详细内容。
 
 ### ITER-113 GOAL-1565D 手动 CloudKit 同步入口
 - 日期：2026-06-02

@@ -150,10 +150,33 @@ struct LedgerCloudKitSyncAdapter {
             )
         }
 
-        return try await modifyRecords(
-            recordsToSave: recordsToSave,
-            recordIDsToDelete: recordIDsToDelete,
-            dryRunResult: dryRunResult
+        var savedRecordNames: [String] = []
+        var deletedRecordNames: [String] = []
+
+        for recordsChunk in recordsToSave.chunked(maxCount: 100) {
+            let partial = try await modifyRecords(
+                recordsToSave: recordsChunk,
+                recordIDsToDelete: [],
+                dryRunResult: dryRunResult
+            )
+            savedRecordNames.append(contentsOf: partial.savedRecordNames)
+        }
+
+        for recordIDChunk in recordIDsToDelete.chunked(maxCount: 100) {
+            let partial = try await modifyRecords(
+                recordsToSave: [],
+                recordIDsToDelete: recordIDChunk,
+                dryRunResult: dryRunResult
+            )
+            deletedRecordNames.append(contentsOf: partial.deletedRecordNames)
+        }
+
+        return LedgerCloudKitPushResult(
+            savedRecordNames: savedRecordNames.sorted(),
+            deletedRecordNames: deletedRecordNames.sorted(),
+            upsertCount: dryRunResult.upsertCount,
+            tombstoneCount: dryRunResult.tombstoneCount,
+            expiredTombstoneCount: dryRunResult.expiredTombstoneCount
         )
     }
 
@@ -191,6 +214,39 @@ struct LedgerCloudKitSyncAdapter {
         }
 
         return record
+    }
+
+    static func describe(_ error: Error) -> String {
+        let nsError = error as NSError
+        var parts: [String] = []
+
+        if nsError.domain == CKError.errorDomain,
+           let code = CKError.Code(rawValue: nsError.code) {
+            parts.append("CKError \(nsError.code) (\(code))")
+        } else {
+            parts.append("\(nsError.domain) \(nsError.code)")
+        }
+
+        if !nsError.localizedDescription.isEmpty {
+            parts.append(nsError.localizedDescription)
+        }
+        if let failureReason = nsError.localizedFailureReason, !failureReason.isEmpty {
+            parts.append(failureReason)
+        }
+        if let serverDescription = nsError.userInfo[NSLocalizedDescriptionKey] as? String,
+           serverDescription != nsError.localizedDescription {
+            parts.append(serverDescription)
+        }
+        if let partialErrors = nsError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
+           let first = partialErrors.first {
+            let key = String(describing: first.key)
+            parts.append("partial[\(key)]: \(describe(first.value))")
+        }
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            parts.append("underlying: \(describe(underlying))")
+        }
+
+        return parts.joined(separator: " | ")
     }
 
     private var database: CKDatabase {
@@ -394,5 +450,20 @@ struct LedgerCloudKitSyncAdapter {
             deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date,
             conflictState: SyncConflictState(rawValue: conflictStateString) ?? .clean
         )
+    }
+}
+
+private extension Array {
+    func chunked(maxCount: Int) -> [[Element]] {
+        guard maxCount > 0, !isEmpty else { return [] }
+
+        var chunks: [[Element]] = []
+        var startIndex = 0
+        while startIndex < count {
+            let endIndex = Swift.min(startIndex + maxCount, count)
+            chunks.append(Array(self[startIndex..<endIndex]))
+            startIndex = endIndex
+        }
+        return chunks
     }
 }
