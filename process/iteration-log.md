@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1563 多端同步策略冻结）
+更新日期：2026-06-02（v1.5.0 GOAL-1564 同步元数据与冲突模型）
 
 ## 记录规则
 
@@ -43,6 +43,34 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-109 GOAL-1564 基础同步元数据与冲突模型
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 数据 / 同步底座
+- 目标：在不接入 CloudKit、不改变发布链配置的前提下，为后续 iPhone / iPad / Mac 多端同步补齐最小 sync metadata、删除 tombstone、幂等键和冲突判定基础。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/SyncMetadata.swift`：新增 `TransactionSyncMetadata`、`TransactionSyncRecord`、`SyncConflictState`、`TransactionSyncResolution` 和基础冲突判定器。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Persistence/SQLiteTransactionStore.swift`：`transactions` 增量补齐 `sync_revision`、`sync_device_id`、`sync_idempotency_key`、`sync_conflict_state`；保存、更新、软删除、恢复维护 revision / tombstone；新增 sync record 读取 API。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/BackupBundle.swift`：`BackupTransaction` 新增 optional `syncMetadata`，保持旧 v1 JSON 兼容。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增同步模型、SQLite metadata、tombstone 和旧备份兼容回归。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1564 完成状态。
+- 未改动范围：未实现 CloudKit；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、WatchConnectivity payload、Widget SQL 读取逻辑、iCloud Drive backup service 或 App Store 发布脚本。
+- 完成内容：
+  - 新交易默认获得本机安装级 `sync_device_id`、`sync_revision = 0`、默认幂等键和 clean 冲突状态。
+  - 更新、软删除和恢复会递增 sync revision，并刷新 `updated_at` 与本机 `sync_device_id`。
+  - 软删除保留 `deleted_at` tombstone；同步层可选择读取包含删除或仅活跃的 sync records。
+  - 备份交易可携带 optional sync metadata；旧备份 JSON 缺失该字段时仍能解码。
+  - 基础冲突判定支持 higher revision 应用、same revision 内容分叉进入待复核冲突。
+- 未完成内容：未实现真实多端同步；未定义 CloudKit record schema；未做冲突解决 UI；未新增批量清洗变更日志表；未迁移自定义分类 / 来源到 SQLite per-item 同步表。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+- 风险与注意事项：`permanentlyDeleteTransaction` 仍为物理删除，后续 GOAL-1565 必须定义 tombstone 保留期或远端确认后再永久删除的策略；否则未同步软删除可能被过早清除。
+- 回滚方式：回退本轮新增 `SyncMetadata.swift`、SQLite sync metadata 增量、BackupTransaction optional 字段、离线回归和文档记录；旧数据库中已添加的 additive columns 可保留，不影响现有查询。
+- 结论：GOAL-1564 完成，可以进入 GOAL-1565 的 iPhone / iPad / Mac 基础同步闭环设计与实现。
+- 下一步建议：进入 GOAL-1565 前先明确 CloudKit record schema、拉取 / 推送顺序、tombstone 保留策略和冲突 UI 入口。
 
 ### ITER-108 GOAL-1563 多端同步现状审计与策略冻结
 - 日期：2026-06-02

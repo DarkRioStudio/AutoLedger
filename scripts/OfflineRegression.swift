@@ -39,6 +39,7 @@ struct OfflineRegression {
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
+        verifySyncConflictResolver(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -456,6 +457,66 @@ struct OfflineRegression {
         reporter.check(fallbackSummary.recentDisplayName == "交通", "TodaySpendingSummary falls back to category when merchant is blank")
     }
 
+    private static func verifySyncConflictResolver(reporter: RegressionReporter) {
+        let transactionID = UUID()
+        let baseTransaction = Transaction(
+            id: transactionID,
+            merchant: "Demo Coffee",
+            amount: 18,
+            occurredAt: Date(timeIntervalSince1970: 1_780_000_000),
+            category: .dining,
+            source: .manual,
+            note: "sync"
+        )
+        let local = TransactionSyncRecord(
+            transaction: baseTransaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_000_010),
+                syncRevision: 1,
+                deviceID: "local-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        let remoteNewer = TransactionSyncRecord(
+            transaction: baseTransaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_000_020),
+                syncRevision: 2,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        reporter.check(
+            TransactionSyncConflictResolver.resolve(local: local, remote: remoteNewer) == .applyRemote,
+            "TransactionSyncConflictResolver applies higher remote revision"
+        )
+
+        let remoteConflict = TransactionSyncRecord(
+            transaction: Transaction(
+                id: transactionID,
+                merchant: "Changed Merchant",
+                amount: 22,
+                occurredAt: baseTransaction.occurredAt,
+                category: .dining,
+                source: .manual,
+                note: "sync"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: local.metadata.updatedAt,
+                syncRevision: local.metadata.syncRevision,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        reporter.check(
+            TransactionSyncConflictResolver.resolve(local: local, remote: remoteConflict) == .conflictPendingReview,
+            "TransactionSyncConflictResolver flags same-revision divergent records"
+        )
+    }
+
     private static func verifySampleParsing(
         using parser: ReceiptParser,
         samples: [SampleReceipt],
@@ -589,7 +650,11 @@ struct OfflineRegression {
             try? FileManager.default.removeItem(at: rootURL)
         }
 
-        let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "offline.sqlite3")
+        let store = try SQLiteTransactionStore(
+            baseDirectoryURL: rootURL,
+            filename: "offline.sqlite3",
+            syncDeviceID: "offline-device"
+        )
         let transaction = Transaction(
             merchant: "离线回归商户",
             amount: 12.50,
@@ -602,6 +667,18 @@ struct OfflineRegression {
 
         let loaded = try store.loadTransactions()
         reporter.check(loaded.contains(transaction), "SQLite save/load retains inserted transaction")
+        guard let insertedMetadata = try store.loadTransactionSyncMetadata(transactionID: transaction.id) else {
+            reporter.check(false, "SQLite exposes inserted transaction sync metadata")
+            return
+        }
+        reporter.check(insertedMetadata.syncRevision == 0, "SQLite inserted transaction starts at sync revision 0")
+        reporter.check(insertedMetadata.deviceID == "offline-device", "SQLite inserted transaction stores sync device id")
+        reporter.check(
+            insertedMetadata.idempotencyKey == "transaction:\(transaction.id.uuidString)",
+            "SQLite inserted transaction stores default idempotency key"
+        )
+        reporter.check(insertedMetadata.deletedAt == nil, "SQLite inserted transaction sync metadata has no tombstone")
+        reporter.check(insertedMetadata.conflictState == .clean, "SQLite inserted transaction sync metadata starts clean")
 
         let updated = Transaction(
             id: transaction.id,
@@ -616,12 +693,28 @@ struct OfflineRegression {
 
         let reloaded = try store.loadTransactions()
         reporter.check(reloaded.contains(updated), "SQLite update persists modified transaction")
+        let updatedMetadata = try store.loadTransactionSyncMetadata(transactionID: updated.id)
+        reporter.check(updatedMetadata?.syncRevision == insertedMetadata.syncRevision + 1, "SQLite update increments sync revision")
+        reporter.check(updatedMetadata?.deletedAt == nil, "SQLite update keeps sync tombstone empty")
 
         try store.delete(transactionID: updated.id)
         let activeAfterDelete = try store.loadTransactions()
         let deletedAfterDelete = try store.loadDeletedTransactions()
         reporter.check(!activeAfterDelete.contains(updated), "SQLite soft delete hides transaction from active load")
         reporter.check(deletedAfterDelete.contains(updated), "SQLite soft delete exposes transaction in deleted load")
+        let deletedMetadata = try store.loadTransactionSyncMetadata(transactionID: updated.id)
+        reporter.check(deletedMetadata?.syncRevision == (updatedMetadata?.syncRevision ?? 0) + 1, "SQLite soft delete increments sync revision")
+        reporter.check(deletedMetadata?.deletedAt != nil, "SQLite soft delete records sync tombstone")
+        let allSyncRecordsAfterDelete = try store.loadTransactionSyncRecords(includeDeleted: true)
+        let activeSyncRecordsAfterDelete = try store.loadTransactionSyncRecords(includeDeleted: false)
+        reporter.check(
+            allSyncRecordsAfterDelete.contains { $0.transaction.id == updated.id && $0.metadata.deletedAt != nil },
+            "SQLite sync records include deleted tombstones"
+        )
+        reporter.check(
+            !activeSyncRecordsAfterDelete.contains { $0.transaction.id == updated.id },
+            "SQLite active sync records exclude deleted tombstones when requested"
+        )
 
         let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "offline.sqlite3")
         let reopenedDeleted = try reopenedStore.loadDeletedTransactions()
@@ -630,6 +723,9 @@ struct OfflineRegression {
         try store.restoreTransaction(id: updated.id)
         let activeAfterRestore = try store.loadTransactions()
         reporter.check(activeAfterRestore.contains(updated), "SQLite restore returns transaction to active load")
+        let restoredMetadata = try store.loadTransactionSyncMetadata(transactionID: updated.id)
+        reporter.check(restoredMetadata?.syncRevision == (deletedMetadata?.syncRevision ?? 0) + 1, "SQLite restore increments sync revision")
+        reporter.check(restoredMetadata?.deletedAt == nil, "SQLite restore clears sync tombstone")
 
         try store.delete(transactionID: updated.id)
         try store.permanentlyDeleteTransaction(id: updated.id)
@@ -904,6 +1000,26 @@ struct OfflineRegression {
     }
 
     private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {
+        let legacyTransactionJSON = """
+        {
+          "id": "00000000-0000-0000-0000-000000000101",
+          "merchant": "Legacy Store",
+          "amount": 12.5,
+          "occurredAt": "2026-04-24T08:30:00Z",
+          "category": "shopping",
+          "source": "manual",
+          "note": "legacy backup",
+          "deletedAt": null
+        }
+        """.data(using: .utf8) ?? Data()
+        let legacyDecoder = JSONDecoder()
+        legacyDecoder.dateDecodingStrategy = .iso8601
+        let legacyBackupTransaction = try legacyDecoder.decode(BackupTransaction.self, from: legacyTransactionJSON)
+        reporter.check(
+            legacyBackupTransaction.syncMetadata == nil,
+            "BackupTransaction decodes legacy v1 JSON without sync metadata"
+        )
+
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AutoLedgerBackupRegression-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)

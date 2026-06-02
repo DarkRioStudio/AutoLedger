@@ -110,6 +110,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
     public let source: String
     public let note: String
     public let deletedAt: Date?
+    public let syncMetadata: TransactionSyncMetadata?
 
     public init(
         id: UUID,
@@ -119,7 +120,8 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         category: String,
         source: String,
         note: String,
-        deletedAt: Date?
+        deletedAt: Date?,
+        syncMetadata: TransactionSyncMetadata? = nil
     ) {
         self.id = id
         self.merchant = merchant
@@ -129,6 +131,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         self.source = source
         self.note = note
         self.deletedAt = deletedAt
+        self.syncMetadata = syncMetadata
     }
 
     public init(transaction: Transaction, deletedAt: Date? = nil) {
