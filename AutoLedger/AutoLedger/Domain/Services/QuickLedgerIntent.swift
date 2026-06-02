@@ -197,6 +197,7 @@ struct QuickLedgerIntent: AppIntent {
         }
 
         WidgetCenter.shared.reloadAllTimelines()
+        NotificationService.markIntentLedgerSaveNeedsCloudPush()
 
         // 通知 App 内 LedgerStore 刷新（Intent 直写 SQLite，绕过了 LedgerStore）
         await MainActor.run {

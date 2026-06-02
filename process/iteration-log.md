@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565L iCloud 同步推拉职责拆分）
+更新日期：2026-06-02（v1.5.0 GOAL-1565M 快捷指令记账 iCloud 补推链路）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-124 GOAL-1565M 快捷指令记账 iCloud 补推链路
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / App Intents / 同步底座
+- 目标：补齐快捷指令直写 SQLite 后的 iCloud 推送链路，避免 iPhone 通过快捷指令记账后只更新本机账本、远端 iCloud 未及时更新。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/NotificationService.swift`：新增 Intent 保存账单后的待推送标记。
+  - `QuickLedgerIntent.swift`、`VoiceLedgerIntent.swift`、`AddTransactionIntent.swift`：保存账单成功后标记待推送并通知主 App 刷新；其中 AddTransactionIntent 补齐原先缺失的主 App 刷新通知。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：App 启动、收到 Intent 保存通知、回到前台时消费待推送标记并触发 iCloud 增量推送。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `pushPendingIntentLedgerSaveIfNeeded`，并让 `pushLedgerChangesToCloudKitIfEnabled` 返回是否推送成功，成功后才清除待推送标记。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮快捷指令同步链路。
+- 未改动范围：未修改 CloudKit schema、record type、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未在本轮实现订阅 / 商户别名独立 CloudKit schema。
+- 完成内容：
+  - QuickLedgerIntent / VoiceLedgerIntent / AddTransactionIntent 保存成功后都会标记“有待推送账单”。
+  - 主 App 如果正在运行，会在收到通知后刷新本地列表并立即尝试增量推送 iCloud。
+  - 如果快捷指令执行时主 App 没有接住通知，待推送标记会保留到 App 下次启动或回前台再补推。
+  - iCloud 不可用、同步正在运行或推送失败时不会清除待推送标记，后续仍可重试。
+- 未完成内容：该链路仍依赖主 App 进程消费待推送标记；未把 CloudKit push 逻辑直接放入 App Intent 运行体；订阅、商户别名、自定义分类 / 来源自身仍未建独立 CloudKit record type。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：快捷指令保存后若 iCloud 同步开关未启用，则标记会保留，但首次启用 iCloud 同步会执行全量同步；若用户长期不打开主 App，远端 iCloud 仍不会立刻收到该条记录。
+- 回滚方式：移除 Intent 保存后的待推送标记与通知，`AutoLedgerApp` 恢复只刷新本地账本，`pushLedgerChangesToCloudKitIfEnabled` 恢复无返回值。
+- 结论：GOAL-1565M 完成，快捷指令 / App Intents 直写 SQLite 后的 iCloud 补推链路已接上。
+- 下一步建议：订阅、商户别名和必要用户配置的 iCloud schema 顺延为 GOAL-1565N。
 
 ### ITER-123 GOAL-1565L iCloud 同步推拉职责拆分
 - 日期：2026-06-02

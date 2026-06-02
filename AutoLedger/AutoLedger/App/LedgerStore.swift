@@ -1053,6 +1053,7 @@ extension LedgerStore {
     private static let lastBackupErrorKey = "lastBackupError"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
     private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
+    private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
 
     var isLocalDataEmptyForRestore: Bool {
         transactions.isEmpty &&
@@ -1286,15 +1287,24 @@ extension LedgerStore {
         }
     }
 
-    func pushLedgerChangesToCloudKitIfEnabled(reason: String = "本地账单已变化，开始增量推送。") async {
-        guard isLedgerCloudSyncEnabled else { return }
+    func pushPendingIntentLedgerSaveIfNeeded(reason: String = "检测到快捷指令账单待推送，开始同步到 iCloud。") async {
+        guard UserDefaults.standard.bool(forKey: Self.pendingIntentLedgerCloudPushKey) else { return }
+        let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: reason)
+        if didPush {
+            UserDefaults.standard.removeObject(forKey: Self.pendingIntentLedgerCloudPushKey)
+        }
+    }
+
+    @discardableResult
+    func pushLedgerChangesToCloudKitIfEnabled(reason: String = "本地账单已变化，开始增量推送。") async -> Bool {
+        guard isLedgerCloudSyncEnabled else { return false }
         guard !isLedgerCloudSyncRunning else {
             updateLedgerCloudSyncStatus("已有 iCloud 同步正在运行，稍后重试推送本地变更。")
             Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 await self?.pushLedgerChangesToCloudKitIfEnabled(reason: reason)
             }
-            return
+            return false
         }
 
         isLedgerCloudSyncRunning = true
@@ -1304,7 +1314,7 @@ extension LedgerStore {
         do {
             guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
                 updateLedgerCloudSyncStatus("iCloud 同步需要 SQLite 账本。")
-                return
+                return false
             }
 
             let adapter = LedgerCloudKitSyncAdapter(mode: .live, allowsLiveCloudKitWrites: true)
@@ -1312,13 +1322,15 @@ extension LedgerStore {
             let accountCheck = await adapter.checkAccountStatus()
             guard accountCheck.canUsePrivateDatabase else {
                 updateLedgerCloudSyncStatus("iCloud 不可用：\(accountCheck.message)")
-                return
+                return false
             }
 
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
             updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条。")
+            return true
         } catch {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+            return false
         }
     }
 

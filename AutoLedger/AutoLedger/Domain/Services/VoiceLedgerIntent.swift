@@ -103,6 +103,7 @@ struct VoiceLedgerIntent: AppIntent {
         }
 
         WidgetCenter.shared.reloadAllTimelines()
+        NotificationService.markIntentLedgerSaveNeedsCloudPush()
 
         await MainActor.run {
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
