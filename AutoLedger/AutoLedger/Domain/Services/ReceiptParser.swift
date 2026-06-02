@@ -140,6 +140,9 @@ public struct ReceiptParser: Sendable {
         // 滴滴出行结束订单页：含"行程已结束"特征，直接返回"滴滴出行"
         let didiMerchant = parseDidiTrip(lines: cleanedLines)
 
+        // 支付宝/淘宝闪购账单详情页：从"商品说明"字段提取真实店铺/商品说明
+        let alipayBillDetailMerchant = parseAlipayBillDetailMerchant(lines: cleanedLines)
+
         // 淘宝闪购订单进行中页：含"骑士"+"闪购"，从"闪购"标签后提取店铺名
         let taobaoFlashMerchant = parseTaobaoFlashOrder(lines: cleanedLines)
 
@@ -160,6 +163,7 @@ public struct ReceiptParser: Sendable {
                 ?? douyinMerchant
                 ?? meituanMerchant
                 ?? didiMerchant
+                ?? alipayBillDetailMerchant
                 ?? taobaoFlashMerchant
                 ?? wechatDeductionMerchant
                 ?? unionPayMerchant
@@ -293,6 +297,115 @@ public struct ReceiptParser: Sendable {
             return trimmed
         }
         return nil
+    }
+
+    // MARK: - 支付宝 / 淘宝账单详情解析
+
+    /// 支付宝账单详情页的字段常以"支付时间 / 付款方式 / 商品说明"标签块展示，
+    /// OCR 会先输出连续标签，再按相同顺序输出对应值。淘宝闪购的账单来源可能被识别为
+    /// `taobao`，但真实商户通常藏在"商品说明"值中，如"XXX（分店）外卖订单"。
+    private func parseAlipayBillDetailMerchant(lines: [String]) -> String? {
+        guard lines.contains(where: { $0 == "商品说明" || $0.contains("商品说明") }) else { return nil }
+        guard lines.contains(where: { $0.contains("账单详情") || $0.contains("账单分类") || $0.contains("支付成功") }) else {
+            return nil
+        }
+
+        for (idx, line) in lines.enumerated() where line.contains("商品说明") {
+            if let inline = inlineValue(after: "商品说明", in: line),
+               let candidate = cleanedAlipayBillDetailMerchant(from: inline) {
+                return candidate
+            }
+
+            if let candidate = alipayBillDetailBlockValue(lines: lines, labelIndex: idx) {
+                return candidate
+            }
+
+            if let candidate = alipayBillDetailFollowingValue(lines: lines, startIndex: idx + 1) {
+                return candidate
+            }
+        }
+
+        return nil
+    }
+
+    private func alipayBillDetailBlockValue(lines: [String], labelIndex: Int) -> String? {
+        var blockStart = labelIndex
+        while blockStart > 0, isAlipayBillDetailLabel(lines[blockStart - 1]) {
+            blockStart -= 1
+        }
+
+        let labelOffset = labelIndex - blockStart
+        let valuesStart = labelIndex + 1
+        let candidateStart = valuesStart + labelOffset
+        guard candidateStart < lines.count else { return nil }
+        return alipayBillDetailFollowingValue(lines: lines, startIndex: candidateStart)
+    }
+
+    private func alipayBillDetailFollowingValue(lines: [String], startIndex: Int) -> String? {
+        var fragments: [String] = []
+
+        for i in startIndex..<lines.count {
+            let line = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty else { continue }
+            if shouldStopAlipayBillDetailValue(line) { break }
+            if amountCandidate(in: line) != nil || AppFormatters.parseFlexibleDate(line) != nil {
+                if fragments.isEmpty { continue }
+                break
+            }
+            fragments.append(line)
+
+            let joined = fragments.joined()
+            if joined.contains("订单") || (joined.contains("（") && joined.contains("）")) {
+                break
+            }
+        }
+
+        guard !fragments.isEmpty else { return nil }
+        return cleanedAlipayBillDetailMerchant(from: fragments.joined())
+    }
+
+    private func inlineValue(after label: String, in line: String) -> String? {
+        guard let labelRange = line.range(of: label) else { return nil }
+        let suffix = String(line[labelRange.upperBound...])
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ":：")))
+        return suffix.isEmpty ? nil : suffix
+    }
+
+    private func isAlipayBillDetailLabel(_ line: String) -> Bool {
+        let labels: Set<String> = [
+            "支付时间", "付款方式", "商品说明", "订单金额", "支付奖励", "收单机构",
+            "清算机构", "收款方全称", "优惠", "红包", "商家订单号", "交易号",
+            "订单号", "账单分类", "标签", "计入收支"
+        ]
+        return labels.contains(line)
+    }
+
+    private func shouldStopAlipayBillDetailValue(_ line: String) -> Bool {
+        if isAlipayBillDetailLabel(line) { return true }
+        let stopKeywords = [
+            "更多", "账单管理", "账单分类", "请选择", "使用记账本", "计入收支",
+            "查看商家订单", "交易凭证", "联系商家"
+        ]
+        return stopKeywords.contains { line.contains($0) }
+    }
+
+    private func cleanedAlipayBillDetailMerchant(from value: String) -> String? {
+        var candidate = value
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "＞>》〉~～")))
+
+        candidate = candidate
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)\s*(?:外卖|到店|团购)?订单.*$"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "＞>》〉~～")))
+
+        let genericNames: Set<String> = ["淘宝闪购", "支付宝", "付款方式", "商品说明", "支付成功"]
+        guard candidate.count >= 2,
+              !genericNames.contains(candidate),
+              amountCandidate(in: candidate) == nil,
+              AppFormatters.parseFlexibleDate(candidate) == nil else {
+            return nil
+        }
+        return candidate
     }
 
     private func inferReceiptCategory(merchant: String, text: String) -> TransactionCategory {

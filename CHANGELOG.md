@@ -10,6 +10,9 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565G CloudKit 最小探针诊断：根据真机回填确认单条 `LedgerTransaction` 完整 record 仍被 `serverRejectedRequest` / `CKInternalErrorDomain 2000` 拒绝；`CKModifyRecordsOperation` 保存策略改为 `.allKeys`，完整保存失败后会用同 record type 写入最小探针 record 并尝试删除，用 `Probe: minimal-save ...` 区分容器 / record type 本身不可写，还是完整字段集合被拒绝。
+- [2026-06-02 +0800] 完成 GOAL-1594 平台无关解释器主链路收口规划：在 `versions/v1.5.0-plan.md` 记录当前 `LedgerTextInterpreterCore` 已存在但主入账链路仍主要用 App 层 `SmartReceiptParser` / `ReceiptParser` 产出最终结构化账单的事实；明确目标链路为 Core 候选实体提取与评分、可选本地 AI rerank、App adapter 只负责 OCR / provider / UI / 保存，并新增 GOAL-1595～1598 跟进 Core 候选模型、主链路切换、Intent / Share Extension 收口和平台规则迁移。
+- [2026-06-02 +0800] 完成 GOAL-1593 淘宝闪购支付宝账单详情商户提取：`ReceiptParser` 新增支付宝 / 淘宝账单详情的“商品说明”标签块解析，在“支付时间 / 付款方式 / 商品说明”连续标签后按同序值提取真实店铺说明，并清理 OCR 换行与“外卖订单”后缀；新增 Golden Case 覆盖 `淘宝闪购` 平台行 + `LINLEE林里•手打柠檬茶（南开海光MALL店）` 商品说明样本，避免继续把平台名误当商户。
 - [2026-06-02 +0800] 部分完成 GOAL-1565F CloudKit 推送拒绝定位：根据真机 UI 回填确认 `CKErrorDomain` code 15 发生在 push 阶段，且 underlying 为 `CKInternalErrorDomain` code 2000；CloudKit 手动同步临时改为单条 record 一个 modify operation，并在单条保存 / 删除失败时显示 recordName、字段类型与字符串长度摘要，不输出商户或备注原文，便于继续定位是否为单条账单内容、字段长度、schema 或服务端限制导致拒绝。
 - [2026-06-02 +0800] 部分完成 GOAL-1565E CloudKit 真机错误诊断：针对 iPad / iPhone 手动同步时出现的 `CKErrorDomain` code 15，将手动同步状态拆分为推送、拉取和本地 SQLite 写入阶段；CloudKit adapter 新增 CKError / partial error / underlying error 描述，并将 push 保存与删除请求按 100 条一组分批提交，便于定位是 record schema、query / index 还是批量 operation 被服务端拒绝；WatchConnectivity counterpart 未安装日志记录为非本轮 CloudKit 阻断。
 - [2026-06-02 +0800] 部分完成 GOAL-1565D 手动 CloudKit 同步闭环：主 App entitlement 保留 CloudDocuments 并新增 CloudKit，去除本轮不需要的 `aps-environment`；数据管理页新增 CloudKit 账本同步手动入口，执行 account status 检查、push 本机正式账单、fetch 远端 `LedgerTransaction` 并按 sync revision / updatedAt 应用到 SQLite；旧 iCloud Drive 自动备份从 UI 自动开关降级为 legacy 手动备份 / 恢复；离线回归新增远端 insert / update / tombstone / conflict 应用断言。

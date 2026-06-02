@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565F CloudKit 推送拒绝定位）
+更新日期：2026-06-02（v1.5.0 GOAL-1565G CloudKit 最小探针诊断）
 
 ## 记录规则
 
@@ -43,6 +43,79 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-118 GOAL-1565G CloudKit 最小探针诊断
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 诊断 / 同步底座
+- 目标：根据真机回填确认单条 `LedgerTransaction` 完整 record 仍被 `serverRejectedRequest` / `CKInternalErrorDomain 2000` 拒绝后，继续区分“record type / 容器本身不可写”和“完整字段集合被拒绝”。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：`CKModifyRecordsOperation.savePolicy` 改为 `.allKeys`；完整 record 保存失败后，使用相同 record type 写入最小探针 record，并尝试删除探针；错误文案增加 `Probe: minimal-save ...`。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮真机错误链条、诊断策略和复测口径。
+- 未改动范围：未修改 CloudKit record type、字段名、SQLite schema、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未碰本轮外的 `ReceiptParser` / Golden Case 工作区改动。
+- 完成内容：
+  - 明确当前 blocker 不是批量大小，单条完整 record 仍会被服务端拒绝。
+  - 新建 record 的保存策略改为 `.allKeys`，减少 CloudKit changed keys 新建行为的不确定性。
+  - 完整保存失败后会自动做最小 `LedgerTransaction` 探针：只写入 `transactionID` 与 `updatedAt`，成功后尝试删除。
+  - 下一次真机 UI 将显示探针结果：`minimal-save failed` 或 `minimal-save succeeded...`。
+- 未完成内容：未完成用户真机复测；未确认 CKInternalError 2000 最终原因；未配置 CloudKit Dashboard schema / index；未实现后台自动同步、增量 token、冲突解决 UI 或同步健康页。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：探针会短暂写入一个 `transaction-...-probe` record，成功后立即删除；若删除失败，UI 会显示 probe delete failed，需要在 CloudKit Dashboard 人工检查是否遗留探针 record。
+- 回滚方式：回退本轮 `savePolicy = .allKeys`、`diagnoseMinimalSave` 和 `recordSaveRejected` probe 文案，以及文档记录；本地 SQLite 数据不受影响。
+- 结论：GOAL-1565G 诊断路径完成，可以重新安装到 iPhone 真机复测 CloudKit push。
+- 下一步建议：重新点击 iPhone CloudKit 同步一次；若仍失败，回填包含 `Probe:` 的完整错误文案。
+
+### ITER-117 GOAL-1594 平台无关解释器主链路收口规划
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：识别链路 / 架构收口
+- 类型：文档 / 治理 / 架构规划
+- 目标：把“平台无关层已存在但未作为最终文本转结构化账单主链路”的当前事实写入版本文档，并拆出后续可逐步落实的 GOAL。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增 `8.4 平台无关解释器收口方向（GOAL-1594）`，记录当前 `LedgerTextInterpreterCore`、`LedgerTextInterpreter`、`SmartReceiptParser`、`ReceiptParser`、QuickLedgerIntent / Share Extension 的职责边界；补充目标链路、候选商户原则、AI rerank 边界和 GOAL-1595～1598。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮 docs-only 架构收口。
+- 未改动范围：未修改 `LedgerTextInterpreterCore`、`LedgerTextInterpreter`、`SmartReceiptParser`、`ReceiptParser`、QuickLedgerIntent、Share Extension、Golden Case、SQLite、CloudKit、Watch、Widget、iPad UI 或 Xcode project。
+- 完成内容：
+  - 明确当前平台无关层已存在并能输出 `TransactionDraft`，但主入账链路目前主要用它做 `nonBillImage` gate。
+  - 明确最终结构化账单仍主要来自 App 层 `SmartReceiptParser` / `ReceiptParser`，平台规则仍堆在 App target。
+  - 固定后续目标：Core 提供文本标准化、分段、候选实体、评分解释和可选本地 AI rerank；App adapter 只保留 OCR、provider、UI、保存和 iOS 专属能力。
+  - 新增后续 GOAL：1595 Core 候选实体模型、1596 App 主链路采用 Core draft、1597 Intent / Share Extension Core-first、1598 平台规则迁移与 App `ReceiptParser` 瘦身。
+- 未完成内容：未开始代码迁移；GOAL-1593 的淘宝闪购支付宝账单详情规则仍暂留 App 层 `ReceiptParser`；未新增 Core 候选实体模型或回归样本。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：后续迁移应按 Golden Case 分批推进，避免一次性替换 `ReceiptParser` 导致真实支付截图大面积回退；AI 介入只应作为本地候选 rerank，不默认自由生成商户名。
+- 回滚方式：回退本轮 `versions/v1.5.0-plan.md` 的 GOAL-1594～1598 文档增量，以及 `CHANGELOG.md`、`process/iteration-log.md` 对应条目；无代码或数据影响。
+- 结论：本轮完成，v1.5.0 文档已把平台无关解释器主链路收口列为可追踪 GOAL 序列。
+- 下一步建议：进入 GOAL-1595，先定义 Core 候选实体模型、候选来源枚举、评分字段和 debug reason，再迁移支付宝 / 淘宝闪购 / 微信 / 云闪付样本。
+
+### ITER-116 GOAL-1593 淘宝闪购支付宝账单详情商户提取
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：识别链路 / 真实样本修复
+- 类型：Bugfix / 解析规则 / 测试
+- 目标：修复淘宝闪购支付宝账单详情截图中，规则解析把平台行“淘宝闪购”误作为商户，而没有从“商品说明”字段提取真实店铺说明的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift`：新增支付宝 / 淘宝账单详情“商品说明”标签块解析；按连续标签和值块顺序提取商品说明，合并 OCR 换行，并清理“外卖订单”等尾缀。
+  - `tests/golden/ledger_text_interpreter/cases.jsonl`：新增 `taobao_flash_alipay_bill_detail_linlee` Golden Case，覆盖 `LINLEE林里•手打柠檬茶（南开海光MALL店）` 样本。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮范围、验证结果和回滚方式。
+- 未改动范围：未修改来源推断优先级；含“淘宝 / 闪购”的账单仍可归为 `taobao` 来源；未改 MerchantAliasResolver、SQLite、LedgerStore 保存路径、CloudKit 同步、Watch、Widget、iPad UI、Xcode project 或 schema。
+- 完成内容：
+  - `ReceiptParser` 在通用负数金额邻近行规则之前，优先从“商品说明”值提取真实商户说明。
+  - 样本中的 `LINLEE林里•手打柠檬茶（南开海光MAL` + `L店）外卖订单` 会合并并清理为 `LINLEE林里•手打柠檬茶（南开海光MALL店）`。
+  - 新 Golden Case 同时断言金额 `21.87`、商户、餐饮分类和 `taobao` 来源。
+- 未完成内容：未做更多淘宝 / 饿了么 / 美团 / 支付宝账单详情样本的批量准确率评估；未调整分类词库；未改变用户已保存的历史账单。
+- 测试情况：
+  - PASS：`bash scripts/run_golden_regression.sh`，34 cases；仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`bash scripts/run_offline_regression.sh`；仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：“商品说明”字段本质上是订单说明，不一定所有平台都等同于店铺名；本轮仅在支付宝账单详情结构明显存在时启用，避免影响普通支付成功页和淘宝订单进行中页。
+- 回滚方式：回退 `ReceiptParser` 中 `parseAlipayBillDetailMerchant` 及调用顺序、删除新增 Golden Case，并回退本轮文档记录；本地账本数据不受影响。
+- 结论：本轮完成，用户反馈的淘宝闪购支付宝支付截图可解析出更精确的店铺说明商户名，不再默认落到平台名“淘宝闪购”。
+- 下一步建议：继续收集同类外卖 / 电商账单详情样本，按平台拆小样本加入 Golden Case，再决定是否抽象为更通用的字段块解析器。
 
 ### ITER-115 GOAL-1565F CloudKit 推送拒绝定位
 - 日期：2026-06-02

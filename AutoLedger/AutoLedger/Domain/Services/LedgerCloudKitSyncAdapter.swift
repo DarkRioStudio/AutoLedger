@@ -13,7 +13,7 @@ enum LedgerCloudKitSyncError: LocalizedError, Equatable {
     case liveModeRequired
     case liveModeRequiresManualValidation
     case accountUnavailable(LedgerCloudKitAccountState)
-    case recordSaveRejected(recordName: String, fieldSummary: String, message: String)
+    case recordSaveRejected(recordName: String, fieldSummary: String, probeSummary: String, message: String)
     case recordDeleteRejected(recordName: String, message: String)
 
     var errorDescription: String? {
@@ -26,8 +26,8 @@ enum LedgerCloudKitSyncError: LocalizedError, Equatable {
             return "CloudKit live sync requires capability, provisioning, and Xcode Cloud validation first."
         case let .accountUnavailable(state):
             return "CloudKit account is unavailable: \(state.rawValue)."
-        case let .recordSaveRejected(recordName, fieldSummary, message):
-            return "CloudKit rejected record save \(recordName). Fields: \(fieldSummary). Error: \(message)"
+        case let .recordSaveRejected(recordName, fieldSummary, probeSummary, message):
+            return "CloudKit rejected record save \(recordName). Probe: \(probeSummary). Fields: \(fieldSummary). Error: \(message)"
         case let .recordDeleteRejected(recordName, message):
             return "CloudKit rejected record delete \(recordName). Error: \(message)"
         }
@@ -168,9 +168,11 @@ struct LedgerCloudKitSyncAdapter {
                     dryRunResult: dryRunResult
                 )
             } catch {
+                let probeSummary = await diagnoseMinimalSave(for: record, dryRunResult: dryRunResult)
                 throw LedgerCloudKitSyncError.recordSaveRejected(
                     recordName: record.recordID.recordName,
                     fieldSummary: Self.fieldSummary(for: record),
+                    probeSummary: probeSummary,
                     message: Self.describe(error)
                 )
             }
@@ -372,7 +374,7 @@ struct LedgerCloudKitSyncAdapter {
                 recordsToSave: recordsToSave,
                 recordIDsToDelete: recordIDsToDelete
             )
-            operation.savePolicy = .changedKeys
+            operation.savePolicy = .allKeys
             operation.isAtomic = false
             operation.modifyRecordsCompletionBlock = { savedRecords, deletedRecordIDs, error in
                 if let error {
@@ -392,6 +394,43 @@ struct LedgerCloudKitSyncAdapter {
             }
 
             database.add(operation)
+        }
+    }
+
+    private func diagnoseMinimalSave(
+        for record: CKRecord,
+        dryRunResult: LedgerCloudKitDryRunResult
+    ) async -> String {
+        let probeRecordName = "\(record.recordID.recordName)-probe"
+        let probe = CKRecord(
+            recordType: record.recordType,
+            recordID: CKRecord.ID(recordName: probeRecordName)
+        )
+
+        if let transactionID = record[CloudLedgerSyncSchema.Field.transactionID] as? NSString {
+            probe[CloudLedgerSyncSchema.Field.transactionID] = transactionID
+        }
+        probe[CloudLedgerSyncSchema.Field.updatedAt] = Date() as NSDate
+
+        do {
+            _ = try await modifyRecords(
+                recordsToSave: [probe],
+                recordIDsToDelete: [],
+                dryRunResult: dryRunResult
+            )
+        } catch {
+            return "minimal-save failed (\(Self.describe(error)))"
+        }
+
+        do {
+            _ = try await modifyRecords(
+                recordsToSave: [],
+                recordIDsToDelete: [probe.recordID],
+                dryRunResult: dryRunResult
+            )
+            return "minimal-save succeeded and probe deleted"
+        } catch {
+            return "minimal-save succeeded but probe delete failed (\(Self.describe(error)))"
         }
     }
 
