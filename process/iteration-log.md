@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565K iCloud 同步设置页收口）
+更新日期：2026-06-02（v1.5.0 GOAL-1565L iCloud 同步推拉职责拆分）
 
 ## 记录规则
 
@@ -43,6 +43,34 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-123 GOAL-1565L iCloud 同步推拉职责拆分
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 同步底座
+- 目标：按真机反馈将 iCloud 同步触发拆成拉取和推送两条线：App 启动只拉取，本地账本数据变化只推送，账本页下拉刷新只拉取，设置页强制刷新保留完整全量刷新。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增本地账本变化后的延迟增量推送任务；将启动同步改为 pull-only；拆出 `pullLedgerFromCloudKitIfEnabled`、`pushLedgerChangesToCloudKitIfEnabled`、`pushLocalLedgerChanges`、`pullRemoteLedgerChanges`。
+  - `AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift`：账本页下拉刷新改为从 iCloud 拉取一次，未启用 iCloud 同步时仍只刷新本地 SQLite。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：iPad 账本 workspace 下拉刷新改为从 iCloud 拉取一次。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮触发策略调整。
+- 未改动范围：未修改 CloudKit record type、schema、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未在本轮实现订阅 / 商户别名独立 CloudKit schema。
+- 完成内容：
+  - App 启动且 iCloud 同步开启时，只执行远端拉取和本地合并，不再顺带推送。
+  - 本地新增、编辑、软删除、恢复、永久删除、OCR 入账以及商户别名批量刷新账单后，会在 2 秒防抖后触发增量推送。
+  - 账本页和 iPad 账本页下拉刷新改为 pull-only 懒加载。
+  - 数据管理页“强制刷新数据”仍执行一次全量 push + pull。
+- 未完成内容：订阅、商户别名、自定义分类 / 来源自身仍未建独立 CloudKit record type；push checkpoint 仍按本机成功推送时间保存，pull 端仍为 query 分页。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：App Intents / Share Extension 若在 App 未运行时直接写入 SQLite，仍主要依赖后续 App 启动拉取和用户触发流程；后续可补一个启动时“本机未推送变更检测”或通知钩子，避免后台直写漏推。
+- 回滚方式：将 `syncLedgerWithCloudKitOnLaunchIfNeeded()` 恢复为调用 `syncLedgerWithCloudKitNow(forceFull: false)`，账本页 / iPad 下拉刷新恢复 `refreshFromStore()`，移除本地变更后的延迟推送任务。
+- 结论：GOAL-1565L 完成，iCloud 同步已按启动拉取、本地变更推送、账本下拉拉取、强制刷新全量同步拆分。
+- 下一步建议：订阅、商户别名和必要用户配置的 iCloud schema 可顺延为 GOAL-1565M。
 
 ### ITER-122 GOAL-1565K iCloud 同步设置页收口
 - 日期：2026-06-02

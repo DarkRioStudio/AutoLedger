@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 完成 GOAL-1565L iCloud 同步推拉职责拆分：App 启动改为只从 iCloud 拉取远端账本；账本页 / iPad 账本下拉刷新改为懒加载拉取；本地新增、编辑、删除、恢复、商户别名批量刷新账单后延迟触发增量推送；数据管理页“强制刷新数据”继续执行一次全量推送 + 拉取，用于人工排查和重拉。
 - [2026-06-02 +0800] 完成 GOAL-1565K iCloud 同步设置页收口：根据 iPad 真机同步通过结果，将“CloudKit 账本同步”改为“iCloud 同步”；隐藏 iCloud Drive 旧备份卡片；移除同步卡片的长说明和重复状态行；“同步一次”改为“强制刷新数据”并执行全量同步；同步日志继续作为进度和错误的唯一展开区；版本计划同步记录订阅和商户别名后续纳入 iCloud 同步 schema。
 - [2026-06-02 +0800] 部分完成 GOAL-1565J iCloud 同步启用流程：数据管理页新增“启用 iCloud 同步”开关，首次开启会清空 CloudKit push checkpoint 并立即执行全量同步；开启后 App 启动 `.task` 会自动触发一次后台增量同步；CloudKit 同步状态统一写入近期日志，UI 展示阶段进度和最近 6 条日志，手动“同步一次”仅在开关开启后可用。
 - [2026-06-02 +0800] 部分完成 GOAL-1565I CloudKit 全量 / 增量同步性能收口：根据真机错误确认 `_defaultZone` 不支持 `getChanges`，拉取回退到 `CKQueryOperation` 100 条分页；推送从诊断期单条 record operation 恢复为最多 100 条一批，并在本地保存 `lastSuccessfulCloudKitPushAt`，后续手动同步只推本机新增 / 修改 / tombstone 变更；备份恢复会清除 push checkpoint，避免恢复旧数据后漏推。

@@ -428,7 +428,7 @@ private struct IPadLedgerWorkspaceView: View {
         .scrollContentBackground(.hidden)
         .background(AppTheme.canvas.opacity(0.45))
         .refreshable {
-            store.refreshFromStore()
+            await store.pullLedgerFromCloudKitIfEnabled(reason: "iPad 账本下拉刷新，正在从 iCloud 拉取数据。")
         }
     }
 

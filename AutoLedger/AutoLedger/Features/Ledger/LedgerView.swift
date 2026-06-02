@@ -212,7 +212,7 @@ struct LedgerView: View {
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.screenGradient.ignoresSafeArea())
                 .refreshable {
-                    store.refreshFromStore()
+                    await store.pullLedgerFromCloudKitIfEnabled(reason: "账本下拉刷新，正在从 iCloud 拉取数据。")
                 }
                 .onChange(of: searchText) { _, _ in
                     if let first = searchFilteredTransactions.first {
