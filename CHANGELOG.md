@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565B CloudKit dry-run adapter：主 App 新增 `LedgerCloudKitSyncAdapter`，提供 disabled / dry-run / live 三态保护；dry-run 可把 `LedgerSyncPushBatch` 映射为 `LedgerCloudKitMappedRecord` 并生成 `CKRecord`，live 模式在 capability、provisioning 和 Xcode Cloud 验证前仍抛出受控错误；本轮未写入 CloudKit、不修改 entitlements、不改变发布链。
 - [2026-06-02 +0800] 部分完成 GOAL-1565 基础账本同步闭环：新增 `CloudLedgerSyncSchema`、`LedgerTransactionSyncPayload`、`LedgerSyncPushBatch` 和 `LedgerSyncPlanner`，固定正式账单 CloudKit record type、record name、字段映射、upsert / tombstone / expired tombstone 拆分和 `changedAfter` 增量过滤；当前为本地计划层，不 import CloudKit、不修改 entitlements、不声明真实多端同步已完成。
 - [2026-06-02 +0800] 完成 GOAL-1564 基础同步元数据与冲突模型底座：新增 `TransactionSyncMetadata` / `TransactionSyncRecord`、`SyncConflictState` 和基础冲突判定器；SQLite `transactions` 增量补齐 `sync_revision`、`sync_device_id`、`sync_idempotency_key`、`sync_conflict_state`，保存 / 更新 / 软删除 / 恢复会维护 revision 与 tombstone；`BackupTransaction` 新增可选 `syncMetadata` 并保持旧 v1 JSON 兼容；离线回归新增 sync metadata、tombstone、active/deleted sync record 和旧备份解码用例。
 - [2026-06-02 +0800] 完成 GOAL-1563 多端同步现状审计与策略冻结：确认当前 iCloud 为 CloudDocuments 单文件 BackupBundle 备份、Watch 为 WatchConnectivity 轻量同步、Widget 为 App Group 本机 SQLite 只读；冻结 v1.5.0 最小策略为 local-first + CloudKit private database 结构化同步优先，iCloud Drive BackupBundle 保留备份 / 导出 / 恢复角色，原始截图、OCR 全文、支付截图、小票图片、raw input 和调试包默认不进入同步。

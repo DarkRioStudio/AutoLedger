@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565A 同步计划层）
+更新日期：2026-06-02（v1.5.0 GOAL-1565B CloudKit dry-run adapter）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-111 GOAL-1565B CloudKit dry-run adapter
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 数据 / 同步底座
+- 目标：在不修改 entitlements、不启用真实 CloudKit 写入的前提下，给 GOAL-1565A 的同步计划层增加 CloudKit adapter 外壳、dry-run record mapping 和 live 模式保护。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：新增 disabled / dry-run / live 三态 adapter、CloudKit 字段值包装、mapped record 结构和 `CKRecord` 构造入口。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1565B 范围、发布链影响和下一步。
+- 未改动范围：未修改 CloudKit capability、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、scheme、target、WatchConnectivity payload、Widget SQL、iCloud Drive BackupBundle、SQLite schema 或 App Store 发布脚本。
+- 完成内容：
+  - `disabled` 模式默认启用，调用 push 准备会抛出受控 disabled 错误。
+  - `dryRun` 模式可把 `LedgerSyncPushBatch` 的 upserts 和 tombstones 映射为 `LedgerCloudKitMappedRecord`，并保留 expired tombstone 计数。
+  - `live` 模式在 capability、provisioning profile、Xcode Cloud signing 和隐私披露完成前抛出受控错误，不会误写 CloudKit。
+  - `makeCKRecord(from:)` 可从 dry-run mapped record 构造 `CKRecord`，为后续真实 adapter 复用字段映射。
+- 未完成内容：未实现 CloudKit save / fetch / modifyRecords；未实现 pull / merge / applyRemote；未做 CloudKit account status；未做同步 smoke；未同步自定义分类 / 来源、商户别名、分类修正或多账本元数据。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：本轮已 import CloudKit，但仅在主 App target 内使用，不进入 `AutoLedgerCore`；GOAL-1565 仍为部分完成，不能声明多设备真实同步。
+- 回滚方式：回退 `LedgerCloudKitSyncAdapter.swift` 和本轮文档记录；该 adapter 尚未接入运行时入口，回滚不影响现有账本、Watch、Widget 或备份功能。
+- 结论：GOAL-1565B 完成，CloudKit dry-run adapter 外壳已可编译，但真实多端同步仍未启用。
+- 下一步建议：验证通过后进入 GOAL-1565C，做 capability-gated 的 CloudKit account/status 检查与真实 modify records 接入方案；CloudKit entitlement 和 Xcode Cloud signing 必须单独人工验证。
 
 ### ITER-110 GOAL-1565A 基础账本同步计划层
 - 日期：2026-06-02
