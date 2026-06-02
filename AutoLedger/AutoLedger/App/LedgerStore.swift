@@ -76,12 +76,16 @@ final class LedgerStore: ObservableObject {
 
     func saveCustomSources() {
         UserDefaults.standard.set(customSources, forKey: "customSources")
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
     func saveCustomCategories() {
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
         Self.watchSyncHandler?()
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -92,6 +96,8 @@ final class LedgerStore: ObservableObject {
             lastImportSummary = "已更新商户别名，并刷新 \(updatedCount) 笔历史账单。"
             scheduleCloudKitPushAfterLocalLedgerChange()
         }
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -100,6 +106,8 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.saveMerchantAlias(original: original, alias: alias)
         }
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -938,6 +946,8 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.saveSubscription(sub)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -947,6 +957,8 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.deleteSubscription(id: sub.id)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -958,6 +970,14 @@ final class LedgerStore: ObservableObject {
             try? sqlStore.updateSubscription(sub)
         }
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+    }
+
+    func recordSubscriptionMetadataChanged() {
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -984,6 +1004,8 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.saveCategoryCorrection(merchant: merchant, category: category)
         }
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -992,6 +1014,8 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.deleteCategoryCorrection(merchant: merchant)
         }
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
 
@@ -1053,7 +1077,9 @@ extension LedgerStore {
     private static let lastBackupErrorKey = "lastBackupError"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
     private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
+    private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
 
     var isLocalDataEmptyForRestore: Bool {
         transactions.isEmpty &&
@@ -1241,10 +1267,11 @@ extension LedgerStore {
                 forceFull: forceFull
             )
             let pullResult = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
+            let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
             refreshFromStore()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)。")
+            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -1279,9 +1306,10 @@ extension LedgerStore {
             }
 
             let result = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
+            let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
             refreshFromStore()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)。")
+            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -1326,7 +1354,7 @@ extension LedgerStore {
             }
 
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
-            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条。")
+            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条，配置\(result.configurationSaved ? "已推送" : "无需推送")。")
             return true
         } catch {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
@@ -1348,7 +1376,7 @@ extension LedgerStore {
         sqlStore: SQLiteTransactionStore,
         adapter: LedgerCloudKitSyncAdapter,
         forceFull: Bool
-    ) async throws -> (pushMode: String, savedCount: Int) {
+    ) async throws -> (pushMode: String, savedCount: Int, configurationSaved: Bool) {
         if forceFull {
             clearCloudKitPushCheckpoint()
         }
@@ -1359,8 +1387,21 @@ extension LedgerStore {
         let pushMode = lastPushAt == nil ? "全量" : "增量"
         updateLedgerCloudSyncStatus("正在\(pushMode)推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录...")
         let pushResult = try await adapter.push(batch: batch)
+
+        let shouldPushConfiguration = forceFull || lastPushAt == nil || ledgerConfigurationUpdatedAt > lastPushAt!
+        var configurationSaved = false
+        if shouldPushConfiguration {
+            updateLedgerCloudSyncStatus("正在推送订阅、商户别名和用户配置...")
+            let configurationResult = try await adapter.pushConfiguration(makeLedgerConfigurationPayload())
+            configurationSaved = !configurationResult.savedRecordNames.isEmpty
+        }
+
         recordCloudKitPushCheckpoint(batch.generatedAt)
-        return (pushMode: pushMode, savedCount: pushResult.savedRecordNames.count)
+        return (
+            pushMode: pushMode,
+            savedCount: pushResult.savedRecordNames.count,
+            configurationSaved: configurationSaved
+        )
     }
 
     private func pullRemoteLedgerChanges(
@@ -1399,6 +1440,105 @@ extension LedgerStore {
             keptLocal: keptLocal,
             conflicts: conflicts
         )
+    }
+
+    private func pullRemoteLedgerConfiguration(
+        sqlStore: SQLiteTransactionStore,
+        adapter: LedgerCloudKitSyncAdapter
+    ) async throws -> (remoteFound: Bool, applied: Bool) {
+        updateLedgerCloudSyncStatus("正在拉取订阅、商户别名和用户配置...")
+        guard let remote = try await adapter.fetchConfigurationRecord() else {
+            return (remoteFound: false, applied: false)
+        }
+
+        guard remote.updatedAt > ledgerConfigurationUpdatedAt,
+              remote.deviceID != localSyncDeviceID else {
+            return (remoteFound: true, applied: false)
+        }
+
+        try sqlStore.replaceConfigurationForSync(
+            subscriptions: remote.subscriptions,
+            categoryCorrections: remote.categoryCorrections,
+            merchantAliases: remote.merchantAliases
+        )
+
+        subscriptions = remote.subscriptions.sorted { $0.nextChargedAt < $1.nextChargedAt }
+        categoryCorrections = Dictionary(uniqueKeysWithValues: remote.categoryCorrections.map { ($0.merchant, $0.category) })
+        customCategories = remote.customCategories
+        customSources = remote.customSources
+        merchantAliases = remote.merchantAliases
+
+        UserDefaults.standard.set(customCategories, forKey: "customCategories")
+        UserDefaults.standard.set(customSources, forKey: "customSources")
+        UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        UserDefaults.standard.set(remote.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
+        UserDefaults.standard.set(remote.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
+        UserDefaults.standard.set(remote.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
+        UserDefaults.standard.set(remote.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
+        UserDefaults.standard.set(remote.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
+        UserDefaults.standard.set(remote.appSettings.autoClipboardImportEnabled, forKey: "autoClipboardImport")
+        UserDefaults.standard.set(false, forKey: Self.iCloudBackupEnabledKey)
+        UserDefaults.standard.set(remote.updatedAt, forKey: Self.ledgerConfigurationUpdatedAtKey)
+
+        NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        Self.watchSyncHandler?()
+        return (remoteFound: true, applied: true)
+    }
+
+    private func makeLedgerConfigurationPayload() -> LedgerConfigurationSyncPayload {
+        let updatedAt = ensureLedgerConfigurationUpdatedAt()
+        let annualPrices = UserDefaults.standard.dictionary(forKey: Self.annualPriceKey) as? [String: Double] ?? [:]
+        let subscriptionNotes = UserDefaults.standard.dictionary(forKey: Self.subscriptionNotesKey) as? [String: String] ?? [:]
+
+        return LedgerConfigurationSyncPayload(
+            updatedAt: updatedAt,
+            deviceID: localSyncDeviceID,
+            subscriptions: subscriptions.sorted { $0.id.uuidString < $1.id.uuidString },
+            categoryCorrections: categoryCorrections
+                .map { BackupCategoryCorrection(merchant: $0.key, category: $0.value) }
+                .sorted { $0.merchant < $1.merchant },
+            customCategories: customCategories,
+            customSources: customSources,
+            merchantAliases: merchantAliases,
+            subscriptionMetadata: BackupSubscriptionMetadata(
+                annualPriceOverrides: annualPrices,
+                notes: subscriptionNotes
+            ),
+            appSettings: BackupAppSettings(
+                subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
+                monthlyAnomalyThresholdPercent: UserDefaults.standard.double(forKey: "monthlyAnomalyThresholdPercent"),
+                llmEnhancementEnabled: UserDefaults.standard.bool(forKey: "llmEnhancementEnabled"),
+                autoClipboardImportEnabled: UserDefaults.standard.bool(forKey: "autoClipboardImport"),
+                iCloudBackupEnabled: false
+            )
+        )
+    }
+
+    private var ledgerConfigurationUpdatedAt: Date {
+        UserDefaults.standard.object(forKey: Self.ledgerConfigurationUpdatedAtKey) as? Date ?? .distantPast
+    }
+
+    private func ensureLedgerConfigurationUpdatedAt() -> Date {
+        if let existing = UserDefaults.standard.object(forKey: Self.ledgerConfigurationUpdatedAtKey) as? Date {
+            return existing
+        }
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: Self.ledgerConfigurationUpdatedAtKey)
+        return now
+    }
+
+    private func markLedgerConfigurationChanged() {
+        UserDefaults.standard.set(Date(), forKey: Self.ledgerConfigurationUpdatedAtKey)
+    }
+
+    private var localSyncDeviceID: String {
+        if let existing = UserDefaults.standard.string(forKey: Self.syncDeviceIDKey),
+           !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return existing
+        }
+        let generated = UUID().uuidString
+        UserDefaults.standard.set(generated, forKey: Self.syncDeviceIDKey)
+        return generated
     }
 
     private func updateLedgerCloudSyncStatus(_ message: String) {

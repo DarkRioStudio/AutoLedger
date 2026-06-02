@@ -365,6 +365,7 @@ struct SubscriptionListView: View {
             annualPriceOverrides.removeValue(forKey: sub.id.uuidString)
         }
         UserDefaults.standard.set(annualPriceOverrides, forKey: annualPriceKey)
+        store.recordSubscriptionMetadataChanged()
     }
 
     private func saveNote(_ value: String, for sub: Subscription) {
@@ -375,6 +376,7 @@ struct SubscriptionListView: View {
             subscriptionNotes[sub.id.uuidString] = note
         }
         UserDefaults.standard.set(subscriptionNotes, forKey: subscriptionNotesKey)
+        store.recordSubscriptionMetadataChanged()
     }
 
     private func deleteSubscription(_ sub: Subscription) {
@@ -383,7 +385,7 @@ struct SubscriptionListView: View {
         subscriptionNotes.removeValue(forKey: sub.id.uuidString)
         UserDefaults.standard.set(annualPriceOverrides, forKey: annualPriceKey)
         UserDefaults.standard.set(subscriptionNotes, forKey: subscriptionNotesKey)
-        store.requestAutomaticBackup()
+        store.recordSubscriptionMetadataChanged()
     }
 
     private func importPickedPhoto(_ item: PhotosPickerItem) async {

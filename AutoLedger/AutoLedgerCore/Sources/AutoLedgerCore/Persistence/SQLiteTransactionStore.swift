@@ -301,6 +301,34 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    public func replaceConfigurationForSync(
+        subscriptions: [Subscription],
+        categoryCorrections: [BackupCategoryCorrection],
+        merchantAliases: [String: String]
+    ) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try execute("DELETE FROM subscriptions;")
+            try execute("DELETE FROM category_corrections;")
+            try execute("DELETE FROM merchant_aliases;")
+
+            for subscription in subscriptions {
+                try saveSubscription(subscription)
+            }
+            for correction in categoryCorrections {
+                try saveCategoryCorrection(merchant: correction.merchant, category: correction.category)
+            }
+            for (original, alias) in merchantAliases {
+                try saveMerchantAlias(original: original, alias: alias)
+            }
+
+            try execute("COMMIT;")
+        } catch {
+            try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
     public func restoreTransaction(id: UUID) throws {
         let sql = """
         UPDATE transactions

@@ -3,6 +3,7 @@ import Foundation
 public enum CloudLedgerSyncSchema {
     public enum RecordType {
         public static let transaction = "LedgerTransaction"
+        public static let configuration = "LedgerConfiguration"
     }
 
     public enum Field {
@@ -19,10 +20,52 @@ public enum CloudLedgerSyncSchema {
         public static let idempotencyKey = "idempotencyKey"
         public static let deletedAt = "deletedAt"
         public static let conflictState = "conflictState"
+        public static let payloadJSON = "payloadJSON"
     }
 
     public static func recordName(for transactionID: UUID) -> String {
         "transaction-\(transactionID.uuidString.lowercased())"
+    }
+
+    public static func configurationRecordName() -> String {
+        "ledger-configuration-default"
+    }
+}
+
+public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
+    public let recordName: String
+    public let updatedAt: Date
+    public let deviceID: String
+    public let subscriptions: [Subscription]
+    public let categoryCorrections: [BackupCategoryCorrection]
+    public let customCategories: [String]
+    public let customSources: [String]
+    public let merchantAliases: [String: String]
+    public let subscriptionMetadata: BackupSubscriptionMetadata
+    public let appSettings: BackupAppSettings
+
+    public init(
+        recordName: String = CloudLedgerSyncSchema.configurationRecordName(),
+        updatedAt: Date,
+        deviceID: String,
+        subscriptions: [Subscription],
+        categoryCorrections: [BackupCategoryCorrection],
+        customCategories: [String],
+        customSources: [String],
+        merchantAliases: [String: String],
+        subscriptionMetadata: BackupSubscriptionMetadata,
+        appSettings: BackupAppSettings
+    ) {
+        self.recordName = recordName
+        self.updatedAt = updatedAt
+        self.deviceID = deviceID
+        self.subscriptions = subscriptions
+        self.categoryCorrections = categoryCorrections
+        self.customCategories = customCategories
+        self.customSources = customSources
+        self.merchantAliases = merchantAliases
+        self.subscriptionMetadata = subscriptionMetadata
+        self.appSettings = appSettings
     }
 }
 

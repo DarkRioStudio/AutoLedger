@@ -224,6 +224,70 @@ struct LedgerCloudKitSyncAdapter {
         return try await fetchTransactionRecords(cursor: nil, accumulated: [])
     }
 
+    func pushConfiguration(_ payload: LedgerConfigurationSyncPayload) async throws -> LedgerCloudKitPushResult {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let mappedRecord = try Self.mapConfigurationRecord(payload)
+        let dryRunResult = LedgerCloudKitDryRunResult(
+            mode: mode,
+            upsertCount: 1,
+            tombstoneCount: 0,
+            expiredTombstoneCount: 0,
+            mappedRecords: [mappedRecord]
+        )
+
+        do {
+            return try await modifyRecords(
+                recordsToSave: [makeCKRecord(from: mappedRecord)],
+                recordIDsToDelete: [],
+                dryRunResult: dryRunResult
+            )
+        } catch {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: Self.fieldSummary(for: makeCKRecord(from: mappedRecord)),
+                probeSummary: "configuration-save",
+                message: Self.describe(error)
+            )
+        }
+    }
+
+    func fetchConfigurationRecord() async throws -> LedgerConfigurationSyncPayload? {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let recordID = CKRecord.ID(recordName: CloudLedgerSyncSchema.configurationRecordName())
+        do {
+            let record = try await database.record(for: recordID)
+            return Self.mapConfigurationPayload(from: record)
+        } catch {
+            if let ckError = error as? CKError,
+               ckError.code == .unknownItem {
+                return nil
+            }
+            throw error
+        }
+    }
+
     func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
         let recordID = CKRecord.ID(recordName: mappedRecord.recordName)
         let record = CKRecord(recordType: mappedRecord.recordType, recordID: recordID)
@@ -513,6 +577,28 @@ struct LedgerCloudKitSyncAdapter {
         )
     }
 
+    private static func mapConfigurationRecord(_ payload: LedgerConfigurationSyncPayload) throws -> LedgerCloudKitMappedRecord {
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        guard let json = String(data: encoded, encoding: .utf8) else {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: "payloadJSON=encodingFailed",
+                probeSummary: "configuration-encode",
+                message: "Configuration payload could not be encoded as UTF-8."
+            )
+        }
+
+        return LedgerCloudKitMappedRecord(
+            recordType: CloudLedgerSyncSchema.RecordType.configuration,
+            recordName: payload.recordName,
+            fields: [
+                CloudLedgerSyncSchema.Field.updatedAt: .date(payload.updatedAt),
+                CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
+                CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
+            ]
+        )
+    }
+
     private static func mapAccountStatus(_ status: CKAccountStatus) -> LedgerCloudKitAccountCheck {
         switch status {
         case .available:
@@ -582,6 +668,50 @@ struct LedgerCloudKitSyncAdapter {
             deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date,
             conflictState: SyncConflictState(rawValue: conflictStateString) ?? .clean
         )
+    }
+
+    private static func mapConfigurationPayload(from record: CKRecord) -> LedgerConfigurationSyncPayload? {
+        guard
+            let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
+            let data = json.data(using: .utf8),
+            var payload = try? JSONDecoder.ledgerSyncDecoder.decode(LedgerConfigurationSyncPayload.self, from: data)
+        else {
+            return nil
+        }
+
+        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
+           updatedAt != payload.updatedAt {
+            payload = LedgerConfigurationSyncPayload(
+                recordName: record.recordID.recordName,
+                updatedAt: updatedAt,
+                deviceID: payload.deviceID,
+                subscriptions: payload.subscriptions,
+                categoryCorrections: payload.categoryCorrections,
+                customCategories: payload.customCategories,
+                customSources: payload.customSources,
+                merchantAliases: payload.merchantAliases,
+                subscriptionMetadata: payload.subscriptionMetadata,
+                appSettings: payload.appSettings
+            )
+        }
+
+        return payload
+    }
+}
+
+private extension JSONEncoder {
+    static var ledgerSyncEncoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+}
+
+private extension JSONDecoder {
+    static var ledgerSyncDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
     }
 }
 

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565M 快捷指令记账 iCloud 补推链路）
+更新日期：2026-06-02（v1.5.0 GOAL-1565N iCloud 配置快照同步）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-125 GOAL-1565N iCloud 配置快照同步
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 同步底座
+- 目标：把订阅、商户别名和必要用户配置纳入 iCloud 同步，避免正式账单已同步但配置仍停留在单机或旧 iCloud Drive 备份路径。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/LedgerSyncPlan.swift`：新增 `LedgerConfigurationSyncPayload`，定义固定 `LedgerConfiguration` record type 和 `ledger-configuration-default` recordName。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Persistence/SQLiteTransactionStore.swift`：新增 `replaceConfigurationForSync`，只替换订阅、分类修正和商户别名，不触碰正式账单。
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：新增配置快照 push / fetch，使用 `payloadJSON` + `updatedAt` + `deviceID` 存储配置包。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：配置变化更新时间戳并触发 iCloud 增量推送；push 时按更新时间决定是否顺带保存配置快照；pull 时应用较新的远端配置。
+  - `AutoLedger/AutoLedger/Features/Settings/SubscriptionListView.swift`：订阅年费覆盖 / 备注变化也标记配置变更并触发推送。
+  - `scripts/run_offline_regression.sh`：补齐离线 CloudKit stub 的配置同步接口，保持回归脚本可编译。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮同步范围和验证结果。
+- 未改动范围：未修改 entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未将配置同步拆成逐条 CloudKit record；未把旧 iCloud Drive 备份入口恢复到 UI。
+- 完成内容：
+  - 订阅、商户别名、分类修正、自定义分类 / 来源、订阅年费覆盖 / 备注和必要用户设置会进入 `LedgerConfiguration` 配置快照。
+  - 本地配置变化后会标记配置更新时间，并通过已有 iCloud push 任务增量推送。
+  - 强制刷新会推送当前配置快照。
+  - 拉取时如果远端配置更新时间更新且来自其他设备，会应用到本机 SQLite / UserDefaults，并刷新订阅提醒和 Watch payload。
+  - 旧 iCloud Drive 备份开关不会通过配置快照重新打开。
+- 未完成内容：配置冲突暂为整包 last-write-wins；未实现订阅 / 商户别名逐条 tombstone；未完成 iPhone / iPad 真机配置同步 smoke。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：配置快照是整包覆盖，适合当前小体量配置；如果两台设备同时改商户别名或订阅，较新的整包会覆盖较旧整包。后续如果用户配置规模变大，应拆成逐条 record 和 tombstone。
+- 回滚方式：移除 `LedgerConfigurationSyncPayload`、CloudKit adapter 配置 push / fetch、LedgerStore 配置推拉与时间戳触发，恢复仅同步正式账单。
+- 结论：GOAL-1565N 完成，基础账本同步已覆盖正式账单和当前主要配置区。
+- 下一步建议：进入 iPhone / iPad 真机配置同步 smoke，并补 Share Extension 直写账单后的 iCloud 补推链路或进入下一阶段同步性能 / UI 收口。
 
 ### ITER-124 GOAL-1565M 快捷指令记账 iCloud 补推链路
 - 日期：2026-06-02

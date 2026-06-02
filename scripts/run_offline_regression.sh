@@ -160,8 +160,16 @@ struct LedgerCloudKitSyncAdapter {
         LedgerCloudKitPushResult(savedRecordNames: [])
     }
 
+    func pushConfiguration(_ payload: LedgerConfigurationSyncPayload) async throws -> LedgerCloudKitPushResult {
+        LedgerCloudKitPushResult(savedRecordNames: [])
+    }
+
     func fetchAllTransactionRecords() async throws -> [LedgerTransactionSyncPayload] {
         []
+    }
+
+    func fetchConfigurationRecord() async throws -> LedgerConfigurationSyncPayload? {
+        nil
     }
 }
 IOSTUB
