@@ -1192,10 +1192,10 @@ extension LedgerStore {
 
         if enabled {
             clearCloudKitPushCheckpoint()
-            updateLedgerCloudSyncStatus("CloudKit 同步已启用，开始首次全量同步。")
+            updateLedgerCloudSyncStatus("iCloud 同步已启用，开始首次全量同步。")
             await syncLedgerWithCloudKitNow(forceFull: true)
         } else {
-            updateLedgerCloudSyncStatus("CloudKit 同步已关闭。")
+            updateLedgerCloudSyncStatus("iCloud 同步已关闭。")
         }
     }
 
@@ -1210,12 +1210,12 @@ extension LedgerStore {
     func syncLedgerWithCloudKitNow(forceFull: Bool = false) async {
         guard !isLedgerCloudSyncRunning else { return }
         isLedgerCloudSyncRunning = true
-        updateLedgerCloudSyncStatus("正在同步 CloudKit...")
+        updateLedgerCloudSyncStatus("正在同步 iCloud...")
         defer { isLedgerCloudSyncRunning = false }
 
         do {
             guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
-                updateLedgerCloudSyncStatus("CloudKit 同步需要 SQLite 账本。")
+                updateLedgerCloudSyncStatus("iCloud 同步需要 SQLite 账本。")
                 return
             }
 
@@ -1223,7 +1223,7 @@ extension LedgerStore {
             updateLedgerCloudSyncStatus("1/4 正在检查 iCloud 账号状态...")
             let accountCheck = await adapter.checkAccountStatus()
             guard accountCheck.canUsePrivateDatabase else {
-                updateLedgerCloudSyncStatus("CloudKit 不可用：\(accountCheck.message)")
+                updateLedgerCloudSyncStatus("iCloud 不可用：\(accountCheck.message)")
                 return
             }
 
@@ -1241,7 +1241,7 @@ extension LedgerStore {
                 pushResult = try await adapter.push(batch: batch)
                 recordCloudKitPushCheckpoint(batch.generatedAt)
             } catch {
-                updateLedgerCloudSyncStatus("CloudKit 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+                updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
                 return
             }
 
@@ -1250,7 +1250,7 @@ extension LedgerStore {
             do {
                 remotePayloads = try await adapter.fetchAllTransactionRecords()
             } catch {
-                updateLedgerCloudSyncStatus("CloudKit 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+                updateLedgerCloudSyncStatus("iCloud 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
                 return
             }
 
@@ -1277,15 +1277,15 @@ extension LedgerStore {
                     }
                 }
             } catch {
-                updateLedgerCloudSyncStatus("CloudKit 拉取完成，但写入本地 SQLite 失败：\(error.localizedDescription)")
+                updateLedgerCloudSyncStatus("iCloud 拉取完成，但写入本地 SQLite 失败：\(error.localizedDescription)")
                 return
             }
 
             refreshFromStore()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("CloudKit 同步完成：\(pushMode)推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。")
+            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushMode)推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。")
         } catch {
-            updateLedgerCloudSyncStatus("CloudKit 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+            updateLedgerCloudSyncStatus("iCloud 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
     }
 

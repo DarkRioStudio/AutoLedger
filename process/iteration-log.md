@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565J iCloud 同步启用流程）
+更新日期：2026-06-02（v1.5.0 GOAL-1565K iCloud 同步设置页收口）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-122 GOAL-1565K iCloud 同步设置页收口
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / UI / 同步底座
+- 目标：根据 iPad 真机同步通过结果，将数据管理页的同步入口收口为面向用户的“iCloud 同步”，隐藏旧 iCloud Drive 备份入口，减少技术细节外露。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Settings/DataManagementView.swift`：隐藏 `iCloudCard`；删除 iCloud 同步标题下方长说明；删除开关下方重复状态行；保留同步日志；按钮从“同步一次”改为“强制刷新数据”，触发 `forceFull: true` 全量同步。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：用户可见同步状态从“CloudKit”改为“iCloud”。
+  - `AutoLedger/AutoLedger/*/Localizable.strings`：三语标题改为 iCloud 同步，新增“强制刷新数据”文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 iPad 真机通过、UI 收口和后续同步范围。
+- 未改动范围：未修改 CloudKit schema、record type、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未在本轮实现订阅 / 商户别名 CloudKit record type。
+- 完成内容：
+  - iPad 数据同步结果回填为通过。
+  - 设置页不再展示 iCloud Drive 旧备份卡片。
+  - 设置页不再展示 CloudKit private database 等技术说明。
+  - 同步进度和错误统一进入“同步日志”区域。
+  - 强制刷新按钮会执行一次全量同步，适合人工排查或重拉数据。
+- 未完成内容：订阅和商户别名仍需下一轮扩展 iCloud 同步 schema / 远端合并 / 删除语义；pull 端仍为 query 全量分页，不是 server change token 增量；未完成 Xcode Cloud validation build。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：旧 iCloud Drive 备份入口只是从数据管理页隐藏，相关恢复代码仍保留以便旧用户迁移；强制刷新会清除 push checkpoint 并做全量推送。
+- 回滚方式：恢复 `iCloudCard` 展示、恢复说明 / 状态行、按钮改回增量同步入口，并回退本地化与文档记录。
+- 结论：GOAL-1565K 完成，iCloud 同步入口已从开发诊断界面收口为用户可理解的设置项。
+- 下一步建议：进入订阅与商户别名 iCloud 同步 schema 扩展，避免旧备份隐藏后这些配置只能靠本机保存。
 
 ### ITER-121 GOAL-1565J iCloud 同步启用流程
 - 日期：2026-06-02

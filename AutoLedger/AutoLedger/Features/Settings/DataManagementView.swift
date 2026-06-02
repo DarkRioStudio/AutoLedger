@@ -16,7 +16,6 @@ struct DataManagementView: View {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
                 cloudKitSyncCard
-                iCloudCard
                 manualBackupCard
 
                 if let statusMessage {
@@ -59,9 +58,6 @@ struct DataManagementView: View {
             }
         } message: {
             Text("data_management.restore.confirm_message")
-        }
-        .onAppear {
-            store.detectICloudBackupForRestore()
         }
     }
 
@@ -143,10 +139,6 @@ struct DataManagementView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
 
-            Text("data_management.cloudkit_description")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.mutedInk)
-
             Toggle(isOn: Binding(
                 get: { store.isLedgerCloudSyncEnabled },
                 set: { enabled in
@@ -167,12 +159,6 @@ struct DataManagementView: View {
             }
             .tint(AppTheme.accent)
             .disabled(store.isLedgerCloudSyncRunning)
-
-            if let status = store.ledgerCloudSyncStatus {
-                Text(status)
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.mutedInk)
-            }
 
             if store.isLedgerCloudSyncRunning {
                 ProgressView()
@@ -200,12 +186,12 @@ struct DataManagementView: View {
             actionButton(
                 titleKey: store.isLedgerCloudSyncRunning
                     ? LocalizedStringKey("data_management.cloudkit_syncing")
-                    : LocalizedStringKey("data_management.cloudkit_sync_now"),
+                    : LocalizedStringKey("data_management.cloudkit_force_refresh"),
                 systemImage: "arrow.triangle.2.circlepath.icloud",
                 style: .primary
             ) {
                 Task {
-                    await store.syncLedgerWithCloudKitNow()
+                    await store.syncLedgerWithCloudKitNow(forceFull: true)
                     statusMessage = store.ledgerCloudSyncStatus
                 }
             }

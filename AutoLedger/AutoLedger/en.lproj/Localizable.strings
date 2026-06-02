@@ -212,12 +212,13 @@
 "data_management.metric.subscriptions" = "Subscriptions";
 "data_management.metric.aliases" = "Merchant Aliases";
 "data_management.last_backup_format" = "Last backup: %@";
-"data_management.cloudkit_sync" = "CloudKit Ledger Sync";
+"data_management.cloudkit_sync" = "iCloud Sync";
 "data_management.cloudkit_description" = "Manually sync confirmed local transactions to the iCloud private database and pull transactions from other devices using the same Apple ID. Original screenshots, payment images, receipt photos, and full OCR text are not included.";
 "data_management.cloudkit_enable" = "Enable iCloud Sync";
 "data_management.cloudkit_enable_description" = "The first enable runs a full sync immediately. Later app launches run an incremental sync in the background.";
 "data_management.cloudkit_log" = "Sync Log";
 "data_management.cloudkit_sync_now" = "Sync Once";
+"data_management.cloudkit_force_refresh" = "Force Refresh Data";
 "data_management.cloudkit_syncing" = "Syncing";
 "data_management.icloud_auto_backup" = "Legacy iCloud Drive Backup";
 "data_management.icloud_description" = "This is the legacy AutoLedgerBackup.json restore file. Use it for migration or disaster recovery, not real-time multi-device sync.";
