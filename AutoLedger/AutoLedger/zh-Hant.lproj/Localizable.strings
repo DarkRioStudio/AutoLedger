@@ -217,6 +217,9 @@
 "data_management.last_backup_format" = "上次備份：%@";
 "data_management.cloudkit_sync" = "CloudKit 帳本同步";
 "data_management.cloudkit_description" = "手動將本機正式帳單同步到 iCloud private database，並拉取同一 Apple ID 下其他裝置的帳單。原始截圖、支付截圖、小票圖片和 OCR 原文不會進入本同步。";
+"data_management.cloudkit_enable" = "啟用 iCloud 同步";
+"data_management.cloudkit_enable_description" = "首次開啟會立即全量同步；之後 App 啟動時自動背景增量同步。";
+"data_management.cloudkit_log" = "同步日誌";
 "data_management.cloudkit_sync_now" = "同步一次";
 "data_management.cloudkit_syncing" = "同步中";
 "data_management.icloud_auto_backup" = "iCloud Drive 舊備份";

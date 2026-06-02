@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565I CloudKit 全量 / 增量同步性能收口）
+更新日期：2026-06-02（v1.5.0 GOAL-1565J iCloud 同步启用流程）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-121 GOAL-1565J iCloud 同步启用流程
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 同步底座 / UI
+- 目标：将 CloudKit 手动同步入口升级为“先启用 iCloud 同步，首次全量，后续启动自动增量”的用户流程，并在 UI 展示同步进度和近期日志。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `ledgerCloudSyncEnabled` 持久化开关、`ledgerCloudSyncLog`、首次启用全量同步、App 启动自动增量同步入口和统一状态日志。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：启动 `.task` 中调用 `syncLedgerWithCloudKitOnLaunchIfNeeded()`。
+  - `AutoLedger/AutoLedger/Features/Settings/DataManagementView.swift`：CloudKit 卡片新增开关、运行进度和近期日志；手动“同步一次”仅在开关开启且未运行时可用。
+  - `AutoLedger/AutoLedger/*/Localizable.strings`：补齐简体中文、繁体中文、英文文案。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮流程和验证结果。
+- 未改动范围：未修改 CloudKit record type、字段名、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未迁移到 custom CloudKit zone。
+- 完成内容：
+  - 用户在数据管理页首次开启 iCloud 同步时，会清除 push checkpoint，并立即触发一次全量同步。
+  - 开关保持开启后，App 下次启动会自动执行一次后台增量同步。
+  - 同步阶段会写入状态和近期日志，包括账号检查、推送、拉取、写入本地和完成 / 失败结果。
+  - 手动“同步一次”保留为已启用状态下的补跑入口。
+- 未完成内容：pull 端仍为 query 全量分页，不是 server change token 增量；未实现后台静默 push、CloudKit subscription、同步取消、同步健康详情页、iPad 真机拉取回填或 Xcode Cloud validation build。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：启动自动同步当前在 App 启动 `.task` 中运行一次，不是系统后台任务；如果 CloudKit schema / query index 不完整，仍可能在 pull 阶段显示拉取失败日志。开关关闭时不会取消已经开始的同步任务。
+- 回滚方式：回退 `LedgerStore` 的开关 / 日志 / 启动同步入口，回退 `AutoLedgerApp` `.task` 调用、`DataManagementView` UI 和新增本地化 key。
+- 结论：GOAL-1565J 完成，可以进入 iPhone / iPad 真机流程测试。
+- 下一步建议：在 iPhone 打开“启用 iCloud 同步”观察首次全量日志；重启 App 验证自动增量日志；再到 iPad 启用同步并验证拉取账本。
 
 ### ITER-120 GOAL-1565I CloudKit 全量 / 增量同步性能收口
 - 日期：2026-06-02

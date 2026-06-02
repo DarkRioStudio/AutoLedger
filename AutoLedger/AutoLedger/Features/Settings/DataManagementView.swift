@@ -147,10 +147,54 @@ struct DataManagementView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
 
+            Toggle(isOn: Binding(
+                get: { store.isLedgerCloudSyncEnabled },
+                set: { enabled in
+                    Task {
+                        await store.setLedgerCloudSyncEnabled(enabled)
+                        statusMessage = store.ledgerCloudSyncStatus
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("data_management.cloudkit_enable")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                    Text("data_management.cloudkit_enable_description")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+            }
+            .tint(AppTheme.accent)
+            .disabled(store.isLedgerCloudSyncRunning)
+
             if let status = store.ledgerCloudSyncStatus {
                 Text(status)
                     .font(.footnote)
                     .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            if store.isLedgerCloudSyncRunning {
+                ProgressView()
+                    .tint(AppTheme.accent)
+            }
+
+            if !store.ledgerCloudSyncLog.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("data_management.cloudkit_log")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+
+                    ForEach(store.ledgerCloudSyncLog.suffix(6), id: \.self) { item in
+                        Text(item)
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(AppTheme.mutedInk)
+                            .lineLimit(3)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppTheme.canvas.opacity(0.7)))
             }
 
             actionButton(
@@ -165,8 +209,8 @@ struct DataManagementView: View {
                     statusMessage = store.ledgerCloudSyncStatus
                 }
             }
-            .disabled(store.isLedgerCloudSyncRunning)
-            .opacity(store.isLedgerCloudSyncRunning ? 0.65 : 1)
+            .disabled(store.isLedgerCloudSyncRunning || !store.isLedgerCloudSyncEnabled)
+            .opacity(store.isLedgerCloudSyncRunning || !store.isLedgerCloudSyncEnabled ? 0.65 : 1)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

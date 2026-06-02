@@ -30,6 +30,8 @@ final class LedgerStore: ObservableObject {
     @Published var customCategories: [String] = []
     @Published private(set) var merchantAliases: [String: String] = [:]
     @Published private(set) var ledgerCloudSyncStatus: String?
+    @Published private(set) var ledgerCloudSyncLog: [String] = []
+    @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
 
     private let parser: ReceiptParser
@@ -39,6 +41,7 @@ final class LedgerStore: ObservableObject {
     private let transactionStore: TransactionStore?
     private var lastPasteboardChangeCount: Int
     private var pendingBackupTask: Task<Void, Never>?
+    private var didRunLaunchCloudKitSync = false
     private let iCloudBackupService = ICloudBackupService()
 
     init(
@@ -57,6 +60,7 @@ final class LedgerStore: ObservableObject {
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
+        self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         LedgerStore.shared = self
     }
@@ -1039,6 +1043,7 @@ extension LedgerStore {
     private static let lastBackupAtKey = "lastBackupAt"
     private static let lastBackupBundleIdKey = "lastBackupBundleId"
     private static let lastBackupErrorKey = "lastBackupError"
+    private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
     private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
 
     var isLocalDataEmptyForRestore: Bool {
@@ -1180,45 +1185,72 @@ extension LedgerStore {
         lastBackupSummary = "已备份到 iCloud：\(summaryText(for: bundle))"
     }
 
-    func syncLedgerWithCloudKitNow() async {
+    func setLedgerCloudSyncEnabled(_ enabled: Bool) async {
+        guard enabled != isLedgerCloudSyncEnabled else { return }
+        isLedgerCloudSyncEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.ledgerCloudSyncEnabledKey)
+
+        if enabled {
+            clearCloudKitPushCheckpoint()
+            updateLedgerCloudSyncStatus("CloudKit 同步已启用，开始首次全量同步。")
+            await syncLedgerWithCloudKitNow(forceFull: true)
+        } else {
+            updateLedgerCloudSyncStatus("CloudKit 同步已关闭。")
+        }
+    }
+
+    func syncLedgerWithCloudKitOnLaunchIfNeeded() async {
+        guard isLedgerCloudSyncEnabled else { return }
+        guard !didRunLaunchCloudKitSync else { return }
+        didRunLaunchCloudKitSync = true
+        updateLedgerCloudSyncStatus("App 启动，开始后台增量同步。")
+        await syncLedgerWithCloudKitNow(forceFull: false)
+    }
+
+    func syncLedgerWithCloudKitNow(forceFull: Bool = false) async {
         guard !isLedgerCloudSyncRunning else { return }
         isLedgerCloudSyncRunning = true
-        ledgerCloudSyncStatus = "正在同步 CloudKit..."
+        updateLedgerCloudSyncStatus("正在同步 CloudKit...")
         defer { isLedgerCloudSyncRunning = false }
 
         do {
             guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
-                ledgerCloudSyncStatus = "CloudKit 同步需要 SQLite 账本。"
+                updateLedgerCloudSyncStatus("CloudKit 同步需要 SQLite 账本。")
                 return
             }
 
             let adapter = LedgerCloudKitSyncAdapter(mode: .live, allowsLiveCloudKitWrites: true)
+            updateLedgerCloudSyncStatus("1/4 正在检查 iCloud 账号状态...")
             let accountCheck = await adapter.checkAccountStatus()
             guard accountCheck.canUsePrivateDatabase else {
-                ledgerCloudSyncStatus = "CloudKit 不可用：\(accountCheck.message)"
+                updateLedgerCloudSyncStatus("CloudKit 不可用：\(accountCheck.message)")
                 return
             }
 
-            let lastPushAt = lastSuccessfulCloudKitPushAt
+            if forceFull {
+                clearCloudKitPushCheckpoint()
+            }
+
+            let lastPushAt = forceFull ? nil : lastSuccessfulCloudKitPushAt
             let localRecords = try sqlStore.loadTransactionSyncRecords(includeDeleted: true)
             let batch = LedgerSyncPlanner.makePushBatch(from: localRecords, changedAfter: lastPushAt)
             let pushMode = lastPushAt == nil ? "全量" : "增量"
-            ledgerCloudSyncStatus = "正在\(pushMode)推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录..."
+            updateLedgerCloudSyncStatus("2/4 正在\(pushMode)推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录...")
             let pushResult: LedgerCloudKitPushResult
             do {
                 pushResult = try await adapter.push(batch: batch)
                 recordCloudKitPushCheckpoint(batch.generatedAt)
             } catch {
-                ledgerCloudSyncStatus = "CloudKit 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))"
+                updateLedgerCloudSyncStatus("CloudKit 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
                 return
             }
 
-            ledgerCloudSyncStatus = "推送完成，正在拉取远端账单..."
+            updateLedgerCloudSyncStatus("3/4 推送完成，正在拉取远端账单...")
             let remotePayloads: [LedgerTransactionSyncPayload]
             do {
                 remotePayloads = try await adapter.fetchAllTransactionRecords()
             } catch {
-                ledgerCloudSyncStatus = "CloudKit 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))"
+                updateLedgerCloudSyncStatus("CloudKit 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
                 return
             }
 
@@ -1229,6 +1261,7 @@ extension LedgerStore {
             var conflicts = 0
 
             do {
+                updateLedgerCloudSyncStatus("4/4 拉取完成，正在写入本地账本...")
                 for payload in remotePayloads {
                     switch try sqlStore.applyRemoteSyncRecord(payload.syncRecord) {
                     case .inserted:
@@ -1244,15 +1277,28 @@ extension LedgerStore {
                     }
                 }
             } catch {
-                ledgerCloudSyncStatus = "CloudKit 拉取完成，但写入本地 SQLite 失败：\(error.localizedDescription)"
+                updateLedgerCloudSyncStatus("CloudKit 拉取完成，但写入本地 SQLite 失败：\(error.localizedDescription)")
                 return
             }
 
             refreshFromStore()
             reloadWidgets()
-            ledgerCloudSyncStatus = "CloudKit 同步完成：\(pushMode)推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。"
+            updateLedgerCloudSyncStatus("CloudKit 同步完成：\(pushMode)推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。")
         } catch {
-            ledgerCloudSyncStatus = "CloudKit 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))"
+            updateLedgerCloudSyncStatus("CloudKit 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+        }
+    }
+
+    private func updateLedgerCloudSyncStatus(_ message: String) {
+        ledgerCloudSyncStatus = message
+        appendLedgerCloudSyncLog(message)
+    }
+
+    private func appendLedgerCloudSyncLog(_ message: String) {
+        let timestamp = DateFormatter.localizedString(from: .now, dateStyle: .none, timeStyle: .medium)
+        ledgerCloudSyncLog.append("[\(timestamp)] \(message)")
+        if ledgerCloudSyncLog.count > 12 {
+            ledgerCloudSyncLog.removeFirst(ledgerCloudSyncLog.count - 12)
         }
     }
 

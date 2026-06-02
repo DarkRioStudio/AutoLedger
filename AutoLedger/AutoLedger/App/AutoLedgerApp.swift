@@ -74,6 +74,9 @@ private struct AutoLedgerRootView: View {
             }
             .task {
                 SupportPurchaseManager.shared.startTransactionListener()
+                Task {
+                    await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
+                }
                 // App 启动后台预热 Gemma（如已下载），避免首次推理时才加载
                 if LLMProvider.userSelected == .gemma {
                     await GemmaService.shared.ensureLoaded()

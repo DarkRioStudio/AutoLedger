@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565J iCloud 同步启用流程：数据管理页新增“启用 iCloud 同步”开关，首次开启会清空 CloudKit push checkpoint 并立即执行全量同步；开启后 App 启动 `.task` 会自动触发一次后台增量同步；CloudKit 同步状态统一写入近期日志，UI 展示阶段进度和最近 6 条日志，手动“同步一次”仅在开关开启后可用。
 - [2026-06-02 +0800] 部分完成 GOAL-1565I CloudKit 全量 / 增量同步性能收口：根据真机错误确认 `_defaultZone` 不支持 `getChanges`，拉取回退到 `CKQueryOperation` 100 条分页；推送从诊断期单条 record operation 恢复为最多 100 条一批，并在本地保存 `lastSuccessfulCloudKitPushAt`，后续手动同步只推本机新增 / 修改 / tombstone 变更；备份恢复会清除 push checkpoint，避免恢复旧数据后漏推。
 - [2026-06-02 +0800] 部分完成 GOAL-1565H CloudKit 拉取索引依赖收口：根据真机回填确认 `LedgerTransaction` push / pull 已可成功，但旧拉取路径依赖 CloudKit Dashboard 中 `recordName` 标记为 Queryable；`LedgerCloudKitSyncAdapter` 改用 default zone changes 拉取远端账单，避免手动同步依赖 `recordName` query index，并记录首次全量同步慢、290 条同步统计与数据管理页当前计数口径不一致的问题待后续优化。
 - [2026-06-02 +0800] 部分完成 GOAL-1565G CloudKit 最小探针诊断：根据真机回填确认单条 `LedgerTransaction` 完整 record 仍被 `serverRejectedRequest` / `CKInternalErrorDomain 2000` 拒绝；`CKModifyRecordsOperation` 保存策略改为 `.allKeys`，完整保存失败后会用同 record type 写入最小探针 record 并尝试删除，用 `Probe: minimal-save ...` 区分容器 / record type 本身不可写，还是完整字段集合被拒绝。
