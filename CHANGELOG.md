@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565H CloudKit 拉取索引依赖收口：根据真机回填确认 `LedgerTransaction` push / pull 已可成功，但旧拉取路径依赖 CloudKit Dashboard 中 `recordName` 标记为 Queryable；`LedgerCloudKitSyncAdapter` 改用 default zone changes 拉取远端账单，避免手动同步依赖 `recordName` query index，并记录首次全量同步慢、290 条同步统计与数据管理页当前计数口径不一致的问题待后续优化。
 - [2026-06-02 +0800] 部分完成 GOAL-1565G CloudKit 最小探针诊断：根据真机回填确认单条 `LedgerTransaction` 完整 record 仍被 `serverRejectedRequest` / `CKInternalErrorDomain 2000` 拒绝；`CKModifyRecordsOperation` 保存策略改为 `.allKeys`，完整保存失败后会用同 record type 写入最小探针 record 并尝试删除，用 `Probe: minimal-save ...` 区分容器 / record type 本身不可写，还是完整字段集合被拒绝。
 - [2026-06-02 +0800] 完成 GOAL-1594 平台无关解释器主链路收口规划：在 `versions/v1.5.0-plan.md` 记录当前 `LedgerTextInterpreterCore` 已存在但主入账链路仍主要用 App 层 `SmartReceiptParser` / `ReceiptParser` 产出最终结构化账单的事实；明确目标链路为 Core 候选实体提取与评分、可选本地 AI rerank、App adapter 只负责 OCR / provider / UI / 保存，并新增 GOAL-1595～1598 跟进 Core 候选模型、主链路切换、Intent / Share Extension 收口和平台规则迁移。
 - [2026-06-02 +0800] 完成 GOAL-1593 淘宝闪购支付宝账单详情商户提取：`ReceiptParser` 新增支付宝 / 淘宝账单详情的“商品说明”标签块解析，在“支付时间 / 付款方式 / 商品说明”连续标签后按同序值提取真实店铺说明，并清理 OCR 换行与“外卖订单”后缀；新增 Golden Case 覆盖 `淘宝闪购` 平台行 + `LINLEE林里•手打柠檬茶（南开海光MALL店）` 商品说明样本，避免继续把平台名误当商户。

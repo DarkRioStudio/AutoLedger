@@ -218,7 +218,7 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchTransactionRecords(cursor: nil, accumulated: [])
+        return try await fetchTransactionRecordsFromDefaultZoneChanges()
     }
 
     func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
@@ -434,38 +434,40 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
-    private func fetchTransactionRecords(
-        cursor: CKQueryOperation.Cursor?,
-        accumulated: [LedgerTransactionSyncPayload]
+    private func fetchTransactionRecordsFromDefaultZoneChanges(
+        previousServerChangeToken: CKServerChangeToken? = nil,
+        accumulated: [LedgerTransactionSyncPayload] = []
     ) async throws -> [LedgerTransactionSyncPayload] {
         try await withCheckedThrowingContinuation { continuation in
-            let operation: CKQueryOperation
-            if let cursor {
-                operation = CKQueryOperation(cursor: cursor)
-            } else {
-                let query = CKQuery(
-                    recordType: CloudLedgerSyncSchema.RecordType.transaction,
-                    predicate: NSPredicate(value: true)
-                )
-                operation = CKQueryOperation(query: query)
-            }
+            let zoneID = CKRecordZone.default().zoneID
+            let configuration = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+            configuration.previousServerChangeToken = previousServerChangeToken
 
             var records = accumulated
-            operation.recordFetchedBlock = { record in
+            let operation = CKFetchRecordZoneChangesOperation(
+                recordZoneIDs: [zoneID],
+                configurationsByRecordZoneID: [zoneID: configuration]
+            )
+
+            operation.recordChangedBlock = { record in
                 if let payload = Self.mapPayload(from: record) {
                     records.append(payload)
                 }
             }
-            operation.queryCompletionBlock = { cursor, error in
+
+            operation.recordZoneFetchCompletionBlock = { _, serverChangeToken, _, moreComing, error in
                 if let error {
                     continuation.resume(throwing: error)
                     return
                 }
 
-                if let cursor {
+                if moreComing, let serverChangeToken {
                     Task {
                         do {
-                            let next = try await fetchTransactionRecords(cursor: cursor, accumulated: records)
+                            let next = try await fetchTransactionRecordsFromDefaultZoneChanges(
+                                previousServerChangeToken: serverChangeToken,
+                                accumulated: records
+                            )
                             continuation.resume(returning: next)
                         } catch {
                             continuation.resume(throwing: error)

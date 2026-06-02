@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565G CloudKit 最小探针诊断）
+更新日期：2026-06-02（v1.5.0 GOAL-1565H CloudKit 拉取索引依赖收口）
 
 ## 记录规则
 
@@ -43,6 +43,32 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-119 GOAL-1565H CloudKit 拉取索引依赖收口
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 同步底座 / 真机诊断
+- 目标：根据真机回填确认 CloudKit push / pull 已成功后，移除手动拉取对 `recordName` Queryable 索引的运行时依赖，降低 CloudKit Dashboard 手工配置复杂度。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：远端拉取从 `CKQueryOperation(TRUEPREDICATE)` 改为 `CKFetchRecordZoneChangesOperation` 读取 default zone changes，并继续通过 payload mapper 过滤正式账单 record。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮真机结论、CloudKit index 边界、同步慢和计数口径问题。
+- 未改动范围：未修改 CloudKit record type、字段名、SQLite schema、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未提交 Xcode 能力页自动写入的 entitlement 变化。
+- 完成内容：
+  - 明确 `recordName` Queryable 属于 CloudKit server-side schema / index 配置，App 不能可靠地在运行时为 Dashboard 创建查询索引。
+  - 手动同步的 pull 阶段改用 zone changes，不再需要以 `recordName` 为 queryable 才能拉取。
+  - 当前仍未持久化 server change token，因此每次手动同步仍按全量 zone changes 拉取；这解释了首次同步和当前手动同步仍可能偏慢。
+  - 真机回填的 `推送 290 / 拉取 290 / 保留本地 290` 被记录为 sync record 口径，不直接等同于数据管理页“账单 + 最近删除”的展示口径。
+- 未完成内容：未实现 server change token 持久化、后台自动同步、CloudKit subscription / silent push、同步健康页、统计分解 UI、iPad 真机拉取回填或 Xcode Cloud validation build。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：zone changes 当前不保存 change token，会重新扫描 default zone；如果默认 zone 后续承载更多 record type，应继续保持 mapper 过滤，并在 GOAL-1565I 引入 token / checkpoint，避免同步越来越慢。
+- 回滚方式：若 zone changes 在真机 iPad / iPhone 上表现异常，可回退到 `CKQueryOperation` 拉取路径，但需要在 CloudKit Dashboard 继续维护相关 queryable index。
+- 结论：GOAL-1565H 代码侧完成，CloudKit 拉取不再依赖 `recordName` query index；需要安装到 iPad 真机验证拉取账本。
+- 下一步建议：进入 GOAL-1565I，优先做 iPad 真机拉取 smoke、同步统计口径拆分和 server change token 持久化。
 
 ### ITER-118 GOAL-1565G CloudKit 最小探针诊断
 - 日期：2026-06-02
