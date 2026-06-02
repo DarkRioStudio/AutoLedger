@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-01（v1.5.0 GOAL-1521A Widget accessory UI）
+更新日期：2026-06-02（v1.5.0 基础多端数据同步规划）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-107 v1.5.0 基础多端数据同步规划
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：文档 / 规划 / 治理
+- 目标：记录 v1.5.0 仍需解决基础多端数据同步问题，避免 iPad、Mac、Watch、Widget、tvOS 和 visionOS 各自形成孤立数据口径。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：新增“基础多端数据同步”章节，补充同步现状、同步范围、冲突策略、隐私边界和 GOAL-1563～1566。
+  - `README.md`、`README.en.md`：Roadmap 将基础多端数据同步列入 v1.5.0 开发范围。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮文档规划变更。
+- 未改动范围：未修改代码、SQLite schema、BackupBundle、CloudKit、entitlements、Xcode project、scheme、target、Bundle ID、signing、App Group 或 iCloud Container。
+- 完成内容：
+  - 明确 iCloud Drive 单文件备份不是实时多端同步。
+  - 明确 WatchConnectivity 当前只承担 Watch 轻量同步和 pending 回传，不是完整账本复制。
+  - 明确 Widget 当前读取本机 App Group SQLite，不代表其他设备最新状态。
+  - 将 Mac Catalyst、tvOS、visionOS 的可发布质量依赖调整到基础同步底座之后。
+  - 新增 GOAL-1563 多端同步策略、GOAL-1564 同步元数据 / 冲突模型、GOAL-1565 iPhone / iPad / Mac 基础账本同步、GOAL-1566 Watch / Widget / 展示端快照同步。
+- 未完成内容：未选择 CloudKit 或 iCloud Drive BackupBundle 作为最终同步方案；未实现任何同步代码；未做真机多设备验证。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：后续若引入 CloudKit private database，需要同步验证 Apple Developer capability、entitlements、Xcode Cloud signing、隐私披露和离线冲突；如果继续使用 BackupBundle，需要避免把它误写成无感实时同步。
+- 回滚方式：回退本轮 README / CHANGELOG / iteration-log / v1.5.0 plan 文档变更。
+- 结论：v1.5.0 规划已把基础多端数据同步提升为必须收口的底座任务。
+- 下一步建议：进入 GOAL-1563 前，先审计当前 SQLite、BackupBundle、WatchConnectivity、Widget App Group 和 iCloud entitlement 的真实能力，再决定同步介质。
 
 ### ITER-106 GOAL-1521A Widget accessory UI
 - 日期：2026-06-01

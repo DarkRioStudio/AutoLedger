@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 文档补充 v1.5.0 基础多端数据同步要求：将 iPhone / iPad / Mac 可写端、Apple Watch 轻写入端、Widget / tvOS / visionOS 只读端的数据一致性列为本版本底座问题；明确 iCloud Drive 单文件备份、WatchConnectivity 和本机 App Group Widget 读取都不等同于完整多端同步；新增 GOAL-1563～1566 作为多端同步审计、元数据 / 冲突模型、基础账本同步闭环和展示端快照同步任务。
 - [2026-06-01 +0800] 部分完成 GOAL-1521 表盘小组件 UI 基础：现有 `DailyExpenseWidget` 新增 `.accessoryInline`、`.accessoryCircular`、`.accessoryRectangular` 三种 accessory family 展示，复用今日支出数据口径，支持 inline 文案、圆形金额 / 笔数、矩形金额 / 笔数摘要；当前工程仍无独立 watchOS WidgetKit complication target，因此 Apple Watch 表盘上线仍需后续 target / embedding / signing 收口。
 - [2026-06-01 +0800] 完成 GOAL-1512 Watch 左滑最近支出第二屏：最近支出页补充当前账本提示，列表行显示今天 / 昨天 / 日期 + 时间，最近账单可点入只读详情；iPhone -> Watch 同步 payload 增加分类和来源展示字段，Watch 详情页展示金额、商户、分类、来源、时间和备注；补齐 Watch 三语本地化 key，Watch generic watchOS Debug build 通过。
 - [2026-06-01 +0800] 完成 GOAL-1511 Watch 首屏今日支出：iPhone `WatchConnectivityHost` 同步 payload 新增 `todaySummary`，Watch session / view model 接收今日总额、笔数、最近展示名和更新时间；Watch App 首屏切换为“今日支出”摘要卡，保留语音记账与快速记账入口，并将最近 5 笔支出保留为左滑第二页；补齐简体中文、繁体中文、英文 Watch 本地化 key，Watch generic watchOS Debug build 通过。

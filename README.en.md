@@ -120,7 +120,7 @@ The `main` branch is intended to remain the real AutoLedger development and rele
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
 | v1.4.0 | 1.3.0 | Released | Apple Watch support, accessibility improvements, App Intents, localization, screenshot pipeline updates, optional Support Developer IAP |
-| v1.5.0 | 1.4.0 | In development | iPad workspace, batch import, batch OCR / receipt cleanup, multi-ledger support, better statistics and data cleaning, improved Apple Watch workflow, iPad screenshot pipeline |
+| v1.5.0 | 1.4.0 | In development | iPad workspace, batch import, batch OCR / receipt cleanup, multi-ledger support, foundational multi-device data sync, better statistics and data cleaning, improved Apple Watch workflow, iPad screenshot pipeline |
 
 ## License
 
