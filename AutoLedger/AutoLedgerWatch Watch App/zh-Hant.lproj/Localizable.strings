@@ -22,6 +22,7 @@
 "watch.today.count_format" = "今日共 %d 筆";
 "watch.today.latest_format" = "最近一筆：%@";
 "watch.today.updated_format" = "更新於 %@";
+"watch.today.snapshot_stale" = "資料可能較舊";
 "watch.today.accessibility_format" = "今日支出 %@，共 %d 筆";
 "watch.today.empty.description" = "今天還沒有支出，可直接在手錶上快速記一筆。";
 "watch.recent.title" = "最近支出";

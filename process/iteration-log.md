@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565 基础 iCloud 同步闭环收尾）
+更新日期：2026-06-02（v1.5.0 GOAL-1566A Watch / Widget 同步快照元数据）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-129 GOAL-1566A Watch / Widget 同步快照元数据
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / Watch / Widget / 同步底座
+- 目标：让 Watch 与 Widget 读取同一份主 App 本机账本快照元数据，避免只读端展示的更新时间只是 timeline / payload 生成时间，并在 iCloud 同步长时间未成功时显示轻量过期提示。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：在 App Group defaults 写入 `ledgerSnapshotUpdatedAt`、`lastSuccessfulCloudKitSyncAt` 和 iCloud 同步开关；本机账本快照刷新时 reload Widget 并触发 Watch payload。
+  - `AutoLedger/AutoLedger/Domain/Services/WatchConnectivityHost.swift`：Watch 今日摘要 payload 的 `updatedAt` 改用账本快照更新时间，并携带 `isSnapshotStale`。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchTransaction.swift`、`ContentView.swift`、三语 `Localizable.strings`：Watch 今日支出卡片支持“数据可能较旧”轻提示。
+  - `AutoLedger/AutoLedgerWidgets/AutoLedgerWidgets.swift`：Widget 读取 App Group 快照元数据，今日支出和月报小组件显示轻量“较旧 / Stale”状态。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1566A 范围、状态和验证。
+- 未改动范围：未修改 WatchConnectivity pending 草稿协议、Widget target 配置、CloudKit schema、SQLite schema、entitlements、Bundle ID、App Group、iCloud Container、Xcode project、workspace、scheme、target 或 Xcode Cloud 脚本；未让 Widget 直接访问 CloudKit。
+- 完成内容：
+  - Watch 和 Widget 都能读取主 App 写入的账本快照更新时间。
+  - iCloud 同步开启但 12 小时内没有成功同步时，Watch / Widget 会展示轻量过期提示。
+  - Widget 统计仍来自 App Group SQLite，Watch 仍来自 iPhone WatchConnectivity payload，数据口径保持 local-first。
+- 未完成内容：未做真机 Watch / Widget 视觉 smoke；tvOS / visionOS 展示端快照仍未实现。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：过期判断当前使用 12 小时阈值，属于轻量健康提示，不阻止用户查看本机快照；如果后续引入 silent push / server change token，阈值和文案需要重新评估。
+- 回滚方式：移除 App Group 快照元数据写入、Watch payload 的 `isSnapshotStale` 字段、Watch / Widget 过期提示 UI，恢复只显示本机统计。
+- 结论：GOAL-1566A 完成，Watch / Widget 已接入主 App 账本快照元数据和轻量过期提示，编译与离线回归门禁通过。
+- 下一步建议：验证通过后进行 iPhone Widget 与 Apple Watch 真机 smoke，再决定是否关闭 GOAL-1566 或进入 GOAL-1570。
 
 ### ITER-128 GOAL-1565 基础 iCloud 同步闭环收尾
 - 日期：2026-06-02

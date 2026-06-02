@@ -22,6 +22,7 @@
 "watch.today.count_format" = "%d entries today";
 "watch.today.latest_format" = "Latest: %@";
 "watch.today.updated_format" = "Updated %@";
+"watch.today.snapshot_stale" = "Data may be stale";
 "watch.today.accessibility_format" = "Today spending %@, %d entries";
 "watch.today.empty.description" = "No spending today yet. Add one quickly from your watch.";
 "watch.recent.title" = "Recent";

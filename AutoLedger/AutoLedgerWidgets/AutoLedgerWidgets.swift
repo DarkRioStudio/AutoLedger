@@ -22,6 +22,8 @@ private enum WidgetCopy {
     static var watchAccessoryCountFormat: String { isChinese ? "%d 笔" : "%d entries" }
     static var fallbackMerchant: String { isChinese ? "暂无" : "None" }
     static var fallbackCategory: String { isChinese ? "暂无" : "None" }
+    static var staleSnapshotShort: String { isChinese ? "较旧" : "Stale" }
+    static var staleSnapshotUpdatedPrefix: String { isChinese ? "较旧" : "Stale" }
 
     fileprivate static var isChinese: Bool {
         Locale.preferredLanguages.first?.lowercased().hasPrefix("zh") == true
@@ -37,6 +39,7 @@ private struct WidgetLedgerMetrics {
     let topMerchant: String?
     let topCategory: String?
     let updatedAt: Date
+    let isSnapshotStale: Bool
 
     static let empty = WidgetLedgerMetrics(
         todayTotal: 0,
@@ -46,7 +49,8 @@ private struct WidgetLedgerMetrics {
         monthCount: 0,
         topMerchant: nil,
         topCategory: nil,
-        updatedAt: .now
+        updatedAt: .now,
+        isSnapshotStale: false
     )
 }
 
@@ -54,17 +58,41 @@ private enum WidgetLedgerStore {
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let databaseFolder = "AutoLedger"
     private static let databaseFilename = "autoledger.sqlite3"
+    private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
+    private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
+    private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
 
     static func loadMetrics(referenceDate: Date = .now) -> WidgetLedgerMetrics {
+        let metadata = loadSnapshotMetadata(referenceDate: referenceDate)
         guard let dbURL = databaseURL(),
               FileManager.default.fileExists(atPath: dbURL.path) else {
-            return .empty
+            return WidgetLedgerMetrics(
+                todayTotal: 0,
+                todayCount: 0,
+                latestMerchant: nil,
+                monthTotal: 0,
+                monthCount: 0,
+                topMerchant: nil,
+                topCategory: nil,
+                updatedAt: metadata.updatedAt,
+                isSnapshotStale: metadata.isStale
+            )
         }
 
         var db: OpaquePointer?
         guard sqlite3_open_v2(dbURL.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
             sqlite3_close(db)
-            return .empty
+            return WidgetLedgerMetrics(
+                todayTotal: 0,
+                todayCount: 0,
+                latestMerchant: nil,
+                monthTotal: 0,
+                monthCount: 0,
+                topMerchant: nil,
+                topCategory: nil,
+                updatedAt: metadata.updatedAt,
+                isSnapshotStale: metadata.isStale
+            )
         }
         defer { sqlite3_close(db) }
 
@@ -92,8 +120,22 @@ private enum WidgetLedgerStore {
             monthCount: monthTransactions.count,
             topMerchant: topMerchant,
             topCategory: topCategory,
-            updatedAt: referenceDate
+            updatedAt: metadata.updatedAt,
+            isSnapshotStale: metadata.isStale
         )
+    }
+
+    private static func loadSnapshotMetadata(referenceDate: Date) -> (updatedAt: Date, isStale: Bool) {
+        let defaults = UserDefaults(suiteName: appGroupIdentifier)
+        let snapshotUpdatedAt = defaults?.object(forKey: ledgerSnapshotUpdatedAtKey) as? Date ?? referenceDate
+        let syncEnabled = defaults?.bool(forKey: ledgerCloudSyncEnabledKey) ?? false
+        guard syncEnabled else {
+            return (snapshotUpdatedAt, false)
+        }
+        guard let lastSyncAt = defaults?.object(forKey: lastSuccessfulCloudKitSyncAtKey) as? Date else {
+            return (snapshotUpdatedAt, true)
+        }
+        return (snapshotUpdatedAt, referenceDate.timeIntervalSince(lastSyncAt) > 12 * 60 * 60)
     }
 
     private static func databaseURL() -> URL? {
@@ -272,7 +314,8 @@ private struct DailyExpenseProvider: TimelineProvider {
                 monthCount: 26,
                 topMerchant: "Example Supermarket",
                 topCategory: "日用杂货",
-                updatedAt: .now
+                updatedAt: .now,
+                isSnapshotStale: false
             )
         )
     }
@@ -300,7 +343,8 @@ private struct MonthlyReportProvider: TimelineProvider {
                 monthCount: 26,
                 topMerchant: "Example Supermarket",
                 topCategory: "日用杂货",
-                updatedAt: .now
+                updatedAt: .now,
+                isSnapshotStale: false
             )
         )
     }
@@ -414,8 +458,10 @@ private struct DailyExpenseWidgetView: View {
                             .minimumScaleFactor(0.75)
                         Spacer(minLength: 4)
                         smallBadge(
-                            icon: "list.bullet.clipboard.fill",
-                            text: String(format: WidgetCopy.todayCountCompactFormat, max(entry.metrics.todayCount, 0)),
+                            icon: entry.metrics.isSnapshotStale ? "exclamationmark.icloud" : "list.bullet.clipboard.fill",
+                            text: entry.metrics.isSnapshotStale
+                                ? WidgetCopy.staleSnapshotShort
+                                : String(format: WidgetCopy.todayCountCompactFormat, max(entry.metrics.todayCount, 0)),
                             compact: compact
                         )
                     }
@@ -560,7 +606,7 @@ private struct MonthlyReportWidgetView: View {
 
                         Spacer(minLength: 6)
 
-                        Text(shortUpdateTime(entry.metrics.updatedAt))
+                        Text(shortUpdateTime(entry.metrics.updatedAt, isStale: entry.metrics.isSnapshotStale))
                             .font(.system(size: compact ? 10 : 11, weight: .medium))
                             .foregroundStyle(Color.black.opacity(0.48))
                             .lineLimit(1)
@@ -670,11 +716,12 @@ private struct MonthlyReportWidgetView: View {
         )
     }
 
-    private func shortUpdateTime(_ date: Date) -> String {
+    private func shortUpdateTime(_ date: Date, isStale: Bool) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
         formatter.dateFormat = "HH:mm"
-        return "\(WidgetCopy.updatedPrefix) \(formatter.string(from: date))"
+        let prefix = isStale ? WidgetCopy.staleSnapshotUpdatedPrefix : WidgetCopy.updatedPrefix
+        return "\(prefix) \(formatter.string(from: date))"
     }
 
     private func currency(_ value: Double) -> String {
@@ -728,7 +775,8 @@ struct MonthlyReportWidget: Widget {
             monthCount: 26,
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
-            updatedAt: .now
+            updatedAt: .now,
+            isSnapshotStale: false
         )
     )
 }
@@ -746,7 +794,8 @@ struct MonthlyReportWidget: Widget {
             monthCount: 26,
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
-            updatedAt: .now
+            updatedAt: .now,
+            isSnapshotStale: false
         )
     )
 }
@@ -764,7 +813,8 @@ struct MonthlyReportWidget: Widget {
             monthCount: 26,
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
-            updatedAt: .now
+            updatedAt: .now,
+            isSnapshotStale: false
         )
     )
 }

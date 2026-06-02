@@ -109,13 +109,15 @@ struct WatchTodaySummary: Equatable, Hashable {
     var transactionCount: Int
     var recentDisplayName: String?
     var updatedAt: Date?
+    var isSnapshotStale: Bool
 
     static let empty = WatchTodaySummary(
         ledgerName: String(localized: "watch.today.default_ledger"),
         totalExpense: 0,
         transactionCount: 0,
         recentDisplayName: nil,
-        updatedAt: nil
+        updatedAt: nil,
+        isSnapshotStale: false
     )
 
     init(
@@ -123,13 +125,15 @@ struct WatchTodaySummary: Equatable, Hashable {
         totalExpense: Double,
         transactionCount: Int,
         recentDisplayName: String?,
-        updatedAt: Date?
+        updatedAt: Date?,
+        isSnapshotStale: Bool = false
     ) {
         self.ledgerName = ledgerName
         self.totalExpense = totalExpense
         self.transactionCount = transactionCount
         self.recentDisplayName = recentDisplayName
         self.updatedAt = updatedAt
+        self.isSnapshotStale = isSnapshotStale
     }
 
     init?(from dict: [String: Any]) {
@@ -155,6 +159,7 @@ struct WatchTodaySummary: Equatable, Hashable {
         } else {
             self.updatedAt = nil
         }
+        self.isSnapshotStale = dict["isSnapshotStale"] as? Bool ?? false
     }
 
     static func fallback(from transactions: [WatchTransaction], referenceDate: Date = .now) -> WatchTodaySummary {
@@ -171,7 +176,8 @@ struct WatchTodaySummary: Equatable, Hashable {
             totalExpense: today.reduce(0) { $0 + $1.amount },
             transactionCount: today.count,
             recentDisplayName: today.first?.merchant,
-            updatedAt: today.isEmpty ? nil : Date()
+            updatedAt: today.isEmpty ? nil : Date(),
+            isSnapshotStale: false
         )
     }
 
@@ -188,5 +194,10 @@ struct WatchTodaySummary: Equatable, Hashable {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: updatedAt)
+    }
+
+    var snapshotStatusText: String? {
+        guard isSnapshotStale else { return nil }
+        return String(localized: "watch.today.snapshot_stale")
     }
 }

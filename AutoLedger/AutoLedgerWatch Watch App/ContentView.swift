@@ -130,6 +130,13 @@ private struct WatchTodaySummaryPage: View {
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
+
+                    if let snapshotStatusText = viewModel.todaySummary.snapshotStatusText {
+                        Label(snapshotStatusText, systemImage: "exclamationmark.icloud")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)

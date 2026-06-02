@@ -343,6 +343,7 @@ final class LedgerStore: ObservableObject {
     }
 
     private func reloadWidgets() {
+        recordLedgerSnapshotUpdatedAt()
         WidgetCenter.shared.reloadAllTimelines()
         Self.watchSyncHandler?()
     }
@@ -1077,6 +1078,8 @@ extension LedgerStore {
     private static let lastBackupErrorKey = "lastBackupError"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
     private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
+    private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
+    private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
@@ -1104,6 +1107,19 @@ extension LedgerStore {
 
     var lastBackupAt: Date? {
         UserDefaults.standard.object(forKey: Self.lastBackupAtKey) as? Date
+    }
+
+    var ledgerDisplaySnapshotMetadata: [String: Any] {
+        let snapshotUpdatedAt = Self.appGroupDefaults?.object(forKey: Self.ledgerSnapshotUpdatedAtKey) as? Date ?? Date()
+        let lastCloudSyncAt = Self.appGroupDefaults?.object(forKey: Self.lastSuccessfulCloudKitSyncAtKey) as? Date
+        var metadata: [String: Any] = [
+            "snapshotUpdatedAt": snapshotUpdatedAt.timeIntervalSince1970,
+            "isSnapshotStale": isLedgerCloudSyncEnabled && isCloudKitSnapshotStale(referenceDate: Date())
+        ]
+        if let lastCloudSyncAt {
+            metadata["lastCloudSyncAt"] = lastCloudSyncAt.timeIntervalSince1970
+        }
+        return metadata
     }
 
     func makeBackupBundle() throws -> BackupBundle {
@@ -1228,6 +1244,7 @@ extension LedgerStore {
         guard enabled != isLedgerCloudSyncEnabled else { return }
         isLedgerCloudSyncEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: Self.ledgerCloudSyncEnabledKey)
+        Self.appGroupDefaults?.set(enabled, forKey: Self.ledgerCloudSyncEnabledKey)
 
         if enabled {
             clearCloudKitPushCheckpoint()
@@ -1274,6 +1291,7 @@ extension LedgerStore {
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
             refreshFromStore()
+            recordCloudKitSyncSuccess()
             reloadWidgets()
             updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
         } catch {
@@ -1312,6 +1330,7 @@ extension LedgerStore {
             let result = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
             refreshFromStore()
+            recordCloudKitSyncSuccess()
             reloadWidgets()
             updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
         } catch {
@@ -1368,6 +1387,7 @@ extension LedgerStore {
             }
 
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
+            recordCloudKitSyncSuccess()
             updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条，配置\(result.configurationSaved ? "已推送" : "无需推送")。")
             return true
         } catch {
@@ -1578,6 +1598,26 @@ extension LedgerStore {
 
     private func clearCloudKitPushCheckpoint() {
         UserDefaults.standard.removeObject(forKey: Self.lastSuccessfulCloudKitPushAtKey)
+    }
+
+    private func recordCloudKitSyncSuccess(_ date: Date = Date()) {
+        UserDefaults.standard.set(date, forKey: Self.lastSuccessfulCloudKitSyncAtKey)
+        Self.appGroupDefaults?.set(date, forKey: Self.lastSuccessfulCloudKitSyncAtKey)
+    }
+
+    private func recordLedgerSnapshotUpdatedAt(_ date: Date = Date()) {
+        UserDefaults.standard.set(date, forKey: Self.ledgerSnapshotUpdatedAtKey)
+        Self.appGroupDefaults?.set(date, forKey: Self.ledgerSnapshotUpdatedAtKey)
+        Self.appGroupDefaults?.set(isLedgerCloudSyncEnabled, forKey: Self.ledgerCloudSyncEnabledKey)
+    }
+
+    private func isCloudKitSnapshotStale(referenceDate: Date) -> Bool {
+        guard isLedgerCloudSyncEnabled else { return false }
+        guard let lastSyncAt = Self.appGroupDefaults?.object(forKey: Self.lastSuccessfulCloudKitSyncAtKey) as? Date ??
+                UserDefaults.standard.object(forKey: Self.lastSuccessfulCloudKitSyncAtKey) as? Date else {
+            return true
+        }
+        return referenceDate.timeIntervalSince(lastSyncAt) > 12 * 60 * 60
     }
 
     func detectICloudBackupForRestore() {

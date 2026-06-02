@@ -72,12 +72,19 @@ final class WatchConnectivityHost: NSObject {
             ]
         }
 
+        let metadata = LedgerStore.shared?.ledgerDisplaySnapshotMetadata ?? [:]
+        let snapshotUpdatedAt = metadata["snapshotUpdatedAt"] as? Double ?? Date().timeIntervalSince1970
         var payload: [String: Any] = [
             "ledgerName": summary.ledgerName,
             "totalExpense": summary.totalExpense,
             "transactionCount": summary.transactionCount,
-            "updatedAt": Date().timeIntervalSince1970
+            "updatedAt": snapshotUpdatedAt,
+            "isSnapshotStale": metadata["isSnapshotStale"] as? Bool ?? false
         ]
+
+        if let lastCloudSyncAt = metadata["lastCloudSyncAt"] as? Double {
+            payload["lastCloudSyncAt"] = lastCloudSyncAt
+        }
 
         if let recentDisplayName = summary.recentDisplayName {
             payload["recentDisplayName"] = recentDisplayName
