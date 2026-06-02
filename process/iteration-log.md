@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565E CloudKit 真机错误诊断）
+更新日期：2026-06-02（v1.5.0 GOAL-1565F CloudKit 推送拒绝定位）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-115 GOAL-1565F CloudKit 推送拒绝定位
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 诊断 / 同步底座
+- 目标：根据真机 UI 回填的 `CloudKit 推送失败：CKError 15 ... underlying: CKInternalErrorDomain 2000`，进一步定位 push 阶段是整批请求、单条记录内容、字段长度、schema 还是服务端限制导致拒绝。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：手动同步 push 临时改为单条 record 一个 `CKModifyRecordsOperation`；单条保存 / 删除失败时抛出包含 recordName 和字段摘要的诊断错误；CKError code 15 显示为 `serverRejectedRequest`。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录真机截图反馈和下一轮复测口径。
+- 未改动范围：未修改 CloudKit record schema、SQLite schema、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 确认当前 blocker 在 CloudKit push 阶段，不是 iPad fetch / SQLite apply 阶段。
+  - 手动 smoke 路径不再一次保存 100 条，避免 CloudKit 整批拒绝时无法定位。
+  - 新错误文案不会输出商户、备注或账单原文，只输出 recordName、字段名、字段类型和字符串长度。
+  - CKError 15 后续会显示为 `serverRejectedRequest`，比 `CKErrorCode(rawValue: 15)` 更容易判断。
+- 未完成内容：未完成用户真机复测；未确认 CKInternalError 2000 最终原因；未配置 CloudKit Dashboard schema / index；未实现后台自动同步、增量 token、冲突解决 UI 或同步健康页。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：单条 push 是诊断优先的 smoke 策略，271 条账单首轮同步会比批量慢；真机确认失败原因后再恢复受控批量和后台增量同步。
+- 回滚方式：回退本轮 `LedgerCloudKitSyncAdapter` 单条 push 与错误包装变更，以及文档记录；本地 SQLite 数据不受影响。
+- 结论：GOAL-1565F 诊断路径完成，可以重新安装到 iPhone 真机复测 push 阶段。
+- 下一步建议：重新点击 iPhone CloudKit 同步一次；如果仍失败，回填新状态文案中 `CloudKit rejected record save ... Fields: ... Error: ...` 的完整内容。
 
 ### ITER-114 GOAL-1565E CloudKit 真机错误诊断
 - 日期：2026-06-02

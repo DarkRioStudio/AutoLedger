@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565F CloudKit 推送拒绝定位：根据真机 UI 回填确认 `CKErrorDomain` code 15 发生在 push 阶段，且 underlying 为 `CKInternalErrorDomain` code 2000；CloudKit 手动同步临时改为单条 record 一个 modify operation，并在单条保存 / 删除失败时显示 recordName、字段类型与字符串长度摘要，不输出商户或备注原文，便于继续定位是否为单条账单内容、字段长度、schema 或服务端限制导致拒绝。
 - [2026-06-02 +0800] 部分完成 GOAL-1565E CloudKit 真机错误诊断：针对 iPad / iPhone 手动同步时出现的 `CKErrorDomain` code 15，将手动同步状态拆分为推送、拉取和本地 SQLite 写入阶段；CloudKit adapter 新增 CKError / partial error / underlying error 描述，并将 push 保存与删除请求按 100 条一组分批提交，便于定位是 record schema、query / index 还是批量 operation 被服务端拒绝；WatchConnectivity counterpart 未安装日志记录为非本轮 CloudKit 阻断。
 - [2026-06-02 +0800] 部分完成 GOAL-1565D 手动 CloudKit 同步闭环：主 App entitlement 保留 CloudDocuments 并新增 CloudKit，去除本轮不需要的 `aps-environment`；数据管理页新增 CloudKit 账本同步手动入口，执行 account status 检查、push 本机正式账单、fetch 远端 `LedgerTransaction` 并按 sync revision / updatedAt 应用到 SQLite；旧 iCloud Drive 自动备份从 UI 自动开关降级为 legacy 手动备份 / 恢复；离线回归新增远端 insert / update / tombstone / conflict 应用断言。
 - [2026-06-02 +0800] 部分完成 GOAL-1565C CloudKit live 前置门控：`LedgerCloudKitSyncAdapter` 新增 iCloud account status 检查、`allowsLiveCloudKitWrites` 手动写入开关和最小 `CKModifyRecordsOperation` push 路径；默认仍关闭 live 写入，缺少人工 capability / provisioning / Xcode Cloud / 真机验证时只返回受控错误；未修改 entitlements、Bundle ID、App Group 或 iCloud Container。

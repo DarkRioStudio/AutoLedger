@@ -13,6 +13,8 @@ enum LedgerCloudKitSyncError: LocalizedError, Equatable {
     case liveModeRequired
     case liveModeRequiresManualValidation
     case accountUnavailable(LedgerCloudKitAccountState)
+    case recordSaveRejected(recordName: String, fieldSummary: String, message: String)
+    case recordDeleteRejected(recordName: String, message: String)
 
     var errorDescription: String? {
         switch self {
@@ -24,6 +26,10 @@ enum LedgerCloudKitSyncError: LocalizedError, Equatable {
             return "CloudKit live sync requires capability, provisioning, and Xcode Cloud validation first."
         case let .accountUnavailable(state):
             return "CloudKit account is unavailable: \(state.rawValue)."
+        case let .recordSaveRejected(recordName, fieldSummary, message):
+            return "CloudKit rejected record save \(recordName). Fields: \(fieldSummary). Error: \(message)"
+        case let .recordDeleteRejected(recordName, message):
+            return "CloudKit rejected record delete \(recordName). Error: \(message)"
         }
     }
 }
@@ -153,21 +159,38 @@ struct LedgerCloudKitSyncAdapter {
         var savedRecordNames: [String] = []
         var deletedRecordNames: [String] = []
 
-        for recordsChunk in recordsToSave.chunked(maxCount: 100) {
-            let partial = try await modifyRecords(
-                recordsToSave: recordsChunk,
-                recordIDsToDelete: [],
-                dryRunResult: dryRunResult
-            )
+        for record in recordsToSave {
+            let partial: LedgerCloudKitPushResult
+            do {
+                partial = try await modifyRecords(
+                    recordsToSave: [record],
+                    recordIDsToDelete: [],
+                    dryRunResult: dryRunResult
+                )
+            } catch {
+                throw LedgerCloudKitSyncError.recordSaveRejected(
+                    recordName: record.recordID.recordName,
+                    fieldSummary: Self.fieldSummary(for: record),
+                    message: Self.describe(error)
+                )
+            }
             savedRecordNames.append(contentsOf: partial.savedRecordNames)
         }
 
-        for recordIDChunk in recordIDsToDelete.chunked(maxCount: 100) {
-            let partial = try await modifyRecords(
-                recordsToSave: [],
-                recordIDsToDelete: recordIDChunk,
-                dryRunResult: dryRunResult
-            )
+        for recordID in recordIDsToDelete {
+            let partial: LedgerCloudKitPushResult
+            do {
+                partial = try await modifyRecords(
+                    recordsToSave: [],
+                    recordIDsToDelete: [recordID],
+                    dryRunResult: dryRunResult
+                )
+            } catch {
+                throw LedgerCloudKitSyncError.recordDeleteRejected(
+                    recordName: recordID.recordName,
+                    message: Self.describe(error)
+                )
+            }
             deletedRecordNames.append(contentsOf: partial.deletedRecordNames)
         }
 
@@ -217,12 +240,17 @@ struct LedgerCloudKitSyncAdapter {
     }
 
     static func describe(_ error: Error) -> String {
+        if let syncError = error as? LedgerCloudKitSyncError,
+           let description = syncError.errorDescription {
+            return description
+        }
+
         let nsError = error as NSError
         var parts: [String] = []
 
         if nsError.domain == CKError.errorDomain,
            let code = CKError.Code(rawValue: nsError.code) {
-            parts.append("CKError \(nsError.code) (\(code))")
+            parts.append("CKError \(nsError.code) (\(Self.ckErrorName(code)))")
         } else {
             parts.append("\(nsError.domain) \(nsError.code)")
         }
@@ -247,6 +275,67 @@ struct LedgerCloudKitSyncAdapter {
         }
 
         return parts.joined(separator: " | ")
+    }
+
+    private static func fieldSummary(for record: CKRecord) -> String {
+        record.allKeys().sorted().map { key in
+            let value = record[key]
+            if let string = value as? NSString {
+                return "\(key)=String(\(string.length))"
+            }
+            if let number = value as? NSNumber {
+                return "\(key)=Number(\(String(cString: number.objCType)))"
+            }
+            if value is NSDate {
+                return "\(key)=Date"
+            }
+            if let value {
+                return "\(key)=\(String(describing: type(of: value)))"
+            } else {
+                return "\(key)=nil"
+            }
+        }.joined(separator: ", ")
+    }
+
+    private static func ckErrorName(_ code: CKError.Code) -> String {
+        switch code {
+        case .internalError: return "internalError"
+        case .partialFailure: return "partialFailure"
+        case .networkUnavailable: return "networkUnavailable"
+        case .networkFailure: return "networkFailure"
+        case .badContainer: return "badContainer"
+        case .serviceUnavailable: return "serviceUnavailable"
+        case .requestRateLimited: return "requestRateLimited"
+        case .missingEntitlement: return "missingEntitlement"
+        case .notAuthenticated: return "notAuthenticated"
+        case .permissionFailure: return "permissionFailure"
+        case .unknownItem: return "unknownItem"
+        case .invalidArguments: return "invalidArguments"
+        case .resultsTruncated: return "resultsTruncated"
+        case .serverRecordChanged: return "serverRecordChanged"
+        case .serverRejectedRequest: return "serverRejectedRequest"
+        case .assetFileNotFound: return "assetFileNotFound"
+        case .assetFileModified: return "assetFileModified"
+        case .incompatibleVersion: return "incompatibleVersion"
+        case .constraintViolation: return "constraintViolation"
+        case .operationCancelled: return "operationCancelled"
+        case .changeTokenExpired: return "changeTokenExpired"
+        case .batchRequestFailed: return "batchRequestFailed"
+        case .zoneBusy: return "zoneBusy"
+        case .badDatabase: return "badDatabase"
+        case .quotaExceeded: return "quotaExceeded"
+        case .zoneNotFound: return "zoneNotFound"
+        case .limitExceeded: return "limitExceeded"
+        case .userDeletedZone: return "userDeletedZone"
+        case .tooManyParticipants: return "tooManyParticipants"
+        case .alreadyShared: return "alreadyShared"
+        case .referenceViolation: return "referenceViolation"
+        case .managedAccountRestricted: return "managedAccountRestricted"
+        case .participantMayNeedVerification: return "participantMayNeedVerification"
+        case .serverResponseLost: return "serverResponseLost"
+        case .assetNotAvailable: return "assetNotAvailable"
+        @unknown default: return "unknown(\(code.rawValue))"
+        }
     }
 
     private var database: CKDatabase {
@@ -450,20 +539,5 @@ struct LedgerCloudKitSyncAdapter {
             deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date,
             conflictState: SyncConflictState(rawValue: conflictStateString) ?? .clean
         )
-    }
-}
-
-private extension Array {
-    func chunked(maxCount: Int) -> [[Element]] {
-        guard maxCount > 0, !isEmpty else { return [] }
-
-        var chunks: [[Element]] = []
-        var startIndex = 0
-        while startIndex < count {
-            let endIndex = Swift.min(startIndex + maxCount, count)
-            chunks.append(Array(self[startIndex..<endIndex]))
-            startIndex = endIndex
-        }
-        return chunks
     }
 }
