@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565N iCloud 配置快照同步）
+更新日期：2026-06-02（v1.5.0 设置页导航环境注入崩溃修复）
 
 ## 记录规则
 
@@ -43,6 +43,28 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-126 设置页导航环境注入崩溃修复
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / UI
+- 目标：修复 iPad 设置页进入“数据管理”后，`DataManagementView` 首屏读取 `LedgerStore` 时因缺少 `@EnvironmentObject` 而崩溃的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Settings/SettingsView.swift`：对依赖 `LedgerStore` 的导航目的页显式补 `.environmentObject(store)`，覆盖数据管理、订阅、商户别名、分类、来源、分类学习和 Debug 页。
+  - `AutoLedger/AutoLedger/AutoLedger.entitlements`：保留 CloudKit 后台通知与 iCloud KVS 所需 entitlement，支撑后续 iCloud 同步通知 / 配置同步能力。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮崩溃修复与验证结果。
+- 未改动范围：未修改 `DataManagementView` 的业务逻辑、CloudKit / iCloud 同步流程、SQLite schema、Bundle ID、App Group、Watch target、Widget target 或 Xcode project 配置。
+- 完成内容：设置页推入依赖账本状态的子页时会显式沿用根 `LedgerStore`，避免 SwiftUI 导航目的页环境传播不稳定导致 `No ObservableObject of type LedgerStore found`。
+- 未完成内容：未在真机上重新启动并手动进入数据管理页复测；当前验证为代码检查和 generic iOS 构建。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`git diff --cached --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：本轮只补设置页内部导航的环境转交，不改变根 `LedgerStore` 所有权；entitlement 变更不改变 Bundle ID / Team / App Group / iCloud Container，但真机与 Xcode Cloud 仍需使用具备对应能力的 provisioning profile；如果其他独立宿主直接打开这些子页，仍需要对应宿主注入环境对象。
+- 回滚方式：移除 `SettingsView.swift` 中各导航目的页新增的 `.environmentObject(store)`。
+- 结论：本轮完成，编译门禁通过；建议重新 Run 到 iPad 后从设置页进入数据管理验证崩溃已消失。
+- 下一步建议：在 iPad 真机继续做 iCloud 配置同步 smoke，并保留这次设置页导航修复作为同步设置入口的稳定性补丁。
 
 ### ITER-125 GOAL-1565N iCloud 配置快照同步
 - 日期：2026-06-02

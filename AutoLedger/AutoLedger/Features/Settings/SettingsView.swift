@@ -18,6 +18,7 @@ struct SettingsView: View {
                     if showDebugUnlocked {
                         NavigationLink {
                             DebugView()
+                                .environmentObject(store)
                         } label: {
                             settingsRow(
                                 icon: "ladybug.fill",
@@ -31,6 +32,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         SourceManagementView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "arrow.triangle.branch",
@@ -43,6 +45,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         CategoryManagementView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "square.grid.2x2.fill",
@@ -55,6 +58,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         MerchantAliasView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "person.text.rectangle.fill",
@@ -67,6 +71,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         SubscriptionListView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "repeat.circle.fill",
@@ -79,6 +84,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         DataManagementView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "externaldrive.fill.badge.icloud",
@@ -99,6 +105,7 @@ struct SettingsView: View {
 
                     NavigationLink {
                         CategoryLearningView()
+                            .environmentObject(store)
                     } label: {
                         settingsRow(
                             icon: "brain.head.profile",

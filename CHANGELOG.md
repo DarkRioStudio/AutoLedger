@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.5.0）
+- [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
+
 ### 变更（v1.5.0）
 - [2026-06-02 +0800] 完成 GOAL-1565N iCloud 配置快照同步：新增 `LedgerConfiguration` CloudKit record，用单个配置快照同步订阅、商户别名、分类修正、自定义分类 / 来源、订阅年费覆盖 / 备注和必要用户设置；本地配置变化会更新时间戳并触发增量推送，pull 时会按远端更新时间应用配置；旧 iCloud Drive 备份开关不会通过配置快照重新打开。
 - [2026-06-02 +0800] 完成 GOAL-1565M 快捷指令记账 iCloud 补推链路：QuickLedgerIntent、VoiceLedgerIntent、AddTransactionIntent 直写 SQLite 成功后会标记待推送账单并通知主 App；主 App 启动、回前台或收到 Intent 保存通知时会刷新本地账本并触发 iCloud 增量推送，推送成功后清除待推送标记。
