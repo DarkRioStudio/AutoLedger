@@ -212,8 +212,12 @@
 "data_management.metric.subscriptions" = "订阅";
 "data_management.metric.aliases" = "商户别名";
 "data_management.last_backup_format" = "上次备份：%@";
-"data_management.icloud_auto_backup" = "iCloud 自动备份";
-"data_management.icloud_description" = "开启后会把最新备份写入 iCloud Drive 的 AutoLedgerBackup.json。它是恢复文件，不会作为主数据库实时同步。";
+"data_management.cloudkit_sync" = "CloudKit 账本同步";
+"data_management.cloudkit_description" = "手动将本机正式账单同步到 iCloud private database，并拉取同一 Apple ID 下其他设备的账单。原始截图、支付截图、小票图片和 OCR 原文不会进入本同步。";
+"data_management.cloudkit_sync_now" = "同步一次";
+"data_management.cloudkit_syncing" = "同步中";
+"data_management.icloud_auto_backup" = "iCloud Drive 旧备份";
+"data_management.icloud_description" = "这是旧版 AutoLedgerBackup.json 恢复文件，适合迁移或灾备，不再作为多端实时同步入口。";
 "data_management.icloud_detected_format" = "检测到 iCloud 备份：%@";
 "data_management.restore_icloud" = "恢复 iCloud 备份";
 "data_management.restore_icloud_success" = "已从 iCloud 备份恢复。";

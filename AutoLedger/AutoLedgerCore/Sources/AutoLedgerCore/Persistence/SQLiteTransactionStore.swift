@@ -558,6 +558,30 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return records
     }
 
+    public func applyRemoteSyncRecord(_ remote: TransactionSyncRecord) throws -> TransactionSyncApplyOutcome {
+        let localRecord = try loadTransactionSyncRecords(includeDeleted: true)
+            .first { $0.transaction.id == remote.transaction.id }
+
+        guard let localRecord else {
+            guard remote.metadata.deletedAt == nil else {
+                return .keptLocal
+            }
+            try insertRemoteSyncRecord(remote)
+            return .inserted
+        }
+
+        switch TransactionSyncConflictResolver.resolve(local: localRecord, remote: remote) {
+        case .keepLocal:
+            return .keptLocal
+        case .conflictPendingReview:
+            try markTransactionSyncConflict(transactionID: remote.transaction.id)
+            return .conflictPendingReview
+        case .applyRemote:
+            try updateFromRemoteSyncRecord(remote)
+            return remote.metadata.deletedAt == nil ? .updated : .deleted
+        }
+    }
+
     private func backfillSyncMetadataDefaults() throws {
         try bindAndExecute(
             "UPDATE transactions SET sync_device_id = ? WHERE sync_device_id IS NULL OR sync_device_id = '';",
@@ -590,6 +614,106 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
         }
+    }
+
+    private func insertRemoteSyncRecord(_ record: TransactionSyncRecord) throws {
+        let sql = """
+        INSERT INTO transactions (
+            id, merchant, amount, occurred_at, category, source, note, created_at, updated_at, deleted_at,
+            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        bindRemote(record: record, to: statement, includeCreatedAt: true)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    private func updateFromRemoteSyncRecord(_ record: TransactionSyncRecord) throws {
+        let sql = """
+        UPDATE transactions
+        SET merchant = ?, amount = ?, occurred_at = ?, category = ?, source = ?, note = ?,
+            updated_at = ?, deleted_at = ?, sync_revision = ?, sync_device_id = ?,
+            sync_idempotency_key = ?, sync_conflict_state = ?
+        WHERE id = ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, record.transaction.merchant, -1, sqliteTransient)
+        sqlite3_bind_double(statement, 2, record.transaction.amount)
+        sqlite3_bind_text(statement, 3, Self.storageFormatter.string(from: record.transaction.occurredAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 4, record.transaction.category, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, record.transaction.source, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, record.transaction.note, -1, sqliteTransient)
+        bindRemoteMetadata(record.metadata, to: statement, startingAt: 7)
+        sqlite3_bind_text(statement, 13, record.transaction.id.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    private func markTransactionSyncConflict(transactionID: UUID) throws {
+        let sql = "UPDATE transactions SET sync_conflict_state = ? WHERE id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, SyncConflictState.conflictPendingReview.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, transactionID.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    private func bindRemote(record: TransactionSyncRecord, to statement: OpaquePointer?, includeCreatedAt: Bool) {
+        sqlite3_bind_text(statement, 1, record.transaction.id.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, record.transaction.merchant, -1, sqliteTransient)
+        sqlite3_bind_double(statement, 3, record.transaction.amount)
+        sqlite3_bind_text(statement, 4, Self.storageFormatter.string(from: record.transaction.occurredAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, record.transaction.category, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, record.transaction.source, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 7, record.transaction.note, -1, sqliteTransient)
+        if includeCreatedAt {
+            sqlite3_bind_text(statement, 8, Self.storageFormatter.string(from: .now), -1, sqliteTransient)
+            bindRemoteMetadata(record.metadata, to: statement, startingAt: 9)
+        } else {
+            bindRemoteMetadata(record.metadata, to: statement, startingAt: 8)
+        }
+    }
+
+    private func bindRemoteMetadata(_ metadata: TransactionSyncMetadata, to statement: OpaquePointer?, startingAt index: Int32) {
+        sqlite3_bind_text(statement, index, Self.storageFormatter.string(from: metadata.updatedAt), -1, sqliteTransient)
+        if let deletedAt = metadata.deletedAt {
+            sqlite3_bind_text(statement, index + 1, Self.storageFormatter.string(from: deletedAt), -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, index + 1)
+        }
+        sqlite3_bind_int(statement, index + 2, Int32(metadata.syncRevision))
+        sqlite3_bind_text(statement, index + 3, metadata.deviceID, -1, sqliteTransient)
+        if let idempotencyKey = metadata.idempotencyKey {
+            sqlite3_bind_text(statement, index + 4, idempotencyKey, -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, index + 4)
+        }
+        sqlite3_bind_text(statement, index + 5, metadata.conflictState.rawValue, -1, sqliteTransient)
     }
 
     // MARK: - Debug Events

@@ -215,8 +215,12 @@
 "data_management.metric.subscriptions" = "訂閱";
 "data_management.metric.aliases" = "商家別名";
 "data_management.last_backup_format" = "上次備份：%@";
-"data_management.icloud_auto_backup" = "iCloud 自動備份";
-"data_management.icloud_description" = "開啟後會把最新備份寫入 iCloud Drive 的 AutoLedgerBackup.json。它是恢復檔案，不會作為主資料庫即時同步。";
+"data_management.cloudkit_sync" = "CloudKit 帳本同步";
+"data_management.cloudkit_description" = "手動將本機正式帳單同步到 iCloud private database，並拉取同一 Apple ID 下其他裝置的帳單。原始截圖、支付截圖、小票圖片和 OCR 原文不會進入本同步。";
+"data_management.cloudkit_sync_now" = "同步一次";
+"data_management.cloudkit_syncing" = "同步中";
+"data_management.icloud_auto_backup" = "iCloud Drive 舊備份";
+"data_management.icloud_description" = "這是舊版 AutoLedgerBackup.json 恢復檔案，適合遷移或災備，不再作為多端即時同步入口。";
 "data_management.icloud_detected_format" = "偵測到 iCloud 備份：%@";
 "data_management.restore_icloud" = "恢復 iCloud 備份";
 "data_management.restore_icloud_success" = "已從 iCloud 備份恢復。";

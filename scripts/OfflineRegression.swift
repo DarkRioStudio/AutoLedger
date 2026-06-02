@@ -600,6 +600,8 @@ struct OfflineRegression {
         reporter.check(batch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps retained tombstones in delete batch")
         reporter.check(batch.expiredTombstoneIDs == [expiredID], "LedgerSyncPlanner separates expired tombstones")
         reporter.check(batch.upserts.first?.recordName == CloudLedgerSyncSchema.recordName(for: activeID), "LedgerSyncPlanner payload carries record name")
+        reporter.check(batch.upserts.first?.syncRecord.transaction == activeTransaction, "LedgerSyncPlanner payload round-trips transaction")
+        reporter.check(batch.upserts.first?.syncRecord.metadata.syncRevision == 1, "LedgerSyncPlanner payload round-trips sync metadata")
 
         let incrementalBatch = LedgerSyncPlanner.makePushBatch(
             from: [activeRecord, deletedRecord],
@@ -820,6 +822,103 @@ struct OfflineRegression {
         let restoredMetadata = try store.loadTransactionSyncMetadata(transactionID: updated.id)
         reporter.check(restoredMetadata?.syncRevision == (deletedMetadata?.syncRevision ?? 0) + 1, "SQLite restore increments sync revision")
         reporter.check(restoredMetadata?.deletedAt == nil, "SQLite restore clears sync tombstone")
+
+        let remoteInsertedID = UUID(uuidString: "00000000-0000-0000-0000-000000151500") ?? UUID()
+        let remoteInserted = TransactionSyncRecord(
+            transaction: Transaction(
+                id: remoteInsertedID,
+                merchant: "Remote Demo Coffee",
+                amount: 22,
+                occurredAt: Date(timeIntervalSince1970: 1_780_100_000),
+                category: .dining,
+                source: .manual,
+                note: "remote insert"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: remoteInsertedID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_100_100),
+                syncRevision: 3,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(remoteInsertedID.uuidString)"
+            )
+        )
+        let remoteInsertOutcome = try store.applyRemoteSyncRecord(remoteInserted)
+        let transactionsAfterRemoteInsert = try store.loadTransactions()
+        reporter.check(remoteInsertOutcome == .inserted, "SQLite remote sync inserts new active transaction")
+        reporter.check(transactionsAfterRemoteInsert.contains(remoteInserted.transaction), "SQLite remote inserted transaction becomes active")
+
+        let remoteUpdated = TransactionSyncRecord(
+            transaction: Transaction(
+                id: remoteInsertedID,
+                merchant: "Remote Example Market",
+                amount: 33,
+                occurredAt: Date(timeIntervalSince1970: 1_780_100_200),
+                category: .groceries,
+                source: .wechat,
+                note: "remote update"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: remoteInsertedID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_100_300),
+                syncRevision: 4,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(remoteInsertedID.uuidString)"
+            )
+        )
+        let remoteUpdateOutcome = try store.applyRemoteSyncRecord(remoteUpdated)
+        let transactionsAfterRemoteUpdate = try store.loadTransactions()
+        reporter.check(remoteUpdateOutcome == .updated, "SQLite remote sync applies higher remote revision")
+        reporter.check(transactionsAfterRemoteUpdate.contains(remoteUpdated.transaction), "SQLite remote updated transaction becomes active")
+
+        let remoteDeleted = TransactionSyncRecord(
+            transaction: remoteUpdated.transaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: remoteInsertedID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_100_400),
+                syncRevision: 5,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(remoteInsertedID.uuidString)",
+                deletedAt: Date(timeIntervalSince1970: 1_780_100_400)
+            )
+        )
+        let remoteDeleteOutcome = try store.applyRemoteSyncRecord(remoteDeleted)
+        let deletedAfterRemoteDelete = try store.loadDeletedTransactions()
+        reporter.check(remoteDeleteOutcome == .deleted, "SQLite remote sync applies higher remote tombstone")
+        reporter.check(deletedAfterRemoteDelete.contains(remoteUpdated.transaction), "SQLite remote tombstone moves transaction to deleted list")
+
+        let conflictID = UUID(uuidString: "00000000-0000-0000-0000-000000151501") ?? UUID()
+        let conflictLocal = Transaction(
+            id: conflictID,
+            merchant: "Conflict Local Store",
+            amount: 44,
+            occurredAt: Date(timeIntervalSince1970: 1_780_200_000),
+            category: .shopping,
+            source: .manual,
+            note: "local"
+        )
+        try store.save(transaction: conflictLocal)
+        let conflictRemote = TransactionSyncRecord(
+            transaction: Transaction(
+                id: conflictID,
+                merchant: "Conflict Remote Store",
+                amount: 55,
+                occurredAt: conflictLocal.occurredAt,
+                category: .shopping,
+                source: .manual,
+                note: "remote"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: conflictID,
+                updatedAt: try store.loadTransactionSyncMetadata(transactionID: conflictID)?.updatedAt ?? .now,
+                syncRevision: 0,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(conflictID.uuidString)"
+            )
+        )
+        let conflictOutcome = try store.applyRemoteSyncRecord(conflictRemote)
+        let conflictMetadata = try store.loadTransactionSyncMetadata(transactionID: conflictID)
+        reporter.check(conflictOutcome == .conflictPendingReview, "SQLite remote sync flags same-revision divergent conflict")
+        reporter.check(conflictMetadata?.conflictState == .conflictPendingReview, "SQLite remote sync stores conflict state")
 
         try store.delete(transactionID: updated.id)
         try store.permanentlyDeleteTransaction(id: updated.id)

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565C CloudKit live 前置门控）
+更新日期：2026-06-02（v1.5.0 GOAL-1565D 手动 CloudKit 同步入口）
 
 ## 记录规则
 
@@ -43,6 +43,39 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-113 GOAL-1565D 手动 CloudKit 同步入口
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 数据 / 同步底座
+- 目标：在 iPhone / iPad 真机均可启动且 CloudKit capability 已开启后，解释“刷新账本不拉取远端”的原因，并补上可手动触发的 CloudKit 同步一次入口。
+- 改动范围：
+  - `AutoLedger/AutoLedger/AutoLedger.entitlements`：保留 CloudDocuments、App Group 和原 iCloud container，新增 CloudKit；去除本轮不需要的 `aps-environment`。
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：新增 fetch `LedgerTransaction` records 并映射回 `LedgerTransactionSyncPayload`。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/LedgerSyncPlan.swift`：补充 payload 显式 init 与 `syncRecord` 往返入口。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/SyncMetadata.swift`：新增 `TransactionSyncApplyOutcome`。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Persistence/SQLiteTransactionStore.swift`：新增 `applyRemoteSyncRecord`，按 revision / updatedAt 插入、更新、软删除或标记冲突。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `syncLedgerWithCloudKitNow()`、同步状态和运行中状态；旧 iCloud Drive 自动备份开关固定关闭。
+  - `AutoLedger/AutoLedger/Features/Settings/DataManagementView.swift`、三语 `Localizable.strings`：新增 CloudKit 同步卡片；旧 iCloud Drive 备份文案降级为 legacy 手动备份 / 恢复。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增 payload round-trip 与 SQLite 远端 insert / update / tombstone / conflict 回归，并补离线 CloudKit stub。
+- 未改动范围：未新增后台自动同步、CloudKit subscription / push notification、冲突解决 UI、自定义分类 / 来源同步、商户别名同步、多账本元数据同步、Watch / Widget / tvOS / visionOS 快照同步；未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、scheme 或 target。
+- 完成内容：
+  - 用户已确认 iPhone 真机和 iPad 真机均可正常启动。
+  - 明确 iPad 端“刷新账本”此前只刷新本地 SQLite，不会自动拉 CloudKit。
+  - 数据管理页新增“CloudKit 账本同步”卡片，手动点击后执行 push 本机正式账单、fetch 远端正式账单、应用到 SQLite、刷新 UI / Widget / Watch payload。
+  - 远端记录应用规则：无本地记录则插入；远端 revision / updatedAt 更高则应用；远端 tombstone 更高则软删除；本地更新更高则保留本地；同 revision 内容分叉标记 `conflictPendingReview`。
+  - 旧 iCloud Drive 单文件自动备份从自动开关降级，不再作为多端同步入口；仍保留手动旧备份和旧备份恢复能力。
+- 未完成内容：未做用户真机手动同步结果回填；未实现后台自动同步；未实现远端变更增量 token；未实现冲突解决 UI；未同步自定义分类 / 来源、商户别名、分类修正或多账本元数据；未完成 Xcode Cloud validation build。
+- 测试情况：
+  - PASS：用户手动确认 iPhone / iPad 真机均可启动。
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前同步为手动全量 query，不是最终后台增量同步；若两端都有 seed / 测试账单，首次同步会把两端现有正式账单都推入 CloudKit。CloudKit private database 真机同步结果仍需用户在两台设备上点击手动同步验证。
+- 回滚方式：回退本轮 CloudKit fetch / SQLite apply / LedgerStore 手动同步 / DataManagementView / 本地化 / entitlements / 回归脚本变更；旧本地 SQLite 数据不受回滚破坏。
+- 结论：GOAL-1565D 代码闭环完成，可以进入两台真机手动同步 smoke。
+- 下一步建议：在 iPhone 新增一笔明显测试账单，进入设置 -> 数据管理 -> CloudKit 账本同步 -> 同步一次；随后在 iPad 打开同一入口点击同步一次，确认状态文案显示拉取到远端账单且账本页出现该测试账单。通过后再跑 Xcode Cloud validation build。
 
 ### ITER-112 GOAL-1565C CloudKit live 前置门控
 - 日期：2026-06-02

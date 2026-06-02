@@ -42,6 +42,38 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
     public let deletedAt: Date?
     public let conflictState: SyncConflictState
 
+    public init(
+        recordName: String,
+        transactionID: UUID,
+        merchant: String,
+        amount: Double,
+        occurredAt: Date,
+        category: String,
+        source: String,
+        note: String,
+        updatedAt: Date,
+        syncRevision: Int,
+        deviceID: String,
+        idempotencyKey: String?,
+        deletedAt: Date?,
+        conflictState: SyncConflictState
+    ) {
+        self.recordName = recordName
+        self.transactionID = transactionID
+        self.merchant = merchant
+        self.amount = amount
+        self.occurredAt = occurredAt
+        self.category = category
+        self.source = source
+        self.note = note
+        self.updatedAt = updatedAt
+        self.syncRevision = syncRevision
+        self.deviceID = deviceID
+        self.idempotencyKey = idempotencyKey
+        self.deletedAt = deletedAt
+        self.conflictState = conflictState
+    }
+
     public init(record: TransactionSyncRecord) {
         self.recordName = CloudLedgerSyncSchema.recordName(for: record.transaction.id)
         self.transactionID = record.transaction.id
@@ -61,6 +93,29 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
 
     public var isTombstone: Bool {
         deletedAt != nil
+    }
+
+    public var syncRecord: TransactionSyncRecord {
+        TransactionSyncRecord(
+            transaction: Transaction(
+                id: transactionID,
+                merchant: merchant,
+                amount: amount,
+                occurredAt: occurredAt,
+                categoryLabel: category,
+                sourceLabel: source,
+                note: note
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: updatedAt,
+                syncRevision: syncRevision,
+                deviceID: deviceID,
+                idempotencyKey: idempotencyKey,
+                deletedAt: deletedAt,
+                conflictState: conflictState
+            )
+        )
     }
 }
 

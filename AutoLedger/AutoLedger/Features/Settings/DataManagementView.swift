@@ -15,6 +15,7 @@ struct DataManagementView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
+                cloudKitSyncCard
                 iCloudCard
                 manualBackupCard
 
@@ -90,14 +91,9 @@ struct DataManagementView: View {
 
     private var iCloudCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Toggle(isOn: Binding(
-                get: { store.iCloudBackupEnabled },
-                set: { store.iCloudBackupEnabled = $0 }
-            )) {
-                Label("data_management.icloud_auto_backup", systemImage: "icloud.and.arrow.up.fill")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.ink)
-            }
+            Label("data_management.icloud_auto_backup", systemImage: "icloud.and.arrow.up.fill")
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
 
             Text("data_management.icloud_description")
                 .font(.subheadline)
@@ -135,6 +131,42 @@ struct DataManagementView: View {
                     statusMessage = String(format: String(localized: "data_management.backup_icloud_failed_format"), error.localizedDescription)
                 }
             }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(AppTheme.card))
+    }
+
+    private var cloudKitSyncCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("data_management.cloudkit_sync", systemImage: "icloud.fill")
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+
+            Text("data_management.cloudkit_description")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+
+            if let status = store.ledgerCloudSyncStatus {
+                Text(status)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            actionButton(
+                titleKey: store.isLedgerCloudSyncRunning
+                    ? LocalizedStringKey("data_management.cloudkit_syncing")
+                    : LocalizedStringKey("data_management.cloudkit_sync_now"),
+                systemImage: "arrow.triangle.2.circlepath.icloud",
+                style: .primary
+            ) {
+                Task {
+                    await store.syncLedgerWithCloudKitNow()
+                    statusMessage = store.ledgerCloudSyncStatus
+                }
+            }
+            .disabled(store.isLedgerCloudSyncRunning)
+            .opacity(store.isLedgerCloudSyncRunning ? 0.65 : 1)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -50,6 +50,14 @@ public enum TransactionSyncResolution: Equatable, Sendable {
     case conflictPendingReview
 }
 
+public enum TransactionSyncApplyOutcome: Equatable, Sendable {
+    case inserted
+    case updated
+    case deleted
+    case keptLocal
+    case conflictPendingReview
+}
+
 public enum TransactionSyncConflictResolver {
     public static func resolve(
         local: TransactionSyncRecord,

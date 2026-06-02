@@ -157,6 +157,22 @@ struct LedgerCloudKitSyncAdapter {
         )
     }
 
+    func fetchAllTransactionRecords() async throws -> [LedgerTransactionSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchTransactionRecords(cursor: nil, accumulated: [])
+    }
+
     func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
         let recordID = CKRecord.ID(recordName: mappedRecord.recordName)
         let record = CKRecord(recordType: mappedRecord.recordType, recordID: recordID)
@@ -234,6 +250,52 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
+    private func fetchTransactionRecords(
+        cursor: CKQueryOperation.Cursor?,
+        accumulated: [LedgerTransactionSyncPayload]
+    ) async throws -> [LedgerTransactionSyncPayload] {
+        try await withCheckedThrowingContinuation { continuation in
+            let operation: CKQueryOperation
+            if let cursor {
+                operation = CKQueryOperation(cursor: cursor)
+            } else {
+                let query = CKQuery(
+                    recordType: CloudLedgerSyncSchema.RecordType.transaction,
+                    predicate: NSPredicate(value: true)
+                )
+                operation = CKQueryOperation(query: query)
+            }
+
+            var records = accumulated
+            operation.recordFetchedBlock = { record in
+                if let payload = Self.mapPayload(from: record) {
+                    records.append(payload)
+                }
+            }
+            operation.queryCompletionBlock = { cursor, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                if let cursor {
+                    Task {
+                        do {
+                            let next = try await fetchTransactionRecords(cursor: cursor, accumulated: records)
+                            continuation.resume(returning: next)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                } else {
+                    continuation.resume(returning: records)
+                }
+            }
+
+            database.add(operation)
+        }
+    }
+
     private static func mapRecord(_ payload: LedgerTransactionSyncPayload) -> LedgerCloudKitMappedRecord {
         var fields: [String: LedgerCloudKitFieldValue] = [
             CloudLedgerSyncSchema.Field.transactionID: .string(payload.transactionID.uuidString),
@@ -293,8 +355,44 @@ struct LedgerCloudKitSyncAdapter {
         @unknown default:
             return LedgerCloudKitAccountCheck(
                 state: .unknown,
-                message: "CloudKit account status is unknown."
+            message: "CloudKit account status is unknown."
             )
         }
+    }
+
+    private static func mapPayload(from record: CKRecord) -> LedgerTransactionSyncPayload? {
+        guard
+            let transactionIDString = record[CloudLedgerSyncSchema.Field.transactionID] as? String,
+            let transactionID = UUID(uuidString: transactionIDString),
+            let merchant = record[CloudLedgerSyncSchema.Field.merchant] as? String,
+            let amountNumber = record[CloudLedgerSyncSchema.Field.amount] as? NSNumber,
+            let occurredAt = record[CloudLedgerSyncSchema.Field.occurredAt] as? Date,
+            let category = record[CloudLedgerSyncSchema.Field.category] as? String,
+            let source = record[CloudLedgerSyncSchema.Field.source] as? String,
+            let note = record[CloudLedgerSyncSchema.Field.note] as? String,
+            let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
+            let syncRevisionNumber = record[CloudLedgerSyncSchema.Field.syncRevision] as? NSNumber,
+            let deviceID = record[CloudLedgerSyncSchema.Field.deviceID] as? String,
+            let conflictStateString = record[CloudLedgerSyncSchema.Field.conflictState] as? String
+        else {
+            return nil
+        }
+
+        return LedgerTransactionSyncPayload(
+            recordName: record.recordID.recordName,
+            transactionID: transactionID,
+            merchant: merchant,
+            amount: amountNumber.doubleValue,
+            occurredAt: occurredAt,
+            category: category,
+            source: source,
+            note: note,
+            updatedAt: updatedAt,
+            syncRevision: syncRevisionNumber.intValue,
+            deviceID: deviceID,
+            idempotencyKey: record[CloudLedgerSyncSchema.Field.idempotencyKey] as? String,
+            deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date,
+            conflictState: SyncConflictState(rawValue: conflictStateString) ?? .clean
+        )
     }
 }

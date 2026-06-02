@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565D 手动 CloudKit 同步闭环：主 App entitlement 保留 CloudDocuments 并新增 CloudKit，去除本轮不需要的 `aps-environment`；数据管理页新增 CloudKit 账本同步手动入口，执行 account status 检查、push 本机正式账单、fetch 远端 `LedgerTransaction` 并按 sync revision / updatedAt 应用到 SQLite；旧 iCloud Drive 自动备份从 UI 自动开关降级为 legacy 手动备份 / 恢复；离线回归新增远端 insert / update / tombstone / conflict 应用断言。
 - [2026-06-02 +0800] 部分完成 GOAL-1565C CloudKit live 前置门控：`LedgerCloudKitSyncAdapter` 新增 iCloud account status 检查、`allowsLiveCloudKitWrites` 手动写入开关和最小 `CKModifyRecordsOperation` push 路径；默认仍关闭 live 写入，缺少人工 capability / provisioning / Xcode Cloud / 真机验证时只返回受控错误；未修改 entitlements、Bundle ID、App Group 或 iCloud Container。
 - [2026-06-02 +0800] 部分完成 GOAL-1565B CloudKit dry-run adapter：主 App 新增 `LedgerCloudKitSyncAdapter`，提供 disabled / dry-run / live 三态保护；dry-run 可把 `LedgerSyncPushBatch` 映射为 `LedgerCloudKitMappedRecord` 并生成 `CKRecord`，live 模式在 capability、provisioning 和 Xcode Cloud 验证前仍抛出受控错误；本轮未写入 CloudKit、不修改 entitlements、不改变发布链。
 - [2026-06-02 +0800] 部分完成 GOAL-1565 基础账本同步闭环：新增 `CloudLedgerSyncSchema`、`LedgerTransactionSyncPayload`、`LedgerSyncPushBatch` 和 `LedgerSyncPlanner`，固定正式账单 CloudKit record type、record name、字段映射、upsert / tombstone / expired tombstone 拆分和 `changedAfter` 增量过滤；当前为本地计划层，不 import CloudKit、不修改 entitlements、不声明真实多端同步已完成。

@@ -128,6 +128,37 @@ struct ICloudBackupService {
 
     func readBundleIfAvailable() throws -> BackupBundle? { nil }
 }
+
+enum LedgerCloudKitSyncMode {
+    case disabled
+    case dryRun
+    case live
+}
+
+struct LedgerCloudKitAccountCheck {
+    let canUsePrivateDatabase: Bool
+    let message: String
+}
+
+struct LedgerCloudKitPushResult {
+    let savedRecordNames: [String]
+}
+
+struct LedgerCloudKitSyncAdapter {
+    init(mode: LedgerCloudKitSyncMode = .disabled, allowsLiveCloudKitWrites: Bool = false) {}
+
+    func checkAccountStatus() async -> LedgerCloudKitAccountCheck {
+        LedgerCloudKitAccountCheck(canUsePrivateDatabase: false, message: "Offline CloudKit stub")
+    }
+
+    func push(batch: LedgerSyncPushBatch) async throws -> LedgerCloudKitPushResult {
+        LedgerCloudKitPushResult(savedRecordNames: [])
+    }
+
+    func fetchAllTransactionRecords() async throws -> [LedgerTransactionSyncPayload] {
+        []
+    }
+}
 IOSTUB
 
 swiftc \
