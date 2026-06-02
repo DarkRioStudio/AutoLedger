@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565O Share Extension iCloud 补推链路）
+更新日期：2026-06-02（v1.5.0 GOAL-1565 基础 iCloud 同步闭环收尾）
 
 ## 记录规则
 
@@ -43,6 +43,29 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-128 GOAL-1565 基础 iCloud 同步闭环收尾
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：文档 / 治理 / 同步底座
+- 目标：把长期拆分推进的 GOAL-1565 从“部分完成”收口为“已完成”，明确当前 iPhone / iPad 基础 iCloud 同步闭环已满足 v1.5.0 最小交付要求，并把剩余平台和性能增强拆给后续 GOAL。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：将 GOAL 队列表中 `GOAL-1565` 标记为已完成，新增 `13.37 GOAL-1565 收尾结论`，列出已完成范围、不再纳入 1565 的范围和后续承接 GOAL。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮收尾决策。
+- 未改动范围：未修改 Swift 源码、CloudKit schema、SQLite schema、entitlements、Bundle ID、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 确认 1565 已覆盖正式账单、软删除、iPhone / iPad 同步、iCloud 同步 UI、启动拉取、本地变化推送、账本下拉拉取、App Intents / Share Extension 外部入口补推和主要配置快照同步。
+  - 明确 Mac Catalyst 实际复用验证转入 GOAL-1570～1575。
+  - 明确 Watch / Widget / tvOS / visionOS 只读展示快照与过期状态转入 GOAL-1566。
+  - 明确 CloudKit custom zone、server change token、silent push、配置逐条 record 和冲突人工解决 UI 不再作为 GOAL-1565 blocker。
+- 未完成内容：本轮不做新的真机 smoke；Share Extension 到 iPad 的端到端 smoke 仍建议用户按 13.36.6 执行。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：GOAL-1565 的“已完成”是 v1.5.0 最小基础同步闭环完成，不等于所有同步增强、Mac Catalyst 复用和只读展示端快照都已完成。
+- 回滚方式：撤销 `versions/v1.5.0-plan.md` 中 GOAL-1565 状态和 13.37 收尾段落，恢复为部分完成。
+- 结论：GOAL-1565 可以收尾；v1.5.0 基础 iPhone / iPad iCloud 同步闭环完成，后续进入 GOAL-1566。
+- 下一步建议：进入 GOAL-1566，处理 Watch / Widget / 展示端读取同步后稳定快照和离线 / 过期状态。
 
 ### ITER-127 GOAL-1565O Share Extension iCloud 补推链路
 - 日期：2026-06-02
