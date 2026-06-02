@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565C CloudKit live 前置门控：`LedgerCloudKitSyncAdapter` 新增 iCloud account status 检查、`allowsLiveCloudKitWrites` 手动写入开关和最小 `CKModifyRecordsOperation` push 路径；默认仍关闭 live 写入，缺少人工 capability / provisioning / Xcode Cloud / 真机验证时只返回受控错误；未修改 entitlements、Bundle ID、App Group 或 iCloud Container。
 - [2026-06-02 +0800] 部分完成 GOAL-1565B CloudKit dry-run adapter：主 App 新增 `LedgerCloudKitSyncAdapter`，提供 disabled / dry-run / live 三态保护；dry-run 可把 `LedgerSyncPushBatch` 映射为 `LedgerCloudKitMappedRecord` 并生成 `CKRecord`，live 模式在 capability、provisioning 和 Xcode Cloud 验证前仍抛出受控错误；本轮未写入 CloudKit、不修改 entitlements、不改变发布链。
 - [2026-06-02 +0800] 部分完成 GOAL-1565 基础账本同步闭环：新增 `CloudLedgerSyncSchema`、`LedgerTransactionSyncPayload`、`LedgerSyncPushBatch` 和 `LedgerSyncPlanner`，固定正式账单 CloudKit record type、record name、字段映射、upsert / tombstone / expired tombstone 拆分和 `changedAfter` 增量过滤；当前为本地计划层，不 import CloudKit、不修改 entitlements、不声明真实多端同步已完成。
 - [2026-06-02 +0800] 完成 GOAL-1564 基础同步元数据与冲突模型底座：新增 `TransactionSyncMetadata` / `TransactionSyncRecord`、`SyncConflictState` 和基础冲突判定器；SQLite `transactions` 增量补齐 `sync_revision`、`sync_device_id`、`sync_idempotency_key`、`sync_conflict_state`，保存 / 更新 / 软删除 / 恢复会维护 revision 与 tombstone；`BackupTransaction` 新增可选 `syncMetadata` 并保持旧 v1 JSON 兼容；离线回归新增 sync metadata、tombstone、active/deleted sync record 和旧备份解码用例。

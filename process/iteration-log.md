@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565B CloudKit dry-run adapter）
+更新日期：2026-06-02（v1.5.0 GOAL-1565C CloudKit live 前置门控）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-112 GOAL-1565C CloudKit live 前置门控
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 数据 / 同步底座
+- 目标：在不修改 entitlements、不默认启用真实 CloudKit 写入的前提下，为后续真机 smoke 增加 iCloud account status 检查、live 写入手动门控和最小 modify records 代码路径。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：新增 `LedgerCloudKitAccountState`、`LedgerCloudKitAccountCheck`、`LedgerCloudKitPushResult`、`checkAccountStatus()`、`push(batch:)` 和 `allowsLiveCloudKitWrites` 手动写入开关。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录 GOAL-1565C 范围、验证结果和真机 / Xcode 配置要求。
+- 未改动范围：未修改 CloudKit capability、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、scheme、target、WatchConnectivity payload、Widget SQL、iCloud Drive BackupBundle、SQLite schema 或 App Store 发布脚本。
+- 完成内容：
+  - `checkAccountStatus()` 可读取 `CKContainer.accountStatus()` 并映射为可展示 / 可诊断的账户状态。
+  - `push(batch:)` 只允许在 `mode == .live` 且 `allowsLiveCloudKitWrites == true` 时进入真实 CloudKit 路径。
+  - live 前会检查 iCloud account status，非 available 时抛出受控 `accountUnavailable` 错误。
+  - 最小 `CKModifyRecordsOperation` 路径可保存 upserts / retained tombstones，并按 expired tombstone IDs 删除对应远端 record。
+  - 默认初始化仍为 disabled，且 live writes 默认 false，避免未完成人工迁移前误写 CloudKit。
+- 未完成内容：未修改 Xcode capability；未做真机 CloudKit smoke；未接入自动同步入口；未实现 pull / merge / applyRemote；未实现冲突 UI 或同步健康 UI；未同步自定义分类 / 来源、商户别名、分类修正或多账本元数据。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`bash scripts/run_offline_regression.sh`。仅有既有 `nonisolated(unsafe)` warning。
+- 风险与注意事项：真实 CloudKit private database 写入必须由用户在 Xcode / Apple Developer 中开启 CloudKit capability，并在真机与 Xcode Cloud 上验证 provisioning；当前代码只提供受控入口，不代表多端同步已完成。
+- MANUAL_MIGRATION_REQUIRED：在 Xcode 主 App target 的 iCloud capability 中保留现有 CloudDocuments，并启用 CloudKit；使用现有 `iCloud.top.darkrio326.AutoLedger` container；重新生成 provisioning profile；用两台登录同一 Apple ID 的真机做 iPhone / iPad smoke；随后跑 Xcode Cloud validation build。
+- 回滚方式：回退 `LedgerCloudKitSyncAdapter.swift` 的 GOAL-1565C 增量和本轮文档记录；默认入口未接运行时，回滚不影响现有账本、Watch、Widget 或备份功能。
+- 结论：GOAL-1565C 代码门控完成，真机 live 同步验证仍未完成。
+- 下一步建议：先由用户完成 Xcode CloudKit capability 配置和真机 smoke；验证通过后再进入 GOAL-1565D，接入受控同步入口、pull / merge / applyRemote 和同步状态 UI。
 
 ### ITER-111 GOAL-1565B CloudKit dry-run adapter
 - 日期：2026-06-02
