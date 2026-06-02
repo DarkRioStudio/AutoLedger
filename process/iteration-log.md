@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 基础多端数据同步规划）
+更新日期：2026-06-02（v1.5.0 GOAL-1563 多端同步策略冻结）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-108 GOAL-1563 多端同步现状审计与策略冻结
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：文档 / 审计 / 治理
+- 目标：审计当前 SQLite、BackupBundle、iCloud Drive、WatchConnectivity、Widget App Group 和 entitlements 的真实同步能力，冻结 v1.5.0 最小多端同步策略。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：补充 GOAL-1563 审计结论、数据范围矩阵、策略冻结、发布链影响和下一步 GOAL-1564。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮完成范围。
+- 未改动范围：未修改 Swift 代码、SQLite schema、BackupBundle schema、CloudKit、WatchConnectivity payload、Widget 读取逻辑、entitlements、Xcode project、scheme、target、Bundle ID、signing、App Group 或 iCloud Container。
+- 完成内容：
+  - 确认当前 iCloud 能力是 CloudDocuments / iCloud Drive 单文件 `AutoLedgerBackup.json` 备份，不是 CloudKit 结构化同步。
+  - 确认当前 Watch 只承担最近账单、今日支出摘要、自定义分类和 pending 回传，不是完整账本复制。
+  - 确认当前 Widget 只读取本机 App Group SQLite，不能代表其他设备最新账本。
+  - 冻结 v1.5.0 最小策略：local-first，本机 SQLite 仍为运行时事实源；CloudKit private database 作为结构化多端同步优先方向；iCloud Drive BackupBundle 保留备份、导出、恢复和人工迁移角色。
+  - 明确原始截图、支付截图、小票图片、OCR 全文、raw input 和调试包默认不进入同步。
+  - 明确 GOAL-1564 必须先补同步元数据、幂等键、删除合并和冲突模型，再进入 GOAL-1565 同步闭环。
+- 未完成内容：未实现 CloudKit；未实现 iPhone / iPad / Mac 多端同步；未新增同步 metadata；未做真机多设备同步验证。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：若后续引入 CloudKit private database，需要单独验证 Apple Developer capability、provisioning profile、Xcode Cloud signing、隐私披露、离线冲突和真机多设备同步；如果 capability 未就绪，应标记为 `MANUAL_MIGRATION_REQUIRED`，不要用单文件 BackupBundle 伪装静默同步。
+- 回滚方式：回退本轮 `versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md` 文档变更。
+- 结论：GOAL-1563 完成，v1.5.0 多端同步方向已冻结为“本地优先 + CloudKit 结构化同步优先 + iCloud Drive 备份保留”。
+- 下一步建议：进入 GOAL-1564，设计并实现基础同步元数据与冲突模型。
 
 ### ITER-107 v1.5.0 基础多端数据同步规划
 - 日期：2026-06-02
