@@ -83,6 +83,8 @@ struct LedgerCloudKitPushResult: Equatable {
 
 @MainActor
 struct LedgerCloudKitSyncAdapter {
+    private static let operationRecordLimit = 100
+
     let mode: LedgerCloudKitSyncMode
     let allowsLiveCloudKitWrites: Bool
 
@@ -159,19 +161,20 @@ struct LedgerCloudKitSyncAdapter {
         var savedRecordNames: [String] = []
         var deletedRecordNames: [String] = []
 
-        for record in recordsToSave {
+        for chunk in recordsToSave.chunked(into: Self.operationRecordLimit) {
             let partial: LedgerCloudKitPushResult
             do {
                 partial = try await modifyRecords(
-                    recordsToSave: [record],
+                    recordsToSave: chunk,
                     recordIDsToDelete: [],
                     dryRunResult: dryRunResult
                 )
             } catch {
-                let probeSummary = await diagnoseMinimalSave(for: record, dryRunResult: dryRunResult)
+                let firstRecord = chunk[0]
+                let probeSummary = await diagnoseMinimalSave(for: firstRecord, dryRunResult: dryRunResult)
                 throw LedgerCloudKitSyncError.recordSaveRejected(
-                    recordName: record.recordID.recordName,
-                    fieldSummary: Self.fieldSummary(for: record),
+                    recordName: firstRecord.recordID.recordName,
+                    fieldSummary: Self.fieldSummary(for: firstRecord),
                     probeSummary: probeSummary,
                     message: Self.describe(error)
                 )
@@ -179,17 +182,17 @@ struct LedgerCloudKitSyncAdapter {
             savedRecordNames.append(contentsOf: partial.savedRecordNames)
         }
 
-        for recordID in recordIDsToDelete {
+        for chunk in recordIDsToDelete.chunked(into: Self.operationRecordLimit) {
             let partial: LedgerCloudKitPushResult
             do {
                 partial = try await modifyRecords(
                     recordsToSave: [],
-                    recordIDsToDelete: [recordID],
+                    recordIDsToDelete: chunk,
                     dryRunResult: dryRunResult
                 )
             } catch {
                 throw LedgerCloudKitSyncError.recordDeleteRejected(
-                    recordName: recordID.recordName,
+                    recordName: chunk[0].recordName,
                     message: Self.describe(error)
                 )
             }
@@ -218,7 +221,7 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchTransactionRecordsFromDefaultZoneChanges()
+        return try await fetchTransactionRecords(cursor: nil, accumulated: [])
     }
 
     func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
@@ -434,40 +437,39 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
-    private func fetchTransactionRecordsFromDefaultZoneChanges(
-        previousServerChangeToken: CKServerChangeToken? = nil,
-        accumulated: [LedgerTransactionSyncPayload] = []
+    private func fetchTransactionRecords(
+        cursor: CKQueryOperation.Cursor?,
+        accumulated: [LedgerTransactionSyncPayload]
     ) async throws -> [LedgerTransactionSyncPayload] {
         try await withCheckedThrowingContinuation { continuation in
-            let zoneID = CKRecordZone.default().zoneID
-            let configuration = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
-            configuration.previousServerChangeToken = previousServerChangeToken
+            let operation: CKQueryOperation
+            if let cursor {
+                operation = CKQueryOperation(cursor: cursor)
+            } else {
+                let query = CKQuery(
+                    recordType: CloudLedgerSyncSchema.RecordType.transaction,
+                    predicate: NSPredicate(value: true)
+                )
+                operation = CKQueryOperation(query: query)
+            }
 
             var records = accumulated
-            let operation = CKFetchRecordZoneChangesOperation(
-                recordZoneIDs: [zoneID],
-                configurationsByRecordZoneID: [zoneID: configuration]
-            )
-
-            operation.recordChangedBlock = { record in
+            operation.resultsLimit = Self.operationRecordLimit
+            operation.recordFetchedBlock = { record in
                 if let payload = Self.mapPayload(from: record) {
                     records.append(payload)
                 }
             }
-
-            operation.recordZoneFetchCompletionBlock = { _, serverChangeToken, _, moreComing, error in
+            operation.queryCompletionBlock = { cursor, error in
                 if let error {
                     continuation.resume(throwing: error)
                     return
                 }
 
-                if moreComing, let serverChangeToken {
+                if let cursor {
                     Task {
                         do {
-                            let next = try await fetchTransactionRecordsFromDefaultZoneChanges(
-                                previousServerChangeToken: serverChangeToken,
-                                accumulated: records
-                            )
+                            let next = try await fetchTransactionRecords(cursor: cursor, accumulated: records)
                             continuation.resume(returning: next)
                         } catch {
                             continuation.resume(throwing: error)
@@ -580,5 +582,14 @@ struct LedgerCloudKitSyncAdapter {
             deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date,
             conflictState: SyncConflictState(rawValue: conflictStateString) ?? .clean
         )
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0 else { return [self] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
     }
 }

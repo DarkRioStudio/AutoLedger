@@ -1039,6 +1039,7 @@ extension LedgerStore {
     private static let lastBackupAtKey = "lastBackupAt"
     private static let lastBackupBundleIdKey = "lastBackupBundleId"
     private static let lastBackupErrorKey = "lastBackupError"
+    private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
 
     var isLocalDataEmptyForRestore: Bool {
         transactions.isEmpty &&
@@ -1155,6 +1156,7 @@ extension LedgerStore {
             customSources = bundle.customSources
             merchantAliases = bundle.merchantAliases
             saveRestoredUserDefaults(from: bundle)
+            clearCloudKitPushCheckpoint()
             refreshFromStore()
             reloadWidgets()
             lastImportSummary = "已从备份恢复：\(summaryText(for: bundle))"
@@ -1165,6 +1167,7 @@ extension LedgerStore {
             customSources = safetyBundle.customSources
             merchantAliases = safetyBundle.merchantAliases
             saveRestoredUserDefaults(from: safetyBundle)
+            clearCloudKitPushCheckpoint()
             refreshFromStore()
             throw error
         }
@@ -1196,12 +1199,15 @@ extension LedgerStore {
                 return
             }
 
+            let lastPushAt = lastSuccessfulCloudKitPushAt
             let localRecords = try sqlStore.loadTransactionSyncRecords(includeDeleted: true)
-            let batch = LedgerSyncPlanner.makePushBatch(from: localRecords)
-            ledgerCloudSyncStatus = "正在推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录..."
+            let batch = LedgerSyncPlanner.makePushBatch(from: localRecords, changedAfter: lastPushAt)
+            let pushMode = lastPushAt == nil ? "全量" : "增量"
+            ledgerCloudSyncStatus = "正在\(pushMode)推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录..."
             let pushResult: LedgerCloudKitPushResult
             do {
                 pushResult = try await adapter.push(batch: batch)
+                recordCloudKitPushCheckpoint(batch.generatedAt)
             } catch {
                 ledgerCloudSyncStatus = "CloudKit 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))"
                 return
@@ -1244,10 +1250,22 @@ extension LedgerStore {
 
             refreshFromStore()
             reloadWidgets()
-            ledgerCloudSyncStatus = "CloudKit 同步完成：推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。"
+            ledgerCloudSyncStatus = "CloudKit 同步完成：\(pushMode)推送 \(pushResult.savedRecordNames.count) 条，拉取 \(remotePayloads.count) 条，新增 \(inserted)，更新 \(updated)，删除 \(deleted)，保留本地 \(keptLocal)，冲突 \(conflicts)。"
         } catch {
             ledgerCloudSyncStatus = "CloudKit 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))"
         }
+    }
+
+    private var lastSuccessfulCloudKitPushAt: Date? {
+        UserDefaults.standard.object(forKey: Self.lastSuccessfulCloudKitPushAtKey) as? Date
+    }
+
+    private func recordCloudKitPushCheckpoint(_ date: Date) {
+        UserDefaults.standard.set(date, forKey: Self.lastSuccessfulCloudKitPushAtKey)
+    }
+
+    private func clearCloudKitPushCheckpoint() {
+        UserDefaults.standard.removeObject(forKey: Self.lastSuccessfulCloudKitPushAtKey)
     }
 
     func detectICloudBackupForRestore() {

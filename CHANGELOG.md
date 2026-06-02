@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 部分完成 GOAL-1565I CloudKit 全量 / 增量同步性能收口：根据真机错误确认 `_defaultZone` 不支持 `getChanges`，拉取回退到 `CKQueryOperation` 100 条分页；推送从诊断期单条 record operation 恢复为最多 100 条一批，并在本地保存 `lastSuccessfulCloudKitPushAt`，后续手动同步只推本机新增 / 修改 / tombstone 变更；备份恢复会清除 push checkpoint，避免恢复旧数据后漏推。
 - [2026-06-02 +0800] 部分完成 GOAL-1565H CloudKit 拉取索引依赖收口：根据真机回填确认 `LedgerTransaction` push / pull 已可成功，但旧拉取路径依赖 CloudKit Dashboard 中 `recordName` 标记为 Queryable；`LedgerCloudKitSyncAdapter` 改用 default zone changes 拉取远端账单，避免手动同步依赖 `recordName` query index，并记录首次全量同步慢、290 条同步统计与数据管理页当前计数口径不一致的问题待后续优化。
 - [2026-06-02 +0800] 部分完成 GOAL-1565G CloudKit 最小探针诊断：根据真机回填确认单条 `LedgerTransaction` 完整 record 仍被 `serverRejectedRequest` / `CKInternalErrorDomain 2000` 拒绝；`CKModifyRecordsOperation` 保存策略改为 `.allKeys`，完整保存失败后会用同 record type 写入最小探针 record 并尝试删除，用 `Probe: minimal-save ...` 区分容器 / record type 本身不可写，还是完整字段集合被拒绝。
 - [2026-06-02 +0800] 完成 GOAL-1594 平台无关解释器主链路收口规划：在 `versions/v1.5.0-plan.md` 记录当前 `LedgerTextInterpreterCore` 已存在但主入账链路仍主要用 App 层 `SmartReceiptParser` / `ReceiptParser` 产出最终结构化账单的事实；明确目标链路为 Core 候选实体提取与评分、可选本地 AI rerank、App adapter 只负责 OCR / provider / UI / 保存，并新增 GOAL-1595～1598 跟进 Core 候选模型、主链路切换、Intent / Share Extension 收口和平台规则迁移。

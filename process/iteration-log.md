@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1565H CloudKit 拉取索引依赖收口）
+更新日期：2026-06-02（v1.5.0 GOAL-1565I CloudKit 全量 / 增量同步性能收口）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-120 GOAL-1565I CloudKit 全量 / 增量同步性能收口
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 同步底座 / 性能
+- 目标：修复真机 `_defaultZone` 不支持 `getChanges` 导致的 CloudKit 拉取失败，并把手动同步从每次全量单条 push 收口为首轮全量、后续增量、每批最多 100 条。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift`：撤回 default zone changes 拉取，恢复 `CKQueryOperation` 分页拉取；query `resultsLimit` 设为 100；push 保存 / 删除 operation 改为 100 条一批。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：读取 `lastSuccessfulCloudKitPushAt` 作为 `LedgerSyncPlanner.changedAfter`；push 成功后记录 checkpoint；备份恢复会清除 checkpoint。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录真机错误、默认 zone 限制、全量 / 增量边界和验证结果。
+- 未改动范围：未迁移到 CloudKit custom zone；未修改 CloudKit record type、字段名、SQLite schema、entitlements、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 修复 `AppDefaultZone does not support getChanges call`：当前默认 zone 不再走 `CKFetchRecordZoneChangesOperation`。
+  - 首次安装本轮构建后，如果本机没有 checkpoint，会做一次全量 push；成功后保存 `lastSuccessfulCloudKitPushAt`。
+  - 第二次及之后手动同步只把 `sync metadata.updatedAt > lastSuccessfulCloudKitPushAt` 的本机记录放入 push batch。
+  - push operation 从诊断期单条 record 恢复为最多 100 条一批，降低 290 条账单场景的网络往返次数。
+- 未完成内容：pull 端仍是 query 全量分页，不是 server change token 增量；仍未实现后台自动同步、CloudKit subscription / silent push、同步健康页、统计分解 UI 或 iPad 真机拉取回填。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前 pull 依然依赖 CloudKit query schema / index 可用；真正的 pull 增量需要后续迁移到 custom record zone，或将 `updatedAt` Queryable 纳入 schema deploy 后用时间窗口 query。当前 checkpoint 只控制本机 push，不代表远端 pull token。
+- 回滚方式：回退本轮 batch chunk、query pull 恢复、`lastSuccessfulCloudKitPushAt` 读写和文档记录；本地账本数据不受影响。
+- 结论：GOAL-1565I 代码侧完成，可以重新安装到 iPhone / iPad 真机验证；预期第一次仍可能全量，第二次开始 push 应明显变少。
+- 下一步建议：iPhone 连续点两次 CloudKit 同步，观察第二次是否显示“增量推送 0 条”或只推新增变更；再到 iPad 执行同步验证拉取。
 
 ### ITER-119 GOAL-1565H CloudKit 拉取索引依赖收口
 - 日期：2026-06-02
