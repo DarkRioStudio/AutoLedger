@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 
 class ShareViewController: UIViewController {
 
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
+    private static let pendingLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     private let statusLabel = UILabel()
 
@@ -154,6 +157,7 @@ class ShareViewController: UIViewController {
 
             do {
                 try store.save(transaction: transaction)
+                self.markLedgerSaveNeedsCloudPush()
                 self.writeShareResult(ocrText: text, receipt: receiptForSave)
                 var msg = String(format: String(localized: "share.saved_format"), receiptForSave.merchant, receiptForSave.amount)
                 if multiReceipt {
@@ -192,7 +196,7 @@ class ShareViewController: UIViewController {
 
     /// 将最近一次分享导入的 OCR 文本 & 解析结果写入 App Group，供主 App 回前台时读取
     private func writeShareResult(ocrText: String, receipt: ImportedReceipt) {
-        guard let defaults = UserDefaults(suiteName: "group.top.darkrio326.AutoLedger") else { return }
+        guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier) else { return }
         defaults.set(ocrText, forKey: "share_lastOCRText")
         let receiptDict: [String: Any] = [
             "merchant": receipt.merchant,
@@ -205,6 +209,13 @@ class ShareViewController: UIViewController {
             "category": receipt.suggestedCategory.rawValue,
         ]
         defaults.set(receiptDict, forKey: "share_lastReceipt")
+    }
+
+    private func markLedgerSaveNeedsCloudPush() {
+        UserDefaults.standard.set(true, forKey: Self.pendingLedgerCloudPushKey)
+        guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier) else { return }
+        defaults.set(true, forKey: Self.pendingLedgerCloudPushKey)
+        defaults.synchronize()
     }
 
     private func finish(message: String) {

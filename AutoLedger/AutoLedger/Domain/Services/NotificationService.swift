@@ -15,20 +15,27 @@ final class NotificationService: Sendable {
     /// 略微延迟，避免与快捷指令完成瞬间的系统 UI 切换抢占展示
     static let quickLedgerNotificationDelay: TimeInterval = 1
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "NotificationService")
+    private static var appGroupDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
 
     private init() {}
 
     static var hasPendingIntentLedgerCloudPush: Bool {
-        UserDefaults.standard.bool(forKey: pendingIntentLedgerCloudPushKey)
+        UserDefaults.standard.bool(forKey: pendingIntentLedgerCloudPushKey) ||
+            (appGroupDefaults?.bool(forKey: pendingIntentLedgerCloudPushKey) ?? false)
     }
 
     static func markIntentLedgerSaveNeedsCloudPush() {
         UserDefaults.standard.set(true, forKey: pendingIntentLedgerCloudPushKey)
+        appGroupDefaults?.set(true, forKey: pendingIntentLedgerCloudPushKey)
     }
 
     static func clearIntentLedgerSaveNeedsCloudPush() {
         UserDefaults.standard.removeObject(forKey: pendingIntentLedgerCloudPushKey)
+        appGroupDefaults?.removeObject(forKey: pendingIntentLedgerCloudPushKey)
     }
 
     // MARK: - Permission

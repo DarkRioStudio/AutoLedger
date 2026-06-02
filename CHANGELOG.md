@@ -13,6 +13,7 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-02 +0800] 完成 GOAL-1565O Share Extension 记账 iCloud 补推链路：Share Extension 直写 App Group SQLite 成功后会在 App Group 中标记待推送账单；主 App 启动、回前台或外部入口通知触发时会同时检查标准 defaults 与 App Group 标记，成功增量推送到 iCloud 后统一清除标记；同步状态文案从“快捷指令”扩展为“外部入口”，覆盖快捷指令与分享扩展。
 - [2026-06-02 +0800] 完成 GOAL-1565N iCloud 配置快照同步：新增 `LedgerConfiguration` CloudKit record，用单个配置快照同步订阅、商户别名、分类修正、自定义分类 / 来源、订阅年费覆盖 / 备注和必要用户设置；本地配置变化会更新时间戳并触发增量推送，pull 时会按远端更新时间应用配置；旧 iCloud Drive 备份开关不会通过配置快照重新打开。
 - [2026-06-02 +0800] 完成 GOAL-1565M 快捷指令记账 iCloud 补推链路：QuickLedgerIntent、VoiceLedgerIntent、AddTransactionIntent 直写 SQLite 成功后会标记待推送账单并通知主 App；主 App 启动、回前台或收到 Intent 保存通知时会刷新本地账本并触发 iCloud 增量推送，推送成功后清除待推送标记。
 - [2026-06-02 +0800] 完成 GOAL-1565L iCloud 同步推拉职责拆分：App 启动改为只从 iCloud 拉取远端账本；账本页 / iPad 账本下拉刷新改为懒加载拉取；本地新增、编辑、删除、恢复、商户别名批量刷新账单后延迟触发增量推送；数据管理页“强制刷新数据”继续执行一次全量推送 + 拉取，用于人工排查和重拉。

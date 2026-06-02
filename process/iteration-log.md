@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 设置页导航环境注入崩溃修复）
+更新日期：2026-06-02（v1.5.0 GOAL-1565O Share Extension iCloud 补推链路）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-127 GOAL-1565O Share Extension iCloud 补推链路
+- 日期：2026-06-02
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：能力增强 / 同步底座 / Share Extension
+- 目标：补齐 Share Extension 直写 App Group SQLite 后的 iCloud 待推送链路，避免分享截图入账只落本机共享数据库、主 App 回前台后不主动把该笔账单推到 CloudKit。
+- 改动范围：
+  - `AutoLedger/ShareExtension/ShareViewController.swift`：分享扩展保存正式账单成功后，在 App Group `UserDefaults` 写入待推送标记；复用 App Group 常量写入最近一次 OCR / 解析结果。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：消费待推送标记时同时检查标准 `UserDefaults` 与 App Group `UserDefaults`；iCloud 增量推送成功后统一清除两个位置的标记。
+  - `AutoLedger/AutoLedger/Domain/Services/NotificationService.swift`：快捷指令 / App Intent 入口保留标准 defaults 标记，同时同步写入 App Group 标记，让所有外部入口共享同一补推语义。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：启动、外部入口通知和回前台的同步状态文案从“快捷指令”扩展为“外部入口”。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮补推链路与验证结果。
+- 未改动范围：未修改 CloudKit schema、record type、SQLite schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode project、workspace、scheme、target、Watch target、Widget target 或 Xcode Cloud 脚本；未把 CloudKit push 逻辑放入 Share Extension 进程。
+- 完成内容：
+  - Share Extension 入账成功后会留下跨进程可见的待推送标记。
+  - 主 App 下次启动或回前台会刷新本地账本，并在 iCloud 同步开启时尝试增量推送该笔外部入口账单。
+  - 推送失败或 iCloud 未开启时标记不会被清除，后续仍可重试；推送成功后统一清除标准 defaults 与 App Group defaults。
+  - 快捷指令和 Share Extension 现在共享“外部入口待推送”语义，后续也可接入其他扩展入口。
+- 未完成内容：未做真机 Share Extension -> 主 App -> iPad 拉取端到端复测；该链路仍依赖主 App 进程消费待推送标记，不在 Share Extension 内直接写 CloudKit。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`。
+  - PASS：`bash scripts/run_golden_regression.sh`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：App Group 标记需要主 App 与 Share Extension provisioning profile 均具备同一 App Group；若用户分享入账后长期不打开主 App，远端 iCloud 仍不会立即收到该笔账单。
+- 回滚方式：移除 Share Extension 保存成功后的待推送标记，`LedgerStore` 恢复只检查标准 `UserDefaults`，`NotificationService` 恢复只写标准 defaults。
+- 结论：GOAL-1565O 完成，Share Extension 直写账单后的 iCloud 补推链路已接入，编译与核心回归门禁通过。
+- 下一步建议：验证通过后进行 iPhone 真机分享截图入账 -> 打开主 App -> iPad 下拉刷新 smoke。
 
 ### ITER-126 设置页导航环境注入崩溃修复
 - 日期：2026-06-02

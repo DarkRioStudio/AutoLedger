@@ -76,7 +76,7 @@ private struct AutoLedgerRootView: View {
                 SupportPurchaseManager.shared.startTransactionListener()
                 Task {
                     await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
-                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "检测到快捷指令账单待推送，开始同步到 iCloud。")
+                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "检测到外部入口账单待推送，开始同步到 iCloud。")
                 }
                 // App 启动后台预热 Gemma（如已下载），避免首次推理时才加载
                 if LLMProvider.userSelected == .gemma {
@@ -86,14 +86,14 @@ private struct AutoLedgerRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
                 store.refreshFromStore()
                 Task {
-                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "快捷指令记账完成，开始推送 iCloud。")
+                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     store.refreshFromStore()
                     Task {
-                        await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推快捷指令账单。")
+                        await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
                     }
                     WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
                     if store.isLocalDataEmptyForRestore {

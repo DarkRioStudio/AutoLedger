@@ -1079,7 +1079,11 @@ extension LedgerStore {
     private static let lastSuccessfulCloudKitPushAtKey = "lastSuccessfulCloudKitPushAt"
     private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
+    private static var appGroupDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupIdentifier)
+    }
 
     var isLocalDataEmptyForRestore: Bool {
         transactions.isEmpty &&
@@ -1315,12 +1319,22 @@ extension LedgerStore {
         }
     }
 
-    func pushPendingIntentLedgerSaveIfNeeded(reason: String = "检测到快捷指令账单待推送，开始同步到 iCloud。") async {
-        guard UserDefaults.standard.bool(forKey: Self.pendingIntentLedgerCloudPushKey) else { return }
+    func pushPendingIntentLedgerSaveIfNeeded(reason: String = "检测到外部入口账单待推送，开始同步到 iCloud。") async {
+        guard hasPendingExternalLedgerCloudPush else { return }
         let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: reason)
         if didPush {
-            UserDefaults.standard.removeObject(forKey: Self.pendingIntentLedgerCloudPushKey)
+            clearPendingExternalLedgerCloudPush()
         }
+    }
+
+    private var hasPendingExternalLedgerCloudPush: Bool {
+        UserDefaults.standard.bool(forKey: Self.pendingIntentLedgerCloudPushKey) ||
+            (Self.appGroupDefaults?.bool(forKey: Self.pendingIntentLedgerCloudPushKey) ?? false)
+    }
+
+    private func clearPendingExternalLedgerCloudPush() {
+        UserDefaults.standard.removeObject(forKey: Self.pendingIntentLedgerCloudPushKey)
+        Self.appGroupDefaults?.removeObject(forKey: Self.pendingIntentLedgerCloudPushKey)
     }
 
     @discardableResult
