@@ -241,21 +241,16 @@ private struct WatchDailyExpenseWidgetView: View {
     }
 
     private var cornerView: some View {
-        Gauge(value: spendingProgress, in: 0...1) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(entry.snapshot.cornerAmount)
-                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .minimumScaleFactor(0.65)
+                .minimumScaleFactor(0.62)
                 .lineLimit(1)
-        } currentValueLabel: {
-            EmptyView()
-        } minimumValueLabel: {
-            EmptyView()
-        } maximumValueLabel: {
-            EmptyView()
+
+            SpendingCornerRangeBar(progress: spendingProgress)
         }
-        .gaugeStyle(.accessoryLinearCapacity)
-        .tint(spendingTint)
+        .frame(width: 42, height: 22, alignment: .leading)
         .widgetAccentable()
     }
 
@@ -304,6 +299,49 @@ private struct WatchDailyExpenseWidgetView: View {
         return entry.snapshot.transactionCount == 0
             ? WatchLedgerWidgetCopy.emptyTitle
             : WatchLedgerWidgetCopy.countText(entry.snapshot.transactionCount)
+    }
+}
+
+private struct SpendingCornerRangeBar: View {
+    let progress: Double
+
+    private var clampedProgress: Double {
+        min(max(progress, 0), 1)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(proxy.size.width, 1)
+            let dotSize: CGFloat = 5
+            let dotX = min(max(width * clampedProgress, dotSize / 2), width - dotSize / 2)
+
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .green,
+                                .yellow,
+                                .orange,
+                                .red
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .opacity(0.82)
+                    .frame(height: 6)
+
+                Circle()
+                    .fill(.white)
+                    .frame(width: dotSize, height: dotSize)
+                    .shadow(radius: 1, y: 0.5)
+                    .offset(x: dotX - dotSize / 2)
+            }
+            .frame(width: width, height: proxy.size.height, alignment: .leading)
+        }
+        .frame(width: 38, height: 7)
+        .accessibilityHidden(true)
     }
 }
 

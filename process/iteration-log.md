@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 iPad 批量导入 UI）
+更新日期：2026-06-03（v1.5.0 Watch accessory corner 样式修正）
 
 ## 记录规则
 
@@ -43,6 +43,28 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-139 Watch accessory corner 样式修正
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / iPhone 与 Watch Widget
+- 类型：Bugfix / Widget / watchOS
+- 目标：根据真机表盘截图修正 Apple Watch accessory corner 组件，让今日支出金额与支出程度条更接近系统天气角落组件的读数结构。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从系统 `Gauge` label 布局改为自定义金额读数、细渐变范围条和白色定位点。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录真机反馈修正与验证结果。
+- 未改动范围：未修改 Widget family、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、WatchConnectivity、App Group 快照数据源或 Xcode Cloud 脚本。
+- 完成内容：
+  - accessory corner 不再把金额作为 `Gauge` label 显示在条形外侧。
+  - 金额单独作为角落读数展示。
+  - 支出程度条隐藏上下限，并用白色圆点标记当前位置。
+- 未完成内容：尚未在真实 Apple Watch 上重新安装并目检该 corner 样式；当前只完成代码侧修正。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：accessory corner 实际排版受表盘角落裁切影响，仍需真机表盘目检；如果圆点或条形仍被系统压缩，下一轮应进一步缩短宽度和字体。
+- 回滚方式：将 `cornerView` 恢复为原 `Gauge(value:in:)` 实现，删除 `SpendingCornerRangeBar`，并回退文档记录。
+- 结论：代码侧已按真机反馈修正 accessory corner 样式。
+- 下一步建议：重新 Run Watch App / Widget 后，在真实 Apple Watch 表盘添加 corner complication 目检。
 
 ### ITER-138 GOAL-1541 iPad 批量导入 UI
 - 日期：2026-06-03
