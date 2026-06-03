@@ -14,6 +14,8 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-03 +0800] 完成 GOAL-1570 Mac Catalyst 接入评估：确认当前主 App 仍为 iPhone + iPad，`SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"` 且 `SUPPORTS_MACCATALYST = NO`；本轮不启用 Catalyst、不改 target / scheme / signing / entitlements / Xcode Cloud 配置，只输出 Mac 复用资产、依赖风险、文件权限、菜单快捷键、大表格和批量导入依赖清单；建议先完成 GOAL-1540 批量导入队列，再进入 GOAL-1571 Mac 拖拽导入。
+- [2026-06-03 +0800] 收尾 GOAL-1566 Watch / Widget / 展示端同步快照：将 Watch / Widget 的同步后稳定快照、更新时间、过期提示和 Watch 第二屏标题修复作为最小闭环完成；tvOS / visionOS 展示端不继续放在 1566 内扩张，转入 GOAL-1580～1583 单独设计与实现评估；发布前仍保留 iPhone Widget / Today View / Apple Watch 真机 smoke。
 - [2026-06-02 +0800] 部分完成 GOAL-1566A Watch / Widget 同步快照元数据：主 App 在 App Group 记录本机账本快照更新时间和 iCloud 最近成功同步时间；Watch 今日支出 payload 改用该快照时间并携带过期状态；Widget 读取同一 App Group 元数据，今日支出 / 月报小组件在同步可能过期时显示轻量“较旧 / Stale”提示，避免只读端把 timeline 刷新时间误当作账本数据时间。
 - [2026-06-02 +0800] 收尾 GOAL-1565 iPhone / iPad 基础 iCloud 同步闭环：将 GOAL 队列中的 1565 从“部分完成”改为“已完成”，明确已覆盖正式账单、软删除、主要配置、App Intents 和 Share Extension 外部入口补推；Mac Catalyst 复用验证转入 GOAL-1570，Watch / Widget / 展示端快照转入 GOAL-1566，CloudKit custom zone / silent push / 配置逐条 record 不再作为 1565 blocker。
 - [2026-06-02 +0800] 完成 GOAL-1565O Share Extension 记账 iCloud 补推链路：Share Extension 直写 App Group SQLite 成功后会在 App Group 中标记待推送账单；主 App 启动、回前台或外部入口通知触发时会同时检查标准 defaults 与 App Group 标记，成功增量推送到 iCloud 后统一清除标记；同步状态文案从“快捷指令”扩展为“外部入口”，覆盖快捷指令与分享扩展。

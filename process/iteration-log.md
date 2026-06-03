@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 iCloud 同步真机体验修复）
+更新日期：2026-06-03（v1.5.0 GOAL-1566 收尾与 GOAL-1570 Mac Catalyst 接入评估）
 
 ## 记录规则
 
@@ -43,6 +43,53 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-132 GOAL-1570 Mac Catalyst 接入评估
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：文档 / 架构评估 / 发布链保护
+- 目标：评估当前 iPad 工作台和同步底座推进到 Mac Catalyst 的可行性，输出复用资产、配置现状、主要风险和后续实施顺序，同时保护 iPhone / iPad / Watch 现有发布链。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：将 GOAL-1570 标记为已完成，新增 `13.41 GOAL-1570 Mac Catalyst 接入评估`，记录当前 Xcode 配置、可复用资产、Catalyst 风险、文件权限、菜单快捷键、大表格和推荐实施顺序。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮评估结果。
+- 未改动范围：未修改 Swift 源码、Xcode project 配置、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 CocoaPods 配置；未开启 `SUPPORTS_MACCATALYST`。
+- 完成内容：
+  - 确认主 App 当前仍为 iPhone + iPad，`SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"`，`SUPPORTS_MACCATALYST = NO`。
+  - 确认可复用资产包括 `AutoLedgerCore`、SQLite 正式账本与同步元数据、CloudKit private database 同步策略、BackupBundle、iPad `NavigationSplitView` 工作台和现有回归脚本。
+  - 记录主要风险：MediaPipe / CocoaPods Catalyst 可用性、Mac 文件权限、导入队列缺失、菜单命令、大表格密度、同步性能和发布签名验证。
+  - 明确推荐顺序：先完成 GOAL-1540 批量导入队列，再进入 GOAL-1571 Mac 拖拽导入，随后推进 CSV / JSON、菜单快捷键、大表格和重复检查。
+- 未完成内容：未做 Catalyst build smoke；未开启 Mac destination；未实现 Mac 拖拽导入、菜单、快捷键或大表格。
+- 测试情况：
+  - PASS：`xcodebuild -list -workspace AutoLedger/AutoLedger.xcworkspace`，workspace 可列出 `AutoLedger`、`AutoLedgerCore`、Watch App、Widget、Control Widget、Pods、ReceiptDebugTool 和 ShareExtension schemes。
+- 风险与注意事项：GOAL-1570 是评估完成，不代表 Mac Catalyst 已可构建或可发布；任何开启 Catalyst 的变更都应在独立分支先做 smoke。
+- 回滚方式：恢复 `versions/v1.5.0-plan.md` 的 GOAL-1570 状态与新增评估章节，移除对应 CHANGELOG / iteration-log 条目。
+- 结论：GOAL-1570 完成，当前 main 保持 iPhone / iPad / Watch 发布链不变；Mac Catalyst 下一步不应直接启用，而应先补批量导入队列。
+- 下一步建议：回到依赖顺序先执行 GOAL-1540 批量导入队列模型，随后再进入 GOAL-1571 Mac 拖拽导入。
+
+### ITER-131 GOAL-1566 Watch / Widget 同步快照收尾
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：文档 / 治理 / Watch / Widget
+- 目标：把 GOAL-1566 从 Watch / Widget 快照元数据的部分完成状态收口为最小闭环完成，并将 tvOS / visionOS 展示端从 1566 中拆出给后续独立 GOAL。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：将 GOAL-1566 标记为已完成，新增 `13.40 GOAL-1566 收尾结论`，记录已完成范围、不再纳入 1566 的范围、真机检查口径和收尾判断。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮收尾决策。
+- 未改动范围：未修改 Swift 源码、WatchConnectivity payload schema、Widget target、CloudKit schema、SQLite schema、entitlements、Bundle ID、App Group、iCloud Container、Xcode project、workspace、scheme、target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 确认 Watch 今日支出、Watch 最近支出、Widget 今日支出 / 月报小组件都读取主 App 同步后的本机稳定快照或 App Group 元数据。
+  - 确认 Watch / Widget 已具备快照更新时间和轻量过期提示。
+  - 确认 Watch 第二屏标题修复已纳入 1566 收尾范围。
+  - 明确 tvOS / visionOS 展示端由 GOAL-1580～1583 单独承接，不作为 1566 的继续扩张项。
+- 未完成内容：发布前仍需用户执行 iPhone Widget / Today View / Apple Watch 真机 smoke；未实现 tvOS / visionOS target。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - 说明：本轮为文档治理；承接上一轮已通过的离线回归和 generic iOS build。
+- 风险与注意事项：GOAL-1566 的“已完成”指 Watch / Widget 最小同步快照闭环完成，不代表 tvOS / visionOS 已实现，也不代表 Watch 拥有完整 CloudKit 同步。
+- 回滚方式：恢复 GOAL-1566 队列状态和新增收尾章节，移除对应 CHANGELOG / iteration-log 条目。
+- 结论：GOAL-1566 可以收尾，避免基础同步目标继续扩张；后续进入 Mac Catalyst 评估和只读展示端独立设计。
+- 下一步建议：执行 GOAL-1570 Mac Catalyst 接入评估。
 
 ### ITER-130 iCloud 同步真机体验修复
 - 日期：2026-06-03
