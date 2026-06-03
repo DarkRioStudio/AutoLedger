@@ -31,6 +31,11 @@
 "ipad.workspace.cleaning.item.merchant" = "Merchant unification: merge different merchant spellings.";
 "ipad.workspace.cleaning.item.category" = "Category cleanup: adjust related transactions in batches.";
 "ipad.workspace.cleaning.item.duplicates" = "Duplicate detection: flag likely duplicates by amount, time, and merchant.";
+"ipad.analysis.title" = "Spending Analysis";
+"ipad.analysis.metric.transactions.detail" = "Selected month";
+"ipad.analysis.metric.top_merchant.detail" = "Highest spending this month";
+"ipad.analysis.month_detail" = "Month Summary";
+"ipad.analysis.month_detail.note" = "Uses the same basis as iPhone Reports: selected month, official transactions, and the local ledger snapshot.";
 
 "common.close" = "Close";
 "common.cancel" = "Cancel";

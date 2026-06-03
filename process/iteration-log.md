@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 watchOS 表盘小组件 target 接入）
+更新日期：2026-06-03（v1.5.0 iPad 统计分析基础页）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-136 GOAL-1532 iPad 统计分析基础页
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 3 / iPad 工作台
+- 类型：能力增强 / iPad / 统计分析
+- 目标：在第一批、第二批代码侧完成后进入第三批剩余 GOAL，为 iPad 工作台补齐基础统计分析页，并保持 iPhone 月报原路径不回退。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：将 iPad 侧“分析”入口切换为 `IPadReportWorkspaceView`，新增宽屏布局，复用 `MonthlySnapshot` 展示当前月份总支出、账单数、Top 商户、商户数、分类占比、近 6 个月趋势和本月摘要。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐 iPad 分析页新增文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1532 完成范围和验证结果。
+- 未改动范围：未修改 iPhone `ReportView`、`MonthlySnapshot` 统计模型、SQLite schema、CloudKit 同步、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme、target 或 Xcode Cloud 脚本。
+- 完成内容：
+  - iPad 工作台“分析”页拥有独立宽屏统计视图，不再直接套用 iPhone 月报纵向页面。
+  - 统计口径继续复用 `MonthlySnapshot.build(from:referenceDate:)`，与 iPhone 月报保持一致。
+  - 支持月份前后切换；未来月份按钮禁用。
+  - 分类占比与 Top 商户以进度条展示，近 6 个月趋势使用 Charts BarMark，点击月份可查看该月金额和账单数。
+- 未完成内容：未新增 iPad 专属截图管线；未新增统计模型测试；未进入批量导入队列、候选账单或数据清洗实现。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前验证为 generic iOS build，尚未在真机 iPad 横竖屏目检；iPad 分析页依赖现有 `MonthlySnapshot`，因此任何统计口径修正仍应优先在 Core 层处理。
+- 回滚方式：将 iPad `.reports` detail 从 `IPadReportWorkspaceView()` 切回 `ReportView()`，删除新增 iPad 分析子视图和对应本地化 key，并回退文档记录。
+- 结论：GOAL-1532 代码侧完成，第三批 iPad 工作台的基础统计分析页已具备可构建的第一版。
+- 下一步建议：进入 GOAL-1540，先实现批量导入队列模型，让 iPad 导入、Mac 拖拽导入和候选账单复核都有共同落点。
 
 ### ITER-135 GOAL-1521B2 watchOS 表盘小组件 target 接入
 - 日期：2026-06-03

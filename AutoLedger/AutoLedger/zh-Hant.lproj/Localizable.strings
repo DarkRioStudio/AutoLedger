@@ -31,6 +31,11 @@
 "ipad.workspace.cleaning.item.merchant" = "商戶統一：合併不同寫法。";
 "ipad.workspace.cleaning.item.category" = "分類修正：批次調整同類帳單。";
 "ipad.workspace.cleaning.item.duplicates" = "重複檢測：按金額、時間和商戶提示疑似重複。";
+"ipad.analysis.title" = "消費分析";
+"ipad.analysis.metric.transactions.detail" = "目前篩選月份";
+"ipad.analysis.metric.top_merchant.detail" = "本月消費最高";
+"ipad.analysis.month_detail" = "本月摘要";
+"ipad.analysis.month_detail.note" = "統計口徑與 iPhone 月報保持一致：按目前月份、正式帳單和本地帳本快照計算。";
 
 "common.close" = "關閉";
 "common.cancel" = "取消";

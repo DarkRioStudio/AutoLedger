@@ -1,4 +1,5 @@
 import AutoLedgerCore
+import Charts
 import SwiftUI
 
 private enum IPadWorkspaceSection: String, CaseIterable, Identifiable {
@@ -108,7 +109,7 @@ struct IPadWorkspaceView: View {
         case .ledger:
             IPadLedgerWorkspaceView()
         case .reports:
-            ReportView()
+            IPadReportWorkspaceView()
         case .reviewQueue:
             IPadPlanningWorkspaceView(
                 titleKey: "ipad.workspace.review_queue",
@@ -308,6 +309,391 @@ private struct IPadWorkspaceOverviewView: View {
             .font(.subheadline)
             .foregroundStyle(AppTheme.mutedInk)
             .frame(maxWidth: .infinity, minHeight: 80)
+    }
+}
+
+private struct IPadReportWorkspaceView: View {
+    @EnvironmentObject private var store: LedgerStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var selectedMonth: Date = .now
+    @State private var selectedTrendLabel: String?
+
+    private var snapshot: MonthlySnapshot {
+        MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)
+    }
+
+    private var isCurrentMonth: Bool {
+        AppFormatters.calendar.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+                    metricGrid
+                    analysisGrid
+                }
+                .padding(24)
+            }
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle("ipad.workspace.reports")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        stepMonth(by: -1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .fontWeight(.semibold)
+                    }
+                    .accessibilityLabel(Text("ledger.filter.previous_month"))
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        stepMonth(by: 1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(isCurrentMonth)
+                    .opacity(isCurrentMonth ? 0.35 : 1)
+                    .accessibilityLabel(Text("ledger.filter.next_month"))
+                }
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("ipad.analysis.title")
+                    .font(.largeTitle.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Text(snapshot.monthLabel)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Spacer()
+
+            Text(AppFormatters.currency(snapshot.totalExpense))
+                .font(.system(size: 42, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.accent)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+        }
+        .padding(22)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var metricGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 4), spacing: 14) {
+            MetricCard(
+                title: String(localized: "report.summary.transactions"),
+                value: transactionCountText(snapshot.transactionCount),
+                detail: String(localized: "ipad.analysis.metric.transactions.detail"),
+                accent: AppTheme.accent
+            )
+
+            MetricCard(
+                title: String(localized: "report.summary.top1"),
+                value: snapshot.topMerchant,
+                detail: String(localized: "ipad.analysis.metric.top_merchant.detail"),
+                accent: AppTheme.accentSecondary
+            )
+
+            MetricCard(
+                title: String(localized: "report.summary.merchant_count"),
+                value: merchantCountText(snapshot.topMerchantMetrics.count),
+                detail: String(localized: "report.top_merchants.title"),
+                accent: Color(red: 0.33, green: 0.35, blue: 0.78)
+            )
+
+            MetricCard(
+                title: String(localized: "report.category_breakdown.title"),
+                value: snapshot.categoryBreakdown.first?.title ?? String(localized: "report.all_categories"),
+                detail: snapshot.categoryBreakdown.first.map { percentageText($0.ratio) } ?? String(localized: "report.empty.month"),
+                accent: snapshot.categoryBreakdown.first?.tint ?? AppTheme.accent
+            )
+        }
+    }
+
+    private var analysisGrid: some View {
+        Grid(horizontalSpacing: 18, verticalSpacing: 18) {
+            GridRow {
+                categoryPanel
+                trendPanel
+            }
+
+            GridRow {
+                topMerchantPanel
+                recentMonthPanel
+            }
+        }
+    }
+
+    private var categoryPanel: some View {
+        analysisPanel(titleKey: "report.category_breakdown.title") {
+            if snapshot.categoryBreakdown.isEmpty {
+                emptyState("report.empty.month")
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(snapshot.categoryBreakdown.prefix(6)) { metric in
+                        IPadAnalysisProgressRow(
+                            title: metric.title,
+                            value: AppFormatters.currency(metric.total),
+                            ratioText: percentageText(metric.ratio),
+                            ratio: metric.ratio,
+                            tint: metric.tint,
+                            systemImage: metric.iconName
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var trendPanel: some View {
+        analysisPanel(titleKey: "report.six_month_trend.title") {
+            VStack(alignment: .leading, spacing: 12) {
+                Chart(snapshot.monthlyTrend) { metric in
+                    BarMark(
+                        x: .value(String(localized: "report.chart.month"), metric.label),
+                        y: .value(String(localized: "report.chart.expense"), metric.total)
+                    )
+                    .foregroundStyle(metric.isCurrentMonth ? AppTheme.accentSecondary : AppTheme.accent)
+                    .opacity(selectedTrendLabel == nil || selectedTrendLabel == metric.label ? 1 : 0.36)
+                }
+                .chartLegend(.hidden)
+                .frame(height: 230)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(.clear)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onEnded { value in
+                                        guard let plotFrame = proxy.plotFrame else { return }
+                                        let xInPlot = value.location.x - geo[plotFrame].origin.x
+                                        if let tapped: String = proxy.value(atX: xInPlot) {
+                                            withOptionalAnimation {
+                                                selectedTrendLabel = selectedTrendLabel == tapped ? nil : tapped
+                                            }
+                                        }
+                                    }
+                            )
+                    }
+                }
+
+                HStack {
+                    let activeMetric = selectedTrendLabel.flatMap { label in
+                        snapshot.monthlyTrend.first { $0.label == label }
+                    } ?? snapshot.monthlyTrend.last
+
+                    Text(activeMetric?.label ?? snapshot.monthLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(AppFormatters.currency(activeMetric?.total ?? snapshot.totalExpense))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(transactionCountText(activeMetric?.transactionCount ?? snapshot.transactionCount))
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                }
+            }
+        }
+    }
+
+    private var topMerchantPanel: some View {
+        analysisPanel(titleKey: "report.top_merchants.title") {
+            if snapshot.topMerchantMetrics.isEmpty {
+                emptyState("report.top_merchants.empty")
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(Array(snapshot.topMerchantMetrics.prefix(6).enumerated()), id: \.element.id) { index, metric in
+                        IPadAnalysisProgressRow(
+                            title: metric.merchant,
+                            value: AppFormatters.currency(metric.total),
+                            ratioText: transactionCountText(metric.transactionCount),
+                            ratio: metric.ratio,
+                            tint: index == 0 ? AppTheme.accentSecondary : AppTheme.accent,
+                            rank: index + 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var recentMonthPanel: some View {
+        analysisPanel(titleKey: "ipad.analysis.month_detail") {
+            VStack(alignment: .leading, spacing: 14) {
+                IPadAnalysisDetailRow(
+                    titleKey: "report.summary.transactions",
+                    value: transactionCountText(snapshot.transactionCount)
+                )
+                IPadAnalysisDetailRow(
+                    titleKey: "report.summary.top1",
+                    value: snapshot.topMerchant
+                )
+                IPadAnalysisDetailRow(
+                    titleKey: "report.summary.merchant_count",
+                    value: merchantCountText(snapshot.topMerchantMetrics.count)
+                )
+                IPadAnalysisDetailRow(
+                    titleKey: "report.category_breakdown.title",
+                    value: snapshot.categoryBreakdown.first?.title ?? String(localized: "report.all_categories")
+                )
+                Divider()
+                Text("ipad.analysis.month_detail.note")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+    }
+
+    private func analysisPanel<Content: View>(
+        titleKey: LocalizedStringKey,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(titleKey)
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+
+            content()
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 330, alignment: .topLeading)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func emptyState(_ textKey: LocalizedStringKey) -> some View {
+        Text(textKey)
+            .font(.subheadline)
+            .foregroundStyle(AppTheme.mutedInk)
+            .frame(maxWidth: .infinity, minHeight: 180, alignment: .center)
+    }
+
+    private func stepMonth(by value: Int) {
+        guard let next = AppFormatters.calendar.date(byAdding: .month, value: value, to: selectedMonth) else { return }
+        withOptionalAnimation {
+            selectedMonth = next
+            selectedTrendLabel = nil
+        }
+    }
+
+    private func withOptionalAnimation(_ body: () -> Void) {
+        if reduceMotion {
+            body()
+        } else {
+            withAnimation(.easeInOut(duration: 0.18), body)
+        }
+    }
+
+    private func transactionCountText(_ count: Int) -> String {
+        String(format: String(localized: "report.transaction_count_format"), count)
+    }
+
+    private func merchantCountText(_ count: Int) -> String {
+        String(format: String(localized: "report.merchant_count_format"), count)
+    }
+
+    private func percentageText(_ ratio: Double) -> String {
+        String(format: String(localized: "report.percentage_format"), Int((ratio * 100).rounded()))
+    }
+}
+
+private struct IPadAnalysisProgressRow: View {
+    let title: String
+    let value: String
+    let ratioText: String
+    let ratio: Double
+    let tint: Color
+    var systemImage: String?
+    var rank: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                if let rank {
+                    Text("\(rank)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(tint))
+                } else if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(tint)
+                        .frame(width: 26, height: 26)
+                        .background(tint.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                        .lineLimit(1)
+                    Text(ratioText)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Text(value)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(tint.opacity(0.12))
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: max(proxy.size.width * min(max(ratio, 0), 1), 8))
+                }
+            }
+            .frame(height: 7)
+            .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct IPadAnalysisDetailRow: View {
+    let titleKey: LocalizedStringKey
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(titleKey)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
     }
 }
 

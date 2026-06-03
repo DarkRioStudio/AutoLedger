@@ -15,6 +15,7 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-03 +0800] 完成 GOAL-1532 iPad 统计分析基础页：iPad 工作台“分析”页从直接复用 iPhone `ReportView` 改为专用宽屏分析视图，复用 `MonthlySnapshot` 统计口径，按当前月份展示总支出、账单数、Top 商户、分类占比、近 6 个月趋势和本月摘要；补齐中英繁本地化，不修改 iPhone 月报路径、SQLite schema、Bundle ID、entitlements 或 Xcode Cloud 配置。
 - [2026-06-03 +0800] 完成 GOAL-1521B2 watchOS 表盘小组件 target 接入：新增 `AutoLedgerWatchWidgetsExtension` 源码目录与 `AutoLedgerWatchWidgetsExtensionExtension` target，嵌入 `AutoLedgerWatch Watch App`，复用 `group.top.darkrio326.AutoLedger` App Group；Watch App 收到 iPhone 今日支出同步 payload 后写入轻量 Widget 快照并刷新 timeline，表盘小组件以 accessory inline / circular / rectangular / corner 展示今日支出、笔数、最近商户和待同步状态，其中圆形样式只显示金额。模板 Control Widget / Emoji 示例代码已移除，未修改既有主 App / Watch App Bundle ID、DEVELOPMENT_TEAM、iCloud Container 或 Xcode Cloud 主链路。
 - [2026-06-03 +0800] 调整 watchOS 表盘小组件视觉：accessory corner 改为参考天气组件的线性彩色支出程度条，将短金额放到系统角落主读数位置并隐藏 current / min / max 标签，避免金额被裁切；accessory circular 继续只显示金额并复用同一支出程度色彩，accessory rectangular 内容改为填满可用区域并左对齐；Widget 展示名、描述、待同步、空状态等文案补齐简体中文、英文、繁体中文本地化。
 - [2026-06-03 +0800] 推进第二批 GOAL-1521B1 Widget 点击路径：`DailyExpenseWidget` 增加 `autoledger://ledger/today` deep link，主 App 根视图接收后复用现有账本页导航状态，iPhone 桌面 / 负一屏今日支出小组件点击后进入账本页；本轮不新增 watchOS WidgetKit extension target，不修改 Bundle ID / signing / entitlements，真正 Apple Watch 表盘 target 仍需后续受控推进。
