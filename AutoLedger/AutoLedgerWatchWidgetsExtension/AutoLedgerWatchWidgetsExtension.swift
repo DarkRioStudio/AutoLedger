@@ -241,17 +241,34 @@ private struct WatchDailyExpenseWidgetView: View {
     }
 
     private var cornerView: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        ZStack {
+            AccessoryWidgetBackground()
             Text(entry.snapshot.cornerAmount)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
                 .monospacedDigit()
-                .minimumScaleFactor(0.62)
+                .minimumScaleFactor(0.55)
                 .lineLimit(1)
-
-            SpendingCornerRangeBar(progress: spendingProgress)
+                .widgetAccentable()
         }
-        .frame(width: 42, height: 22, alignment: .leading)
-        .widgetAccentable()
+        .widgetLabel {
+            Gauge(value: spendingProgress, in: 0...1) {
+                EmptyView()
+            } currentValueLabel: {
+                EmptyView()
+            } minimumValueLabel: {
+                EmptyView()
+            } maximumValueLabel: {
+                EmptyView()
+            }
+            .tint(
+                LinearGradient(
+                    colors: [.green, .yellow, .orange, .red],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .accessibilityLabel(WatchLedgerWidgetCopy.title)
+        }
     }
 
     private var rectangularView: some View {
@@ -299,49 +316,6 @@ private struct WatchDailyExpenseWidgetView: View {
         return entry.snapshot.transactionCount == 0
             ? WatchLedgerWidgetCopy.emptyTitle
             : WatchLedgerWidgetCopy.countText(entry.snapshot.transactionCount)
-    }
-}
-
-private struct SpendingCornerRangeBar: View {
-    let progress: Double
-
-    private var clampedProgress: Double {
-        min(max(progress, 0), 1)
-    }
-
-    var body: some View {
-        GeometryReader { proxy in
-            let width = max(proxy.size.width, 1)
-            let dotSize: CGFloat = 5
-            let dotX = min(max(width * clampedProgress, dotSize / 2), width - dotSize / 2)
-
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                .green,
-                                .yellow,
-                                .orange,
-                                .red
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .opacity(0.82)
-                    .frame(height: 6)
-
-                Circle()
-                    .fill(.white)
-                    .frame(width: dotSize, height: dotSize)
-                    .shadow(radius: 1, y: 0.5)
-                    .offset(x: dotX - dotSize / 2)
-            }
-            .frame(width: width, height: proxy.size.height, alignment: .leading)
-        }
-        .frame(width: 38, height: 7)
-        .accessibilityHidden(true)
     }
 }
 

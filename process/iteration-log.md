@@ -51,18 +51,20 @@
 - 类型：Bugfix / Widget / watchOS
 - 目标：根据真机表盘截图修正 Apple Watch accessory corner 组件，让今日支出金额与支出程度条更接近系统天气角落组件的读数结构。
 - 改动范围：
-  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从系统 `Gauge` label 布局改为自定义金额读数、细渐变范围条和白色定位点。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从角落内容区自绘范围条改为 `.widgetLabel { Gauge(...) }`，让 watch face 负责沿表盘边缘渲染支出程度条；角落主体只保留今日金额读数。
   - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录真机反馈修正与验证结果。
 - 未改动范围：未修改 Widget family、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、WatchConnectivity、App Group 快照数据源或 Xcode Cloud 脚本。
 - 完成内容：
-  - accessory corner 不再把金额作为 `Gauge` label 显示在条形外侧。
+  - accessory corner 不再在小内容区域内自绘水平支出条。
   - 金额单独作为角落读数展示。
-  - 支出程度条隐藏上下限，并用白色圆点标记当前位置。
-- 未完成内容：尚未在真实 Apple Watch 上重新安装并目检该 corner 样式；当前只完成代码侧修正。
+  - 支出程度条通过系统 `widgetLabel` Gauge 提供给表盘边缘渲染，并隐藏 current / min / max 可见文字。
+- 未完成内容：尚未在真实 Apple Watch 或 Apple Watch Simulator 表盘上手动添加 corner complication 目检边缘渲染；当前完成代码侧修正与构建验证。
 - 测试情况：
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
-- 风险与注意事项：accessory corner 实际排版受表盘角落裁切影响，仍需真机表盘目检；如果圆点或条形仍被系统压缩，下一轮应进一步缩短宽度和字体。
-- 回滚方式：将 `cornerView` 恢复为原 `Gauge(value:in:)` 实现，删除 `SpendingCornerRangeBar`，并回退文档记录。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 3 (49mm)' build`。
+  - PARTIAL：Apple Watch Ultra 3 Simulator 中 Watch App bundle 可安装并可 launch；CLI 截图停在模拟器主屏，未能自动完成表盘 corner complication 添加与边缘样式截图。
+- 风险与注意事项：`simctl` 当前没有直接把指定 complication 自动添加到表盘角落的命令，边缘渲染仍需手动在表盘上添加后目检；如果系统仍不显示边缘 Gauge，下一轮应检查该表盘是否支持 corner label Gauge。
+- 回滚方式：将 `cornerView` 恢复为上一版 `Gauge(value:in:)` 或自绘实现，并回退文档记录。
 - 结论：代码侧已按真机反馈修正 accessory corner 样式。
 - 下一步建议：重新 Run Watch App / Widget 后，在真实 Apple Watch 表盘添加 corner complication 目检。
 
