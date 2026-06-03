@@ -37,6 +37,7 @@ struct OfflineRegression {
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
+        verifyBatchImportQueue(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
@@ -611,6 +612,100 @@ struct OfflineRegression {
         )
         reporter.check(incrementalBatch.upserts.isEmpty, "LedgerSyncPlanner filters unchanged active records by changedAfter")
         reporter.check(incrementalBatch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps changed tombstones after changedAfter")
+    }
+
+    private static func verifyBatchImportQueue(reporter: RegressionReporter) {
+        let batchID = UUID(uuidString: "00000000-0000-0000-0000-000000001540") ?? UUID()
+        let rawInputID = UUID(uuidString: "00000000-0000-0000-0000-000000001541") ?? UUID()
+        let itemID = UUID(uuidString: "00000000-0000-0000-0000-000000001542") ?? UUID()
+        let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001543") ?? UUID()
+        let now = Date(timeIntervalSince1970: 1_780_100_000)
+        let later = Date(timeIntervalSince1970: 1_780_100_600)
+        let batch = BatchImportBatch(
+            id: batchID,
+            sourceKind: .text,
+            itemCount: 1,
+            createdAt: now,
+            updatedAt: now
+        )
+        let rawInput = BatchRawInput(
+            id: rawInputID,
+            batchID: batch.id,
+            sourceKind: .text,
+            originalFileName: "sample_receipt_01.txt",
+            inputHash: "sample-hash-001",
+            rawText: "Demo Coffee\nAmount ¥18.00",
+            createdAt: now,
+            updatedAt: now
+        )
+        let rawItem = BatchImportQueueItem.rawInput(rawInput: rawInput, id: itemID, createdAt: now)
+        reporter.check(rawItem.state == .rawInput, "BatchImportQueue creates raw input item")
+        reporter.check(rawItem.rawInputID == rawInput.id, "BatchImportQueue links item to raw input")
+        reporter.check(!rawItem.isOfficialTransaction, "BatchImportQueue raw input does not enter official ledger")
+
+        let draft = TransactionDraft(
+            amount: 18,
+            merchant: "Demo Coffee",
+            category: TransactionCategory.dining.rawValue,
+            occurredAt: later,
+            sourceType: .ocr,
+            inputText: rawInput.rawText ?? "",
+            parseMethod: .rule
+        )
+        let candidate = rawItem.applyingInterpretation(
+            InterpretResult(
+                draft: draft,
+                confidence: .high,
+                needsReview: false
+            ),
+            now: later
+        )
+        reporter.check(candidate.state == .candidate, "BatchImportQueue advances raw input to candidate")
+        reporter.check(candidate.merchant == "Demo Coffee", "BatchImportQueue carries candidate merchant")
+        reporter.check(abs((candidate.amount ?? 0) - 18) < 0.001, "BatchImportQueue carries candidate amount")
+        reporter.check(candidate.convertedTransactionID == nil, "BatchImportQueue high confidence candidate is not auto-saved")
+        reporter.check(!candidate.isOfficialTransaction, "BatchImportQueue candidate does not pollute official ledger")
+
+        let missingAmount = rawItem.applyingInterpretation(
+            InterpretResult(
+                draft: nil,
+                confidence: .low,
+                needsReview: true,
+                warnings: [.missingAmount]
+            ),
+            now: later
+        )
+        reporter.check(missingAmount.state == .candidate, "BatchImportQueue turns missing amount item into review candidate")
+        reporter.check(missingAmount.failureReason == .missingAmount, "BatchImportQueue records missing amount failure")
+        reporter.check(missingAmount.warnings.contains(.lowConfidence), "BatchImportQueue records low confidence warning")
+        reporter.check(missingAmount.canRetry, "BatchImportQueue missing amount item can retry")
+
+        let duplicate = candidate.markedDuplicate(
+            groupID: "duplicate-demo-001",
+            score: 0.92,
+            reason: "same amount and merchant",
+            possibleTransactionID: transactionID,
+            now: later
+        )
+        reporter.check(duplicate.state == .candidate, "BatchImportQueue duplicate warning keeps candidate")
+        reporter.check(duplicate.failureReason == .duplicateSuspected, "BatchImportQueue records duplicate failure reason")
+        reporter.check(duplicate.needsReview, "BatchImportQueue duplicate suspected requires review")
+        reporter.check(!duplicate.isOfficialTransaction, "BatchImportQueue duplicate warning does not delete or save")
+
+        let reviewed = candidate.reviewed(now: later)
+        let converted = reviewed.converted(transactionID: transactionID, now: later)
+        reporter.check(reviewed.state == .reviewed, "BatchImportQueue reviewed candidate moves to reviewed")
+        reporter.check(converted.state == .transaction, "BatchImportQueue converted item moves to transaction")
+        reporter.check(converted.convertedTransactionID == transactionID, "BatchImportQueue stores converted transaction id")
+
+        let snapshot = BatchImportQueueSnapshot(
+            batches: [batch],
+            rawInputs: [rawInput],
+            items: [rawItem, candidate, duplicate, converted]
+        )
+        reporter.check(snapshot.items(in: .candidate).count == 2, "BatchImportQueue snapshot filters candidate items")
+        reporter.check(snapshot.officialTransactionIDs == [transactionID], "BatchImportQueue snapshot exposes only converted transaction ids")
+        reporter.check(snapshot.doesNotPolluteOfficialLedger(), "BatchImportQueue snapshot keeps non-transaction items out of official ledger")
     }
 
     private static func verifySampleParsing(

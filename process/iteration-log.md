@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 iPad 统计分析基础页）
+更新日期：2026-06-03（v1.5.0 批量导入队列模型）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-137 GOAL-1540 批量导入队列模型
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：能力增强 / Core 模型 / 测试
+- 目标：建立 iPad 批量导入、Mac 拖拽导入和候选账单复核共用的队列模型，让导入项可以从原始输入进入候选状态，并保证用户确认前不污染正式账本。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/BatchImportQueue.swift`：新增 batch、raw input、queue item、状态、失败原因、warning、重试、疑似重复和 reviewed / transaction 转换模型。
+  - `scripts/run_offline_regression.sh`：将新模型纳入离线回归编译。
+  - `scripts/OfflineRegression.swift`：新增批量导入队列状态断言。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1540 完成范围和下一步边界。
+- 未改动范围：未新增 SQLite 表，未升级 BackupBundle，未修改 iPad UI、OCR 执行器、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 原始输入可创建 `rawInput` item，不进入正式账本。
+  - 高置信解析结果进入 `candidate`，保留结构化草稿但不自动保存。
+  - 缺金额、缺商户、缺日期、低置信和疑似重复会进入可复核候选状态并记录原因。
+  - 非账单和不支持类型可以进入 rejected。
+  - reviewed / converted 状态边界固定，只有带 `convertedTransactionID` 的 item 才算正式账本输出。
+- 未完成内容：iPad 批量导入 UI、队列持久化、批量 OCR / 文本解析执行器、候选账单正式入账和重复处理 UI 均未实现。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前模型仍是内存 / Codable 契约，后续落 SQLite 时需要保持 additive migration；iPad 当前“导入”Tab 仍复用既有 `InboxView` 单导入能力，不代表批量导入 UI 已完成。
+- 回滚方式：删除 `BatchImportQueue.swift`，从 `run_offline_regression.sh` 和 `OfflineRegression.swift` 移除对应编译与断言，并回退文档记录。
+- 结论：GOAL-1540 代码侧完成，批量导入已有平台无关队列模型，正式账本污染边界清晰。
+- 下一步建议：进入 GOAL-1541，基于该模型实现 iPad 批量导入 UI：导入箱、状态筛选、失败重试入口和候选列表。
 
 ### ITER-136 GOAL-1532 iPad 统计分析基础页
 - 日期：2026-06-03

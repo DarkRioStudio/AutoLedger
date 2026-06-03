@@ -182,6 +182,7 @@ swiftc \
   "$CORE/Models/ImportedReceipt.swift" \
   "$CORE/Models/ImportDebugRecord.swift" \
   "$CORE/Models/LedgerInterpretationModels.swift" \
+  "$CORE/Models/BatchImportQueue.swift" \
   "$CORE/Models/SampleReceipt.swift" \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/TodaySpendingSummary.swift" \
