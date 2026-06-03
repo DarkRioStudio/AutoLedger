@@ -201,15 +201,11 @@ private struct WatchDailyExpenseWidgetView: View {
         Gauge(value: min(entry.snapshot.totalExpense, 999), in: 0...999) {
             Image(systemName: "yensign")
         } currentValueLabel: {
-            VStack(spacing: 0) {
-                Text(entry.snapshot.compactAmount)
-                    .font(.system(.caption2, design: .rounded).weight(.bold))
-                    .minimumScaleFactor(0.55)
-                    .lineLimit(1)
-                Text("\(entry.snapshot.transactionCount)")
-                    .font(.system(size: 8, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
+            Text(entry.snapshot.compactAmount)
+                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.55)
+                .lineLimit(1)
         }
         .gaugeStyle(.accessoryCircularCapacity)
     }
