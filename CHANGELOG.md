@@ -15,6 +15,7 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-03 +0800] 完成 GOAL-1541 iPad 批量导入 UI 第一版：iPad “导入”和“候选账单”入口接入同一个批量导入工作台，展示基于 `BatchImportQueue` 的虚构样例队列、状态筛选、候选详情、失败原因、warning、疑似重复信息和重试入口；保留“单张导入”按钮以弹出既有 `InboxView` 路径；本轮不接真实文件批量选择、不跑 OCR 队列、不落 SQLite、不自动入账。
 - [2026-06-03 +0800] 完成 GOAL-1540 批量导入队列模型：在 `AutoLedgerCore` 新增纯 Foundation 的批量导入 batch / raw input / queue item 模型，固定 rawInput / candidate / reviewed / transaction / rejected 状态、失败原因、warning、重试、疑似重复和候选转正式账单边界；离线回归覆盖 raw input -> candidate、缺金额候选、低置信 warning、重复提示、reviewed / converted 和“不污染正式账本”契约；本轮不做 SQLite 落库、不改 iPad UI、不修改 Xcode project / signing / entitlements。
 - [2026-06-03 +0800] 完成 GOAL-1532 iPad 统计分析基础页：iPad 工作台“分析”页从直接复用 iPhone `ReportView` 改为专用宽屏分析视图，复用 `MonthlySnapshot` 统计口径，按当前月份展示总支出、账单数、Top 商户、分类占比、近 6 个月趋势和本月摘要；补齐中英繁本地化，不修改 iPhone 月报路径、SQLite schema、Bundle ID、entitlements 或 Xcode Cloud 配置。
 - [2026-06-03 +0800] 完成 GOAL-1521B2 watchOS 表盘小组件 target 接入：新增 `AutoLedgerWatchWidgetsExtension` 源码目录与 `AutoLedgerWatchWidgetsExtensionExtension` target，嵌入 `AutoLedgerWatch Watch App`，复用 `group.top.darkrio326.AutoLedger` App Group；Watch App 收到 iPhone 今日支出同步 payload 后写入轻量 Widget 快照并刷新 timeline，表盘小组件以 accessory inline / circular / rectangular / corner 展示今日支出、笔数、最近商户和待同步状态，其中圆形样式只显示金额。模板 Control Widget / Emoji 示例代码已移除，未修改既有主 App / Watch App Bundle ID、DEVELOPMENT_TEAM、iCloud Container 或 Xcode Cloud 主链路。

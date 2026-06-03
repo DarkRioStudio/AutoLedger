@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 批量导入队列模型）
+更新日期：2026-06-03（v1.5.0 iPad 批量导入 UI）
 
 ## 记录规则
 
@@ -43,6 +43,35 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-138 GOAL-1541 iPad 批量导入 UI
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：能力增强 / iPad / SwiftUI
+- 目标：把 GOAL-1540 的队列模型展示到 iPad 工作台中，让“导入”和“候选账单”不再只是规划入口，并保留当前单张导入路径。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：新增 iPad 批量导入工作台、状态筛选、队列列表、详情检查器、疑似重复展示和重试入口；`.capture` 与 `.reviewQueue` 入口接入同一工作台。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐新增 UI 文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录完成范围与验证结果。
+- 未改动范围：未接真实文件 picker、OCR 执行器、SQLite 持久化、候选编辑 / 确认入账；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - iPad “导入”入口默认展示全部批量队列。
+  - iPad “候选账单”入口复用同一工作台并默认筛选待复核候选。
+  - UI 可展示待识别、待复核、需处理、疑似重复等状态，以及候选字段、置信度、失败原因和 warning。
+  - 对可重试 item 提供重试入口并在 UI 中标记重试状态。
+  - “单张导入”按钮弹出既有 `InboxView`，保留当前真实截图 / 拍照 / 剪贴板导入路径。
+- 未完成内容：真实批量图片 / 文件选择、OCR / 文本解析批处理、候选队列持久化、确认入账和批量编辑尚未实现。
+- 测试情况：
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' build`。
+- 风险与注意事项：当前队列数据为虚构样例，不代表真实导入已接队列；后续 GOAL-1542 接执行器时需要避免大批量 OCR 阻塞主线程。
+- 回滚方式：将 `.capture` 恢复为 `InboxView(selectedTab:)`，将 `.reviewQueue` 恢复为 `IPadPlanningWorkspaceView`，删除 `IPadBatchImportWorkspaceView` 和新增本地化 key，并回退文档记录。
+- 结论：GOAL-1541 代码侧完成，iPad 导入页已从纯复用单导入推进到批量队列工作台第一版。
+- 下一步建议：进入 GOAL-1542，将 OCR / `LedgerTextInterpreterCore` 执行器接入队列，并设计批处理节流与进度反馈。
 
 ### ITER-137 GOAL-1540 批量导入队列模型
 - 日期：2026-06-03
