@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 GOAL-1566 收尾与 GOAL-1570 Mac Catalyst 接入评估）
+更新日期：2026-06-03（v1.5.0 第二批 GOAL-1521 Widget 点击路径）
 
 ## 记录规则
 
@@ -43,6 +43,32 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-133 GOAL-1521B1 Widget 点击路径
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / iPhone 与 Watch Widget
+- 类型：能力增强 / Widget / 导航
+- 目标：按 `13.4 推荐推进顺序` 回补第二批未完成项，先在不新增 watchOS target 的前提下补齐今日支出 Widget 点击进入账本页的路径。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWidgets/AutoLedgerWidgets.swift`：`DailyExpenseWidget` 增加 `autoledger://ledger/today` deep link。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：根视图接收 `autoledger://ledger/today`、`autoledger://ledger` 或 `autoledger://today` 后，复用现有 `QuickLedgerNavigationState` 和账本导航通知打开账本页。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录第二批回补、完成范围和 Watch 表盘 target 风险。
+- 未改动范围：未新增 watchOS WidgetKit extension target；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 CocoaPods 配置。
+- 完成内容：
+  - iPhone 桌面今日支出 Widget 点击后进入账本页。
+  - iPhone 负一屏 / Today View 今日支出 Widget 点击后进入账本页。
+  - iPad 收到同一 deep link 时会切到账本工作区。
+  - 冷启动和运行中两种状态都复用现有 pending navigation / notification 机制。
+- 未完成内容：真正 Apple Watch 表盘小组件仍未完成，因为还没有 watchOS WidgetKit extension target、Watch App embedding、独立 Bundle ID 和 signing 验证。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerWidgetsExtension -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：`autoledger://ledger/today` 作为 Widget 跳转 URL 已接入 App 侧处理；仍需真机点按 iPhone 桌面 / 负一屏 Widget 验证系统传递 URL 的实际行为。本轮不为此新增 Info.plist URL Types 或修改 Xcode project 配置。
+- 回滚方式：移除 `DailyExpenseWidget` 的 `.widgetURL(...)` 和 `AutoLedgerRootView.handleDeepLink(_:)`，恢复对应文档记录。
+- 结论：本轮完成后，第二批仍未完全完成；剩余 blocker 是 GOAL-1521B2 watchOS WidgetKit extension target。
+- 下一步建议：评估是否在受控分支新增 watchOS WidgetKit extension target；若暂不碰发布链，则继续把第二批状态保留为部分完成并进入第三批 GOAL-1532。
 
 ### ITER-132 GOAL-1570 Mac Catalyst 接入评估
 - 日期：2026-06-03

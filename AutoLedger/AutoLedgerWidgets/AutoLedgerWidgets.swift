@@ -30,6 +30,10 @@ private enum WidgetCopy {
     }
 }
 
+private enum WidgetDeepLink {
+    static let todayLedgerURL = URL(string: "autoledger://ledger/today")
+}
+
 private struct WidgetLedgerMetrics {
     let todayTotal: Double
     let todayCount: Int
@@ -740,6 +744,7 @@ struct DailyExpenseWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DailyExpenseProvider()) { entry in
             DailyExpenseWidgetView(entry: entry)
+                .widgetURL(WidgetDeepLink.todayLedgerURL)
         }
         .configurationDisplayName(WidgetCopy.todayExpenseTitle)
         .description(WidgetCopy.todayExpenseTitle)

@@ -84,6 +84,9 @@ private struct AutoLedgerRootView: View {
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
             }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     store.refreshFromStore()
@@ -136,5 +139,17 @@ private struct AutoLedgerRootView: View {
             guard !Task.isCancelled else { return }
             await GemmaService.shared.ensureLoaded()
         }
+    }
+
+    @MainActor
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme?.lowercased() == "autoledger" else { return }
+
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+        let destinationParts = [url.host].compactMap { $0 } + pathComponents
+        guard destinationParts.contains("ledger") || destinationParts.contains("today") else { return }
+
+        QuickLedgerNavigationState.shared.markOpenLedgerPending()
+        NotificationCenter.default.post(name: NotificationService.quickLedgerOpenLedgerEvent, object: nil)
     }
 }
