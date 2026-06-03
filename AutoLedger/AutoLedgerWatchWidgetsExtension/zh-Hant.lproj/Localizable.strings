@@ -1,0 +1,7 @@
+"widget.today.title" = "今日支出";
+"widget.default_ledger" = "本地帳本";
+"widget.no_expense" = "暫無支出";
+"widget.count_format" = "%d 筆";
+"widget.updated_format" = "更新 %@";
+"widget.sync_pending" = "待同步";
+"widget.today.description" = "在錶盤查看 AutoLedger 今日支出。";

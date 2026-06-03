@@ -1,0 +1,7 @@
+"widget.today.title" = "Today";
+"widget.default_ledger" = "Local Ledger";
+"widget.no_expense" = "No expense";
+"widget.count_format" = "%d items";
+"widget.updated_format" = "Updated %@";
+"widget.sync_pending" = "Sync pending";
+"widget.today.description" = "View today's AutoLedger spending on the watch face.";

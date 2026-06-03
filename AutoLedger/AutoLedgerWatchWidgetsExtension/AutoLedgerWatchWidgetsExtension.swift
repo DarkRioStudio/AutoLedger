@@ -100,6 +100,13 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
         return String(format: "¥%.2f", totalExpense)
     }
 
+    var cornerAmount: String {
+        if totalExpense >= 10_000 {
+            return String(format: "¥%.0f万", totalExpense / 10_000)
+        }
+        return String(format: "¥%.0f", totalExpense)
+    }
+
     var updatedDisplayText: String? {
         guard let updatedAt else { return nil }
         let formatter = DateFormatter()
@@ -109,32 +116,39 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
 }
 
 private enum WatchLedgerWidgetCopy {
-    static var isChineseLocale: Bool {
-        Locale.autoupdatingCurrent.language.languageCode?.identifier.hasPrefix("zh") == true
+    private static func localized(_ key: String, fallback: String) -> String {
+        NSLocalizedString(key, bundle: .main, value: fallback, comment: "")
     }
 
     static var title: String {
-        isChineseLocale ? "今日支出" : "Today"
+        localized("widget.today.title", fallback: "Today")
     }
 
     static var defaultLedgerName: String {
-        isChineseLocale ? "本地账本" : "Local Ledger"
+        localized("widget.default_ledger", fallback: "Local Ledger")
     }
 
     static var emptyTitle: String {
-        isChineseLocale ? "暂无支出" : "No expense"
+        localized("widget.no_expense", fallback: "No expense")
     }
 
     static func countText(_ count: Int) -> String {
-        isChineseLocale ? "\(count) 笔" : "\(count) items"
+        String(format: localized("widget.count_format", fallback: "%d items"), count)
     }
 
     static func updatedText(_ time: String) -> String {
-        isChineseLocale ? "更新 \(time)" : "Updated \(time)"
+        String(format: localized("widget.updated_format", fallback: "Updated %@"), time)
     }
 
     static var staleText: String {
-        isChineseLocale ? "待同步" : "Sync pending"
+        localized("widget.sync_pending", fallback: "Sync pending")
+    }
+
+    static var configurationDescription: String {
+        localized(
+            "widget.today.description",
+            fallback: "View today's AutoLedger spending on the watch face."
+        )
     }
 }
 
@@ -228,17 +242,17 @@ private struct WatchDailyExpenseWidgetView: View {
 
     private var cornerView: some View {
         Gauge(value: spendingProgress, in: 0...1) {
-            Image(systemName: "yensign")
-        } currentValueLabel: {
-            Text(entry.snapshot.compactAmount)
+            Text(entry.snapshot.cornerAmount)
                 .font(.system(.caption2, design: .rounded).weight(.bold))
                 .monospacedDigit()
-                .minimumScaleFactor(0.52)
+                .minimumScaleFactor(0.65)
                 .lineLimit(1)
+        } currentValueLabel: {
+            EmptyView()
         } minimumValueLabel: {
-            Text("")
+            EmptyView()
         } maximumValueLabel: {
-            Text("")
+            EmptyView()
         }
         .gaugeStyle(.accessoryLinearCapacity)
         .tint(spendingTint)
@@ -302,9 +316,7 @@ struct AutoLedgerWatchWidgetsExtension: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName(WatchLedgerWidgetCopy.title)
-        .description(WatchLedgerWidgetCopy.isChineseLocale
-                     ? "在表盘查看 AutoLedger 今日支出。"
-                     : "View today's AutoLedger spending on the watch face.")
+        .description(WatchLedgerWidgetCopy.configurationDescription)
         .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular, .accessoryCorner])
     }
 }
