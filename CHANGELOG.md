@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 修复（v1.5.0）
+- [2026-06-03 +0800] 修复 iCloud 同步接入后的三处真机体验问题：App 启动时 iCloud 拉取 / 外部入口补推和 Gemma 预热延后到首屏渲染后再后台执行，降低 iPhone / iPad 启动 UI 卡顿；iPad 工作台右侧 detail 绑定侧边栏 selection identity，设置页内部 push 后切换主菜单会正确刷新右侧页面；Apple Watch 左滑到“最近支出”第二屏时 navigation title 会随页面切换，不再继续显示“今日支出”。
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）

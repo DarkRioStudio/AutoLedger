@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-02（v1.5.0 GOAL-1566A Watch / Widget 同步快照元数据）
+更新日期：2026-06-03（v1.5.0 iCloud 同步真机体验修复）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-130 iCloud 同步真机体验修复
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 性能 / iPad / Watch
+- 目标：根据真机反馈修复 iCloud 同步接入后的启动 UI 卡顿、iPad 设置页内部页面阻塞主菜单 detail 切换、Apple Watch 第二屏标题仍显示“今日支出”的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：App 启动时不再立即在根 `.task` 中触发 iCloud 拉取 / 外部入口补推和 Gemma 预热；改为首屏渲染后延迟 1.5 秒调度 iCloud 后台任务、延迟 2.5 秒调度 Gemma 预热，避免和首屏交互抢主线程。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：右侧 detail 增加 `.id(selection)`，切换侧边栏主菜单时重建右侧上下文，避免设置页内部 push 后右侧页面停留在旧子页。
+  - `AutoLedger/AutoLedgerWatch Watch App/ContentView.swift`：Watch `TabView` 绑定当前页 selection，navigation title 根据当前页在“今日支出”和“最近支出”之间切换。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮真机反馈和修复结果。
+- 未改动范围：未修改 CloudKit schema、SQLite schema、同步 record 字段、entitlements、Bundle ID、App Group、iCloud Container、Xcode project、workspace、scheme、target、WatchConnectivity 消息结构或 Xcode Cloud 脚本。
+- 完成内容：
+  - iPhone / iPad 启动后 iCloud 同步不会抢首屏立即执行，降低首屏 UI 无响应风险。
+  - iPad 设置页进入内部页面后，点击其他主菜单项会刷新右侧 detail。
+  - Apple Watch 左滑到最近支出页后，顶部标题会显示“最近支出”。
+- 未完成内容：未做 Instruments / ETTrace 性能采样；启动卡顿修复以调度避让为第一步，仍需用户真机复测体感。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：启动 iCloud 拉取现在延后约 1.5 秒，首屏显示会更快，但最新远端数据到达会比原先略晚；这是为了保护启动交互，仍保留后台自动拉取。
+- 回滚方式：恢复 `AutoLedgerApp` 直接在 `.task` 中启动同步 / Gemma 预热，移除 iPad detail `.id(selection)`，恢复 Watch 固定 navigation title。
+- 结论：本轮修复完成，generic iOS Debug build 通过；建议用户在 iPhone、iPad、Apple Watch 真机重新安装后复测三条反馈路径。
+- 下一步建议：真机确认卡顿和导航问题消失后，继续收口 GOAL-1566 或进入 GOAL-1570 Mac Catalyst 接入评估。
 
 ### ITER-129 GOAL-1566A Watch / Widget 同步快照元数据
 - 日期：2026-06-02

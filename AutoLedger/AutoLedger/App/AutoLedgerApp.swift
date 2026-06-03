@@ -47,6 +47,7 @@ struct AutoLedgerApp: App {
 private struct AutoLedgerRootView: View {
     @StateObject private var store = LedgerStore()
     @Environment(\.scenePhase) private var scenePhase
+    @State private var didScheduleLaunchSync = false
 
     var body: some View {
         rootContent
@@ -74,14 +75,8 @@ private struct AutoLedgerRootView: View {
             }
             .task {
                 SupportPurchaseManager.shared.startTransactionListener()
-                Task {
-                    await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
-                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "检测到外部入口账单待推送，开始同步到 iCloud。")
-                }
-                // App 启动后台预热 Gemma（如已下载），避免首次推理时才加载
-                if LLMProvider.userSelected == .gemma {
-                    await GemmaService.shared.ensureLoaded()
-                }
+                scheduleLaunchCloudSyncIfNeeded()
+                scheduleGemmaWarmupIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
                 store.refreshFromStore()
@@ -92,6 +87,7 @@ private struct AutoLedgerRootView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     store.refreshFromStore()
+                    scheduleLaunchCloudSyncIfNeeded()
                     Task {
                         await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
                     }
@@ -119,6 +115,26 @@ private struct AutoLedgerRootView: View {
             IPadWorkspaceView()
         } else {
             HomeView()
+        }
+    }
+
+    private func scheduleLaunchCloudSyncIfNeeded() {
+        guard !didScheduleLaunchSync else { return }
+        didScheduleLaunchSync = true
+        Task(priority: .background) {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
+            await store.pushPendingIntentLedgerSaveIfNeeded(reason: "检测到外部入口账单待推送，开始同步到 iCloud。")
+        }
+    }
+
+    private func scheduleGemmaWarmupIfNeeded() {
+        guard LLMProvider.userSelected == .gemma else { return }
+        Task(priority: .background) {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            await GemmaService.shared.ensureLoaded()
         }
     }
 }

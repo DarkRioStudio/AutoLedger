@@ -81,6 +81,7 @@ struct IPadWorkspaceView: View {
             .tint(AppTheme.accent)
         } detail: {
             detailView
+                .id(selection)
         }
         .navigationSplitViewStyle(.balanced)
         .tint(AppTheme.accent)

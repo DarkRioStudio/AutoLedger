@@ -11,11 +11,12 @@ struct ContentView: View {
 
     @Environment(WatchLedgerViewModel.self) private var viewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var selectedPage = 0
 
     var body: some View {
         @Bindable var vm = viewModel
         NavigationStack {
-            TabView {
+            TabView(selection: $selectedPage) {
                 WatchTodaySummaryPage()
                     .tag(0)
 
@@ -23,7 +24,7 @@ struct ContentView: View {
                     .tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .navigationTitle("watch.today.title")
+            .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -77,6 +78,10 @@ struct ContentView: View {
             viewModel.requestInitialSyncIfNeeded()
         }
         .animation(reduceMotion ? nil : .easeInOut, value: viewModel.lastFeedback)
+    }
+
+    private var navigationTitle: LocalizedStringKey {
+        selectedPage == 1 ? "watch.recent.title" : "watch.today.title"
     }
 }
 
