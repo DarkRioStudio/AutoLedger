@@ -235,8 +235,12 @@ private struct WatchDailyExpenseWidgetView: View {
                 .monospacedDigit()
                 .minimumScaleFactor(0.52)
                 .lineLimit(1)
+        } minimumValueLabel: {
+            Text("")
+        } maximumValueLabel: {
+            Text("")
         }
-        .gaugeStyle(.accessoryCircularCapacity)
+        .gaugeStyle(.accessoryLinearCapacity)
         .tint(spendingTint)
         .widgetAccentable()
     }

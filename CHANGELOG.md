@@ -16,7 +16,7 @@
 
 ### 变更（v1.5.0）
 - [2026-06-03 +0800] 完成 GOAL-1521B2 watchOS 表盘小组件 target 接入：新增 `AutoLedgerWatchWidgetsExtension` 源码目录与 `AutoLedgerWatchWidgetsExtensionExtension` target，嵌入 `AutoLedgerWatch Watch App`，复用 `group.top.darkrio326.AutoLedger` App Group；Watch App 收到 iPhone 今日支出同步 payload 后写入轻量 Widget 快照并刷新 timeline，表盘小组件以 accessory inline / circular / rectangular / corner 展示今日支出、笔数、最近商户和待同步状态，其中圆形样式只显示金额。模板 Control Widget / Emoji 示例代码已移除，未修改既有主 App / Watch App Bundle ID、DEVELOPMENT_TEAM、iCloud Container 或 Xcode Cloud 主链路。
-- [2026-06-03 +0800] 调整 watchOS 表盘小组件视觉：accessory corner 改为系统式金额中心 + 彩色支出程度环，accessory circular 继续只显示金额并复用同一支出程度色彩，accessory rectangular 内容改为填满可用区域并左对齐，提升模块和表盘其他 complication 的一致性。
+- [2026-06-03 +0800] 调整 watchOS 表盘小组件视觉：accessory corner 改为参考天气组件的线性彩色支出程度条，隐藏上下限文字，仅用位置点和今日金额表达当前支出；accessory circular 继续只显示金额并复用同一支出程度色彩，accessory rectangular 内容改为填满可用区域并左对齐。
 - [2026-06-03 +0800] 推进第二批 GOAL-1521B1 Widget 点击路径：`DailyExpenseWidget` 增加 `autoledger://ledger/today` deep link，主 App 根视图接收后复用现有账本页导航状态，iPhone 桌面 / 负一屏今日支出小组件点击后进入账本页；本轮不新增 watchOS WidgetKit extension target，不修改 Bundle ID / signing / entitlements，真正 Apple Watch 表盘 target 仍需后续受控推进。
 - [2026-06-03 +0800] 完成 GOAL-1570 Mac Catalyst 接入评估：确认当前主 App 仍为 iPhone + iPad，`SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"` 且 `SUPPORTS_MACCATALYST = NO`；本轮不启用 Catalyst、不改 target / scheme / signing / entitlements / Xcode Cloud 配置，只输出 Mac 复用资产、依赖风险、文件权限、菜单快捷键、大表格和批量导入依赖清单；建议先完成 GOAL-1540 批量导入队列，再进入 GOAL-1571 Mac 拖拽导入。
 - [2026-06-03 +0800] 收尾 GOAL-1566 Watch / Widget / 展示端同步快照：将 Watch / Widget 的同步后稳定快照、更新时间、过期提示和 Watch 第二屏标题修复作为最小闭环完成；tvOS / visionOS 展示端不继续放在 1566 内扩张，转入 GOAL-1580～1583 单独设计与实现评估；发布前仍保留 iPhone Widget / Today View / Apple Watch 真机 smoke。
