@@ -180,6 +180,8 @@ private struct WatchDailyExpenseWidgetView: View {
             inlineView
         case .accessoryCircular:
             circularView
+        case .accessoryCorner:
+            cornerView
         case .accessoryRectangular:
             rectangularView
         default:
@@ -210,6 +212,20 @@ private struct WatchDailyExpenseWidgetView: View {
             }
         }
         .gaugeStyle(.accessoryCircularCapacity)
+    }
+
+    private var cornerView: some View {
+        Gauge(value: min(entry.snapshot.totalExpense, 999), in: 0...999) {
+            Text(WatchLedgerWidgetCopy.title)
+        } currentValueLabel: {
+            Text(entry.snapshot.compactAmount)
+                .font(.system(.caption2, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.52)
+                .lineLimit(1)
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .widgetAccentable()
     }
 
     private var rectangularView: some View {
@@ -267,8 +283,25 @@ struct AutoLedgerWatchWidgetsExtension: Widget {
         .description(WatchLedgerWidgetCopy.isChineseLocale
                      ? "在表盘查看 AutoLedger 今日支出。"
                      : "View today's AutoLedger spending on the watch face.")
-        .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.accessoryInline, .accessoryCircular, .accessoryRectangular, .accessoryCorner])
     }
+}
+
+#Preview(as: .accessoryCorner) {
+    AutoLedgerWatchWidgetsExtension()
+} timeline: {
+    WatchDailyExpenseEntry(
+        date: .now,
+        snapshot: WatchLedgerWidgetSnapshot(
+            ledgerName: WatchLedgerWidgetCopy.defaultLedgerName,
+            totalExpense: 32.80,
+            transactionCount: 2,
+            recentDisplayName: "Demo Coffee",
+            updatedAt: .now,
+            isSnapshotStale: false,
+            savedAt: .now
+        )
+    )
 }
 
 #Preview(as: .accessoryRectangular) {
