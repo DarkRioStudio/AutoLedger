@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 第二批 GOAL-1521 Widget 点击路径）
+更新日期：2026-06-03（v1.5.0 iCloud 启动同步顺序修正）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-134 iCloud 启动同步先推后拉
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 7 / 基础多端数据同步
+- 类型：Bugfix / 同步链路
+- 目标：根据真机同步测试中“未删除但记录消失”的反馈，修正 App 启动自动同步顺序，确保任何平台启动时先推送本机增量，再拉取远端。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`syncLedgerWithCloudKitOnLaunchIfNeeded()` 改为先调用本机增量推送；推送成功后清理外部入口 pending 标记，再拉取远端；推送失败时暂停本次拉取。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：移除启动同步后的额外 pending 补推调用，避免启动链路重复推送。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录风险判断、现行同步口径和真机复测步骤。
+- 未改动范围：未修改 CloudKit schema、record type、字段、索引、SQLite schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme、target 或 Xcode Cloud 配置。
+- 完成内容：
+  - App 启动且 iCloud 同步开启时，后台同步顺序变为“先推本机增量 -> 推送成功 -> 清理外部入口 pending -> 拉取远端”。
+  - 如果本机增量推送失败，本次启动同步不会继续拉取远端，降低本机变更未上云时先合并远端状态的风险。
+  - 手动“强制刷新数据”仍保持全量推送 + 拉取；账本页下拉刷新仍保持拉取远端。
+- 未完成内容：未实现 CloudKit server change token、silent push、同步健康详情页或按 record 级别的冲突恢复 UI；未直接检查用户真机数据库内容。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：本轮修复启动顺序，不等于解决所有同步一致性问题；如果仍出现记录消失，需要继续检查远端 tombstone、push checkpoint、同一 transactionID 的历史状态和真机本地 SQLite 最近删除列表。
+- 回滚方式：恢复 `syncLedgerWithCloudKitOnLaunchIfNeeded()` 为启动只拉取，恢复 `AutoLedgerApp` 启动后 pending 补推调用，移除对应文档记录。
+- 结论：启动同步应改为先推后拉，符合用户对 iPhone / iPad 启动同步的直觉和数据保护优先级。
+- 下一步建议：真机复测 iPhone 新增后立刻退出、重新启动推送，再到 iPad 拉取；反向也测一次。
 
 ### ITER-133 GOAL-1521B1 Widget 点击路径
 - 日期：2026-06-03

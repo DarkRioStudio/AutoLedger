@@ -128,7 +128,6 @@ private struct AutoLedgerRootView: View {
             try? await Task.sleep(for: .seconds(1.5))
             guard !Task.isCancelled else { return }
             await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
-            await store.pushPendingIntentLedgerSaveIfNeeded(reason: "检测到外部入口账单待推送，开始同步到 iCloud。")
         }
     }
 

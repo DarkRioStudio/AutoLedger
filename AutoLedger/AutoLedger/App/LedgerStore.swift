@@ -1259,7 +1259,13 @@ extension LedgerStore {
         guard isLedgerCloudSyncEnabled else { return }
         guard !didRunLaunchCloudKitSync else { return }
         didRunLaunchCloudKitSync = true
-        await pullLedgerFromCloudKitIfEnabled(reason: "App 启动，开始后台拉取 iCloud 数据。")
+        let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: "App 启动，先推送本地增量到 iCloud。")
+        guard didPush else {
+            updateLedgerCloudSyncStatus("App 启动同步已暂停：本地增量未成功推送，暂不拉取远端数据。")
+            return
+        }
+        clearPendingExternalLedgerCloudPush()
+        await pullLedgerFromCloudKitIfEnabled(reason: "App 启动，本地增量推送完成，开始拉取 iCloud 数据。")
     }
 
     func syncLedgerWithCloudKitNow(forceFull: Bool = false) async {
