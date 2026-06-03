@@ -174,6 +174,21 @@ private struct WatchDailyExpenseWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: WatchDailyExpenseEntry
 
+    private var spendingProgress: Double {
+        min(max(entry.snapshot.totalExpense / 200, 0), 1)
+    }
+
+    private var spendingTint: Color {
+        switch spendingProgress {
+        case ..<0.5:
+            return .green
+        case ..<0.8:
+            return .orange
+        default:
+            return .red
+        }
+    }
+
     var body: some View {
         switch family {
         case .accessoryInline:
@@ -198,7 +213,7 @@ private struct WatchDailyExpenseWidgetView: View {
     }
 
     private var circularView: some View {
-        Gauge(value: min(entry.snapshot.totalExpense, 999), in: 0...999) {
+        Gauge(value: spendingProgress, in: 0...1) {
             Image(systemName: "yensign")
         } currentValueLabel: {
             Text(entry.snapshot.compactAmount)
@@ -208,11 +223,12 @@ private struct WatchDailyExpenseWidgetView: View {
                 .lineLimit(1)
         }
         .gaugeStyle(.accessoryCircularCapacity)
+        .tint(spendingTint)
     }
 
     private var cornerView: some View {
-        Gauge(value: min(entry.snapshot.totalExpense, 999), in: 0...999) {
-            Text(WatchLedgerWidgetCopy.title)
+        Gauge(value: spendingProgress, in: 0...1) {
+            Image(systemName: "yensign")
         } currentValueLabel: {
             Text(entry.snapshot.compactAmount)
                 .font(.system(.caption2, design: .rounded).weight(.bold))
@@ -221,6 +237,7 @@ private struct WatchDailyExpenseWidgetView: View {
                 .lineLimit(1)
         }
         .gaugeStyle(.accessoryCircularCapacity)
+        .tint(spendingTint)
         .widgetAccentable()
     }
 
@@ -232,11 +249,13 @@ private struct WatchDailyExpenseWidgetView: View {
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Text(entry.snapshot.formattedAmount)
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .monospacedDigit()
                 .minimumScaleFactor(0.64)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 4) {
                 Text(secondaryText)
                     .lineLimit(1)
@@ -247,7 +266,10 @@ private struct WatchDailyExpenseWidgetView: View {
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .widgetAccentable()
     }
 

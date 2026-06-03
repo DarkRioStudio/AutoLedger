@@ -62,6 +62,7 @@
 - 完成内容：
   - 新 watchOS Widget target 已能作为 Watch App 依赖构建并嵌入 `AutoLedgerWatch Watch App.app/PlugIns`。
   - 表盘 Widget 读取 `group.top.darkrio326.AutoLedger` 中的 `WatchLedgerWidget.todaySummary` 快照，展示今日支出金额、笔数、最近商户和待同步状态，覆盖 inline / circular / rectangular / corner。
+  - Accessory circular 只显示今日金额；accessory corner 使用金额中心 + 彩色支出程度环；accessory rectangular 内容左对齐。
   - Watch App 收到 iPhone WatchConnectivity 今日摘要后会写入该快照，并调用 `WidgetCenter.shared.reloadTimelines(ofKind:)` 刷新表盘 timeline。
   - 模板 Control Widget 与示例 AppIntent 已删除，避免发布包出现无关 “Timer” 控制。
 - 未完成内容：未在真实 Apple Watch 表盘上人工添加 complication 目检；未实现隐私隐藏开关；未把 watchOS Widget 单独 scheme 固化为共享 scheme。
