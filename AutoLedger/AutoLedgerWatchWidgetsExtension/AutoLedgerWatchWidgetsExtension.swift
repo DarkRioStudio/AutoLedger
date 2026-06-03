@@ -101,10 +101,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     }
 
     var cornerAmount: String {
-        if totalExpense >= 10_000 {
-            return String(format: "¥%.0f万", totalExpense / 10_000)
-        }
-        return String(format: "¥%.0f", totalExpense)
+        String(format: "¥%.2f", totalExpense)
     }
 
     var updatedDisplayText: String? {
@@ -241,15 +238,13 @@ private struct WatchDailyExpenseWidgetView: View {
     }
 
     private var cornerView: some View {
-        ZStack {
-            AccessoryWidgetBackground()
-            Text(entry.snapshot.cornerAmount)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .minimumScaleFactor(0.55)
-                .lineLimit(1)
-                .widgetAccentable()
-        }
+        Text(entry.snapshot.cornerAmount)
+            .font(.system(size: 16, weight: .black, design: .rounded))
+            .monospacedDigit()
+            .minimumScaleFactor(0.42)
+            .lineLimit(1)
+            .rotationEffect(.degrees(-18))
+            .widgetAccentable()
         .widgetLabel {
             Gauge(value: spendingProgress, in: 0...1) {
                 EmptyView()

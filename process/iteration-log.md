@@ -51,12 +51,12 @@
 - 类型：Bugfix / Widget / watchOS
 - 目标：根据真机表盘截图修正 Apple Watch accessory corner 组件，让今日支出金额与支出程度条更接近系统天气角落组件的读数结构。
 - 改动范围：
-  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从角落内容区自绘范围条改为 `.widgetLabel { Gauge(...) }`，让 watch face 负责沿表盘边缘渲染支出程度条；角落主体只保留今日金额读数。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从角落内容区自绘范围条改为 `.widgetLabel { Gauge(...) }`，让 watch face 负责沿表盘边缘渲染支出程度条；角落主体只保留两位小数今日金额读数，并去除灰色圆形背景。
   - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录真机反馈修正与验证结果。
 - 未改动范围：未修改 Widget family、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、WatchConnectivity、App Group 快照数据源或 Xcode Cloud 脚本。
 - 完成内容：
   - accessory corner 不再在小内容区域内自绘水平支出条。
-  - 金额单独作为角落读数展示。
+  - 金额单独作为角落读数展示，字号调大、轻微倾斜并显示小数点后两位。
   - 支出程度条通过系统 `widgetLabel` Gauge 提供给表盘边缘渲染，并隐藏 current / min / max 可见文字。
 - 未完成内容：尚未在真实 Apple Watch 或 Apple Watch Simulator 表盘上手动添加 corner complication 目检边缘渲染；当前完成代码侧修正与构建验证。
 - 测试情况：
