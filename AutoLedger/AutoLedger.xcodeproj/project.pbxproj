@@ -16,6 +16,9 @@
 		C08D1AEB2F9A0A3B00CF2B9E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
 		C08D1AED2F9A0A3B00CF2B9E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
 		C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0A00EDF2FCFC9AC0072F729 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
+		C0A00EE02FCFC9AC0072F729 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
+		C0A00EEF2FCFC9AF0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */; };
 /* End PBXBuildFile section */
@@ -41,6 +44,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C08D1AE82F9A0A3B00CF2B9E;
 			remoteInfo = AutoLedgerWidgetsExtension;
+		};
+		C0A00EED2FCFC9AF0072F729 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C042FD6C2F76270200A01918 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0A00EDD2FCFC9AC0072F729;
+			remoteInfo = AutoLedgerWatchWidgetsExtensionExtension;
 		};
 		D0CC00082FA68B0000639DC8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -76,6 +86,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0A00EF42FCFC9AF0072F729 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0A00EEF2FCFC9AF0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -88,6 +109,8 @@
 		C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AutoLedgerWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AutoLedgerWatchWidgetsExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0A00EF62FCFCA2A0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AutoLedgerWatchWidgetsExtensionExtension.entitlements; sourceTree = "<group>"; };
 		D0AA00012FC70E0000639DC8 /* AutoLedgerSupport.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = AutoLedgerSupport.storekit; sourceTree = "<group>"; };
 		D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ControlWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3E9CB3BD1997D348E7B8304 /* Pods-AutoLedger.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AutoLedger.release.xcconfig"; path = "Target Support Files/Pods-AutoLedger/Pods-AutoLedger.release.xcconfig"; sourceTree = "<group>"; };
@@ -138,6 +161,13 @@
 			);
 			target = C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */;
 		};
+		C0A00EF32FCFC9AF0072F729 /* Exceptions for "AutoLedgerWatchWidgetsExtension" folder in "AutoLedgerWatchWidgetsExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C0A00EDD2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension */;
+		};
 		D0CC00032FA68B0000639DC8 /* Exceptions for "ControlWidgetExtension" folder in "ControlWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -176,6 +206,14 @@
 				C08D1B022F9A0A3C00CF2B9E /* Exceptions for "AutoLedgerWidgets" folder in "AutoLedgerWidgetsExtension" target */,
 			);
 			path = AutoLedgerWidgets;
+			sourceTree = "<group>";
+		};
+		C0A00EE12FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C0A00EF32FCFC9AF0072F729 /* Exceptions for "AutoLedgerWatchWidgetsExtension" folder in "AutoLedgerWatchWidgetsExtensionExtension" target */,
+			);
+			path = AutoLedgerWatchWidgetsExtension;
 			sourceTree = "<group>";
 		};
 		D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */ = {
@@ -223,6 +261,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0A00EDB2FCFC9AC0072F729 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0A00EE02FCFC9AC0072F729 /* SwiftUI.framework in Frameworks */,
+				C0A00EDF2FCFC9AC0072F729 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CC00052FA68B0000639DC8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +303,7 @@
 		C042FD6B2F76270200A01918 = {
 			isa = PBXGroup;
 			children = (
+				C0A00EF62FCFCA2A0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.entitlements */,
 				D0AA00012FC70E0000639DC8 /* AutoLedgerSupport.storekit */,
 				C08D1B032F9A0A7000CF2B9E /* AutoLedgerWidgetsExtension.entitlements */,
 				C042FD762F76270200A01918 /* AutoLedger */,
@@ -263,6 +311,7 @@
 				D0CC00022FA68B0000639DC8 /* ControlWidgetExtension */,
 				C08D1AEE2F9A0A3B00CF2B9E /* AutoLedgerWidgets */,
 				C030417F2FB4235000F02850 /* AutoLedgerWatch Watch App */,
+				C0A00EE12FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtension */,
 				C042FD752F76270200A01918 /* Products */,
 				13BEB0B77CF0A0026FA94868 /* Pods */,
 				2372506559E3E54DCB779F64 /* Frameworks */,
@@ -277,6 +326,7 @@
 				D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */,
 				C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */,
 				C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */,
+				C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -314,10 +364,12 @@
 				C030417A2FB4235000F02850 /* Sources */,
 				C030417B2FB4235000F02850 /* Frameworks */,
 				C030417C2FB4235000F02850 /* Resources */,
+				C0A00EF42FCFC9AF0072F729 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C0A00EEE2FCFC9AF0072F729 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C030417F2FB4235000F02850 /* AutoLedgerWatch Watch App */,
@@ -382,6 +434,28 @@
 			productReference = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C0A00EDD2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0A00EF02FCFC9AF0072F729 /* Build configuration list for PBXNativeTarget "AutoLedgerWatchWidgetsExtensionExtension" */;
+			buildPhases = (
+				C0A00EDA2FCFC9AC0072F729 /* Sources */,
+				C0A00EDB2FCFC9AC0072F729 /* Frameworks */,
+				C0A00EDC2FCFC9AC0072F729 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C0A00EE12FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtension */,
+			);
+			name = AutoLedgerWatchWidgetsExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = AutoLedgerWatchWidgetsExtensionExtension;
+			productReference = C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0CC000C2FA68B0000639DC8 /* Build configuration list for PBXNativeTarget "ControlWidgetExtension" */;
@@ -427,6 +501,9 @@
 					C08D1AE82F9A0A3B00CF2B9E = {
 						CreatedOnToolsVersion = 26.5;
 					};
+					C0A00EDD2FCFC9AC0072F729 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					D0CC00072FA68B0000639DC8 = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -456,6 +533,7 @@
 				D0CC00072FA68B0000639DC8 /* ControlWidgetExtension */,
 				C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */,
 				C030417D2FB4235000F02850 /* AutoLedgerWatch Watch App */,
+				C0A00EDD2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -483,6 +561,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C08D1AE72F9A0A3B00CF2B9E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0A00EDC2FCFC9AC0072F729 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -552,6 +637,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0A00EDA2FCFC9AC0072F729 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CC00042FA68B0000639DC8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -576,6 +668,11 @@
 			isa = PBXTargetDependency;
 			target = C08D1AE82F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension */;
 			targetProxy = C08D1AFC2F9A0A3C00CF2B9E /* PBXContainerItemProxy */;
+		};
+		C0A00EEE2FCFC9AF0072F729 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0A00EDD2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension */;
+			targetProxy = C0A00EED2FCFC9AF0072F729 /* PBXContainerItemProxy */;
 		};
 		D0CC00092FA68B0000639DC8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -652,6 +749,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "AutoLedgerWatch Watch App/AutoLedgerWatch Watch App.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -686,6 +784,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "AutoLedgerWatch Watch App/AutoLedgerWatch Watch App.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -994,6 +1093,80 @@
 			};
 			name = Release;
 		};
+		C0A00EF12FCFC9AF0072F729 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AutoLedgerWatchWidgetsExtensionExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerWatchWidgetsExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatchWidgetsExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		C0A00EF22FCFC9AF0072F729 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = AutoLedgerWatchWidgetsExtensionExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5QM62E2M2R;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerWatchWidgetsExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AutoLedgerWatchWidgetsExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4.0;
+				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.watchkitapp.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 		D0CC000D2FA68B0000639DC8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1100,6 +1273,15 @@
 			buildConfigurations = (
 				C08D1AFF2F9A0A3C00CF2B9E /* Debug */,
 				C08D1B002F9A0A3C00CF2B9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0A00EF02FCFC9AF0072F729 /* Build configuration list for PBXNativeTarget "AutoLedgerWatchWidgetsExtensionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0A00EF12FCFC9AF0072F729 /* Debug */,
+				C0A00EF22FCFC9AF0072F729 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

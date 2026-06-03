@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 iCloud 启动同步顺序修正）
+更新日期：2026-06-03（v1.5.0 watchOS 表盘小组件 target 接入）
 
 ## 记录规则
 
@@ -43,6 +43,37 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-135 GOAL-1521B2 watchOS 表盘小组件 target 接入
+- 日期：2026-06-03
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / iPhone 与 Watch Widget
+- 类型：能力增强 / Widget / watchOS
+- 目标：在用户已通过 Xcode 默认配置新增 Watch Widget target 后，接入真实 AutoLedger 今日支出表盘小组件，并保证 Watch App、主 App 和 Xcode Cloud 发布链仍可构建。
+- 改动范围：
+  - `AutoLedger/AutoLedger.xcodeproj/project.pbxproj`：保留 Xcode 默认生成的 `AutoLedgerWatchWidgetsExtensionExtension` target 名；补齐 watchOS supported platforms；保持 Bundle ID `top.darkrio326.AutoLedger.watchkitapp.widgets`，并将 extension marketing version 对齐当前 Watch App `1.4.0`。
+  - `AutoLedger/AutoLedgerWatch Watch App/AutoLedgerWatch Watch App.entitlements`、`AutoLedger/AutoLedgerWatchWidgetsExtensionExtension.entitlements`：保留用户新增的 `group.top.darkrio326.AutoLedger` App Group。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchSessionManager.swift`：收到 iPhone 今日支出 payload 或主动拉取回复后，将轻量 summary 写入 Watch App Group，并触发 Watch Widget timeline 刷新。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：替换模板 emoji widget，新增 accessory inline / circular / rectangular 今日支出表盘展示。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtensionBundle.swift`：只注册真实 AutoLedger Watch Widget。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AppIntent.swift`、`AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtensionControl.swift`：移除 Xcode 模板生成的 Timer Control Widget / Emoji 配置示例。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1521B2 完成范围和人工验证项。
+- 未改动范围：未修改主 App / Watch App / iPhone Widget / Share Extension / Control Widget 既有 Bundle ID、DEVELOPMENT_TEAM、iCloud Container、主 App scheme、Watch App scheme、App Store 发布脚本或 CloudKit 同步逻辑；未让表盘 Widget 直接读取 iPhone SQLite 或直接连接 CloudKit。
+- 完成内容：
+  - 新 watchOS Widget target 已能作为 Watch App 依赖构建并嵌入 `AutoLedgerWatch Watch App.app/PlugIns`。
+  - 表盘 Widget 读取 `group.top.darkrio326.AutoLedger` 中的 `WatchLedgerWidget.todaySummary` 快照，展示今日支出金额、笔数、最近商户和待同步状态。
+  - Watch App 收到 iPhone WatchConnectivity 今日摘要后会写入该快照，并调用 `WidgetCenter.shared.reloadTimelines(ofKind:)` 刷新表盘 timeline。
+  - 模板 Control Widget 与示例 AppIntent 已删除，避免发布包出现无关 “Timer” 控制。
+- 未完成内容：未在真实 Apple Watch 表盘上人工添加 complication 目检；未实现隐私隐藏开关；未新增 accessory corner 样式；未把 watchOS Widget 单独 scheme 固化为共享 scheme。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -project AutoLedger/AutoLedger.xcodeproj -target AutoLedgerWatchWidgetsExtensionExtension -configuration Debug build`，仅有无 scheme 时忽略 destination 与 `ONLY_ACTIVE_ARCH` 的 xcodebuild 提示。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：`xcodebuild -list` 会显示自动 scheme `AutoLedgerWatchWidgetsExtensionExtension`，但该单独 scheme 解析 destination 时偶尔按 iOS 自动 scheme 枚举；可靠门禁为直接 target 构建、Watch App scheme 构建和主 App scheme 构建。发布前仍需用 Xcode Cloud / Archive 验证完整签名。
+- 回滚方式：移除 Watch Widget target 与嵌入关系，删除 `AutoLedgerWatchWidgetsExtension` 目录和 extension entitlements，恢复 `WatchSessionManager` 的 App Group 快照写入改动，并回退对应文档记录。
+- 结论：GOAL-1521B2 代码侧完成，Watch 表盘小组件已具备可构建、可嵌入、可读取 Watch 同步快照的第一版闭环。
+- 下一步建议：在真实 Apple Watch 表盘添加 `今日支出` complication，点验 inline / circular / rectangular 三种样式和 iPhone 记账后的刷新延迟；通过后可继续 13.4 推荐推进顺序的下一批 GOAL。
 
 ### ITER-134 iCloud 启动同步先推后拉
 - 日期：2026-06-03

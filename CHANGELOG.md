@@ -15,6 +15,7 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-03 +0800] 完成 GOAL-1521B2 watchOS 表盘小组件 target 接入：新增 `AutoLedgerWatchWidgetsExtension` 源码目录与 `AutoLedgerWatchWidgetsExtensionExtension` target，嵌入 `AutoLedgerWatch Watch App`，复用 `group.top.darkrio326.AutoLedger` App Group；Watch App 收到 iPhone 今日支出同步 payload 后写入轻量 Widget 快照并刷新 timeline，表盘小组件以 accessory inline / circular / rectangular 展示今日支出、笔数、最近商户和待同步状态。模板 Control Widget / Emoji 示例代码已移除，未修改既有主 App / Watch App Bundle ID、DEVELOPMENT_TEAM、iCloud Container 或 Xcode Cloud 主链路。
 - [2026-06-03 +0800] 推进第二批 GOAL-1521B1 Widget 点击路径：`DailyExpenseWidget` 增加 `autoledger://ledger/today` deep link，主 App 根视图接收后复用现有账本页导航状态，iPhone 桌面 / 负一屏今日支出小组件点击后进入账本页；本轮不新增 watchOS WidgetKit extension target，不修改 Bundle ID / signing / entitlements，真正 Apple Watch 表盘 target 仍需后续受控推进。
 - [2026-06-03 +0800] 完成 GOAL-1570 Mac Catalyst 接入评估：确认当前主 App 仍为 iPhone + iPad，`SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"` 且 `SUPPORTS_MACCATALYST = NO`；本轮不启用 Catalyst、不改 target / scheme / signing / entitlements / Xcode Cloud 配置，只输出 Mac 复用资产、依赖风险、文件权限、菜单快捷键、大表格和批量导入依赖清单；建议先完成 GOAL-1540 批量导入队列，再进入 GOAL-1571 Mac 拖拽导入。
 - [2026-06-03 +0800] 收尾 GOAL-1566 Watch / Widget / 展示端同步快照：将 Watch / Widget 的同步后稳定快照、更新时间、过期提示和 Watch 第二屏标题修复作为最小闭环完成；tvOS / visionOS 展示端不继续放在 1566 内扩张，转入 GOAL-1580～1583 单独设计与实现评估；发布前仍保留 iPhone Widget / Today View / Apple Watch 真机 smoke。

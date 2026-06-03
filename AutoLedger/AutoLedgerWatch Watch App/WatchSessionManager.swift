@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import WatchConnectivity
+import WidgetKit
 
 /// Watch 侧 WatchConnectivity 会话管理器。
 /// 负责：
@@ -38,6 +39,9 @@ final class WatchSessionManager: NSObject {
 
     private static let pendingKey = "WatchLedgerDraftsPending"
     private static let backgroundFetchInterval: TimeInterval = 60
+    private static let widgetAppGroupIdentifier = "group.top.darkrio326.AutoLedger"
+    private static let widgetSummaryKey = "WatchLedgerWidget.todaySummary"
+    private static let watchDailyWidgetKind = "AutoLedgerWatchDailyExpenseWidget"
 
     private var lastBackgroundFetchRequestAt: Date?
 
@@ -169,6 +173,7 @@ final class WatchSessionManager: NSObject {
         recentTransactions = list.compactMap { WatchTransaction(from: $0) }
         todaySummary = makeTodaySummary(from: reply)
         customCategories = reply["customCategories"] as? [String] ?? customCategories
+        saveWidgetSnapshot()
         notifyStateChanged()
     }
 
@@ -178,6 +183,7 @@ final class WatchSessionManager: NSObject {
         }
         todaySummary = makeTodaySummary(from: payload)
         customCategories = payload["customCategories"] as? [String] ?? customCategories
+        saveWidgetSnapshot()
         notifyStateChanged()
     }
 
@@ -201,6 +207,25 @@ final class WatchSessionManager: NSObject {
             "action": "fetchRecent",
             "requestedAt": now.timeIntervalSince1970
         ])
+    }
+
+    private func saveWidgetSnapshot() {
+        guard let defaults = UserDefaults(suiteName: Self.widgetAppGroupIdentifier) else { return }
+        var snapshot: [String: Any] = [
+            "ledgerName": todaySummary.ledgerName,
+            "totalExpense": todaySummary.totalExpense,
+            "transactionCount": todaySummary.transactionCount,
+            "isSnapshotStale": todaySummary.isSnapshotStale,
+            "savedAt": Date().timeIntervalSince1970
+        ]
+        if let recentDisplayName = todaySummary.recentDisplayName {
+            snapshot["recentDisplayName"] = recentDisplayName
+        }
+        if let updatedAt = todaySummary.updatedAt {
+            snapshot["updatedAt"] = updatedAt.timeIntervalSince1970
+        }
+        defaults.set(snapshot, forKey: Self.widgetSummaryKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.watchDailyWidgetKind)
     }
 
     private func notifyStateChanged() {
