@@ -41,6 +41,11 @@ struct AutoLedgerApp: App {
                 AutoLedgerRootView()
             }
         }
+        #if targetEnvironment(macCatalyst)
+        .commands {
+            AutoLedgerMacCommands()
+        }
+        #endif
     }
 }
 

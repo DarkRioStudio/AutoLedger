@@ -87,6 +87,14 @@
 "mac.data_exchange.json_restore.confirm_title" = "恢復 JSON 會覆蓋目前本機資料";
 "mac.data_exchange.json_restore.confirm_action" = "覆蓋恢復";
 "mac.data_exchange.json_restore.confirm_message" = "JSON 備份會替換目前正式帳本、最近刪除和使用者配置；恢復前會嘗試建立安全備份。";
+"mac.menu.import" = "匯入";
+"mac.menu.import.files" = "匯入檔案...";
+"mac.menu.import.csv" = "匯入 CSV...";
+"mac.menu.export" = "匯出";
+"mac.menu.export.csv" = "匯出 CSV...";
+"mac.menu.backup" = "備份";
+"mac.menu.backup.json" = "匯出 JSON 備份...";
+"mac.menu.settings" = "設定...";
 "ipad.batch_import.recognition_summary" = "已處理 %d 項，生成候選 %d 項，需處理 %d 項";
 "ipad.batch_import.confirm_save" = "確認入帳";
 "ipad.batch_import.reject" = "忽略候選";

@@ -10,17 +10,17 @@
 		0BECB7067388F3643094548F /* Pods_AutoLedger.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */; };
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
-		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C030418E2FB4240500F02850 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C030418D2FB4240500F02850 /* AutoLedgerCore */; };
 		C08D1AEB2F9A0A3B00CF2B9E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
 		C08D1AED2F9A0A3B00CF2B9E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
-		C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C08D1AFE2F9A0A3C00CF2B9E /* AutoLedgerWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C08D1AE92F9A0A3B00CF2B9E /* AutoLedgerWidgetsExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0A00EDF2FCFC9AC0072F729 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEA2F9A0A3B00CF2B9E /* WidgetKit.framework */; };
 		C0A00EE02FCFC9AC0072F729 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
 		C0A00EEF2FCFC9AF0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0F1A8932FD15B6C0012F5E3 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8922FD15B6C0012F5E3 /* RealityKitContent */; };
-		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */; };
 /* End PBXBuildFile section */
 

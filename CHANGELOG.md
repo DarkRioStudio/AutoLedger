@@ -10,6 +10,10 @@
 ## [Unreleased]
 
 ### 修复（v1.5.0）
+- [2026-06-05 +0800] 统一 Apple Watch “今日支出”和“最近支出”两页 UI：导航栏保留唯一页面标题，页面内容区移除重复的“今日支出 / 最近支出”标题；两页改用统一的账本上下文行展示本地账本，避免同屏出现两个标题并让摘要页和列表页的开头结构一致。
+- [2026-06-05 +0800] 修复 Apple Watch App 今日支出与表盘小组件数据不同步的问题：Watch App 启动和回到前台时会先读取 Watch Widget 共用的 App Group 今日支出快照，再向 iPhone 请求增量同步，避免小组件已显示最新金额但 Watch App 首屏仍显示 0，必须杀后台重开才刷新的情况；同步写入快照后同时刷新两个 Watch 表盘小组件 kind。
+- [2026-06-05 +0800] 修复全平台统计卡片尺寸不齐的问题：共享 `MetricCard` 固定外框高度，标题、金额和说明文本改为在卡片内部压缩适配；iPhone / iPad / Mac Catalyst 第一屏的本月支出、Top 商户等统计卡不再因内容长短撑出不同高度。iPad 分析页的分类占比、趋势和摘要面板同步固定外框高度，内部行文案和数值自适应缩放，保持多列分析组件平均对齐。
+- [2026-06-05 +0800] 修复 iPad / Mac Catalyst 工作台进入二级页面后切换其他侧边栏 Tab 时右侧 detail 不切换的问题：侧边栏改为绑定 `List(selection:)` 的显式选择模型，并保留整行点击与 detail identity 重置；无论点击文字、图标还是行内空白区域，都会同步 sidebar selection、重建右侧 detail 根页面，避免子 `NavigationStack` 的二级页面残留。
 - [2026-06-04 +0800] 修复 iPad / Mac Catalyst 工作台侧边栏点击与 detail 导航残留问题：侧边栏菜单行改为整行可点击，不再只有文字 / 图标区域响应；切换主菜单时重置 detail identity，确保从某个 Tab 进入内层页面后，再点击其他主菜单会切换到目标页面而不是停留在上一层详情页。
 - [2026-06-04 +0800] 优化 iPad 工作台侧边栏切换卡顿：移除 detail 区域全局 `.id(selection)` 强制重建，普通“总览 / 导入 / 账本 / 分析 / 候选账单 / 数据清洗”切换不再整页销毁重建；仅在离开设置页时重置 `SettingsView` 局部 identity，保留设置内部页面切回其他主菜单的刷新修复。
 - [2026-06-04 +0800] 收口 Apple Watch accessory corner 表盘小组件样式：真机验证确认系统自动读数无法稳定复刻官方天气角落样式，改为提供两个可选 corner 版本；默认 `今日支出` 角落版显示大号 `7.20` 金额并保留系统边缘色条，新增 `今日支出文字` 角落版主体显示 `¥` 图标、边缘文字显示“今日支出：7.20”；两版均移除主体金额中的 `¥` 前缀，不修改 target、Bundle ID、App Group 或同步数据源。
@@ -18,6 +22,7 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-05 +0800] 完成 GOAL-1573 Mac 基础菜单栏与键盘快捷键第一版：Mac Catalyst 下新增 `Import` / `Export` / `Backup` 菜单和设置快捷入口，支持通过菜单触发导入文件、导入 CSV、导出 CSV、导出 JSON 备份和打开设置；命令会路由到现有 iPad / Mac 工作台，不新增直接写账本旁路，JSON 覆盖恢复仍保留在页面内二次确认路径，不挂到菜单快捷键。
 - [2026-06-04 +0800] 推进 GOAL-1572 Mac CSV / JSON 导入导出第一版：新增 `LedgerCSVCodec`，支持正式账单按 `id, occurredAt, merchant, amount, category, source, note` 导出 CSV，并将 CSV 行导入为候选账单队列，用户确认前不会写入正式账本；Mac Catalyst 导入页新增 CSV 导入导出和 JSON 备份导出 / 恢复入口，JSON 恢复保留二次确认与安全备份语义；离线回归新增 CSV 往返、引号 / 逗号转义和无效金额用例。
 - [2026-06-04 +0800] 推进 GOAL-1571 Mac 拖拽截图 / 文件导入第一版：Mac Catalyst 导入页和识别队列页新增 Finder 拖拽导入区；拖入图片会复用 Vision OCR 进入待识别队列，文本文件直接进入待识别队列，PDF 和文件夹作为需处理项进入队列并提示不支持，不会直接写入正式账本。文件选择和拖拽导入共用同一套 `BatchRawInput` 入口与安全作用域读取逻辑。
 - [2026-06-04 +0800] 建立全平台 target 基线：主 App 已开启 Mac Catalyst supported destination，并关闭 Mac Designed for iPad 口径；新增 `AutoLedgerTV` 与 `AutoLedgerVision` 模板 target 作为后续只读展示平台入口。Mac Catalyst 构建通过，当前通过条件编译让 Gemma / MediaPipe 在 Catalyst 下受控降级，并在构建设置中让 iOS Extension / Watch 内容只嵌入 iOS 包；tvOS / visionOS 本机 smoke 暂受 Xcode 组件缺失限制，等待安装对应 platform runtime 后继续验证。

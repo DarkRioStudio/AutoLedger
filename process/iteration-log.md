@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-04（v1.5.0 全平台单账本路线调整）
+更新日期：2026-06-05（Watch 今日 / 最近页面标题去重与 UI 统一）
 
 ## 记录规则
 
@@ -43,6 +43,123 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-158 Watch 今日 / 最近页面标题去重与 UI 统一
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / Watch 体验修复
+- 类型：Bugfix / watchOS / SwiftUI
+- 目标：修复 Apple Watch “今日支出”和“最近支出”页面同屏出现两个同名标题，并统一两页开头 UI 结构。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWatch Watch App/ContentView.swift`：移除今日页内部 `watch.today.title` 和最近页内部 `watch.recent.title`；新增共享 `WatchLedgerContextHeader`，两页统一使用图标 + 账本名作为内容区上下文行，导航栏标题作为唯一页面标题。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮 Watch UI 修复。
+- 未改动范围：未修改 Watch 数据同步、表盘小组件、App Group、entitlements、Bundle ID、target、iCloud、SQLite 或 Xcode Cloud 配置。
+- 完成内容：今日页和最近页都保留顶部导航标题，不再在内容区重复显示同一标题；内容区第一行统一展示“本地账本”上下文，视觉结构更接近同一套 Watch 页面模板。
+- 未完成内容：未做 Apple Watch 真机截图复测；需要用户在真机上确认两页标题和间距是否符合预期。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：本轮去掉了今日页的内部 material 摘要卡背景，让今日页和最近页更统一；如果真机上觉得摘要内容缺少层次，可后续为两页引入同一套 section 容器，而不是只给今日页单独加卡片。
+- 回滚方式：恢复今日页和最近页内部标题，并移除 `WatchLedgerContextHeader`。
+- 结论：代码侧修复完成，Watch generic 构建通过；等待真机视觉复测。
+- 下一步建议：在 Watch 真机左右滑动今日 / 最近两页，确认导航栏标题唯一、内容区账本行一致、今日金额和最近列表的视觉节奏协调。
+
+### ITER-157 Watch App 与表盘小组件今日支出快照一致性修复
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 2 / Watch 与 Widget 同步体验修复
+- 类型：Bugfix / watchOS / Widget
+- 目标：修复 Apple Watch App 内“今日支出”为 0，但表盘小组件已有今日支出数据，必须杀后台再打开 Watch App 才刷新的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchSessionManager.swift`：新增从 App Group `WatchLedgerWidget.todaySummary` 读取今日支出快照的前台恢复路径；当本地快照不旧于内存态或内存态为空时，先回灌 `todaySummary`；写入快照后同时刷新默认金额组件和文字版 corner 组件。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchLedgerViewModel.swift`：初始化、初次同步和前台恢复时先同步本地 Widget 快照，再发起 WatchConnectivity 同步请求。
+  - `AutoLedger/AutoLedgerWatch Watch App/AutoLedgerWatchApp.swift`：监听 `scenePhase == .active`，Watch App 回到前台时刷新本地快照并请求 iPhone 补齐最新数据。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮修复和验证。
+- 未改动范围：未修改 Watch App / Widget target、Bundle ID、signing、App Group、entitlements、iCloud Container、主 App 同步 schema、SQLite 或 Xcode Cloud 脚本。
+- 完成内容：Watch App 的今日支出页面和表盘小组件现在共享同一份本地 App Group 快照作为前台恢复基线；即使 WCSession 回调还没回来，Watch App 首屏也能先显示小组件已经拿到的今日金额，然后再由 iPhone 同步覆盖为最新状态。
+- 未完成内容：未做 Apple Watch 真机前后台切换复测；需要用户在真机上验证“iPhone 新记一笔 / 小组件更新 / 打开 Watch App 首屏”的链路。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：本地快照只用于今日摘要的快速恢复，不替代 iPhone 的 WatchConnectivity 增量同步；最近账单列表仍以 WCSession payload 为准。
+- 回滚方式：移除 `refreshFromWidgetSnapshot()`、ViewModel 前台恢复调用和 `scenePhase` 监听，恢复 Watch App 只依赖 WCSession 内存态。
+- 结论：代码侧修复完成，Watch generic 构建通过；等待真机验证。
+- 下一步建议：在 iPhone 端新增一笔今日支出后，等待表盘小组件显示更新，再直接打开 Watch App（不杀后台）确认今日支出立即显示同一金额；随后下拉刷新确认最近账单列表补齐。
+
+### ITER-156 全平台统计卡与 iPad 分析组件尺寸固定
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / Phase 8 工作台体验修复
+- 类型：Bugfix / SwiftUI
+- 目标：修复 iPhone / iPad / Mac Catalyst 第一屏统计卡，以及 iPad 分析页不同统计组件因为文本长度自适应撑高，导致外框大小不一致、网格不平均对齐的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Shared/Components/MetricCard.swift`：共享统计卡固定外框高度，标题、数值和说明文本使用 `lineLimit`、`minimumScaleFactor` 与 tightening 在卡片内部自适应。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：iPad 分析页面板固定外框高度；分类占比、趋势和摘要行的标题 / 数值改为在面板内部缩放适配。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮体验修复。
+- 未改动范围：未调整统计口径、账本数据、iCloud 同步、批量导入、Mac 菜单命令、SQLite schema、Bundle ID、signing、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本。
+- 完成内容：统计卡和分析面板从“外框跟随内容高度变化”改为“外框固定、内部文字适配”，优先保证首页和宽屏分析网格平均对齐；长商户名、长分类名或较大金额不会继续把单个组件撑高。
+- 未完成内容：未做 iPad / Mac Catalyst 运行态截图目检；具体字号压缩效果仍需在真机或运行包中确认。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`。
+- 风险与注意事项：固定高度会让极端长文本优先缩小而不是撑开卡片；如后续视觉上觉得金额过小，可按具体页面再拆分专用卡片高度或专用字号策略。
+- 回滚方式：还原 `MetricCard` 的固定高度和 iPad 分析面板固定高度，恢复由内容决定组件高度的布局。
+- 结论：代码侧布局约束修复完成，iOS 与 Mac Catalyst 构建通过；等待运行态视觉复测。
+- 下一步建议：在 iPad 横屏、Mac Catalyst 窗口和 iPhone 首页分别检查“本月支出 / Top 商户 / 分类占比 / 最近趋势 / 本月摘要”的外框对齐和文字缩放效果。
+
+### ITER-155 iPad / Mac Catalyst 侧边栏二级页面切换修复
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 3 / Phase 8 工作台体验修复
+- 类型：Bugfix / SwiftUI
+- 目标：修复 iPad 工作台进入某个 Tab 的二级页面后，点击其他侧边栏 Tab 时右侧 detail 仍停留在旧二级页面的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：`IPadWorkspaceSection` 增加 `Hashable`，侧边栏引入 `sidebarSelection` 并绑定 `List(selection:)`；行点击和系统 list selection 都统一调用 `select(_:)`；切换 Tab 时继续重置 detail identity 和设置页局部 identity。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮修复和验证。
+- 未改动范围：未改 iPad / Mac 各 Tab 的业务页面；未改 CloudKit、导入队列、正式账本保存、Bundle ID、signing、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本。
+- 完成内容：侧边栏选择状态从“自定义 Button 自管状态”改为同时绑定 SwiftUI `List(selection:)`，避免子 `NavigationStack` 在二级页面时压住 detail 切换；点击文字、图标或行内空白区域都会走同一套切换和 detail 重置逻辑。
+- 未完成内容：未做 iPad 真机手动复测；需要用户在真机上再次验证“进入设置 / 账本 / 候选等二级页面后点击其他 Tab”的切换行为。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`。
+- 风险与注意事项：这是 SwiftUI `NavigationSplitView` + 自定义 sidebar button 的状态同步修复；如果后续仍出现个别 Tab 内部 `NavigationStack` 残留，需要把每个 Tab 的导航路径拆为显式 `NavigationPath`。
+- 回滚方式：移除 `sidebarSelection`、`List(selection:)`、`.tag(section)` 和对应 `onChange`，恢复上一轮自定义 Button 侧边栏。
+- 结论：代码侧修复完成，构建通过；等待 iPad 真机复测确认。
+- 下一步建议：真机进入任一二级页面后，连续点击“总览 / 导入 / 账本 / 分析 / 候选账单 / 数据清洗 / 设置”各 Tab，确认右侧都回到目标 Tab 根页面。
+
+### ITER-154 GOAL-1573 Mac 基础菜单栏与键盘快捷键
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：能力增强 / Mac Catalyst / 桌面交互
+- 目标：为 Mac Catalyst 工作台补齐基础菜单栏和常用键盘快捷键，让文件导入、CSV 导入导出、JSON 备份导出和设置入口可以通过桌面菜单触发。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/AutoLedgerMacCommandCenter.swift`：新增 Catalyst 命令中心和 `AutoLedgerMacCommands`，提供 `Import` / `Export` / `Backup` 菜单及设置快捷入口。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：在 Mac Catalyst 下挂载菜单命令，不影响 iPhone / iPad / Watch 路径。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：接收 Mac 菜单命令并路由到工作台；导入文件、导入 CSV、导出 CSV、导出 JSON 备份复用现有页面动作；设置命令切换到设置页。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐菜单和命令三语文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1573 完成范围。
+- 未改动范围：未新增原生 `NSSavePanel` / `NSOpenPanel`，未实现多窗口，未实现大表格、批量选择、批量修正或重复账单处理；JSON 覆盖恢复不挂菜单快捷键，仍保留在页面内二次确认；未修改 Bundle ID、signing、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本。
+- 完成内容：
+  - `Import > Import Files...` 可打开现有文件导入器。
+  - `Import > Import CSV...` 可打开 CSV 导入器，CSV 行继续进入候选账单队列。
+  - `Export > Export CSV...` 复用现有 CSV 导出能力。
+  - `Backup > Export JSON Backup...` 复用现有 JSON BackupBundle 导出能力。
+  - 设置命令可切换到工作台设置页。
+  - 快捷键覆盖导入文件、导入 CSV、导出 CSV、导出 JSON 和设置入口。
+- 未完成内容：菜单 smoke 仍需在真实 Mac Catalyst 运行包里人工确认；剪贴板导入、筛选后局部导出、JSON 恢复预览、原生文件面板和菜单禁用态可在后续桌面打磨中继续增强。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`，仍有 MediaPipe XCFramework 缺少 maccatalyst slice 的 CocoaPods copy warning，但不影响当前构建。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 formatter warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`，仅有既有 Swift / MediaPipe warning。
+- 风险与注意事项：当前命令路由基于工作台内的现有 SwiftUI file importer / exporter / share flow；如果未来改成更原生的 Mac 文件面板，需要单独处理沙盒安全范围和保存路径。菜单命令不应绕过候选复核或覆盖恢复确认。
+- 回滚方式：移除 `AutoLedgerMacCommandCenter.swift`、`AutoLedgerApp` 的 Catalyst `.commands`、工作台的命令路由和新增本地化 key，并将 GOAL-1573 状态恢复为未完成。
+- 结论：GOAL-1573 代码侧第一版完成，Mac Catalyst 已具备基础菜单栏和快捷键入口。
+- 下一步建议：在 Mac Catalyst 运行包中人工 smoke 菜单项和快捷键；随后进入 GOAL-1574 Mac 大表格与批量编辑。
 
 ### ITER-153 GOAL-1572 Mac CSV / JSON 导入导出
 - 日期：2026-06-04

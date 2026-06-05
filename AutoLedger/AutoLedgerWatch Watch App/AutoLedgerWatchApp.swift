@@ -22,10 +22,15 @@ struct AutoLedgerWatch_Watch_AppApp: App {
 }
 
 private struct WatchAppRootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel = WatchLedgerViewModel()
 
     var body: some View {
         ContentView()
             .environment(viewModel)
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                viewModel.refreshOnForeground()
+            }
     }
 }

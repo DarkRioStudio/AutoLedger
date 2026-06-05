@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-private enum IPadWorkspaceSection: String, CaseIterable, Identifiable {
+private enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case overview
     case capture
     case ledger
@@ -44,13 +44,14 @@ private enum IPadWorkspaceSection: String, CaseIterable, Identifiable {
 
 struct IPadWorkspaceView: View {
     @State private var selection: IPadWorkspaceSection = .overview
+    @State private var sidebarSelection: IPadWorkspaceSection? = .overview
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var settingsResetID = UUID()
     @State private var detailResetID = UUID()
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            List {
+            List(selection: $sidebarSelection) {
                 ForEach(IPadWorkspaceSection.allCases) { section in
                     Button {
                         select(section)
@@ -70,6 +71,7 @@ struct IPadWorkspaceView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(selection == section ? AppTheme.accent : AppTheme.ink)
                     .listRowBackground(selection == section ? AppTheme.accent.opacity(0.10) : Color.clear)
+                    .tag(section)
                 }
             }
             .navigationTitle("ipad.workspace.title")
@@ -83,9 +85,21 @@ struct IPadWorkspaceView: View {
         .onAppear {
             consumeQuickLedgerPendingNavigationIfNeeded()
         }
+        .onChange(of: sidebarSelection) { _, newValue in
+            guard let newValue else {
+                sidebarSelection = selection
+                return
+            }
+            select(newValue)
+        }
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.quickLedgerOpenLedgerEvent)) { _ in
             consumeQuickLedgerPendingNavigationIfNeeded()
         }
+        #if targetEnvironment(macCatalyst)
+        .onReceive(NotificationCenter.default.publisher(for: AutoLedgerMacCommandCenter.didPerformCommand)) { _ in
+            handleMacCommandRoutingIfNeeded()
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -124,12 +138,31 @@ struct IPadWorkspaceView: View {
 
     private func select(_ section: IPadWorkspaceSection) {
         guard selection != section else { return }
-        if selection == .settings {
+        resetDetailColumn(leaving: selection)
+        selection = section
+        sidebarSelection = section
+    }
+
+    private func resetDetailColumn(leaving oldSection: IPadWorkspaceSection) {
+        if oldSection == .settings {
             settingsResetID = UUID()
         }
-        selection = section
         detailResetID = UUID()
     }
+
+    #if targetEnvironment(macCatalyst)
+    @MainActor
+    private func handleMacCommandRoutingIfNeeded() {
+        guard let command = AutoLedgerMacCommandCenter.shared.pendingCommand else { return }
+        switch command {
+        case .openSettings:
+            _ = AutoLedgerMacCommandCenter.shared.consume(command)
+            select(.settings)
+        case .importFiles, .importCSV, .exportCSV, .exportJSON:
+            select(.capture)
+        }
+    }
+    #endif
 
     @MainActor
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
@@ -997,6 +1030,7 @@ private struct IPadBatchImportWorkspaceView: View {
             .onAppear {
                 selectedItemID = selectedItem?.id
                 syncCandidateDraft()
+                handleMacBatchCommandIfNeeded()
             }
             .onChange(of: filter) { _, _ in
                 selectedItemID = items.first?.id
@@ -1014,7 +1048,35 @@ private struct IPadBatchImportWorkspaceView: View {
                 capturedImageData = nil
                 await importCapturedPhoto(data)
             }
+            #if targetEnvironment(macCatalyst)
+            .onReceive(NotificationCenter.default.publisher(for: AutoLedgerMacCommandCenter.didPerformCommand)) { _ in
+                handleMacBatchCommandIfNeeded()
+            }
+            #endif
         }
+    }
+
+    @MainActor
+    private func handleMacBatchCommandIfNeeded() {
+        #if targetEnvironment(macCatalyst)
+        guard let command = AutoLedgerMacCommandCenter.shared.pendingCommand else { return }
+        switch command {
+        case .importFiles:
+            _ = AutoLedgerMacCommandCenter.shared.consume(command)
+            showsFileImporter = true
+        case .importCSV:
+            _ = AutoLedgerMacCommandCenter.shared.consume(command)
+            showsCSVImporter = true
+        case .exportCSV:
+            _ = AutoLedgerMacCommandCenter.shared.consume(command)
+            exportCSV()
+        case .exportJSON:
+            _ = AutoLedgerMacCommandCenter.shared.consume(command)
+            exportJSONBackup()
+        case .openSettings:
+            break
+        }
+        #endif
     }
 
     private var dropImportTarget: some View {
@@ -2324,6 +2386,7 @@ private struct IPadReportWorkspaceView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedMonth: Date = .now
     @State private var selectedTrendLabel: String?
+    private let analysisPanelHeight: CGFloat = 396
 
     private var snapshot: MonthlySnapshot {
         MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)
@@ -2576,11 +2639,13 @@ private struct IPadReportWorkspaceView: View {
             Text(titleKey)
                 .font(.headline)
                 .foregroundStyle(AppTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
 
             content()
         }
         .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 330, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: analysisPanelHeight, idealHeight: analysisPanelHeight, maxHeight: analysisPanelHeight, alignment: .topLeading)
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -2653,10 +2718,13 @@ private struct IPadAnalysisProgressRow: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .allowsTightening(true)
                     Text(ratioText)
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                 }
 
                 Spacer()
@@ -2666,7 +2734,8 @@ private struct IPadAnalysisProgressRow: View {
                     .foregroundStyle(AppTheme.ink)
                     .monospacedDigit()
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.62)
+                    .allowsTightening(true)
             }
 
             GeometryReader { proxy in
@@ -2694,12 +2763,15 @@ private struct IPadAnalysisDetailRow: View {
             Text(titleKey)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
             Spacer()
             Text(value)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.62)
+                .allowsTightening(true)
         }
     }
 }

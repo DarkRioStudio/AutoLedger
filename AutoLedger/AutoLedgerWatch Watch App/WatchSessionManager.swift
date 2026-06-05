@@ -42,6 +42,7 @@ final class WatchSessionManager: NSObject {
     private static let widgetAppGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let widgetSummaryKey = "WatchLedgerWidget.todaySummary"
     private static let watchDailyWidgetKind = "AutoLedgerWatchDailyExpenseWidget"
+    private static let watchCornerTextWidgetKind = "AutoLedgerWatchCornerTextWidget"
 
     private var lastBackgroundFetchRequestAt: Date?
 
@@ -97,6 +98,26 @@ final class WatchSessionManager: NSObject {
     func requestInitialSyncIfNeeded() {
         guard recentTransactions.isEmpty || customCategories.isEmpty || todaySummary.updatedAt == nil else { return }
         requestRecentTransactions(allowBackgroundFallback: true)
+    }
+
+    /// Watch App 回到前台时，先从表盘小组件共用的 App Group 快照恢复今日支出。
+    ///
+    /// WidgetKit timeline 可能已经读取到最新快照，但 Watch App 仍停留在旧的
+    /// `WatchSessionManager` 内存态；先回灌本地快照，再请求 iPhone 增量同步，可避免
+    /// 小组件有数据而 App 首屏显示 0 的短暂分叉。
+    func refreshFromWidgetSnapshot() {
+        guard
+            let defaults = UserDefaults(suiteName: Self.widgetAppGroupIdentifier),
+            let snapshot = defaults.dictionary(forKey: Self.widgetSummaryKey),
+            let summary = WatchTodaySummary(from: snapshot)
+        else { return }
+
+        let snapshotUpdatedAt = summary.updatedAt ?? Date.distantPast
+        let currentUpdatedAt = todaySummary.updatedAt ?? Date.distantPast
+        guard snapshotUpdatedAt >= currentUpdatedAt || todaySummary.isEmpty else { return }
+
+        todaySummary = summary
+        notifyStateChanged()
     }
 
     // MARK: - Flush / Retry
@@ -226,6 +247,7 @@ final class WatchSessionManager: NSObject {
         }
         defaults.set(snapshot, forKey: Self.widgetSummaryKey)
         WidgetCenter.shared.reloadTimelines(ofKind: Self.watchDailyWidgetKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.watchCornerTextWidgetKind)
     }
 
     private func notifyStateChanged() {

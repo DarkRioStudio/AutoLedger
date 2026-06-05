@@ -56,6 +56,7 @@ final class WatchLedgerViewModel {
         resolvedSession.onStateChanged = { [weak self] in
             self?.syncFromSession()
         }
+        resolvedSession.refreshFromWidgetSnapshot()
         syncFromSession()
         resolvedSession.requestInitialSyncIfNeeded()
         resolvedSession.retryPending()
@@ -76,7 +77,17 @@ final class WatchLedgerViewModel {
     /// Watch 首屏无账单或无自定义分类时，主动触发一次同步请求。
     func requestInitialSyncIfNeeded() {
         guard !WatchScreenshotModeConfig.isEnabled else { return }
+        session.refreshFromWidgetSnapshot()
+        syncFromSession()
         session.requestInitialSyncIfNeeded()
+    }
+
+    /// Watch App 从后台恢复时先读本地 Widget 快照，再请求 iPhone 补齐最新数据。
+    func refreshOnForeground() {
+        guard !WatchScreenshotModeConfig.isEnabled else { return }
+        session.refreshFromWidgetSnapshot()
+        syncFromSession()
+        session.requestRecentTransactions()
     }
 
     /// 快速记账提交（创建 WatchLedgerDraft，入 pending 队列）

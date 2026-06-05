@@ -90,21 +90,13 @@ private struct WatchTodaySummaryPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(viewModel.todaySummary.ledgerName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+            VStack(alignment: .leading, spacing: 14) {
+                WatchLedgerContextHeader(
+                    iconName: "calendar",
+                    ledgerName: viewModel.todaySummary.ledgerName
+                )
 
-                    Text("watch.today.title")
-                        .font(.headline)
-
+                VStack(alignment: .leading, spacing: 7) {
                     Text(viewModel.todaySummary.formattedAmount)
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .monospacedDigit()
@@ -143,9 +135,7 @@ private struct WatchTodaySummaryPage: View {
                             .lineLimit(1)
                     }
                 }
-                .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(
                     Text(String(format: String(localized: "watch.today.accessibility_format"), viewModel.todaySummary.formattedAmount, viewModel.todaySummary.transactionCount))
@@ -182,20 +172,11 @@ private struct WatchRecentTransactionsPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 4) {
-                    Image(systemName: "list.bullet.rectangle")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("watch.recent.title")
-                            .font(.headline)
-                        Text(viewModel.todaySummary.ledgerName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
+            VStack(alignment: .leading, spacing: 12) {
+                WatchLedgerContextHeader(
+                    iconName: "list.bullet.rectangle",
+                    ledgerName: viewModel.todaySummary.ledgerName
+                )
 
                 if viewModel.recentTransactions.isEmpty {
                     ContentUnavailableView(
@@ -218,6 +199,27 @@ private struct WatchRecentTransactionsPage: View {
             .padding(.horizontal, 4)
         }
         .scrollIndicators(.hidden)
+    }
+}
+
+private struct WatchLedgerContextHeader: View {
+    let iconName: String
+    let ledgerName: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: iconName)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 14)
+
+            Text(ledgerName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

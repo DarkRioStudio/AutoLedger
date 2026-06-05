@@ -87,6 +87,14 @@
 "mac.data_exchange.json_restore.confirm_title" = "Restoring JSON will replace local data";
 "mac.data_exchange.json_restore.confirm_action" = "Replace and Restore";
 "mac.data_exchange.json_restore.confirm_message" = "A JSON backup replaces the official ledger, recently deleted items, and user settings. AutoLedger will try to create a safety backup first.";
+"mac.menu.import" = "Import";
+"mac.menu.import.files" = "Import Files...";
+"mac.menu.import.csv" = "Import CSV...";
+"mac.menu.export" = "Export";
+"mac.menu.export.csv" = "Export CSV...";
+"mac.menu.backup" = "Backup";
+"mac.menu.backup.json" = "Export JSON Backup...";
+"mac.menu.settings" = "Settings...";
 "ipad.batch_import.recognition_summary" = "Processed %d, candidates %d, needs work %d";
 "ipad.batch_import.confirm_save" = "Save to Ledger";
 "ipad.batch_import.reject" = "Ignore Candidate";
