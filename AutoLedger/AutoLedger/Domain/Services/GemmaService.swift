@@ -1,8 +1,10 @@
 import Foundation
 import OSLog
 import CryptoKit
+#if !targetEnvironment(macCatalyst)
 @preconcurrency import MediaPipeTasksGenAI
 import MediaPipeTasksGenAIC
+#endif
 
 private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "GemmaService")
 
@@ -25,7 +27,9 @@ final class GemmaService {
     }
 
     private(set) var state: ModelState = .notDownloaded
+    #if !targetEnvironment(macCatalyst)
     private var llmInference: LlmInference?
+    #endif
     private var isLoading = false
 
     /// 推理结束后延迟卸载模型的计时器（默认 120 秒无新调用则释放内存）
@@ -115,18 +119,30 @@ final class GemmaService {
     }
 
     var isModelReady: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
         if case .ready = state { return true }
         return false
+        #endif
     }
 
     /// 模型文件已下载到本地（可能尚未加载到内存）
     var isModelDownloaded: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
         resolvedModelPath != nil
+        #endif
     }
 
     /// 当前是否运行在 App Extension 中（Extension 内存上限 ~50 MB，无法加载 2.5 GB 模型）
     static let isRunningInExtension: Bool = {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
         Bundle.main.bundlePath.hasSuffix(".appex")
+        #endif
     }()
 
     /// 模型文件大小（MB），用于 UI 展示
@@ -158,6 +174,10 @@ final class GemmaService {
     /// 异步懒加载：首次调用时加载模型，后续直接返回。
     /// 供 generate() 和 UI 自动调用。
     func ensureLoaded() async {
+        #if targetEnvironment(macCatalyst)
+        state = .error("Gemma 模型暂不支持 Mac Catalyst")
+        return
+        #else
         if Self.isRunningInExtension { return }  // Extension 内存不足，跳过
         if isModelReady || isLoading { return }
         guard resolvedModelPath != nil else { return }
@@ -166,13 +186,16 @@ final class GemmaService {
         unloadTask?.cancel()  // 取消即将卸载的计时器
         unloadTask = nil
         await loadModelAsync()
+        #endif
     }
 
     /// 释放模型内存（保留文件），下次 ensureLoaded() 会重新加载
     func unloadModel() {
         unloadTask?.cancel()
         unloadTask = nil
+        #if !targetEnvironment(macCatalyst)
         llmInference = nil
+        #endif
         if resolvedModelPath != nil {
             state = .notDownloaded  // 文件还在，仅释放内存
         }
@@ -194,6 +217,9 @@ final class GemmaService {
 
     /// 检查远端 manifest，对比本地版本。返回远端 manifest（供后续下载使用）。
     func checkForUpdate() async {
+        #if targetEnvironment(macCatalyst)
+        state = .error("Gemma 模型暂不支持 Mac Catalyst")
+        #else
         state = .checkingManifest
         do {
             let remote = try await fetchManifest()
@@ -216,11 +242,16 @@ final class GemmaService {
             // manifest 获取失败不阻塞：如本地有模型就继续用
             if resolvedModelPath != nil { loadModel() }
         }
+        #endif
     }
 
     // MARK: - 下载
 
     func downloadModel() async {
+        #if targetEnvironment(macCatalyst)
+        state = .error("Gemma 模型暂不支持 Mac Catalyst")
+        return
+        #else
         guard !isModelReady else { return }
         state = .downloading(progress: 0)
         logger.info("[Gemma] 开始下载...")
@@ -276,12 +307,16 @@ final class GemmaService {
             logger.error("[Gemma] 下载失败: \(error.localizedDescription)")
             state = .error(error.localizedDescription)
         }
+        #endif
     }
 
     // MARK: - 加载
 
     /// 同步加载（仅供下载完成后 / checkForUpdate 内部使用）
     private func loadModel() {
+        #if targetEnvironment(macCatalyst)
+        state = .error("Gemma 模型暂不支持 Mac Catalyst")
+        #else
         guard let path = resolvedModelPath else {
             state = .notDownloaded
             return
@@ -299,10 +334,14 @@ final class GemmaService {
             logger.error("[Gemma] 模型加载失败: \(error.localizedDescription)")
             state = .error("模型加载失败：\(error.localizedDescription)")
         }
+        #endif
     }
 
     /// 异步加载——在后台线程执行重量级 init，避免阻塞主线程
     private func loadModelAsync() async {
+        #if targetEnvironment(macCatalyst)
+        state = .error("Gemma 模型暂不支持 Mac Catalyst")
+        #else
         guard let path = resolvedModelPath else {
             state = .notDownloaded
             return
@@ -329,6 +368,7 @@ final class GemmaService {
             logger.error("[Gemma] 异步模型加载失败: \(error.localizedDescription)")
             state = .error("模型加载失败：\(error.localizedDescription)")
         }
+        #endif
     }
 
     /// 记录一次模型加载耗时，持久化到 UserDefaults，并更新可观察属性
@@ -356,6 +396,9 @@ final class GemmaService {
     /// 单轮文本生成（nonisolated —— 调用方应在后台 Task 中调用）。
     /// 首次调用时自动触发异步加载。
     nonisolated func generate(prompt: String) async throws -> String {
+        #if targetEnvironment(macCatalyst)
+        throw await MainActor.run { GemmaError.modelNotReady }
+        #else
         // 确保模型已加载（懒加载）
         await ensureLoaded()
         let inference: LlmInference = try await MainActor.run {
@@ -389,12 +432,15 @@ final class GemmaService {
         }
 
         return fullResponse
+        #endif
     }
 
     // MARK: - 删除
 
     func deleteModel() {
+        #if !targetEnvironment(macCatalyst)
         llmInference = nil
+        #endif
         try? FileManager.default.removeItem(at: modelDirectory)
         state = .notDownloaded
         logger.info("[Gemma] 模型已删除")

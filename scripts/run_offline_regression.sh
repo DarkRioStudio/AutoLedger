@@ -195,7 +195,10 @@ swiftc \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
+  "$CORE/Services/BatchImportRecognitionExecutor.swift" \
+  "$CORE/Services/DataCleaningPreviewPlanner.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \
+  "$CORE/Services/LedgerCSVCodec.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \

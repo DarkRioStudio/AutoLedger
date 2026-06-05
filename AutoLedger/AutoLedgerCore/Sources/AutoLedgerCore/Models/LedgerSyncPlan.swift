@@ -69,6 +69,113 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
     }
 }
 
+public enum LedgerConfigurationSyncPolicy {
+    public static func shouldPreserveLocalConfiguration(
+        local: LedgerConfigurationSyncPayload,
+        remote: LedgerConfigurationSyncPayload
+    ) -> Bool {
+        local.hasUserConfigurationContent && !remote.hasUserConfigurationContent
+    }
+
+    public static func merge(
+        local: LedgerConfigurationSyncPayload,
+        remote: LedgerConfigurationSyncPayload,
+        updatedAt: Date? = nil
+    ) -> LedgerConfigurationSyncPayload {
+        LedgerConfigurationSyncPayload(
+            recordName: remote.recordName,
+            updatedAt: updatedAt ?? remote.updatedAt,
+            deviceID: remote.deviceID,
+            subscriptions: mergeSubscriptions(local.subscriptions, remote.subscriptions),
+            categoryCorrections: mergeCategoryCorrections(local.categoryCorrections, remote.categoryCorrections),
+            customCategories: mergeStrings(local.customCategories, remote.customCategories),
+            customSources: mergeStrings(local.customSources, remote.customSources),
+            merchantAliases: mergeDictionaries(local.merchantAliases, remote.merchantAliases),
+            subscriptionMetadata: BackupSubscriptionMetadata(
+                annualPriceOverrides: mergeDictionaries(
+                    local.subscriptionMetadata.annualPriceOverrides,
+                    remote.subscriptionMetadata.annualPriceOverrides
+                ),
+                notes: mergeDictionaries(local.subscriptionMetadata.notes, remote.subscriptionMetadata.notes)
+            ),
+            appSettings: remote.appSettings
+        )
+    }
+
+    public static func hasDifferentUserConfigurationContent(
+        _ lhs: LedgerConfigurationSyncPayload,
+        _ rhs: LedgerConfigurationSyncPayload
+    ) -> Bool {
+        lhs.subscriptions != rhs.subscriptions ||
+            lhs.categoryCorrections != rhs.categoryCorrections ||
+            lhs.customCategories != rhs.customCategories ||
+            lhs.customSources != rhs.customSources ||
+            lhs.merchantAliases != rhs.merchantAliases ||
+            lhs.subscriptionMetadata != rhs.subscriptionMetadata
+    }
+
+    private static func mergeSubscriptions(
+        _ local: [Subscription],
+        _ remote: [Subscription]
+    ) -> [Subscription] {
+        var merged = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        for subscription in remote {
+            merged[subscription.id] = subscription
+        }
+        return merged.values.sorted { lhs, rhs in
+            if lhs.nextChargedAt == rhs.nextChargedAt {
+                return lhs.merchant < rhs.merchant
+            }
+            return lhs.nextChargedAt < rhs.nextChargedAt
+        }
+    }
+
+    private static func mergeCategoryCorrections(
+        _ local: [BackupCategoryCorrection],
+        _ remote: [BackupCategoryCorrection]
+    ) -> [BackupCategoryCorrection] {
+        var merged = Dictionary(uniqueKeysWithValues: local.map { ($0.merchant, $0.category) })
+        for correction in remote {
+            merged[correction.merchant] = correction.category
+        }
+        return merged
+            .map { BackupCategoryCorrection(merchant: $0.key, category: $0.value) }
+            .sorted { $0.merchant < $1.merchant }
+    }
+
+    private static func mergeStrings(_ local: [String], _ remote: [String]) -> [String] {
+        var seen: Set<String> = []
+        return (local + remote)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .filter { seen.insert($0).inserted }
+            .sorted()
+    }
+
+    private static func mergeDictionaries<Value>(
+        _ local: [String: Value],
+        _ remote: [String: Value]
+    ) -> [String: Value] {
+        var merged = local
+        for (key, value) in remote {
+            merged[key] = value
+        }
+        return merged
+    }
+}
+
+public extension LedgerConfigurationSyncPayload {
+    var hasUserConfigurationContent: Bool {
+        !subscriptions.isEmpty ||
+            !categoryCorrections.isEmpty ||
+            !customCategories.isEmpty ||
+            !customSources.isEmpty ||
+            !merchantAliases.isEmpty ||
+            !subscriptionMetadata.annualPriceOverrides.isEmpty ||
+            !subscriptionMetadata.notes.isEmpty
+    }
+}
+
 public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
     public let recordName: String
     public let transactionID: UUID

@@ -1,7 +1,10 @@
 "widget.today.title" = "Today";
+"widget.corner_text.title" = "Today Text";
 "widget.default_ledger" = "Local Ledger";
 "widget.no_expense" = "No expense";
 "widget.count_format" = "%d items";
 "widget.updated_format" = "Updated %@";
 "widget.sync_pending" = "Sync pending";
 "widget.today.description" = "View today's AutoLedger spending on the watch face.";
+"widget.corner_text.description" = "Show today's spending as an icon and corner label on the watch face.";
+"widget.corner_text.format" = "Today: %@";

@@ -10,6 +10,25 @@ typealias Subscription = AutoLedgerCore.Subscription
 
 private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "LedgerStore")
 
+struct DataCleaningApplicationResult: Identifiable, Equatable {
+    let id = UUID()
+    let previewID: String
+    let kind: DataCleaningPreviewKind
+    let updatedCount: Int
+    let deletedCount: Int
+    let skippedCount: Int
+    let canUndo: Bool
+}
+
+private struct DataCleaningUndoSnapshot {
+    let previewID: String
+    let kind: DataCleaningPreviewKind
+    let previousActiveTransactions: [Transaction]
+    let previousDeletedTransactions: [Transaction]
+    let updatedCount: Int
+    let deletedCount: Int
+}
+
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
     static var watchSyncHandler: (() -> Void)?
@@ -33,6 +52,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var ledgerCloudSyncLog: [String] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
+    @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -43,6 +63,7 @@ final class LedgerStore: ObservableObject {
     private var pendingBackupTask: Task<Void, Never>?
     private var pendingCloudKitPushTask: Task<Void, Never>?
     private var didRunLaunchCloudKitSync = false
+    private var lastDataCleaningUndoSnapshot: DataCleaningUndoSnapshot?
     private let iCloudBackupService = ICloudBackupService()
 
     init(
@@ -63,6 +84,7 @@ final class LedgerStore: ObservableObject {
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
         self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
+        seedLegacyLedgerConfigurationTimestampIfNeeded()
         LedgerStore.shared = self
     }
 
@@ -716,6 +738,206 @@ final class LedgerStore: ObservableObject {
         return updatedCount
     }
 
+    @discardableResult
+    func applyDataCleaningPreview(_ preview: DataCleaningPreviewItem) -> DataCleaningApplicationResult {
+        let previousActive = transactions
+        let previousDeleted = deletedTransactions
+        let affectedIDs = Set(preview.affectedTransactionIDs)
+        var updatedCount = 0
+        var deletedCount = 0
+        var skippedCount = 0
+
+        do {
+            switch preview.kind {
+            case .merchantAlias:
+                for transaction in transactions where affectedIDs.contains(transaction.id) {
+                    guard let updated = transaction.applyingMerchantAlias(
+                        original: preview.currentValue,
+                        alias: preview.proposedValue
+                    ) else {
+                        skippedCount += 1
+                        continue
+                    }
+                    try updateTransactionForDataCleaning(updated)
+                    updatedCount += 1
+                }
+
+            case .categoryCorrection:
+                guard let categoryRawValue = categoryRawValue(from: preview) else {
+                    skippedCount = preview.affectedTransactionIDs.count
+                    break
+                }
+                for transaction in transactions where affectedIDs.contains(transaction.id) {
+                    guard transaction.category != categoryRawValue else {
+                        skippedCount += 1
+                        continue
+                    }
+                    try updateTransactionForDataCleaning(transaction.replacingCategory(categoryRawValue))
+                    updatedCount += 1
+                }
+
+            case .duplicateCandidate:
+                let affected = transactions
+                    .filter { affectedIDs.contains($0.id) }
+                    .sorted { $0.occurredAt > $1.occurredAt }
+                for transaction in affected.dropFirst() {
+                    try softDeleteTransactionForDataCleaning(transaction)
+                    deletedCount += 1
+                }
+                skippedCount = max(0, preview.affectedTransactionIDs.count - affected.count)
+            }
+        } catch {
+            restoreDataCleaningSnapshot(active: previousActive, deleted: previousDeleted)
+            lastImportSummary = "数据清洗应用失败，已尝试恢复到应用前状态：\(error.localizedDescription)"
+            let result = DataCleaningApplicationResult(
+                previewID: preview.id,
+                kind: preview.kind,
+                updatedCount: 0,
+                deletedCount: 0,
+                skippedCount: preview.affectedTransactionIDs.count,
+                canUndo: false
+            )
+            lastDataCleaningApplicationResult = result
+            return result
+        }
+
+        let changedCount = updatedCount + deletedCount
+        let result = DataCleaningApplicationResult(
+            previewID: preview.id,
+            kind: preview.kind,
+            updatedCount: updatedCount,
+            deletedCount: deletedCount,
+            skippedCount: skippedCount,
+            canUndo: changedCount > 0
+        )
+        lastDataCleaningApplicationResult = result
+
+        if changedCount > 0 {
+            lastDataCleaningUndoSnapshot = DataCleaningUndoSnapshot(
+                previewID: preview.id,
+                kind: preview.kind,
+                previousActiveTransactions: previousActive,
+                previousDeletedTransactions: previousDeleted,
+                updatedCount: updatedCount,
+                deletedCount: deletedCount
+            )
+            sortTransactions()
+            lastImportSummary = "已应用数据清洗：更新 \(updatedCount) 笔，移入最近删除 \(deletedCount) 笔。"
+            reloadWidgets()
+            requestAutomaticBackup()
+            scheduleCloudKitPushAfterLocalLedgerChange()
+        } else {
+            lastDataCleaningUndoSnapshot = nil
+            lastImportSummary = "没有需要应用的数据清洗项。"
+        }
+
+        return result
+    }
+
+    @discardableResult
+    func undoLastDataCleaningApplication() -> DataCleaningApplicationResult? {
+        guard let snapshot = lastDataCleaningUndoSnapshot else {
+            lastImportSummary = "没有可撤销的数据清洗操作。"
+            return nil
+        }
+
+        restoreDataCleaningSnapshot(
+            active: snapshot.previousActiveTransactions,
+            deleted: snapshot.previousDeletedTransactions
+        )
+        let result = DataCleaningApplicationResult(
+            previewID: snapshot.previewID,
+            kind: snapshot.kind,
+            updatedCount: snapshot.updatedCount,
+            deletedCount: snapshot.deletedCount,
+            skippedCount: 0,
+            canUndo: false
+        )
+        lastDataCleaningApplicationResult = result
+        lastDataCleaningUndoSnapshot = nil
+        lastImportSummary = "已撤销上一次数据清洗操作。"
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return result
+    }
+
+    private func updateTransactionForDataCleaning(_ transaction: Transaction) throws {
+        if let index = transactions.firstIndex(where: { $0.id == transaction.id }) {
+            transactions[index] = transaction
+        } else if let index = deletedTransactions.firstIndex(where: { $0.id == transaction.id }) {
+            deletedTransactions[index] = transaction
+        }
+        try transactionStore?.update(transaction: transaction)
+    }
+
+    private func softDeleteTransactionForDataCleaning(_ transaction: Transaction) throws {
+        try transactionStore?.delete(transactionID: transaction.id)
+        transactions.removeAll { $0.id == transaction.id }
+        deletedTransactions.removeAll { $0.id == transaction.id }
+        deletedTransactions.insert(transaction, at: 0)
+        if deletedTransactions.count > 50 {
+            deletedTransactions = Array(deletedTransactions.prefix(50))
+        }
+    }
+
+    private func categoryRawValue(from preview: DataCleaningPreviewItem) -> String? {
+        if let category = TransactionCategory.allCases.first(where: { $0.title == preview.proposedValue }) {
+            return category.rawValue
+        }
+        guard let rawValue = preview.id.components(separatedBy: "->").last,
+              TransactionCategory(rawValue: rawValue) != nil else {
+            return nil
+        }
+        return rawValue
+    }
+
+    private func restoreDataCleaningSnapshot(active: [Transaction], deleted: [Transaction]) {
+        let previousByID = Dictionary(uniqueKeysWithValues: (active + deleted).map { ($0.id, $0) })
+        let activeIDs = Set(active.map(\.id))
+        let deletedIDs = Set(deleted.map(\.id))
+        let currentByID = Dictionary(uniqueKeysWithValues: (transactions + deletedTransactions).map { ($0.id, $0) })
+        let currentDeletedIDs = Set(deletedTransactions.map(\.id))
+        let currentActiveIDs = Set(transactions.map(\.id))
+
+        for id in activeIDs {
+            guard let transaction = previousByID[id] else { continue }
+            guard currentByID[id] != transaction || currentDeletedIDs.contains(id) else { continue }
+            do {
+                if deletedTransactions.contains(where: { $0.id == id }),
+                   let sqlStore = transactionStore as? SQLiteTransactionStore {
+                    try sqlStore.restoreTransaction(id: id)
+                }
+                try transactionStore?.update(transaction: transaction)
+            } catch {
+                lastImportSummary = "恢复数据清洗快照时写入失败：\(error.localizedDescription)"
+            }
+        }
+
+        for id in deletedIDs {
+            guard let transaction = previousByID[id] else { continue }
+            guard currentByID[id] != transaction || currentActiveIDs.contains(id) else { continue }
+            do {
+                try transactionStore?.update(transaction: transaction)
+                try transactionStore?.delete(transactionID: id)
+            } catch {
+                lastImportSummary = "恢复最近删除状态时写入失败：\(error.localizedDescription)"
+            }
+        }
+
+        for id in currentByID.keys where previousByID[id] == nil {
+            do {
+                try transactionStore?.delete(transactionID: id)
+            } catch {
+                lastImportSummary = "恢复数据清洗快照时处理新增账单失败：\(error.localizedDescription)"
+            }
+        }
+
+        transactions = active
+        deletedTransactions = Array(deleted.prefix(50))
+        sortTransactions()
+    }
+
     private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {
         let originalMerchant = original.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
         let updatedMerchant = updated.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1193,6 +1415,19 @@ extension LedgerStore {
         return url
     }
 
+    func writeCSVExportFile() throws -> URL {
+        let data = try LedgerCSVCodec.encode(transactions: transactions)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let filename = "AutoLedger_transactions_\(formatter.string(from: Date())).csv"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try data.write(to: url, options: [.atomic])
+        lastBackupSummary = "已生成 CSV：\(transactions.count) 条正式账单"
+        return url
+    }
+
     func importBackup(from url: URL) throws {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer {
@@ -1458,7 +1693,7 @@ extension LedgerStore {
         var conflicts = 0
 
         updateLedgerCloudSyncStatus("拉取完成，正在写入本地账本...")
-        for payload in remotePayloads {
+        for (index, payload) in remotePayloads.enumerated() {
             switch try sqlStore.applyRemoteSyncRecord(payload.syncRecord) {
             case .inserted:
                 inserted += 1
@@ -1470,6 +1705,10 @@ extension LedgerStore {
                 keptLocal += 1
             case .conflictPendingReview:
                 conflicts += 1
+            }
+
+            if (index + 1).isMultiple(of: 100) {
+                await Task.yield()
             }
         }
         return (
@@ -1496,29 +1735,46 @@ extension LedgerStore {
             return (remoteFound: true, applied: false)
         }
 
+        let local = makeLedgerConfigurationPayload(updatedAt: ledgerConfigurationUpdatedAt)
+        if LedgerConfigurationSyncPolicy.shouldPreserveLocalConfiguration(local: local, remote: remote) {
+            markLedgerConfigurationChanged()
+            scheduleCloudKitPushAfterLocalLedgerChange()
+            updateLedgerCloudSyncStatus("远端用户配置为空，已保留本地分类、商户别名和分类学习。")
+            return (remoteFound: true, applied: false)
+        }
+
+        let merged = LedgerConfigurationSyncPolicy.merge(local: local, remote: remote)
+        let shouldPushMergedConfiguration = LedgerConfigurationSyncPolicy
+            .hasDifferentUserConfigurationContent(merged, remote)
+
         try sqlStore.replaceConfigurationForSync(
-            subscriptions: remote.subscriptions,
-            categoryCorrections: remote.categoryCorrections,
-            merchantAliases: remote.merchantAliases
+            subscriptions: merged.subscriptions,
+            categoryCorrections: merged.categoryCorrections,
+            merchantAliases: merged.merchantAliases
         )
 
-        subscriptions = remote.subscriptions.sorted { $0.nextChargedAt < $1.nextChargedAt }
-        categoryCorrections = Dictionary(uniqueKeysWithValues: remote.categoryCorrections.map { ($0.merchant, $0.category) })
-        customCategories = remote.customCategories
-        customSources = remote.customSources
-        merchantAliases = remote.merchantAliases
+        subscriptions = merged.subscriptions.sorted { $0.nextChargedAt < $1.nextChargedAt }
+        categoryCorrections = Dictionary(uniqueKeysWithValues: merged.categoryCorrections.map { ($0.merchant, $0.category) })
+        customCategories = merged.customCategories
+        customSources = merged.customSources
+        merchantAliases = merged.merchantAliases
 
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
         UserDefaults.standard.set(customSources, forKey: "customSources")
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
-        UserDefaults.standard.set(remote.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
-        UserDefaults.standard.set(remote.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
-        UserDefaults.standard.set(remote.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
-        UserDefaults.standard.set(remote.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
-        UserDefaults.standard.set(remote.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
-        UserDefaults.standard.set(remote.appSettings.autoClipboardImportEnabled, forKey: "autoClipboardImport")
+        UserDefaults.standard.set(merged.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
+        UserDefaults.standard.set(merged.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
+        UserDefaults.standard.set(merged.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
+        UserDefaults.standard.set(merged.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
+        UserDefaults.standard.set(merged.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
+        UserDefaults.standard.set(merged.appSettings.autoClipboardImportEnabled, forKey: "autoClipboardImport")
         UserDefaults.standard.set(false, forKey: Self.iCloudBackupEnabledKey)
-        UserDefaults.standard.set(remote.updatedAt, forKey: Self.ledgerConfigurationUpdatedAtKey)
+        if shouldPushMergedConfiguration {
+            markLedgerConfigurationChanged()
+            scheduleCloudKitPushAfterLocalLedgerChange()
+        } else {
+            UserDefaults.standard.set(merged.updatedAt, forKey: Self.ledgerConfigurationUpdatedAtKey)
+        }
 
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
         Self.watchSyncHandler?()
@@ -1526,7 +1782,10 @@ extension LedgerStore {
     }
 
     private func makeLedgerConfigurationPayload() -> LedgerConfigurationSyncPayload {
-        let updatedAt = ensureLedgerConfigurationUpdatedAt()
+        makeLedgerConfigurationPayload(updatedAt: ensureLedgerConfigurationUpdatedAt())
+    }
+
+    private func makeLedgerConfigurationPayload(updatedAt: Date) -> LedgerConfigurationSyncPayload {
         let annualPrices = UserDefaults.standard.dictionary(forKey: Self.annualPriceKey) as? [String: Double] ?? [:]
         let subscriptionNotes = UserDefaults.standard.dictionary(forKey: Self.subscriptionNotesKey) as? [String: String] ?? [:]
 
@@ -1552,6 +1811,13 @@ extension LedgerStore {
                 iCloudBackupEnabled: false
             )
         )
+    }
+
+    private func seedLegacyLedgerConfigurationTimestampIfNeeded() {
+        guard UserDefaults.standard.object(forKey: Self.ledgerConfigurationUpdatedAtKey) == nil else { return }
+        let local = makeLedgerConfigurationPayload(updatedAt: .distantPast)
+        guard local.hasUserConfigurationContent else { return }
+        UserDefaults.standard.set(Date(), forKey: Self.ledgerConfigurationUpdatedAtKey)
     }
 
     private var ledgerConfigurationUpdatedAt: Date {

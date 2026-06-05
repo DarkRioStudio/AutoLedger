@@ -125,7 +125,7 @@ private struct AutoLedgerRootView: View {
         guard !didScheduleLaunchSync else { return }
         didScheduleLaunchSync = true
         Task(priority: .background) {
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
             await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
         }

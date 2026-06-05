@@ -101,7 +101,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     }
 
     var cornerAmount: String {
-        String(format: "¥%.2f", totalExpense)
+        String(format: "%.2f", totalExpense)
     }
 
     var updatedDisplayText: String? {
@@ -119,6 +119,10 @@ private enum WatchLedgerWidgetCopy {
 
     static var title: String {
         localized("widget.today.title", fallback: "Today")
+    }
+
+    static var cornerTextTitle: String {
+        localized("widget.corner_text.title", fallback: "Today Text")
     }
 
     static var defaultLedgerName: String {
@@ -146,6 +150,17 @@ private enum WatchLedgerWidgetCopy {
             "widget.today.description",
             fallback: "View today's AutoLedger spending on the watch face."
         )
+    }
+
+    static var cornerTextConfigurationDescription: String {
+        localized(
+            "widget.corner_text.description",
+            fallback: "Show today's spending as a watch face corner label."
+        )
+    }
+
+    static func cornerText(_ amount: String) -> String {
+        String(format: localized("widget.corner_text.format", fallback: "Today: %@"), amount)
     }
 }
 
@@ -239,31 +254,36 @@ private struct WatchDailyExpenseWidgetView: View {
 
     private var cornerView: some View {
         Text(entry.snapshot.cornerAmount)
-            .font(.system(size: 16, weight: .black, design: .rounded))
+            .font(.system(size: 36, weight: .black, design: .rounded))
             .monospacedDigit()
-            .minimumScaleFactor(0.42)
+            .minimumScaleFactor(0.32)
             .lineLimit(1)
-            .rotationEffect(.degrees(-18))
             .widgetAccentable()
-        .widgetLabel {
-            Gauge(value: spendingProgress, in: 0...1) {
-                EmptyView()
-            } currentValueLabel: {
-                EmptyView()
-            } minimumValueLabel: {
-                EmptyView()
-            } maximumValueLabel: {
-                EmptyView()
+            .widgetLabel {
+                cornerGauge
             }
-            .tint(
-                LinearGradient(
-                    colors: [.green, .yellow, .orange, .red],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .accessibilityLabel(WatchLedgerWidgetCopy.title)
+            .accessibilityLabel("\(WatchLedgerWidgetCopy.title) \(entry.snapshot.cornerAmount)")
+    }
+
+    private var cornerGauge: some View {
+        Gauge(value: spendingProgress, in: 0...1) {
+            EmptyView()
+        } currentValueLabel: {
+            EmptyView()
+        } minimumValueLabel: {
+            EmptyView()
+        } maximumValueLabel: {
+            EmptyView()
         }
+        .gaugeStyle(.accessoryLinearCapacity)
+        .tint(
+            LinearGradient(
+                colors: [.green, .yellow, .orange, .red],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .accessibilityLabel(WatchLedgerWidgetCopy.title)
     }
 
     private var rectangularView: some View {
@@ -314,6 +334,23 @@ private struct WatchDailyExpenseWidgetView: View {
     }
 }
 
+private struct WatchDailyExpenseCornerTextWidgetView: View {
+    let entry: WatchDailyExpenseEntry
+
+    var body: some View {
+        Image(systemName: "yensign.circle.fill")
+            .font(.system(size: 22, weight: .bold, design: .rounded))
+            .widgetAccentable()
+            .widgetLabel {
+                Text(WatchLedgerWidgetCopy.cornerText(entry.snapshot.cornerAmount))
+                    .font(.caption2.weight(.semibold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .accessibilityLabel(WatchLedgerWidgetCopy.cornerText(entry.snapshot.cornerAmount))
+    }
+}
+
 struct AutoLedgerWatchWidgetsExtension: Widget {
     let kind: String = "AutoLedgerWatchDailyExpenseWidget"
 
@@ -328,8 +365,39 @@ struct AutoLedgerWatchWidgetsExtension: Widget {
     }
 }
 
+struct AutoLedgerWatchCornerTextWidget: Widget {
+    let kind: String = "AutoLedgerWatchCornerTextWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: WatchDailyExpenseProvider()) { entry in
+            WatchDailyExpenseCornerTextWidgetView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
+        }
+        .configurationDisplayName(WatchLedgerWidgetCopy.cornerTextTitle)
+        .description(WatchLedgerWidgetCopy.cornerTextConfigurationDescription)
+        .supportedFamilies([.accessoryCorner])
+    }
+}
+
 #Preview(as: .accessoryCorner) {
     AutoLedgerWatchWidgetsExtension()
+} timeline: {
+    WatchDailyExpenseEntry(
+        date: .now,
+        snapshot: WatchLedgerWidgetSnapshot(
+            ledgerName: WatchLedgerWidgetCopy.defaultLedgerName,
+            totalExpense: 32.80,
+            transactionCount: 2,
+            recentDisplayName: "Demo Coffee",
+            updatedAt: .now,
+            isSnapshotStale: false,
+            savedAt: .now
+        )
+    )
+}
+
+#Preview("Corner Text", as: .accessoryCorner) {
+    AutoLedgerWatchCornerTextWidget()
 } timeline: {
     WatchDailyExpenseEntry(
         date: .now,

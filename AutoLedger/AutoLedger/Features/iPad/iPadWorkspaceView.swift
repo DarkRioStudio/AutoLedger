@@ -1,6 +1,9 @@
 import AutoLedgerCore
 import Charts
+import PhotosUI
 import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
 
 private enum IPadWorkspaceSection: String, CaseIterable, Identifiable {
     case overview
@@ -37,31 +40,20 @@ private enum IPadWorkspaceSection: String, CaseIterable, Identifiable {
         }
     }
 
-    var tabIndex: Int? {
-        switch self {
-        case .capture: return 0
-        case .ledger: return 1
-        case .reports: return 2
-        case .settings: return 3
-        case .overview, .reviewQueue, .cleaning: return nil
-        }
-    }
-
-    static func fromTabIndex(_ index: Int) -> IPadWorkspaceSection? {
-        allCases.first { $0.tabIndex == index }
-    }
 }
 
 struct IPadWorkspaceView: View {
     @State private var selection: IPadWorkspaceSection = .overview
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var settingsResetID = UUID()
+    @State private var detailResetID = UUID()
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List {
                 ForEach(IPadWorkspaceSection.allCases) { section in
                     Button {
-                        selection = section
+                        select(section)
                     } label: {
                         HStack(spacing: 12) {
                             Label(section.titleKey, systemImage: section.systemImage)
@@ -72,6 +64,8 @@ struct IPadWorkspaceView: View {
                                     .foregroundStyle(AppTheme.accent)
                             }
                         }
+                        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(selection == section ? AppTheme.accent : AppTheme.ink)
@@ -82,7 +76,7 @@ struct IPadWorkspaceView: View {
             .tint(AppTheme.accent)
         } detail: {
             detailView
-                .id(selection)
+                .id(detailResetID)
         }
         .navigationSplitViewStyle(.balanced)
         .tint(AppTheme.accent)
@@ -99,15 +93,16 @@ struct IPadWorkspaceView: View {
         switch selection {
         case .overview:
             IPadWorkspaceOverviewView(
-                openLedger: { selection = .ledger },
-                openImport: { selection = .capture },
-                openReviewQueue: { selection = .reviewQueue },
-                openCleaning: { selection = .cleaning }
+                openLedger: { select(.ledger) },
+                openImport: { select(.capture) },
+                openReviewQueue: { select(.reviewQueue) },
+                openCleaning: { select(.cleaning) }
             )
         case .capture:
             IPadBatchImportWorkspaceView(
-                selectedTab: selectedTabBinding,
-                initialFilter: .all
+                initialFilter: .all,
+                showsImportActions: true,
+                openReviewQueue: { select(.reviewQueue) }
             )
         case .ledger:
             IPadLedgerWorkspaceView()
@@ -115,38 +110,31 @@ struct IPadWorkspaceView: View {
             IPadReportWorkspaceView()
         case .reviewQueue:
             IPadBatchImportWorkspaceView(
-                selectedTab: selectedTabBinding,
-                initialFilter: .candidate
+                initialFilter: .candidate,
+                showsImportActions: false,
+                openReviewQueue: { select(.reviewQueue) }
             )
         case .cleaning:
-            IPadPlanningWorkspaceView(
-                titleKey: "ipad.workspace.cleaning",
-                subtitleKey: "ipad.workspace.cleaning.placeholder",
-                systemImage: "wand.and.sparkles",
-                items: [
-                    "ipad.workspace.cleaning.item.merchant",
-                    "ipad.workspace.cleaning.item.category",
-                    "ipad.workspace.cleaning.item.duplicates"
-                ]
-            )
+            IPadCleaningPreviewWorkspaceView()
         case .settings:
             SettingsView()
+                .id(settingsResetID)
         }
     }
 
-    private var selectedTabBinding: Binding<Int> {
-        Binding {
-            selection.tabIndex ?? 0
-        } set: { tabIndex in
-            guard let next = IPadWorkspaceSection.fromTabIndex(tabIndex) else { return }
-            selection = next
+    private func select(_ section: IPadWorkspaceSection) {
+        guard selection != section else { return }
+        if selection == .settings {
+            settingsResetID = UUID()
         }
+        selection = section
+        detailResetID = UUID()
     }
 
     @MainActor
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
         guard QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
-        selection = .ledger
+        select(.ledger)
     }
 }
 
@@ -344,19 +332,551 @@ private enum IPadBatchImportFilter: String, CaseIterable, Identifiable {
     }
 }
 
+private enum IPadBatchImportSheet: Identifiable {
+    case camera
+    case voice
+
+    var id: String {
+        switch self {
+        case .camera: return "camera"
+        case .voice: return "voice"
+        }
+    }
+}
+
+private struct IPadBatchCandidateDraft: Equatable {
+    var merchant: String
+    var amountText: String
+    var occurredAt: Date
+    var category: TransactionCategory
+    var source: ReceiptSource
+    var note: String
+
+    static let empty = IPadBatchCandidateDraft(
+        merchant: "",
+        amountText: "",
+        occurredAt: .now,
+        category: .other,
+        source: .manual,
+        note: ""
+    )
+
+    init(
+        merchant: String,
+        amountText: String,
+        occurredAt: Date,
+        category: TransactionCategory,
+        source: ReceiptSource,
+        note: String
+    ) {
+        self.merchant = merchant
+        self.amountText = amountText
+        self.occurredAt = occurredAt
+        self.category = category
+        self.source = source
+        self.note = note
+    }
+
+    init(item: BatchImportQueueItem) {
+        self.merchant = item.merchant ?? ""
+        self.amountText = item.amount.map { String(format: "%.2f", $0) } ?? ""
+        self.occurredAt = item.occurredAt ?? .now
+        self.category = item.category.flatMap(TransactionCategory.init(rawValue:)) ?? .other
+        self.source = item.source.flatMap(ReceiptSource.init(rawValue:)) ?? .manual
+        self.note = item.note
+    }
+
+    var amount: Double? {
+        let normalized = amountText
+            .replacingOccurrences(of: "¥", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(normalized)
+    }
+
+    var isValid: Bool {
+        !merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (amount ?? 0) > 0
+    }
+
+    func transaction() -> Transaction? {
+        guard isValid, let amount else { return nil }
+        return Transaction(
+            merchant: merchant.trimmingCharacters(in: .whitespacesAndNewlines),
+            amount: amount,
+            occurredAt: occurredAt,
+            category: category,
+            source: source,
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+}
+
+private struct IPadCleaningPreviewWorkspaceView: View {
+    @EnvironmentObject private var store: LedgerStore
+    @State private var selectedPreviewID: String?
+    @State private var previewPendingApplication: DataCleaningPreviewItem?
+    @State private var showsApplyConfirmation = false
+
+    private var snapshot: DataCleaningPreviewSnapshot {
+        DataCleaningPreviewPlanner().buildSnapshot(
+            transactions: store.transactions,
+            merchantAliases: store.merchantAliases,
+            categoryCorrections: store.categoryCorrections
+        )
+    }
+
+    private var previews: [DataCleaningPreviewItem] {
+        snapshot.items
+    }
+
+    private var selectedPreview: DataCleaningPreviewItem? {
+        if let selectedPreviewID,
+           let preview = previews.first(where: { $0.id == selectedPreviewID }) {
+            return preview
+        }
+        return previews.first
+    }
+
+    private var affectedTransactions: [Transaction] {
+        guard let selectedPreview else { return [] }
+        let ids = Set(selectedPreview.affectedTransactionIDs)
+        return store.transactions
+            .filter { ids.contains($0.id) }
+            .sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    var body: some View {
+        NavigationStack {
+            HStack(spacing: 0) {
+                previewList
+                    .frame(minWidth: 390, idealWidth: 460, maxWidth: 540)
+
+                Divider()
+
+                previewDetail
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle("ipad.workspace.cleaning")
+            .onAppear {
+                if selectedPreviewID == nil {
+                    selectedPreviewID = previews.first?.id
+                }
+            }
+            .confirmationDialog(
+                "ipad.cleaning.apply_confirm_title",
+                isPresented: $showsApplyConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("ipad.cleaning.apply_confirm_action", role: .destructive) {
+                    applyPendingPreview()
+                }
+                Button("common.cancel", role: .cancel) {
+                    previewPendingApplication = nil
+                }
+            } message: {
+                Text("ipad.cleaning.apply_confirm_message")
+            }
+        }
+    }
+
+    private var previewList: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("ipad.cleaning.title")
+                    .font(.largeTitle.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Text("ipad.cleaning.subtitle")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            summaryRow
+
+            if previews.isEmpty {
+                emptyPreview
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(DataCleaningPreviewKind.allCases, id: \.rawValue) { kind in
+                            let kindItems = snapshot.items(kind: kind)
+                            if !kindItems.isEmpty {
+                                Text(kindTitle(kind))
+                                    .font(.headline)
+                                    .foregroundStyle(AppTheme.ink)
+                                    .padding(.top, 4)
+
+                                ForEach(kindItems) { item in
+                                    previewRow(item)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.bottom, 16)
+                }
+            }
+        }
+        .padding(24)
+        .background(AppTheme.canvas.opacity(0.45))
+    }
+
+    private var summaryRow: some View {
+        HStack(spacing: 10) {
+            summaryPill("ipad.cleaning.summary.alias", value: snapshot.items(kind: .merchantAlias).count, tint: AppTheme.accent)
+            summaryPill("ipad.cleaning.summary.category", value: snapshot.items(kind: .categoryCorrection).count, tint: AppTheme.accentSecondary)
+            summaryPill("ipad.cleaning.summary.duplicate", value: snapshot.items(kind: .duplicateCandidate).count, tint: Color(red: 0.84, green: 0.45, blue: 0.12))
+        }
+    }
+
+    private func summaryPill(_ titleKey: LocalizedStringKey, value: Int, tint: Color) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+            Text(titleKey)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(AppTheme.card)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(tint)
+                .frame(height: 3)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var emptyPreview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.largeTitle)
+                .foregroundStyle(AppTheme.accent)
+            Text("ipad.cleaning.empty.title")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+            Text("ipad.cleaning.empty.subtitle")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+        }
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
+        .padding(20)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func previewRow(_ item: DataCleaningPreviewItem) -> some View {
+        Button {
+            selectedPreviewID = item.id
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: kindIcon(item.kind))
+                    .font(.headline)
+                    .foregroundStyle(kindTint(item.kind))
+                    .frame(width: 38, height: 38)
+                    .background(kindTint(item.kind).opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                        .lineLimit(1)
+                    Text(previewSubtitle(item))
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                Text("\(item.affectedTransactionIDs.count)")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .monospacedDigit()
+            }
+            .padding(12)
+            .background(selectedPreview?.id == item.id ? kindTint(item.kind).opacity(0.12) : AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var previewDetail: some View {
+        if let selectedPreview {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: kindIcon(selectedPreview.kind))
+                            .font(.title2)
+                            .foregroundStyle(kindTint(selectedPreview.kind))
+                            .frame(width: 48, height: 48)
+                            .background(kindTint(selectedPreview.kind).opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(selectedPreview.title)
+                                .font(.largeTitle.weight(.bold))
+                                .foregroundStyle(AppTheme.ink)
+                            Text(kindTitle(selectedPreview.kind))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(kindTint(selectedPreview.kind))
+                        }
+                        Spacer()
+                    }
+
+                    previewDetailCard(titleKey: "ipad.cleaning.preview") {
+                        detailRow("ipad.cleaning.current", value: selectedPreview.currentValue)
+                        detailRow("ipad.cleaning.proposed", value: selectedPreview.proposedValue)
+                        detailRow("ipad.cleaning.affected_count", value: "\(selectedPreview.affectedTransactionIDs.count)")
+                        if let score = selectedPreview.score {
+                            detailRow("ipad.cleaning.score", value: String(format: "%.0f%%", score * 100))
+                        }
+                        detailRow("ipad.cleaning.reason", value: localizedReason(selectedPreview))
+                    }
+
+                    previewDetailCard(titleKey: "ipad.cleaning.affected_transactions") {
+                        VStack(spacing: 0) {
+                            ForEach(affectedTransactions) { transaction in
+                                IPadTransactionCompactRow(transaction: transaction)
+                                if transaction.id != affectedTransactions.last?.id {
+                                    Divider()
+                                        .padding(.leading, 44)
+                                }
+                            }
+                        }
+                    }
+
+                    cleaningActions(for: selectedPreview)
+
+                    if let result = store.lastDataCleaningApplicationResult {
+                        applicationResultCard(result)
+                    }
+                }
+                .padding(28)
+            }
+        } else {
+            IPadPlanningWorkspaceView(
+                titleKey: "ipad.cleaning.empty.title",
+                subtitleKey: "ipad.cleaning.empty.subtitle",
+                systemImage: "checkmark.seal.fill",
+                items: [
+                    "ipad.workspace.cleaning.item.merchant",
+                    "ipad.workspace.cleaning.item.category",
+                    "ipad.workspace.cleaning.item.duplicates"
+                ]
+            )
+        }
+    }
+
+    private func previewDetailCard<Content: View>(
+        titleKey: LocalizedStringKey,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(titleKey)
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+            content()
+        }
+        .padding(16)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func detailRow(_ titleKey: LocalizedStringKey, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(titleKey)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+                .frame(width: 132, alignment: .leading)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func cleaningActions(for item: DataCleaningPreviewItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("ipad.cleaning.apply_note", systemImage: "checkmark.shield")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.mutedInk)
+
+            HStack(spacing: 12) {
+                Button {
+                    previewPendingApplication = item
+                    showsApplyConfirmation = true
+                } label: {
+                    Label(applyButtonTitle(for: item.kind), systemImage: item.kind == .duplicateCandidate ? "trash" : "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(kindTint(item.kind))
+
+                Button {
+                    _ = store.undoLastDataCleaningApplication()
+                    selectedPreviewID = previews.first?.id
+                } label: {
+                    Label("ipad.cleaning.undo_last", systemImage: "arrow.uturn.backward")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(store.lastDataCleaningApplicationResult?.canUndo != true)
+            }
+        }
+        .padding(16)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func applicationResultCard(_ result: DataCleaningApplicationResult) -> some View {
+        previewDetailCard(titleKey: "ipad.cleaning.result") {
+            Text(String(
+                format: String(localized: "ipad.cleaning.result_format"),
+                result.updatedCount,
+                result.deletedCount,
+                result.skippedCount
+            ))
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(AppTheme.ink)
+        }
+    }
+
+    private func applyPendingPreview() {
+        guard let previewPendingApplication else { return }
+        _ = store.applyDataCleaningPreview(previewPendingApplication)
+        self.previewPendingApplication = nil
+        selectedPreviewID = previews.first?.id
+    }
+
+    private func applyButtonTitle(for kind: DataCleaningPreviewKind) -> LocalizedStringKey {
+        switch kind {
+        case .merchantAlias, .categoryCorrection:
+            return "ipad.cleaning.apply"
+        case .duplicateCandidate:
+            return "ipad.cleaning.apply_duplicate"
+        }
+    }
+
+    private func previewSubtitle(_ item: DataCleaningPreviewItem) -> String {
+        switch item.kind {
+        case .merchantAlias, .categoryCorrection:
+            return "\(item.currentValue) -> \(item.proposedValue)"
+        case .duplicateCandidate:
+            if let score = item.score {
+                return String(format: String(localized: "ipad.cleaning.duplicate_score_format"), score * 100)
+            }
+            return String(localized: "ipad.cleaning.kind.duplicate")
+        }
+    }
+
+    private func localizedReason(_ item: DataCleaningPreviewItem) -> String {
+        switch item.kind {
+        case .merchantAlias:
+            return String(localized: "ipad.cleaning.reason.alias")
+        case .categoryCorrection:
+            return String(localized: "ipad.cleaning.reason.category")
+        case .duplicateCandidate:
+            return String(localized: "ipad.cleaning.reason.duplicate")
+        }
+    }
+
+    private func kindTitle(_ kind: DataCleaningPreviewKind) -> String {
+        switch kind {
+        case .merchantAlias:
+            return String(localized: "ipad.cleaning.kind.alias")
+        case .categoryCorrection:
+            return String(localized: "ipad.cleaning.kind.category")
+        case .duplicateCandidate:
+            return String(localized: "ipad.cleaning.kind.duplicate")
+        }
+    }
+
+    private func kindIcon(_ kind: DataCleaningPreviewKind) -> String {
+        switch kind {
+        case .merchantAlias:
+            return "textformat.alt"
+        case .categoryCorrection:
+            return "tag.fill"
+        case .duplicateCandidate:
+            return "doc.on.doc.fill"
+        }
+    }
+
+    private func kindTint(_ kind: DataCleaningPreviewKind) -> Color {
+        switch kind {
+        case .merchantAlias:
+            return AppTheme.accent
+        case .categoryCorrection:
+            return AppTheme.accentSecondary
+        case .duplicateCandidate:
+            return Color(red: 0.84, green: 0.45, blue: 0.12)
+        }
+    }
+}
+
 private struct IPadBatchImportWorkspaceView: View {
-    @Binding private var selectedTab: Int
+    @EnvironmentObject private var store: LedgerStore
     @State private var filter: IPadBatchImportFilter
     @State private var selectedItemID: UUID?
-    @State private var showSingleImport = false
-    @State private var retriedItemIDs: Set<UUID> = []
+    @State private var activeSheet: IPadBatchImportSheet?
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var capturedImageData: Data?
+    @State private var showsFileImporter = false
+    @State private var showsCSVImporter = false
+    @State private var showsJSONImporter = false
+    @State private var showExportShareSheet = false
+    @State private var exportedFileURL: URL?
+    @State private var pendingJSONImportURL: URL?
+    @State private var showJSONRestoreConfirmation = false
+    @State private var isImportingPhoto = false
+    @State private var isImportingCamera = false
+    @State private var isImportingClipboard = false
+    @State private var isImportingFiles = false
+    @State private var isDropTargeted = false
+    @State private var queueSnapshot = BatchImportQueueSnapshot()
+    @State private var isRecognizing = false
+    @State private var recognitionLogs: [BatchImportRecognitionLog] = []
+    @State private var lastRecognitionSummary: String?
+    @State private var candidateDraft = IPadBatchCandidateDraft.empty
+    @State private var draftItemID: UUID?
 
-    private var snapshot: BatchImportQueueSnapshot {
-        Self.sampleSnapshot
+    private let showsImportActions: Bool
+    private let ocrService = OCRService()
+
+    private var showsMacDropImportTarget: Bool {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
+    private var showsMacDataExchangeActions: Bool {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
+    private var supportedDropTypeIdentifiers: [String] {
+        [
+            UTType.fileURL.identifier,
+            UTType.image.identifier,
+            UTType.pdf.identifier,
+            UTType.text.identifier,
+            UTType.plainText.identifier
+        ]
     }
 
     private var items: [BatchImportQueueItem] {
-        snapshot.items
+        queueSnapshot.items
             .filter(filter.matches)
             .sorted { $0.updatedAt > $1.updatedAt }
     }
@@ -369,63 +889,524 @@ private struct IPadBatchImportWorkspaceView: View {
         return items.first
     }
 
-    init(selectedTab: Binding<Int>, initialFilter: IPadBatchImportFilter) {
-        self._selectedTab = selectedTab
+    private var titleKey: LocalizedStringKey {
+        showsImportActions ? "ipad.import.title" : "ipad.import.batch.title"
+    }
+
+    private var subtitleKey: LocalizedStringKey {
+        showsImportActions ? "ipad.import.subtitle" : "ipad.batch_import.subtitle"
+    }
+
+    private let openReviewQueue: () -> Void
+
+    init(initialFilter: IPadBatchImportFilter, showsImportActions: Bool, openReviewQueue: @escaping () -> Void) {
         self._filter = State(initialValue: initialFilter)
+        self.showsImportActions = showsImportActions
+        self.openReviewQueue = openReviewQueue
     }
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                filterBar
+                if showsImportActions {
+                    importActions
+                    if showsMacDataExchangeActions {
+                        macDataExchangeActions
+                    }
+                    if showsMacDropImportTarget {
+                        dropImportTarget
+                    }
+                } else {
+                    if showsMacDropImportTarget {
+                        dropImportTarget
+                    }
+                    filterBar
 
-                HStack(alignment: .top, spacing: 18) {
-                    queueList
-                        .frame(minWidth: 360, idealWidth: 460, maxWidth: 520)
+                    HStack(alignment: .top, spacing: 18) {
+                        queueList
+                            .frame(minWidth: 360, idealWidth: 460, maxWidth: 520)
 
-                    detailPane
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        detailPane
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    }
                 }
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(AppTheme.screenGradient.ignoresSafeArea())
-            .navigationTitle("ipad.batch_import.title")
-            .sheet(isPresented: $showSingleImport) {
-                InboxView(selectedTab: $selectedTab)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .camera:
+                    CameraPicker(imageData: $capturedImageData)
+                case .voice:
+                    VoiceLedgerConfirmView()
+                }
+            }
+            .fileImporter(
+                isPresented: $showsFileImporter,
+                allowedContentTypes: [.image, .pdf, .text, .plainText],
+                allowsMultipleSelection: true
+            ) { result in
+                Task {
+                    await importSelectedFiles(result)
+                }
+            }
+            .fileImporter(
+                isPresented: $showsCSVImporter,
+                allowedContentTypes: [.commaSeparatedText, .text, .plainText],
+                allowsMultipleSelection: false
+            ) { result in
+                importSelectedCSV(result)
+            }
+            .fileImporter(
+                isPresented: $showsJSONImporter,
+                allowedContentTypes: [.json],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case let .success(urls):
+                    pendingJSONImportURL = urls.first
+                    showJSONRestoreConfirmation = pendingJSONImportURL != nil
+                case let .failure(error):
+                    lastRecognitionSummary = String(
+                        format: String(localized: "mac.data_exchange.file_selection_failed_format"),
+                        error.localizedDescription
+                    )
+                }
+            }
+            .confirmationDialog(
+                "mac.data_exchange.json_restore.confirm_title",
+                isPresented: $showJSONRestoreConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("mac.data_exchange.json_restore.confirm_action", role: .destructive) {
+                    importPendingJSONBackup()
+                }
+                Button("common.cancel", role: .cancel) {
+                    pendingJSONImportURL = nil
+                }
+            } message: {
+                Text("mac.data_exchange.json_restore.confirm_message")
+            }
+            .sheet(isPresented: $showExportShareSheet) {
+                if let exportedFileURL {
+                    ActivityShareSheet(activityItems: [exportedFileURL])
+                }
             }
             .onAppear {
                 selectedItemID = selectedItem?.id
+                syncCandidateDraft()
             }
             .onChange(of: filter) { _, _ in
                 selectedItemID = items.first?.id
+                syncCandidateDraft()
             }
+            .onChange(of: selectedItemID) { _, _ in
+                syncCandidateDraft()
+            }
+            .task(id: selectedPhoto) {
+                guard let selectedPhoto else { return }
+                await importPickedPhoto(selectedPhoto)
+            }
+            .task(id: capturedImageData) {
+                guard let data = capturedImageData else { return }
+                capturedImageData = nil
+                await importCapturedPhoto(data)
+            }
+        }
+    }
+
+    private var dropImportTarget: some View {
+        VStack(alignment: .center, spacing: 10) {
+            Label {
+                Text(isImportingFiles ? "ipad.batch_import.importing_files" : "mac.import.drop.title")
+                    .font(.headline.weight(.semibold))
+            } icon: {
+                if isImportingFiles {
+                    ProgressView()
+                } else {
+                    Image(systemName: "arrow.down.doc.fill")
+                }
+            }
+
+            Text("mac.import.drop.subtitle")
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(isDropTargeted ? AppTheme.accent : AppTheme.ink)
+        .frame(maxWidth: .infinity, minHeight: 86)
+        .padding(.horizontal, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(isDropTargeted ? AppTheme.accent.opacity(0.12) : AppTheme.card.opacity(0.82))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    isDropTargeted ? AppTheme.accent : AppTheme.mutedInk.opacity(0.18),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [8, 6])
+                )
+        )
+        .contentShape(Rectangle())
+        .onDrop(of: supportedDropTypeIdentifiers, isTargeted: $isDropTargeted) { providers in
+            guard !providers.isEmpty else { return false }
+            Task {
+                await importDroppedProviders(providers)
+            }
+            return true
         }
     }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("ipad.batch_import.title")
+                Text(titleKey)
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
-                Text("ipad.batch_import.subtitle")
+                Text(subtitleKey)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
 
             Spacer()
 
-            Button {
-                showSingleImport = true
-            } label: {
-                Label("ipad.batch_import.single_import", systemImage: "doc.text.viewfinder")
-                    .fontWeight(.semibold)
+            if !showsImportActions {
+                HStack(spacing: 12) {
+                    Button {
+                        showsFileImporter = true
+                    } label: {
+                        if isImportingFiles {
+                            ProgressView()
+                        } else {
+                            Label("ipad.batch_import.import_files", systemImage: "folder.badge.plus")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accentSecondary)
+                    .disabled(isImportingFiles)
+
+                    Button {
+                        recognizeQueuedItems()
+                    } label: {
+                        if isRecognizing {
+                            ProgressView()
+                        } else {
+                            Label("ipad.batch_import.run_recognition", systemImage: "text.viewfinder")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .disabled(isRecognizing || queueSnapshot.items.allSatisfy { $0.state != .rawInput })
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
         }
+    }
+
+    private var importActions: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3), spacing: 14) {
+            importActionCard(
+                titleKey: "ipad.import.payment.title",
+                subtitleKey: "ipad.import.payment.subtitle",
+                systemImage: "doc.text.viewfinder",
+                tint: AppTheme.accent
+            ) {
+                VStack(spacing: 10) {
+                    PhotosPicker(
+                        selection: $selectedPhoto,
+                        matching: .images,
+                        preferredItemEncoding: .automatic
+                    ) {
+                        importActionButtonLabel(
+                            titleKey: isImportingPhoto ? "inbox.import.processing" : "inbox.import.photo",
+                            systemImage: "photo.on.rectangle",
+                            isLoading: isImportingPhoto
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button {
+                            activeSheet = .camera
+                        } label: {
+                            importActionButtonLabel(
+                                titleKey: isImportingCamera ? "inbox.import.processing" : "inbox.import.camera",
+                                systemImage: "camera.fill",
+                                isLoading: isImportingCamera
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(AppTheme.accent)
+                    }
+
+                    Button {
+                        Task { await importFromClipboard() }
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: isImportingClipboard ? "inbox.import.processing" : "inbox.import.clipboard",
+                            systemImage: "doc.on.clipboard",
+                            isLoading: isImportingClipboard
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accentSecondary)
+
+                    if let summary = store.lastImportSummary {
+                        Label(summary, systemImage: "checkmark.seal.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+
+            importActionCard(
+                titleKey: "ipad.import.voice.title",
+                subtitleKey: "ipad.import.voice.subtitle",
+                systemImage: "waveform",
+                tint: AppTheme.accentSecondary
+            ) {
+                Button {
+                    activeSheet = .voice
+                } label: {
+                    importActionButtonLabel(
+                        titleKey: "voice_ledger_title",
+                        systemImage: "waveform.circle.fill",
+                        isLoading: false
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accentSecondary)
+            }
+
+            importActionCard(
+                titleKey: "ipad.import.batch.title",
+                subtitleKey: "ipad.import.batch.subtitle",
+                systemImage: "square.stack.3d.up.fill",
+                tint: Color(red: 0.33, green: 0.35, blue: 0.78)
+            ) {
+                VStack(spacing: 10) {
+                    compactQueueSummary
+
+                    Button {
+                        showsFileImporter = true
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: isImportingFiles ? "ipad.batch_import.importing_files" : "ipad.batch_import.import_files",
+                            systemImage: "folder.badge.plus",
+                            isLoading: isImportingFiles
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color(red: 0.33, green: 0.35, blue: 0.78))
+                    .disabled(isImportingFiles)
+
+                    Button {
+                        openReviewQueue()
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: "ipad.batch_import.show_queue",
+                            systemImage: "checklist",
+                            isLoading: false
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.33, green: 0.35, blue: 0.78))
+                }
+            }
+        }
+    }
+
+    private var macDataExchangeActions: some View {
+        HStack(alignment: .top, spacing: 14) {
+            dataExchangeCard(
+                titleKey: "mac.data_exchange.csv.title",
+                subtitleKey: "mac.data_exchange.csv.subtitle",
+                systemImage: "tablecells",
+                tint: AppTheme.accent
+            ) {
+                HStack(spacing: 10) {
+                    Button {
+                        exportCSV()
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: "mac.data_exchange.export_csv",
+                            systemImage: "square.and.arrow.up",
+                            isLoading: false
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+
+                    Button {
+                        showsCSVImporter = true
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: "mac.data_exchange.import_csv",
+                            systemImage: "square.and.arrow.down",
+                            isLoading: false
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
+                }
+            }
+
+            dataExchangeCard(
+                titleKey: "mac.data_exchange.json.title",
+                subtitleKey: "mac.data_exchange.json.subtitle",
+                systemImage: "doc.zipper",
+                tint: Color(red: 0.33, green: 0.35, blue: 0.78)
+            ) {
+                HStack(spacing: 10) {
+                    Button {
+                        exportJSONBackup()
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: "mac.data_exchange.export_json",
+                            systemImage: "square.and.arrow.up",
+                            isLoading: false
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.33, green: 0.35, blue: 0.78))
+
+                    Button {
+                        showsJSONImporter = true
+                    } label: {
+                        importActionButtonLabel(
+                            titleKey: "mac.data_exchange.import_json",
+                            systemImage: "arrow.down.doc.fill",
+                            isLoading: false
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color(red: 0.33, green: 0.35, blue: 0.78))
+                }
+            }
+        }
+    }
+
+    private func dataExchangeCard<Content: View>(
+        titleKey: LocalizedStringKey,
+        subtitleKey: LocalizedStringKey,
+        systemImage: String,
+        tint: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: systemImage)
+                    .font(.title3)
+                    .foregroundStyle(tint)
+                    .frame(width: 30, height: 30)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titleKey)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text(subtitleKey)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(AppTheme.card.opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var compactQueueSummary: some View {
+        HStack(spacing: 10) {
+            queueSummaryValue("ipad.batch_import.summary.total", value: queueSnapshot.items.count)
+            queueSummaryValue("ipad.batch_import.summary.candidates", value: queueSnapshot.items(in: .candidate).count)
+            queueSummaryValue("ipad.batch_import.summary.failed", value: queueSnapshot.items.filter { $0.failureReason != nil }.count)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func queueSummaryValue(_ titleKey: LocalizedStringKey, value: Int) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+            Text(titleKey)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(AppTheme.card.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func importActionCard<Content: View>(
+        titleKey: LocalizedStringKey,
+        subtitleKey: LocalizedStringKey,
+        systemImage: String,
+        tint: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                    .foregroundStyle(tint)
+                    .frame(width: 34, height: 34)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(titleKey)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text(subtitleKey)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+            content()
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 216, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(AppTheme.card)
+        )
+    }
+
+    private func importActionButtonLabel(
+        titleKey: LocalizedStringKey,
+        systemImage: String,
+        isLoading: Bool
+    ) -> some View {
+        HStack {
+            if isLoading {
+                ProgressView()
+            } else {
+                Image(systemName: systemImage)
+            }
+            Text(titleKey)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
     }
 
     private var filterBar: some View {
@@ -439,10 +1420,16 @@ private struct IPadBatchImportWorkspaceView: View {
             .pickerStyle(.segmented)
 
             HStack(spacing: 12) {
-                summaryPill("ipad.batch_import.summary.total", value: "\(snapshot.items.count)", tint: AppTheme.accent)
-                summaryPill("ipad.batch_import.summary.candidates", value: "\(snapshot.items(in: .candidate).count)", tint: AppTheme.accentSecondary)
-                summaryPill("ipad.batch_import.summary.failed", value: "\(snapshot.items.filter { $0.failureReason != nil }.count)", tint: Color(red: 0.82, green: 0.28, blue: 0.22))
-                summaryPill("ipad.batch_import.summary.official", value: "\(snapshot.officialTransactionIDs.count)", tint: Color(red: 0.33, green: 0.35, blue: 0.78))
+                summaryPill("ipad.batch_import.summary.total", value: "\(queueSnapshot.items.count)", tint: AppTheme.accent)
+                summaryPill("ipad.batch_import.summary.candidates", value: "\(queueSnapshot.items(in: .candidate).count)", tint: AppTheme.accentSecondary)
+                summaryPill("ipad.batch_import.summary.failed", value: "\(queueSnapshot.items.filter { $0.failureReason != nil }.count)", tint: Color(red: 0.82, green: 0.28, blue: 0.22))
+                summaryPill("ipad.batch_import.summary.official", value: "\(queueSnapshot.officialTransactionIDs.count)", tint: Color(red: 0.33, green: 0.35, blue: 0.78))
+            }
+
+            if let lastRecognitionSummary {
+                Label(lastRecognitionSummary, systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
             }
         }
     }
@@ -556,23 +1543,13 @@ private struct IPadBatchImportWorkspaceView: View {
                         Spacer()
                     }
 
-                    detailCard(titleKey: "ipad.batch_import.detail.fields") {
-                        detailRow("transaction_editor.merchant", value: item.merchant ?? String(localized: "common.none"))
-                        detailRow("transaction_editor.amount", value: item.amount.map(AppFormatters.currency) ?? String(localized: "common.none"))
-                        detailRow("transaction_editor.category", value: item.category ?? String(localized: "common.none"))
-                        detailRow("transaction_editor.source", value: item.source ?? String(localized: "common.none"))
-                        detailRow("transaction_editor.date", value: item.occurredAt.map(AppFormatters.exportDateTime) ?? String(localized: "common.none"))
-                    }
+                    candidateFields(for: item)
 
                     detailCard(titleKey: "ipad.batch_import.detail.status") {
                         detailRow("ipad.batch_import.detail.confidence", value: confidenceText(item.confidence))
                         detailRow("ipad.batch_import.detail.failure", value: item.failureReason.map(failureTitle) ?? String(localized: "common.none"))
                         detailRow("ipad.batch_import.detail.warnings", value: warningSummary(item.warnings))
-                        if retriedItemIDs.contains(item.id) {
-                            Label("ipad.batch_import.retry_queued", systemImage: "arrow.clockwise.circle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(AppTheme.accent)
-                        }
+                        recognitionLogCard(for: item)
                     }
 
                     if item.failureReason == .duplicateSuspected {
@@ -583,9 +1560,20 @@ private struct IPadBatchImportWorkspaceView: View {
                     }
 
                     HStack(spacing: 12) {
+                        if canSaveCandidate(item) {
+                            Button {
+                                saveCandidate(item)
+                            } label: {
+                                Label("ipad.batch_import.confirm_save", systemImage: "tray.and.arrow.down.fill")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accent)
+                            .disabled(!candidateDraft.isValid)
+                        }
+
                         if item.canRetry {
                             Button {
-                                retriedItemIDs.insert(item.id)
+                                retry(item)
                             } label: {
                                 Label("ipad.batch_import.retry", systemImage: "arrow.clockwise")
                             }
@@ -593,12 +1581,14 @@ private struct IPadBatchImportWorkspaceView: View {
                             .tint(AppTheme.accent)
                         }
 
-                        Button {
-                            filter = .candidate
-                        } label: {
-                            Label("ipad.batch_import.show_candidates", systemImage: "checklist")
+                        if item.state == .candidate || item.state == .reviewed || item.failureReason != nil {
+                            Button(role: .destructive) {
+                                rejectCandidate(item)
+                            } label: {
+                                Label("ipad.batch_import.reject", systemImage: "xmark.circle")
+                            }
+                            .buttonStyle(.bordered)
                         }
-                        .buttonStyle(.bordered)
                     }
                 }
                 .padding(18)
@@ -615,6 +1605,601 @@ private struct IPadBatchImportWorkspaceView: View {
                     "ipad.workspace.review_queue.item.candidate",
                     "ipad.workspace.review_queue.item.reviewed"
                 ]
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func candidateFields(for item: BatchImportQueueItem) -> some View {
+        if canSaveCandidate(item) {
+            detailCard(titleKey: "ipad.batch_import.detail.fields") {
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("transaction_editor.merchant", text: $candidateDraft.merchant)
+                        .textFieldStyle(.roundedBorder)
+
+                    HStack(spacing: 12) {
+                        TextField("transaction_editor.amount", text: $candidateDraft.amountText)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+
+                        DatePicker(
+                            "transaction_editor.date",
+                            selection: $candidateDraft.occurredAt,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+                    }
+
+                    HStack(spacing: 12) {
+                        Picker("transaction_editor.category", selection: $candidateDraft.category) {
+                            ForEach(TransactionCategory.allCases) { category in
+                                Text(category.title).tag(category)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
+                        Picker("transaction_editor.source", selection: $candidateDraft.source) {
+                            ForEach(ReceiptSource.allCases) { source in
+                                Text(source.title).tag(source)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
+                    TextField("transaction_editor.note", text: $candidateDraft.note, axis: .vertical)
+                        .lineLimit(2...4)
+                        .textFieldStyle(.roundedBorder)
+
+                    if !candidateDraft.isValid {
+                        Label("ipad.batch_import.validation.required", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(red: 0.82, green: 0.28, blue: 0.22))
+                    }
+                }
+            }
+        } else {
+            detailCard(titleKey: "ipad.batch_import.detail.fields") {
+                detailRow("transaction_editor.merchant", value: item.merchant ?? String(localized: "common.none"))
+                detailRow("transaction_editor.amount", value: item.amount.map(AppFormatters.currency) ?? String(localized: "common.none"))
+                detailRow("transaction_editor.category", value: item.category ?? String(localized: "common.none"))
+                detailRow("transaction_editor.source", value: item.source ?? String(localized: "common.none"))
+                detailRow("transaction_editor.date", value: item.occurredAt.map(AppFormatters.exportDateTime) ?? String(localized: "common.none"))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func recognitionLogCard(for item: BatchImportQueueItem) -> some View {
+        let itemLogs = recognitionLogs
+            .filter { $0.itemID == item.id }
+            .suffix(3)
+        if !itemLogs.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("ipad.batch_import.detail.logs")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+                ForEach(Array(itemLogs.enumerated()), id: \.offset) { _, log in
+                    Label(log.message, systemImage: "terminal")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+            }
+        }
+    }
+
+    private func recognizeQueuedItems() {
+        runRecognition(itemIDs: nil)
+    }
+
+    private func retry(_ item: BatchImportQueueItem) {
+        updateQueueItem(item.retryRequested())
+        runRecognition(itemIDs: [item.id])
+    }
+
+    private func canSaveCandidate(_ item: BatchImportQueueItem) -> Bool {
+        item.state == .candidate || item.state == .reviewed
+    }
+
+    private func saveCandidate(_ item: BatchImportQueueItem) {
+        guard canSaveCandidate(item),
+              let transaction = candidateDraft.transaction() else { return }
+        store.addTransaction(transaction)
+        updateQueueItem(item.converted(transactionID: transaction.id))
+        selectedItemID = item.id
+        syncCandidateDraft(force: true)
+        lastRecognitionSummary = String(localized: "ipad.batch_import.save_summary")
+    }
+
+    private func rejectCandidate(_ item: BatchImportQueueItem) {
+        updateQueueItem(item.markedFailed(reason: .userRejected))
+        selectedItemID = item.id
+        syncCandidateDraft(force: true)
+        lastRecognitionSummary = String(localized: "ipad.batch_import.reject_summary")
+    }
+
+    private func runRecognition(itemIDs: Set<UUID>?) {
+        guard !isRecognizing else { return }
+        isRecognizing = true
+        let executor = BatchImportRecognitionExecutor()
+        let result = executor.process(snapshot: queueSnapshot, itemIDs: itemIDs)
+        queueSnapshot = result.snapshot
+        recognitionLogs = (result.logs + recognitionLogs).prefix(12).map { $0 }
+        lastRecognitionSummary = String(
+            format: String(localized: "ipad.batch_import.recognition_summary"),
+            result.processedCount,
+            result.candidateCount,
+            result.failedCount
+        )
+        if selectedItemID == nil || !items.contains(where: { $0.id == selectedItemID }) {
+            selectedItemID = items.first?.id
+        }
+        syncCandidateDraft(force: true)
+        isRecognizing = false
+    }
+
+    private func updateQueueItem(_ item: BatchImportQueueItem) {
+        guard let index = queueSnapshot.items.firstIndex(where: { $0.id == item.id }) else { return }
+        queueSnapshot.items[index] = item
+    }
+
+    private func appendBatchRawInputs(_ rawInputs: [BatchRawInput], failedReasons: [UUID: BatchImportFailureReason] = [:]) {
+        guard !rawInputs.isEmpty else { return }
+        let now = Date()
+        let batchID = rawInputs.first?.batchID ?? UUID()
+        let batch = BatchImportBatch(
+            id: batchID,
+            sourceKind: .files,
+            status: failedReasons.count == rawInputs.count ? .failed : .pending,
+            itemCount: rawInputs.count,
+            createdAt: now,
+            updatedAt: now
+        )
+        let importedItems = rawInputs.map { rawInput -> BatchImportQueueItem in
+            let item = BatchImportQueueItem.rawInput(rawInput: rawInput, createdAt: now)
+            guard let reason = failedReasons[rawInput.id] else { return item }
+            return item.markedFailed(reason: reason, now: now)
+        }
+
+        var baseSnapshot = queueSnapshot
+        baseSnapshot.batches.insert(batch, at: 0)
+        baseSnapshot.rawInputs = rawInputs + baseSnapshot.rawInputs
+        baseSnapshot.items = importedItems + baseSnapshot.items
+        queueSnapshot = baseSnapshot
+        selectedItemID = importedItems.first?.id
+        filter = .all
+        syncCandidateDraft(force: true)
+    }
+
+    private func syncCandidateDraft(force: Bool = false) {
+        guard let item = selectedItem else {
+            candidateDraft = .empty
+            draftItemID = nil
+            return
+        }
+        guard force || draftItemID != item.id else { return }
+        candidateDraft = IPadBatchCandidateDraft(item: item)
+        draftItemID = item.id
+    }
+
+    private func importPickedPhoto(_ item: PhotosPickerItem) async {
+        isImportingPhoto = true
+        store.prepareForLiveImport()
+        defer {
+            isImportingPhoto = false
+            selectedPhoto = nil
+        }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                throw OCRServiceError.loadFailed
+            }
+            let text = try ocrService.recognizeText(from: data)
+            store.importRecognizedText(text, imageSource: .photoLibrary)
+        } catch {
+            store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
+        }
+    }
+
+    private func importCapturedPhoto(_ data: Data) async {
+        isImportingCamera = true
+        store.prepareForLiveImport()
+        defer { isImportingCamera = false }
+
+        do {
+            let text = try ocrService.recognizeText(from: data)
+            store.importRecognizedText(text, imageSource: .camera)
+        } catch {
+            store.setImportError(error.localizedDescription, imageSource: .camera)
+        }
+    }
+
+    private func importFromClipboard() async {
+        isImportingClipboard = true
+        store.prepareForLiveImport()
+        defer { isImportingClipboard = false }
+
+        guard let image = UIPasteboard.general.image,
+              let data = image.pngData() else {
+            store.setImportError(String(localized: "inbox.clipboard.empty"), imageSource: .clipboard)
+            return
+        }
+
+        do {
+            let text = try ocrService.recognizeText(from: data)
+            store.importRecognizedText(text, imageSource: .clipboard)
+        } catch {
+            store.setImportError(error.localizedDescription, imageSource: .clipboard)
+        }
+    }
+
+    private func exportCSV() {
+        do {
+            exportedFileURL = try store.writeCSVExportFile()
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.csv_exported_summary"),
+                store.transactions.count
+            )
+            showExportShareSheet = true
+        } catch {
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.export_failed_format"),
+                error.localizedDescription
+            )
+        }
+    }
+
+    private func exportJSONBackup() {
+        do {
+            exportedFileURL = try store.writeManualBackupFile()
+            lastRecognitionSummary = store.lastBackupSummary
+            showExportShareSheet = true
+        } catch {
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.export_failed_format"),
+                error.localizedDescription
+            )
+        }
+    }
+
+    private func importSelectedCSV(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess { url.stopAccessingSecurityScopedResource() }
+            }
+
+            let data = try Data(contentsOf: url)
+            let importResult = try LedgerCSVCodec.decode(data: data)
+            appendCSVImportResult(importResult, fileName: url.lastPathComponent)
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.csv_imported_summary"),
+                importResult.rows.count,
+                importResult.validCount,
+                importResult.failedCount
+            )
+        } catch {
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.import_failed_format"),
+                error.localizedDescription
+            )
+        }
+    }
+
+    private func importPendingJSONBackup() {
+        guard let pendingJSONImportURL else { return }
+        do {
+            try store.importBackup(from: pendingJSONImportURL)
+            lastRecognitionSummary = store.lastImportSummary ?? String(localized: "mac.data_exchange.json_restore_success")
+        } catch {
+            lastRecognitionSummary = String(
+                format: String(localized: "mac.data_exchange.import_failed_format"),
+                error.localizedDescription
+            )
+        }
+        self.pendingJSONImportURL = nil
+    }
+
+    private func appendCSVImportResult(_ result: LedgerCSVImportResult, fileName: String) {
+        guard !result.rows.isEmpty else { return }
+        let now = Date()
+        let batchID = UUID()
+        var rawInputs: [BatchRawInput] = []
+        var importedItems: [BatchImportQueueItem] = []
+
+        for row in result.rows {
+            let rawInput = BatchRawInput(
+                batchID: batchID,
+                sourceKind: .files,
+                originalFileName: "\(fileName):\(row.lineNumber)",
+                originalUTType: UTType.commaSeparatedText.identifier,
+                inputHash: "csv-\(batchID.uuidString)-\(row.lineNumber)",
+                fileRef: fileName,
+                rawText: row.rawText,
+                createdAt: now,
+                updatedAt: now
+            )
+            rawInputs.append(rawInput)
+
+            let item: BatchImportQueueItem
+            if let transaction = row.transaction {
+                item = BatchImportQueueItem(
+                    rawInputID: rawInput.id,
+                    batchID: batchID,
+                    state: .candidate,
+                    merchant: transaction.merchant,
+                    amount: transaction.amount,
+                    occurredAt: transaction.occurredAt,
+                    category: transaction.category,
+                    source: transaction.source,
+                    note: transaction.note,
+                    confidence: 0.95,
+                    needsReview: true,
+                    createdAt: now,
+                    updatedAt: now
+                )
+            } else {
+                item = BatchImportQueueItem(
+                    rawInputID: rawInput.id,
+                    batchID: batchID,
+                    state: .candidate,
+                    note: row.rawText,
+                    confidence: 0.15,
+                    needsReview: true,
+                    warnings: warning(for: row.failureReason).map { [$0] } ?? [],
+                    failureReason: row.failureReason ?? .parseFailed,
+                    createdAt: now,
+                    updatedAt: now
+                )
+            }
+            importedItems.append(item)
+        }
+
+        let batch = BatchImportBatch(
+            id: batchID,
+            sourceKind: .files,
+            status: result.validCount == 0 ? .failed : .pending,
+            itemCount: result.rows.count,
+            createdAt: now,
+            updatedAt: now
+        )
+
+        var baseSnapshot = queueSnapshot
+        baseSnapshot.batches.insert(batch, at: 0)
+        baseSnapshot.rawInputs = rawInputs + baseSnapshot.rawInputs
+        baseSnapshot.items = importedItems + baseSnapshot.items
+        queueSnapshot = baseSnapshot
+        selectedItemID = importedItems.first?.id
+        filter = .all
+        syncCandidateDraft(force: true)
+    }
+
+    private func warning(for reason: BatchImportFailureReason?) -> BatchImportWarning? {
+        switch reason {
+        case .emptyInput:
+            return .emptyOCRText
+        case .missingAmount:
+            return .missingAmount
+        case .missingMerchant:
+            return .missingMerchant
+        case .missingDate:
+            return .missingDate
+        case .lowConfidence:
+            return .lowConfidence
+        case .duplicateSuspected:
+            return .duplicateSuspected
+        case .unsupportedFileType:
+            return .unsupportedFileType
+        case .parseFailed:
+            return .parseFailed
+        case .nonBillImage, .ocrFailed, .multipleReceipts, .userRejected, .permissionDenied, .none:
+            return nil
+        }
+    }
+
+    private func importSelectedFiles(_ result: Result<[URL], Error>) async {
+        isImportingFiles = true
+        defer { isImportingFiles = false }
+
+        do {
+            let urls = try result.get()
+            await importFileURLs(urls, successSummaryKey: "ipad.batch_import.files_imported_summary")
+        } catch {
+            lastRecognitionSummary = String(
+                format: String(localized: "ipad.batch_import.files_failed_format"),
+                error.localizedDescription
+            )
+        }
+    }
+
+    private func importDroppedProviders(_ providers: [NSItemProvider]) async {
+        guard !isImportingFiles else { return }
+        isImportingFiles = true
+        defer { isImportingFiles = false }
+
+        var urls: [URL] = []
+        for provider in providers {
+            if let url = await loadDroppedFileURL(from: provider) {
+                urls.append(url)
+            }
+        }
+
+        guard !urls.isEmpty else {
+            lastRecognitionSummary = String(localized: "mac.import.drop.no_files")
+            return
+        }
+
+        await importFileURLs(urls, successSummaryKey: "mac.import.drop.imported_summary")
+    }
+
+    private func importFileURLs(_ urls: [URL], successSummaryKey: String) async {
+        guard !urls.isEmpty else { return }
+
+        let batchID = UUID()
+        var rawInputs: [BatchRawInput] = []
+        var failedReasons: [UUID: BatchImportFailureReason] = [:]
+
+        for url in urls {
+            let imported = await importFileAsRawInput(url, batchID: batchID)
+            rawInputs.append(imported.rawInput)
+            if let failureReason = imported.failureReason {
+                failedReasons[imported.rawInput.id] = failureReason
+            }
+        }
+
+        appendBatchRawInputs(rawInputs, failedReasons: failedReasons)
+        lastRecognitionSummary = String(
+            format: String(localized: String.LocalizationValue(successSummaryKey)),
+            rawInputs.count
+        )
+    }
+
+    private func loadDroppedFileURL(from provider: NSItemProvider) async -> URL? {
+        guard provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) else {
+            return nil
+        }
+
+        return await withCheckedContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                continuation.resume(returning: Self.fileURL(from: item))
+            }
+        }
+    }
+
+    private static func fileURL(from item: NSSecureCoding?) -> URL? {
+        if let url = item as? URL {
+            return url
+        }
+        if let url = item as? NSURL {
+            return url as URL
+        }
+        if let data = item as? Data {
+            return URL(dataRepresentation: data, relativeTo: nil)
+        }
+        return nil
+    }
+
+    private func importFileAsRawInput(
+        _ url: URL,
+        batchID: UUID
+    ) async -> (rawInput: BatchRawInput, failureReason: BatchImportFailureReason?) {
+        let now = Date()
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess { url.stopAccessingSecurityScopedResource() }
+        }
+
+        let fileName = url.lastPathComponent
+        let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey, .isDirectoryKey])
+        let contentType = resourceValues?.contentType
+        let typeIdentifier = contentType?.identifier
+        let inputID = UUID()
+
+        if resourceValues?.isDirectory == true {
+            return (
+                BatchRawInput(
+                    id: inputID,
+                    batchID: batchID,
+                    sourceKind: .files,
+                    originalFileName: fileName,
+                    originalUTType: typeIdentifier,
+                    inputHash: "file-\(inputID.uuidString)",
+                    fileRef: fileName,
+                    rawText: nil,
+                    createdAt: now,
+                    updatedAt: now
+                ),
+                .unsupportedFileType
+            )
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            if contentType?.conforms(to: .image) == true {
+                let text = try ocrService.recognizeText(from: data)
+                return (
+                    BatchRawInput(
+                        id: inputID,
+                        batchID: batchID,
+                        sourceKind: .files,
+                        originalFileName: fileName,
+                        originalUTType: typeIdentifier,
+                        inputHash: "file-\(inputID.uuidString)",
+                        fileRef: fileName,
+                        rawText: text,
+                        createdAt: now,
+                        updatedAt: now
+                    ),
+                    nil
+                )
+            }
+
+            if contentType?.conforms(to: .text) == true || contentType == .plainText {
+                let text = String(data: data, encoding: .utf8)
+                    ?? String(data: data, encoding: .unicode)
+                    ?? ""
+                return (
+                    BatchRawInput(
+                        id: inputID,
+                        batchID: batchID,
+                        sourceKind: .files,
+                        originalFileName: fileName,
+                        originalUTType: typeIdentifier,
+                        inputHash: "file-\(inputID.uuidString)",
+                        fileRef: fileName,
+                        rawText: text,
+                        createdAt: now,
+                        updatedAt: now
+                    ),
+                    text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .emptyInput : nil
+                )
+            }
+
+            return (
+                BatchRawInput(
+                    id: inputID,
+                    batchID: batchID,
+                    sourceKind: .files,
+                    originalFileName: fileName,
+                    originalUTType: typeIdentifier,
+                    inputHash: "file-\(inputID.uuidString)",
+                    fileRef: fileName,
+                    rawText: nil,
+                    createdAt: now,
+                    updatedAt: now
+                ),
+                contentType?.conforms(to: .pdf) == true ? .unsupportedFileType : .unsupportedFileType
+            )
+        } catch let error as OCRServiceError {
+            return (
+                BatchRawInput(
+                    id: inputID,
+                    batchID: batchID,
+                    sourceKind: .files,
+                    originalFileName: fileName,
+                    originalUTType: typeIdentifier,
+                    inputHash: "file-\(inputID.uuidString)",
+                    fileRef: fileName,
+                    rawText: nil,
+                    createdAt: now,
+                    updatedAt: now
+                ),
+                error == .emptyText ? .ocrFailed : .parseFailed
+            )
+        } catch {
+            return (
+                BatchRawInput(
+                    id: inputID,
+                    batchID: batchID,
+                    sourceKind: .files,
+                    originalFileName: fileName,
+                    originalUTType: typeIdentifier,
+                    inputHash: "file-\(inputID.uuidString)",
+                    fileRef: fileName,
+                    rawText: nil,
+                    createdAt: now,
+                    updatedAt: now
+                ),
+                .permissionDenied
             )
         }
     }
@@ -732,81 +2317,6 @@ private struct IPadBatchImportWorkspaceView: View {
         String(format: "%.0f%%", confidence * 100)
     }
 
-    private static var sampleSnapshot: BatchImportQueueSnapshot {
-        let batchID = UUID(uuidString: "00000000-0000-0000-0000-000000154100") ?? UUID()
-        let now = Date(timeIntervalSince1970: 1_780_200_000)
-        let later = Date(timeIntervalSince1970: 1_780_203_600)
-        let batch = BatchImportBatch(
-            id: batchID,
-            sourceKind: .photos,
-            status: .running,
-            itemCount: 5,
-            createdAt: now,
-            updatedAt: later
-        )
-
-        let rawInputs = (1...5).map { index in
-            BatchRawInput(
-                id: UUID(uuidString: "00000000-0000-0000-0000-00000015410\(index)") ?? UUID(),
-                batchID: batchID,
-                sourceKind: index == 5 ? .files : .photos,
-                originalFileName: "sample_receipt_0\(index).png",
-                inputHash: "sample-hash-1541-\(index)",
-                rawText: index == 5 ? nil : "Sample receipt \(index)",
-                createdAt: now,
-                updatedAt: later
-            )
-        }
-
-        let demoCoffeeDraft = TransactionDraft(
-            amount: 18.8,
-            merchant: "Demo Coffee",
-            category: TransactionCategory.dining.rawValue,
-            occurredAt: later,
-            sourceType: .ocr,
-            inputText: "Demo Coffee\nAmount 18.80",
-            parseMethod: .rule
-        )
-        let exampleMarketDraft = TransactionDraft(
-            amount: 62.4,
-            merchant: "Example Market",
-            category: TransactionCategory.groceries.rawValue,
-            occurredAt: later.addingTimeInterval(-1_800),
-            sourceType: .ocr,
-            inputText: "Example Market\nAmount 62.40",
-            parseMethod: .rule
-        )
-
-        let rawItem = BatchImportQueueItem.rawInput(rawInput: rawInputs[0], createdAt: now)
-        let candidate = BatchImportQueueItem
-            .rawInput(rawInput: rawInputs[1], createdAt: now)
-            .applyingInterpretation(InterpretResult(draft: demoCoffeeDraft, confidence: .high, needsReview: false), now: later)
-        let missingAmount = BatchImportQueueItem
-            .rawInput(rawInput: rawInputs[2], createdAt: now)
-            .applyingInterpretation(
-                InterpretResult(draft: nil, confidence: .low, needsReview: true, warnings: [.missingAmount]),
-                now: later
-            )
-        let duplicate = BatchImportQueueItem
-            .rawInput(rawInput: rawInputs[3], createdAt: now)
-            .applyingInterpretation(InterpretResult(draft: exampleMarketDraft, confidence: .medium, needsReview: true), now: later)
-            .markedDuplicate(
-                groupID: "sample-duplicate-1541",
-                score: 0.91,
-                reason: String(localized: "ipad.batch_import.sample.duplicate_reason"),
-                possibleTransactionID: UUID(uuidString: "00000000-0000-0000-0000-000000154199"),
-                now: later
-            )
-        let rejected = BatchImportQueueItem
-            .rawInput(rawInput: rawInputs[4], createdAt: now)
-            .markedFailed(reason: .unsupportedFileType, now: later)
-
-        return BatchImportQueueSnapshot(
-            batches: [batch],
-            rawInputs: rawInputs,
-            items: [rawItem, candidate, missingAmount, duplicate, rejected]
-        )
-    }
 }
 
 private struct IPadReportWorkspaceView: View {

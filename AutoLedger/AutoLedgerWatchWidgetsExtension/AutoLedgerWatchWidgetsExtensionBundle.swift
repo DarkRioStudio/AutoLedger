@@ -12,5 +12,6 @@ import SwiftUI
 struct AutoLedgerWatchWidgetsExtensionBundle: WidgetBundle {
     var body: some Widget {
         AutoLedgerWatchWidgetsExtension()
+        AutoLedgerWatchCornerTextWidget()
     }
 }

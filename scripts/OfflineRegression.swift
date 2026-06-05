@@ -38,12 +38,16 @@ struct OfflineRegression {
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
+        verifyBatchImportRecognitionExecutor(reporter: reporter)
+        verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
+        verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
+        try verifyLedgerCSVCodec(reporter: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
 
         reporter.finish()
@@ -614,6 +618,74 @@ struct OfflineRegression {
         reporter.check(incrementalBatch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps changed tombstones after changedAfter")
     }
 
+    private static func verifyLedgerConfigurationSyncPolicy(reporter: RegressionReporter) {
+        let appSettings = BackupAppSettings(
+            subscriptionReminderEnabled: true,
+            monthlyAnomalyThresholdPercent: 150,
+            llmEnhancementEnabled: false,
+            autoClipboardImportEnabled: false,
+            iCloudBackupEnabled: false
+        )
+        let local = LedgerConfigurationSyncPayload(
+            updatedAt: Date(timeIntervalSince1970: 1_780_000_000),
+            deviceID: "iphone",
+            subscriptions: [],
+            categoryCorrections: [
+                BackupCategoryCorrection(merchant: "Demo Coffee", category: .dining)
+            ],
+            customCategories: ["咖啡", "通勤"],
+            customSources: ["快捷指令"],
+            merchantAliases: ["Demo Cafe": "Demo Coffee"],
+            subscriptionMetadata: BackupSubscriptionMetadata(notes: ["sample": "local"]),
+            appSettings: appSettings
+        )
+        let emptyRemote = LedgerConfigurationSyncPayload(
+            updatedAt: Date(timeIntervalSince1970: 1_780_010_000),
+            deviceID: "ipad",
+            subscriptions: [],
+            categoryCorrections: [],
+            customCategories: [],
+            customSources: [],
+            merchantAliases: [:],
+            subscriptionMetadata: BackupSubscriptionMetadata(),
+            appSettings: appSettings
+        )
+
+        reporter.check(
+            LedgerConfigurationSyncPolicy.shouldPreserveLocalConfiguration(local: local, remote: emptyRemote),
+            "LedgerConfigurationSyncPolicy preserves local config when remote config is empty"
+        )
+
+        let remote = LedgerConfigurationSyncPayload(
+            updatedAt: Date(timeIntervalSince1970: 1_780_020_000),
+            deviceID: "ipad",
+            subscriptions: [],
+            categoryCorrections: [
+                BackupCategoryCorrection(merchant: "Example Market", category: .groceries)
+            ],
+            customCategories: ["餐饮"],
+            customSources: ["相册"],
+            merchantAliases: ["Example Shop": "Example Market"],
+            subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: ["remote": 88]),
+            appSettings: appSettings
+        )
+        let merged = LedgerConfigurationSyncPolicy.merge(local: local, remote: remote)
+        reporter.check(
+            Set(merged.customCategories) == Set(["咖啡", "通勤", "餐饮"]),
+            "LedgerConfigurationSyncPolicy merges custom categories from local and remote"
+        )
+        reporter.check(
+            merged.categoryCorrections.contains(BackupCategoryCorrection(merchant: "Demo Coffee", category: .dining)) &&
+                merged.categoryCorrections.contains(BackupCategoryCorrection(merchant: "Example Market", category: .groceries)),
+            "LedgerConfigurationSyncPolicy merges category learning records"
+        )
+        reporter.check(
+            merged.merchantAliases["Demo Cafe"] == "Demo Coffee" &&
+                merged.merchantAliases["Example Shop"] == "Example Market",
+            "LedgerConfigurationSyncPolicy merges merchant aliases"
+        )
+    }
+
     private static func verifyBatchImportQueue(reporter: RegressionReporter) {
         let batchID = UUID(uuidString: "00000000-0000-0000-0000-000000001540") ?? UUID()
         let rawInputID = UUID(uuidString: "00000000-0000-0000-0000-000000001541") ?? UUID()
@@ -694,9 +766,12 @@ struct OfflineRegression {
 
         let reviewed = candidate.reviewed(now: later)
         let converted = reviewed.converted(transactionID: transactionID, now: later)
+        let rejected = candidate.markedFailed(reason: .userRejected, now: later)
         reporter.check(reviewed.state == .reviewed, "BatchImportQueue reviewed candidate moves to reviewed")
         reporter.check(converted.state == .transaction, "BatchImportQueue converted item moves to transaction")
         reporter.check(converted.convertedTransactionID == transactionID, "BatchImportQueue stores converted transaction id")
+        reporter.check(rejected.state == .rejected, "BatchImportQueue ignored candidate moves to rejected")
+        reporter.check(rejected.convertedTransactionID == nil, "BatchImportQueue ignored candidate does not create transaction id")
 
         let snapshot = BatchImportQueueSnapshot(
             batches: [batch],
@@ -706,6 +781,146 @@ struct OfflineRegression {
         reporter.check(snapshot.items(in: .candidate).count == 2, "BatchImportQueue snapshot filters candidate items")
         reporter.check(snapshot.officialTransactionIDs == [transactionID], "BatchImportQueue snapshot exposes only converted transaction ids")
         reporter.check(snapshot.doesNotPolluteOfficialLedger(), "BatchImportQueue snapshot keeps non-transaction items out of official ledger")
+    }
+
+    private static func verifyBatchImportRecognitionExecutor(reporter: RegressionReporter) {
+        let batchID = UUID(uuidString: "00000000-0000-0000-0000-000000001544") ?? UUID()
+        let now = Date(timeIntervalSince1970: 1_780_110_000)
+        let textRaw = BatchRawInput(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001545") ?? UUID(),
+            batchID: batchID,
+            sourceKind: .text,
+            originalFileName: "sample_receipt_02.txt",
+            rawText: "Demo Coffee\nTotal ¥21.50",
+            createdAt: now,
+            updatedAt: now
+        )
+        let emptyRaw = BatchRawInput(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001546") ?? UUID(),
+            batchID: batchID,
+            sourceKind: .text,
+            originalFileName: "empty_receipt.txt",
+            rawText: "   ",
+            createdAt: now,
+            updatedAt: now
+        )
+        let photoRaw = BatchRawInput(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001547") ?? UUID(),
+            batchID: batchID,
+            sourceKind: .photos,
+            originalFileName: "sample_receipt_03.png",
+            rawText: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+        let fileRaw = BatchRawInput(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001548") ?? UUID(),
+            batchID: batchID,
+            sourceKind: .files,
+            originalFileName: "sample_receipt_04.pdf",
+            rawText: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+        let snapshot = BatchImportQueueSnapshot(
+            batches: [
+                BatchImportBatch(
+                    id: batchID,
+                    sourceKind: .text,
+                    itemCount: 4,
+                    createdAt: now,
+                    updatedAt: now
+                )
+            ],
+            rawInputs: [textRaw, emptyRaw, photoRaw, fileRaw],
+            items: [textRaw, emptyRaw, photoRaw, fileRaw].map { BatchImportQueueItem.rawInput(rawInput: $0, createdAt: now) }
+        )
+
+        let executor = BatchImportRecognitionExecutor()
+        let result = executor.process(snapshot: snapshot, now: now.addingTimeInterval(30))
+        reporter.check(result.processedCount == 4, "BatchImportRecognitionExecutor processes raw queue items")
+        reporter.check(result.candidateCount == 1, "BatchImportRecognitionExecutor generates one candidate from text")
+        reporter.check(result.failedCount == 3, "BatchImportRecognitionExecutor records failures for empty/OCR-missing/unsupported inputs")
+
+        let byRawInputID = Dictionary(uniqueKeysWithValues: result.snapshot.items.map { ($0.rawInputID, $0) })
+        let textItem = byRawInputID[textRaw.id]
+        reporter.check(textItem?.state == .candidate, "BatchImportRecognitionExecutor advances text input to candidate")
+        reporter.check(abs((textItem?.amount ?? 0) - 21.5) < 0.001, "BatchImportRecognitionExecutor carries interpreted amount")
+        reporter.check(textItem?.convertedTransactionID == nil, "BatchImportRecognitionExecutor does not auto-save candidate")
+        reporter.check(byRawInputID[emptyRaw.id]?.failureReason == .emptyInput, "BatchImportRecognitionExecutor marks empty text")
+        reporter.check(byRawInputID[photoRaw.id]?.failureReason == .ocrFailed, "BatchImportRecognitionExecutor marks image without OCR text")
+        reporter.check(byRawInputID[fileRaw.id]?.failureReason == .unsupportedFileType, "BatchImportRecognitionExecutor marks unsupported file")
+        reporter.check(result.snapshot.doesNotPolluteOfficialLedger(), "BatchImportRecognitionExecutor keeps official ledger untouched")
+
+        guard let retryItem = byRawInputID[emptyRaw.id]?.retryRequested(now: now.addingTimeInterval(60)) else {
+            reporter.check(false, "BatchImportRecognitionExecutor prepares retry item")
+            return
+        }
+        var retrySnapshot = result.snapshot
+        if let index = retrySnapshot.items.firstIndex(where: { $0.id == retryItem.id }) {
+            retrySnapshot.items[index] = retryItem
+        }
+        let retryResult = executor.process(snapshot: retrySnapshot, itemIDs: [retryItem.id], now: now.addingTimeInterval(90))
+        reporter.check(retryResult.processedCount == 1, "BatchImportRecognitionExecutor retries selected item only")
+        reporter.check(retryResult.snapshot.items.first(where: { $0.id == retryItem.id })?.retryCount == 1, "BatchImportRecognitionExecutor preserves retry count")
+    }
+
+    private static func verifyDataCleaningPreviewPlanner(reporter: RegressionReporter) {
+        let base = Date(timeIntervalSince1970: 1_780_300_000)
+        let aliasTransaction = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001551") ?? UUID(),
+            merchant: "Demo Coffee Original",
+            amount: 18,
+            occurredAt: base,
+            category: .other,
+            source: .manual,
+            note: ""
+        )
+        let categoryTransaction = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001552") ?? UUID(),
+            merchant: "Example Market",
+            amount: 42,
+            occurredAt: base.addingTimeInterval(-300),
+            category: .other,
+            source: .manual,
+            note: ""
+        )
+        let duplicateA = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001553") ?? UUID(),
+            merchant: "Sample Store",
+            amount: 9.9,
+            occurredAt: base.addingTimeInterval(-600),
+            category: .shopping,
+            source: .manual,
+            note: ""
+        )
+        let duplicateB = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001554") ?? UUID(),
+            merchant: "Sample Store",
+            amount: 9.9,
+            occurredAt: base.addingTimeInterval(-630),
+            category: .shopping,
+            source: .manual,
+            note: ""
+        )
+
+        let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
+            transactions: [aliasTransaction, categoryTransaction, duplicateA, duplicateB],
+            merchantAliases: ["Demo Coffee Original": "Demo Coffee"],
+            categoryCorrections: ["Example Market": .groceries]
+        )
+
+        reporter.check(snapshot.items(kind: .merchantAlias).count == 1, "DataCleaningPreviewPlanner previews merchant alias impact")
+        reporter.check(snapshot.items(kind: .categoryCorrection).count == 1, "DataCleaningPreviewPlanner previews category correction impact")
+        reporter.check(snapshot.items(kind: .duplicateCandidate).count == 1, "DataCleaningPreviewPlanner previews duplicate candidates")
+        reporter.check(
+            snapshot.items(kind: .merchantAlias).first?.affectedTransactionIDs == [aliasTransaction.id],
+            "DataCleaningPreviewPlanner scopes alias impact to matching transactions"
+        )
+        reporter.check(
+            Set(snapshot.items(kind: .duplicateCandidate).first?.affectedTransactionIDs ?? []) == Set([duplicateA.id, duplicateB.id]),
+            "DataCleaningPreviewPlanner duplicate preview includes both transactions"
+        )
     }
 
     private static func verifySampleParsing(
@@ -1285,6 +1500,137 @@ struct OfflineRegression {
             ledger.transactions.contains { $0.id == aliasRefresh.id && $0.merchant == "别名刷新后" },
             "LedgerStore refreshes a single merchant alias merchant name"
         )
+
+        let cleaningAlias = Transaction(
+            merchant: "Cleanup Original Merchant",
+            amount: 21,
+            occurredAt: .now,
+            category: .other,
+            source: .manual,
+            note: "data cleaning alias"
+        )
+        ledger.addTransaction(cleaningAlias)
+        ledger.recordMerchantAlias(original: "Cleanup Original Merchant", alias: "Cleanup Unified Merchant")
+        let aliasCleaningPreview = DataCleaningPreviewPlanner()
+            .buildSnapshot(
+                transactions: ledger.transactions,
+                merchantAliases: ledger.merchantAliases,
+                categoryCorrections: ledger.categoryCorrections
+            )
+            .items(kind: .merchantAlias)
+            .first { $0.affectedTransactionIDs.contains(cleaningAlias.id) }
+        reporter.check(aliasCleaningPreview != nil, "LedgerStore data cleaning can preview merchant alias application")
+        if let aliasCleaningPreview {
+            let result = ledger.applyDataCleaningPreview(aliasCleaningPreview)
+            reporter.check(result.updatedCount == 1 && result.canUndo, "LedgerStore applies merchant alias cleaning with undo snapshot")
+            reporter.check(
+                ledger.transactions.contains { $0.id == cleaningAlias.id && $0.merchant == "Cleanup Unified Merchant" },
+                "LedgerStore merchant alias cleaning updates affected transaction"
+            )
+            _ = ledger.undoLastDataCleaningApplication()
+            reporter.check(
+                ledger.transactions.contains { $0.id == cleaningAlias.id && $0.merchant == "Cleanup Original Merchant" },
+                "LedgerStore undo restores merchant alias cleaning"
+            )
+        }
+
+        let cleaningCategory = Transaction(
+            merchant: "Cleanup Category Merchant",
+            amount: 22,
+            occurredAt: .now.addingTimeInterval(-120),
+            category: .other,
+            source: .manual,
+            note: "data cleaning category"
+        )
+        ledger.addTransaction(cleaningCategory)
+        ledger.recordCategoryCorrection(merchant: "Cleanup Category Merchant", category: .dining)
+        let categoryCleaningPreview = DataCleaningPreviewPlanner()
+            .buildSnapshot(
+                transactions: ledger.transactions,
+                merchantAliases: ledger.merchantAliases,
+                categoryCorrections: ledger.categoryCorrections
+            )
+            .items(kind: .categoryCorrection)
+            .first { $0.affectedTransactionIDs.contains(cleaningCategory.id) }
+        reporter.check(categoryCleaningPreview != nil, "LedgerStore data cleaning can preview category correction application")
+        if let categoryCleaningPreview {
+            let result = ledger.applyDataCleaningPreview(categoryCleaningPreview)
+            reporter.check(result.updatedCount == 1, "LedgerStore applies category cleaning")
+            reporter.check(
+                ledger.transactions.contains { $0.id == cleaningCategory.id && $0.category == TransactionCategory.dining.rawValue },
+                "LedgerStore category cleaning updates affected transaction"
+            )
+        }
+
+        let duplicateA = Transaction(
+            merchant: "Cleanup Duplicate Merchant",
+            amount: 23,
+            occurredAt: .now.addingTimeInterval(-240),
+            category: .shopping,
+            source: .manual,
+            note: "duplicate A"
+        )
+        let duplicateB = Transaction(
+            merchant: "Cleanup Duplicate Merchant",
+            amount: 23,
+            occurredAt: duplicateA.occurredAt.addingTimeInterval(-20),
+            category: .shopping,
+            source: .manual,
+            note: "duplicate B"
+        )
+        ledger.addTransaction(duplicateA)
+        ledger.addTransaction(duplicateB)
+        let duplicateCleaningPreview = DataCleaningPreviewPlanner()
+            .buildSnapshot(
+                transactions: ledger.transactions,
+                merchantAliases: ledger.merchantAliases,
+                categoryCorrections: ledger.categoryCorrections
+            )
+            .items(kind: .duplicateCandidate)
+            .first { Set($0.affectedTransactionIDs) == Set([duplicateA.id, duplicateB.id]) }
+        reporter.check(duplicateCleaningPreview != nil, "LedgerStore data cleaning can preview duplicate application")
+        if let duplicateCleaningPreview {
+            let result = ledger.applyDataCleaningPreview(duplicateCleaningPreview)
+            reporter.check(result.deletedCount == 1 && result.canUndo, "LedgerStore duplicate cleaning soft-deletes one duplicate with undo snapshot")
+            reporter.check(
+                ledger.transactions.filter { $0.merchant == "Cleanup Duplicate Merchant" }.count == 1 &&
+                ledger.deletedTransactions.contains { $0.merchant == "Cleanup Duplicate Merchant" },
+                "LedgerStore duplicate cleaning moves one item to recently deleted"
+            )
+            _ = ledger.undoLastDataCleaningApplication()
+            reporter.check(
+                ledger.transactions.filter { $0.merchant == "Cleanup Duplicate Merchant" }.count == 2 &&
+                !ledger.deletedTransactions.contains { $0.merchant == "Cleanup Duplicate Merchant" },
+                "LedgerStore undo restores duplicate cleaning"
+            )
+        }
+    }
+
+    private static func verifyLedgerCSVCodec(reporter: RegressionReporter) throws {
+        let transaction = Transaction(
+            merchant: "Demo Coffee",
+            amount: 18.80,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-06-04 09:30") ?? .now,
+            category: .dining,
+            source: .manual,
+            note: "latte, \"morning\""
+        )
+
+        let data = try LedgerCSVCodec.encode(transactions: [transaction])
+        let decoded = try LedgerCSVCodec.decode(data: data)
+        reporter.check(decoded.rows.count == 1, "LedgerCSVCodec round-trips one transaction row")
+        reporter.check(decoded.validCount == 1, "LedgerCSVCodec imports valid row")
+        reporter.check(decoded.rows.first?.transaction?.merchant == transaction.merchant, "LedgerCSVCodec preserves merchant")
+        reporter.check(abs((decoded.rows.first?.transaction?.amount ?? 0) - transaction.amount) < 0.001, "LedgerCSVCodec preserves amount")
+        reporter.check(decoded.rows.first?.transaction?.note == transaction.note, "LedgerCSVCodec preserves quoted note")
+
+        let invalidCSV = """
+        occurredAt,merchant,amount,category,source,note
+        2026-06-04T09:30:00Z,Example Market,not-a-number,groceries,manual,invalid amount
+        """
+        let invalid = try LedgerCSVCodec.decode(data: Data(invalidCSV.utf8))
+        reporter.check(invalid.rows.count == 1, "LedgerCSVCodec keeps invalid row for review")
+        reporter.check(invalid.rows.first?.failureReason == .missingAmount, "LedgerCSVCodec marks invalid amount")
     }
 
     private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {

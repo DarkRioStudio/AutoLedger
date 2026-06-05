@@ -16,4 +16,42 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
     end
   end
+
+  # MediaPipe LLM Inference xcframeworks currently ship iOS / iOS Simulator
+  # slices only. Keep them enabled for iPhone and iPad, but do not link them
+  # into the Mac Catalyst build; GemmaService provides a Catalyst fallback.
+  installer.aggregate_targets.each do |target|
+    next unless target.name == 'Pods-AutoLedger'
+
+    target.xcconfigs.each do |config_name, xcconfig|
+      xcconfig.attributes['OTHER_LDFLAGS'] =
+        '$(inherited) -ObjC -l"c++" -framework "Accelerate" -framework "CoreVideo" -framework "Metal"'
+      xcconfig.attributes['OTHER_LDFLAGS[sdk=iphoneos*]'] =
+        '$(inherited) -framework "MediaPipeTasksGenAI" -framework "MediaPipeTasksGenAIC" -framework "OpenGLES" -force_load "$(PODS_ROOT)/MediaPipeTasksGenAIC/frameworks/genai_libraries/libMediaPipeTasksGenAIC_device.a"'
+      xcconfig.attributes['OTHER_LDFLAGS[sdk=iphonesimulator*]'] =
+        '$(inherited) -framework "MediaPipeTasksGenAI" -framework "MediaPipeTasksGenAIC" -framework "OpenGLES" -force_load "${PODS_ROOT}/MediaPipeTasksGenAIC/frameworks/genai_libraries/libMediaPipeTasksGenAIC_simulator.a"'
+      xcconfig.attributes['OTHER_LDFLAGS[sdk=macosx*]'] =
+        '$(inherited) -ObjC -l"c++" -framework "Accelerate" -framework "CoreVideo" -framework "Metal"'
+      xcconfig.attributes['FRAMEWORK_SEARCH_PATHS[sdk=macosx*]'] = '$(inherited)'
+      xcconfig.attributes['OTHER_MODULE_VERIFIER_FLAGS[sdk=macosx*]'] = '$(inherited)'
+      xcconfig.save_as(target.xcconfig_path(config_name))
+    end
+  end
+
+  ['debug', 'release'].each do |configuration|
+    xcconfig_path = File.join(
+      installer.sandbox.root,
+      'Target Support Files',
+      'Pods-AutoLedger',
+      "Pods-AutoLedger.#{configuration}.xcconfig"
+    )
+    next unless File.exist?(xcconfig_path)
+
+    contents = File.read(xcconfig_path)
+    contents = contents.sub(
+      /^OTHER_LDFLAGS = .*$/,
+      'OTHER_LDFLAGS = $(inherited) -ObjC -l"c++" -framework "Accelerate" -framework "CoreVideo" -framework "Metal"'
+    )
+    File.write(xcconfig_path, contents)
+  end
 end

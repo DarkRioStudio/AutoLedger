@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-03（v1.5.0 Watch accessory corner 样式修正）
+更新日期：2026-06-04（v1.5.0 全平台单账本路线调整）
 
 ## 记录规则
 
@@ -44,6 +44,381 @@
 
 ## 日志条目
 
+### ITER-153 GOAL-1572 Mac CSV / JSON 导入导出
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：能力增强 / Mac Catalyst / 导入导出
+- 目标：为 Mac Catalyst 工作台补齐 CSV / JSON 导入导出第一版，让桌面端可以导出正式账单、导入 CSV 候选，并继续复用 JSON BackupBundle 的备份 / 恢复能力。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerCSVCodec.swift`：新增 CSV 编解码工具，固定列为 `id, occurredAt, merchant, amount, category, source, note`，支持引号、逗号和无效行诊断。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `writeCSVExportFile()`，只导出当前正式账单，不包含最近删除、候选队列或调试日志。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：Mac Catalyst 导入页新增 CSV 导入导出与 JSON 备份导出 / 恢复入口；CSV 导入行进入候选队列，JSON 恢复保留二次确认。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐 CSV / JSON 数据交换三语文案。
+  - `scripts/run_offline_regression.sh`、`scripts/OfflineRegression.swift`：将 CSV codec 纳入离线回归，新增 CSV 往返、转义和无效金额用例。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1572 完成范围。
+- 未改动范围：未实现菜单栏 Import / Export / Backup 命令，未实现键盘快捷键，未实现 CSV 字段映射 UI，未实现选中账单局部导出，未把 CSV 导入直接写入正式账本，未修改 signing、Bundle ID、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - Mac 导入页可以导出正式账单 CSV。
+  - Mac 导入页可以导入 CSV，并把每一行转换为候选账单或需处理候选，不会自动写入正式账本。
+  - Mac 导入页可以导出 JSON BackupBundle。
+  - Mac 导入页可以选择 JSON 备份并通过二次确认恢复，继续复用既有安全备份 / 覆盖恢复语义。
+- 未完成内容：CSV 字段映射和恢复预览 UI 仍是后续增强；本轮 JSON 恢复确认复用既有确认弹窗，还没有独立差异预览；菜单栏和快捷键进入 GOAL-1573。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：CSV 导入是候选账单导入，不是完整备份恢复；用户仍需逐条确认入账。JSON 恢复会覆盖本地账本和配置，必须保留 destructive confirmation。真实 Mac 桌面文件选择 / 分享面板手感仍需人工 smoke。
+- 回滚方式：移除 `LedgerCSVCodec.swift`、`LedgerStore.writeCSVExportFile()`、工作台 CSV / JSON 数据交换入口、本地化键和离线回归新增用例，并将 GOAL-1572 状态恢复为未完成。
+- 结论：GOAL-1572 代码侧第一版完成，Mac Catalyst 已具备 CSV / JSON 数据交换基础能力，可以继续进入 GOAL-1573 菜单栏与快捷键。
+- 下一步建议：在 Mac Catalyst 真机运行中 smoke CSV 导出、CSV 导入候选、JSON 导出和 JSON 恢复确认；随后推进 GOAL-1573。
+
+### ITER-152 GOAL-1571 Mac 拖拽截图 / 文件导入
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：能力增强 / Mac Catalyst / SwiftUI
+- 目标：在 Mac Catalyst 工作台中提供 Finder 拖拽图片 / 文件导入入口，让拖入内容先进入识别队列或需处理队列，不直接写入正式账本。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：Mac Catalyst 下在导入页和识别队列页显示拖拽导入区；新增 `onDrop` 处理 Finder file URL；拖入文件复用既有 `importFileAsRawInput` 和 `appendBatchRawInputs`；文件夹先标记为不支持文件类型。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐 Mac 拖拽导入区标题、说明、失败和导入结果文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1571 第一版完成范围和未做边界。
+- 未改动范围：未实现 PDF OCR、文件夹递归扫描、拖拽后自动入账、CSV / JSON 导入导出、菜单栏、快捷键或大表格；未修改 Xcode project、target、Bundle ID、`DEVELOPMENT_TEAM`、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - Mac Catalyst 导入页和识别队列页提供明显的拖拽导入区域。
+  - 从 Finder 拖入图片会执行 OCR，并以 raw input 进入待识别队列。
+  - 从 Finder 拖入文本文件会读取文本，并进入待识别队列。
+  - PDF 和文件夹会进入队列并标记为需处理 / 不支持文件类型，不会误判为已识别。
+  - 文件选择和拖拽导入共用同一条 `BatchRawInput` 队列路径，候选生成仍需用户点击识别，正式入账仍需复核确认。
+- 未完成内容：未做 Mac 真机拖拽手感测试；未支持拖入非文件 URL 的图片数据；未支持文件夹递归；未做 PDF OCR。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`，仍有 MediaPipe XCFramework 缺少 maccatalyst slice 的 CocoaPods copy warning，但不影响当前构建。
+- 风险与注意事项：拖拽入口当前只消费 Finder file URL；从浏览器或其他 App 拖出的图片对象如果不是文件 URL，可能显示“未能读取拖入的文件”。PDF / 文件夹先进入需处理队列，后续是否支持取决于实际需求。
+- 回滚方式：移除 Mac drop zone、`importDroppedProviders` / `loadDroppedFileURL` / `importFileURLs` helper 和新增本地化 key，恢复仅通过文件选择导入。
+- 结论：GOAL-1571 第一版已具备 Mac Finder 拖拽导入闭环，且不改变正式账本写入边界。
+- 下一步建议：在 Mac Catalyst 运行包中实际拖拽图片、文本、PDF 和文件夹做手感测试；随后进入 GOAL-1572 CSV / JSON 导入导出，或补 GOAL-1571 的 PDF / 文件夹细化能力。
+
+### ITER-151 iPad / Mac Catalyst 工作台侧边栏命中区与 detail 导航重置
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / Phase 8 工作台体验修复
+- 类型：Bugfix / SwiftUI
+- 目标：修复 iPad / Mac Catalyst 工作台左侧菜单只有点中文字才生效，以及 Tab 进入下一层页面后点击其他主菜单仍停留在上一层详情页的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：侧边栏按钮 label 增加整行 frame 与 `contentShape(Rectangle())`；主菜单 selection 变化时更新 detail reset identity，并把 identity 绑定到 detail 根视图。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录本轮体验修复。
+- 未改动范围：未调整 iPad 各 Tab 的业务内容；未改动 CloudKit、批量识别、账本保存、Xcode project、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 侧边栏每一行的空白区域也会响应点击，避免误以为 Tab 切换卡顿。
+  - 从设置、账本、导入、候选账单等页面进入内层 NavigationStack 后，再点击其他主菜单会重建 detail 根页面，清理上一层导航残留。
+- 未完成内容：未做真机 iPad / Mac Catalyst 手感复测；未重构各 Tab 为显式 `NavigationPath`。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 formatter warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`，仍有 MediaPipe XCFramework 缺少 maccatalyst slice 的 CocoaPods copy warning，但不影响当前构建。
+- 风险与注意事项：切换主菜单会重建 detail 根视图，这是为保证跨 Tab 切换可靠性做的明确取舍；如果后续某个 Tab 需要保留独立导航历史，可再改为每个 section 持有独立 `NavigationPath`。
+- 回滚方式：移除 `detailResetID` 与侧边栏 label 的整行 hit area 设置，恢复上一轮 `IPadWorkspaceView` 结构。
+- 结论：工作台主菜单交互已按“点击整行立即切换并回到目标 Tab 根页”的桌面 / iPad 预期修复。
+- 下一步建议：在 iPad 真机和 Mac Catalyst 上连续测试“进入设置内页 -> 点导入 / 账本 / 分析”、“进入账单详情 -> 点其他主菜单”的切换行为。
+
+### ITER-150 全平台 target 基线与 Mac Catalyst 构建 smoke
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Phase 9 / Phase 10 平台接入基线
+- 类型：能力增强 / Xcode 配置 / 构建验证
+- 目标：在用户手动补齐 Mac Catalyst supported destination、tvOS target 和 visionOS target 后，保护现有 iOS / iPad / Watch 发布链，并确认当前工程进入 Mac Catalyst 主线前的真实构建状态。
+- 改动范围：
+  - `AutoLedger/AutoLedger.xcodeproj/project.pbxproj`：主 App target 保持原 Bundle ID，开启 Mac Catalyst supported destination，关闭 Mac Designed for iPad；新增 `AutoLedgerTV` / `AutoLedgerVision` target；为主 App 的 iOS Extension 和 Watch embed 项增加 iOS platform filter，避免 Mac Catalyst 包嵌入 iOS / watchOS 内容。
+  - `AutoLedger/AutoLedger/Domain/Services/GemmaService.swift`：Mac Catalyst 下跳过 MediaPipe import 和模型加载，返回受控不可用状态。
+  - `AutoLedger/Podfile`、`AutoLedger/Podfile.lock`：保留 iOS MediaPipe 依赖，调整 Pods xcconfig，使 MediaPipe / OpenGLES link flags 只作用于 iPhoneOS / iPhone Simulator，Mac Catalyst 使用基础系统 framework link flags。
+  - `AutoLedger/AutoLedgerTV/`、`AutoLedger/AutoLedgerVision/`、`AutoLedger/Packages/RealityKitContent/`：保留 Xcode 新 target 生成的模板入口，作为后续 tvOS / visionOS 只读展示平台基线。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录本轮实际状态、验证和阻断项。
+- 未改动范围：未修改主 App、Watch App、Extension 的 Bundle ID；未修改 `DEVELOPMENT_TEAM`、App Group、iCloud Container、entitlements、scheme 名称或 Xcode Cloud 脚本；未向 App Store Connect 添加新平台；未实现 tvOS / visionOS 产品 UI。
+- 完成内容：
+  - 主 App iOS generic Debug build 继续通过。
+  - 主 App Mac Catalyst Debug build 通过。
+  - Mac Catalyst 下不再尝试链接不可用的 MediaPipe 二进制，也不会嵌入 iOS Share / Widget / ControlWidget extension 或 watchOS app。
+  - tvOS / visionOS target 已进入 workspace scheme 列表，可作为后续只读展示平台开发入口。
+- 未完成内容：tvOS / visionOS 当前仍是模板 target；本机未安装 tvOS 26.5 / visionOS 26.5 platform runtime，无法执行 simulator build smoke；tvOS 真机开发仍需要开发者账号下可用 Apple TV 设备 UDID / profile。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`。
+  - BLOCKED：`AutoLedgerTV` / `AutoLedgerVision` 本机 simulator build，原因是当前 Xcode 未安装 tvOS 26.5 / visionOS 26.5 platform runtime。
+- 风险与注意事项：Mac Catalyst 当前是“可构建基线”，不等于 Mac 功能完成；Gemma / MediaPipe 在 Catalyst 下暂不可用，后续 Mac 导入和解析链路需要继续依赖规则解析、Core 解析或另行评估桌面端 AI 能力。tvOS / visionOS 不应加入 ASC 平台，直到目标 UI、截图和 archive smoke 完成。
+- 回滚方式：关闭主 App `SUPPORTS_MACCATALYST`，移除新 target 及本轮 Pods / Gemma / embed platform filter 调整，恢复到 GOAL-1570 评估完成但未启用 Catalyst 的状态。
+- 结论：全平台 target 基线已建立，Mac Catalyst 已具备继续推进 GOAL-1571 的构建基础；tvOS / visionOS 进入“target 已建、runtime 待装、产品 UI 待实现”的状态。
+- 下一步建议：继续 GOAL-1571 Mac 拖拽截图 / 文件导入；另行安装 tvOS / visionOS Xcode Components 后再做展示端 target smoke。
+
+### ITER-149 全平台截图管线顺延决策
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 11 路线调整
+- 类型：产品决策 / 文档 / 治理
+- 目标：根据 iPad 主线与后续 Mac Catalyst 商店页需求，调整截图管线推进策略，避免先做 iPad 临时管线再为 Mac / tvOS / visionOS 返工。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：将“iPad 截图管线”调整为“全平台截图管线”；GOAL-1590 / GOAL-1591 改为全平台设计与实现；截图管线等待 iPad、Mac、tvOS、visionOS 关键页面稳定后统一推进。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮路线调整。
+- 未改动范围：未修改截图脚本、截图 host、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 明确 iPad 截图不再作为 Mac Catalyst 前置任务。
+  - 明确全平台截图输出需要覆盖 iPhone、Watch、iPad、Mac、tvOS 和 visionOS 的平台分组、locale、fixture 和 `preview.html`。
+  - 当前推进顺序改为：iPad 主线收口后继续 Mac Catalyst；截图管线进入全平台发布收口阶段。
+- 未完成内容：未实现任何新截图导出能力；未生成 iPad / Mac / tvOS / visionOS 截图。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：截图管线不能拖到发布最后一天；进入全平台发布收口前需要提前为各平台准备稳定演示数据和人工目检时间。
+- 回滚方式：恢复 GOAL-1591 为 iPad-only 截图实现，并将 iPad 截图重新放回 Mac Catalyst 前置任务。
+- 结论：截图管线已调整为全平台后段统一推进，当前可以继续进入 Mac Catalyst 主线。
+- 下一步建议：按 GOAL-1571 开始 Mac 拖拽截图 / 文件导入设计与最小实现，同时继续保持 iPad 主线不引入新的样例数据。
+
+### ITER-148 iPad 批量队列真实导入入口与样例移除
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / Phase 5 收口
+- 类型：能力增强 / iPad / SwiftUI
+- 目标：继续收口 iPad 主线，移除批量导入工作台内置样例队列，并让用户选择的图片 / 文本文件能进入识别队列。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：新增 iPad 批量队列 `fileImporter` 多选入口；图片文件先跑 Vision OCR 后生成 raw input，文本文件读取为 raw text，PDF / 不支持文件进入需处理状态；默认队列从内置样例改为空队列。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐选择文件、导入中、文件导入结果文案，并移除 iPad 批量队列专用样例文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 iPad 队列默认空状态、真实文件入口和剩余边界。
+- 未改动范围：未新增 SQLite 候选队列表，未做候选队列持久化，未实现 PDF OCR，未改变确认入账链路，未修改 iPhone 首页、CloudKit schema、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - iPad 导入 / 候选队列启动时不再显示内置样例账单。
+  - 用户可通过“选择文件”批量选择图片、文本或 PDF。
+  - 图片文件经 OCR 后进入待识别队列，文本文件直接进入待识别队列。
+  - PDF 和暂不支持文件进入需处理状态，不会假装已识别或直接写入正式账本。
+  - 队列项仍需用户点击“开始识别”生成候选，再复核确认后才写入正式账本。
+- 未完成内容：队列仍为内存态；App 重启后不保留候选队列；PDF OCR、文件夹导入、拖拽导入和候选持久化仍待后续。
+- 测试情况：
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：图片 OCR 仍在导入动作中执行，真机大批量图片可能需要后续补进度、取消和节流；当前文件入口是 iPad 主线产品化收口，不代表 Mac 拖拽导入已完成。
+- 回滚方式：移除 `fileImporter`、文件导入按钮和 `importSelectedFiles` / `importFileAsRawInput` / `appendBatchRawInputs`，恢复空队列 UI 或回到 GOAL-1552 状态。
+- 结论：iPad 批量队列已移除内置样例数据，并具备真实文件进入候选队列的第一版入口。
+- 下一步建议：用户有明确需求场景后再真机 iPad 测试图片文件、文本文件、PDF 选择和“开始识别 -> 候选复核 -> 确认入账”链路；截图管线已调整为全平台后段统一推进，当前继续进入 Mac Catalyst。
+
+### ITER-147 v1.5.0 全平台单账本路线调整
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：路线调整 / Phase 6 顺延
+- 类型：产品决策 / 文档 / 治理
+- 目标：将多账本从当前 v1.5.0 执行范围中搁置，先按全平台共享同一个正式账本推进，降低同步和跨平台发布复杂度。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：更新版本定位、目标、验收口径、风险、推荐推进顺序和 GOAL 队列；GOAL-1560～1562 改为后续版本顺延。
+  - `README.md`：Roadmap 删除 v1.5.0 的多账本承诺，改为后续版本规划。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮路线调整。
+- 未改动范围：未修改 Swift 源码、SQLite schema、CloudKit schema、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - v1.5.0 统一为单一正式账本口径，所有活跃正式账单视为同一账本。
+  - iPhone / iPad / 后续 Mac 可写端围绕同一账本同步；Apple Watch 作为轻写入端回传同一账本；Widget / tvOS / visionOS 只读展示同一同步后快照。
+  - 多账本模型、账本归属字段、账本管理 UI、按账本统计和账单移动从当前队列移出，保留为 v1.6.0+ 候选规划。
+  - GOAL-1552 后的下一步从 GOAL-1560 改为跳过 Phase 6，进入 Mac Catalyst / 展示平台 / 截图管线等单账本可推进任务。
+- 未完成内容：未重写早期 GOAL-1501 / GOAL-1503 的历史记录；这些仍作为曾经评估过的 schema 方案保留。
+- 测试情况：
+  - PASS：`git diff --check`。
+- 风险与注意事项：后续如果恢复多账本，需要重新评审 CloudKit schema、BackupBundle、截图素材、Watch / Widget 口径和历史账单迁移；当前 v1.5.0 不应在 UI 或 README 中承诺多账本。
+- 回滚方式：将 `versions/v1.5.0-plan.md` 中 GOAL-1560～1562 恢复为当前队列，并恢复 README / CHANGELOG / iteration-log 对多账本的 v1.5.0 承诺。
+- 结论：v1.5.0 当前阶段按单一正式账本推进，多账本进入后续版本。
+- 下一步建议：跳过 GOAL-1560～1562，按调整后的队列继续推进 Mac Catalyst 或截图管线相关 GOAL。
+
+### ITER-146 GOAL-1552 数据清洗应用与回滚策略
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 5 / 数据清洗与候选复核
+- 类型：能力增强 / iPad / LedgerStore / 测试
+- 目标：在 GOAL-1551 的影响范围预览之后，提供用户确认后的数据清洗应用入口，并保留可恢复路径。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `applyDataCleaningPreview(_:)`、`undoLastDataCleaningApplication()`、最近一次应用结果和内存撤销快照；清洗写入使用专用路径，避免普通编辑自动学习反向规则。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：数据清洗详情页新增确认应用、重复项软删除说明、最近一次结果和撤销上次清洗按钮。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐清洗应用、确认、撤销和结果文案。
+  - `scripts/OfflineRegression.swift`：新增商户统一应用 / 撤销、分类清洗应用、疑似重复软删除 / 撤销断言。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1552 完成范围和未做边界。
+- 未改动范围：未新增 SQLite 清洗历史表、长期审计日志、BackupBundle 清洗历史 schema、多账本归属字段、OCR 文本相似重复合并或永久删除重复项；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 商户统一和分类修正可在 iPad 端确认后批量写入受影响正式账单。
+  - 疑似重复只会保留较新的账单，将较旧账单软删除到“最近删除”，用户仍可恢复。
+  - 最近一次清洗可通过 session 内快照撤销，撤销时只恢复实际改变过的账单，避免无意义增加全账本 sync revision。
+  - 应用成功后统一触发排序、Widget 刷新、自动备份和 iCloud 增量推送。
+  - 应用失败时尝试恢复应用前快照，避免半写入留在 UI 状态中。
+- 未完成内容：撤销快照不跨 App 重启；没有持久化清洗历史表；重复检测仍是商户 / 金额 / 时间窗口，不含 OCR 文本相似度；多账本清洗范围已顺延到后续版本，不再阻塞 v1.5.0。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前清洗应用会触发正常的本地账本更新和 iCloud 增量推送；真机测试时建议先用少量可恢复样例验证“应用 / 撤销 / 最近删除恢复”链路。撤销只覆盖最近一次清洗，不是长期审计能力。
+- 回滚方式：移除 `LedgerStore` 的数据清洗应用 / 撤销 API，删除 iPad 数据清洗操作区和对应本地化 key，回退新增离线断言，恢复 GOAL-1551 的只读预览状态。
+- 结论：GOAL-1552 第一版完成，Phase 5 已具备候选入账、清洗预览、确认应用和最近一次撤销的最小闭环。
+- 下一步建议：多账本已顺延；进入下一轮前先考虑提交当前 Phase 4 / Phase 5 变更，再按单账本路线推进 Mac Catalyst、展示平台或截图管线相关 GOAL。
+
+### ITER-145 GOAL-1551 数据清洗规则预览
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 5 / 数据清洗与候选复核
+- 类型：能力增强 / iPad / Core 规则预览
+- 目标：在不静默修改历史账单的前提下，让 iPad 数据清洗页先展示商户统一、分类修正和疑似重复的影响范围。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/DataCleaningPreviewPlanner.swift`：新增纯 Foundation 预览规划器，输出 merchant alias、category correction、duplicate candidate 三类预览。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：数据清洗入口从规划占位页改为真实预览页，展示摘要、预览列表、详情和受影响账单。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐数据清洗预览中英繁文案。
+  - `scripts/run_offline_regression.sh`、`scripts/OfflineRegression.swift`：将预览规划器纳入离线回归，并覆盖三类预览断言。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1551 完成范围和未做边界。
+- 未改动范围：未实现批量应用、撤销栈、清洗历史持久化、SQLite schema 变更、CloudKit schema 变更、多账本归属字段或真实重复合并；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 商户别名预览会显示原商户、目标商户和受影响账单。
+  - 分类修正预览会显示当前分类、建议分类和受影响账单。
+  - 疑似重复预览会基于标准化商户、金额和 60 秒时间窗口展示候选组，不自动删除或合并。
+  - iPad 数据清洗页明确标注为预览，不提供写入按钮。
+- 未完成内容：清洗动作应用、事务写入、失败回滚和清洗记录追踪顺延到 GOAL-1552；候选队列持久化仍未接入。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前重复检测是保守的同商户 / 同金额 / 近时间窗口预览，仍可能漏掉 OCR 文本相似但字段不同的重复账单；本轮只读展示不会影响真实历史账单。
+- 回滚方式：删除 `DataCleaningPreviewPlanner.swift`，将 iPad 数据清洗入口恢复为规划占位页，从离线脚本移除预览断言，并回退本轮新增本地化和文档记录。
+- 结论：GOAL-1551 第一版完成，iPad 数据清洗已经具备确认前影响范围预览。
+- 下一步建议：进入 GOAL-1552，围绕批量应用、事务写入、变更记录和可恢复路径推进。
+
+### ITER-144 GOAL-1550 候选账单复核与正式入账
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 5 / 数据清洗与候选复核
+- 类型：能力增强 / iPad / SwiftUI / Core 状态流
+- 目标：让 iPad 识别队列中的候选账单可以被用户编辑、确认入账或忽略，守住“用户确认后才写入正式账本”的边界。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：新增候选账单编辑草稿；右侧详情支持编辑商户、金额、时间、分类、来源和备注；新增“确认入账”和“忽略候选”动作。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐确认入账、忽略候选、字段校验和结果提示文案。
+  - `scripts/OfflineRegression.swift`：补充候选项 converted / rejected 状态断言。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1550 完成范围和未做边界。
+- 未改动范围：未实现候选队列 SQLite 持久化、真实多文件 picker、PDF OCR、批量应用、撤销栈或复杂重复账单合并；未修改 iPhone `InboxView`、OCR、CloudKit schema、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 候选账单字段可在 iPad 右侧检查器内直接编辑。
+  - 商户为空或金额无效时禁用确认入账，并显示校验提示。
+  - 确认入账会构造正式 `Transaction` 并调用 `LedgerStore.addTransaction(_:)`，复用既有 SQLite 保存、Widget 刷新和 iCloud 增量推送链路。
+  - 入账成功后队列项进入 `transaction` 状态并记录 `convertedTransactionID`。
+  - 忽略候选会进入 `rejected` 状态，不写入正式账本。
+- 未完成内容：队列仍是内存状态，App 重启后不会保留候选；重复账单目前仍是警示与人工判断，不做自动合并；真实多文件与 PDF 入口仍未接入。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+- 风险与注意事项：本轮确认入账使用正式 `LedgerStore.addTransaction`，因此候选入账会触发正常的本地保存和 iCloud 增量推送；真机测试时应确认候选队列只保存用户导入的真实项目，不应出现内置样例。
+- 回滚方式：移除 `IPadBatchCandidateDraft`、候选字段编辑表单、确认 / 忽略按钮和离线断言，恢复候选详情只读展示。
+- 结论：GOAL-1550 第一版完成，iPad 候选队列已经具备“复核后入账”的核心闭环。
+- 下一步建议：进入 GOAL-1551，做数据清洗规则预览，或先按真机反馈微调候选检查器布局。
+
+### ITER-143 iPad 导入页与识别队列分离
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：能力增强 / iPad / SwiftUI
+- 目标：解决 iPad 导入页展示不全、导入操作和查看队列混在一起、两个“开始识别”按钮造成歧义的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：导入页仅展示支付账单导入、语音快捷记账和识别队列入口；队列筛选、队列列表、候选详情和“开始识别”仅在识别队列 / 候选账单页面展示。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：新增“查看队列 / Show Queue”文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录导入页职责收口和后续 GOAL-1550 边界。
+- 未改动范围：未实现真实多文件 picker、PDF OCR、候选编辑、确认入账、队列持久化；未修改 iPhone `InboxView`、OCR、LedgerStore 入账链路、SQLite schema、CloudKit、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - “导入”页不再显示筛选条、队列列表和详情面板，首屏只承载导入入口。
+  - “识别队列 / 候选账单”页保留唯一的“开始识别”按钮，并承载队列筛选、识别结果和详情检查。
+  - 导入页的“查看队列”按钮会切换到队列页，避免用户在导入页误以为可以同时完成全部批处理。
+- 未完成内容：真实候选账单字段编辑、确认入账、忽略和重复账单处理仍按 GOAL-1550 推进。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前导入页中的识别队列摘要来自内存队列，不代表真实持久化队列；GOAL-1550 / 后续持久化前需要继续明确这是候选工作台，不是正式账本。
+- 回滚方式：恢复 `showsImportActions` 模式下同时渲染 `filterBar`、`queueList` 和 `detailPane`，并恢复导入页卡片中的“开始识别”按钮。
+- 结论：iPad 导入页和识别队列职责已经分开，第四批可以在队列页上继续推进候选复核与正式入账。
+- 下一步建议：进入 GOAL-1550，围绕队列页补候选字段编辑、确认入账、忽略和重复提示。
+
+### ITER-142 iPad 工作台菜单切换性能收口
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：Bugfix / iPad / SwiftUI 性能
+- 目标：降低 iPad 工作台点击左侧主菜单时的明显卡顿，同时保留设置页进入内部页面后再切换主菜单能够刷新右侧内容的修复。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：移除 detail 区域的全局 `.id(selection)`；新增 `select(_:)` 统一切换入口；仅在离开设置页时刷新 `SettingsView` 的局部 identity。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录卡顿原因、修复边界和验证结果。
+- 未改动范围：未修改 iPhone 首页、iPad 导入 / 账本 / 分析业务逻辑、OCR、批量识别执行器、SQLite、CloudKit 同步、Watch / Widget、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 普通主菜单切换不再触发整个 detail view tree 销毁重建。
+  - 设置页内部 push 后切换到其他主菜单仍会显示对应右侧页面。
+  - 从其他页面再次进入设置页时会回到设置根视图，避免保留旧的内部导航栈。
+- 未完成内容：尚未在真机 iPad 上做主观流畅度复测；若仍有卡顿，需要继续用 Instruments / SwiftUI template 定位具体页面初始化成本。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：本轮修的是“切换时被迫整页重建”的主要卡顿源；各页面自身的统计计算、列表排序或首屏渲染成本仍可能在低性能设备上产生轻微延迟。
+- 回滚方式：若设置页导航状态再次异常，可恢复 detail 的 `.id(selection)`；若只是设置页重置策略不合适，可仅回退 `settingsResetID` 与 `select(_:)` 中的设置页局部 identity 逻辑。
+- 结论：iPad 主菜单切换的主要强制重建点已移除，代码侧可以进入真机复测。
+- 下一步建议：在真机 iPad 上连续切换“导入 / 账本 / 分析 / 设置 / 数据清洗”，确认右侧页面切换和滚动响应是否明显改善；通过后进入 GOAL-1550。
+
+### ITER-141 iPad 导入 Tab 专用 UI 收口
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：能力增强 / iPad / SwiftUI
+- 目标：让 iPad “导入”Tab 不再复用 iPhone 首页型 `InboxView`，只展示 iPad 工作台需要的导入动作、语音入口和批量队列操作。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：移除 iPad 批量导入页中的 `InboxView` sheet；新增 iPad 专用导入动作区，内联提供相册、拍照、剪贴板、语音快捷记账、识别队列和查看候选入口；保留候选队列和详情检查器。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：新增 iPad 导入专用标题和三语文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 iPad 导入页不再复用 iPhone 首页的边界。
+- 未改动范围：未修改 iPhone `InboxView`、iPhone 首页体验、OCRService、LedgerStore 入账链路、批量队列模型、SQLite schema、Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - iPad 导入 Tab 不再展示 iPhone 首屏大标题、本月支出、Top 商户、快捷指令设置卡片和最近解析列表。
+  - 支付账单导入仍可从相册、相机和剪贴板进入现有 OCR -> 正式入账链路。
+  - 语音快捷记账从 iPad 导入页打开 `VoiceLedgerConfirmView`。
+  - 识别队列入口继续提供“开始识别”和“查看候选”，承接 GOAL-1542；当前仍是内存候选队列，不代表真实多文件导入已接入。
+- 未完成内容：未实现 iPad 真实多文件 picker、PDF OCR、拖拽导入、候选持久化和候选确认入账。
+- 测试情况：
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前 iPad 导入页的相册 / 拍照 / 剪贴板仍是单张直接入账路径，批量队列仍是内存候选路径；两条链路在 GOAL-1550 前保持分离。
+- 回滚方式：恢复 `IPadBatchImportWorkspaceView` 的 `InboxView` sheet 和 `selectedTabBinding`，删除 iPad 导入动作区及新增本地化 key，并回退文档记录。
+- 结论：iPad 导入 Tab 已从 iPhone 首页复用收口为专用导入 UI。
+- 下一步建议：进入 GOAL-1550，把批量候选复核、字段编辑和确认入账补齐。
+
+### ITER-140 GOAL-1542 批量 OCR / 文本解析执行器
+- 日期：2026-06-04
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / 批量导入与识别队列
+- 类型：能力增强 / Core 服务 / iPad / 测试
+- 目标：把 GOAL-1540 的批量导入队列从静态展示推进到可执行识别，让已有文本 / OCR 文本的队列项可以生成候选账单，并继续保证用户确认前不写入正式账本。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/BatchImportRecognitionExecutor.swift`：新增批量识别执行器、识别结果和识别日志，逐条调用 `LedgerTextInterpreterCore` 生成候选或失败状态。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：iPad 批量导入工作台新增“开始识别”、单项重试、识别摘要和详情日志；队列默认空状态，真实导入项进入后可执行内存识别。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐批量识别按钮、摘要和日志文案。
+  - `scripts/run_offline_regression.sh`、`scripts/OfflineRegression.swift`：将执行器纳入离线编译并新增批量识别回归。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1542 完成范围和第三批收尾判断。
+- 未改动范围：未实现真实多选文件 picker、图片 / PDF Vision OCR 队列、SQLite 候选持久化、候选编辑、确认入账、忽略或重复处理；未修改 Xcode project、workspace、scheme、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：
+  - 文本、剪贴板、分享、快捷指令以及已带 OCR 文本的相册 / 拍照队列项可以进入 `LedgerTextInterpreterCore` 并生成候选账单。
+  - 空文本、没有 OCR 文本的图片 / 拍照输入、无文本文件会进入可诊断失败状态，保留重试路径和识别日志。
+  - iPad 工作台可以手动执行整队识别，也可以只重试选中的失败项。
+  - 离线回归确认执行器不会向正式账本写入交易，候选入账边界仍留给 GOAL-1550。
+- 未完成内容：真实图片 OCR 执行、PDF 文本抽取、队列落库、候选字段编辑、确认入账和批量清洗仍未实现。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：当前执行器处理的是已经存在的文本，不代表原始图片 / PDF 批量 OCR 已完成；队列仍是内存状态，App 重启后不会保留候选。
+- 回滚方式：移除 `BatchImportRecognitionExecutor.swift`，从 iPad 工作台删除“开始识别”和单项执行逻辑，从离线脚本移除对应编译与断言，并回退本轮本地化与文档记录。
+- 结论：GOAL-1542 代码侧完成，第三批 iPad 工作台与候选队列链路可以收尾。
+- 下一步建议：进入 GOAL-1550，做候选账单复核、字段编辑和用户确认后的正式入账。
+
 ### ITER-139 Watch accessory corner 样式修正
 - 日期：2026-06-03
 - 所属版本：v1.5.0
@@ -51,20 +426,24 @@
 - 类型：Bugfix / Widget / watchOS
 - 目标：根据真机表盘截图修正 Apple Watch accessory corner 组件，让今日支出金额与支出程度条更接近系统天气角落组件的读数结构。
 - 改动范围：
-  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 从角落内容区自绘范围条改为 `.widgetLabel { Gauge(...) }`，让 watch face 负责沿表盘边缘渲染支出程度条；角落主体只保留两位小数今日金额读数，并去除灰色圆形背景。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift`：将 corner 收口为两个可选 Widget 版本。默认 `AutoLedgerWatchDailyExpenseWidget` 的 corner 显示大号 `xx.xx` 金额并保留系统边缘色条；新增 `AutoLedgerWatchCornerTextWidget` 仅支持 `.accessoryCorner`，主体显示 `¥` 图标，边缘 label 显示“今日支出：xx.xx”。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtensionBundle.swift`：将第二个 corner-only Widget 注册进 Watch Widget bundle。
+  - `AutoLedger/AutoLedgerWatchWidgetsExtension/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐第二个 Widget 的展示名、描述和边缘文字格式。
   - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录真机反馈修正与验证结果。
 - 未改动范围：未修改 Widget family、target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、WatchConnectivity、App Group 快照数据源或 Xcode Cloud 脚本。
 - 完成内容：
   - accessory corner 不再在小内容区域内自绘水平支出条。
-  - 金额单独作为角落读数展示，字号调大、轻微倾斜并显示小数点后两位。
-  - 支出程度条通过系统 `widgetLabel` Gauge 提供给表盘边缘渲染，并隐藏 current / min / max 可见文字。
+  - 真机验证显示 `.widgetLabel` 中的系统 `Gauge` 可稳定沿表盘边缘显示支出程度条。
+  - 真机验证也显示系统 `Gauge` 自动读数无法稳定复刻官方天气角落样式，因此不再继续押注纯系统读数。
+  - 默认 corner 版移除金额前缀 `¥`，放大 `xx.xx` 主体读数并填满角落内容区。
+  - 新增文字 corner 版让边缘 label 承载“今日支出：xx.xx”，用于需要更完整语义的表盘。
 - 未完成内容：尚未在真实 Apple Watch 或 Apple Watch Simulator 表盘上手动添加 corner complication 目检边缘渲染；当前完成代码侧修正与构建验证。
 - 测试情况：
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 3 (49mm)' build`。
   - PARTIAL：Apple Watch Ultra 3 Simulator 中 Watch App bundle 可安装并可 launch；CLI 截图停在模拟器主屏，未能自动完成表盘 corner complication 添加与边缘样式截图。
-- 风险与注意事项：`simctl` 当前没有直接把指定 complication 自动添加到表盘角落的命令，边缘渲染仍需手动在表盘上添加后目检；如果系统仍不显示边缘 Gauge，下一轮应检查该表盘是否支持 corner label Gauge。
-- 回滚方式：将 `cornerView` 恢复为上一版 `Gauge(value:in:)` 或自绘实现，并回退文档记录。
+- 风险与注意事项：`simctl` 当前没有直接把指定 complication 自动添加到表盘角落的命令，边缘渲染仍需手动在表盘上添加后目检；新增第二个 Widget 后，表盘复杂功能选择列表可能需要重新安装 Watch App 或稍等系统刷新。
+- 回滚方式：从 `AutoLedgerWatchWidgetsExtensionBundle` 移除 `AutoLedgerWatchCornerTextWidget`，并将 `cornerView` 恢复为单一主体金额 + 系统色条。
 - 结论：代码侧已按真机反馈修正 accessory corner 样式。
 - 下一步建议：重新 Run Watch App / Widget 后，在真实 Apple Watch 表盘添加 corner complication 目检。
 
@@ -92,7 +471,7 @@
   - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 `nonisolated(unsafe)` warning。
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' build`。
-- 风险与注意事项：当前队列数据为虚构样例，不代表真实导入已接队列；后续 GOAL-1542 接执行器时需要避免大批量 OCR 阻塞主线程。
+- 风险与注意事项：当前版本已移除 iPad 内置队列样例；后续接更多真实输入时仍需要避免大批量 OCR 阻塞主线程。
 - 回滚方式：将 `.capture` 恢复为 `InboxView(selectedTab:)`，将 `.reviewQueue` 恢复为 `IPadPlanningWorkspaceView`，删除 `IPadBatchImportWorkspaceView` 和新增本地化 key，并回退文档记录。
 - 结论：GOAL-1541 代码侧完成，iPad 导入页已从纯复用单导入推进到批量队列工作台第一版。
 - 下一步建议：进入 GOAL-1542，将 OCR / `LedgerTextInterpreterCore` 执行器接入队列，并设计批处理节流与进度反馈。

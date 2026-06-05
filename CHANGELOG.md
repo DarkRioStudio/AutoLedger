@@ -10,13 +10,27 @@
 ## [Unreleased]
 
 ### 修复（v1.5.0）
-- [2026-06-03 +0800] 修正 Apple Watch accessory corner 表盘小组件样式：改用 `.widgetLabel { Gauge(...) }` 让 watch face 沿表盘边缘渲染支出程度条，角落主体只保留两位小数今日金额读数；去除金额底部灰色圆形背景，放大并轻微倾斜金额文本以贴近系统天气角落读数，隐藏 current / min / max 可见标签，避免自绘横条被压在角落内容区域内；不修改 Widget family、target、Bundle ID、App Group 或同步数据源。
+- [2026-06-04 +0800] 修复 iPad / Mac Catalyst 工作台侧边栏点击与 detail 导航残留问题：侧边栏菜单行改为整行可点击，不再只有文字 / 图标区域响应；切换主菜单时重置 detail identity，确保从某个 Tab 进入内层页面后，再点击其他主菜单会切换到目标页面而不是停留在上一层详情页。
+- [2026-06-04 +0800] 优化 iPad 工作台侧边栏切换卡顿：移除 detail 区域全局 `.id(selection)` 强制重建，普通“总览 / 导入 / 账本 / 分析 / 候选账单 / 数据清洗”切换不再整页销毁重建；仅在离开设置页时重置 `SettingsView` 局部 identity，保留设置内部页面切回其他主菜单的刷新修复。
+- [2026-06-04 +0800] 收口 Apple Watch accessory corner 表盘小组件样式：真机验证确认系统自动读数无法稳定复刻官方天气角落样式，改为提供两个可选 corner 版本；默认 `今日支出` 角落版显示大号 `7.20` 金额并保留系统边缘色条，新增 `今日支出文字` 角落版主体显示 `¥` 图标、边缘文字显示“今日支出：7.20”；两版均移除主体金额中的 `¥` 前缀，不修改 target、Bundle ID、App Group 或同步数据源。
 - [2026-06-03 +0800] 修正 iCloud 启动同步顺序：App 启动且 iCloud 同步开启时，后台任务改为先增量推送本机正式账本变更，推送成功后再拉取远端数据；若本地增量推送失败则暂停本次拉取，避免同步测试中出现本机新增记录尚未上云就先合并远端状态的风险。启动推送成功后会清理外部入口待推送标记，避免快捷指令 / Share Extension 写入在下次启动重复补推。
 - [2026-06-03 +0800] 修复 iCloud 同步接入后的三处真机体验问题：App 启动时 iCloud 拉取 / 外部入口补推和 Gemma 预热延后到首屏渲染后再后台执行，降低 iPhone / iPad 启动 UI 卡顿；iPad 工作台右侧 detail 绑定侧边栏 selection identity，设置页内部 push 后切换主菜单会正确刷新右侧页面；Apple Watch 左滑到“最近支出”第二屏时 navigation title 会随页面切换，不再继续显示“今日支出”。
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
-- [2026-06-03 +0800] 完成 GOAL-1541 iPad 批量导入 UI 第一版：iPad “导入”和“候选账单”入口接入同一个批量导入工作台，展示基于 `BatchImportQueue` 的虚构样例队列、状态筛选、候选详情、失败原因、warning、疑似重复信息和重试入口；保留“单张导入”按钮以弹出既有 `InboxView` 路径；本轮不接真实文件批量选择、不跑 OCR 队列、不落 SQLite、不自动入账。
+- [2026-06-04 +0800] 推进 GOAL-1572 Mac CSV / JSON 导入导出第一版：新增 `LedgerCSVCodec`，支持正式账单按 `id, occurredAt, merchant, amount, category, source, note` 导出 CSV，并将 CSV 行导入为候选账单队列，用户确认前不会写入正式账本；Mac Catalyst 导入页新增 CSV 导入导出和 JSON 备份导出 / 恢复入口，JSON 恢复保留二次确认与安全备份语义；离线回归新增 CSV 往返、引号 / 逗号转义和无效金额用例。
+- [2026-06-04 +0800] 推进 GOAL-1571 Mac 拖拽截图 / 文件导入第一版：Mac Catalyst 导入页和识别队列页新增 Finder 拖拽导入区；拖入图片会复用 Vision OCR 进入待识别队列，文本文件直接进入待识别队列，PDF 和文件夹作为需处理项进入队列并提示不支持，不会直接写入正式账本。文件选择和拖拽导入共用同一套 `BatchRawInput` 入口与安全作用域读取逻辑。
+- [2026-06-04 +0800] 建立全平台 target 基线：主 App 已开启 Mac Catalyst supported destination，并关闭 Mac Designed for iPad 口径；新增 `AutoLedgerTV` 与 `AutoLedgerVision` 模板 target 作为后续只读展示平台入口。Mac Catalyst 构建通过，当前通过条件编译让 Gemma / MediaPipe 在 Catalyst 下受控降级，并在构建设置中让 iOS Extension / Watch 内容只嵌入 iOS 包；tvOS / visionOS 本机 smoke 暂受 Xcode 组件缺失限制，等待安装对应 platform runtime 后继续验证。
+- [2026-06-04 +0800] 调整截图管线推进策略：iPad 截图管线不再作为 Mac Catalyst 前置任务；由于 Mac Catalyst、tvOS 和 visionOS 后续也需要商店展示素材，GOAL-1590 / GOAL-1591 改为全平台截图管线设计与实现，等待 iPad / Mac / 展示端关键页面稳定后统一推进，当前主线继续转向 Mac Catalyst。
+- [2026-06-04 +0800] 收口 iPad 批量导入队列：移除工作台内置虚构样例数据，导入 / 候选队列默认显示空状态；用户通过“选择文件”导入图片或文本后才生成真实队列项，PDF 等暂不支持的文件进入需处理状态，不再用内置样例填充产品界面。
+- [2026-06-04 +0800] 调整 v1.5.0 全平台路线：多账本模型、账本迁移和多账本 UI 从当前版本执行队列中顺延到后续版本；v1.5.0 先按全平台共享同一个正式账本设计，iPhone / iPad / 后续 Mac 可写端、Watch 轻写入端、Widget / tvOS / visionOS 只读端都围绕 CloudKit 同步后的单一账本快照收口，降低同步、统计、截图和发布回归复杂度。
+- [2026-06-04 +0800] 完成 GOAL-1552 数据清洗应用与可恢复路径第一版：iPad 数据清洗页新增确认应用、最近一次结果和撤销上次清洗；商户统一 / 分类修正会通过专用清洗写入路径更新受影响正式账单，避免触发普通编辑里的反向学习副作用；疑似重复只会将较旧账单软删除到“最近删除”，不会永久删除。清洗成功后统一刷新 Widget、备份和 iCloud 增量推送；失败时会尝试恢复应用前快照。本轮撤销为 session 内最近一次操作，不新增 SQLite 清洗历史表。
+- [2026-06-04 +0800] 完成 GOAL-1551 数据清洗规则预览第一版：在 `AutoLedgerCore` 新增 `DataCleaningPreviewPlanner`，基于现有正式账单、商户别名、分类修正和近似重复条件生成只读预览；iPad “数据清洗”页展示商户统一、分类修正、疑似重复三类影响范围、原因、分数和受影响账单，不静默修改历史账单。本轮仍不做批量应用、撤销栈、回滚记录或清洗历史持久化。
+- [2026-06-04 +0800] 完成 GOAL-1550 候选账单复核与正式入账第一版：iPad “候选账单 / 识别队列”右侧详情支持编辑商户、金额、时间、分类、来源和备注；用户点击“确认入账”后复用 `LedgerStore.addTransaction` 写入正式账本并触发既有 SQLite / Widget / iCloud 增量推送链路，队列项标记为已入账；“忽略候选”会将队列项标记为已忽略，不污染正式账本。本轮仍不做队列持久化、真实多文件 picker 或 PDF OCR。
+- [2026-06-04 +0800] 调整 iPad 导入页信息架构：左侧“导入”页只保留支付账单导入、语音快捷记账和识别队列入口，不再内嵌队列筛选、队列列表和候选详情；“开始识别”只保留在识别队列 / 候选账单页面，避免导入页出现两个识别入口并挤压队列内容。
+- [2026-06-04 +0800] 收口 iPad 导入 Tab：导入入口不再弹出 / 复用 iPhone `InboxView` 首页，不展示 iPhone 首屏的大标题、本月支出和 Top 商户统计；改为 iPad 专用导入面板，内联提供支付账单导入（相册 / 拍照 / 剪贴板）、语音快捷记账和识别队列操作，并继续保留候选队列、识别和复核入口。
+- [2026-06-04 +0800] 完成 GOAL-1542 批量 OCR / 文本解析执行器第一版：在 `AutoLedgerCore` 新增 `BatchImportRecognitionExecutor`，将批量队列中的文本 / OCR 文本原始输入逐条送入 `LedgerTextInterpreterCore` 生成候选账单、warning、失败原因和识别日志；iPad 批量导入工作台新增“开始识别”和单项重试执行链路，空文本、未完成 OCR 的图片 / 拍照输入、无文本文件会进入可诊断失败状态；本轮仍不写 SQLite 候选队列、不自动写入正式账本、不修改 Xcode project / signing / entitlements。
+- [2026-06-03 +0800] 完成 GOAL-1541 iPad 批量导入 UI 第一版：iPad “导入”和“候选账单”入口接入同一个批量导入工作台，展示基于 `BatchImportQueue` 的队列结构、状态筛选、候选详情、失败原因、warning、疑似重复信息和重试入口；保留“单张导入”按钮以弹出既有 `InboxView` 路径；本轮不接真实文件批量选择、不跑 OCR 队列、不落 SQLite、不自动入账。
 - [2026-06-03 +0800] 完成 GOAL-1540 批量导入队列模型：在 `AutoLedgerCore` 新增纯 Foundation 的批量导入 batch / raw input / queue item 模型，固定 rawInput / candidate / reviewed / transaction / rejected 状态、失败原因、warning、重试、疑似重复和候选转正式账单边界；离线回归覆盖 raw input -> candidate、缺金额候选、低置信 warning、重复提示、reviewed / converted 和“不污染正式账本”契约；本轮不做 SQLite 落库、不改 iPad UI、不修改 Xcode project / signing / entitlements。
 - [2026-06-03 +0800] 完成 GOAL-1532 iPad 统计分析基础页：iPad 工作台“分析”页从直接复用 iPhone `ReportView` 改为专用宽屏分析视图，复用 `MonthlySnapshot` 统计口径，按当前月份展示总支出、账单数、Top 商户、分类占比、近 6 个月趋势和本月摘要；补齐中英繁本地化，不修改 iPhone 月报路径、SQLite schema、Bundle ID、entitlements 或 Xcode Cloud 配置。
 - [2026-06-03 +0800] 完成 GOAL-1521B2 watchOS 表盘小组件 target 接入：新增 `AutoLedgerWatchWidgetsExtension` 源码目录与 `AutoLedgerWatchWidgetsExtensionExtension` target，嵌入 `AutoLedgerWatch Watch App`，复用 `group.top.darkrio326.AutoLedger` App Group；Watch App 收到 iPhone 今日支出同步 payload 后写入轻量 Widget 快照并刷新 timeline，表盘小组件以 accessory inline / circular / rectangular / corner 展示今日支出、笔数、最近商户和待同步状态，其中圆形样式只显示金额。模板 Control Widget / Emoji 示例代码已移除，未修改既有主 App / Watch App Bundle ID、DEVELOPMENT_TEAM、iCloud Container 或 Xcode Cloud 主链路。
