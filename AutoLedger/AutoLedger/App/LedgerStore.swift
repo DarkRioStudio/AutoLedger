@@ -617,6 +617,98 @@ final class LedgerStore: ObservableObject {
     }
 
     @discardableResult
+    func applyBatchTransactionEdits(
+        transactionIDs: Set<UUID>,
+        merchant: String? = nil,
+        category: String? = nil
+    ) -> Int {
+        let targetMerchant = merchant?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let targetCategory = category?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let shouldUpdateMerchant = targetMerchant?.isEmpty == false
+        let shouldUpdateCategory = targetCategory?.isEmpty == false
+
+        guard !transactionIDs.isEmpty,
+              shouldUpdateMerchant || shouldUpdateCategory else {
+            return 0
+        }
+
+        var updatedCount = 0
+        var aliasPairs: [(original: String, alias: String)] = []
+        var categoryCorrectionPairs: [(merchant: String, category: TransactionCategory)] = []
+
+        for index in transactions.indices {
+            let transaction = transactions[index]
+            guard transactionIDs.contains(transaction.id) else { continue }
+
+            let nextMerchant = shouldUpdateMerchant ? (targetMerchant ?? transaction.merchant) : transaction.merchant
+            let nextCategory = shouldUpdateCategory ? (targetCategory ?? transaction.category) : transaction.category
+            guard nextMerchant != transaction.merchant || nextCategory != transaction.category else { continue }
+
+            let updated = Transaction(
+                id: transaction.id,
+                merchant: nextMerchant,
+                amount: transaction.amount,
+                occurredAt: transaction.occurredAt,
+                categoryLabel: nextCategory,
+                sourceLabel: transaction.source,
+                note: transaction.note
+            )
+
+            transactions[index] = updated
+            do {
+                try transactionStore?.update(transaction: updated)
+                updatedCount += 1
+                if nextMerchant != transaction.merchant {
+                    aliasPairs.append((transaction.merchant, nextMerchant))
+                }
+                if nextCategory != transaction.category,
+                   let builtIn = TransactionCategory(rawValue: nextCategory) {
+                    categoryCorrectionPairs.append((nextMerchant, builtIn))
+                }
+            } catch {
+                lastImportSummary = "批量更新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+            }
+        }
+
+        guard updatedCount > 0 else {
+            lastImportSummary = "没有需要批量更新的账单。"
+            return 0
+        }
+
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            for pair in aliasPairs where pair.original != pair.alias {
+                merchantAliases[pair.original] = pair.alias
+                try? sqlStore.saveMerchantAlias(original: pair.original, alias: pair.alias)
+            }
+            for pair in categoryCorrectionPairs {
+                categoryCorrections[pair.merchant] = pair.category
+                try? sqlStore.saveCategoryCorrection(merchant: pair.merchant, category: pair.category)
+            }
+        } else {
+            for pair in aliasPairs where pair.original != pair.alias {
+                merchantAliases[pair.original] = pair.alias
+            }
+            for pair in categoryCorrectionPairs {
+                categoryCorrections[pair.merchant] = pair.category
+            }
+        }
+
+        if !aliasPairs.isEmpty || !categoryCorrectionPairs.isEmpty {
+            UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+            markLedgerConfigurationChanged()
+        }
+
+        sortTransactions()
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        lastImportSummary = "已批量更新 \(updatedCount) 笔账单。"
+        return updatedCount
+    }
+
+    @discardableResult
     private func applyMerchantAliasesToExistingTransactions() -> Int {
         guard !merchantAliases.isEmpty else { return 0 }
 

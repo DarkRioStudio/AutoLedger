@@ -903,16 +903,34 @@ struct OfflineRegression {
             source: .manual,
             note: ""
         )
+        let textDuplicateA = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001555") ?? UUID(),
+            merchant: "Demo Coffee",
+            amount: 26.8,
+            occurredAt: base.addingTimeInterval(-1_200),
+            category: .dining,
+            source: .alipay,
+            note: "支付宝 交易成功 Demo Coffee 26.80 订单 EXAMPLE-001"
+        )
+        let textDuplicateB = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001556") ?? UUID(),
+            merchant: "Demo Coffee Store",
+            amount: 26.8,
+            occurredAt: base.addingTimeInterval(-1_500),
+            category: .dining,
+            source: .alipay,
+            note: "支付宝交易成功 Demo Coffee 26.80 订单 EXAMPLE-001"
+        )
 
         let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
-            transactions: [aliasTransaction, categoryTransaction, duplicateA, duplicateB],
+            transactions: [aliasTransaction, categoryTransaction, duplicateA, duplicateB, textDuplicateA, textDuplicateB],
             merchantAliases: ["Demo Coffee Original": "Demo Coffee"],
             categoryCorrections: ["Example Market": .groceries]
         )
 
         reporter.check(snapshot.items(kind: .merchantAlias).count == 1, "DataCleaningPreviewPlanner previews merchant alias impact")
         reporter.check(snapshot.items(kind: .categoryCorrection).count == 1, "DataCleaningPreviewPlanner previews category correction impact")
-        reporter.check(snapshot.items(kind: .duplicateCandidate).count == 1, "DataCleaningPreviewPlanner previews duplicate candidates")
+        reporter.check(snapshot.items(kind: .duplicateCandidate).count == 2, "DataCleaningPreviewPlanner previews field and text duplicate candidates")
         reporter.check(
             snapshot.items(kind: .merchantAlias).first?.affectedTransactionIDs == [aliasTransaction.id],
             "DataCleaningPreviewPlanner scopes alias impact to matching transactions"
@@ -920,6 +938,13 @@ struct OfflineRegression {
         reporter.check(
             Set(snapshot.items(kind: .duplicateCandidate).first?.affectedTransactionIDs ?? []) == Set([duplicateA.id, duplicateB.id]),
             "DataCleaningPreviewPlanner duplicate preview includes both transactions"
+        )
+        reporter.check(
+            snapshot.items(kind: .duplicateCandidate).contains {
+                Set($0.affectedTransactionIDs) == Set([textDuplicateA.id, textDuplicateB.id]) &&
+                ($0.score ?? 0) >= 0.85
+            },
+            "DataCleaningPreviewPlanner detects same-source similar-note duplicate candidates"
         )
     }
 

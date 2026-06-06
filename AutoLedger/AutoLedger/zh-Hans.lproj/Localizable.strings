@@ -710,3 +710,30 @@
 "feedback.email.attachment.l3.optional_screenshot" = "可选原始截图/图片";
 "feedback.email.attachment.l3.ocr_text" = "识别原文（如已勾选）";
 "feedback.email.important.l3" = "本次诊断包可能包含更多账单上下文信息，仅建议在你明确知情并同意的情况下发送。";
+
+// MARK: - Mac Ledger Workspace
+"mac.ledger.search" = "搜索商户、分类、来源或备注";
+"mac.ledger.sort" = "排序";
+"mac.ledger.sort.date_desc" = "按时间";
+"mac.ledger.sort.amount_desc" = "按金额";
+"mac.ledger.sort.merchant_asc" = "按商户";
+"mac.ledger.selection_format" = "已选 %d / %d";
+"mac.ledger.select_all" = "全选";
+"mac.ledger.clear_selection" = "清空";
+"mac.ledger.batch.title" = "批量修正";
+"mac.ledger.batch.merchant_placeholder" = "统一商户名";
+"mac.ledger.batch.apply_merchant" = "应用商户";
+"mac.ledger.batch.apply_category" = "应用分类";
+"mac.ledger.batch.confirm_merchant_title" = "确认批量修改商户";
+"mac.ledger.batch.confirm_category_title" = "确认批量修改分类";
+"mac.ledger.batch.confirm_merchant_message" = "将 %d 笔账单的商户统一为「%@」。";
+"mac.ledger.batch.confirm_category_message" = "将 %d 笔账单的分类统一为「%@」。";
+"mac.ledger.duplicate.title" = "疑似重复";
+"mac.ledger.duplicate.count_format" = "%d 组";
+"mac.ledger.duplicate.group" = "重复组";
+"mac.ledger.duplicate.group_format" = "%@ · %d 笔";
+"mac.ledger.duplicate.subtitle_format" = "相似度 %.0f%%，涉及 %d 笔账单";
+"mac.ledger.duplicate.select_affected" = "选中账单";
+"mac.ledger.duplicate.apply" = "移入最近删除";
+"mac.ledger.duplicate.confirm_title" = "确认处理疑似重复";
+"mac.ledger.duplicate.confirm_message" = "将较旧的 %d 笔疑似重复账单移入最近删除，可从最近删除恢复。";

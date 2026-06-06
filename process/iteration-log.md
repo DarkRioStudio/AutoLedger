@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-05（Watch 今日 / 最近页面标题去重与 UI 统一）
+更新日期：2026-06-06（GOAL-1575 Mac 重复账单检查）
 
 ## 记录规则
 
@@ -43,6 +43,57 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-160 GOAL-1575 Mac 重复账单检查
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：能力增强 / Mac Catalyst / 数据清洗
+- 目标：为 Mac Catalyst 账本页补齐重复账单检查与处理预览，保持“只提示、用户确认后处理、不静默删除”的边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/DataCleaningPreviewPlanner.swift`：重复检测从同商户 / 同金额 / 近时间扩展到同金额 / 同来源 / 近 10 分钟 / 备注文本高度相似；相似度复用 `TextSimilarity.jaccard`。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：Mac Catalyst 账本表格上方新增疑似重复面板，展示重复组数量、相似度、涉及账单，支持选中影响账单和确认后移入最近删除。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐 Mac 重复检查相关中英繁文案。
+  - `scripts/OfflineRegression.swift`：新增同来源 + 相似文本重复候选回归。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1575 完成范围。
+- 未改动范围：未新增 OCR 原文字段、候选队列持久化、清洗历史表、CloudKit schema、BackupBundle schema；未实现自动合并、永久删除、静默删除、跨币种重复检测或手动选择保留哪一笔；未修改 project / workspace / scheme / target 名称、Bundle ID、signing、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：Mac 账本页可以看到疑似重复组，查看相似度和涉及账单，一键选中影响账单；确认处理后复用现有 `applyDataCleaningPreview`，保留较新账单，把较旧项软删除到最近删除。
+- 未完成内容：未做 Mac Catalyst 运行态人工 smoke；重复检测仍是轻量规则，不替代后续更复杂的 OCR 原文相似度、跨来源支付流水去重或手动保留项选择。
+- 测试情况：
+  - PASS：TDD 红灯。新增同来源 + 相似文本重复候选断言后，旧实现离线回归失败 2 项。
+  - PASS：`bash scripts/run_offline_regression.sh`，新增重复检测断言通过，仅有既有 formatter warning。
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`。
+- 风险与注意事项：当前文本相似度复用 `Transaction.note`，如果真实 OCR 原文不进入正式账单 note，文本重复能力只覆盖已有备注文本；处理重复项会软删除较旧账单，虽然可从最近删除恢复，但仍建议先在小批量数据上 smoke。
+- 回滚方式：移除 `DataCleaningPreviewPlanner` 的文本相似重复规则、Mac 疑似重复面板、新增本地化 key 和离线回归断言，将 `versions/v1.5.0-plan.md` 中 GOAL-1575 状态恢复为未完成，并删除对应 CHANGELOG / iteration-log 条目。
+- 结论：GOAL-1575 代码侧第一版完成，Mac Catalyst Phase 8 最小生产力闭环已覆盖重复账单检查。
+- 下一步建议：进入 GOAL-1580 tvOS 只读看板设计，先做信息架构和只读边界，不急于扩大写入能力。
+
+### ITER-159 GOAL-1574 Mac 大表格与批量编辑
+- 日期：2026-06-05
+- 所属版本：v1.5.0
+- 所属阶段：Phase 8 / Mac Catalyst 生产力工作台
+- 类型：能力增强 / Mac Catalyst / 批量编辑
+- 目标：为 Mac Catalyst 账本页补齐桌面大表格、多选、排序筛选和批量商户 / 分类修正能力。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：新增 `applyBatchTransactionEdits(transactionIDs:merchant:category:)`，批量更新正式账单商户 / 分类，并同步商户别名、分类修正、Widget、自动备份和 CloudKit 增量推送。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：Mac Catalyst 下账本页改为表格工作区，支持搜索、排序、多选、全选、清空选择、批量商户修正、批量分类修正和写入前确认。
+  - `AutoLedger/AutoLedger/{zh-Hans,en,zh-Hant}.lproj/Localizable.strings`：补齐 Mac 账本搜索、排序、批量编辑和确认弹窗三语文案。
+  - `CHANGELOG.md`、`versions/v1.5.0-plan.md`、`process/iteration-log.md`：记录 GOAL-1574 完成范围。
+- 未改动范围：未实现重复账单检查、批量删除、批量恢复、批量导出选中项、列自定义、原生 Mac inspector、新 SQLite / CloudKit / BackupBundle schema；未修改 project / workspace / scheme / target 名称、Bundle ID、signing、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：Mac Catalyst 账本页现在具备更适合桌面的大表格；用户可筛选和排序正式账单，选择多笔后统一修正商户或分类，并在确认弹窗中看到影响条数和目标值后再写入。
+- 未完成内容：未做 Mac Catalyst 运行态人工 smoke；GOAL-1575 的重复账单检查和批量重复处理预览仍待下一轮。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 formatter warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`，仍有既有 MediaPipe XCFramework 缺少 maccatalyst slice 的 CocoaPods copy warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`。
+- 风险与注意事项：批量写入会批量改正式账单，虽然已有确认弹窗，但当前还没有跨启动撤销历史；用户应先在 Mac 运行态 smoke 小批量选择、商户修正和分类修正。重复账单检查仍未实现，不应把本轮视为完整桌面清洗工作台。
+- 回滚方式：移除 `applyBatchTransactionEdits`、Mac 表格工作区和新增本地化 key，将 `versions/v1.5.0-plan.md` 中 GOAL-1574 状态恢复为未完成，并删除对应 CHANGELOG / iteration-log 条目。
+- 结论：GOAL-1574 代码侧第一版完成，Mac Catalyst 大表格与批量商户 / 分类修正能力已具备。
+- 下一步建议：进入 GOAL-1575 Mac 重复账单检查，先做只读检测与影响范围预览，再决定是否接批量处理。
 
 ### ITER-158 Watch 今日 / 最近页面标题去重与 UI 统一
 - 日期：2026-06-05

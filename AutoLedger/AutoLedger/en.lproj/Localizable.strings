@@ -710,3 +710,30 @@
 "feedback.email.attachment.l3.optional_screenshot" = "Optional original screenshot/image";
 "feedback.email.attachment.l3.ocr_text" = "OCR text, if selected";
 "feedback.email.important.l3" = "This diagnostics package may contain more ledger context. Send it only when you clearly understand and agree.";
+
+// MARK: - Mac Ledger Workspace
+"mac.ledger.search" = "Search merchant, category, source, or note";
+"mac.ledger.sort" = "Sort";
+"mac.ledger.sort.date_desc" = "By Date";
+"mac.ledger.sort.amount_desc" = "By Amount";
+"mac.ledger.sort.merchant_asc" = "By Merchant";
+"mac.ledger.selection_format" = "Selected %d / %d";
+"mac.ledger.select_all" = "Select All";
+"mac.ledger.clear_selection" = "Clear";
+"mac.ledger.batch.title" = "Batch Fix";
+"mac.ledger.batch.merchant_placeholder" = "Unified merchant";
+"mac.ledger.batch.apply_merchant" = "Apply Merchant";
+"mac.ledger.batch.apply_category" = "Apply Category";
+"mac.ledger.batch.confirm_merchant_title" = "Confirm Batch Merchant Change";
+"mac.ledger.batch.confirm_category_title" = "Confirm Batch Category Change";
+"mac.ledger.batch.confirm_merchant_message" = "Update the merchant of %d transactions to \"%@\".";
+"mac.ledger.batch.confirm_category_message" = "Update the category of %d transactions to \"%@\".";
+"mac.ledger.duplicate.title" = "Possible Duplicates";
+"mac.ledger.duplicate.count_format" = "%d groups";
+"mac.ledger.duplicate.group" = "Duplicate group";
+"mac.ledger.duplicate.group_format" = "%@ · %d items";
+"mac.ledger.duplicate.subtitle_format" = "Similarity %.0f%% across %d transactions";
+"mac.ledger.duplicate.select_affected" = "Select Affected";
+"mac.ledger.duplicate.apply" = "Move to Recently Deleted";
+"mac.ledger.duplicate.confirm_title" = "Confirm Duplicate Handling";
+"mac.ledger.duplicate.confirm_message" = "Move the older %d suspected duplicate transactions to Recently Deleted. They can be restored.";

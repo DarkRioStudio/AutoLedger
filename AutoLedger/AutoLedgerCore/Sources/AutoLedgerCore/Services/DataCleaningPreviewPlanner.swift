@@ -54,9 +54,17 @@ public struct DataCleaningPreviewSnapshot: Codable, Equatable, Sendable {
 
 public struct DataCleaningPreviewPlanner: Sendable {
     private let duplicateWindow: TimeInterval
+    private let textDuplicateWindow: TimeInterval
+    private let textSimilarityThreshold: Double
 
-    public init(duplicateWindow: TimeInterval = 60) {
+    public init(
+        duplicateWindow: TimeInterval = 60,
+        textDuplicateWindow: TimeInterval = 600,
+        textSimilarityThreshold: Double = 0.82
+    ) {
         self.duplicateWindow = duplicateWindow
+        self.textDuplicateWindow = textDuplicateWindow
+        self.textSimilarityThreshold = textSimilarityThreshold
     }
 
     public func buildSnapshot(
@@ -132,7 +140,8 @@ public struct DataCleaningPreviewPlanner: Sendable {
                 seenPairs.insert(pairID)
 
                 let timeDelta = abs(lhs.occurredAt.timeIntervalSince(rhs.occurredAt))
-                let score = max(0.75, min(1, 1 - (timeDelta / duplicateWindow) * 0.2))
+                let textSimilarity = noteSimilarity(lhs, rhs)
+                let score = duplicateScore(timeDelta: timeDelta, textSimilarity: textSimilarity)
                 items.append(
                     DataCleaningPreviewItem(
                         id: "duplicate:\(pairID)",
@@ -143,7 +152,7 @@ public struct DataCleaningPreviewPlanner: Sendable {
                         proposedValue: rhs.id.uuidString,
                         affectedTransactionIDs: [lhs.id, rhs.id],
                         score: score,
-                        reason: "same merchant, amount, and nearby time"
+                        reason: duplicateReason(lhs, rhs, textSimilarity: textSimilarity)
                     )
                 )
             }
@@ -153,12 +162,46 @@ public struct DataCleaningPreviewPlanner: Sendable {
     }
 
     private func isDuplicateCandidate(_ lhs: Transaction, _ rhs: Transaction) -> Bool {
-        normalizedMerchant(lhs.merchant) == normalizedMerchant(rhs.merchant) &&
-        abs(lhs.amount - rhs.amount) < 0.01 &&
-        abs(lhs.occurredAt.timeIntervalSince(rhs.occurredAt)) < duplicateWindow
+        guard abs(lhs.amount - rhs.amount) < 0.01 else { return false }
+
+        let timeDelta = abs(lhs.occurredAt.timeIntervalSince(rhs.occurredAt))
+        if normalizedMerchant(lhs.merchant) == normalizedMerchant(rhs.merchant),
+           timeDelta < duplicateWindow {
+            return true
+        }
+
+        return normalizedSource(lhs.source) == normalizedSource(rhs.source) &&
+            timeDelta < textDuplicateWindow &&
+            noteSimilarity(lhs, rhs) >= textSimilarityThreshold
     }
 
     private func normalizedMerchant(_ merchant: String) -> String {
         merchant.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func normalizedSource(_ source: String) -> String {
+        source.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func noteSimilarity(_ lhs: Transaction, _ rhs: Transaction) -> Double {
+        let lhsNote = lhs.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rhsNote = rhs.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !lhsNote.isEmpty, !rhsNote.isEmpty else { return 0 }
+        return TextSimilarity.jaccard(lhsNote, rhsNote)
+    }
+
+    private func duplicateScore(timeDelta: TimeInterval, textSimilarity: Double) -> Double {
+        if textSimilarity >= textSimilarityThreshold {
+            return max(0.85, min(1, textSimilarity))
+        }
+        return max(0.75, min(1, 1 - (timeDelta / duplicateWindow) * 0.2))
+    }
+
+    private func duplicateReason(_ lhs: Transaction, _ rhs: Transaction, textSimilarity: Double) -> String {
+        if textSimilarity >= textSimilarityThreshold,
+           normalizedSource(lhs.source) == normalizedSource(rhs.source) {
+            return "same amount, source, and similar text"
+        }
+        return "same merchant, amount, and nearby time"
     }
 }

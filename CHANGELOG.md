@@ -22,6 +22,8 @@
 - [2026-06-02 +0800] 修复 iPad 设置页进入“数据管理”时可能崩溃的问题：设置页会把根 `LedgerStore` 显式传给依赖账本状态的导航目的页，避免 `DataManagementView` 首屏读取 `@EnvironmentObject` 时因导航环境丢失触发 fatal error；同时保留 CloudKit 后台通知 / iCloud KVS 所需 entitlement，保证后续同步能力可用。
 
 ### 变更（v1.5.0）
+- [2026-06-06 +0800] 完成 GOAL-1575 Mac 重复账单检查第一版：`DataCleaningPreviewPlanner` 的重复检测从同商户 / 同金额 / 近时间扩展到同金额 / 同来源 / 近 10 分钟 / 备注或 OCR 文本高度相似；Mac Catalyst 账本表格新增疑似重复面板，显示重复组数量、相似度和涉及账单，支持选中影响账单并在二次确认后将较旧重复项移入最近删除。本轮不做静默删除、永久删除、自动合并或新 schema。
+- [2026-06-05 +0800] 完成 GOAL-1574 Mac 大表格与批量编辑第一版：Mac Catalyst 账本页新增桌面表格工作区，支持按商户 / 分类 / 来源 / 备注搜索、按日期 / 金额 / 商户排序、多选、筛选结果全选和清空选择；批量商户 / 分类修正写入前会展示影响范围确认，写入后复用正式账本更新链路刷新 SQLite、Widget、自动备份和 CloudKit 增量推送。本轮不做重复账单检查、批量删除或新 schema。
 - [2026-06-05 +0800] 完成 GOAL-1573 Mac 基础菜单栏与键盘快捷键第一版：Mac Catalyst 下新增 `Import` / `Export` / `Backup` 菜单和设置快捷入口，支持通过菜单触发导入文件、导入 CSV、导出 CSV、导出 JSON 备份和打开设置；命令会路由到现有 iPad / Mac 工作台，不新增直接写账本旁路，JSON 覆盖恢复仍保留在页面内二次确认路径，不挂到菜单快捷键。
 - [2026-06-04 +0800] 推进 GOAL-1572 Mac CSV / JSON 导入导出第一版：新增 `LedgerCSVCodec`，支持正式账单按 `id, occurredAt, merchant, amount, category, source, note` 导出 CSV，并将 CSV 行导入为候选账单队列，用户确认前不会写入正式账本；Mac Catalyst 导入页新增 CSV 导入导出和 JSON 备份导出 / 恢复入口，JSON 恢复保留二次确认与安全备份语义；离线回归新增 CSV 往返、引号 / 逗号转义和无效金额用例。
 - [2026-06-04 +0800] 推进 GOAL-1571 Mac 拖拽截图 / 文件导入第一版：Mac Catalyst 导入页和识别队列页新增 Finder 拖拽导入区；拖入图片会复用 Vision OCR 进入待识别队列，文本文件直接进入待识别队列，PDF 和文件夹作为需处理项进入队列并提示不支持，不会直接写入正式账本。文件选择和拖拽导入共用同一套 `BatchRawInput` 入口与安全作用域读取逻辑。

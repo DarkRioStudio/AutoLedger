@@ -713,3 +713,30 @@
 "feedback.email.attachment.l3.optional_screenshot" = "可選原始截圖/圖片";
 "feedback.email.attachment.l3.ocr_text" = "識別原文（如已勾選）";
 "feedback.email.important.l3" = "本次診斷包可能包含更多帳單上下文資訊，僅建議在你明確知情並同意的情況下傳送。";
+
+// MARK: - Mac Ledger Workspace
+"mac.ledger.search" = "搜尋商家、分類、來源或備註";
+"mac.ledger.sort" = "排序";
+"mac.ledger.sort.date_desc" = "按時間";
+"mac.ledger.sort.amount_desc" = "按金額";
+"mac.ledger.sort.merchant_asc" = "按商家";
+"mac.ledger.selection_format" = "已選 %d / %d";
+"mac.ledger.select_all" = "全選";
+"mac.ledger.clear_selection" = "清空";
+"mac.ledger.batch.title" = "批量修正";
+"mac.ledger.batch.merchant_placeholder" = "統一商家名";
+"mac.ledger.batch.apply_merchant" = "套用商家";
+"mac.ledger.batch.apply_category" = "套用分類";
+"mac.ledger.batch.confirm_merchant_title" = "確認批量修改商家";
+"mac.ledger.batch.confirm_category_title" = "確認批量修改分類";
+"mac.ledger.batch.confirm_merchant_message" = "將 %d 筆帳單的商家統一為「%@」。";
+"mac.ledger.batch.confirm_category_message" = "將 %d 筆帳單的分類統一為「%@」。";
+"mac.ledger.duplicate.title" = "疑似重複";
+"mac.ledger.duplicate.count_format" = "%d 組";
+"mac.ledger.duplicate.group" = "重複組";
+"mac.ledger.duplicate.group_format" = "%@ · %d 筆";
+"mac.ledger.duplicate.subtitle_format" = "相似度 %.0f%%，涉及 %d 筆帳單";
+"mac.ledger.duplicate.select_affected" = "選中帳單";
+"mac.ledger.duplicate.apply" = "移入最近刪除";
+"mac.ledger.duplicate.confirm_title" = "確認處理疑似重複";
+"mac.ledger.duplicate.confirm_message" = "將較舊的 %d 筆疑似重複帳單移入最近刪除，可從最近刪除恢復。";

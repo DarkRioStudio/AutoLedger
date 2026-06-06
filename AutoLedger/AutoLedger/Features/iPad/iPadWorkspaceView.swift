@@ -2779,42 +2779,83 @@ private struct IPadAnalysisDetailRow: View {
 private struct IPadLedgerWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var selectedTransactionID: UUID?
+    @State private var selectedTransactionIDs: Set<UUID> = []
     @State private var editingTransaction: Transaction?
     @State private var isAddingTransaction = false
     @State private var isShowingVoiceLedger = false
+    @State private var macSearchText = ""
+    @State private var macSortMode: MacLedgerSortMode = .dateDescending
+    @State private var batchMerchant = ""
+    @State private var batchCategory = TransactionCategory.other.rawValue
+    @State private var pendingBatchAction: MacLedgerBatchAction?
+    @State private var selectedDuplicatePreviewID: String?
+    @State private var pendingDuplicatePreview: DataCleaningPreviewItem?
+    @State private var showsDuplicateApplyConfirmation = false
 
     private var transactions: [Transaction] {
-        store.transactions.sorted { $0.occurredAt > $1.occurredAt }
+        sortedTransactions(store.transactions)
+    }
+
+    private var filteredTransactions: [Transaction] {
+        let query = macSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return transactions }
+        return transactions.filter { transaction in
+            transaction.merchant.localizedCaseInsensitiveContains(query) ||
+            transaction.categoryTitle.localizedCaseInsensitiveContains(query) ||
+            transaction.sourceTitle.localizedCaseInsensitiveContains(query) ||
+            transaction.note.localizedCaseInsensitiveContains(query)
+        }
     }
 
     private var selectedTransaction: Transaction? {
         if let selectedTransactionID,
-           let transaction = transactions.first(where: { $0.id == selectedTransactionID }) {
+           let transaction = store.transactions.first(where: { $0.id == selectedTransactionID }) {
             return transaction
         }
-        return transactions.first
+        if let firstSelectedID = selectedTransactionIDs.first,
+           let transaction = store.transactions.first(where: { $0.id == firstSelectedID }) {
+            return transaction
+        }
+        return filteredTransactions.first
+    }
+
+    private var selectedTransactions: [Transaction] {
+        store.transactions.filter { selectedTransactionIDs.contains($0.id) }
+    }
+
+    private var batchCategoryTitle: String {
+        TransactionCategory(rawValue: batchCategory)?.title ?? batchCategory
+    }
+
+    private var macDuplicatePreviews: [DataCleaningPreviewItem] {
+        DataCleaningPreviewPlanner()
+            .buildSnapshot(
+                transactions: store.transactions,
+                merchantAliases: store.merchantAliases,
+                categoryCorrections: store.categoryCorrections
+            )
+            .items(kind: .duplicateCandidate)
+    }
+
+    private var selectedDuplicatePreview: DataCleaningPreviewItem? {
+        if let selectedDuplicatePreviewID,
+           let preview = macDuplicatePreviews.first(where: { $0.id == selectedDuplicatePreviewID }) {
+            return preview
+        }
+        return macDuplicatePreviews.first
+    }
+
+    private var selectedDuplicateTransactions: [Transaction] {
+        guard let selectedDuplicatePreview else { return [] }
+        let affectedIDs = Set(selectedDuplicatePreview.affectedTransactionIDs)
+        return store.transactions
+            .filter { affectedIDs.contains($0.id) }
+            .sorted { $0.occurredAt > $1.occurredAt }
     }
 
     var body: some View {
         NavigationStack {
-            HStack(spacing: 0) {
-                transactionList
-                    .frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
-
-                Divider()
-
-                IPadTransactionInspector(
-                    transaction: selectedTransaction,
-                    edit: { transaction in editingTransaction = transaction },
-                    delete: { transaction in
-                        store.deleteTransaction(transaction)
-                        if selectedTransactionID == transaction.id {
-                            selectedTransactionID = transactions.first(where: { $0.id != transaction.id })?.id
-                        }
-                    }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            ledgerContent
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("ipad.workspace.ledger")
             .toolbar {
@@ -2840,9 +2881,13 @@ private struct IPadLedgerWorkspaceView: View {
             }
             .onAppear {
                 if selectedTransactionID == nil {
-                    selectedTransactionID = transactions.first?.id
+                    selectedTransactionID = filteredTransactions.first?.id
                 }
                 consumePendingNewTransactionIfNeeded()
+            }
+            .onChange(of: selectedTransactionIDs) { _, newSelection in
+                guard let first = newSelection.first else { return }
+                selectedTransactionID = first
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
                 consumePendingNewTransactionIfNeeded()
@@ -2872,6 +2917,58 @@ private struct IPadLedgerWorkspaceView: View {
             .sheet(isPresented: $isShowingVoiceLedger) {
                 VoiceLedgerConfirmView()
             }
+            .confirmationDialog(
+                batchConfirmationTitle,
+                isPresented: Binding(
+                    get: { pendingBatchAction != nil },
+                    set: { if !$0 { pendingBatchAction = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(batchConfirmationButtonTitle, role: .none) {
+                    applyPendingBatchAction()
+                }
+                Button("common.cancel", role: .cancel) {
+                    pendingBatchAction = nil
+                }
+            } message: {
+                Text(batchConfirmationMessage)
+            }
+            .confirmationDialog(
+                "mac.ledger.duplicate.confirm_title",
+                isPresented: $showsDuplicateApplyConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("mac.ledger.duplicate.apply", role: .destructive) {
+                    applyPendingDuplicatePreview()
+                }
+                Button("common.cancel", role: .cancel) {
+                    pendingDuplicatePreview = nil
+                }
+            } message: {
+                Text(duplicateConfirmationMessage)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ledgerContent: some View {
+        #if targetEnvironment(macCatalyst)
+        macLedgerWorkspace
+        #else
+        ipadLedgerWorkspace
+        #endif
+    }
+
+    private var ipadLedgerWorkspace: some View {
+        HStack(spacing: 0) {
+            transactionList
+                .frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
+
+            Divider()
+
+            transactionInspector
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -2898,11 +2995,386 @@ private struct IPadLedgerWorkspaceView: View {
         }
     }
 
+    private var transactionInspector: some View {
+        IPadTransactionInspector(
+            transaction: selectedTransaction,
+            edit: { transaction in editingTransaction = transaction },
+            delete: { transaction in
+                store.deleteTransaction(transaction)
+                selectedTransactionIDs.remove(transaction.id)
+                if selectedTransactionID == transaction.id {
+                    selectedTransactionID = filteredTransactions.first(where: { $0.id != transaction.id })?.id
+                }
+            }
+        )
+    }
+
+    #if targetEnvironment(macCatalyst)
+    private var macLedgerWorkspace: some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                macLedgerToolbar
+                macBatchEditPanel
+                macDuplicateReviewPanel
+                macTransactionTable
+            }
+            .padding(20)
+            .frame(minWidth: 720, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(AppTheme.canvas.opacity(0.45))
+
+            Divider()
+
+            transactionInspector
+                .frame(width: 380)
+                .frame(maxHeight: .infinity)
+        }
+    }
+
+    private var macLedgerToolbar: some View {
+        HStack(spacing: 12) {
+            TextField("mac.ledger.search", text: $macSearchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 240, maxWidth: 360)
+
+            Picker("mac.ledger.sort", selection: $macSortMode) {
+                ForEach(MacLedgerSortMode.allCases) { mode in
+                    Text(mode.titleKey).tag(mode)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 180)
+
+            Spacer()
+
+            Text(String(format: String(localized: "mac.ledger.selection_format"), selectedTransactionIDs.count, filteredTransactions.count))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.mutedInk)
+
+            Button {
+                selectedTransactionIDs = Set(filteredTransactions.map(\.id))
+                selectedTransactionID = filteredTransactions.first?.id
+            } label: {
+                Label("mac.ledger.select_all", systemImage: "checklist.checked")
+            }
+            .buttonStyle(.bordered)
+            .disabled(filteredTransactions.isEmpty)
+
+            Button {
+                selectedTransactionIDs.removeAll()
+            } label: {
+                Label("mac.ledger.clear_selection", systemImage: "xmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .disabled(selectedTransactionIDs.isEmpty)
+        }
+    }
+
+    private var macBatchEditPanel: some View {
+        HStack(spacing: 12) {
+            Label("mac.ledger.batch.title", systemImage: "square.stack.3d.up")
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+
+            TextField("mac.ledger.batch.merchant_placeholder", text: $batchMerchant)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 220)
+
+            Button {
+                pendingBatchAction = .merchant
+            } label: {
+                Label("mac.ledger.batch.apply_merchant", systemImage: "textformat.alt")
+            }
+            .buttonStyle(.bordered)
+            .disabled(selectedTransactionIDs.isEmpty || batchMerchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            Picker("transaction_editor.category", selection: $batchCategory) {
+                ForEach(TransactionCategory.allCases, id: \.rawValue) { category in
+                    Text(category.title).tag(category.rawValue)
+                }
+                ForEach(store.customCategories, id: \.self) { category in
+                    Text(category).tag(category)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 180)
+
+            Button {
+                pendingBatchAction = .category
+            } label: {
+                Label("mac.ledger.batch.apply_category", systemImage: "tag.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.accent)
+            .disabled(selectedTransactionIDs.isEmpty)
+        }
+        .padding(12)
+        .background(AppTheme.card.opacity(0.86))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var macTransactionTable: some View {
+        Table(filteredTransactions, selection: $selectedTransactionIDs) {
+            TableColumn(String(localized: "transaction_editor.date")) { transaction in
+                Text(AppFormatters.shortDateTime(transaction.occurredAt))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+            .width(min: 132, ideal: 150)
+
+            TableColumn(String(localized: "transaction_editor.merchant")) { transaction in
+                Text(transaction.merchant)
+                    .font(.body.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .width(min: 180, ideal: 260)
+
+            TableColumn(String(localized: "transaction_editor.amount")) { transaction in
+                Text(AppFormatters.currency(transaction.amount))
+                    .font(.body.weight(.bold))
+                    .monospacedDigit()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .width(min: 96, ideal: 118)
+
+            TableColumn(String(localized: "transaction_editor.category")) { transaction in
+                Label(transaction.categoryTitle, systemImage: transaction.categoryEnum.iconName)
+                    .lineLimit(1)
+            }
+            .width(min: 128, ideal: 160)
+
+            TableColumn(String(localized: "transaction_editor.source")) { transaction in
+                Text(transaction.sourceTitle)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .lineLimit(1)
+            }
+            .width(min: 96, ideal: 128)
+
+            TableColumn(String(localized: "transaction_editor.note")) { transaction in
+                Text(transaction.note.isEmpty ? "-" : transaction.note)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .lineLimit(1)
+            }
+            .width(min: 160, ideal: 260)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var macDuplicateReviewPanel: some View {
+        if let selectedDuplicatePreview {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Label("mac.ledger.duplicate.title", systemImage: "doc.on.doc.fill")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+
+                    Text(String(format: String(localized: "mac.ledger.duplicate.count_format"), macDuplicatePreviews.count))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.84, green: 0.45, blue: 0.12))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color(red: 0.84, green: 0.45, blue: 0.12).opacity(0.12))
+                        .clipShape(Capsule())
+
+                    Picker("mac.ledger.duplicate.group", selection: Binding(
+                        get: { selectedDuplicatePreview.id },
+                        set: { selectedDuplicatePreviewID = $0 }
+                    )) {
+                        ForEach(macDuplicatePreviews) { preview in
+                            Text(duplicatePreviewTitle(preview)).tag(preview.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 220)
+
+                    Spacer()
+
+                    Button {
+                        selectedTransactionIDs = Set(selectedDuplicatePreview.affectedTransactionIDs)
+                        selectedTransactionID = selectedDuplicatePreview.affectedTransactionIDs.first
+                    } label: {
+                        Label("mac.ledger.duplicate.select_affected", systemImage: "checklist.checked")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(role: .destructive) {
+                        pendingDuplicatePreview = selectedDuplicatePreview
+                        showsDuplicateApplyConfirmation = true
+                    } label: {
+                        Label("mac.ledger.duplicate.apply", systemImage: "trash")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.84, green: 0.45, blue: 0.12))
+                }
+
+                HStack(spacing: 10) {
+                    Text(duplicatePreviewSubtitle(selectedDuplicatePreview))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(1)
+
+                    ForEach(selectedDuplicateTransactions) { transaction in
+                        Text("\(transaction.merchant) \(AppFormatters.currency(transaction.amount))")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.ink)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.canvas.opacity(0.78))
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color(red: 0.84, green: 0.45, blue: 0.12).opacity(0.10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color(red: 0.84, green: 0.45, blue: 0.12).opacity(0.22), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+    }
+    #endif
+
     @MainActor
     private func consumePendingNewTransactionIfNeeded() {
         guard QuickLedgerNavigationState.shared.consumeCreateTransactionPending() else { return }
         isAddingTransaction = true
     }
+
+    private func sortedTransactions(_ source: [Transaction]) -> [Transaction] {
+        switch macSortMode {
+        case .dateDescending:
+            return source.sorted { $0.occurredAt > $1.occurredAt }
+        case .amountDescending:
+            return source.sorted {
+                if $0.amount == $1.amount { return $0.occurredAt > $1.occurredAt }
+                return $0.amount > $1.amount
+            }
+        case .merchantAscending:
+            return source.sorted {
+                let merchantCompare = $0.merchant.localizedStandardCompare($1.merchant)
+                if merchantCompare == .orderedSame { return $0.occurredAt > $1.occurredAt }
+                return merchantCompare == .orderedAscending
+            }
+        }
+    }
+
+    private var batchConfirmationTitle: String {
+        guard let pendingBatchAction else { return "" }
+        switch pendingBatchAction {
+        case .merchant:
+            return String(localized: "mac.ledger.batch.confirm_merchant_title")
+        case .category:
+            return String(localized: "mac.ledger.batch.confirm_category_title")
+        }
+    }
+
+    private var batchConfirmationButtonTitle: String {
+        guard let pendingBatchAction else { return String(localized: "common.ok") }
+        switch pendingBatchAction {
+        case .merchant:
+            return String(localized: "mac.ledger.batch.apply_merchant")
+        case .category:
+            return String(localized: "mac.ledger.batch.apply_category")
+        }
+    }
+
+    private var batchConfirmationMessage: String {
+        guard let pendingBatchAction else { return "" }
+        switch pendingBatchAction {
+        case .merchant:
+            return String(
+                format: String(localized: "mac.ledger.batch.confirm_merchant_message"),
+                selectedTransactions.count,
+                batchMerchant.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        case .category:
+            return String(
+                format: String(localized: "mac.ledger.batch.confirm_category_message"),
+                selectedTransactions.count,
+                batchCategoryTitle
+            )
+        }
+    }
+
+    private func applyPendingBatchAction() {
+        guard let pendingBatchAction else { return }
+        switch pendingBatchAction {
+        case .merchant:
+            _ = store.applyBatchTransactionEdits(
+                transactionIDs: selectedTransactionIDs,
+                merchant: batchMerchant,
+                category: nil
+            )
+            batchMerchant = ""
+        case .category:
+            _ = store.applyBatchTransactionEdits(
+                transactionIDs: selectedTransactionIDs,
+                merchant: nil,
+                category: batchCategory
+            )
+        }
+        self.pendingBatchAction = nil
+    }
+
+    private var duplicateConfirmationMessage: String {
+        guard let pendingDuplicatePreview else { return "" }
+        return String(
+            format: String(localized: "mac.ledger.duplicate.confirm_message"),
+            max(0, pendingDuplicatePreview.affectedTransactionIDs.count - 1)
+        )
+    }
+
+    private func applyPendingDuplicatePreview() {
+        guard let pendingDuplicatePreview else { return }
+        _ = store.applyDataCleaningPreview(pendingDuplicatePreview)
+        selectedTransactionIDs.subtract(pendingDuplicatePreview.affectedTransactionIDs)
+        self.pendingDuplicatePreview = nil
+        selectedDuplicatePreviewID = macDuplicatePreviews.first?.id
+    }
+
+    private func duplicatePreviewTitle(_ preview: DataCleaningPreviewItem) -> String {
+        String(
+            format: String(localized: "mac.ledger.duplicate.group_format"),
+            preview.title,
+            preview.affectedTransactionIDs.count
+        )
+    }
+
+    private func duplicatePreviewSubtitle(_ preview: DataCleaningPreviewItem) -> String {
+        let score = (preview.score ?? 0) * 100
+        return String(
+            format: String(localized: "mac.ledger.duplicate.subtitle_format"),
+            score,
+            preview.affectedTransactionIDs.count
+        )
+    }
+}
+
+private enum MacLedgerSortMode: String, CaseIterable, Identifiable {
+    case dateDescending
+    case amountDescending
+    case merchantAscending
+
+    var id: String { rawValue }
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .dateDescending:
+            return "mac.ledger.sort.date_desc"
+        case .amountDescending:
+            return "mac.ledger.sort.amount_desc"
+        case .merchantAscending:
+            return "mac.ledger.sort.merchant_asc"
+        }
+    }
+}
+
+private enum MacLedgerBatchAction {
+    case merchant
+    case category
 }
 
 private struct IPadTransactionCompactRow: View {
