@@ -13,7 +13,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "Unknown export_ios.sh argument: $1" >&2
+      echo "Unknown export_ipad.sh argument: $1" >&2
       exit 2
       ;;
   esac
@@ -25,8 +25,8 @@ import json, sys
 cfg = json.load(open(sys.argv[1], encoding="utf-8"))
 print(
     cfg["app"]["workspace"],
-    cfg["app"]["ios"]["scheme"],
-    cfg["app"]["ios"]["bundleId"],
+    cfg["app"]["ipad"]["scheme"],
+    cfg["app"]["ipad"]["bundleId"],
     cfg.get("capture", {}).get("derivedDataPath", "tools/appstore-screenshots/.derivedData"),
     cfg.get("capture", {}).get("stabilizeSeconds", 2),
     cfg["app"]["name"],
@@ -46,9 +46,9 @@ text = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available
 devices = []
 for line in text.splitlines():
     m = re.match(r"\s+(.+?) \(([0-9A-F-]{36})\) \((Booted|Shutdown)\)", line)
-    if m and m.group(1).startswith("iPhone"):
+    if m and m.group(1).startswith("iPad"):
         devices.append((m.group(1), m.group(2)))
-for candidate in cfg["app"]["ios"].get("deviceCandidates", []):
+for candidate in cfg["app"]["ipad"].get("deviceCandidates", []):
     for name, udid in devices:
         if name == candidate:
             print(udid, name, sep="\t")
@@ -56,12 +56,12 @@ for candidate in cfg["app"]["ios"].get("deviceCandidates", []):
 if devices:
     print(devices[0][1], devices[0][0], sep="\t")
     raise SystemExit(0)
-print("No available iPhone simulator found.", file=sys.stderr)
+print("No available iPad simulator found.", file=sys.stderr)
 raise SystemExit(1)
 PY
 )
 
-echo "==> Building iOS app"
+echo "==> Building iPad app"
 echo "workspace: $WORKSPACE"
 echo "scheme: $SCHEME"
 echo "bundle id: $BUNDLE_ID"
@@ -77,7 +77,7 @@ xcodebuild \
 
 APP_PATH="$DERIVED_PATH/Build/Products/Debug-iphonesimulator/$APP_NAME.app"
 if [[ ! -d "$APP_PATH" ]]; then
-  echo "Could not find built iOS app at: $APP_PATH" >&2
+  echo "Could not find built iPad app at: $APP_PATH" >&2
   exit 1
 fi
 
@@ -130,7 +130,7 @@ raise SystemExit(0 if is_dark or is_blank else 1)
 PY
 }
 
-capture_ios_screenshot() {
+capture_ipad_screenshot() {
   local locale="$1"
   local apple_lang="$2"
   local apple_locale="$3"
@@ -144,7 +144,7 @@ capture_ios_screenshot() {
     xcrun simctl terminate "$DEVICE_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
     xcrun simctl launch --terminate-running-process "$DEVICE_UDID" "$BUNDLE_ID" \
       --screenshot-mode \
-      --screenshot-platform ios \
+      --screenshot-platform ipad \
       --screenshot-scene "$scene" \
       -AppleLanguages "$apple_lang" \
       -AppleLocale "$apple_locale" \
@@ -155,21 +155,21 @@ capture_ios_screenshot() {
       mv "$tmp_path" "$out_path"
       return 0
     fi
-    echo "warning: ios/$locale/$shot_id captured incomplete frame; retry $attempt/$attempts" >&2
+    echo "warning: ipad/$locale/$shot_id captured incomplete frame; retry $attempt/$attempts" >&2
     sleep 1
   done
 
   mv "$tmp_path" "$out_path"
-  echo "warning: ios/$locale/$shot_id still looks incomplete after retries" >&2
+  echo "warning: ipad/$locale/$shot_id still looks incomplete after retries" >&2
 }
 
-echo "==> Capturing iOS raw screenshots"
+echo "==> Capturing iPad raw screenshots"
 while IFS=$'\t' read -r LOCALE APPLE_LANG APPLE_LOCALE SHOT_ID SCENE; do
-  OUT_DIR="$ROOT/tools/appstore-screenshots/output/raw/ios/$LOCALE"
+  OUT_DIR="$ROOT/tools/appstore-screenshots/output/raw/ipad/$LOCALE"
   mkdir -p "$OUT_DIR"
   OUT_PATH="$OUT_DIR/$SHOT_ID.png"
-  echo "capture ios/$LOCALE/$SHOT_ID ($SCENE)"
-  capture_ios_screenshot "$LOCALE" "$APPLE_LANG" "$APPLE_LOCALE" "$SHOT_ID" "$SCENE" "$OUT_PATH"
+  echo "capture ipad/$LOCALE/$SHOT_ID ($SCENE)"
+  capture_ipad_screenshot "$LOCALE" "$APPLE_LANG" "$APPLE_LOCALE" "$SHOT_ID" "$SCENE" "$OUT_PATH"
 done < <(
   python3 - "$CONFIG" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"} <<'PY'
 import json, sys
@@ -178,7 +178,7 @@ filters = set(sys.argv[2:])
 for locale, locale_cfg in cfg["locales"].items():
     if filters and locale not in filters:
         continue
-    for shot in cfg["iosShots"]:
+    for shot in cfg["ipadShots"]:
         print(locale, locale_cfg["appleLanguages"], locale_cfg["appleLocale"], shot["id"], shot["scene"], sep="\t")
 PY
 )

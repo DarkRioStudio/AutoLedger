@@ -16,13 +16,19 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[3]
 TOOL_DIR = ROOT / "tools" / "appstore-screenshots"
 CONFIG_PATH = TOOL_DIR / "config" / "screenshots.json"
-RAW_DIR = TOOL_DIR / "output" / "raw" / "ios"
-STORE_DIR = TOOL_DIR / "output" / "store" / "ios"
+RAW_BASE_DIR = TOOL_DIR / "output" / "raw"
+STORE_BASE_DIR = TOOL_DIR / "output" / "store"
 
 BACKGROUND = (243, 240, 232)
 INK = (34, 40, 37)
 MUTED = (91, 101, 96)
 ACCENT = (43, 120, 87)
+
+PLATFORM_DEFS = {
+    "ios": {"shotsKey": "iosShots", "targetKey": "ios_65", "label": "iPhone"},
+    "ipad": {"shotsKey": "ipadShots", "targetKey": "ipad_13", "label": "iPad"},
+    "mac": {"shotsKey": "macShots", "targetKey": "mac_desktop", "label": "Mac"},
+}
 
 
 def load_config() -> dict:
@@ -30,8 +36,9 @@ def load_config() -> dict:
         return json.load(handle)
 
 
-def target_size(config: dict) -> tuple[int, int]:
-    target = config["targets"]["ios_65"]
+def target_size(config: dict, platform: str) -> tuple[int, int]:
+    target_key = PLATFORM_DEFS[platform]["targetKey"]
+    target = config["targets"][target_key]
     return int(target["width"]), int(target["height"])
 
 
@@ -121,14 +128,31 @@ def draw_multiline(
     return y
 
 
-def cover_resize(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+def cover_resize(image: Image.Image, size: tuple[int, int], align_y: str = "center") -> Image.Image:
     target_w, target_h = size
     src_w, src_h = image.size
     scale = max(target_w / src_w, target_h / src_h)
     resized = image.resize((round(src_w * scale), round(src_h * scale)), Image.Resampling.LANCZOS)
     left = (resized.width - target_w) // 2
-    top = (resized.height - target_h) // 2
+    if align_y == "top":
+        top = 0
+    elif align_y == "bottom":
+        top = max(0, resized.height - target_h)
+    else:
+        top = (resized.height - target_h) // 2
     return resized.crop((left, top, left + target_w, top + target_h))
+
+
+def fit_resize(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+    target_w, target_h = size
+    src_w, src_h = image.size
+    scale = min(target_w / src_w, target_h / src_h)
+    resized = image.resize((max(1, round(src_w * scale)), max(1, round(src_h * scale))), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", size, (255, 255, 255, 0))
+    left = (target_w - resized.width) // 2
+    top = (target_h - resized.height) // 2
+    canvas.alpha_composite(resized.convert("RGBA"), (left, top))
+    return canvas
 
 
 def rounded_mask(size: tuple[int, int], radius: int) -> Image.Image:
@@ -137,65 +161,181 @@ def rounded_mask(size: tuple[int, int], radius: int) -> Image.Image:
     return mask
 
 
-def paste_phone(canvas: Image.Image, raw: Image.Image, box: tuple[int, int, int, int], radius: int) -> None:
+def paste_framed_capture(
+    canvas: Image.Image,
+    raw: Image.Image,
+    box: tuple[int, int, int, int],
+    radius: int,
+    inset: int,
+    mode: str = "cover",
+    align_y: str = "center",
+) -> None:
     x, y, w, h = box
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    shadow_draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=(0, 0, 0, 72))
+    shadow_draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=(0, 0, 0, 70))
     shadow = shadow.filter(ImageFilter.GaussianBlur(26))
     canvas.alpha_composite(shadow, (0, 18))
 
     frame = Image.new("RGBA", (w, h), (255, 255, 255, 255))
-    screenshot = cover_resize(raw.convert("RGB"), (w - 22, h - 22)).convert("RGBA")
-    inner_mask = rounded_mask(screenshot.size, max(radius - 18, 30))
-    frame.alpha_composite(screenshot, (11, 11))
+    target_size = (w - (inset * 2), h - (inset * 2))
+    if mode == "fit":
+        screenshot = fit_resize(raw.convert("RGBA"), target_size)
+    else:
+        screenshot = cover_resize(raw.convert("RGB"), target_size, align_y=align_y).convert("RGBA")
+    frame.alpha_composite(screenshot, (inset, inset))
     frame.putalpha(rounded_mask((w, h), radius))
     canvas.alpha_composite(frame, (x, y))
 
 
-def render_shot(config: dict, locale: str, shot: dict) -> bool:
-    raw_path = RAW_DIR / locale / f"{shot['id']}.png"
+def paste_window_capture(
+    canvas: Image.Image,
+    raw: Image.Image,
+    box: tuple[int, int, int, int],
+    radius: int,
+    mode: str = "fit",
+    align_y: str = "center",
+) -> None:
+    x, y, w, h = box
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    shadow_draw.rounded_rectangle((x, y, x + w, y + h), radius=radius, fill=(0, 0, 0, 62))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(20))
+    canvas.alpha_composite(shadow, (0, 14))
+
+    if mode == "cover":
+        screenshot = cover_resize(raw.convert("RGB"), (w, h), align_y=align_y).convert("RGBA")
+    else:
+        screenshot = fit_resize(raw.convert("RGBA"), (w, h))
+    screenshot.putalpha(rounded_mask((w, h), radius))
+    canvas.alpha_composite(screenshot, (x, y))
+
+
+def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) -> dict:
+    if platform == "ios":
+        return {
+            "brandPos": (110, 96),
+            "brandFont": font(34, "bold"),
+            "titleFont": font(74 if locale != "en" else 68, "bold"),
+            "subtitleFont": font(35, "regular"),
+            "textWidth": canvas_w - 220,
+            "titlePos": (110, 205),
+            "lineWidth": 98,
+            "captureBox": (canvas_w // 2 - 420, 765, 840, min(canvas_h - 857, 1180)),
+            "kind": "framed",
+            "radius": 72,
+            "inset": 11,
+        }
+
+    if platform == "ipad":
+        title_font_size = 68 if locale != "en" else 62
+        capture_w = 2440
+        capture_h = 1280
+        return {
+            "brandPos": (132, 84),
+            "brandFont": font(40, "bold"),
+            "titleFont": font(title_font_size, "bold"),
+            "subtitleFont": font(30, "regular"),
+            "textWidth": canvas_w - 264,
+            "titlePos": (132, 170),
+            "lineWidth": 112,
+            "captureBox": ((canvas_w - capture_w) // 2, 480, capture_w, capture_h),
+            "kind": "framed",
+            "radius": 56,
+            "inset": 16,
+            "frameMode": "cover",
+            "frameAlignY": "top",
+        }
+
+    capture_w = 1248
+    capture_h = 780
+    return {
+        "brandPos": (54, 36),
+        "brandFont": font(26, "bold"),
+        "titleFont": font(50 if locale != "en" else 46, "bold"),
+        "subtitleFont": font(22, "regular"),
+        "textWidth": canvas_w - 108,
+        "titlePos": (54, 72),
+        "lineWidth": 72,
+        "captureBox": ((canvas_w - capture_w) // 2, 232, capture_w, capture_h),
+        "kind": "window",
+        "radius": 24,
+        "inset": 0,
+        "frameMode": "fit",
+        "frameAlignY": "center",
+    }
+
+
+def render_shot(config: dict, platform: str, locale: str, shot: dict) -> bool:
+    raw_path = RAW_BASE_DIR / platform / locale / f"{shot['id']}.png"
     if not raw_path.exists():
-        print(f"warning: missing raw iOS screenshot: {raw_path}", file=sys.stderr)
+        print(f"warning: missing raw {platform} screenshot: {raw_path}", file=sys.stderr)
         return False
 
-    canvas_w, canvas_h = target_size(config)
+    canvas_w, canvas_h = target_size(config, platform)
     canvas = Image.new("RGBA", (canvas_w, canvas_h), BACKGROUND + (255,))
     draw = ImageDraw.Draw(canvas)
+    layout = platform_layout(platform, locale, canvas_w, canvas_h)
 
-    brand_font = font(34, "bold")
-    title_font = font(74 if locale != "en" else 68, "bold")
-    subtitle_font = font(35, "regular")
+    draw.text(layout["brandPos"], config["app"]["name"], font=layout["brandFont"], fill=ACCENT)
 
-    draw.text((110, 96), config["app"]["name"], font=brand_font, fill=ACCENT)
     title = shot["title"][locale]
     subtitle = shot["subtitle"][locale]
-    max_text_width = canvas_w - 220
-    title_lines = wrap_text(draw, title, title_font, max_text_width)
-    title_bottom = draw_multiline(draw, (110, 235), title_lines, title_font, INK, 10)
-    subtitle_lines = wrap_text(draw, subtitle, subtitle_font, max_text_width)
-    subtitle_bottom = draw_multiline(draw, (112, title_bottom + 18), subtitle_lines, subtitle_font, MUTED, 8)
+    title_lines = wrap_text(draw, title, layout["titleFont"], layout["textWidth"])
+    title_bottom = draw_multiline(draw, layout["titlePos"], title_lines, layout["titleFont"], INK, 10)
+    subtitle_lines = wrap_text(draw, subtitle, layout["subtitleFont"], layout["textWidth"])
+    subtitle_bottom = draw_multiline(
+        draw,
+        (layout["titlePos"][0] + 2, title_bottom + 16),
+        subtitle_lines,
+        layout["subtitleFont"],
+        MUTED,
+        8,
+    )
 
-    line_y = subtitle_bottom + 28
-    draw.rounded_rectangle((112, line_y, 210, line_y + 8), radius=4, fill=ACCENT)
+    line_y = subtitle_bottom + 24
+    draw.rounded_rectangle(
+        (layout["titlePos"][0] + 2, line_y, layout["titlePos"][0] + 2 + layout["lineWidth"], line_y + 8),
+        radius=4,
+        fill=ACCENT,
+    )
 
     raw = Image.open(raw_path)
-    phone_w = 900 if shot["id"] == "00_preview" else 840
-    phone_h = min(canvas_h - 760, round(phone_w * raw.height / raw.width))
-    phone_top = 735 if shot["id"] == "00_preview" else 835
-    phone_top = max(phone_top, line_y + 82)
-    if phone_top + phone_h > canvas_h - 92:
-        phone_h = canvas_h - phone_top - 92
-        phone_w = round(phone_h * raw.width / raw.height)
-    phone_x = (canvas_w - phone_w) // 2
-    paste_phone(canvas, raw, (phone_x, phone_top, phone_w, phone_h), 72)
+    if layout["kind"] == "window":
+        paste_window_capture(
+            canvas,
+            raw,
+            layout["captureBox"],
+            layout["radius"],
+            layout.get("frameMode", "fit"),
+            layout.get("frameAlignY", "center"),
+        )
+    else:
+        paste_framed_capture(
+            canvas,
+            raw,
+            layout["captureBox"],
+            layout["radius"],
+            layout["inset"],
+            layout.get("frameMode", "cover"),
+            layout.get("frameAlignY", "center"),
+        )
 
-    out_dir = STORE_DIR / locale
+    out_dir = STORE_BASE_DIR / platform / locale
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{shot['id']}.png"
     canvas.convert("RGB").save(out_path, "PNG")
     print(f"wrote {out_path.relative_to(ROOT)} ({canvas_w}x{canvas_h})")
     return True
+
+
+def iter_platform_shots(config: dict) -> list[tuple[str, list[dict]]]:
+    items: list[tuple[str, list[dict]]] = []
+    for platform, platform_def in PLATFORM_DEFS.items():
+        shots = config.get(platform_def["shotsKey"], [])
+        if shots:
+            items.append((platform, shots))
+    return items
 
 
 def main() -> int:
@@ -206,12 +346,13 @@ def main() -> int:
     for locale in config["locales"]:
         if filters and locale not in filters:
             continue
-        for shot in config["iosShots"]:
-            attempted += 1
-            if render_shot(config, locale, shot):
-                rendered += 1
+        for platform, shots in iter_platform_shots(config):
+            for shot in shots:
+                attempted += 1
+                if render_shot(config, platform, locale, shot):
+                    rendered += 1
     if rendered == 0 and attempted:
-        print("error: no iOS raw screenshots were found; cannot render marketing images", file=sys.stderr)
+        print("error: no iPhone / iPad / Mac raw screenshots were found; cannot render marketing images", file=sys.stderr)
         return 1
     return 0
 

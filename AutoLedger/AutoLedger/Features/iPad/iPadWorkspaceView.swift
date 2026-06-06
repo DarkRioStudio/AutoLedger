@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-private enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
+enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case overview
     case capture
     case ledger
@@ -43,11 +43,16 @@ private enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable 
 }
 
 struct IPadWorkspaceView: View {
-    @State private var selection: IPadWorkspaceSection = .overview
-    @State private var sidebarSelection: IPadWorkspaceSection? = .overview
+    @State private var selection: IPadWorkspaceSection
+    @State private var sidebarSelection: IPadWorkspaceSection?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var settingsResetID = UUID()
     @State private var detailResetID = UUID()
+
+    init(initialSection: IPadWorkspaceSection = .overview) {
+        _selection = State(initialValue: initialSection)
+        _sidebarSelection = State(initialValue: initialSection)
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {

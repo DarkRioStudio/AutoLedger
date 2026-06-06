@@ -36,7 +36,10 @@ struct AutoLedgerApp: App {
     var body: some Scene {
         WindowGroup {
             if ScreenshotModeConfig.isEnabled {
-                ScreenshotHostView(scene: ScreenshotModeConfig.scene)
+                ScreenshotHostView(
+                    platform: ScreenshotModeConfig.platform,
+                    sceneIdentifier: ScreenshotModeConfig.sceneIdentifier
+                )
             } else {
                 AutoLedgerRootView()
             }

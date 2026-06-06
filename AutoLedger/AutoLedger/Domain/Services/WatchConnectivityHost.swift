@@ -12,6 +12,10 @@ import WatchConnectivity
 final class WatchConnectivityHost: NSObject {
 
     static let shared = WatchConnectivityHost()
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
+    private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
+    private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
+    private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
 
     // MARK: - Init
 
@@ -27,6 +31,7 @@ final class WatchConnectivityHost: NSObject {
     /// App 进入前台或账单变化时调用：将最近 20 条账单同步给 Watch。
     func pushRecentTransactionsIfReachable() {
         guard WCSession.default.activationState == .activated else { return }
+        recordFallbackSnapshotUpdatedAtIfNeeded()
         let payload = makeSyncPayload()
 
         do {
@@ -34,6 +39,8 @@ final class WatchConnectivityHost: NSObject {
         } catch {
             // sendMessage below still covers the foreground reachable case.
         }
+
+        queueBackgroundSnapshotTransfer(payload)
 
         guard WCSession.default.isReachable else { return }
         WCSession.default.sendMessage(
@@ -58,21 +65,12 @@ final class WatchConnectivityHost: NSObject {
     }
 
     private func makeRecentPayload() -> [[String: Any]] {
-        guard let store = LedgerStore.shared else { return [] }
-        return store.transactions.prefix(20).map { serialize($0) }
+        currentTransactions().prefix(20).map { serialize($0) }
     }
 
     private func makeTodaySummaryPayload() -> [String: Any] {
-        guard let summary = LedgerStore.shared?.todaySpendingSummary else {
-            return [
-                "ledgerName": TodaySpendingSummary.defaultLedgerName,
-                "totalExpense": 0.0,
-                "transactionCount": 0,
-                "updatedAt": Date().timeIntervalSince1970
-            ]
-        }
-
-        let metadata = LedgerStore.shared?.ledgerDisplaySnapshotMetadata ?? [:]
+        let summary = TodaySpendingSummary.build(from: currentTransactions(), referenceDate: .now)
+        let metadata = makeSnapshotMetadata()
         let snapshotUpdatedAt = metadata["snapshotUpdatedAt"] as? Double ?? Date().timeIntervalSince1970
         var payload: [String: Any] = [
             "ledgerName": summary.ledgerName,
@@ -98,8 +96,59 @@ final class WatchConnectivityHost: NSObject {
             "action": "syncTransactions",
             "transactions": makeRecentPayload(),
             "todaySummary": makeTodaySummaryPayload(),
-            "customCategories": LedgerStore.shared?.customCategories ?? []
+            "customCategories": currentCustomCategories()
         ]
+    }
+
+    private func currentTransactions() -> [Transaction] {
+        if let store = LedgerStore.shared {
+            return store.transactions
+        }
+        return ((try? SQLiteTransactionStore().loadTransactions()) ?? [])
+            .sorted { lhs, rhs in
+                return lhs.occurredAt > rhs.occurredAt
+            }
+    }
+
+    private func currentCustomCategories() -> [String] {
+        if let store = LedgerStore.shared {
+            return store.customCategories
+        }
+        return UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+    }
+
+    private func makeSnapshotMetadata(referenceDate: Date = Date()) -> [String: Any] {
+        if let store = LedgerStore.shared {
+            return store.ledgerDisplaySnapshotMetadata
+        }
+
+        let defaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+        let snapshotUpdatedAt = defaults?.object(forKey: Self.ledgerSnapshotUpdatedAtKey) as? Date ?? referenceDate
+        let lastCloudSyncAt = defaults?.object(forKey: Self.lastSuccessfulCloudKitSyncAtKey) as? Date
+        let syncEnabled = defaults?.bool(forKey: Self.ledgerCloudSyncEnabledKey) ?? UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
+        let isSnapshotStale = syncEnabled && (lastCloudSyncAt.map { referenceDate.timeIntervalSince($0) > 12 * 60 * 60 } ?? true)
+        var metadata: [String: Any] = [
+            "snapshotUpdatedAt": snapshotUpdatedAt.timeIntervalSince1970,
+            "isSnapshotStale": isSnapshotStale
+        ]
+        if let lastCloudSyncAt {
+            metadata["lastCloudSyncAt"] = lastCloudSyncAt.timeIntervalSince1970
+        }
+        return metadata
+    }
+
+    private func recordFallbackSnapshotUpdatedAtIfNeeded(_ date: Date = Date()) {
+        guard LedgerStore.shared == nil else { return }
+        UserDefaults.standard.set(date, forKey: Self.ledgerSnapshotUpdatedAtKey)
+        let defaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+        defaults?.set(date, forKey: Self.ledgerSnapshotUpdatedAtKey)
+        defaults?.set(UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey), forKey: Self.ledgerCloudSyncEnabledKey)
+    }
+
+    private func queueBackgroundSnapshotTransfer(_ payload: [String: Any]) {
+        _ = WCSession.default.transferUserInfo(payload)
+        guard WCSession.default.remainingComplicationUserInfoTransfers > 0 else { return }
+        _ = WCSession.default.transferCurrentComplicationUserInfo(payload)
     }
 
     /// 将 Watch 发来的 addTransaction 字典转换为 Transaction 并保存。

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-06（GOAL-1575 Mac 重复账单检查）
+更新日期：2026-06-06（GOAL-1581 tvOS 看板实现评估）
 
 ## 记录规则
 
@@ -43,6 +43,217 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-169 GOAL-1592 当前发布平台回归矩阵与 Review Notes
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 11 / 发布资产与收口
+- 类型：文档 / 回归 / 发布准备
+- 目标：把 `v1.5.0` 当前发布主线的验证结果、剩余人工检查项和 App Review 说明整理成提交前可直接复用的资料。
+- 改动范围：
+  - `versions/v1.5.0-regression-baseline.md`：新增当前发布平台回归基线，区分命令 PASS、离线覆盖、用户点验和 PENDING 项。
+  - `versions/v1.5.0-review-notes.md`：新增 Review Notes 英文草稿、中文备忘、审核路径和提交前人工清单。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1592` 标记为已完成，并新增 `13.67` 记录门禁结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：回填本轮收口资料。
+- 未改动范围：未改动任何业务代码、签名、CloudKit 配置、IAP 产品 ID、截图 fixture、Xcode Cloud 配置或 App Store Connect 线上配置。
+- 完成内容：形成 `v1.5.0` 当前发布平台的完整回归矩阵；明确 `backup / CSV / screenshot / iCloud sync / IAP` 的验证层级；给出可直接粘贴到 ASC 的 Review Notes 英文草稿；把 `Watch 表盘后台自动刷新`、`IAP 真机购买`、`Xcode Cloud archive` 和 `ASC 最终提交` 收敛为发布前人工清单。
+- 未完成内容：仍未替代真机 Watch 后台刷新复测、IAP 沙盒购买点验、Xcode Cloud archive / TestFlight 上传和 ASC 实际提交操作。
+- 测试情况：
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：沿用本轮已完成的 generic iOS build、Mac Catalyst build、`export.sh --ios-only --watch-only --ipad-only --mac-only --locale zh-Hans`
+- 风险与注意事项：本轮文档已经明确“本地构建 / 离线回归通过”不等于“Xcode Cloud archive / 真机 Watch 自动刷新 / IAP 购买 / ASC 提交完成”；提审前仍要按人工清单逐项复核。
+- 回滚方式：删除 `versions/v1.5.0-regression-baseline.md`、`versions/v1.5.0-review-notes.md`，回退 `GOAL-1592` 对应版本与日志条目即可。
+- 结论：`GOAL-1592` 已完成，`v1.5.0` 当前发布线的回归资料与审核说明已经齐备。
+- 下一步建议：停止新增范围，按回归基线执行最后一轮真机 / Xcode Cloud / ASC 提交前 smoke。
+
+### ITER-168 GOAL-1591 当前发布平台截图管线实现
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 11 / 发布资产与收口
+- 类型：工具链 / 能力增强 / 文档
+- 目标：在不破坏现有 iPhone / Watch 导出链路的前提下，把当前发布平台所需的 iPad / Mac 截图真正接入统一导出管线。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Screenshots/ScreenshotModeConfig.swift`、`ScreenshotHostView.swift`、`App/AutoLedgerApp.swift`：新增 `ipad` / `mac` screenshot-mode 平台和 scene 路由。
+  - `AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`：暴露可初始化的工作台 section，便于截图宿主稳定切页。
+  - `tools/appstore-screenshots/config/screenshots.json`：新增 `ipad` / `mac` 平台、targets、设备候选、scene 与文案。
+  - `tools/appstore-screenshots/scripts/export.sh`、`export_ipad.sh`、`export_mac.sh`、`render_marketing.py`、`build_preview.py`：新增 iPad / Mac 导出、渲染、preview 分组与 incomplete frame 检测。
+  - `tools/appstore-screenshots/README.md`、`versions/v1.5.0-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：同步回填工具说明与版本状态。
+- 未改动范围：未接入 tvOS / visionOS 截图导出；未上传 App Store Connect；未改动真实账本、OCR、CloudKit、Bundle ID、签名或 Xcode Cloud 配置。
+- 完成内容：统一截图工具现已支持 `--ios-only`、`--ipad-only`、`--mac-only`、`--watch-only`；`preview.html` 现按 `iPhone / Apple Watch / iPad / Mac` 分组展示；iPad / Mac 使用固定 fixture 与 screenshot host 导出关键页面；营销图标题区与截图框比例已按用户反馈收紧，减少标题和内容之间的视觉割裂。
+- 未完成内容：tvOS / visionOS 截图仍顺延到 `v1.6.0`；App Store Connect 上传与最终商店页精选文案仍待 `GOAL-1592` 收口。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ipad-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --mac-only --locale zh-Hans`
+  - PASS：人工查看 iPad / Mac 导出图，确认首张 iPad 不再白屏，横屏裁切不再失真，Mac 窗体截图可正常导出。
+- 风险与注意事项：Mac 导出依赖本机 Accessibility 权限与 `System Events`；若权限不足，脚本会跳过 Mac 并在 preview 中保留状态。iPad / Mac 当前用的是稳定 fixture，并非真实用户账本快照。
+- 回滚方式：回退 screenshot host、`screenshots.json`、三个导出脚本、renderer、preview 和文档改动即可恢复到旧的 iPhone / Watch-only 管线。
+- 结论：`GOAL-1591` 已完成，当前发布平台截图导出能力已经闭环；下一步应进入 `GOAL-1592`，整理发布回归矩阵与 Review Notes。
+- 下一步建议：基于当前脚本输出整理 `iPhone / iPad / Watch / Mac` 发布前检查表，并补充 ASC / Xcode Cloud / IAP / backup 说明。
+
+### ITER-167 v1.5.0 收口策略更新
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 11 / 发布资产与收口
+- 类型：文档 / 版本策略 / 发布收口
+- 目标：把 `v1.5.0` 的版本边界重新收紧，避免在发布收口阶段继续背着 tvOS / visionOS 产品实现范围。
+- 改动范围：
+  - `versions/v1.5.0-plan.md`：更新版本收口策略，明确 `v1.5.0` 只对 `iPhone / iPad / Watch / Mac Catalyst` 负责；将 `GOAL-1591` / `GOAL-1592` 重新收口为当前发布平台截图和回归；新增 `13.65` 记录本轮判断。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录版本边界调整。
+- 未改动范围：未修改任何业务代码、Xcode target、Bundle ID、签名、entitlements、截图脚本实现或 tvOS / visionOS 模板代码。
+- 完成内容：明确 `tvOS / visionOS` 当前只保留 target 基线、设计稿和实现评估，不在 `v1.5.0` 中继续落产品代码；明确 `v1.5.1` 仅作为当前开发线内部补丁 / TestFlight 节点，不承接新平台实现；明确 `v1.6.0` 承接 tvOS / visionOS 第一版产品代码、截图和平台发布准备。
+- 未完成内容：`GOAL-1591` 当前发布平台截图实现、`GOAL-1592` 当前发布平台回归矩阵与 Review Notes 仍待继续执行。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：文档自检，GOAL 队列、推荐推进顺序、验收口径和收口判断保持一致。
+- 风险与注意事项：这次调整是范围收紧，不是能力回退；tvOS / visionOS 的设计与评估文档仍然有效，但不应被误解为 `v1.5.0` 已承诺上线的平台能力。
+- 回滚方式：回退本轮文档改动，将 `GOAL-1591` / `GOAL-1592` 恢复为覆盖 tvOS / visionOS 的全平台发布范围。
+- 结论：`v1.5.0` 现在的剩余目标已经明确收敛到当前发布主线，接下来应直接进入截图实现和发布回归，而不是继续新增平台代码。
+- 下一步建议：进入 `GOAL-1591`，优先补齐 iPad / Mac 截图管线，并保持 iPhone / Watch 现有导出稳定。
+
+### ITER-166 GOAL-1590 全平台截图管线设计
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 11 / 全平台截图与发布准备
+- 类型：文档 / 设计 / 工具链规划
+- 目标：在不破坏现有 iPhone / Watch 截图导出链路的前提下，定义 iPad / Mac / tvOS / visionOS 如何进入统一截图管线。
+- 改动范围：
+  - `docs/all-platform-screenshot-pipeline-design.md`：新增全平台截图设计稿，覆盖配置扩展、CLI flag、输出目录、preview 分组、平台场景和 `GOAL-1591` 实施顺序。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1590` 状态改为已完成，并新增 `13.64` 记录本轮结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1590` 完成范围。
+- 未改动范围：未修改 `tools/appstore-screenshots/config/screenshots.json`、`scripts/export.sh`、`scripts/build_preview.py` 或任一 render 脚本；未新增任何 iPad / Mac / tvOS / visionOS 实际截图 scene；未生成新平台图片。
+- 完成内容：收敛出单一 `screenshots.json` 的多平台扩展方式；明确 `--ipad-only`、`--mac-only`、`--tvos-only`、`--visionos-only` 的参数设计；定义六平台 raw/store 输出目录与 `preview.html` 分组；明确 iPad / Mac / tvOS / visionOS 的首批截图场景和 `GOAL-1591` 的分步实施顺序。
+- 未完成内容：未真正实现新 flag、未扩 preview 脚本、未导出任何新平台截图。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：文档自检，设计稿与版本计划中的截图资产章节、GOAL 队列保持一致。
+  - PASS：核对 `tools/appstore-screenshots/README.md`、`config/screenshots.json`、`scripts/export.sh`、`scripts/build_preview.py` 当前基线。
+- 风险与注意事项：如果 `GOAL-1591` 一次性同时接六个平台，调试面会过大；更稳妥的顺序是先 iPad / Mac，再 tvOS / visionOS，同时保持现有 iPhone / Watch 输出不回退。
+- 回滚方式：删除 `docs/all-platform-screenshot-pipeline-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1590` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 结论：`GOAL-1590` 设计完成，下一步可直接实现截图管线扩展，而不需要继续讨论总体方案。
+- 下一步建议：进入 `GOAL-1591`，先做配置 / flag / preview 的骨架扩展，再按 iPad / Mac → tvOS / visionOS 的顺序接入 capture。
+
+### ITER-165 GOAL-1583 visionOS 展示实现评估
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 10 / visionOS 空间展示版本
+- 类型：文档 / 实现评估 / 平台扩展
+- 目标：确认 `AutoLedgerVision` target / simulator 是否已可用，收敛首版 scene 选择、数据入口边界和最小 smoke 定义，避免直接把范围膨胀到 immersive 空间实现。
+- 改动范围：
+  - `docs/visionos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、scene 方案对比、RealityKit 模板判断、推荐实现路径和最小 smoke 定义。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1583` 状态改为已完成，并新增 `13.63` 记录本轮实现评估结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1583` 完成范围。
+- 未改动范围：未修改 `AutoLedgerVision` 模板代码、未接只读 view model、未接 CloudKit 数据读链路、未移除 RealityKit 模板包、未修改 Bundle ID / signing / entitlements / App Group / iCloud Container / Xcode Cloud 脚本。
+- 完成内容：确认 `AutoLedgerVision` 的 destinations、generic build 和 `Apple Vision Pro` simulator build 全部可用；明确首版应从 `WindowGroup` 单窗口开始，而不是先做 `Volume` 或 immersive space；明确 `RealityKitContent` 当前仍是模板资源，不应成为首版 blocker；收敛出“SwiftUI 四区只读骨架 + 稳定读模型”的推荐路径。
+- 未完成内容：未实现 visionOS 骨架 UI、未接真实账本数据、未做 simulator 视觉 smoke、未确定未来是否保留 RealityKit 装饰层。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -showdestinations -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision`。
+  - PASS：`xcrun simctl list devices available | rg "Vision|visionOS|Apple Vision"`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'platform=visionOS Simulator,name=Apple Vision Pro' build`。
+- 风险与注意事项：如果下一轮继续保留模板 `RealityKitContent + Hello, world!` 同时叠加真实账本 UI，很容易得到一套不稳定的混合界面；更稳妥的路径是先用 SwiftUI 落首版只读四区骨架，再决定是否需要 `Volume` 或 RealityKit 增强。
+- 回滚方式：删除 `docs/visionos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1583` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 结论：`GOAL-1583` 评估完成，visionOS target / simulator 已可继续推进；下一步应实现首版只读骨架，或转入 `GOAL-1590` 统一规划全平台截图管线。
+- 下一步建议：如果继续按“第三批后段”推进，可直接进入 `GOAL-1590`；如果希望 visionOS 先落一个可见结果，也可以单开一轮仅做 `WindowGroup` 四区静态骨架，不接真实数据。
+
+### ITER-164 GOAL-1582 visionOS 空间展示设计
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 10 / visionOS 空间展示版本
+- 类型：文档 / 设计 / 平台扩展
+- 目标：为 `AutoLedgerVision` 首版输出可直接交接到实现评估阶段的空间展示设计，明确入口 scene、空间层次、数据口径、交互密度和隐私边界。
+- 改动范围：
+  - `docs/visionos-spatial-design.md`：新增 visionOS 设计稿，覆盖平台定位、入口形态、四个展示区、空间布局原则、轻交互模型、隐私模式和 `GOAL-1583` 交接问题。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1582` 状态改为已完成，并新增 `13.62` 记录本轮设计结论和 build smoke 结果。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1582` 完成范围。
+- 未改动范围：未修改 `AutoLedgerVision` 模板代码、未接 CloudKit 数据读模型、未实现 visionOS UI、未修改 Bundle ID / signing / App Group / iCloud Container / Xcode Cloud 脚本、未接 App Store Connect visionOS 平台。
+- 完成内容：visionOS 首版定位收口为“空间展示端而非生产力工作台”；入口推荐从 `WindowGroup` 主窗口开始，不把 immersive space 作为首版必需条件；一个主窗口内固定 `月度空间看板 / 分类漂浮卡片 / 年度时间线墙 / 最近账单悬浮列表` 四个展示区；明确只读、单一正式账本、隐私模式和 stale 状态是一等边界。
+- 未完成内容：未决定是否需要 `Volume` 或额外 scene；未验证 simulator 视觉呈现；未实现 view model、CloudKit 只读接入和空间布局代码。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：文档自检，设计稿与 `6.7 visionOS 空间展示版本`、`10.5 visionOS` 和 GOAL 队列保持一致。
+  - PASS：`xcodebuild -showdestinations -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`。
+- 风险与注意事项：visionOS target 虽然已能 build，但当前仍只是模板 scene；如果下一轮直接进入 immersive / RealityKit 深度实现，范围会比首版只读展示扩大很多。更稳妥的路径是先在 `GOAL-1583` 决定首版是否仅用 SwiftUI 空间面板完成四区展示，再评估是否保留 RealityKit 模板资源。
+- 回滚方式：删除 `docs/visionos-spatial-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1582` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 结论：`GOAL-1582` 设计完成，visionOS 首版展示口径已定型，下一步进入 `GOAL-1583` 回答 scene / 数据入口 / 最小 smoke 的实现问题。
+- 下一步建议：继续按顺序推进 `GOAL-1583`，先把 `WindowGroup / Volume / RealityKit / 只读数据入口` 的最小实现路径评估清楚，再决定是否开始写 visionOS 骨架界面。
+
+### ITER-163 GOAL-1581 tvOS 看板实现评估
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 9 / tvOS 只读大屏看板
+- 类型：文档 / 实现评估 / 平台扩展
+- 目标：确认 `AutoLedgerTV` target / simulator 是否可用，明确 tvOS 首版 dashboard 的最小实现面和正确数据入口。
+- 改动范围：
+  - `docs/tvos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、数据入口方案对比、推荐路径、主要缺口和下一步建议。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1581` 状态改为已完成，并新增 `13.61` 记录本轮工程评估结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1581` 完成范围。
+- 未改动范围：未修改 `AutoLedgerTV` 模板代码、未新增 tvOS entitlements、未接 CloudKit capability、未实现 tvOS dashboard UI、未修改 Bundle ID / signing / App Group / iCloud Container / Xcode Cloud 脚本。
+- 完成内容：确认 `AutoLedgerTV` 的 generic tvOS build、tvOS Simulator build 和 destinations 全部可用；明确 tvOS 不能直接复用 iPhone Widget 的本地 App Group SQLite 读法；收敛出首版最小路径应为 CloudKit 正式账单只读拉取 + 本地派生 `TodaySpendingSummary` / `MonthlySnapshot` 指标。
+- 未完成内容：未实现 tvOS 专用只读 view model、未拆 `LedgerCloudKitSyncAdapter` 的只读门禁、未写总览页 smoke UI。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`xcodebuild -showdestinations -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' build`。
+  - PASS：`xcrun simctl list devices available | rg 'Apple TV'`。
+- 风险与注意事项：tvOS 首版如果直接拉全量 CloudKit 正式账单，展示端仍需自己管理 `loading / stale / empty / unavailable` 状态；若后续发现拉取成本过高，可以单独立项引入 dashboard snapshot record，不建议在这一轮顺手扩 schema。
+- 回滚方式：删除 `docs/tvos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1581` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 结论：`GOAL-1581` 评估完成，tvOS target 和 simulator 已不是 blocker；下一步可直接开始 tvOS 最小骨架实现，或按顺序进入 `GOAL-1582` 完成 visionOS 设计。
+- 下一步建议：若继续沿第七批推进，进入 `GOAL-1582`；若希望 tvOS 先落一个可见成果，可单开一轮仅实现总览页 smoke，不扩到四页完整 UI。
+
+### ITER-162 GOAL-1580 tvOS 只读看板设计
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 9 / tvOS 只读大屏看板
+- 类型：文档 / 设计 / 平台扩展
+- 目标：为 tvOS 首版输出可直接交接到实现评估阶段的信息架构，明确只读边界、页面结构、遥控器焦点模型、隐私模式和同步口径。
+- 改动范围：
+  - `docs/tvos-dashboard-design.md`：新增 tvOS 设计稿，覆盖目标、页面职责、布局草案、焦点导航、隐私模式、快照状态和 `GOAL-1581` 交接建议。
+  - `versions/v1.5.0-plan.md`：将 `GOAL-1580` 状态改为已完成，并新增 `13.60` 记录本轮设计结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1580` 文档完成范围。
+- 未改动范围：未修改 `AutoLedgerTV` target 模板代码、Bundle ID、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本；未实现 tvOS UI、未做 tvOS build smoke、未接 App Store Connect 平台。
+- 完成内容：tvOS 首版定位收口为“家庭大屏只读账本看板”，一级导航固定为 `总览 / 分类 / 趋势 / 摘要` 四页；明确只读展示单一正式账本稳定快照，隐私模式作为一等能力；遥控器焦点模型保持极简，不把 iPad / Mac 工作台交互照搬到 tvOS。
+- 未完成内容：未实现 tvOS SwiftUI 页面或 scene；未决定最终技术接入方式，只明确 `GOAL-1581` 应优先评估只读展示快照或共享读模型。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：文档自检，设计稿与 `6.6 tvOS 只读大屏看板`、`10.4 tvOS`、`13.4 推荐推进顺序` 保持一致。
+- 风险与注意事项：当前本机缺 tvOS runtime，下一轮实现评估前仍需先补 Xcode Components；设计稿已明确 tvOS 不应承接导入、清洗或写入链路，后续若新增功能应单独立项，避免再次扩张范围。
+- 回滚方式：删除 `docs/tvos-dashboard-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1580` 状态恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 结论：`GOAL-1580` 设计稿完成，可进入 `GOAL-1581` 的 target / scene / 数据入口实现评估。
+- 下一步建议：下一轮只做 `GOAL-1581`，先评估 `AutoLedgerTV` 最小 scene 结构、焦点导航和只读快照读取方式，再决定是否进入 tvOS UI 第一版。
+
+### ITER-161 Watch 表盘后台同步快照修复
+- 日期：2026-06-06
+- 所属版本：v1.5.0
+- 所属阶段：Phase 4 / Watch & Widget 今日支出
+- 类型：Bugfix / watchOS / WidgetKit / WatchConnectivity
+- 目标：修复 iOS 端或快捷指令新增账单后，Apple Watch 表盘小组件仍显示旧值或 0，必须点开 Watch App 后才更新的问题。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/WatchConnectivityHost.swift`：iPhone 侧同步 payload 改为可从 `LedgerStore` 或 SQLite fallback 构建；账本变化时除 `updateApplicationContext` / 前台 `sendMessage` 外，同时排队后台 `transferUserInfo` 和当前 complication userInfo。
+  - `AutoLedger/AutoLedgerWatch Watch App/WatchSessionManager.swift`：Watch 侧新增 `didReceiveUserInfo` 处理，收到后台同步 payload 后写入 Watch App Group 今日支出快照并刷新表盘 Widget timeline。
+  - `AddTransactionIntent.swift`、`QuickLedgerIntent.swift`、`VoiceLedgerIntent.swift`：App Intent / 快捷指令直写 SQLite 成功后主动触发 Watch 今日支出快照推送，不再只依赖主 App 前台通知。
+  - `CHANGELOG.md`、`process/iteration-log.md`、`versions/v1.5.0-plan.md`：记录本轮修复范围。
+- 未改动范围：未修改 Watch Widget UI 样式、target / Bundle ID / App Group / entitlements / iCloud Container / Xcode Cloud 脚本；未让表盘 Widget 直接访问 iPhone SQLite 或 CloudKit。
+- 完成内容：iPhone App 内新增 / 删除 / 恢复等账本变化继续走现有 `LedgerStore.reloadWidgets()` 触发 Watch 同步；快捷指令、Siri 和 App Intent 直写 SQLite 后也会构建最新今日支出 payload 并排队给 Watch。Watch 收到后台 userInfo 后会刷新本地 Widget 快照，降低表盘停留在 0 的概率。
+- 未完成内容：未做 Apple Watch 真机表盘后台刷新时延测试；WidgetKit 和 WatchConnectivity 仍受系统调度影响，不承诺秒级实时更新。
+- 测试情况：
+  - PASS：`git diff --check`。
+  - PASS：`bash scripts/run_offline_regression.sh`，仅有既有 formatter warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`，仅有既有 AppIntent / Gemma warning。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`。
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerWatchWidgetsExtensionExtension -configuration Debug -destination 'generic/platform=watchOS' build`。
+- 风险与注意事项：`transferUserInfo` / complication userInfo 是后台队列，真机表盘刷新仍可能有系统延迟；如果 Apple Watch 未连接、低电量、WatchConnectivity 被系统延后，表盘不会像同设备 Widget 读 SQLite 一样即时。真机验收应以“无需打开 Watch App，稍等后表盘能自动更新”为目标。
+- 回滚方式：移除 iPhone 侧后台 transfer 队列、Watch 侧 `didReceiveUserInfo` 处理，以及三个 Intent 中的 `WatchConnectivityHost` 推送调用；恢复为只在 Watch App 前台或可达时同步。
+- 结论：代码侧修复完成，构建门禁通过；仍需用户在真机上通过 iPhone / 快捷指令新增账单后观察表盘是否自动更新。
+- 下一步建议：真机测试时先保持 Watch 戴在手腕且与 iPhone 连接，新增一笔今日支出后等待 30～120 秒观察表盘；若仍不更新，再抓 WatchConnectivity 日志判断是否后台 payload 未送达或 Widget timeline 未刷新。
 
 ### ITER-160 GOAL-1575 Mac 重复账单检查
 - 日期：2026-06-06

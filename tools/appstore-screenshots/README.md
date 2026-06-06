@@ -1,13 +1,15 @@
 # AutoLedger App Store Screenshot Export
 
-This folder contains a repeatable local pipeline for App Store screenshots. It captures deterministic screenshot-mode screens from the iOS app and, when available, the Watch app, then renders store-ready PNGs and a local `preview.html`.
+This folder contains a repeatable local pipeline for App Store screenshots. It captures deterministic screenshot-mode screens from the iOS, iPad, and Mac Catalyst app, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
 
 ## Supported Output
 
 - iPhone: zh-Hans, zh-Hant, and en, default 6.5-inch App Store size `1242x2688`.
+- iPad: zh-Hans, zh-Hant, and en, default 13-inch landscape App Store size `2732x2048`.
+- Mac Catalyst: zh-Hans, zh-Hant, and en, default desktop capture size `1440x900`.
 - Apple Watch: zh-Hans, zh-Hant, and en when the Watch scheme and a usable Watch simulator pair are available.
 
-The pipeline does not upload to App Store Connect, create official App Preview videos, or generate iPad screenshots.
+The pipeline does not upload to App Store Connect or create official App Preview videos.
 
 ## Run
 
@@ -23,6 +25,18 @@ Only iPhone:
 bash tools/appstore-screenshots/scripts/export.sh --ios-only
 ```
 
+Only iPad:
+
+```bash
+bash tools/appstore-screenshots/scripts/export.sh --ipad-only
+```
+
+Only Mac:
+
+```bash
+bash tools/appstore-screenshots/scripts/export.sh --mac-only
+```
+
 Only Apple Watch:
 
 ```bash
@@ -33,6 +47,8 @@ Limit to one locale:
 
 ```bash
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --ipad-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --mac-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale en
 ```
@@ -59,9 +75,13 @@ Generated files are written under `tools/appstore-screenshots/output/`, which is
 output/
   raw/
     ios/{zh-Hans,zh-Hant,en}/
+    ipad/{zh-Hans,zh-Hant,en}/
+    mac/{zh-Hans,zh-Hant,en}/
     watch/{zh-Hans,zh-Hant,en}/
   store/
     ios/{zh-Hans,zh-Hant,en}/
+    ipad/{zh-Hans,zh-Hant,en}/
+    mac/{zh-Hans,zh-Hant,en}/
     watch/{zh-Hans,zh-Hant,en}/
   preview.html
 ```
@@ -118,9 +138,46 @@ To add a scene:
 
 Watch screenshot mode is isolated from `WatchSessionManager`, so it does not depend on iPhone reachability or WatchConnectivity state.
 
+## iPad Scenes
+
+The iOS app screenshot host also supports iPad workspace scenes:
+
+```text
+--screenshot-mode
+--screenshot-platform ipad
+--screenshot-scene workspace_review|workspace_capture|workspace_ledger|workspace_reports|workspace_cleaning
+```
+
+To add a scene:
+
+1. Extend `IPadWorkspaceSection` or the screenshot workspace host mapping.
+2. Add a new scene mapping in `ScreenshotHostView`.
+3. Add an entry to `ipadShots` in `screenshots.json`.
+4. Run `bash tools/appstore-screenshots/scripts/export.sh --ipad-only`.
+
+## Mac Scenes
+
+Mac Catalyst capture uses the same screenshot workspace host, but launches a local Mac app window and crops that window from the desktop:
+
+```text
+--screenshot-mode
+--screenshot-platform mac
+--screenshot-scene mac_capture|mac_ledger|mac_cleaning|mac_settings
+```
+
+To add a scene:
+
+1. Extend the Mac scene mapping in `ScreenshotHostView`.
+2. Add an entry to `macShots` in `screenshots.json`.
+3. Run `bash tools/appstore-screenshots/scripts/export.sh --mac-only`.
+
 ## Sizes
 
 iPhone defaults to `ios_65` (`1242x2688`). To switch to the reserved 6.9-inch target, enable `targets.ios_69`, update `render_marketing.py` target selection if needed, and ensure the selected simulator produces suitable raw screenshots.
+
+iPad defaults to `ipad_13` (`2732x2048`). The renderer keeps the workspace screenshot inside a fixed landscape marketing canvas and fits the screenshot without vertically cropping the workspace.
+
+Mac defaults to `mac_desktop` (`1440x900`). The exporter launches the built Mac Catalyst app, resizes the front window with AppleScript, and captures that window rectangle from the desktop.
 
 Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, and en Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
 
@@ -149,8 +206,10 @@ python3 tools/appstore-screenshots/scripts/build_preview.py
 - Missing Watch simulator pair: create a paired iPhone + Apple Watch simulator in Xcode.
 - `xcodebuild` failure: open `AutoLedger/AutoLedger.xcworkspace`, not the `.xcodeproj`, and verify CocoaPods are installed.
 - App opens the real home screen: confirm `--screenshot-mode --screenshot-platform ios --screenshot-scene ...` is passed to `simctl launch`.
+- iPad screenshot is blank white or still loading: the capture scripts retry incomplete frames; if it still happens, increase `capture.stabilizeSeconds` or use a screenshot scene with stable fixture content.
+- Mac export is skipped: enable Accessibility permission for the terminal or Codex app so `System Events` can move and resize the AutoLedger window before `screencapture`.
 - Watch does not enter screenshot mode: confirm the Watch app bundle ID and launch arguments in `screenshots.json`.
-- First screenshot is black: capture scripts retry mostly black frames before writing raw PNGs; if it still happens, increase `capture.stabilizeSeconds`.
+- First screenshot is black or white: capture scripts retry incomplete frames before writing raw PNGs; if it still happens, increase `capture.stabilizeSeconds`.
 - UI text looks oversized: screenshot hosts pin Dynamic Type to the default `.large` size, independent of the simulator's Accessibility text size.
 - Permission prompts appear: screenshot host should not call camera, photo library, OCR, notifications, iCloud, or network paths; check any newly added scene for live dependencies.
 - Chinese font looks wrong: install or restore the macOS system PingFang fonts. The renderer falls back with a warning.
@@ -161,6 +220,7 @@ python3 tools/appstore-screenshots/scripts/build_preview.py
 
 - App Store Connect API upload.
 - Official App Preview video.
-- iPad screenshots. This is now tracked as a v1.5.0 planning item in `versions/v1.5.0-plan.md`; the current pipeline remains iPhone + Apple Watch only.
+- tvOS screenshots.
+- visionOS screenshots.
 - Figma or Canva integration.
 - Real OCR or real user data capture.

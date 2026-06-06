@@ -305,4 +305,13 @@ extension WatchSessionManager: WCSessionDelegate {
             self.handleSyncPayload(applicationContext)
         }
     }
+
+    nonisolated func session(_ session: WCSession,
+                             didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        guard let action = userInfo["action"] as? String,
+              action == "syncTransactions" else { return }
+        Task { @MainActor in
+            self.handleSyncPayload(userInfo)
+        }
+    }
 }

@@ -2,26 +2,78 @@ import AutoLedgerCore
 import SwiftUI
 
 struct ScreenshotHostView: View {
-    let scene: ScreenshotScene
+    let platform: ScreenshotPlatform
+    let sceneIdentifier: String
 
     var body: some View {
         Group {
-            switch scene {
-            case .preview, .quickCapture:
+            switch platform {
+            case .ios:
+                switch ScreenshotScene(rawValue: sceneIdentifier) ?? .preview {
+                case .preview, .quickCapture:
+                    ScreenshotAppPage(scene: .inbox)
+                case .importMethods:
+                    ScreenshotImportMethodsHost()
+                case .autoExtract:
+                    ScreenshotAppPage(scene: .ledger)
+                case .reviewEdit:
+                    ScreenshotTransactionEditorHost()
+                case .monthlyReport:
+                    ScreenshotAppPage(scene: .report)
+                case .settingsManagement:
+                    ScreenshotAppPage(scene: .settings)
+                }
+            case .ipad:
+                ScreenshotWorkspaceHost(section: screenshotWorkspaceSection(for: sceneIdentifier, platform: .ipad))
+            case .mac:
+                ScreenshotWorkspaceHost(section: screenshotWorkspaceSection(for: sceneIdentifier, platform: .mac))
+            case .watch:
                 ScreenshotAppPage(scene: .inbox)
-            case .importMethods:
-                ScreenshotImportMethodsHost()
-            case .autoExtract:
-                ScreenshotAppPage(scene: .ledger)
-            case .reviewEdit:
-                ScreenshotTransactionEditorHost()
-            case .monthlyReport:
-                ScreenshotAppPage(scene: .report)
-            case .settingsManagement:
-                ScreenshotAppPage(scene: .settings)
             }
         }
         .dynamicTypeSize(.large)
+    }
+
+    private func screenshotWorkspaceSection(
+        for sceneIdentifier: String,
+        platform: ScreenshotPlatform
+    ) -> IPadWorkspaceSection {
+        switch platform {
+        case .ipad:
+            switch sceneIdentifier {
+            case "workspace_capture":
+                .capture
+            case "workspace_ledger":
+                .ledger
+            case "workspace_reports":
+                .reports
+            case "workspace_review":
+                .reviewQueue
+            case "workspace_cleaning":
+                .cleaning
+            case "workspace_settings":
+                .settings
+            default:
+                .overview
+            }
+        case .mac:
+            switch sceneIdentifier {
+            case "mac_capture":
+                .capture
+            case "mac_ledger":
+                .ledger
+            case "mac_reports":
+                .reports
+            case "mac_cleaning":
+                .cleaning
+            case "mac_settings":
+                .settings
+            default:
+                .capture
+            }
+        case .ios, .watch:
+            .overview
+        }
     }
 }
 
@@ -70,6 +122,23 @@ private struct ScreenshotTransactionEditorHost: View {
 
     var body: some View {
         TransactionEditorView(transaction: ScreenshotFixtures.transactions[0]) { _, _ in }
+            .environmentObject(store)
+            .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotWorkspaceHost: View {
+    let section: IPadWorkspaceSection
+    @StateObject private var store: LedgerStore
+
+    init(section: IPadWorkspaceSection) {
+        self.section = section
+        ScreenshotFixtures.installUserDefaults()
+        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+    }
+
+    var body: some View {
+        IPadWorkspaceView(initialSection: section)
             .environmentObject(store)
             .preferredColorScheme(.light)
     }
@@ -237,5 +306,5 @@ private final class ScreenshotTransactionStore: TransactionStore, @unchecked Sen
 }
 
 #Preview {
-    ScreenshotHostView(scene: .preview)
+    ScreenshotHostView(platform: .ios, sceneIdentifier: ScreenshotScene.preview.rawValue)
 }

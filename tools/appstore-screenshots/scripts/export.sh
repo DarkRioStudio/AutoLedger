@@ -7,6 +7,8 @@ CONFIG="$ROOT/tools/appstore-screenshots/config/screenshots.json"
 OUTPUT_DIR="$ROOT/tools/appstore-screenshots/output"
 
 IOS_ONLY=false
+IPAD_ONLY=false
+MAC_ONLY=false
 WATCH_ONLY=false
 RENDER_ONLY=false
 LOCALE_ARGS=()
@@ -15,6 +17,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --ios-only)
       IOS_ONLY=true
+      shift
+      ;;
+    --ipad-only)
+      IPAD_ONLY=true
+      shift
+      ;;
+    --mac-only)
+      MAC_ONLY=true
       shift
       ;;
     --watch-only)
@@ -35,6 +45,8 @@ Usage: bash tools/appstore-screenshots/scripts/export.sh [options]
 
 Options:
   --ios-only       Capture and render iPhone screenshots only.
+  --ipad-only      Capture and render iPad screenshots only.
+  --mac-only       Capture and render Mac Catalyst screenshots only.
   --watch-only     Capture and render Apple Watch screenshots only.
   --render-only    Re-render store images and preview.html from existing raw screenshots.
   --locale LOCALE  Limit capture to zh-Hans, zh-Hant, or en. Can be repeated.
@@ -81,16 +93,29 @@ if [[ "$RENDER_ONLY" == true ]]; then
   exit 0
 fi
 
-if [[ "$IOS_ONLY" == true && "$WATCH_ONLY" == true ]]; then
-  echo "--ios-only and --watch-only cannot be used together." >&2
+selected_only_count=0
+for flag in "$IOS_ONLY" "$IPAD_ONLY" "$MAC_ONLY" "$WATCH_ONLY"; do
+  [[ "$flag" == true ]] && ((selected_only_count+=1))
+done
+
+if (( selected_only_count > 1 )); then
+  echo "Only one of --ios-only, --ipad-only, --mac-only, or --watch-only can be used at a time." >&2
   exit 2
 fi
 
-if [[ "$WATCH_ONLY" != true ]]; then
+if [[ "$WATCH_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_ios.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 
-if [[ "$IOS_ONLY" != true ]]; then
+if [[ "$IOS_ONLY" != true && "$WATCH_ONLY" != true && "$MAC_ONLY" != true ]]; then
+  bash "$SCRIPT_DIR/export_ipad.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
+fi
+
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$WATCH_ONLY" != true ]]; then
+  bash "$SCRIPT_DIR/export_mac.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
+fi
+
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_watch.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 

@@ -13,6 +13,24 @@
         "iPhone 13 Pro Max"
       ]
     },
+    "ipad": {
+      "scheme": "AutoLedger",
+      "bundleId": "top.darkrio326.AutoLedger",
+      "deviceCandidates": [
+        "iPad Pro 13-inch (M5)",
+        "iPad Air 13-inch (M4)",
+        "iPad Pro 11-inch (M5)",
+        "iPad (A16)",
+        "iPad mini (A17 Pro)"
+      ]
+    },
+    "mac": {
+      "scheme": "AutoLedger",
+      "bundleId": "top.darkrio326.AutoLedger",
+      "windowTitle": "AutoLedger",
+      "windowWidth": 1440,
+      "windowHeight": 900
+    },
     "watch": {
       "enabled": "auto",
       "scheme": "AutoLedgerWatch Watch App",
@@ -37,6 +55,16 @@
       "width": 1320,
       "height": 2868,
       "enabled": false
+    },
+    "ipad_13": {
+      "width": 2732,
+      "height": 2048,
+      "enabled": true
+    },
+    "mac_desktop": {
+      "width": 1440,
+      "height": 900,
+      "enabled": true
     },
     "watch": {
       "width": 410,
@@ -159,6 +187,136 @@
         "zh-Hans": "让自动识别结果越来越贴合你的使用习惯",
         "zh-Hant": "讓自動識別結果越來越貼合你的使用習慣",
         "en": "Make recognition results fit your own habits over time"
+      }
+    }
+  ],
+  "ipadShots": [
+    {
+      "id": "00_workspace_overview",
+      "scene": "workspace_review",
+      "title": {
+        "zh-Hans": "候选账单与复核队列集中查看",
+        "zh-Hant": "候選帳單與複核佇列集中查看",
+        "en": "Keep review items in one queue"
+      },
+      "subtitle": {
+        "zh-Hans": "待识别、待复核和候选账单都能在大屏里继续处理。",
+        "zh-Hant": "待識別、待複核和候選帳單都能在大螢幕裡繼續處理。",
+        "en": "Continue recognition and review work on a larger screen."
+      }
+    },
+    {
+      "id": "01_workspace_capture",
+      "scene": "workspace_capture",
+      "title": {
+        "zh-Hans": "导入与识别分开组织",
+        "zh-Hant": "匯入與識別分開組織",
+        "en": "Keep import and review organized"
+      },
+      "subtitle": {
+        "zh-Hans": "截图、拍照、剪贴板与识别队列清晰分层。",
+        "zh-Hant": "截圖、拍照、剪貼簿與識別佇列清楚分層。",
+        "en": "Separate screenshots, camera, clipboard, and the recognition queue."
+      }
+    },
+    {
+      "id": "02_workspace_ledger",
+      "scene": "workspace_ledger",
+      "title": {
+        "zh-Hans": "更大的账本编辑区域",
+        "zh-Hant": "更大的帳本編輯區域",
+        "en": "Edit your ledger with more room"
+      },
+      "subtitle": {
+        "zh-Hans": "在大屏上更轻松地浏览、筛选和修正账单。",
+        "zh-Hant": "在大螢幕上更輕鬆地瀏覽、篩選和修正帳單。",
+        "en": "Browse, filter, and correct records comfortably on a larger canvas."
+      }
+    },
+    {
+      "id": "03_workspace_reports",
+      "scene": "workspace_reports",
+      "title": {
+        "zh-Hans": "分析视图更适合横屏查看",
+        "zh-Hant": "分析視圖更適合橫向查看",
+        "en": "Reports feel better in landscape"
+      },
+      "subtitle": {
+        "zh-Hans": "分类、趋势和统计在横屏工作流里更顺手。",
+        "zh-Hant": "分類、趨勢和統計在橫向工作流裡更順手。",
+        "en": "Categories, trends, and stats are easier to scan in landscape."
+      }
+    },
+    {
+      "id": "04_workspace_cleaning",
+      "scene": "workspace_cleaning",
+      "title": {
+        "zh-Hans": "候选账单与数据清洗集中处理",
+        "zh-Hant": "候選帳單與資料清洗集中處理",
+        "en": "Review and clean data in one flow"
+      },
+      "subtitle": {
+        "zh-Hans": "把待复核、待修正和批量处理集中到一条工作线里。",
+        "zh-Hant": "把待複核、待修正和批量處理集中到一條工作線裡。",
+        "en": "Keep review, cleanup, and bulk fixes together in one workspace."
+      }
+    }
+  ],
+  "macShots": [
+    {
+      "id": "00_mac_capture",
+      "scene": "mac_capture",
+      "title": {
+        "zh-Hans": "桌面端导入更专注",
+        "zh-Hant": "桌面端匯入更專注",
+        "en": "Import faster on desktop"
+      },
+      "subtitle": {
+        "zh-Hans": "更适合拖拽截图、文件和长时间整理账单。",
+        "zh-Hant": "更適合拖放截圖、檔案和長時間整理帳單。",
+        "en": "A better space for drag and drop, files, and longer cleanup sessions."
+      }
+    },
+    {
+      "id": "01_mac_ledger",
+      "scene": "mac_ledger",
+      "title": {
+        "zh-Hans": "账本表格适合高频修订",
+        "zh-Hant": "帳本表格適合高頻修訂",
+        "en": "A ledger table built for desktop work"
+      },
+      "subtitle": {
+        "zh-Hans": "更大的列表、筛选和批量选择让整理更顺手。",
+        "zh-Hant": "更大的列表、篩選和批量選取讓整理更順手。",
+        "en": "Bigger lists, filters, and multi-select make cleanup easier."
+      }
+    },
+    {
+      "id": "02_mac_cleaning",
+      "scene": "mac_cleaning",
+      "title": {
+        "zh-Hans": "重复账单和修正流程更清晰",
+        "zh-Hant": "重複帳單和修正流程更清楚",
+        "en": "Duplicate checks fit the desktop flow"
+      },
+      "subtitle": {
+        "zh-Hans": "在一个桌面工作区里完成批量检查与确认。",
+        "zh-Hant": "在一個桌面工作區裡完成批量檢查與確認。",
+        "en": "Review duplicates and apply fixes from one desktop workspace."
+      }
+    },
+    {
+      "id": "03_mac_settings",
+      "scene": "mac_settings",
+      "title": {
+        "zh-Hans": "设置、导出与备份统一管理",
+        "zh-Hant": "設定、匯出與備份統一管理",
+        "en": "Manage settings and exports together"
+      },
+      "subtitle": {
+        "zh-Hans": "把同步、导出和偏好设置放在同一套桌面入口中。",
+        "zh-Hant": "把同步、匯出和偏好設定放在同一套桌面入口中。",
+        "en": "Keep sync, export, and preferences in one desktop control surface."
       }
     }
   ],

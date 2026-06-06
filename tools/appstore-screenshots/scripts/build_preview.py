@@ -18,6 +18,7 @@ OUTPUT_DIR = TOOL_DIR / "output"
 STORE_DIR = OUTPUT_DIR / "store"
 CONFIG_PATH = TOOL_DIR / "config" / "screenshots.json"
 WATCH_STATUS_PATH = OUTPUT_DIR / "watch_status.json"
+MAC_STATUS_PATH = OUTPUT_DIR / "mac_status.json"
 PREVIEW_PATH = OUTPUT_DIR / "preview.html"
 
 
@@ -79,6 +80,22 @@ def watch_status_html() -> str:
     return f'<p class="notice skipped">Apple Watch skipped: {html.escape(reason)}</p>'
 
 
+def mac_status_html() -> str:
+    if not MAC_STATUS_PATH.exists():
+        return ""
+    try:
+        status = json.loads(MAC_STATUS_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ""
+    if not status.get("macSkipped"):
+        reason = status.get("reason")
+        if not reason:
+            return ""
+        return f'<p class="notice">Mac: {html.escape(reason)}</p>'
+    reason = status.get("reason") or "Mac export skipped."
+    return f'<p class="notice skipped">Mac skipped: {html.escape(reason)}</p>'
+
+
 def locale_section(platform: str, locale: str) -> str:
     return f"""
     <section>
@@ -97,6 +114,8 @@ def main() -> int:
 
     ios_sections = "\n".join(locale_section("ios", locale) for locale in locales)
     watch_sections = "\n".join(locale_section("watch", locale) for locale in locales)
+    ipad_sections = "\n".join(locale_section("ipad", locale) for locale in locales)
+    mac_sections = "\n".join(locale_section("mac", locale) for locale in locales)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     html_text = f"""<!doctype html>
@@ -214,6 +233,13 @@ def main() -> int:
   <h2>Apple Watch</h2>
   {watch_status_html()}
   {watch_sections}
+
+  <h2>iPad</h2>
+  {ipad_sections}
+
+  <h2>Mac</h2>
+  {mac_status_html()}
+  {mac_sections}
 </body>
 </html>
 """
