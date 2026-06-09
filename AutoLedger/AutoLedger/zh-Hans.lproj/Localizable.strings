@@ -185,6 +185,7 @@
 "common.done" = "完成";
 "common.edit" = "编辑";
 "common.none" = "暂无";
+"common.import_status" = "导入结果";
 "common.today" = "今天";
 "common.tomorrow" = "明天";
 "common.days_later_format" = "%d 天后";
