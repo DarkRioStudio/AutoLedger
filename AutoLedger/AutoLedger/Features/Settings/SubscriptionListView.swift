@@ -17,6 +17,10 @@ struct SubscriptionListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                if let summary = store.lastImportSummary {
+                    importStatusBanner(summary)
+                }
+
                 if store.subscriptions.isEmpty {
                     emptyState
                 } else {
@@ -166,6 +170,27 @@ struct SubscriptionListView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(AppTheme.accent.opacity(0.08))
         )
+    }
+
+    private func importStatusBanner(_ summary: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(AppTheme.accent)
+                .accessibilityHidden(true)
+
+            Text(summary)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.ink)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "common.import_status"))
+        .accessibilityValue(summary)
     }
 
     // MARK: - Card
