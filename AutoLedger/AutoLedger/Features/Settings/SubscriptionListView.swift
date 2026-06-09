@@ -188,6 +188,8 @@ struct SubscriptionListView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(AppTheme.card)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("subscriptions.upload_renewal_screenshot") + Text("，") + Text(summary))
     }
 
     // MARK: - Card
