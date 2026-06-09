@@ -140,6 +140,9 @@ public struct ReceiptParser: Sendable {
         // 滴滴出行结束订单页：含"行程已结束"特征，直接返回"滴滴出行"
         let didiMerchant = parseDidiTrip(lines: cleanedLines)
 
+        // 支付宝支付成功页：优先提取"付款方式"上方紧邻的真实商户名
+        let alipayPaymentSuccessMerchant = parseAlipayPaymentSuccessMerchant(lines: cleanedLines)
+
         // 支付宝/淘宝闪购账单详情页：从"商品说明"字段提取真实店铺/商品说明
         let alipayBillDetailMerchant = parseAlipayBillDetailMerchant(lines: cleanedLines)
 
@@ -163,6 +166,7 @@ public struct ReceiptParser: Sendable {
                 ?? douyinMerchant
                 ?? meituanMerchant
                 ?? didiMerchant
+                ?? alipayPaymentSuccessMerchant
                 ?? alipayBillDetailMerchant
                 ?? taobaoFlashMerchant
                 ?? wechatDeductionMerchant
@@ -300,6 +304,57 @@ public struct ReceiptParser: Sendable {
     }
 
     // MARK: - 支付宝 / 淘宝账单详情解析
+
+    /// 支付宝支付成功页（新版）常见结构：
+    /// 支付成功 -> 金额 ->（奖励文案）-> 商户名 -> 付款方式。
+    /// 该场景无"商品说明"字段，商户应优先从"付款方式"前的近邻行提取。
+    private func parseAlipayPaymentSuccessMerchant(lines: [String]) -> String? {
+        guard let successIndex = lines.indices.first(where: { lines[$0].contains("支付成功") }) else { return nil }
+        guard let paymentMethodIndex = lines.indices.first(where: { lines[$0].contains("付款方式") }) else { return nil }
+        guard !lines.contains(where: { $0.contains("商品说明") }) else { return nil }
+
+        // 付款方式标签附近通常紧邻真实商户名；窗口限制用于隔离下方推荐内容噪声。
+        let searchWindowSize = Self.alipayPaymentSuccessSearchWindowSize
+        let nearbyStart = max(0, paymentMethodIndex - searchWindowSize)
+        if paymentMethodIndex > 0 {
+            for idx in stride(from: paymentMethodIndex - 1, through: nearbyStart, by: -1) {
+                if let candidate = cleanedAlipayPaymentSuccessMerchantCandidate(lines[idx]) {
+                    return candidate
+                }
+            }
+        }
+
+        // 兜底补扫：仅扫描主窗口之外、位于支付成功与主窗口之间的区间，避免重复检查同一行。
+        if successIndex + 1 < nearbyStart {
+            for idx in (successIndex + 1)..<nearbyStart {
+                if let candidate = cleanedAlipayPaymentSuccessMerchantCandidate(lines[idx]) {
+                    return candidate
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func cleanedAlipayPaymentSuccessMerchantCandidate(_ value: String) -> String? {
+        let candidate = value
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "＞>》〉~～")))
+
+        let skipContains = [
+            "支付成功", "付款方式", "回首页", "获得森林能量", "加油小葵", "当前有",
+            "待领取", "立即领取", "去领取", "点餐红包", "限量发放", "券后", "限时享",
+            "完成", "红包", "信用卡", "银行卡", "葵花籽"
+        ]
+
+        guard candidate.count >= 2,
+              candidate.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }),
+              !skipContains.contains(where: { candidate.contains($0) }),
+              amountCandidate(in: candidate) == nil,
+              AppFormatters.parseFlexibleDate(candidate) == nil else {
+            return nil
+        }
+        return candidate
+    }
 
     /// 支付宝账单详情页的字段常以"支付时间 / 付款方式 / 商品说明"标签块展示，
     /// OCR 会先输出连续标签，再按相同顺序输出对应值。淘宝闪购的账单来源可能被识别为
@@ -1169,6 +1224,8 @@ public struct ReceiptParser: Sendable {
 
     // 滴滴车费局部 OCR 共用的正则模式
     private static let fareCurrencyPattern = #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+    // 支付宝支付成功页在现网 OCR 中，商户行通常位于"付款方式"前 1~3 行；取 6 行兼顾噪声容错。
+    private static let alipayPaymentSuccessSearchWindowSize = 6
     /// OCR 将"¥"误识别为数字"4"时的修正模式：整行形如"445"或"421.50"，
     /// 去掉首位"4"后还原为实际金额（如 445 → 45，421.50 → 21.50）。
     private static let fareYenArtifactPattern = #"^4([1-9][0-9]{1,2}(?:\.[0-9]{1,2})?)$"#
