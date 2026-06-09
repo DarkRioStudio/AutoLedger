@@ -199,6 +199,7 @@ swiftc \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \
   "$CORE/Services/LedgerCSVCodec.swift" \
+  "$CORE/Services/StructuredLedgerJSONParser.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \

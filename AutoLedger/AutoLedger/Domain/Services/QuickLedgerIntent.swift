@@ -318,6 +318,16 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             systemImageName: "text.viewfinder"
         )
         AppShortcut(
+            intent: ImportLedgerJSONIntent(),
+            phrases: [
+                "用 \(.applicationName) 导入 JSON 账单",
+                "\(.applicationName) JSON 记账",
+                "Import ledger JSON with \(.applicationName)"
+            ],
+            shortTitle: "import_ledger_json.intent.short_title",
+            systemImageName: "curlybraces"
+        )
+        AppShortcut(
             intent: OpenQuickAddIntent(),
             phrases: [
                 "打开 \(.applicationName) 快速记账",

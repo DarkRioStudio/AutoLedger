@@ -56,6 +56,7 @@ private struct AutoLedgerRootView: View {
     @StateObject private var store = LedgerStore()
     @Environment(\.scenePhase) private var scenePhase
     @State private var didScheduleLaunchSync = false
+    @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
 
     var body: some View {
         rootContent
@@ -92,11 +93,16 @@ private struct AutoLedgerRootView: View {
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
             }
+            .sheet(item: $pendingStructuredJSONHandoff) { handoff in
+                StructuredLedgerJSONConfirmView(handoff: handoff)
+                    .environmentObject(store)
+            }
             .onOpenURL { url in
                 handleDeepLink(url)
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
+                    consumeStructuredJSONHandoffIfNeeded()
                     store.refreshFromStore()
                     scheduleLaunchCloudSyncIfNeeded()
                     Task {
@@ -117,6 +123,9 @@ private struct AutoLedgerRootView: View {
                 } else if newPhase == .background {
                     store.backupOnAppBackground()
                 }
+            }
+            .onAppear {
+                consumeStructuredJSONHandoffIfNeeded()
             }
     }
 
@@ -146,6 +155,13 @@ private struct AutoLedgerRootView: View {
             guard !Task.isCancelled else { return }
             await GemmaService.shared.ensureLoaded()
         }
+    }
+
+    @MainActor
+    private func consumeStructuredJSONHandoffIfNeeded() {
+        guard pendingStructuredJSONHandoff == nil,
+              let handoff = StructuredLedgerJSONIntentHandoffStore.consume() else { return }
+        pendingStructuredJSONHandoff = handoff
     }
 
     @MainActor

@@ -9,6 +9,11 @@
 
 ## [Unreleased]
 
+### 变更（v1.5.1）
+- [2026-06-09 +0800] 新增 Shortcuts `导入 JSON 账单` App Intent 与确认页：支持从 Shortcuts 参数或剪贴板传入结构化账单 JSON，解析金额、商户、分类、日期、备注、币种和置信度；高置信度自动保存，中置信度打开确认页复核，低置信度或关键字段缺失时返回错误不入账；新增 [docs/shortcuts-json-ledger-import.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/docs/shortcuts-json-ledger-import.md) 说明字段 schema 与当前边界。
+- [2026-06-08 +0800] 新增 [versions/v1.5.1-plan.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/versions/v1.5.1-plan.md)，正式将当前开发线切换为 `v1.5.1` 规划：`v1.5.0` 改为实现基线，不再单独执行最终 smoke / Xcode Cloud / ASC 提审收口；`v1.5.1` 统一承接 `v1.5.0` 遗留发布门禁、tvOS / visionOS 第一版产品代码以及全平台最低系统需求优化。多账本继续顺延到后续版本。
+- [2026-06-08 +0800] 更新 [docs/minimum-platform-baseline-reduction-plan.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/docs/minimum-platform-baseline-reduction-plan.md) 与 [versions/v1.5.0-plan.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/versions/v1.5.0-plan.md)：最低系统优化承接版本从 `v1.6.0` 调整为 `v1.5.1`，并明确若 `AutoLedgerCore` 现有 target 仍被 `AppIntents` 入口抬高版本，则优先拆出 `CoreBase + Intent Adapter + FeatureGate`，不允许用高版本 availability 污染主 App / 通用模型 / ViewModel 主链路。
+
 ### 修复（v1.5.0）
 - [2026-06-06 +0800] 修复 iPhone / 快捷指令入账后 Apple Watch 表盘小组件仍显示 0 的问题：iPhone 侧账本变化时除了 `applicationContext` 和前台 `sendMessage`，还会排队后台 `userInfo` 与当前 complication payload；快捷指令 / Siri / App Intent 直写 SQLite 成功后也主动触发表盘快照推送。Watch App 侧补充接收 `didReceiveUserInfo` 后写入 Watch App Group 快照并刷新两个表盘小组件 kind，减少必须点开 Watch App 才更新表盘的情况。
 - [2026-06-05 +0800] 统一 Apple Watch “今日支出”和“最近支出”两页 UI：导航栏保留唯一页面标题，页面内容区移除重复的“今日支出 / 最近支出”标题；两页改用统一的账本上下文行展示本地账本，避免同屏出现两个标题并让摘要页和列表页的开头结构一致。

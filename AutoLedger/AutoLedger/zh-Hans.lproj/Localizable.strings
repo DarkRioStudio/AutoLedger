@@ -648,6 +648,30 @@
 "parse_ledger.confidence.medium" = "中";
 "parse_ledger.confidence.low" = "低";
 
+// MARK: - ImportLedgerJSONIntent
+"import_ledger_json.intent.title" = "导入 JSON 账单";
+"import_ledger_json.intent.description" = "从结构化 JSON 导入一笔账单，按置信度自动保存或打开确认页";
+"import_ledger_json.intent.short_title" = "JSON 账单";
+"import_ledger_json.text.title" = "账单 JSON";
+"import_ledger_json.text.description" = "包含金额、商户、分类、日期、备注、币种和置信度的 JSON；留空时读取剪切板";
+"import_ledger_json.parameter_summary" = "导入结构化账单 JSON";
+"import_ledger_json.empty_input" = "没有收到 JSON 文本，请传入 JSON 或复制账单 JSON 到剪切板。";
+"import_ledger_json.invalid_json" = "JSON 格式无效，请检查是否为一个对象。";
+"import_ledger_json.missing_amount" = "JSON 中缺少金额 amount。";
+"import_ledger_json.invalid_amount" = "JSON 中的金额必须大于 0。";
+"import_ledger_json.missing_merchant" = "JSON 中缺少商户 merchant。";
+"import_ledger_json.low_confidence_format" = "置信度 %.2f 过低，未入账。请提高识别质量后重试。";
+"import_ledger_json.review_required" = "JSON 已解析，请在 AutoLedger 中确认后保存。";
+"import_ledger_json.save_failed" = "JSON 账单保存失败，请打开 AutoLedger 确认。";
+"import_ledger_json.saved_format" = "已从 JSON 保存：%@ ¥%.2f（置信度 %.2f）";
+"import_ledger_json.currency_note_format" = "币种：%@";
+"import_ledger_json.confidence_note_format" = "JSON 置信度：%.2f";
+"import_ledger_json.confirm.title" = "确认 JSON 账单";
+"import_ledger_json.confirm.section.review" = "解析结果";
+"import_ledger_json.confirm.footer" = "这笔 JSON 账单置信度未达到自动保存阈值，请确认后再入账。";
+"import_ledger_json.confirm.confidence_format" = "置信度：%.2f";
+"import_ledger_json.confirm.currency_format" = "币种：%@";
+
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "打开快速记账";
 "open_quick_add.intent.description" = "打开 AutoLedger 并直接进入新建账单界面";

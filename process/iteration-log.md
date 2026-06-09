@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-06（GOAL-1581 tvOS 看板实现评估）
+更新日期：2026-06-09（Shortcuts JSON 账单导入）
 
 ## 记录规则
 
@@ -43,6 +43,58 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-171 GOAL-1607 Shortcuts JSON 账单导入
+- 日期：2026-06-09
+- 所属版本：v1.5.1
+- 所属阶段：Phase A / 当前主线自动化入口补充
+- 类型：能力增强 / App Intent / UI
+- 目标：新增 `导入 JSON 账单` App Intent，让 Shortcuts 或剪贴板可以传入结构化账单 JSON，并根据置信度决定自动保存、打开确认页或返回错误。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/StructuredLedgerJSONParser.swift`：新增纯 Foundation JSON 解析器、字段别名、日期 / 币种 / 分类 / 置信度处理和自动保存 / 确认 / 报错决策。
+  - `AutoLedger/AutoLedger/Domain/Services/ImportLedgerJSONIntent.swift`：新增 App Intent，支持 Shortcuts 参数和剪贴板兜底输入。
+  - `AutoLedger/AutoLedger/Domain/Services/StructuredLedgerJSONIntentHandoff.swift`：新增中置信度账单的 App 内确认页 handoff。
+  - `AutoLedger/AutoLedger/Features/Ledger/StructuredLedgerJSONConfirmView.swift`、`AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：新增确认页并接入根视图 sheet。
+  - `AutoLedger/AutoLedger/Domain/Services/QuickLedgerIntent.swift`：把 JSON 导入加入 App Shortcuts。
+  - `AutoLedger/AutoLedger/{zh-Hans,zh-Hant,en}.lproj/Localizable.strings`：新增三语文案。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增离线回归覆盖。
+  - `docs/shortcuts-json-ledger-import.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：补充功能说明与版本记录。
+- 未改动范围：未修改 SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置、Xcode Cloud 脚本、截图管线或多账本模型。
+- 完成内容：JSON 可解析金额、商户、分类、日期、备注、币种和置信度；`confidence >= 0.85` 自动保存，`0.50..<0.85` 打开确认页，`< 0.50` 或缺少金额 / 商户等关键字段时报错；缺省置信度按确认处理；币种当前不新增字段，非 `CNY` 会写入备注。
+- 未完成内容：当前只支持单笔 JSON 对象，不支持 JSON 数组批量导入；确认页还没有导入源详情和重复账单检测；Shortcuts 真机端的参数选择与剪贴板路径仍需人工 smoke。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+- 风险与注意事项：高置信度路径会直接保存正式账单，后续如果接入外部解析器，需要控制传入 confidence 的来源可信度；`currency` 暂存在备注里，未来若支持多币种正式模型，需要做 schema 迁移；App Intent 因确认页需要设置 `openAppWhenRun`。
+- 回滚方式：移除新增 JSON parser、App Intent、handoff、确认页、App Shortcuts 入口、本地化键、离线回归和文档记录，并从 `AutoLedgerApp` 删除 handoff sheet 接入。
+- 结论：GOAL-1607 已完成代码侧闭环，Shortcuts / 剪贴板结构化 JSON 账单导入具备自动保存、确认和报错三条路径。
+- 下一步建议：在真机 Shortcuts 中分别测试高置信度自动保存、中置信度确认页和低置信度报错；随后继续 `v1.5.1` 主队列的最低系统需求审计或 tvOS / visionOS 落代码。
+
+### ITER-170 v1.5.1 版本接管与最低系统规划
+- 日期：2026-06-08
+- 所属版本：v1.5.1
+- 所属阶段：Phase 0 / 版本策略与平台基线规划
+- 类型：文档 / 版本策略 / 平台规划
+- 目标：将 `v1.5.0` 的遗留收口项、全平台内容补齐方向和最低系统需求优化整合为新的 `v1.5.1` 版本计划，并明确多账本继续顺延。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：新增 `v1.5.1` 版本计划，承接 `v1.5.0` 遗留 smoke、tvOS / visionOS 第一版代码、最低系统需求优化与最终全平台收口。
+  - `versions/v1.5.0-plan.md`：新增 `1.1.2`，明确 `v1.5.0` 现在视为实现基线，不再单独执行最终提审 smoke。
+  - `docs/minimum-platform-baseline-reduction-plan.md`：将承接版本改为 `v1.5.1`，并补充 `AutoLedgerCore -> CoreBase + Intent Adapter` 的拆分判断。
+  - `README.md`：Roadmap 将 `v1.5.0` 标记为“基线完成”，新增 `v1.5.1` 当前开发线条目。
+  - `CHANGELOG.md`、`process/iteration-log.md`：回填本轮版本接管记录。
+- 未改动范围：未修改任何 Swift 源码、Xcode target、deployment target、Bundle ID、entitlements、CloudKit 配置、截图脚本实现或 App Store Connect 线上配置。
+- 完成内容：将最终 smoke / Xcode Cloud / ASC 提交门禁整体后移到 `v1.5.1`；明确 `v1.5.1` 承接 tvOS / visionOS 第一版落代码与最低系统需求优化；明确多账本继续 delay，不进入当前执行范围；固定新的目标版本矩阵：`iOS 17 / macOS 14 line / watchOS 10 / tvOS 17 / visionOS 1 / ControlWidget iOS 18 / Apple FM iOS 26+ optional enhancement`。
+- 未完成内容：尚未实际下调 deployment target；尚未拆分 `AutoLedgerCore`；尚未落 tvOS / visionOS 产品代码；尚未执行 `v1.5.1` 的最终 smoke / Xcode Cloud / ASC 收口。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：文档自检，`README`、`v1.5.0-plan.md`、`v1.5.1-plan.md` 与最低系统规划口径一致。
+- 风险与注意事项：当前只是版本与平台规划调整，不代表最低系统已经下调成功，也不代表 tvOS / visionOS 已有可发布代码；后续真正实施时必须按 target 分层处理，不允许用全局 `@available(iOS 26.0, *)` 包裹主链路来“假降版本”。
+- 回滚方式：删除 `versions/v1.5.1-plan.md`，回退 `versions/v1.5.0-plan.md`、`docs/minimum-platform-baseline-reduction-plan.md`、`README.md`、`CHANGELOG.md` 和本条日志即可恢复到 `v1.5.0` 收口口径。
+- 结论：当前开发线正式切换为 `v1.5.1` 规划阶段；`v1.5.0` 作为实现基线保留，多账本继续顺延。
+- 下一步建议：先执行 `GOAL-1601`，审计 `AutoLedgerCore` 真实平台依赖并给出 `CoreBase` 拆分与 deployment target 下调实施清单。
 
 ### ITER-169 GOAL-1592 当前发布平台回归矩阵与 Review Notes
 - 日期：2026-06-06

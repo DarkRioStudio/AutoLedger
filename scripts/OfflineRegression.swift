@@ -36,6 +36,7 @@ struct OfflineRegression {
 
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
+        verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -80,6 +81,63 @@ struct OfflineRegression {
         let noAmount = parser.parse("午饭")
         reporter.check(noAmount.confidence == .failed, "VoiceLedgerParser rejects text without amount")
         reporter.check(noAmount.failureReason == .noAmount, "VoiceLedgerParser reports no amount reason")
+    }
+
+    private static func verifyStructuredLedgerJSONParsing(reporter: RegressionReporter) {
+        let fixedNow = AppFormatters.parseFlexibleDate("2026-06-08 12:00") ?? Date(timeIntervalSince1970: 0)
+        let parser = StructuredLedgerJSONParser(now: { fixedNow })
+
+        let highConfidenceJSON = """
+        {
+          "amount": 18.8,
+          "merchant": "Demo Coffee",
+          "category": "dining",
+          "date": "2026-06-08 09:30",
+          "note": "latte",
+          "currency": "cny",
+          "confidence": 0.92
+        }
+        """
+        let high = try? parser.parse(highConfidenceJSON)
+        reporter.check(high?.decision == .autoSave, "StructuredLedgerJSONParser auto-saves high confidence JSON")
+        reporter.check(high?.draft.merchant == "Demo Coffee", "StructuredLedgerJSONParser extracts merchant")
+        reporter.check(abs((high?.draft.amount ?? 0) - 18.8) < 0.001, "StructuredLedgerJSONParser extracts amount")
+        reporter.check(high?.draft.categoryLabel == "dining", "StructuredLedgerJSONParser preserves core category")
+        reporter.check(high?.draft.currency == "CNY", "StructuredLedgerJSONParser normalizes currency")
+
+        let reviewJSON = """
+        {
+          "金额": "47.50",
+          "商户": "Example Market",
+          "分类": "超市",
+          "置信度": 72
+        }
+        """
+        let review = try? parser.parse(reviewJSON)
+        reporter.check(review?.decision == .needsConfirmation, "StructuredLedgerJSONParser routes medium confidence JSON to review")
+        reporter.check(review?.draft.categoryLabel == "groceries", "StructuredLedgerJSONParser maps Chinese category alias")
+        reporter.check(
+            review.map { sameMinute($0.draft.occurredAt, fixedNow) } ?? false,
+            "StructuredLedgerJSONParser falls back to now when date is missing"
+        )
+
+        do {
+            _ = try parser.parse(#"{"amount": 12, "merchant": "Sample Store", "confidence": 0.2}"#)
+            reporter.check(false, "StructuredLedgerJSONParser rejects low confidence JSON")
+        } catch StructuredLedgerJSONError.lowConfidence(let confidence) {
+            reporter.check(abs(confidence - 0.2) < 0.001, "StructuredLedgerJSONParser reports low confidence")
+        } catch {
+            reporter.check(false, "StructuredLedgerJSONParser reports the expected low-confidence error")
+        }
+
+        do {
+            _ = try parser.parse(#"{"merchant": "Sample Store", "confidence": 0.9}"#)
+            reporter.check(false, "StructuredLedgerJSONParser rejects missing amount")
+        } catch StructuredLedgerJSONError.missingAmount {
+            reporter.check(true, "StructuredLedgerJSONParser reports missing amount")
+        } catch {
+            reporter.check(false, "StructuredLedgerJSONParser reports the expected missing-amount error")
+        }
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {

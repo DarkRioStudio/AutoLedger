@@ -648,6 +648,30 @@
 "parse_ledger.confidence.medium" = "Medium";
 "parse_ledger.confidence.low" = "Low";
 
+// MARK: - ImportLedgerJSONIntent
+"import_ledger_json.intent.title" = "Import Ledger JSON";
+"import_ledger_json.intent.description" = "Import one structured ledger JSON entry and either save it automatically or open a review page based on confidence";
+"import_ledger_json.intent.short_title" = "JSON Ledger";
+"import_ledger_json.text.title" = "Ledger JSON";
+"import_ledger_json.text.description" = "JSON with amount, merchant, category, date, note, currency, and confidence. Leave empty to read the clipboard.";
+"import_ledger_json.parameter_summary" = "Import structured ledger JSON";
+"import_ledger_json.empty_input" = "No JSON text was provided. Pass JSON text or copy ledger JSON to the clipboard.";
+"import_ledger_json.invalid_json" = "Invalid JSON. Make sure it is a single object.";
+"import_ledger_json.missing_amount" = "The JSON is missing amount.";
+"import_ledger_json.invalid_amount" = "The JSON amount must be greater than 0.";
+"import_ledger_json.missing_merchant" = "The JSON is missing merchant.";
+"import_ledger_json.low_confidence_format" = "Confidence %.2f is too low, so nothing was saved. Improve the recognition result and try again.";
+"import_ledger_json.review_required" = "JSON parsed. Review it in AutoLedger before saving.";
+"import_ledger_json.save_failed" = "Failed to save the JSON ledger entry. Open AutoLedger to confirm.";
+"import_ledger_json.saved_format" = "Saved from JSON: %@ \u00a5%.2f (confidence %.2f)";
+"import_ledger_json.currency_note_format" = "Currency: %@";
+"import_ledger_json.confidence_note_format" = "JSON confidence: %.2f";
+"import_ledger_json.confirm.title" = "Review JSON Entry";
+"import_ledger_json.confirm.section.review" = "Parsed Result";
+"import_ledger_json.confirm.footer" = "This JSON entry did not meet the automatic-save confidence threshold. Review it before saving.";
+"import_ledger_json.confirm.confidence_format" = "Confidence: %.2f";
+"import_ledger_json.confirm.currency_format" = "Currency: %@";
+
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "Open Quick Add";
 "open_quick_add.intent.description" = "Open AutoLedger and go directly to the new transaction screen";

@@ -651,6 +651,30 @@
 "parse_ledger.confidence.medium" = "中";
 "parse_ledger.confidence.low" = "低";
 
+// MARK: - ImportLedgerJSONIntent
+"import_ledger_json.intent.title" = "匯入 JSON 帳單";
+"import_ledger_json.intent.description" = "從結構化 JSON 匯入一筆帳單，依置信度自動儲存或開啟確認頁";
+"import_ledger_json.intent.short_title" = "JSON 帳單";
+"import_ledger_json.text.title" = "帳單 JSON";
+"import_ledger_json.text.description" = "包含金額、商家、分類、日期、備註、幣種和置信度的 JSON；留空時讀取剪貼板";
+"import_ledger_json.parameter_summary" = "匯入結構化帳單 JSON";
+"import_ledger_json.empty_input" = "沒有收到 JSON 文字，請傳入 JSON 或複製帳單 JSON 到剪貼板。";
+"import_ledger_json.invalid_json" = "JSON 格式無效，請確認它是一個物件。";
+"import_ledger_json.missing_amount" = "JSON 中缺少金額 amount。";
+"import_ledger_json.invalid_amount" = "JSON 中的金額必須大於 0。";
+"import_ledger_json.missing_merchant" = "JSON 中缺少商家 merchant。";
+"import_ledger_json.low_confidence_format" = "置信度 %.2f 過低，未入帳。請提高識別品質後重試。";
+"import_ledger_json.review_required" = "JSON 已解析，請在 AutoLedger 中確認後儲存。";
+"import_ledger_json.save_failed" = "JSON 帳單儲存失敗，請開啟 AutoLedger 確認。";
+"import_ledger_json.saved_format" = "已從 JSON 儲存：%@ ¥%.2f（置信度 %.2f）";
+"import_ledger_json.currency_note_format" = "幣種：%@";
+"import_ledger_json.confidence_note_format" = "JSON 置信度：%.2f";
+"import_ledger_json.confirm.title" = "確認 JSON 帳單";
+"import_ledger_json.confirm.section.review" = "解析結果";
+"import_ledger_json.confirm.footer" = "這筆 JSON 帳單置信度未達自動儲存門檻，請確認後再入帳。";
+"import_ledger_json.confirm.confidence_format" = "置信度：%.2f";
+"import_ledger_json.confirm.currency_format" = "幣種：%@";
+
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "開啟快速記帳";
 "open_quick_add.intent.description" = "開啟 AutoLedger 並直接進入新建帳單介面";
