@@ -189,7 +189,8 @@ struct SubscriptionListView: View {
                 .fill(AppTheme.card)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(String(localized: "common.import_status")): \(summary)")
+        .accessibilityLabel(String(localized: "common.import_status"))
+        .accessibilityValue(summary)
     }
 
     // MARK: - Card
