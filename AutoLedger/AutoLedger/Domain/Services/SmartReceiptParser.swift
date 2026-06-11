@@ -24,11 +24,47 @@ struct SmartReceiptParser: Sendable {
 
     private let ruleParser = ReceiptParser()
     private let mergePolicy = SmartReceiptMergePolicy()
+    private let externalAssistClient: any ExternalReceiptAssistClientProtocol
+
+    init(externalAssistClient: any ExternalReceiptAssistClientProtocol = ExternalReceiptAssistClient()) {
+        self.externalAssistClient = externalAssistClient
+    }
 
     // MARK: - 同步规则解析（兜底）
 
     func parseWithRules(text: String, source: ReceiptSource, imageData: Data? = nil, fallbackMerchant: String? = nil) -> ImportedReceipt? {
         ruleParser.parse(text: text, source: source, imageData: imageData, fallbackMerchant: fallbackMerchant)
+    }
+
+    func parseWithExternalAssist(
+        text: String,
+        source: ReceiptSource,
+        imageData: Data? = nil,
+        fallbackMerchant: String? = nil
+    ) async -> SmartResult? {
+        let ruleResult = ruleParser.parse(
+            text: text,
+            source: source,
+            imageData: imageData,
+            fallbackMerchant: fallbackMerchant
+        )
+
+        if let externalMerged = await requestExternalAssistIfAvailable(
+            text: text,
+            source: source,
+            ruleResult: ruleResult
+        ) {
+            return SmartResult(
+                receipt: externalMerged.receipt,
+                llmTrace: nil,
+                usedRuleFallback: externalMerged.usedRuleAmount
+            )
+        }
+
+        guard let ruleResult else {
+            return nil
+        }
+        return SmartResult(receipt: ruleResult, llmTrace: nil, usedRuleFallback: true)
     }
 
     // MARK: - 置信度阈值
@@ -63,6 +99,18 @@ struct SmartReceiptParser: Sendable {
         )
 
         let providerAvailable = await provider.isAvailable
+
+        if let externalMerged = await requestExternalAssistIfAvailable(
+            text: text,
+            source: source,
+            ruleResult: ruleResult
+        ) {
+            return SmartResult(
+                receipt: externalMerged.receipt,
+                llmTrace: nil,
+                usedRuleFallback: externalMerged.usedRuleAmount
+            )
+        }
 
         // ── Step 1: 尝试 LLM 字段增强 ──
         if providerAvailable {
@@ -254,6 +302,48 @@ struct SmartReceiptParser: Sendable {
             needsUserConfirmation: llm.needsUserConfirmation,
             suggestedCategory: category
         )
+    }
+
+    private func requestExternalAssistIfAvailable(
+        text: String,
+        source: ReceiptSource,
+        ruleResult: ImportedReceipt?
+    ) async -> SmartReceiptMergeOutcome? {
+        let apiKey = ExternalReceiptAssistSettings.runtimeAPIKey
+        let configuration = ExternalReceiptAssistSettings.gateConfiguration(apiKey: apiKey)
+        let payload = ExternalReceiptAssistPayloadBuilder().build(rawText: text, source: source)
+        let decision = ExternalReceiptAssistGate().evaluate(configuration: configuration, payload: payload)
+
+        guard decision.canRequest, let apiKey else {
+            if configuration.isEnabled, let reason = decision.reason {
+                logger.info("[ExternalAssist] 跳过外部辅助识别: \(String(describing: reason))")
+            }
+            return nil
+        }
+
+        do {
+            let suggestion = try await externalAssistClient.requestSuggestion(
+                payload: payload,
+                configuration: configuration,
+                apiKey: apiKey
+            )
+            guard let aiSuggestion = ExternalReceiptAssistSuggestionMapper().makeAISuggestion(from: suggestion),
+                  let merged = mergePolicy.merge(
+                    aiSuggestion: aiSuggestion,
+                    ruleReceipt: ruleResult,
+                    source: source,
+                    rawText: text,
+                    summary: "\(source.title) 外部辅助解析"
+                  ),
+                  merged.usedAIEnrichment else {
+                return nil
+            }
+            logger.info("[ExternalAssist] 已合并外部辅助候选，商户=\(merged.receipt.merchant) 规则金额=\(merged.usedRuleAmount ? "是" : "否")")
+            return merged
+        } catch {
+            logger.info("[ExternalAssist] 外部辅助识别失败，继续本地解析: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// 金额字符串 → Double

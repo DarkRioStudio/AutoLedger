@@ -70,11 +70,26 @@ struct SmartReceiptParser {
     ) -> ImportedReceipt? {
         parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant)
     }
+
+    func parseWithExternalAssist(
+        text: String,
+        source: ReceiptSource,
+        fallbackMerchant: String? = nil
+    ) async -> SmartResult? {
+        guard let receipt = parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {
+            return nil
+        }
+        return SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
+    }
 }
 STUB
 
 cat > "$PREP_DIR/IOSStubs.swift" << 'IOSTUB'
 import Foundation
+
+enum ExternalReceiptAssistSettings {
+    static var isEnabled: Bool { false }
+}
 
 // --- UIKit stubs ---
 enum UIPasteboard {

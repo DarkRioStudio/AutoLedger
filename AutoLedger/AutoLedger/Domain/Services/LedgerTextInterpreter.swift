@@ -86,7 +86,13 @@ struct LedgerTextInterpreter {
         let enhancementOn = LLMProvider.isEnhancementEnabled
 
         let result: SmartReceiptParser.SmartResult?
-        if enhancementOn, #available(iOS 26.0, *) {
+        if ExternalReceiptAssistSettings.isEnabled {
+            result = await smartParser.parseWithExternalAssist(
+                text: cleanedText,
+                source: source,
+                fallbackMerchant: input.fallbackMerchant
+            )
+        } else if enhancementOn, #available(iOS 26.0, *) {
             result = await smartParser.parse(
                 text: cleanedText,
                 source: source,

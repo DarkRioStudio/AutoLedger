@@ -102,7 +102,13 @@ struct QuickLedgerIntent: AppIntent {
         }
 
         let result: SmartReceiptParser.SmartResult?
-        if useModelInference, #available(iOS 26.0, *) {
+        if ExternalReceiptAssistSettings.isEnabled {
+            result = await smartParser.parseWithExternalAssist(
+                text: cleanedText,
+                source: source,
+                imageData: imageData
+            )
+        } else if useModelInference, #available(iOS 26.0, *) {
             result = await smartParser.parse(text: cleanedText, source: source,
                                              imageData: imageData,
                                              ocrMinConfidence: ocrResult.minimumWordConfidence,

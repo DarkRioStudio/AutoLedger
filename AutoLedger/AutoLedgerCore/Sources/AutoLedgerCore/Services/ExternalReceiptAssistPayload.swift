@@ -31,6 +31,52 @@ public struct ExternalReceiptAssistSuggestion: Codable, Equatable, Sendable {
     }
 }
 
+public struct ExternalReceiptAssistSuggestionMapper: Sendable {
+    public init() {}
+
+    public func makeAISuggestion(from suggestion: ExternalReceiptAssistSuggestion) -> ReceiptAISuggestion? {
+        guard let merchant = suggestion.merchantCandidates
+            .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+            .first(where: { !$0.isEmpty }) else {
+            return nil
+        }
+
+        let confidence = suggestion.confidence ?? 0.5
+        return ReceiptAISuggestion(
+            merchant: merchant,
+            amount: 0,
+            occurredAt: nil,
+            confidence: confidence,
+            needsUserConfirmation: confidence < 0.7,
+            suggestedCategory: mapCategoryHint(suggestion.categoryHint)
+        )
+    }
+
+    private func mapCategoryHint(_ hint: String?) -> TransactionCategory? {
+        guard let hint = hint?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !hint.isEmpty else {
+            return nil
+        }
+
+        if let category = TransactionCategory(rawValue: hint) {
+            return category
+        }
+
+        switch hint.lowercased() {
+        case "餐饮", "餐飲", "food", "meal", "restaurant":
+            return .dining
+        case "交通", "transportation", "ride", "taxi", "transit":
+            return .transport
+        case "购物", "購物", "shopping", "groceries", "supermarket":
+            return .groceries
+        case "数字服务", "數字服務", "digital", "subscription":
+            return .digital
+        default:
+            return nil
+        }
+    }
+}
+
 public struct ExternalReceiptAssistPayloadBuilder: Sendable {
     public init() {}
 

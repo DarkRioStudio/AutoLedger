@@ -43,6 +43,7 @@ struct OfflineRegression {
         verifySmartReceiptMergePolicy(reporter: reporter)
         verifyExternalReceiptAssistPayload(reporter: reporter)
         verifyExternalReceiptAssistGate(reporter: reporter)
+        verifyExternalReceiptAssistSuggestionMapping(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -350,6 +351,32 @@ struct OfflineRegression {
         )
         reporter.check(allowed.canRequest, "ExternalReceiptAssistGate allows complete enabled config")
         reporter.check(allowed.reason == nil, "ExternalReceiptAssistGate has no failure reason when allowed")
+    }
+
+    private static func verifyExternalReceiptAssistSuggestionMapping(reporter: RegressionReporter) {
+        let suggestion = ExternalReceiptAssistSuggestion(
+            merchantCandidates: ["", "Demo Coffee", "Example Market"],
+            categoryHint: "dining",
+            explanation: "merchant appears near payment context",
+            confidence: 0.82
+        )
+        let mapped = ExternalReceiptAssistSuggestionMapper().makeAISuggestion(from: suggestion)
+
+        reporter.check(mapped?.merchant == "Demo Coffee", "ExternalReceiptAssistSuggestionMapper picks first non-empty merchant candidate")
+        reporter.check(mapped?.amount == 0, "ExternalReceiptAssistSuggestionMapper never supplies amount")
+        reporter.check(mapped?.suggestedCategory == .dining, "ExternalReceiptAssistSuggestionMapper maps category hint")
+        reporter.check(mapped?.needsUserConfirmation == false, "ExternalReceiptAssistSuggestionMapper accepts high confidence suggestion")
+
+        let empty = ExternalReceiptAssistSuggestion(
+            merchantCandidates: ["", "   "],
+            categoryHint: nil,
+            explanation: nil,
+            confidence: 0.9
+        )
+        reporter.check(
+            ExternalReceiptAssistSuggestionMapper().makeAISuggestion(from: empty) == nil,
+            "ExternalReceiptAssistSuggestionMapper rejects empty merchant candidates"
+        )
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {

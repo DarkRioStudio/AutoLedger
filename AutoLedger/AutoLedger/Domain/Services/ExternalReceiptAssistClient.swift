@@ -4,6 +4,7 @@ import Foundation
 enum ExternalReceiptAssistSettings {
     static let enabledKey = "externalReceiptAssistEnabled"
     static let endpointKey = "externalReceiptAssistEndpoint"
+    static let apiKeyEnvironmentKey = "AUTOLEDGER_EXTERNAL_RECEIPT_ASSIST_API_KEY"
 
     static var isEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: enabledKey) }
@@ -21,6 +22,10 @@ enum ExternalReceiptAssistSettings {
             endpointURLString: endpointURLString,
             hasAPIKey: apiKey?.isEmpty == false
         )
+    }
+
+    static var runtimeAPIKey: String? {
+        ProcessInfo.processInfo.environment[apiKeyEnvironmentKey]
     }
 }
 
