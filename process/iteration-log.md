@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-09（Shortcuts JSON 账单导入）
+更新日期：2026-06-11（v1.5.1 识别链路重构规划）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-172 GOAL-1608 识别链路 Core 化重构规划
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 识别链路 Core 化重构
+- 类型：文档 / 架构规划 / 回归规划
+- 目标：将 `v1.5.0` 遗留的账单 OCR / 文本识别链路重构纳入 `v1.5.1`，明确金额、商户、分类解析的 Core Pipeline、LLM 边界、脱敏外部 API 辅助识别试点和回归验收。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：新增 `4.7 账单 OCR / 文本识别链路 Core 化重构`、Phase C、Phase D、`GOAL-1608` 和 `GOAL-1609`。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮规划变更。
+- 未改动范围：未修改任何 Swift 源码、Xcode project、target、deployment target、Bundle ID、entitlements、CloudKit 配置、截图脚本或 App Store Connect 线上配置。
+- 完成内容：明确新 Pipeline 为 `OCR / 原始文本 -> TextClean + PaymentAmountExtractor -> Merchant Extraction -> MerchantResolver / MerchantNormalizer -> CategoryResolver -> TransactionDraft / ImportedReceipt 适配`；明确金额只由规则决定，LLM 只辅助商户候选；明确商户选择不再依赖 OCR 文本行顺序，而是按分词候选、上下文证据、支付渠道排除、主体名特征、历史别名和 LLM 候选一致性综合评分；明确新增 Core 类型、`LedgerTextInterpreterCore` 接入边界、`ReceiptParser` 渐进复用策略、`SmartReceiptParser` 不再允许 LLM 金额覆盖规则金额；补充离线回归和 Golden 回归验收；将脱敏外部大模型 API 辅助识别从后续评估前移为 `v1.5.1` 受控试点，要求默认关闭、用户主动开启、请求脱敏最小化、失败降级、本地链路完整可用。
+- 未完成内容：尚未实现 `PaymentAmountExtractor`、`MerchantResolver`、`MerchantNormalizer`、`CategoryResolver` 等 Core 类型；尚未迁移现有规则；尚未扩展离线回归；尚未实现外部大模型增强的脱敏 schema、开关 UI、隐私说明、API Adapter 和失败降级。
+- 测试情况：未运行测试。本轮仅更新版本规划与迭代记录，不涉及源码。
+- 风险与注意事项：该重构会触及 OCR 入账主链路，后续实施必须分阶段落地并保持 `LedgerTextInterpreterCore`、`ReceiptParser`、`SmartReceiptParser` 外部调用兼容；不得在 Core 中引入平台框架依赖；外部大模型增强进入 `v1.5.1` 试点后仍必须默认关闭、用户主动开启、只发送脱敏最小化文本，并保持本地识别链路完整可用。
+- 回滚方式：回退 `versions/v1.5.1-plan.md` 中 `4.7`、Phase C、`GOAL-1608` 和门禁补充，并移除本条日志与 CHANGELOG 条目。
+- 结论：`GOAL-1608` 与 `GOAL-1609` 已进入 `v1.5.1` 规划队列，作为最低系统准备之后、tvOS / visionOS 落代码之前的识别链路稳定性目标。
+- 下一步建议：实施时先做 `PaymentAmountExtractor` 和金额候选回归，再迁移商户候选 / resolver；随后接入默认关闭的脱敏外部 API Adapter，把外部结果转成商户候选而不是正式账单。
 
 ### ITER-171 GOAL-1607 Shortcuts JSON 账单导入
 - 日期：2026-06-09
