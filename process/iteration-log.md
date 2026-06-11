@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1602 最低系统需求下调）
+更新日期：2026-06-11（GOAL-1608A 金额识别 Core 化第一步）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-175 GOAL-1608A 金额识别 Core 化第一步
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 识别链路 Core 化重构
+- 类型：重构 / 测试
+- 目标：先将 `LedgerTextInterpreterCore` 中的金额选择规则抽成平台无关的 Core 服务，为后续商户候选评分、分类 resolver 和外部脱敏增强接入准备稳定边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/PaymentAmountExtractor.swift`：新增 `PaymentAmountExtractor`、`AmountRole`、`AmountCandidate`、`AmountExtractionResult`。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：金额提取入口改为调用 `PaymentAmountExtractor`，并将 amount debug trace 接回解释结果。
+  - `scripts/OfflineRegression.swift`：新增 `PaymentAmountExtractor` 独立回归，覆盖支付金额标签、`TOTAL RM` 优先和无标签 fallback。
+  - `scripts/run_offline_regression.sh`：将新 Core 文件纳入离线编译列表。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改商户选择、分类推断、`ReceiptParser` 特殊平台规则、`SmartReceiptParser` LLM 职责、UI、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或用户可见入账流程。
+- 完成内容：金额提取器已独立输出候选、角色、置信度、证据、规则名、debug trace 和近似标记；既有 `LedgerTextInterpreterCore` 金额行为保持通过离线回归；新模块保持 `Foundation` 级别，不引入 `UIKit` / `SwiftUI` / `Vision` / `FoundationModels` 等平台依赖。
+- 未完成内容：尚未迁移商户候选、商户标准化、分类 resolver；尚未修改 `ReceiptParser` / `SmartReceiptParser` 的金额和商户职责边界；尚未执行 Golden 回归和全平台 build。
+- 测试情况：
+  - RED：新增 `PaymentAmountExtractor` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到新类型失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：新提取器当前以搬迁既有规则为主，不代表金额识别算法已最终完成；候选列表包含调试证据，后续对外展示或日志导出时仍应继续避免输出敏感 OCR 全文；`AppFormatters` 的 `nonisolated(unsafe)` warning 为既有 warning，本轮未处理。
+- 回滚方式：回退提交 `refactor: extract payment amount parser` 及本轮文档回填，可恢复 `LedgerTextInterpreterCore` 内联金额提取逻辑。
+- 结论：`GOAL-1608A` 已完成，金额识别从解释器内联规则抽为独立 Core 服务，并通过离线回归和 iOS generic build。
+- 下一步建议：进入 `GOAL-1608B`，抽取 `MerchantCandidate` / `RuleMerchantExtractor` / `MerchantResolver`，把商户选择从行序优先改为候选评分。
 
 ### ITER-174 GOAL-1602 最低系统需求下调实施
 - 日期：2026-06-11
