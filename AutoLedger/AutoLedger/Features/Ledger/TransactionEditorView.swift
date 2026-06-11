@@ -105,7 +105,7 @@ struct TransactionEditorView: View {
     }
 
     private var parsedAmount: Double {
-        Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
+        LedgerAmountInputParser.parse(amountText) ?? 0
     }
 
     private func editedTransaction() -> Transaction {

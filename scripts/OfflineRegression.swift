@@ -37,6 +37,7 @@ struct OfflineRegression {
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyStructuredLedgerJSONParsing(reporter: reporter)
+        verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
@@ -145,6 +146,29 @@ struct OfflineRegression {
         } catch {
             reporter.check(false, "StructuredLedgerJSONParser reports the expected missing-amount error")
         }
+    }
+
+    private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {
+        reporter.check(
+            abs((LedgerAmountInputParser.parse("¥12.30") ?? 0) - 12.30) < 0.001,
+            "LedgerAmountInputParser accepts currency-prefixed amount"
+        )
+        reporter.check(
+            abs((LedgerAmountInputParser.parse("１２．３０") ?? 0) - 12.30) < 0.001,
+            "LedgerAmountInputParser accepts full-width amount"
+        )
+        reporter.check(
+            abs((LedgerAmountInputParser.parse("12,30") ?? 0) - 12.30) < 0.001,
+            "LedgerAmountInputParser accepts comma decimal amount"
+        )
+        reporter.check(
+            abs((LedgerAmountInputParser.parse(" 12.30 元") ?? 0) - 12.30) < 0.001,
+            "LedgerAmountInputParser accepts amount with unit suffix"
+        )
+        reporter.check(
+            LedgerAmountInputParser.parse("abc") == nil,
+            "LedgerAmountInputParser rejects non-amount text"
+        )
     }
 
     private static func verifyPaymentAmountExtraction(reporter: RegressionReporter) {
@@ -1710,6 +1734,35 @@ struct OfflineRegression {
             } else {
                 reporter.check(false, "LedgerStore finds imported coffee transaction for delete/reimport regression")
             }
+        }
+
+        do {
+            let manualEditStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "manual-edit.sqlite3")
+            let manualEditLedger = LedgerStore(transactionStore: manualEditStore)
+            let directManual = Transaction(
+                merchant: "普通编辑原商户",
+                amount: 15.50,
+                occurredAt: .now,
+                category: .other,
+                source: .manual,
+                note: "普通编辑不应学习别名"
+            )
+            manualEditLedger.addTransaction(directManual)
+            manualEditLedger.updateTransaction(
+                Transaction(
+                    id: directManual.id,
+                    merchant: "普通编辑新商户",
+                    amount: directManual.amount,
+                    occurredAt: directManual.occurredAt,
+                    categoryLabel: directManual.category,
+                    sourceLabel: directManual.source,
+                    note: directManual.note
+                )
+            )
+            reporter.check(
+                manualEditLedger.merchantAliases["普通编辑原商户"] == nil,
+                "LedgerStore does not learn merchant alias from ordinary manual edit"
+            )
         }
 
         let aliasLearningText = """

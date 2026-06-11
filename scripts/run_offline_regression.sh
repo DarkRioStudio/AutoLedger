@@ -209,6 +209,7 @@ swiftc \
   "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
+  "$CORE/Services/LedgerAmountInputParser.swift" \
   "$CORE/Services/PaymentAmountExtractor.swift" \
   "$CORE/Services/MerchantResolver.swift" \
   "$CORE/Services/CategoryResolver.swift" \

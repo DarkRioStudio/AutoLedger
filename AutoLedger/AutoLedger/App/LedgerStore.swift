@@ -582,7 +582,9 @@ final class LedgerStore: ObservableObject {
 
         let original = transactions[index]
         let categoryChanged = original.category != transaction.category
-        learnMerchantAliasIfNeeded(from: original, to: transaction)
+        if isHighConfidenceGeneratedTransaction(original.id) {
+            learnMerchantAliasIfNeeded(from: original, to: transaction)
+        }
 
         // 检测分类修正——仅对内置分类记录用户偏好（自定义分类直接以字符串存储在 Transaction）
         if categoryChanged,
