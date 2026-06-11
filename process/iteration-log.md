@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1609B 外部辅助识别门控与 adapter）
+更新日期：2026-06-11（GOAL-1609C 外部辅助识别主链路接入）
 
 ## 记录规则
 
@@ -43,6 +43,32 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-181 GOAL-1609C 外部辅助识别主链路接入
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D / 脱敏外部 API 辅助识别试点
+- 类型：能力增强 / 隐私 / 测试
+- 目标：在默认关闭和脱敏 payload 边界下，把外部辅助候选接入 SmartParser / 文本解释器 / 快捷指令解析链路，并验证失败时仍完整回退到本地规则。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/ExternalReceiptAssistPayload.swift`：新增 `ExternalReceiptAssistSuggestionMapper`，将外部候选映射成 `ReceiptAISuggestion`。
+  - `AutoLedger/AutoLedger/Domain/Services/SmartReceiptParser.swift`：新增默认关闭的外部辅助解析路径，并通过 `SmartReceiptMergePolicy` 合并本地规则结果。
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift`、`AutoLedger/AutoLedger/Domain/Services/QuickLedgerIntent.swift`：在设置开启时走外部辅助分支，失败或关闭时保留原有本地链路。
+  - `AutoLedger/AutoLedger/Domain/Services/ExternalReceiptAssistClient.swift`：补充运行时 API key 环境变量读取边界。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增 mapper 回归与离线 stub。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未接 UI 开关、未接 Keychain 存储、未写入真实 API key、未配置真实 provider、未发送图片 / 完整 OCR 原文、未修改 SQLite schema、Bundle ID、signing、entitlements 或 CloudKit 配置。
+- 完成内容：外部辅助路径现在可在运行时完整配置后参与解析；外部结果只补商户和分类，不覆盖规则金额；开关关闭、配置不全、网络失败或响应无效时会降级到本地规则 / 既有增强路径。
+- 未完成内容：尚未实现用户可见开关、API key 安全输入 / 存储、隐私文案、真实 provider 配置、多 provider 选择和真机端到端外部 API 验证。
+- 测试情况：
+  - RED：新增 `ExternalReceiptAssistSuggestionMapper` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到 mapper 失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：当前外部辅助能力仍没有用户入口，且 API key 只支持运行时环境变量；后续接 UI 时必须补隐私提示、Keychain / 本地安全存储和日志脱敏检查。
+- 回滚方式：回退提交 `feat: connect external assist parser path` 及本轮文档回填，可保留 1609A / 1609B 的脱敏 payload 和门控 skeleton，主本地解析链路不受影响。
+- 结论：`GOAL-1609C` 已完成，外部辅助识别试点已接入主解析分支但仍默认关闭。
+- 下一步建议：进入 `GOAL-1609D`，补用户可见开关、API key 安全输入 / 存储、隐私说明和真实 provider 配置；若发布前隐私或成本未收口，则保持隐藏 / Debug 开关。
 
 ### ITER-180 GOAL-1609B 外部辅助识别门控与 adapter
 - 日期：2026-06-11
