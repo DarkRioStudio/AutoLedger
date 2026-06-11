@@ -13,7 +13,7 @@ struct QuickLedgerIntent: AppIntent {
     /// 后台完成快捷指令记账，成功后仅发通知；用户点通知时再进入 App。
     static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "quick_ledger.screenshot.title", description: "quick_ledger.screenshot.description", supportedContentTypes: [.image])
+    @Parameter(title: "quick_ledger.screenshot.title", description: "quick_ledger.screenshot.description")
     var screenshot: IntentFile
 
     static var parameterSummary: some ParameterSummary {
@@ -102,7 +102,7 @@ struct QuickLedgerIntent: AppIntent {
         }
 
         let result: SmartReceiptParser.SmartResult?
-        if useModelInference {
+        if useModelInference, #available(iOS 26.0, *) {
             result = await smartParser.parse(text: cleanedText, source: source,
                                              imageData: imageData,
                                              ocrMinConfidence: ocrResult.minimumWordConfidence,
