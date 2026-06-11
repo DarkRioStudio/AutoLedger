@@ -4,9 +4,9 @@ import PackageDescription
 let package = Package(
     name: "AutoLedgerCore",
     platforms: [
-        .iOS(.v18),
+        .iOS(.v17),
         .macOS(.v14),
-        .watchOS(.v11),
+        .watchOS(.v10),
     ],
     products: [
         .library(name: "AutoLedgerCore", targets: ["AutoLedgerCore"]),
