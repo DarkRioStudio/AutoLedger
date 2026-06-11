@@ -1778,20 +1778,54 @@ struct OfflineRegression {
         let importedForAlias = ledger.transactions.first { $0.merchant == "Example Restaurant Management Co." }
         reporter.check(importedForAlias != nil, "LedgerStore imports full merchant before alias learning")
         if let importedForAlias {
-            ledger.updateTransaction(
-                Transaction(
-                    id: importedForAlias.id,
-                    merchant: "Example Dining",
-                    amount: importedForAlias.amount,
-                    occurredAt: importedForAlias.occurredAt,
-                    categoryLabel: importedForAlias.category,
-                    sourceLabel: importedForAlias.source,
-                    note: importedForAlias.note
-                )
+            let aliasUpdate = Transaction(
+                id: importedForAlias.id,
+                merchant: "Example Dining",
+                amount: importedForAlias.amount,
+                occurredAt: importedForAlias.occurredAt,
+                categoryLabel: importedForAlias.category,
+                sourceLabel: importedForAlias.source,
+                note: importedForAlias.note
             )
             reporter.check(
-                ledger.merchantAliases["Example Restaurant Management Co."] == "Example Dining",
-                "LedgerStore learns merchant alias from high-confidence edit"
+                ledger.shouldOfferMerchantAlias(from: importedForAlias, to: aliasUpdate),
+                "LedgerStore can offer merchant alias prompt for high-confidence edit"
+            )
+            ledger.updateTransaction(aliasUpdate)
+            reporter.check(
+                ledger.merchantAliases["Example Restaurant Management Co."] == nil,
+                "LedgerStore does not learn merchant alias until user confirms"
+            )
+        }
+
+        let confirmedAliasLearningText = """
+        支付宝
+        交易成功
+        商户：Example Restaurant Management Branch
+        金额：￥21.80
+        时间：2026/03/28 12:30
+        备注：商户别名确认保存
+        """
+        ledger.importRecognizedText(confirmedAliasLearningText, preferredSource: .alipay)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        let confirmedAliasSource = ledger.transactions.first { $0.merchant == "Example Restaurant Management Branch" }
+        reporter.check(confirmedAliasSource != nil, "LedgerStore imports second full merchant before confirmed alias learning")
+        if let confirmedAliasSource {
+            ledger.updateTransaction(
+                Transaction(
+                    id: confirmedAliasSource.id,
+                    merchant: "Example Dining",
+                    amount: confirmedAliasSource.amount,
+                    occurredAt: confirmedAliasSource.occurredAt,
+                    categoryLabel: confirmedAliasSource.category,
+                    sourceLabel: confirmedAliasSource.source,
+                    note: confirmedAliasSource.note
+                ),
+                saveMerchantAlias: true
+            )
+            reporter.check(
+                ledger.merchantAliases["Example Restaurant Management Branch"] == "Example Dining",
+                "LedgerStore learns merchant alias after user confirms high-confidence edit"
             )
         }
 
@@ -1806,7 +1840,7 @@ struct OfflineRegression {
         """
         ledger.importRecognizedText(multiItemNoTotalText, preferredSource: .manual)
         try await Task.sleep(nanoseconds: 200_000_000)
-        reporter.check(ledger.transactions.count == initialCount + 4, "LedgerStore does not persist multi-item receipt without reliable total")
+        reporter.check(ledger.transactions.count == initialCount + 5, "LedgerStore does not persist multi-item receipt without reliable total")
         reporter.check(
             ledger.lastImportSummary?.contains("总金额") == true || ledger.lastImportSummary?.contains("total amount") == true,
             "LedgerStore reports multi-item receipt total-missing guidance"
@@ -1822,7 +1856,7 @@ struct OfflineRegression {
 
         let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger.sqlite3")
         let reloadedTransactions = try reloadedStore.loadTransactions()
-        reporter.check(reloadedTransactions.count == initialCount + 4, "SQLite store reload keeps imported transactions")
+        reporter.check(reloadedTransactions.count == initialCount + 5, "SQLite store reload keeps imported transactions")
 
         let categoryRefreshA = Transaction(
             merchant: "批量分类商户",

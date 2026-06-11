@@ -255,8 +255,12 @@ struct LedgerView: View {
                 }
             }
             .sheet(item: $selectedTransaction) { transaction in
-                TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory in
-                    store.updateTransaction(updated, refreshSameMerchantCategory: refreshSameMerchantCategory)
+                TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory, saveMerchantAlias in
+                    store.updateTransaction(
+                        updated,
+                        refreshSameMerchantCategory: refreshSameMerchantCategory,
+                        saveMerchantAlias: saveMerchantAlias
+                    )
                 }
             }
             .sheet(isPresented: $isAddingTransaction) {
@@ -270,7 +274,7 @@ struct LedgerView: View {
                         note: ""
                     ),
                     isNew: true
-                ) { newTransaction, _ in
+                ) { newTransaction, _, _ in
                     store.addTransaction(newTransaction)
                 }
             }

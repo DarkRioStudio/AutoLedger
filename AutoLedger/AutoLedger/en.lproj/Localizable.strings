@@ -275,6 +275,10 @@
 "transaction_editor.category_refresh.current_only" = "Save This One";
 "transaction_editor.category_refresh.refresh_all" = "Refresh All";
 "transaction_editor.category_refresh.message_format" = "Update the category of all existing transactions from “%@” to “%@”?";
+"transaction_editor.merchant_alias.title" = "Save Merchant Alias?";
+"transaction_editor.merchant_alias.skip" = "Do Not Save";
+"transaction_editor.merchant_alias.save" = "Save Alias";
+"transaction_editor.merchant_alias.message_format" = "Automatically recognize “%@” as “%@” next time?";
 "transaction_editor.save_failed.title" = "Save Failed";
 "transaction_editor.save_failed.message" = "The transaction was not saved. Check the fields and try again.";
 

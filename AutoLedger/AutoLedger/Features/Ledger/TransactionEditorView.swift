@@ -3,7 +3,7 @@ import SwiftUI
 
 struct TransactionEditorView: View {
     let transaction: Transaction
-    let onSave: (Transaction, Bool) -> Bool
+    let onSave: (Transaction, Bool, Bool) -> Bool
     /// `true` 表示新增模式，导航栏标题显示"新增账单"；`false` 为编辑模式
     var isNew: Bool = false
 
@@ -16,11 +16,13 @@ struct TransactionEditorView: View {
     @State private var occurredAt: Date
     @State private var note: String
     @State private var pendingSave: Transaction?
+    @State private var pendingRefreshSameMerchantCategory = false
     @State private var showCategoryRefreshPrompt = false
+    @State private var showMerchantAliasPrompt = false
     @State private var isSaving = false
     @State private var saveErrorMessage: String?
 
-    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool) -> Bool) {
+    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool, Bool) -> Bool) {
         self.transaction = transaction
         self.isNew = isNew
         self.onSave = onSave
@@ -82,26 +84,38 @@ struct TransactionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
-                        let updated = editedTransaction()
-                        if shouldPromptCategoryRefresh(for: updated) {
-                            pendingSave = updated
-                            showCategoryRefreshPrompt = true
-                        } else {
-                            save(updated, refreshSameMerchantCategory: false)
-                        }
+                        beginSave(editedTransaction())
                     }
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .alert("transaction_editor.category_refresh.title", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
                 Button("transaction_editor.category_refresh.current_only", role: .cancel) {
-                    save(updated, refreshSameMerchantCategory: false)
+                    continueSave(updated, refreshSameMerchantCategory: false)
                 }
                 Button("transaction_editor.category_refresh.refresh_all") {
-                    save(updated, refreshSameMerchantCategory: true)
+                    continueSave(updated, refreshSameMerchantCategory: true)
                 }
             } message: { updated in
                 Text(String(format: String(localized: "transaction_editor.category_refresh.message_format"), updated.merchant, updated.categoryTitle))
+            }
+            .alert("transaction_editor.merchant_alias.title", isPresented: $showMerchantAliasPrompt, presenting: pendingSave) { updated in
+                Button("transaction_editor.merchant_alias.skip", role: .cancel) {
+                    save(
+                        updated,
+                        refreshSameMerchantCategory: pendingRefreshSameMerchantCategory,
+                        saveMerchantAlias: false
+                    )
+                }
+                Button("transaction_editor.merchant_alias.save") {
+                    save(
+                        updated,
+                        refreshSameMerchantCategory: pendingRefreshSameMerchantCategory,
+                        saveMerchantAlias: true
+                    )
+                }
+            } message: { updated in
+                Text(String(format: String(localized: "transaction_editor.merchant_alias.message_format"), transaction.merchant, updated.merchant))
             }
             .alert("transaction_editor.save_failed.title", isPresented: Binding(
                 get: { saveErrorMessage != nil },
@@ -135,12 +149,36 @@ struct TransactionEditorView: View {
         !isNew && transaction.category != updated.category
     }
 
-    private func save(_ updated: Transaction, refreshSameMerchantCategory: Bool) {
+    private func shouldPromptMerchantAlias(for updated: Transaction) -> Bool {
+        !isNew && store.shouldOfferMerchantAlias(from: transaction, to: updated)
+    }
+
+    private func beginSave(_ updated: Transaction) {
+        if shouldPromptCategoryRefresh(for: updated) {
+            pendingSave = updated
+            showCategoryRefreshPrompt = true
+        } else {
+            continueSave(updated, refreshSameMerchantCategory: false)
+        }
+    }
+
+    private func continueSave(_ updated: Transaction, refreshSameMerchantCategory: Bool) {
+        if shouldPromptMerchantAlias(for: updated) {
+            pendingSave = updated
+            pendingRefreshSameMerchantCategory = refreshSameMerchantCategory
+            showMerchantAliasPrompt = true
+        } else {
+            save(updated, refreshSameMerchantCategory: refreshSameMerchantCategory, saveMerchantAlias: false)
+        }
+    }
+
+    private func save(_ updated: Transaction, refreshSameMerchantCategory: Bool, saveMerchantAlias: Bool) {
         guard !isSaving else { return }
         isSaving = true
-        let didSave = onSave(updated, refreshSameMerchantCategory)
+        let didSave = onSave(updated, refreshSameMerchantCategory, saveMerchantAlias)
         if didSave {
             pendingSave = nil
+            pendingRefreshSameMerchantCategory = false
             dismiss()
         } else {
             isSaving = false

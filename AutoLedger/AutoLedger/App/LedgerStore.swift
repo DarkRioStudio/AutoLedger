@@ -578,7 +578,11 @@ final class LedgerStore: ObservableObject {
     }
 
     @discardableResult
-    func updateTransaction(_ transaction: Transaction, refreshSameMerchantCategory: Bool = false) -> Bool {
+    func updateTransaction(
+        _ transaction: Transaction,
+        refreshSameMerchantCategory: Bool = false,
+        saveMerchantAlias: Bool = false
+    ) -> Bool {
         guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
             lastImportSummary = "账单保存失败：未找到要更新的账单。"
             return false
@@ -594,7 +598,7 @@ final class LedgerStore: ObservableObject {
             return false
         }
 
-        if isHighConfidenceGeneratedTransaction(original.id) {
+        if saveMerchantAlias && shouldOfferMerchantAlias(from: original, to: transaction) {
             learnMerchantAliasIfNeeded(from: original, to: transaction)
         }
 
@@ -623,6 +627,11 @@ final class LedgerStore: ObservableObject {
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
         return true
+    }
+
+    func shouldOfferMerchantAlias(from original: Transaction, to updated: Transaction) -> Bool {
+        isHighConfidenceGeneratedTransaction(original.id) &&
+            merchantAliasCandidate(from: original, to: updated) != nil
     }
 
     @discardableResult
@@ -1040,10 +1049,20 @@ final class LedgerStore: ObservableObject {
     }
 
     private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {
+        guard let candidate = merchantAliasCandidate(from: original, to: updated) else { return }
+        recordMerchantAlias(original: candidate.original, alias: candidate.alias)
+    }
+
+    private func merchantAliasCandidate(from original: Transaction, to updated: Transaction) -> (original: String, alias: String)? {
         let originalMerchant = original.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
         let updatedMerchant = updated.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard originalMerchant != updatedMerchant else { return }
-        recordMerchantAlias(original: originalMerchant, alias: updatedMerchant)
+        guard !originalMerchant.isEmpty,
+              !updatedMerchant.isEmpty,
+              originalMerchant != updatedMerchant,
+              merchantAliases[originalMerchant] != updatedMerchant else {
+            return nil
+        }
+        return (originalMerchant, updatedMerchant)
     }
 
     private func isHighConfidenceGeneratedTransaction(_ id: UUID) -> Bool {

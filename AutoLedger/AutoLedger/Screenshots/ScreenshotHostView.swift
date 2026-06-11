@@ -121,7 +121,7 @@ private struct ScreenshotTransactionEditorHost: View {
     }
 
     var body: some View {
-        TransactionEditorView(transaction: ScreenshotFixtures.transactions[0]) { _, _ in true }
+        TransactionEditorView(transaction: ScreenshotFixtures.transactions[0]) { _, _, _ in true }
             .environmentObject(store)
             .preferredColorScheme(.light)
     }

@@ -275,6 +275,10 @@
 "transaction_editor.category_refresh.current_only" = "仅保存本笔";
 "transaction_editor.category_refresh.refresh_all" = "刷新全部";
 "transaction_editor.category_refresh.message_format" = "是否将“%@”所有现存账单的分类更新为“%@”？";
+"transaction_editor.merchant_alias.title" = "保存商户别名？";
+"transaction_editor.merchant_alias.skip" = "不保存别名";
+"transaction_editor.merchant_alias.save" = "保存别名";
+"transaction_editor.merchant_alias.message_format" = "以后是否将“%@”自动识别为“%@”？";
 "transaction_editor.save_failed.title" = "保存失败";
 "transaction_editor.save_failed.message" = "账单没有保存成功，请检查输入后重试。";
 

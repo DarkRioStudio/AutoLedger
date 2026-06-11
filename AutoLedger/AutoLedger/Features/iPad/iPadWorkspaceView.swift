@@ -2898,8 +2898,12 @@ private struct IPadLedgerWorkspaceView: View {
                 consumePendingNewTransactionIfNeeded()
             }
             .sheet(item: $editingTransaction) { transaction in
-                TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory in
-                    let didSave = store.updateTransaction(updated, refreshSameMerchantCategory: refreshSameMerchantCategory)
+                TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory, saveMerchantAlias in
+                    let didSave = store.updateTransaction(
+                        updated,
+                        refreshSameMerchantCategory: refreshSameMerchantCategory,
+                        saveMerchantAlias: saveMerchantAlias
+                    )
                     if didSave {
                         selectedTransactionID = updated.id
                     }
@@ -2917,7 +2921,7 @@ private struct IPadLedgerWorkspaceView: View {
                         note: ""
                     ),
                     isNew: true
-                ) { newTransaction, _ in
+                ) { newTransaction, _, _ in
                     let didSave = store.addTransaction(newTransaction)
                     if didSave {
                         selectedTransactionID = newTransaction.id
