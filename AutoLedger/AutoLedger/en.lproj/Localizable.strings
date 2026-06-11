@@ -479,6 +479,8 @@
 "settings.category_learning.subtitle" = "View learned merchant-to-category preferences and delete them";
 "settings.ai_model.title" = "AI Models";
 "settings.ai_model.subtitle" = "Choose an on-device model and manage Gemma downloads";
+"settings.external_assist.title" = "External Assist";
+"settings.external_assist.subtitle" = "Optional redacted cloud help for difficult merchant recognition";
 "settings.analysis.title" = "Spending Analysis";
 "settings.analysis.subtitle" = "Adjust the monthly abnormal spending detection threshold";
 "settings.data_management.title" = "Data Management";
@@ -544,6 +546,24 @@
 "llm.apple.unavailable" = "Apple Intelligence is not supported on this device or in this region";
 "llm.gemma.extension_unavailable" = "Unavailable in extensions";
 "llm.gemma.not_downloaded" = "Model not downloaded yet. Download it first.";
+
+"external_assist.title" = "External Assist";
+"external_assist.info.title" = "Redacted Cloud Assist";
+"external_assist.info.body" = "When enabled, AutoLedger may send a minimized, redacted text payload to your configured endpoint to improve merchant and category suggestions. Amounts still come from local rules, and screenshots or full OCR text are not sent.";
+"external_assist.enable.title" = "Enable External Assist";
+"external_assist.enable.subtitle" = "Default off. Use only with an endpoint and API key you trust.";
+"external_assist.endpoint.title" = "Endpoint";
+"external_assist.endpoint.placeholder" = "https://example.com/autoledger/parse";
+"external_assist.endpoint.save" = "Save Endpoint";
+"external_assist.api_key.title" = "API Key";
+"external_assist.api_key.saved" = "Saved";
+"external_assist.api_key.placeholder" = "Paste API key";
+"external_assist.api_key.save" = "Save Key";
+"external_assist.api_key.clear" = "Clear";
+"external_assist.status.endpoint_saved" = "Endpoint saved.";
+"external_assist.status.key_saved" = "API key saved to Keychain.";
+"external_assist.status.key_failed" = "Could not save the API key.";
+"external_assist.status.key_cleared" = "API key cleared.";
 
 "quick_ledger.intent.title" = "Quick Ledger";
 "quick_ledger.intent.description" = "Recognize payment information from a screenshot and save it automatically";

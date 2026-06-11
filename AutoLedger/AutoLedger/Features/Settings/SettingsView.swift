@@ -129,6 +129,18 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
 
                     NavigationLink {
+                        ExternalReceiptAssistSettingsView()
+                    } label: {
+                        settingsRow(
+                            icon: "sparkles.rectangle.stack.fill",
+                            iconColor: Color(red: 0.35, green: 0.38, blue: 0.82),
+                            title: "settings.external_assist.title",
+                            subtitle: "settings.external_assist.subtitle"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
                         AnalysisSettingsView()
                     } label: {
                         settingsRow(

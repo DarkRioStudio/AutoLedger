@@ -482,6 +482,8 @@
 "settings.category_learning.subtitle" = "查看已學習的商家→分類偏好，支援刪除";
 "settings.ai_model.title" = "AI 模型";
 "settings.ai_model.subtitle" = "選擇端側大模型，管理 Gemma 模型下載";
+"settings.external_assist.title" = "外部輔助識別";
+"settings.external_assist.subtitle" = "可選開啟脫敏雲端輔助，改善疑難商戶識別";
 "settings.analysis.title" = "消費分析";
 "settings.analysis.subtitle" = "調整月報異常消費偵測門檻";
 "settings.data_management.title" = "資料管理";
@@ -547,6 +549,24 @@
 "llm.apple.unavailable" = "目前裝置/地區不支援 Apple Intelligence";
 "llm.gemma.extension_unavailable" = "Extension 中不可用";
 "llm.gemma.not_downloaded" = "模型尚未下載，請先下載";
+
+"external_assist.title" = "外部輔助識別";
+"external_assist.info.title" = "脫敏雲端輔助";
+"external_assist.info.body" = "開啟後，AutoLedger 可以把最小化、已脫敏的文字 payload 傳送到你設定的端點，用於改善商戶和分類建議。金額仍由本機規則決定，不傳送截圖或完整 OCR 原文。";
+"external_assist.enable.title" = "啟用外部輔助識別";
+"external_assist.enable.subtitle" = "預設關閉。請只填寫你信任的 endpoint 和 API key。";
+"external_assist.endpoint.title" = "Endpoint";
+"external_assist.endpoint.placeholder" = "https://example.com/autoledger/parse";
+"external_assist.endpoint.save" = "儲存 Endpoint";
+"external_assist.api_key.title" = "API Key";
+"external_assist.api_key.saved" = "已儲存";
+"external_assist.api_key.placeholder" = "貼上 API key";
+"external_assist.api_key.save" = "儲存 Key";
+"external_assist.api_key.clear" = "清除";
+"external_assist.status.endpoint_saved" = "Endpoint 已儲存。";
+"external_assist.status.key_saved" = "API key 已儲存到 Keychain。";
+"external_assist.status.key_failed" = "API key 儲存失敗。";
+"external_assist.status.key_cleared" = "API key 已清除。";
 
 "quick_ledger.intent.title" = "快速記帳";
 "quick_ledger.intent.description" = "從截圖中識別支付資訊並自動記帳";
