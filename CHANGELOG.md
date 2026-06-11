@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.1）
+- [2026-06-11 +0800] 推进 `GOAL-1609D` 外部辅助识别设置入口：新增独立“外部辅助识别”设置页，提供默认关闭开关、endpoint 保存、API key 保存 / 清除和三语文案；API key 优先存入 Keychain，运行时环境变量仅作为开发 fallback，endpoint 仍保存在 UserDefaults。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不配置真实 provider、不接 Pro gate、不补正式隐私政策或 App Store 文案。
 - [2026-06-11 +0800] 推进 `GOAL-1609C` 外部辅助识别主链路接入：在 `AutoLedgerCore` 新增 `ExternalReceiptAssistSuggestionMapper`，外部结果只映射商户 / 分类 / 置信度，不提供金额；`SmartReceiptParser`、`LedgerTextInterpreter` 和 `QuickLedgerIntent` 接入默认关闭的外部辅助分支，只有运行时配置完整时才发送脱敏 payload，并通过 `SmartReceiptMergePolicy` 保持规则金额优先。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不接 UI 开关、不写入真实 API key、不配置真实 provider。
 - [2026-06-11 +0800] 推进 `GOAL-1609B` 外部辅助识别默认关闭门控与 provider adapter skeleton：在 `AutoLedgerCore` 新增 `ExternalReceiptAssistConfiguration`、`ExternalReceiptAssistGate`、阻断原因与 gate decision，默认关闭，缺 endpoint / 缺 API key / endpoint 非法 / payload 为空均阻断；App 层新增 `ExternalReceiptAssistClient`，只接收已脱敏 payload 和运行时 API key，不在源码或仓库中写入真实 key。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不接 UI、不接主解析链路、不默认调用外部服务。
 - [2026-06-11 +0800] 推进 `GOAL-1609A` 脱敏外部 API 辅助识别试点基础：在 `AutoLedgerCore` 新增 `ExternalReceiptAssistPayload` 与 `ExternalReceiptAssistPayloadBuilder`，构建外部辅助请求前的最小化脱敏文本，保留商户候选和短金额上下文，同时脱敏订单号 / 商户单号 / 交易参考号、卡尾号、手机号、地址行、样本文件 ID 和超长编号；新增离线回归覆盖敏感形态不会进入 payload。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不接入网络请求、真实 API provider、API key、UI 开关或主解析链路。

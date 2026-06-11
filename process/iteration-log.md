@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1609C 外部辅助识别主链路接入）
+更新日期：2026-06-11（GOAL-1609D 外部辅助识别设置入口）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-182 GOAL-1609D 外部辅助识别设置入口
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D / 脱敏外部 API 辅助识别试点
+- 类型：能力增强 / 隐私 / UI
+- 目标：为外部辅助识别补独立设置入口和 API key 安全存储边界，保持默认关闭，不配置真实 provider。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Settings/ExternalReceiptAssistSettingsView.swift`：新增外部辅助识别设置页。
+  - `AutoLedger/AutoLedger/Features/Settings/SettingsView.swift`：新增设置页入口。
+  - `AutoLedger/AutoLedger/Domain/Services/ExternalReceiptAssistClient.swift`：新增 Keychain API key 存取与清除，`runtimeAPIKey` 优先读取 Keychain，保留环境变量 fallback。
+  - `AutoLedger/AutoLedger/en.lproj/Localizable.strings`、`zh-Hans.lproj/Localizable.strings`、`zh-Hant.lproj/Localizable.strings`：补齐三语文案。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未配置真实 provider、未接 Pro / IAP gate、未补正式隐私政策页面或 App Store 文案、未保存请求 payload / 响应内容 / 截图 / 完整 OCR 原文、未修改 Core、SQLite schema、Bundle ID、signing、entitlements 或 CloudKit 配置。
+- 完成内容：外部辅助识别有独立设置入口；默认关闭；endpoint 可保存 / 清除为空；API key 可保存到 Keychain 或清除；UI 文案说明只发送最小化脱敏 payload，金额仍由本地规则决定。
+- 未完成内容：尚未接真实 provider endpoint、正式隐私文案、Pro 功能门控、真机端到端外部 API 调用验证和 App Store 审核说明。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：Keychain 存储路径需要真机 / 模拟器手动点验；真实 provider 接入前仍不应开启给普通用户；若发布前隐私和成本未收口，应保持隐藏或 Debug 使用。
+- 回滚方式：回退提交 `feat: add external assist settings` 及本轮文档回填，可回到 1609C 的主链路默认关闭状态。
+- 结论：`GOAL-1609D` 已完成，外部辅助识别具备用户可控设置入口和 Keychain key 存储边界。
+- 下一步建议：进入 `GOAL-1609E`，接入真实 provider 配置 / mock server 端到端验证，并同步隐私政策和 App Store 文案评估。
 
 ### ITER-181 GOAL-1609C 外部辅助识别主链路接入
 - 日期：2026-06-11
