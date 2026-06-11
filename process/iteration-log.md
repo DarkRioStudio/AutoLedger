@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1610A 账单编辑保存链路稳定性第一步）
+更新日期：2026-06-11（GOAL-1610B 商户别名学习用户确认）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-184 GOAL-1610B 商户别名学习用户确认
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D2 / 账单编辑保存链路稳定性
+- 类型：Bugfix / 数据一致性 / UI
+- 目标：取消高置信识别账单编辑时自动学习商户别名的行为，改为由用户在编辑保存时确认是否保存别名。
+- 改动范围：
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`updateTransaction` 新增 `saveMerchantAlias` 参数；新增 `shouldOfferMerchantAlias(from:to:)`；只有用户确认且符合高置信识别商户改名条件时才写入别名。
+  - `AutoLedger/AutoLedger/Features/Ledger/TransactionEditorView.swift`：保存流程新增“保存商户别名？”确认弹窗；选择“不保存别名”只保存当前账单。
+  - `AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift`、`AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`、`AutoLedger/AutoLedger/Screenshots/ScreenshotHostView.swift`：同步编辑器保存参数。
+  - `AutoLedger/AutoLedger/en.lproj/Localizable.strings`、`zh-Hans.lproj/Localizable.strings`、`zh-Hant.lproj/Localizable.strings`：补三语别名确认文案。
+  - `scripts/OfflineRegression.swift`：新增“可提示但不自动保存别名”和“用户确认后才学习别名”回归。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改商户 resolver、OCR 解析规则、SQLite schema、CloudKit schema、Bundle ID、signing、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：商户别名学习由自动副作用改为用户确认；普通编辑、新增账单和未命中高置信识别记录的账单不提示也不学习别名。
+- 未完成内容：尚未完成真机弹窗交互、长商户名文案截断和后续同商户识别套用别名的实机复测。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：若用户修改商户但不保存别名，后续相同原商户仍会按规则识别，需要用户再次确认；这是当前刻意选择的数据安全边界。
+- 回滚方式：回退提交 `fix: require confirmation before saving merchant aliases` 及本轮文档回填即可恢复自动学习行为。
+- 结论：`GOAL-1610B` 已完成命令级验证，可以进入真机识别链路和编辑保存链路联合测试。
+- 下一步建议：用真实支付截图测试“识别 -> 保存 -> 编辑商户 -> 不保存别名 / 保存别名 -> 再次识别同商户”的完整链路。
 
 ### ITER-183 GOAL-1610A 账单编辑保存链路稳定性第一步
 - 日期：2026-06-11
