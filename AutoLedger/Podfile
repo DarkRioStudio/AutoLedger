@@ -1,4 +1,4 @@
-platform :ios, '18.0'
+platform :ios, '17.0'
 
 target 'AutoLedger' do
   use_frameworks!
@@ -8,12 +8,12 @@ target 'AutoLedger' do
   pod 'MediaPipeTasksGenAIC'
 end
 
-# MediaPipe 预编译二进制最低 iOS 16，但我们项目 target 26.0
+# MediaPipe 预编译二进制最低 iOS 16，主 App 当前目标为 iOS 17。
 # CocoaPods 会将 Pods target 对齐到 platform :ios 或更高
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
     end
   end
 
