@@ -38,6 +38,7 @@ struct OfflineRegression {
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
+        verifyMerchantExtraction(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -182,6 +183,45 @@ struct OfflineRegression {
             "PaymentAmountExtractor falls back to last amount when no total label exists"
         )
         reporter.check(fallbackResult.isApproximate, "PaymentAmountExtractor flags unlabeled fallback as approximate")
+    }
+
+    private static func verifyMerchantExtraction(reporter: RegressionReporter) {
+        let extractor = RuleMerchantExtractor()
+        let resolver = MerchantResolver()
+
+        let labeledText = """
+        支付宝
+        交易成功
+        商户：Demo Coffee
+        支付金额：23.80
+        """
+        let labeledCandidates = extractor.extractCandidates(from: labeledText)
+        let labeledResult = resolver.resolve(candidates: labeledCandidates, text: labeledText)
+        reporter.check(labeledResult.merchant == "Demo Coffee", "MerchantResolver prefers labeled merchant")
+
+        let blacklistHeader = """
+        TAX INVOICE
+        SOON HUAT MACHINERY ENTERPRISE
+        NO.53 JALAN PUTRA 1
+        REPAIR ENGINE 1 X 80.00
+        Total Sales: RM 327.00
+        """
+        let headerResult = resolver.resolve(candidates: extractor.extractCandidates(from: blacklistHeader), text: blacklistHeader)
+        reporter.check(
+            headerResult.merchant == "SOON HUAT MACHINERY ENTERPRISE",
+            "MerchantResolver excludes invoice header noise"
+        )
+
+        let paymentChannelNoise = """
+        微信支付
+        支付成功
+        商品说明
+        Example Market
+        付款金额
+        ¥18.80
+        """
+        let paymentResult = resolver.resolve(candidates: extractor.extractCandidates(from: paymentChannelNoise), text: paymentChannelNoise)
+        reporter.check(paymentResult.merchant == "Example Market", "MerchantResolver avoids payment channel as merchant")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
