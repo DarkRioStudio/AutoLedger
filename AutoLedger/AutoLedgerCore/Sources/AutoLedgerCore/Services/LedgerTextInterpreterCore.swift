@@ -37,7 +37,8 @@ public struct LedgerTextInterpreterCore: Sendable {
 
         let merchantResult = extractMerchant(from: normalizedText)
         let merchant = merchantResult.merchant
-        let category = Self.inferCategory(from: merchant.isEmpty ? normalizedText : merchant)
+        let categoryResult = CategoryResolver().resolveDetailed(text: merchant.isEmpty ? normalizedText : merchant)
+        let category = categoryResult.category
 
         var warnings: [InterpretWarning] = []
         if merchant.isEmpty { warnings.append(.merchantMissing) }
@@ -57,7 +58,7 @@ public struct LedgerTextInterpreterCore: Sendable {
             needsReview: merchant.isEmpty || amountResult.isApproximate, warnings: warnings,
             debugTrace: [
                 "bill_relevant score=\(relevance.score) positive=\(relevance.positiveSignals.joined(separator: ","))",
-            ] + amountResult.debugTrace + merchantResult.debugTrace)
+            ] + amountResult.debugTrace + merchantResult.debugTrace + categoryResult.debugTrace)
     }
 
     public func relevance(for rawText: String, sourceHint: LedgerSourceHint = .unknown) -> BillRelevanceResult {
@@ -92,30 +93,7 @@ public struct LedgerTextInterpreterCore: Sendable {
 
     // MARK: - Category Inference
 
-    private static let merchantCategoryMap: [(keywords: [String], category: TransactionCategory)] = [
-        (["mr d.i.y.", "mr diy", "mr. d.i.y."], .shopping),
-        (["perniagaan zheng hui", "sin nathamby", "yongfatt", "abc ho trading"], .shopping),
-        (["soon huat machinery", "indah gift", "ted heng", "fy eagle"], .shopping),
-        (["mynews retail", "mynews"], .shopping),
-        (["pasar nine jin seng", "pasar"], .groceries),
-        (["ntuc fairprice", "walmart", "supermarket", "fairprice", "tesco", "aeon", "lotus"], .groceries),
-        (["7-eleven", "seven eleven", "7 eleven", "family mart", "罗森", "便利店"], .groceries),
-        (["mcdonald", "gerbang alaf restaurants", "golden arches"], .dining),
-        (["kfc", "burger king", "pizza hut", "starbucks", "subway"], .dining),
-        (["sheraton", "marriott", "hilton", "hyatt", "hotel"], .entertainment),
-        (["滴滴", "didi", "grab", "gojek", "uber"], .transport),
-        (["shell", "petronas", "caltex", "esso", "汽油", "加油站"], .transport),
-        (["apple services", "apple.com", "app store", "spotify", "netflix"], .digital),
-        (["icloud", "google one", "chatgpt", "openai"], .digital),
-    ]
-
     public static func inferCategory(from text: String) -> TransactionCategory {
-        let lowered = text.lowercased()
-        for (keywords, category) in merchantCategoryMap {
-            for kw in keywords {
-                if lowered.contains(kw) { return category }
-            }
-        }
-        return TransactionCategory.infer(from: text)
+        CategoryResolver().resolve(text: text)
     }
 }

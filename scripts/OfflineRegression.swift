@@ -39,6 +39,7 @@ struct OfflineRegression {
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
+        verifyCategoryResolution(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -222,6 +223,15 @@ struct OfflineRegression {
         """
         let paymentResult = resolver.resolve(candidates: extractor.extractCandidates(from: paymentChannelNoise), text: paymentChannelNoise)
         reporter.check(paymentResult.merchant == "Example Market", "MerchantResolver avoids payment channel as merchant")
+    }
+
+    private static func verifyCategoryResolution(reporter: RegressionReporter) {
+        let resolver = CategoryResolver()
+
+        reporter.check(resolver.resolve(text: "McDonald's BHP Taman Melawati") == .dining, "CategoryResolver maps known dining merchant")
+        reporter.check(resolver.resolve(text: "NTUC FAIRPRICE") == .groceries, "CategoryResolver maps known grocery merchant")
+        reporter.check(resolver.resolve(text: "滴滴出行") == .transport, "CategoryResolver maps known transport merchant")
+        reporter.check(resolver.resolve(text: "OpenAI ChatGPT") == .digital, "CategoryResolver maps known digital merchant")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
