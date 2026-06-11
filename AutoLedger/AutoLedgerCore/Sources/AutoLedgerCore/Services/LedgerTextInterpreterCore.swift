@@ -4,14 +4,6 @@ public struct LedgerTextInterpreterCore: Sendable {
     private let relevanceGate = BillRelevanceGate()
     private let voiceParser = VoiceLedgerParser()
 
-    private static let totalKeywords: [String] = [
-        "合计", "总计", "总金额", "总额", "小计", "实付", "实收", "应付", "付款金额",
-        "total", "grand total", "subtotal", "amount due", "total due", "total rounded",
-        "total incl", "total inclusive", "amount", "rounded total", "total sales",
-        "jumlah", "jumlah besar", "jumlah bayaran",
-        "合計"
-    ]
-
     private static let nonMerchantBlacklist: Set<String> = [
         "tan woon yann", "tan woon yarn", "tan chay yee", "cash sale", "tax invoice", "simplified tax invoice",
         "invoice", "receipt", "cash bill",
@@ -54,8 +46,8 @@ public struct LedgerTextInterpreterCore: Sendable {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        let amountResult = extractBestAmount(from: normalizedText, lines: lines)
-        guard let amount = amountResult.amount else {
+        let amountResult = PaymentAmountExtractor().extract(from: normalizedText, lines: lines)
+        guard let amount = amountResult.paidAmount else {
             return InterpretResult(draft: nil, confidence: .low, needsReview: true, warnings: [.missingAmount],
                 debugTrace: ["bill_relevant_but_missing_amount score=\(relevance.score)"])
         }
@@ -81,8 +73,7 @@ public struct LedgerTextInterpreterCore: Sendable {
             needsReview: merchant.isEmpty || amountResult.isApproximate, warnings: warnings,
             debugTrace: [
                 "bill_relevant score=\(relevance.score) positive=\(relevance.positiveSignals.joined(separator: ","))",
-                "amount_source=\(amountResult.source)"
-            ])
+            ] + amountResult.debugTrace)
     }
 
     public func relevance(for rawText: String, sourceHint: LedgerSourceHint = .unknown) -> BillRelevanceResult {
@@ -110,132 +101,7 @@ public struct LedgerTextInterpreterCore: Sendable {
 
     // MARK: - Amount Extraction
 
-    private static let rmAmountRegex = try? NSRegularExpression(pattern: #"(?<![A-Za-z0-9])RM[_\s]*([0-9]+(?:[.,][0-9]{1,2})?)(?![A-Za-z0-9])"#, options: [.caseInsensitive])
     private static let currencyAmountRegex = try? NSRegularExpression(pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB)?(?![A-Za-z0-9./])"#, options: [.caseInsensitive])
-
-    struct AmountResult { let amount: Double?; let source: String; let isApproximate: Bool }
-
-    private func extractBestAmount(from text: String, lines: [String]) -> AmountResult {
-        if let rmResult = extractRMAmounts(from: text, lines: lines) { return rmResult }
-
-        if let totalResult = extractFromTotalLines(lines) {
-            return AmountResult(amount: totalResult, source: "total_line", isApproximate: false)
-        }
-
-        let totalNextResult = extractFromTotalNextLine(lines)
-        if let amount = totalNextResult {
-            return AmountResult(amount: amount, source: "total_next_line", isApproximate: false)
-        }
-
-        let lastExplicit = extractLastExplicitAmount(lines)
-        if let amount = lastExplicit {
-            return AmountResult(amount: amount, source: "last_explicit", isApproximate: false)
-        }
-
-        let lastAny = extractLastAnyAmount(lines)
-        if let amount = lastAny {
-            return AmountResult(amount: amount, source: "last_fallback", isApproximate: true)
-        }
-
-        return AmountResult(amount: nil, source: "none", isApproximate: false)
-    }
-
-    private func extractRMAmounts(from text: String, lines: [String]) -> AmountResult? {
-        guard let regex = Self.rmAmountRegex else { return nil }
-        var candidates: [(value: Double, lineIndex: Int, line: String)] = []
-
-        for (index, line) in lines.enumerated() {
-            if lineLooksLikeChangeOrCashLine(line) { continue }
-            let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
-            let matches = regex.matches(in: line, range: nsRange)
-            for match in matches {
-                guard let numberRange = Range(match.range(at: 1), in: line) else { continue }
-                let raw = String(line[numberRange]).replacingOccurrences(of: ",", with: ".")
-                guard let value = Double(raw), value > 0, value < 100_000 else { continue }
-                if raw.range(of: #"^\d{4,}$"#, options: .regularExpression) != nil, raw.range(of: #"\."#) == nil {
-                    continue
-                }
-                candidates.append((value, index, line))
-            }
-        }
-
-        guard !candidates.isEmpty else { return nil }
-
-        let totalKeywordCandidates = candidates.filter { totalLineScore($0.line) > 0 }
-        if totalKeywordCandidates.isEmpty {
-            let nearTotal = candidates.filter { c in
-                distanceToNearestTotalKeyword(at: c.lineIndex, lines: lines) <= 2
-            }
-            if let bestNear = (nearTotal.isEmpty ? candidates : nearTotal).max(by: { $0.value < $1.value }) {
-                return AmountResult(amount: bestNear.value, source: "rm_near_total", isApproximate: false)
-            }
-            let best = candidates.sorted { $0.lineIndex > $1.lineIndex }.first!
-            return AmountResult(amount: best.value, source: "rm_last", isApproximate: false)
-        }
-        let best = totalKeywordCandidates
-            .sorted { a, b in
-                let aScore = totalLineScore(a.line)
-                let bScore = totalLineScore(b.line)
-                if aScore != bScore { return aScore > bScore }
-                return a.lineIndex > b.lineIndex
-            }.first!
-        return AmountResult(amount: best.value, source: "rm_total_line", isApproximate: false)
-    }
-
-    private func extractFromTotalLines(_ lines: [String]) -> Double? {
-        let kwLines = lines.enumerated().filter { totalLineScore($0.element) > 0 }
-        guard !kwLines.isEmpty else { return nil }
-        for (_, line) in kwLines.reversed() {
-            if let amount = extractAmountFromLine(line) { return amount }
-        }
-        return nil
-    }
-
-    private func extractFromTotalNextLine(_ lines: [String]) -> Double? {
-        for (index, line) in lines.enumerated() {
-            guard totalLineScore(line) > 0 else { continue }
-            guard extractAmountFromLine(line) == nil else { continue }
-            let nextIdx = index + 1
-            guard nextIdx < lines.count else { continue }
-            let nextLine = lines[nextIdx]
-            if lineLooksLikeChangeOrCashLine(nextLine) { continue }
-            if lineLooksLikeItemCodeLine(nextLine) { continue }
-            if lineLooksLikeQtyLine(nextLine) { continue }
-            if lineLooksLikeIdentifierLine(nextLine) { continue }
-            if lineLooksLikeDateOrTime(nextLine) { continue }
-            if let amount = extractAmountFromLine(nextLine) { return amount }
-        }
-        return nil
-    }
-
-    private func extractLastExplicitAmount(_ lines: [String]) -> Double? {
-        for line in lines.reversed() {
-            if lineLooksLikeRegistrationNumber(line) { continue }
-            if lineLooksLikeDateOrTime(line) { continue }
-            if lineLooksLikeIdentifierLine(line) { continue }
-            if lineLooksLikeQtyLine(line) { continue }
-            if lineLooksLikeChangeOrCashLine(line) { continue }
-            if lineLooksLikeGstOrTaxLine(line) { continue }
-            if lineLooksLikeRoundingLine(line) { continue }
-            if lineLooksLikeItemCodeLine(line) { continue }
-            guard let amount = extractAmountFromLine(line) else { continue }
-            if amount < 0.5 || amount > 10000 { continue }
-            return amount
-        }
-        return nil
-    }
-
-    private func extractLastAnyAmount(_ lines: [String]) -> Double? {
-        for line in lines.reversed() {
-            if lineLooksLikeRegistrationNumber(line) { continue }
-            if lineLooksLikeDateOrTime(line) { continue }
-            if lineLooksLikeItemCodeLine(line) { continue }
-            guard let amount = extractAmountFromLine(line) else { continue }
-            if amount < 0.01 || amount > 1000000 { continue }
-            return amount
-        }
-        return nil
-    }
 
     private func extractAmountFromLine(_ line: String) -> Double? {
         guard let regex = Self.currencyAmountRegex else { return nil }
@@ -251,43 +117,6 @@ public struct LedgerTextInterpreterCore: Sendable {
         if values.count == 1 { return values[0] }
         if values.count > 1, let max = values.max(), max < 100_000 { return max }
         return nil
-    }
-
-    private func distanceToNearestTotalKeyword(at index: Int, lines: [String]) -> Int {
-        var bestDist = Int.max
-        for (i, line) in lines.enumerated() where totalLineScore(line) > 0 {
-            let dist = abs(i - index)
-            if dist < bestDist { bestDist = dist }
-        }
-        return bestDist
-    }
-
-    private func totalLineScore(_ line: String) -> Int {
-        let score = Self.totalKeywords.filter { line.localizedCaseInsensitiveContains($0) }.count
-        if line.localizedCaseInsensitiveContains("total") && !line.localizedCaseInsensitiveContains("subtotal") { return score + 2 }
-        if line.localizedCaseInsensitiveContains("jumlah") { return score + 2 }
-        return score
-    }
-
-    // MARK: - Line Classifiers
-
-    private func lineLooksLikeChangeOrCashLine(_ line: String) -> Bool {
-        let lowered = line.lowercased().trimmingCharacters(in: .whitespaces)
-        if lowered.hasPrefix("change") || lowered.hasPrefix("cash") || lowered.hasPrefix("change due") { return true }
-        if lowered == "change" || lowered == "cash" { return true }
-        return false
-    }
-
-    private func lineLooksLikeGstOrTaxLine(_ line: String) -> Bool {
-        let lowered = line.lowercased()
-        guard extractAmountFromLine(line) != nil else { return false }
-        if lowered.contains("gst") || lowered.contains("tax") || lowered.contains("sr @") || lowered.contains("zrl") { return true }
-        return false
-    }
-
-    private func lineLooksLikeRoundingLine(_ line: String) -> Bool {
-        let lowered = line.lowercased()
-        return lowered.contains("rounding") || lowered.contains("round")
     }
 
     // MARK: - Merchant Extraction

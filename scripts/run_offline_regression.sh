@@ -194,6 +194,7 @@ swiftc \
   "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
+  "$CORE/Services/PaymentAmountExtractor.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \

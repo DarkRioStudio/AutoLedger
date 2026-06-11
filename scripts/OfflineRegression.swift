@@ -37,6 +37,7 @@ struct OfflineRegression {
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyStructuredLedgerJSONParsing(reporter: reporter)
+        verifyPaymentAmountExtraction(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -138,6 +139,49 @@ struct OfflineRegression {
         } catch {
             reporter.check(false, "StructuredLedgerJSONParser reports the expected missing-amount error")
         }
+    }
+
+    private static func verifyPaymentAmountExtraction(reporter: RegressionReporter) {
+        let extractor = PaymentAmountExtractor()
+
+        let paymentResult = extractor.extract(from: """
+        支付宝
+        交易成功
+        商户：Demo Coffee
+        支付金额：23.80
+        """)
+        reporter.check(
+            abs((paymentResult.paidAmount ?? 0) - 23.80) < 0.001,
+            "PaymentAmountExtractor extracts labeled payment amount"
+        )
+        reporter.check(paymentResult.confidence >= 0.9, "PaymentAmountExtractor marks labeled payment amount reliable")
+
+        let rmResult = extractor.extract(from: """
+        MR D.I.Y. (JOHOR) SDN BHD
+        Item(s): 4
+        TOTAL RM 30.90
+        CASH RM 50.00
+        CHANGE RM 19.10
+        """)
+        reporter.check(
+            abs((rmResult.paidAmount ?? 0) - 30.90) < 0.01,
+            "PaymentAmountExtractor prefers TOTAL RM over cash/change lines"
+        )
+        reporter.check(
+            rmResult.selectedCandidate?.role == .total,
+            "PaymentAmountExtractor classifies TOTAL RM as total candidate"
+        )
+
+        let fallbackResult = extractor.extract(from: """
+        Example Market
+        item 2.00
+        8.08
+        """)
+        reporter.check(
+            abs((fallbackResult.paidAmount ?? 0) - 8.08) < 0.01,
+            "PaymentAmountExtractor falls back to last amount when no total label exists"
+        )
+        reporter.check(fallbackResult.isApproximate, "PaymentAmountExtractor flags unlabeled fallback as approximate")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
