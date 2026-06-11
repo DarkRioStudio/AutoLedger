@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1609D 外部辅助识别设置入口）
+更新日期：2026-06-11（GOAL-1610A 账单编辑保存链路稳定性第一步）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-183 GOAL-1610A 账单编辑保存链路稳定性第一步
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D2 / 账单编辑保存链路稳定性
+- 类型：Bugfix / 数据一致性
+- 目标：修复真机账单编辑中保存按钮异常置灰、点击保存不生效、普通编辑污染商户别名和保存结果不明确的问题，并拆清编辑保存链路。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerAmountInputParser.swift`：新增金额输入解析器。
+  - `AutoLedger/AutoLedger/Features/Ledger/TransactionEditorView.swift`：保存闭包改为返回成功 / 失败；保存失败时保留当前编辑页并显示提示；保存中禁止重复点击。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：`addTransaction` / `updateTransaction` 改为返回保存结果；`updateTransaction` 先写 SQLite，成功后再刷新内存、Widget、备份和 iCloud 推送；普通手动编辑不再学习商户别名。
+  - `AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift`、`AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift`、`AutoLedger/AutoLedger/Screenshots/ScreenshotHostView.swift`：同步编辑器保存结果调用点。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：补金额输入解析和普通编辑不学习商户别名回归。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 SQLite schema、CloudKit schema、Bundle ID、signing、entitlements、Xcode Cloud 脚本、截图管线和主页面结构；未改变快捷指令 / Watch / iCloud 同步策略。
+- 完成内容：编辑保存链路明确为“表单草稿 -> 金额解析 -> LedgerStore 保存 -> SQLite 写入 -> 内存刷新 -> Widget / 备份 / iCloud 推送”；写库失败不再关闭编辑页；常见金额输入形态不再导致保存按钮误置灰；普通手动编辑不再生成商户别名。
+- 未完成内容：尚未完成真机 iPhone / iPad 编辑保存全路径复测；若仍有卡死，需要继续沿 `TransactionEditorView -> LedgerStore.updateTransaction -> SQLiteTransactionStore.update -> Widget / Backup / CloudKit` 分段定位。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：本步解决保存链路的同步成功 / 失败表达与明显数据污染风险，但真机输入法、长列表刷新、CloudKit 后台推送和 iPad 详情页状态仍需实际设备复测。
+- 回滚方式：回退提交 `fix: stabilize transaction edit save inputs`、`fix: make transaction editor save explicit` 及本轮文档回填，可恢复到原编辑保存行为。
+- 结论：`GOAL-1610A` 已完成代码和命令级验证，可以进入真机编辑保存复测。
+- 下一步建议：在真机 iPhone / iPad 上各选一笔账单，分别修改商户、金额、分类、时间和备注；保存后立即返回列表和详情检查一致性，再重启 App 检查 SQLite 落盘结果。
 
 ### ITER-182 GOAL-1609D 外部辅助识别设置入口
 - 日期：2026-06-11

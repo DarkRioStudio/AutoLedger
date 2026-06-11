@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.5.1）
+- [2026-06-11 +0800] 推进 `GOAL-1610` 账单编辑保存链路稳定性：新增金额输入解析器，编辑页金额字段支持货币符号、全角数字、小数逗号和“元”等常见输入形态，避免真机输入法下保存按钮异常置灰；`LedgerStore.updateTransaction` 改为显式返回保存结果，SQLite 写入成功后才刷新内存、触发 Widget / 备份 / iCloud 推送，失败时编辑页不关闭并显示错误；普通手动账单编辑不再学习商户别名，避免一次商户名修正污染后续账单。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
+
 ### 变更（v1.5.1）
 - [2026-06-11 +0800] 推进 `GOAL-1609D` 外部辅助识别设置入口：新增独立“外部辅助识别”设置页，提供默认关闭开关、endpoint 保存、API key 保存 / 清除和三语文案；API key 优先存入 Keychain，运行时环境变量仅作为开发 fallback，endpoint 仍保存在 UserDefaults。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不配置真实 provider、不接 Pro gate、不补正式隐私政策或 App Store 文案。
 - [2026-06-11 +0800] 推进 `GOAL-1609C` 外部辅助识别主链路接入：在 `AutoLedgerCore` 新增 `ExternalReceiptAssistSuggestionMapper`，外部结果只映射商户 / 分类 / 置信度，不提供金额；`SmartReceiptParser`、`LedgerTextInterpreter` 和 `QuickLedgerIntent` 接入默认关闭的外部辅助分支，只有运行时配置完整时才发送脱敏 payload，并通过 `SmartReceiptMergePolicy` 保持规则金额优先。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。本步不接 UI 开关、不写入真实 API key、不配置真实 provider。
