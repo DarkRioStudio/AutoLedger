@@ -2899,8 +2899,11 @@ private struct IPadLedgerWorkspaceView: View {
             }
             .sheet(item: $editingTransaction) { transaction in
                 TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory in
-                    store.updateTransaction(updated, refreshSameMerchantCategory: refreshSameMerchantCategory)
-                    selectedTransactionID = updated.id
+                    let didSave = store.updateTransaction(updated, refreshSameMerchantCategory: refreshSameMerchantCategory)
+                    if didSave {
+                        selectedTransactionID = updated.id
+                    }
+                    return didSave
                 }
             }
             .sheet(isPresented: $isAddingTransaction) {
@@ -2915,8 +2918,11 @@ private struct IPadLedgerWorkspaceView: View {
                     ),
                     isNew: true
                 ) { newTransaction, _ in
-                    store.addTransaction(newTransaction)
-                    selectedTransactionID = newTransaction.id
+                    let didSave = store.addTransaction(newTransaction)
+                    if didSave {
+                        selectedTransactionID = newTransaction.id
+                    }
+                    return didSave
                 }
             }
             .sheet(isPresented: $isShowingVoiceLedger) {

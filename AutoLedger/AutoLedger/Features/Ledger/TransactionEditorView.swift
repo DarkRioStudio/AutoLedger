@@ -3,7 +3,7 @@ import SwiftUI
 
 struct TransactionEditorView: View {
     let transaction: Transaction
-    let onSave: (Transaction, Bool) -> Void
+    let onSave: (Transaction, Bool) -> Bool
     /// `true` 表示新增模式，导航栏标题显示"新增账单"；`false` 为编辑模式
     var isNew: Bool = false
 
@@ -17,8 +17,10 @@ struct TransactionEditorView: View {
     @State private var note: String
     @State private var pendingSave: Transaction?
     @State private var showCategoryRefreshPrompt = false
+    @State private var isSaving = false
+    @State private var saveErrorMessage: String?
 
-    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool) -> Void) {
+    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool) -> Bool) {
         self.transaction = transaction
         self.isNew = isNew
         self.onSave = onSave
@@ -88,7 +90,7 @@ struct TransactionEditorView: View {
                             save(updated, refreshSameMerchantCategory: false)
                         }
                     }
-                    .disabled(parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .alert("transaction_editor.category_refresh.title", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
@@ -100,6 +102,14 @@ struct TransactionEditorView: View {
                 }
             } message: { updated in
                 Text(String(format: String(localized: "transaction_editor.category_refresh.message_format"), updated.merchant, updated.categoryTitle))
+            }
+            .alert("transaction_editor.save_failed.title", isPresented: Binding(
+                get: { saveErrorMessage != nil },
+                set: { if !$0 { saveErrorMessage = nil } }
+            )) {
+                Button("common.done", role: .cancel) {}
+            } message: {
+                Text(saveErrorMessage ?? String(localized: "transaction_editor.save_failed.message"))
             }
         }
     }
@@ -126,8 +136,15 @@ struct TransactionEditorView: View {
     }
 
     private func save(_ updated: Transaction, refreshSameMerchantCategory: Bool) {
-        onSave(updated, refreshSameMerchantCategory)
-        pendingSave = nil
-        dismiss()
+        guard !isSaving else { return }
+        isSaving = true
+        let didSave = onSave(updated, refreshSameMerchantCategory)
+        if didSave {
+            pendingSave = nil
+            dismiss()
+        } else {
+            isSaving = false
+            saveErrorMessage = String(localized: "transaction_editor.save_failed.message")
+        }
     }
 }

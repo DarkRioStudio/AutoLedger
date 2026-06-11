@@ -278,6 +278,8 @@
 "transaction_editor.category_refresh.current_only" = "僅儲存本筆";
 "transaction_editor.category_refresh.refresh_all" = "刷新全部";
 "transaction_editor.category_refresh.message_format" = "是否將「%@」所有現存帳單的分類更新為「%@」？";
+"transaction_editor.save_failed.title" = "儲存失敗";
+"transaction_editor.save_failed.message" = "帳單沒有儲存成功，請檢查輸入後再試一次。";
 
 "report.category_breakdown.title" = "分類占比";
 "report.six_month_trend.title" = "近 6 個月趨勢";

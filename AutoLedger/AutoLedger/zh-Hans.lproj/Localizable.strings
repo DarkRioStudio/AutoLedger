@@ -275,6 +275,8 @@
 "transaction_editor.category_refresh.current_only" = "仅保存本笔";
 "transaction_editor.category_refresh.refresh_all" = "刷新全部";
 "transaction_editor.category_refresh.message_format" = "是否将“%@”所有现存账单的分类更新为“%@”？";
+"transaction_editor.save_failed.title" = "保存失败";
+"transaction_editor.save_failed.message" = "账单没有保存成功，请检查输入后重试。";
 
 "report.category_breakdown.title" = "分类占比";
 "report.six_month_trend.title" = "近 6 个月趋势";

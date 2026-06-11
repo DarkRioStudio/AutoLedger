@@ -481,7 +481,8 @@ final class LedgerStore: ObservableObject {
     }
 
     /// 手动新增账单（账本右上角 + 入口）
-    func addTransaction(_ transaction: Transaction) {
+    @discardableResult
+    func addTransaction(_ transaction: Transaction) -> Bool {
         let resolvedTransaction = MerchantAliasResolver.applyingAlias(
             to: transaction,
             aliases: merchantAliases
@@ -493,14 +494,14 @@ final class LedgerStore: ObservableObject {
             sortTransactions()
             lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
             reloadWidgets()
-            return
+            return true
         }
 
         do {
             try store.save(transaction: resolvedTransaction)
         } catch {
             lastImportSummary = "记账失败：\(error.localizedDescription)"
-            return
+            return false
         }
 
         transactions.insert(resolvedTransaction, at: 0)
@@ -509,6 +510,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
     }
 
     /// 保存 App 内语音记账确认后的账单，并记录可追溯调试信息。
@@ -575,13 +577,23 @@ final class LedgerStore: ObservableObject {
         }
     }
 
-    func updateTransaction(_ transaction: Transaction, refreshSameMerchantCategory: Bool = false) {
+    @discardableResult
+    func updateTransaction(_ transaction: Transaction, refreshSameMerchantCategory: Bool = false) -> Bool {
         guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
-            return
+            lastImportSummary = "账单保存失败：未找到要更新的账单。"
+            return false
         }
 
         let original = transactions[index]
         let categoryChanged = original.category != transaction.category
+
+        do {
+            try transactionStore?.update(transaction: transaction)
+        } catch {
+            lastImportSummary = "账单保存失败：\(error.localizedDescription)"
+            return false
+        }
+
         if isHighConfidenceGeneratedTransaction(original.id) {
             learnMerchantAliasIfNeeded(from: original, to: transaction)
         }
@@ -594,28 +606,23 @@ final class LedgerStore: ObservableObject {
 
         transactions[index] = transaction
 
-        do {
-            try transactionStore?.update(transaction: transaction)
-            let refreshedCount = refreshSameMerchantCategory && categoryChanged
-                ? applyCategoryToExistingTransactions(
-                    merchant: transaction.merchant,
-                    category: transaction.category,
-                    excluding: transaction.id
-                )
-                : 0
-            sortTransactions()
-            if refreshedCount > 0 {
-                lastImportSummary = "已保存 \(transaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
-            } else {
-                lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
-            }
-            reloadWidgets()
-            requestAutomaticBackup()
-            scheduleCloudKitPushAfterLocalLedgerChange()
-        } catch {
-            sortTransactions()
-            lastImportSummary = "账单已更新到界面，但写入本地存储失败：\(error.localizedDescription)"
+        let refreshedCount = refreshSameMerchantCategory && categoryChanged
+            ? applyCategoryToExistingTransactions(
+                merchant: transaction.merchant,
+                category: transaction.category,
+                excluding: transaction.id
+            )
+            : 0
+        sortTransactions()
+        if refreshedCount > 0 {
+            lastImportSummary = "已保存 \(transaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
+        } else {
+            lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
         }
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
     }
 
     @discardableResult
