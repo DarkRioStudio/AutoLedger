@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1601 Core 平台依赖审计）
+更新日期：2026-06-11（GOAL-1602 最低系统需求下调）
 
 ## 记录规则
 
@@ -43,6 +43,40 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-174 GOAL-1602 最低系统需求下调实施
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase B / 最低系统下调实施
+- 类型：重构 / 工程配置 / 平台兼容
+- 目标：在不破坏现有发布链路的前提下，将主 App / Watch / tvOS / visionOS 等 target 下调到 `v1.5.1` 目标最低系统矩阵，并保留 Apple Foundation Models 与 ControlWidget 的高版本边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Intents/ClipboardImportIntent.swift`：删除 Core 内的 AppIntents 入口。
+  - `AutoLedger/AutoLedger/Domain/Services/ClipboardImportIntent.swift`：新增主 App 层剪贴板导入 Intent 与 App Group handoff 消费。
+  - `AutoLedger/ControlWidgetExtension/ClipboardImportIntent.swift`、`ClipboardImportControl.swift`：新增 Control Widget 层 Intent，并移除对 `AutoLedgerCore` 的直接 import。
+  - `AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：App 激活 / 首次出现时消费 Control Widget 剪贴板导入 handoff。
+  - `AutoLedger/AutoLedgerCore/Package.swift`：下调 Core package platform。
+  - `AutoLedger/AutoLedger.xcodeproj/project.pbxproj`：下调主 App、Share Extension、Widget、Watch、tvOS、visionOS target deployment target，保留 `ControlWidgetExtension` 为 `iOS 18.0`。
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift`、`QuickLedgerIntent.swift`：补充低系统 feature gate，避免 `SmartReceiptParser.parse` 和 iOS 18-only `@Parameter` API 污染 iOS 17 主线。
+  - `AutoLedger/Podfile`、`AutoLedger/Podfile.lock`：CocoaPods baseline 下调到 iOS 17。
+  - `AutoLedger/Packages/RealityKitContent/Package.swift`：下调 RealityKitContent package platform。
+  - `docs/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：回填实施结果。
+- 未改动范围：未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本、SQLite schema、CloudKit schema、App Store Connect 线上配置或用户可见主流程 UI。
+- 完成内容：主发布线最低系统下调到 `iOS 17.0`；Mac Catalyst 跟随 `iOS 17 / macOS 14` line；Watch App / Watch Widget 下调到 `watchOS 10.0`；tvOS 下调到 `tvOS 17.0`；visionOS 下调到 `visionOS 1.0`；`ControlWidgetExtension` 独立保留 `iOS 18.0`；Apple Foundation Models 仍作为 `iOS 26+` optional enhancement。
+- 未完成内容：尚未更新 README / App Store Connect 对外最低系统说明；尚未做真机 iOS 17 / watchOS 10 / tvOS / visionOS simulator 全量 smoke；尚未执行 Xcode Cloud validation build。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme 'AutoLedgerWatch Watch App' -configuration Debug -destination 'generic/platform=watchOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme ControlWidgetExtension -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`
+- 风险与注意事项：Control Widget 的剪贴板导入现在通过 App Group handoff 触发主 App 消费，仍需真机或模拟器手动点验；Mac Catalyst 仍保留 MediaPipe xcframework 无 Catalyst slice 的既有 warning，当前 fallback 可构建；Apple Foundation Models 在 iOS 17 主线下不会启用，低系统默认走规则解析。
+- 回滚方式：回退本轮相关提交可恢复：`refactor: move clipboard intent out of core`、`chore: lower AutoLedgerCore platform baseline`、`chore: lower platform deployment targets`、`fix: gate model parsing for iOS 17 baseline`、`chore: align CocoaPods baseline with iOS 17`、`chore: lower RealityKitContent platform baseline` 以及本轮文档回填。
+- 结论：`GOAL-1602` 已完成命令级验证，主 App / Watch / tvOS / visionOS 的最低系统需求已按 `v1.5.1` 目标矩阵落地。
+- 下一步建议：进入 `GOAL-1608` 识别链路 Core 化重构，先实现 `PaymentAmountExtractor` 与金额候选回归。
 
 ### ITER-173 GOAL-1601 AutoLedgerCore 平台依赖审计
 - 日期：2026-06-11
