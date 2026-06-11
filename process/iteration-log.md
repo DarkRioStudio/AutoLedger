@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1608B 商户识别 Core 化第一步）
+更新日期：2026-06-11（GOAL-1608C 分类识别 Core 化第一步）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-177 GOAL-1608C 分类识别 Core 化第一步
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 识别链路 Core 化重构
+- 类型：重构 / 测试
+- 目标：将 `LedgerTextInterpreterCore` 中的分类推断从解释器内联映射抽为平台无关的 `CategoryResolver`，让金额、商户、分类三段解析都有独立 Core 边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/CategoryResolver.swift`：新增 `CategoryResolver` 与 `CategoryResolutionResult`。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：分类推断入口改为调用 `CategoryResolver`，并保留 `inferCategory(from:)` 兼容门面；分类 debug trace 接回解释结果。
+  - `scripts/OfflineRegression.swift`：新增 `CategoryResolver` 独立回归，覆盖餐饮、商超、出行和数字服务已知商户。
+  - `scripts/run_offline_regression.sh`：将新 Core 文件纳入离线编译列表。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 `ReceiptParser` 特殊平台规则、`SmartReceiptParser` LLM 职责、UI、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或用户可见入账流程。
+- 完成内容：分类推断已具备独立 resolver、详细结果、置信度、规则名和 debug trace；既有 `LedgerTextInterpreterCore.inferCategory(from:)` 调用方式仍可用；离线回归和 iOS generic build 通过。
+- 未完成内容：尚未让 App 层 `ReceiptParser` / `SmartReceiptParser` 统一复用新 resolver；尚未执行 Golden 回归和全平台 build；分类仍是既有关键词模型，未引入历史学习信号。
+- 测试情况：
+  - RED：新增 `CategoryResolver` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到新类型失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：分类 resolver 当前只是边界抽取，不扩大分类能力；后续如果合并历史分类学习，应保持本地优先和可解释 debug trace。
+- 回滚方式：回退提交 `refactor: extract category resolver` 及本轮文档回填，可恢复 `LedgerTextInterpreterCore` 内联分类映射。
+- 结论：`GOAL-1608C` 已完成，Core 层金额、商户、分类三段解析边界已初步拆出。
+- 下一步建议：继续评估 `ReceiptParser` / `SmartReceiptParser` 的职责边界，保证 LLM 不覆盖规则金额；随后进入 `GOAL-1609` 默认关闭的脱敏外部 API 辅助识别试点。
 
 ### ITER-176 GOAL-1608B 商户识别 Core 化第一步
 - 日期：2026-06-11
