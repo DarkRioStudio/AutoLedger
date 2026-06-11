@@ -40,6 +40,7 @@ struct OfflineRegression {
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
+        verifySmartReceiptMergePolicy(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -232,6 +233,40 @@ struct OfflineRegression {
         reporter.check(resolver.resolve(text: "NTUC FAIRPRICE") == .groceries, "CategoryResolver maps known grocery merchant")
         reporter.check(resolver.resolve(text: "滴滴出行") == .transport, "CategoryResolver maps known transport merchant")
         reporter.check(resolver.resolve(text: "OpenAI ChatGPT") == .digital, "CategoryResolver maps known digital merchant")
+    }
+
+    private static func verifySmartReceiptMergePolicy(reporter: RegressionReporter) {
+        let occurredAt = AppFormatters.parseFlexibleDate("2026-06-11 09:30") ?? Date(timeIntervalSince1970: 0)
+        let ruleReceipt = ImportedReceipt(
+            source: .alipay,
+            merchant: "Rule Merchant",
+            amount: 23.80,
+            occurredAt: occurredAt,
+            rawText: "支付金额 23.80",
+            summary: "规则解析",
+            confidence: 0.86,
+            suggestedCategory: .transport
+        )
+        let aiSuggestion = ReceiptAISuggestion(
+            merchant: "AI Merchant",
+            amount: 999.00,
+            occurredAt: nil,
+            confidence: 0.96,
+            needsUserConfirmation: false,
+            suggestedCategory: .dining
+        )
+
+        let merged = SmartReceiptMergePolicy().merge(
+            aiSuggestion: aiSuggestion,
+            ruleReceipt: ruleReceipt,
+            source: .alipay,
+            rawText: "支付金额 23.80"
+        )
+
+        reporter.check(abs((merged?.receipt.amount ?? 0) - 23.80) < 0.001, "SmartReceiptMergePolicy keeps rule amount over AI amount")
+        reporter.check(merged?.receipt.merchant == "AI Merchant", "SmartReceiptMergePolicy allows AI merchant enrichment")
+        reporter.check(merged?.receipt.suggestedCategory == .dining, "SmartReceiptMergePolicy allows AI category enrichment")
+        reporter.check(merged?.usedRuleAmount == true, "SmartReceiptMergePolicy records rule amount usage")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {

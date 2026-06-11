@@ -5,7 +5,7 @@ import os.log
 
 private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "SmartParser")
 
-/// 多模型智能解析器：LLM 优先提取全部字段 → 低置信度时规则兜底
+/// 多模型智能解析器：规则先锁定金额 → LLM 只做商户/分类等字段增强
 /// 支持 Apple Foundation Models / Gemma-4-E2B-it；模型全部不可用时回退纯规则
 struct SmartReceiptParser: Sendable {
 
@@ -23,6 +23,7 @@ struct SmartReceiptParser: Sendable {
     }
 
     private let ruleParser = ReceiptParser()
+    private let mergePolicy = SmartReceiptMergePolicy()
 
     // MARK: - 同步规则解析（兜底）
 
@@ -32,10 +33,10 @@ struct SmartReceiptParser: Sendable {
 
     // MARK: - 置信度阈值
 
-    /// LLM 结果置信度 ≥ 此值时直接采用，否则规则兜底
+    /// LLM 结果置信度 ≥ 此值时用于字段增强，否则规则兜底
     private static let confidenceThreshold: Double = 0.7
 
-    // MARK: - 主入口（流程反转：LLM 优先）
+    // MARK: - 主入口（规则金额优先）
 
     @available(iOS 26.0, *)
     func parse(
@@ -54,9 +55,16 @@ struct SmartReceiptParser: Sendable {
             return SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
         }
 
+        let ruleResult = ruleParser.parse(
+            text: text,
+            source: source,
+            imageData: imageData,
+            fallbackMerchant: fallbackMerchant
+        )
+
         let providerAvailable = await provider.isAvailable
 
-        // ── Step 1: 尝试 LLM 优先解析 ──
+        // ── Step 1: 尝试 LLM 字段增强 ──
         if providerAvailable {
             let prompt = buildSmartPrompt(ocrText: text)
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -78,36 +86,48 @@ struct SmartReceiptParser: Sendable {
                 if let parsed = parseLLMOutput(responseText) {
                     let confidence = parsed.confidence
 
-                    // 高置信度 → 直接采用 LLM 结果
+                    let aiSuggestion = makeAISuggestion(from: parsed)
+
+                    // 高置信度 → 采用 LLM 字段增强，但金额仍优先使用规则结果
                     if confidence >= Self.confidenceThreshold && !parsed.needsUserConfirmation {
-                        let receipt = buildReceipt(from: parsed, source: source, rawText: text)
-                        logger.info("[LLM] 高置信采用: 商户=\(receipt.merchant) 金额=\(receipt.amount) 置信度=\(confidence)")
+                        guard let merged = mergePolicy.merge(
+                            aiSuggestion: aiSuggestion,
+                            ruleReceipt: ruleResult,
+                            source: source,
+                            rawText: text,
+                            summary: "\(source.title) 智能解析"
+                        ) else {
+                            return nil
+                        }
+                        logger.info("[LLM] 高置信增强: 商户=\(merged.receipt.merchant) 金额=\(merged.receipt.amount) 规则金额=\(merged.usedRuleAmount ? "是" : "否") 置信度=\(confidence)")
                         return SmartResult(
-                            receipt: receipt,
+                            receipt: merged.receipt,
                             llmTrace: LLMTrace(prompt: prompt, response: responseText,
                                                provider: provider, latencyMs: latencyMs),
-                            usedRuleFallback: false
+                            usedRuleFallback: merged.usedRuleAmount
                         )
                     }
 
                     // 低置信度 → 用规则引擎交叉验证
                     logger.info("[LLM] 置信度 \(String(format: "%.2f", confidence)) < \(Self.confidenceThreshold)，启用规则交叉验证")
-                    let ruleResult = ruleParser.parse(text: text, source: source,
-                                                      imageData: imageData,
-                                                      fallbackMerchant: fallbackMerchant)
-                    let merged = mergeResults(llm: parsed, rule: ruleResult, source: source, rawText: text)
+                    guard let merged = mergePolicy.merge(
+                        aiSuggestion: aiSuggestion,
+                        ruleReceipt: ruleResult,
+                        source: source,
+                        rawText: text,
+                        summary: "\(source.title) 混合解析"
+                    ) else {
+                        return nil
+                    }
                     return SmartResult(
-                        receipt: merged,
+                        receipt: merged.receipt,
                         llmTrace: LLMTrace(prompt: prompt, response: responseText,
                                            provider: provider, latencyMs: latencyMs),
-                        usedRuleFallback: true
+                        usedRuleFallback: merged.usedRuleAmount
                     )
                 } else {
                     logger.warning("[LLM] JSON 解析失败，回退规则。响应: \(responseText.prefix(200))")
                     // LLM 返回了但无法解析 → 仍记录 trace 并走规则兜底
-                    let ruleResult = ruleParser.parse(text: text, source: source,
-                                                      imageData: imageData,
-                                                      fallbackMerchant: fallbackMerchant)
                     guard let ruleResult else { return nil }
                     return SmartResult(
                         receipt: ruleResult,
@@ -125,9 +145,7 @@ struct SmartReceiptParser: Sendable {
         }
 
         // ── Step 2: 纯规则兜底 ──
-        guard let ruleResult = ruleParser.parse(text: text, source: source,
-                                                 imageData: imageData,
-                                                 fallbackMerchant: fallbackMerchant) else {
+        guard let ruleResult else {
             logger.warning("[规则] 规则解析也失败，无法提取可入账字段")
             return nil
         }
@@ -226,45 +244,14 @@ struct SmartReceiptParser: Sendable {
 
     // MARK: - 结果构建与合并
 
-    /// 从 LLM 输出构建 ImportedReceipt
-    private func buildReceipt(from llm: LLMSmartOutput, source: ReceiptSource, rawText: String) -> ImportedReceipt {
-        let amount = parseAmount(llm.amount)
+    private func makeAISuggestion(from llm: LLMSmartOutput) -> ReceiptAISuggestion {
         let category = mapExpenseTypeToCategory(llm.expenseType)
-        // 日期仍由规则引擎提取（regex 对日期格式更可靠）
-        let date = ruleParser.parse(text: rawText, source: source)?.occurredAt ?? Date()
-        return ImportedReceipt(
-            source: source,
+        return ReceiptAISuggestion(
             merchant: llm.merchantName,
-            amount: amount,
-            occurredAt: date,
-            rawText: rawText,
-            summary: "\(source.title) 智能解析",
+            amount: parseAmount(llm.amount),
+            occurredAt: nil,
             confidence: llm.confidence,
-            suggestedCategory: category
-        )
-    }
-
-    /// LLM 低置信 + 规则引擎交叉验证合并
-    private func mergeResults(llm: LLMSmartOutput, rule: ImportedReceipt?,
-                              source: ReceiptSource, rawText: String) -> ImportedReceipt {
-        let llmAmount = parseAmount(llm.amount)
-        // 金额：优先采用规则（regex 对数字更可靠），LLM 作参考
-        let amount = rule?.amount ?? llmAmount
-        // 商户：LLM 通常更准
-        let merchant = llm.merchantName.isEmpty ? (rule?.merchant ?? "未知商户") : llm.merchantName
-        // 日期：规则更可靠
-        let date = rule?.occurredAt ?? Date()
-        // 分类：LLM 优先
-        let category = mapExpenseTypeToCategory(llm.expenseType)
-
-        return ImportedReceipt(
-            source: source,
-            merchant: merchant,
-            amount: amount,
-            occurredAt: date,
-            rawText: rawText,
-            summary: "\(source.title) 混合解析",
-            confidence: max(llm.confidence, rule?.confidence ?? 0),
+            needsUserConfirmation: llm.needsUserConfirmation,
             suggestedCategory: category
         )
     }

@@ -197,6 +197,7 @@ swiftc \
   "$CORE/Services/PaymentAmountExtractor.swift" \
   "$CORE/Services/MerchantResolver.swift" \
   "$CORE/Services/CategoryResolver.swift" \
+  "$CORE/Services/SmartReceiptMergePolicy.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
