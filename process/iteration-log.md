@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1608C 分类识别 Core 化第一步）
+更新日期：2026-06-11（GOAL-1608D SmartParser 金额职责边界收敛）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-178 GOAL-1608D SmartParser 金额职责边界收敛
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 识别链路 Core 化重构
+- 类型：重构 / 测试
+- 目标：收紧 `SmartReceiptParser` 与规则解析的职责边界，确保 AI / LLM 候选不能覆盖规则解析得到的金额，同时为后续默认关闭的外部 API 辅助识别提供可测试的合并策略。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/SmartReceiptMergePolicy.swift`：新增 `ReceiptAISuggestion`、`SmartReceiptMergeOutcome` 和 `SmartReceiptMergePolicy`。
+  - `AutoLedger/AutoLedger/Domain/Services/SmartReceiptParser.swift`：高置信 LLM 路径改为先拿规则解析结果，再通过 Core 合并策略进行商户 / 分类增强；金额优先保留规则结果。
+  - `scripts/OfflineRegression.swift`：新增 `SmartReceiptMergePolicy` 独立回归，覆盖 AI 金额与规则金额冲突时的规则金额优先契约。
+  - `scripts/run_offline_regression.sh`：将新 Core 文件纳入离线编译列表。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 UI、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置、`ReceiptParser` 特殊平台规则、OCR 服务、外部 API 接入或用户可见入账流程。
+- 完成内容：SmartParser 的 AI 增强路径已改为规则金额优先；Core 合并策略允许 AI 补商户和分类，但规则已有金额时不会被 AI 金额覆盖；离线回归新增了可追溯契约。
+- 未完成内容：尚未接入默认关闭的脱敏外部 API 辅助识别；尚未把外部 API 候选接入 `MerchantResolver`；尚未执行 Golden 回归和全平台 build。
+- 测试情况：
+  - RED：新增 `SmartReceiptMergePolicy` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到 `ReceiptAISuggestion` / `SmartReceiptMergePolicy` 失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：当规则解析完全失败时，高置信 AI 候选仍可作为 fallback 产出候选；后续外部 API 接入时仍必须保持默认关闭、脱敏、失败降级和日志不泄露。
+- 回滚方式：回退提交 `refactor: preserve rule amounts in smart parser` 及本轮文档回填，可恢复 SmartParser 原有 LLM 构建 / 低置信合并逻辑。
+- 结论：`GOAL-1608D` 已完成，`GOAL-1608` 第一阶段可收口为已完成；下一步进入 `GOAL-1609` 脱敏外部 API 辅助识别试点。
+- 下一步建议：按默认关闭、最小化脱敏 payload、失败降级到本地解析的原则开始 `GOAL-1609`，先做配置与接口边界，再接真实 provider。
 
 ### ITER-177 GOAL-1608C 分类识别 Core 化第一步
 - 日期：2026-06-11
