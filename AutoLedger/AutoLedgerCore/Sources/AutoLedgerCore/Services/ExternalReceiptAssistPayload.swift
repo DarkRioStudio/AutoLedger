@@ -12,6 +12,25 @@ public struct ExternalReceiptAssistPayload: Equatable, Sendable {
     }
 }
 
+public struct ExternalReceiptAssistSuggestion: Codable, Equatable, Sendable {
+    public let merchantCandidates: [String]
+    public let categoryHint: String?
+    public let explanation: String?
+    public let confidence: Double?
+
+    public init(
+        merchantCandidates: [String],
+        categoryHint: String?,
+        explanation: String?,
+        confidence: Double?
+    ) {
+        self.merchantCandidates = merchantCandidates
+        self.categoryHint = categoryHint
+        self.explanation = explanation
+        self.confidence = confidence
+    }
+}
+
 public struct ExternalReceiptAssistPayloadBuilder: Sendable {
     public init() {}
 
@@ -112,5 +131,72 @@ public struct ExternalReceiptAssistPayloadBuilder: Sendable {
             withTemplate: template
         )
         return (replaced, matches)
+    }
+}
+
+public struct ExternalReceiptAssistConfiguration: Equatable, Sendable {
+    public let isEnabled: Bool
+    public let endpointURLString: String?
+    public let hasAPIKey: Bool
+
+    public init(isEnabled: Bool, endpointURLString: String?, hasAPIKey: Bool) {
+        self.isEnabled = isEnabled
+        self.endpointURLString = endpointURLString
+        self.hasAPIKey = hasAPIKey
+    }
+}
+
+public enum ExternalReceiptAssistBlockReason: Equatable, Sendable {
+    case disabled
+    case missingEndpoint
+    case invalidEndpoint
+    case missingAPIKey
+    case emptyPayload
+}
+
+public struct ExternalReceiptAssistGateDecision: Equatable, Sendable {
+    public let canRequest: Bool
+    public let endpointURL: URL?
+    public let reason: ExternalReceiptAssistBlockReason?
+
+    public init(canRequest: Bool, endpointURL: URL?, reason: ExternalReceiptAssistBlockReason?) {
+        self.canRequest = canRequest
+        self.endpointURL = endpointURL
+        self.reason = reason
+    }
+}
+
+public struct ExternalReceiptAssistGate: Sendable {
+    public init() {}
+
+    public func evaluate(
+        configuration: ExternalReceiptAssistConfiguration,
+        payload: ExternalReceiptAssistPayload
+    ) -> ExternalReceiptAssistGateDecision {
+        guard configuration.isEnabled else {
+            return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: nil, reason: .disabled)
+        }
+
+        guard !payload.sanitizedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: nil, reason: .emptyPayload)
+        }
+
+        guard let endpointURLString = configuration.endpointURLString,
+              !endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: nil, reason: .missingEndpoint)
+        }
+
+        guard let endpointURL = URL(string: endpointURLString),
+              let scheme = endpointURL.scheme?.lowercased(),
+              ["https", "http"].contains(scheme),
+              endpointURL.host?.isEmpty == false else {
+            return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: nil, reason: .invalidEndpoint)
+        }
+
+        guard configuration.hasAPIKey else {
+            return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: endpointURL, reason: .missingAPIKey)
+        }
+
+        return ExternalReceiptAssistGateDecision(canRequest: true, endpointURL: endpointURL, reason: nil)
     }
 }

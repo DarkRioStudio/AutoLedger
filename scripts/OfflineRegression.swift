@@ -42,6 +42,7 @@ struct OfflineRegression {
         verifyCategoryResolution(reporter: reporter)
         verifySmartReceiptMergePolicy(reporter: reporter)
         verifyExternalReceiptAssistPayload(reporter: reporter)
+        verifyExternalReceiptAssistGate(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -296,6 +297,59 @@ struct OfflineRegression {
         reporter.check(!payload.sanitizedText.contains("天津市和平区Example Road 88号"), "ExternalReceiptAssistPayload redacts address-like lines")
         reporter.check(!payload.sanitizedText.contains("X510123456789"), "ExternalReceiptAssistPayload redacts sample file identifiers")
         reporter.check(payload.redactionCount >= 6, "ExternalReceiptAssistPayload records redaction count")
+    }
+
+    private static func verifyExternalReceiptAssistGate(reporter: RegressionReporter) {
+        let gate = ExternalReceiptAssistGate()
+        let payload = ExternalReceiptAssistPayload(
+            source: .alipay,
+            sanitizedText: "Demo Coffee\n支付金额 23.80",
+            redactionCount: 1
+        )
+
+        let disabled = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: false,
+                endpointURLString: "https://api.example.com/receipt-assist",
+                hasAPIKey: true
+            ),
+            payload: payload
+        )
+        reporter.check(!disabled.canRequest, "ExternalReceiptAssistGate defaults disabled")
+        reporter.check(disabled.reason == .disabled, "ExternalReceiptAssistGate reports disabled reason")
+
+        let missingKey = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "https://api.example.com/receipt-assist",
+                hasAPIKey: false
+            ),
+            payload: payload
+        )
+        reporter.check(!missingKey.canRequest, "ExternalReceiptAssistGate blocks missing API key")
+        reporter.check(missingKey.reason == .missingAPIKey, "ExternalReceiptAssistGate reports missing API key")
+
+        let invalidEndpoint = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "not a url",
+                hasAPIKey: true
+            ),
+            payload: payload
+        )
+        reporter.check(!invalidEndpoint.canRequest, "ExternalReceiptAssistGate blocks invalid endpoint")
+        reporter.check(invalidEndpoint.reason == .invalidEndpoint, "ExternalReceiptAssistGate reports invalid endpoint")
+
+        let allowed = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "https://api.example.com/receipt-assist",
+                hasAPIKey: true
+            ),
+            payload: payload
+        )
+        reporter.check(allowed.canRequest, "ExternalReceiptAssistGate allows complete enabled config")
+        reporter.check(allowed.reason == nil, "ExternalReceiptAssistGate has no failure reason when allowed")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
