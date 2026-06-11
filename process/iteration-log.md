@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1608D SmartParser 金额职责边界收敛）
+更新日期：2026-06-11（GOAL-1609A 外部辅助识别脱敏 payload）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-179 GOAL-1609A 外部辅助识别脱敏 payload
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D / 脱敏外部 API 辅助识别试点
+- 类型：能力增强 / 隐私 / 测试
+- 目标：在不接真实网络和不引入 API key 的前提下，先建立外部辅助识别前的最小化脱敏 payload 边界。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/ExternalReceiptAssistPayload.swift`：新增 `ExternalReceiptAssistPayload` 与 `ExternalReceiptAssistPayloadBuilder`。
+  - `scripts/OfflineRegression.swift`：新增脱敏 payload 独立回归，覆盖订单号、商户单号、卡尾号、手机号、地址行、样本文件 ID 和超长编号脱敏。
+  - `scripts/run_offline_regression.sh`：将新 Core 文件纳入离线编译列表。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未接入网络请求、真实外部 API provider、API key、UI 开关、`SmartReceiptParser` 主链路、日志输出、SQLite schema、Bundle ID、signing、entitlements 或 CloudKit 配置。
+- 完成内容：外部辅助识别 payload 已可在 Core 层生成脱敏文本；商户候选和短金额上下文保留，敏感编号 / 地址 / 手机号 / 卡尾号会被替换；离线回归覆盖脱敏契约。
+- 未完成内容：尚未新增默认关闭开关、provider adapter、响应解析、SmartParser 接入和失败降级；尚未补隐私文案和 UI。
+- 测试情况：
+  - RED：新增 `ExternalReceiptAssistPayload` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到 `ExternalReceiptAssistPayloadBuilder` 失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：脱敏器是第一版启发式规则，不能替代真实隐私审计；后续接 provider 时不得记录原始 OCR 全文，不得把 API key 写入源码或仓库。
+- 回滚方式：回退提交 `feat: add redacted external assist payload` 及本轮文档回填，可移除外部辅助识别 payload 边界，主本地解析链路不受影响。
+- 结论：`GOAL-1609A` 已完成，外部 API 试点具备第一层本地脱敏边界。
+- 下一步建议：进入 `GOAL-1609B`，新增默认关闭开关、API key 读取边界和 provider adapter skeleton，仍不默认调用外部服务。
 
 ### ITER-178 GOAL-1608D SmartParser 金额职责边界收敛
 - 日期：2026-06-11
