@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.5.1）
+- [2026-06-11 +0800] 完成 `GOAL-1601` AutoLedgerCore 平台依赖审计：新增 [docs/autoledgercore-platform-dependency-audit.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/docs/autoledgercore-platform-dependency-audit.md)，确认 `AutoLedgerCore` 当前主要阻塞是 `ClipboardImportIntent` 引入 `AppIntents`，Core 其他主要源码仍是 `Foundation` / `SQLite3` 级别；`v1.5.1` 后续应优先将该 Intent 迁出为 App / Extension 层 Adapter，再下调 Core package，暂不先做大规模 `CoreBase` 拆包。
 - [2026-06-11 +0800] 更新 [versions/v1.5.1-plan.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/versions/v1.5.1-plan.md)：将 `v1.5.0` 遗留的账单 OCR / 文本识别链路重构正式规划进 `v1.5.1`，新增 `GOAL-1608`，明确 Core 层三段式解析 Pipeline、金额由规则决定、LLM 只辅助商户候选、resolver 统一选择最终结果，并把独立回归与 `ReceiptParser` / `SmartReceiptParser` 外部兼容列入验收；补充商户选择不再依赖 OCR 行顺序，而改为分词候选、上下文证据和历史信号综合评分；新增 `GOAL-1609`，将默认关闭的脱敏外部大模型 API 辅助识别前移为 `v1.5.1` 受控试点，可作为后续 Pro 能力评估，但不得成为默认识别路径或破坏本地优先链路。
 - [2026-06-09 +0800] 新增 Shortcuts `导入 JSON 账单` App Intent 与确认页：支持从 Shortcuts 参数或剪贴板传入结构化账单 JSON，解析金额、商户、分类、日期、备注、币种和置信度；高置信度自动保存，中置信度打开确认页复核，低置信度或关键字段缺失时返回错误不入账；新增 [docs/shortcuts-json-ledger-import.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/docs/shortcuts-json-ledger-import.md) 说明字段 schema 与当前边界。
 - [2026-06-08 +0800] 新增 [versions/v1.5.1-plan.md](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/versions/v1.5.1-plan.md)，正式将当前开发线切换为 `v1.5.1` 规划：`v1.5.0` 改为实现基线，不再单独执行最终 smoke / Xcode Cloud / ASC 提审收口；`v1.5.1` 统一承接 `v1.5.0` 遗留发布门禁、tvOS / visionOS 第一版产品代码以及全平台最低系统需求优化。多账本继续顺延到后续版本。

@@ -1,8 +1,9 @@
 # 全平台最低系统需求下调规划
 
-更新日期：2026-06-08
-状态：规划中（仅文档，不改代码）
+更新日期：2026-06-11
+状态：规划中（GOAL-1601 第一轮审计已完成，仍未改代码）
 承接版本：`v1.5.1` 候选
+关联审计：`docs/autoledgercore-platform-dependency-audit.md`
 
 ## 1. 目标
 
@@ -72,13 +73,29 @@
 3. `AutoLedgerCore` 当前 target 内仍混有 `AppIntents`
    - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Intents/ClipboardImportIntent.swift`
    - 从当前源码看，Core 内绝大部分文件仍是 Foundation / SQLite-only
-   - 因此更合理的方向不是“整个 Core 必须维持 iOS 18+”，而是优先拆出 `CoreBase + Intent Adapter`
+   - 因此更合理的方向不是“整个 Core 必须维持 iOS 18+”，而是优先将 `ClipboardImportIntent` 迁出为 Intent Adapter；只有迁出后仍遇到平台 API 阻塞时，再拆独立 `CoreBase`
 
-3. 当前文档口径
+4. 当前文档口径
    - `README.md`
    - `AutoLedger/README.md`
    - 部分本地化文案中也有 `iOS 26+`
    - 这些需要等真正落地后再统一调整
+
+### 4.3 GOAL-1601 审计结论（2026-06-11）
+
+第一轮审计确认：
+
+- `AutoLedgerCore` 当前唯一高层平台框架命中是 `AppIntents`。
+- 命中文件是 `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Intents/ClipboardImportIntent.swift`。
+- Core 内其他主要源码仍是 `Foundation` / `SQLite3` 级别。
+- 当前不需要先做大规模 `CoreBase` 拆包。
+- 更稳妥的实施路径是先把 `ClipboardImportIntent` 迁出 `AutoLedgerCore`，作为 App / Extension 层的 Intent Adapter，再下调 `AutoLedgerCore/Package.swift`。
+
+因此，Phase B 的第一步从“判断是否必须拆 `CoreBase`”调整为：
+
+1. 迁出 `ClipboardImportIntent`。
+2. 下调 `AutoLedgerCore` package platform。
+3. 若仍出现平台 API 编译阻塞，再评估是否拆出独立 `CoreBase`。
 
 ### 4.2 当前看起来不是主要 blocker 的点
 

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（v1.5.1 识别链路重构规划）
+更新日期：2026-06-11（GOAL-1601 Core 平台依赖审计）
 
 ## 记录规则
 
@@ -43,6 +43,26 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-173 GOAL-1601 AutoLedgerCore 平台依赖审计
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase B / 最低系统下调准备
+- 类型：文档 / 架构审计 / 平台规划
+- 目标：审计 `AutoLedgerCore` 当前平台依赖，判断是否必须先拆 `CoreBase`，并为后续 deployment target 下调给出实施顺序。
+- 改动范围：
+  - `docs/autoledgercore-platform-dependency-audit.md`：新增 Core 平台依赖审计结论。
+  - `docs/minimum-platform-baseline-reduction-plan.md`：补充 GOAL-1601 审计结论，收紧 Phase B 顺序。
+  - `versions/v1.5.1-plan.md`：将 `GOAL-1601` 标记为已完成，并补充最低系统实施结论。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮审计。
+- 未改动范围：未修改 Swift 源码、Xcode target、deployment target、Bundle ID、entitlements、CloudKit 配置、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：确认 `AutoLedgerCore` 主要源码仍是 `Foundation` / `SQLite3` 级别；当前唯一高层平台依赖命中是 `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Intents/ClipboardImportIntent.swift` 中的 `AppIntents`；结论是不需要先大规模拆 `CoreBase`，应先把 `ClipboardImportIntent` 迁出为 App / Extension 层 Intent Adapter，再下调 `AutoLedgerCore/Package.swift`。
+- 未完成内容：尚未迁移 `ClipboardImportIntent`；尚未修改 `AutoLedgerCore/Package.swift`；尚未下调任何 Xcode target 的 deployment target；尚未运行低系统构建验证。
+- 测试情况：未运行测试。本轮仅做依赖审计与文档回填，不涉及源码或工程配置修改。
+- 风险与注意事项：`ClipboardImportIntent` 当前被 `ControlWidgetExtension/ClipboardImportControl.swift` 使用，后续迁移时必须保持 Control Widget 和剪贴板导入入口行为不变；迁移后如果 Core 仍出现低系统编译阻塞，再重新评估是否需要独立 `CoreBase`。
+- 回滚方式：删除 `docs/autoledgercore-platform-dependency-audit.md`，回退 `docs/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md` 和本条日志即可。
+- 结论：`GOAL-1601` 已完成。下一步进入 `GOAL-1602`，优先迁出 `ClipboardImportIntent`，再下调 Core package 和相关 target deployment target。
+- 下一步建议：实施 `GOAL-1602` 时先保持行为不变地迁移 Intent Adapter，再跑 iOS generic、Mac Catalyst、Watch 和离线回归。
 
 ### ITER-172 GOAL-1608 识别链路 Core 化重构规划
 - 日期：2026-06-11
