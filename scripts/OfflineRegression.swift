@@ -41,6 +41,7 @@ struct OfflineRegression {
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
         verifySmartReceiptMergePolicy(reporter: reporter)
+        verifyExternalReceiptAssistPayload(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
@@ -267,6 +268,34 @@ struct OfflineRegression {
         reporter.check(merged?.receipt.merchant == "AI Merchant", "SmartReceiptMergePolicy allows AI merchant enrichment")
         reporter.check(merged?.receipt.suggestedCategory == .dining, "SmartReceiptMergePolicy allows AI category enrichment")
         reporter.check(merged?.usedRuleAmount == true, "SmartReceiptMergePolicy records rule amount usage")
+    }
+
+    private static func verifyExternalReceiptAssistPayload(reporter: RegressionReporter) {
+        let rawText = """
+        Demo Coffee
+        支付金额 23.80
+        订单号 202606111234567890
+        商户单号 MERCHANT-ORDER-202606111234
+        付款银行卡 尾号 4321
+        手机号 13800138000
+        地址 天津市和平区Example Road 88号
+        样本文件 X510123456789
+        """
+
+        let payload = ExternalReceiptAssistPayloadBuilder().build(
+            rawText: rawText,
+            source: .alipay
+        )
+
+        reporter.check(payload.sanitizedText.contains("Demo Coffee"), "ExternalReceiptAssistPayload keeps merchant candidate text")
+        reporter.check(payload.sanitizedText.contains("23.80"), "ExternalReceiptAssistPayload keeps short payment amount context")
+        reporter.check(!payload.sanitizedText.contains("202606111234567890"), "ExternalReceiptAssistPayload redacts order-like long numbers")
+        reporter.check(!payload.sanitizedText.contains("MERCHANT-ORDER-202606111234"), "ExternalReceiptAssistPayload redacts merchant order identifiers")
+        reporter.check(!payload.sanitizedText.contains("4321"), "ExternalReceiptAssistPayload redacts card tail numbers")
+        reporter.check(!payload.sanitizedText.contains("13800138000"), "ExternalReceiptAssistPayload redacts phone-like numbers")
+        reporter.check(!payload.sanitizedText.contains("天津市和平区Example Road 88号"), "ExternalReceiptAssistPayload redacts address-like lines")
+        reporter.check(!payload.sanitizedText.contains("X510123456789"), "ExternalReceiptAssistPayload redacts sample file identifiers")
+        reporter.check(payload.redactionCount >= 6, "ExternalReceiptAssistPayload records redaction count")
     }
 
     private static func verifyLedgerTextInterpreterCore(reporter: RegressionReporter) {
