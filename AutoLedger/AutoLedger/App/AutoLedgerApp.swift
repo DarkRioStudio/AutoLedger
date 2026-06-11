@@ -115,6 +115,7 @@ private struct AutoLedgerRootView: View {
                     if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
                         store.attemptClipboardImport()
                     }
+                    consumeClipboardImportIntentHandoffIfNeeded()
                     // 订阅提醒通知调度
                     if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
                         NotificationService.shared.requestPermissionIfNeeded()
@@ -126,6 +127,7 @@ private struct AutoLedgerRootView: View {
             }
             .onAppear {
                 consumeStructuredJSONHandoffIfNeeded()
+                consumeClipboardImportIntentHandoffIfNeeded()
             }
     }
 
@@ -162,6 +164,12 @@ private struct AutoLedgerRootView: View {
         guard pendingStructuredJSONHandoff == nil,
               let handoff = StructuredLedgerJSONIntentHandoffStore.consume() else { return }
         pendingStructuredJSONHandoff = handoff
+    }
+
+    @MainActor
+    private func consumeClipboardImportIntentHandoffIfNeeded() {
+        guard ClipboardImportIntentHandoff.consumePendingRequest() else { return }
+        store.attemptClipboardImport(force: true)
     }
 
     @MainActor

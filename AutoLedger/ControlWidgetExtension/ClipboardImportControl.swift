@@ -1,6 +1,5 @@
 import WidgetKit
 import SwiftUI
-import AutoLedgerCore
 
 @main
 struct ClipboardImportControl: ControlWidget {
