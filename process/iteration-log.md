@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1609A 外部辅助识别脱敏 payload）
+更新日期：2026-06-11（GOAL-1609B 外部辅助识别门控与 adapter）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-180 GOAL-1609B 外部辅助识别门控与 adapter
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase D / 脱敏外部 API 辅助识别试点
+- 类型：能力增强 / 隐私 / 测试
+- 目标：在脱敏 payload 基础上增加默认关闭门控和 App 层 provider adapter skeleton，确保外部请求只有在运行时显式配置完整时才可能发起。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/ExternalReceiptAssistPayload.swift`：新增 `ExternalReceiptAssistSuggestion`、`ExternalReceiptAssistConfiguration`、`ExternalReceiptAssistGate`、`ExternalReceiptAssistGateDecision` 和阻断原因。
+  - `AutoLedger/AutoLedger/Domain/Services/ExternalReceiptAssistClient.swift`：新增 App 层 URLSession adapter skeleton 和 settings key 常量。
+  - `scripts/OfflineRegression.swift`：新增 gate 独立回归，覆盖默认关闭、缺 API key、endpoint 非法和完整配置放行。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未接 UI、未接 `SmartReceiptParser` 主链路、未默认调用外部服务、未写入真实 API key、未修改 SQLite schema、Bundle ID、signing、entitlements 或 CloudKit 配置。
+- 完成内容：外部辅助识别现在有默认关闭门控；外部请求必须满足开关开启、payload 非空、endpoint 合法且运行时存在 API key；App 层 adapter 只发送已脱敏文本，不发送图片或原始 OCR 全文。
+- 未完成内容：尚未接入 SmartParser 增强链路、失败降级、响应候选合并、UI 开关和 API key 安全输入 / 存储路径。
+- 测试情况：
+  - RED：新增 `ExternalReceiptAssistGate` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到 `ExternalReceiptAssistGate` / `ExternalReceiptAssistConfiguration` 失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：当前 adapter skeleton 具备网络发送能力，但没有任何主链路调用；后续接 UI / provider 时 API key 不应进入源码、日志、截图或 iCloud 配置同步。
+- 回滚方式：回退提交 `feat: add external assist request gate` 及本轮文档回填，可保留 1609A 脱敏 payload 或一并回退，主本地解析链路不受影响。
+- 结论：`GOAL-1609B` 已完成，外部 API 试点具备默认关闭门控和 App 层 adapter skeleton。
+- 下一步建议：进入 `GOAL-1609C`，在 SmartParser 增强链路中接入外部辅助候选，并验证关闭 / 失败时完整降级到本地规则。
 
 ### ITER-179 GOAL-1609A 外部辅助识别脱敏 payload
 - 日期：2026-06-11
