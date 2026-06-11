@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1608A 金额识别 Core 化第一步）
+更新日期：2026-06-11（GOAL-1608B 商户识别 Core 化第一步）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-176 GOAL-1608B 商户识别 Core 化第一步
+- 日期：2026-06-11
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 识别链路 Core 化重构
+- 类型：重构 / 测试
+- 目标：将 `LedgerTextInterpreterCore` 中的商户选择从行序优先的内联规则抽为平台无关的候选提取与 resolver，为后续 LLM 商户候选合并和脱敏外部增强准备稳定接口。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/MerchantResolver.swift`：新增 `MerchantCandidate`、`MerchantCandidateSource`、`MerchantResolutionResult`、`MerchantNormalizer`、`RuleMerchantExtractor` 和 `MerchantResolver`。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：商户选择入口改为调用 `RuleMerchantExtractor + MerchantResolver`，并把商户 debug trace 接回解释结果；删除旧内联商户辅助规则。
+  - `scripts/OfflineRegression.swift`：新增 `MerchantResolver` 独立回归，覆盖标签商户、发票页眉排除和支付渠道噪声排除。
+  - `scripts/run_offline_regression.sh`：将新 Core 文件纳入离线编译列表。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 `ReceiptParser` 特殊平台规则、`SmartReceiptParser` LLM 职责、分类 resolver、UI、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或用户可见入账流程。
+- 完成内容：商户识别已具备独立候选模型、normalizer、标签候选、行候选、黑名单 / 编号 / 金额 / 时间 / 商品编号排除和基础评分；`LedgerTextInterpreterCore` 公开 API 保持不变；既有商户离线样例继续通过。
+- 未完成内容：尚未将 App 层 `ReceiptParser` 的平台特殊商户规则复用到新 resolver；尚未接入历史别名信号、外部 LLM 候选、分类 resolver 和 Golden 回归；候选评分仍是第一版轻量规则。
+- 测试情况：
+  - RED：新增 `RuleMerchantExtractor` / `MerchantResolver` 离线回归后，`bash scripts/run_offline_regression.sh` 因找不到新类型失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：商户评分当前只覆盖 Core 解释器第一阶段，不代表所有支付平台特殊解析已经统一；后续接外部 API 时外部结果只能作为 `MerchantCandidate` 输入 resolver，不得直接覆盖金额或静默入账。
+- 回滚方式：回退提交 `refactor: extract merchant resolver` 及本轮文档回填，可恢复 `LedgerTextInterpreterCore` 内联商户选择逻辑。
+- 结论：`GOAL-1608B` 已完成，商户识别从解释器内联规则抽为独立 Core 候选与 resolver，并通过离线回归和 iOS generic build。
+- 下一步建议：继续 Phase C，抽取 `CategoryResolver` 并评估 `ReceiptParser` / `SmartReceiptParser` 的金额与商户职责边界，随后进入 `GOAL-1609` 脱敏外部 API 辅助识别试点。
 
 ### ITER-175 GOAL-1608A 金额识别 Core 化第一步
 - 日期：2026-06-11
