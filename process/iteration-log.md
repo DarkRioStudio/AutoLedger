@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-11（GOAL-1610B 商户别名学习用户确认）
+更新日期：2026-06-12（GOAL-1608E 支付成功页商户候选修正）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-185 GOAL-1608E 支付成功页商户候选修正
+- 日期：2026-06-12
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：Bugfix / 解析稳定性
+- 目标：修复真机支付宝支付成功页 OCR 中优惠 / 奖励 / UI 文案压过真实商户的问题，避免继续按简单文本顺序选中“碰友日立减”。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift`：支付宝支付成功页专用商户候选过滤新增立减、优惠、折扣、代金券、满减、返现、特价、指定商品等营销词。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/MerchantResolver.swift`：Core 商户候选过滤新增回首页、付款方式、立减、红包、森林能量、葵花籽、待领取等 UI / 营销噪声；新增便利店 / 门店括号 / 餐厅 / 咖啡 / market / store 等真实商户形态加分。
+  - `scripts/OfflineRegression.swift`：新增真机形态 OCR 回归，覆盖 `易择便利（陈塘科创园店）` 优先于 `碰友日立减`，并验证金额保持 `¥14.32`。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 UI、SQLite schema、外部 API、LLM 合并策略、Bundle ID、signing、entitlements、CloudKit 配置或 Xcode Cloud 脚本。
+- 完成内容：商户候选从“靠前文本优先”进一步收敛为“过滤 UI / 营销噪声 + 提高门店形态权重”；App 层专用解析和 Core resolver 双层均覆盖该类样本。
+- 未完成内容：尚未在真机重新识别同一张截图；更多平台营销文案仍需要通过后续真实样本扩展回归。
+- 测试情况：
+  - RED：新增真实形态 OCR 回归后，`bash scripts/run_offline_regression.sh` 先失败，Core resolver 会选中非商户候选。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：营销词过滤会降低优惠文案成为商户的概率；如果未来确有商户名包含“立减 / 红包”等词，需要通过别名或更强上下文规则处理。
+- 回滚方式：回退提交 `fix: prefer store merchant over payment reward text` 及本轮文档回填即可恢复原解析行为。
+- 结论：`GOAL-1608E` 已完成命令级验证，可以进入真机复测。
+- 下一步建议：用同一张支付成功截图真机重测，确认调试记录商户变为真实门店；若仍出现营销文案，继续把该 OCR 原文加入回归。
 
 ### ITER-184 GOAL-1610B 商户别名学习用户确认
 - 日期：2026-06-11
