@@ -31,6 +31,186 @@ public struct ExternalReceiptAssistSuggestion: Codable, Equatable, Sendable {
     }
 }
 
+public enum ExternalReceiptAssistProvider: String, CaseIterable, Codable, Equatable, Identifiable, Sendable {
+    case deepSeek = "deepseek"
+    case qwen
+    case openAI = "openai"
+    case custom
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .deepSeek:
+            return "DeepSeek"
+        case .qwen:
+            return "Qwen"
+        case .openAI:
+            return "OpenAI"
+        case .custom:
+            return "Custom"
+        }
+    }
+
+    public var defaultEndpointURLString: String? {
+        switch self {
+        case .deepSeek:
+            return "https://api.deepseek.com/chat/completions"
+        case .qwen:
+            return "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        case .openAI:
+            return "https://api.openai.com/v1/chat/completions"
+        case .custom:
+            return nil
+        }
+    }
+
+    public var defaultModel: String {
+        switch self {
+        case .deepSeek:
+            return "deepseek-chat"
+        case .qwen:
+            return "qwen-plus"
+        case .openAI:
+            return "gpt-4.1-mini"
+        case .custom:
+            return ""
+        }
+    }
+}
+
+public enum ExternalReceiptAssistOpenAICompatibleCodecError: Error, Equatable, Sendable {
+    case missingChoiceContent
+    case invalidSuggestionJSON
+}
+
+public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
+    private struct ChatMessage: Codable, Equatable, Sendable {
+        let role: String
+        let content: String
+    }
+
+    private struct ResponseFormat: Codable, Equatable, Sendable {
+        let type: String
+    }
+
+    private struct ChatCompletionRequest: Codable, Equatable, Sendable {
+        let model: String
+        let messages: [ChatMessage]
+        let temperature: Double
+        let responseFormat: ResponseFormat
+
+        enum CodingKeys: String, CodingKey {
+            case model
+            case messages
+            case temperature
+            case responseFormat = "response_format"
+        }
+    }
+
+    private struct ChatCompletionResponse: Decodable {
+        struct Choice: Decodable {
+            struct Message: Decodable {
+                let content: String?
+            }
+
+            let message: Message
+        }
+
+        let choices: [Choice]
+    }
+
+    private struct SnakeCaseSuggestion: Decodable {
+        let merchantCandidates: [String]
+        let categoryHint: String?
+        let explanation: String?
+        let confidence: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case merchantCandidates = "merchant_candidates"
+            case categoryHint = "category_hint"
+            case explanation
+            case confidence
+        }
+    }
+
+    public init() {}
+
+    public func makeRequestData(
+        payload: ExternalReceiptAssistPayload,
+        model: String
+    ) throws -> Data {
+        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let request = ChatCompletionRequest(
+            model: trimmedModel.isEmpty ? ExternalReceiptAssistProvider.deepSeek.defaultModel : trimmedModel,
+            messages: [
+                ChatMessage(role: "system", content: systemPrompt),
+                ChatMessage(role: "user", content: userPrompt(for: payload))
+            ],
+            temperature: 0.1,
+            responseFormat: ResponseFormat(type: "json_object")
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(request)
+    }
+
+    public func decodeSuggestion(from data: Data) throws -> ExternalReceiptAssistSuggestion {
+        if let direct = try? JSONDecoder().decode(ExternalReceiptAssistSuggestion.self, from: data) {
+            return direct
+        }
+
+        let response = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
+        guard let content = response.choices.first?.message.content,
+              let contentData = normalizedJSONContent(content).data(using: .utf8) else {
+            throw ExternalReceiptAssistOpenAICompatibleCodecError.missingChoiceContent
+        }
+
+        if let direct = try? JSONDecoder().decode(ExternalReceiptAssistSuggestion.self, from: contentData) {
+            return direct
+        }
+
+        if let snake = try? JSONDecoder().decode(SnakeCaseSuggestion.self, from: contentData) {
+            return ExternalReceiptAssistSuggestion(
+                merchantCandidates: snake.merchantCandidates,
+                categoryHint: snake.categoryHint,
+                explanation: snake.explanation,
+                confidence: snake.confidence
+            )
+        }
+
+        throw ExternalReceiptAssistOpenAICompatibleCodecError.invalidSuggestionJSON
+    }
+
+    private var systemPrompt: String {
+        """
+        You are AutoLedger's redacted receipt merchant assistant. Return JSON only.
+        Find likely real merchant names from minimized redacted payment OCR text.
+        Do not infer or return transaction amount, account, card, order id, address, or personal data.
+        Output keys: merchantCandidates, categoryHint, confidence, explanation.
+        merchantCandidates must be ordered by likelihood and should prefer store or brand names over rewards, coupons, banks, payment methods, addresses, routes, or UI labels.
+        categoryHint may be dining, transport, groceries, digital, shopping, other, or null.
+        confidence must be a number from 0 to 1.
+        """
+    }
+
+    private func userPrompt(for payload: ExternalReceiptAssistPayload) -> String {
+        """
+        Source: \(payload.source.rawValue)
+        Redaction count: \(payload.redactionCount)
+        Sanitized payment text:
+        \(payload.sanitizedText)
+        """
+    }
+
+    private func normalizedJSONContent(_ content: String) -> String {
+        content
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 public struct ExternalReceiptAssistSuggestionMapper: Sendable {
     public init() {}
 
@@ -184,11 +364,21 @@ public struct ExternalReceiptAssistConfiguration: Equatable, Sendable {
     public let isEnabled: Bool
     public let endpointURLString: String?
     public let hasAPIKey: Bool
+    public let provider: ExternalReceiptAssistProvider
+    public let modelName: String?
 
-    public init(isEnabled: Bool, endpointURLString: String?, hasAPIKey: Bool) {
+    public init(
+        isEnabled: Bool,
+        endpointURLString: String?,
+        hasAPIKey: Bool,
+        provider: ExternalReceiptAssistProvider = .custom,
+        modelName: String? = nil
+    ) {
         self.isEnabled = isEnabled
         self.endpointURLString = endpointURLString
         self.hasAPIKey = hasAPIKey
+        self.provider = provider
+        self.modelName = modelName
     }
 }
 

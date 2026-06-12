@@ -4,7 +4,9 @@ import Security
 
 enum ExternalReceiptAssistSettings {
     static let enabledKey = "externalReceiptAssistEnabled"
+    static let providerKey = "externalReceiptAssistProvider"
     static let endpointKey = "externalReceiptAssistEndpoint"
+    static let modelKey = "externalReceiptAssistModel"
     static let apiKeyEnvironmentKey = "AUTOLEDGER_EXTERNAL_RECEIPT_ASSIST_API_KEY"
 
     static var isEnabled: Bool {
@@ -12,8 +14,35 @@ enum ExternalReceiptAssistSettings {
         set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
     }
 
+    static var provider: ExternalReceiptAssistProvider {
+        get {
+            guard let rawValue = UserDefaults.standard.string(forKey: providerKey),
+                  let provider = ExternalReceiptAssistProvider(rawValue: rawValue) else {
+                return .deepSeek
+            }
+            return provider
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: providerKey)
+            if let endpoint = newValue.defaultEndpointURLString {
+                endpointURLString = endpoint
+            }
+            if !newValue.defaultModel.isEmpty {
+                modelName = newValue.defaultModel
+            } else if newValue == .custom {
+                UserDefaults.standard.removeObject(forKey: modelKey)
+            }
+        }
+    }
+
     static var endpointURLString: String? {
-        get { UserDefaults.standard.string(forKey: endpointKey) }
+        get {
+            if let endpoint = UserDefaults.standard.string(forKey: endpointKey),
+               !endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return endpoint
+            }
+            return provider.defaultEndpointURLString
+        }
         set {
             if let value = newValue?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
                 UserDefaults.standard.set(value, forKey: endpointKey)
@@ -23,11 +52,31 @@ enum ExternalReceiptAssistSettings {
         }
     }
 
+    static var modelName: String {
+        get {
+            if let model = UserDefaults.standard.string(forKey: modelKey),
+               !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return model
+            }
+            return provider.defaultModel
+        }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                UserDefaults.standard.removeObject(forKey: modelKey)
+            } else {
+                UserDefaults.standard.set(trimmed, forKey: modelKey)
+            }
+        }
+    }
+
     static func gateConfiguration(apiKey: String?) -> ExternalReceiptAssistConfiguration {
         ExternalReceiptAssistConfiguration(
             isEnabled: isEnabled,
             endpointURLString: endpointURLString,
-            hasAPIKey: apiKey?.isEmpty == false
+            hasAPIKey: apiKey?.isEmpty == false,
+            provider: provider,
+            modelName: modelName
         )
     }
 
@@ -122,12 +171,8 @@ protocol ExternalReceiptAssistClientProtocol: Sendable {
 }
 
 struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
-    private struct RequestBody: Encodable {
-        let source: String
-        let sanitizedText: String
-    }
-
     private let gate = ExternalReceiptAssistGate()
+    private let codec = ExternalReceiptAssistOpenAICompatibleCodec()
 
     func requestSuggestion(
         payload: ExternalReceiptAssistPayload,
@@ -146,11 +191,9 @@ struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONEncoder().encode(
-            RequestBody(
-                source: payload.source.rawValue,
-                sanitizedText: payload.sanitizedText
-            )
+        request.httpBody = try codec.makeRequestData(
+            payload: payload,
+            model: configuration.modelName ?? ExternalReceiptAssistSettings.modelName
         )
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -161,6 +204,6 @@ struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
             throw ExternalReceiptAssistClientError.httpStatus(httpResponse.statusCode)
         }
 
-        return try JSONDecoder().decode(ExternalReceiptAssistSuggestion.self, from: data)
+        return try codec.decodeSuggestion(from: data)
     }
 }

@@ -1,8 +1,11 @@
+import AutoLedgerCore
 import SwiftUI
 
 struct ExternalReceiptAssistSettingsView: View {
     @State private var isEnabled = ExternalReceiptAssistSettings.isEnabled
+    @State private var provider = ExternalReceiptAssistSettings.provider
     @State private var endpoint = ExternalReceiptAssistSettings.endpointURLString ?? ""
+    @State private var modelName = ExternalReceiptAssistSettings.modelName
     @State private var apiKeyInput = ""
     @State private var hasStoredAPIKey = ExternalReceiptAssistSettings.hasStoredAPIKey
     @State private var statusMessage: LocalizedStringKey?
@@ -36,8 +39,39 @@ struct ExternalReceiptAssistSettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("external_assist.endpoint.title")
+                    Text("external_assist.provider.title")
                         .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+
+                    Picker("external_assist.provider.title", selection: $provider) {
+                        ForEach(ExternalReceiptAssistProvider.allCases) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: provider) { _, newValue in
+                        ExternalReceiptAssistSettings.provider = newValue
+                        endpoint = ExternalReceiptAssistSettings.endpointURLString ?? ""
+                        modelName = ExternalReceiptAssistSettings.modelName
+                        statusMessage = "external_assist.status.provider_saved"
+                    }
+
+                    Text("external_assist.model.title")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+
+                    TextField("external_assist.model.placeholder", text: $modelName)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(AppTheme.canvas.opacity(0.72))
+                        )
+
+                    Text("external_assist.endpoint.title")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.ink)
 
                     TextField("external_assist.endpoint.placeholder", text: $endpoint)
@@ -53,9 +87,9 @@ struct ExternalReceiptAssistSettingsView: View {
                         )
 
                     Button {
-                        saveEndpoint()
+                        saveProviderConfiguration()
                     } label: {
-                        Label("external_assist.endpoint.save", systemImage: "checkmark.circle.fill")
+                        Label("external_assist.provider.save", systemImage: "checkmark.circle.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -133,10 +167,13 @@ struct ExternalReceiptAssistSettingsView: View {
         .navigationTitle("external_assist.title")
     }
 
-    private func saveEndpoint() {
+    private func saveProviderConfiguration() {
+        ExternalReceiptAssistSettings.provider = provider
+        ExternalReceiptAssistSettings.modelName = modelName
         ExternalReceiptAssistSettings.endpointURLString = endpoint
         endpoint = ExternalReceiptAssistSettings.endpointURLString ?? ""
-        statusMessage = "external_assist.status.endpoint_saved"
+        modelName = ExternalReceiptAssistSettings.modelName
+        statusMessage = "external_assist.status.provider_saved"
     }
 
     private func saveAPIKey() {

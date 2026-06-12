@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-12（GOAL-1608E 支付成功页商户候选修正）
+更新日期：2026-06-12（GOAL-1609E 真实外部 provider 接入）
 
 ## 记录规则
 
@@ -43,6 +43,32 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-186 GOAL-1609E 真实外部 provider 接入
+- 日期：2026-06-12
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：能力增强 / 受控外部辅助识别
+- 目标：把外部辅助识别从自定义 endpoint skeleton 推进到真实 OpenAI-compatible provider，优先支持 DeepSeek，同时预留 Qwen、OpenAI 和 Custom 选择。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/ExternalReceiptAssistPayload.swift`：新增 `ExternalReceiptAssistProvider` 与 `ExternalReceiptAssistOpenAICompatibleCodec`，固定 provider preset、生成 chat/completions 请求并解码 `choices[0].message.content`。
+  - `AutoLedger/AutoLedger/Domain/Services/ExternalReceiptAssistClient.swift`：外部辅助请求改为 OpenAI-compatible body，保留 Bearer API key、Keychain 优先和默认关闭 gate。
+  - `AutoLedger/AutoLedger/Features/Settings/ExternalReceiptAssistSettingsView.swift`：新增 provider 下拉、模型输入和 endpoint 输入，选择 provider 时自动填充默认 endpoint / model。
+  - `AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings`、`AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`、`AutoLedger/AutoLedger/en.lproj/Localizable.strings`：补齐三语设置页文案。
+  - `scripts/OfflineRegression.swift`：新增 provider preset 和 OpenAI-compatible codec 回归。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未默认开启外部辅助识别，未接 Pro / IAP gate，未修改本地规则主链路、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或 Xcode Cloud 脚本。
+- 完成内容：设置页现在可选择 DeepSeek / Qwen / OpenAI / Custom；DeepSeek 默认 endpoint 为 `https://api.deepseek.com/chat/completions`，默认模型为 `deepseek-chat`；Qwen 和 OpenAI 也有默认 endpoint / model；用户仍可手动覆盖模型和 endpoint。真实请求只发送脱敏 payload，并要求模型只返回商户候选、分类提示、置信度和解释。
+- 未完成内容：尚未用真实 DeepSeek API key 在真机跑通端到端网络识别；尚未接 Pro gate、正式隐私政策文案或 App Store 审核说明。
+- 测试情况：
+  - RED：新增 provider / codec 回归后，`bash scripts/run_offline_regression.sh` 先因缺少新类型失败。
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：外部模型服务质量、可用性和计费不可由 App 保证；当前能力仍应保持默认关闭，用户需自行保存 API key 并理解会向第三方发送脱敏文本。模型默认值后续可能需要跟随 provider 官方推荐更新，但 endpoint / model 均可在设置页手动覆盖。
+- 回滚方式：回退提交 `feat: add external assist provider presets` 及本轮文档回填，可回到 1609D 的自定义 endpoint 设置入口；本地规则识别链路不受影响。
+- 结论：`GOAL-1609E` 已完成命令级验证，具备真机填写 DeepSeek API key 后端到端测试的条件。
+- 下一步建议：在真机设置页开启外部辅助识别，选择 DeepSeek，填写 API key 后用同一张支付宝支付成功页截图复测，确认外部候选能把真实商户排在营销文案之前。
 
 ### ITER-185 GOAL-1608E 支付成功页商户候选修正
 - 日期：2026-06-12

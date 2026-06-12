@@ -44,6 +44,8 @@ struct OfflineRegression {
         verifySmartReceiptMergePolicy(reporter: reporter)
         verifyExternalReceiptAssistPayload(reporter: reporter)
         verifyExternalReceiptAssistGate(reporter: reporter)
+        verifyExternalReceiptAssistProviderPresets(reporter: reporter)
+        verifyExternalReceiptAssistOpenAICompatibleCodec(reporter: reporter)
         verifyExternalReceiptAssistSuggestionMapping(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
@@ -398,6 +400,61 @@ struct OfflineRegression {
         )
         reporter.check(allowed.canRequest, "ExternalReceiptAssistGate allows complete enabled config")
         reporter.check(allowed.reason == nil, "ExternalReceiptAssistGate has no failure reason when allowed")
+    }
+
+    private static func verifyExternalReceiptAssistProviderPresets(reporter: RegressionReporter) {
+        reporter.check(
+            ExternalReceiptAssistProvider.deepSeek.defaultEndpointURLString == "https://api.deepseek.com/chat/completions",
+            "ExternalReceiptAssistProvider provides DeepSeek chat completions endpoint"
+        )
+        reporter.check(
+            ExternalReceiptAssistProvider.qwen.defaultEndpointURLString?.contains("dashscope.aliyuncs.com/compatible-mode/v1/chat/completions") == true,
+            "ExternalReceiptAssistProvider provides Qwen OpenAI-compatible endpoint"
+        )
+        reporter.check(
+            ExternalReceiptAssistProvider.openAI.defaultEndpointURLString == "https://api.openai.com/v1/chat/completions",
+            "ExternalReceiptAssistProvider provides OpenAI chat completions endpoint"
+        )
+        reporter.check(
+            ExternalReceiptAssistProvider.deepSeek.defaultModel.isEmpty == false,
+            "ExternalReceiptAssistProvider provides editable default model"
+        )
+    }
+
+    private static func verifyExternalReceiptAssistOpenAICompatibleCodec(reporter: RegressionReporter) {
+        let payload = ExternalReceiptAssistPayload(
+            source: .alipay,
+            sanitizedText: "支付成功\nDemo Coffee\n支付金额 23.80",
+            redactionCount: 0
+        )
+        let codec = ExternalReceiptAssistOpenAICompatibleCodec()
+        let requestData = try? codec.makeRequestData(
+            payload: payload,
+            model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+        )
+        let requestJSON = requestData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+
+        reporter.check(requestJSON.contains("\"model\""), "ExternalReceiptAssistOpenAICompatibleCodec includes model")
+        reporter.check(requestJSON.contains("merchantCandidates"), "ExternalReceiptAssistOpenAICompatibleCodec asks for merchant candidates")
+        reporter.check(requestJSON.contains("Demo Coffee"), "ExternalReceiptAssistOpenAICompatibleCodec includes sanitized text")
+        reporter.check(!requestJSON.contains("raw OCR"), "ExternalReceiptAssistOpenAICompatibleCodec avoids raw OCR wording")
+
+        let responseData = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": "{\\"merchantCandidates\\":[\\"Demo Coffee\\",\\"Example Market\\"],\\"categoryHint\\":\\"dining\\",\\"confidence\\":0.84,\\"explanation\\":\\"merchant is closest to payment amount\\"}"
+              }
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try? codec.decodeSuggestion(from: responseData)
+        reporter.check(decoded?.merchantCandidates.first == "Demo Coffee", "ExternalReceiptAssistOpenAICompatibleCodec decodes chat completion content")
+        reporter.check(decoded?.categoryHint == "dining", "ExternalReceiptAssistOpenAICompatibleCodec decodes category hint")
+        reporter.check(decoded?.confidence == 0.84, "ExternalReceiptAssistOpenAICompatibleCodec decodes confidence")
     }
 
     private static func verifyExternalReceiptAssistSuggestionMapping(reporter: RegressionReporter) {
