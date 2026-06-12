@@ -251,6 +251,29 @@ struct OfflineRegression {
         """
         let paymentResult = resolver.resolve(candidates: extractor.extractCandidates(from: paymentChannelNoise), text: paymentChannelNoise)
         reporter.check(paymentResult.merchant == "Example Market", "MerchantResolver avoids payment channel as merchant")
+
+        let discountNoisePaymentText = """
+        08:18
+        回首页
+        支付成功
+        ¥14.32
+        获得森林能量
+        易择便利（陈塘科创园店）
+        碰友日立减
+        付款方式
+        ¥15.50
+        -¥1.18
+        光大银行信用卡（1234）
+        最高88元点餐红包 限量发放
+        """
+        let discountNoiseResult = resolver.resolve(
+            candidates: extractor.extractCandidates(from: discountNoisePaymentText),
+            text: discountNoisePaymentText
+        )
+        reporter.check(
+            discountNoiseResult.merchant == "易择便利（陈塘科创园店）",
+            "MerchantResolver prefers store-like merchant over discount campaign text"
+        )
     }
 
     private static func verifyCategoryResolution(reporter: RegressionReporter) {
@@ -1391,6 +1414,31 @@ struct OfflineRegression {
                 )
             }
             // Skip date check for samples that have no expected date fixture.
+        }
+
+        let alipayDiscountSuccessText = """
+        08:18
+        回首页
+        支付成功
+        ¥14.32
+        获得森林能量
+        易择便利（陈塘科创园店）
+        碰友日立减
+        付款方式
+        加油小葵•当前有100葵花籽待领取
+        ¥15.50
+        -¥1.18
+        光大银行信用卡（1234）
+        最高88元点餐红包 限量发放
+        """
+        if let receipt = parser.parse(text: alipayDiscountSuccessText, source: .alipay) {
+            reporter.check(
+                receipt.merchant == "易择便利（陈塘科创园店）",
+                "ReceiptParser prefers payment success store over discount campaign text"
+            )
+            reporter.check(abs(receipt.amount - 14.32) < 0.001, "ReceiptParser keeps actual paid amount on discount success page")
+        } else {
+            reporter.check(false, "ReceiptParser parses discount success payment text")
         }
     }
 

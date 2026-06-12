@@ -79,6 +79,7 @@ public struct RuleMerchantExtractor: Sendable {
     private static let blacklistPrefixes = [
         "微信支付", "支付宝", "云闪付", "银联", "apple pay", "wechat pay", "alipay", "unionpay",
         "支付成功", "交易成功", "付款成功", "收款成功", "支付详情", "账单详情",
+        "回首页", "付款方式",
         "tax invoice", "simplified tax invoice", "invoice", "receipt", "cash bill", "cash sale",
         "thank you", "please come again", "goods sold", "gst summary",
         "change", "change due", "cash", "cash tendered",
@@ -178,9 +179,11 @@ public struct RuleMerchantExtractor: Sendable {
             lowered.contains("coffee") || lowered.contains("cafe") || lowered.contains("store") {
             score += 0.20
         }
+        if looksLikeStoreName(line) { score += 0.22 }
 
         if line.range(of: #"[A-Z]{3,}"#, options: .regularExpression) != nil { score += 0.08 }
         if distanceToLabel(from: index, lines: lines) <= 1 { score += 0.14 }
+        if lineLooksLikeCampaignOrReward(line) { score -= 0.45 }
         if looksLikeAddress(line) { score -= 0.25 }
 
         let positionPenalty = min(Double(index) * 0.015, 0.20)
@@ -201,6 +204,7 @@ public struct RuleMerchantExtractor: Sendable {
         let lowered = trimmed.lowercased()
         guard trimmed.count >= 3 else { return false }
         guard !Self.blacklistPrefixes.contains(where: { lowered.hasPrefix($0) || lowered == $0 }) else { return false }
+        guard !lineLooksLikeCampaignOrReward(trimmed) else { return false }
         guard !lineLooksLikeRegistrationNumber(trimmed) else { return false }
         guard !lineContainsAmount(trimmed) else { return false }
         guard !lineLooksLikeDateOrTime(trimmed) else { return false }
@@ -285,6 +289,26 @@ public struct RuleMerchantExtractor: Sendable {
         let lowered = line.lowercased()
         if lowered.hasPrefix("qty") || lowered.hasPrefix("total qty") { return true }
         return false
+    }
+
+    private func lineLooksLikeCampaignOrReward(_ line: String) -> Bool {
+        let keywords = [
+            "立减", "优惠", "红包", "折扣", "满减", "返现", "券后", "优惠券", "代金券",
+            "待领取", "立即领取", "去领取", "森林能量", "葵花籽", "限量发放", "限时享",
+            "当前有", "点餐红包", "特价", "指定商品"
+        ]
+        return keywords.contains { line.contains($0) }
+    }
+
+    private func looksLikeStoreName(_ line: String) -> Bool {
+        let keywords = [
+            "便利", "便利店", "超市", "商店", "门店", "店", "分店", "餐厅", "咖啡",
+            "饭店", "药房", "药店", "生活馆", "生鲜", "市场", "market", "store",
+            "mart", "restaurant", "cafe", "coffee"
+        ]
+        return keywords.contains { line.localizedCaseInsensitiveContains($0) } ||
+            (line.contains("（") && line.contains("）")) ||
+            (line.contains("(") && line.contains(")"))
     }
 
     private func looksLikeAddress(_ line: String) -> Bool {
