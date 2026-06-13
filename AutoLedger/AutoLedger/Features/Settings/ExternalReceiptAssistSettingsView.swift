@@ -9,6 +9,7 @@ struct ExternalReceiptAssistSettingsView: View {
     @State private var apiKeyInput = ""
     @State private var hasStoredAPIKey = ExternalReceiptAssistSettings.hasStoredAPIKey
     @State private var statusMessage: LocalizedStringKey?
+    @State private var isTestingProvider = false
 
     var body: some View {
         ScrollView {
@@ -94,6 +95,26 @@ struct ExternalReceiptAssistSettingsView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
+
+                    Button {
+                        Task {
+                            await testProviderConnection()
+                        }
+                    } label: {
+                        HStack {
+                            if isTestingProvider {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "cloud.bolt.fill")
+                            }
+                            Text("external_assist.provider.test")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.accent)
+                    .disabled(isTestingProvider || ExternalReceiptAssistSettings.runtimeAPIKey?.isEmpty != false)
                 }
                 .padding(18)
                 .background(
@@ -174,6 +195,53 @@ struct ExternalReceiptAssistSettingsView: View {
         endpoint = ExternalReceiptAssistSettings.endpointURLString ?? ""
         modelName = ExternalReceiptAssistSettings.modelName
         statusMessage = "external_assist.status.provider_saved"
+    }
+
+    private func testProviderConnection() async {
+        guard !isTestingProvider else { return }
+        saveProviderConfiguration()
+        guard let apiKey = ExternalReceiptAssistSettings.runtimeAPIKey,
+              !apiKey.isEmpty else {
+            statusMessage = "external_assist.status.test_missing_key"
+            return
+        }
+
+        isTestingProvider = true
+        defer { isTestingProvider = false }
+
+        let payload = ExternalReceiptAssistPayload(
+            source: .alipay,
+            sanitizedText: """
+            支付成功
+            Demo Coffee
+            支付金额 12.34
+            付款方式 Example Bank Card (1234)
+            """,
+            redactionCount: 1
+        )
+        let configuration = ExternalReceiptAssistConfiguration(
+            isEnabled: true,
+            endpointURLString: ExternalReceiptAssistSettings.endpointURLString,
+            hasAPIKey: true,
+            provider: ExternalReceiptAssistSettings.provider,
+            modelName: ExternalReceiptAssistSettings.modelName
+        )
+
+        do {
+            let suggestion = try await ExternalReceiptAssistClient().requestSuggestion(
+                payload: payload,
+                configuration: configuration,
+                apiKey: apiKey
+            )
+            let hasMerchantCandidate = suggestion.merchantCandidates.contains {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            statusMessage = hasMerchantCandidate
+                ? "external_assist.status.test_succeeded"
+                : "external_assist.status.test_empty"
+        } catch {
+            statusMessage = "external_assist.status.test_failed"
+        }
     }
 
     private func saveAPIKey() {

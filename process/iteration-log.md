@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-13（GOAL-1609E DeepSeek 默认模型调整）
+更新日期：2026-06-13（GOAL-1609F Provider 测试入口）
 
 ## 记录规则
 
@@ -43,6 +43,28 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-188 GOAL-1609F Provider 测试入口
+- 日期：2026-06-13
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：能力增强 / 真机验证入口
+- 目标：为外部辅助识别设置页增加一个不读取真实账本数据的 provider 测试入口，方便真机填写 DeepSeek / Qwen / OpenAI API key 后先验证 endpoint、model、Keychain 和响应解码链路。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Features/Settings/ExternalReceiptAssistSettingsView.swift`：新增“测试 Provider”按钮和测试状态；测试会保存当前 provider 配置，读取运行时 API key，并发送虚构脱敏样例请求。
+  - `AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings`、`AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`、`AutoLedger/AutoLedger/en.lproj/Localizable.strings`：补齐测试按钮与测试状态三语文案。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果，并将 `GOAL-1600` 状态修正为已完成。
+- 未改动范围：未默认开启外部辅助识别，未接 Pro / IAP gate，未修改本地规则主链路、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或 Xcode Cloud 脚本。
+- 完成内容：设置页可用虚构样例 `Demo Coffee / 支付金额 12.34` 调用当前 provider；测试复用真实 `ExternalReceiptAssistClient`、Keychain API key、OpenAI-compatible request codec 和 response decoder；成功 / 无候选 / 缺 Key / 失败均有用户提示，不输出 API key、响应原文或用户数据。
+- 未完成内容：尚未用真实 DeepSeek API key 在真机点按测试；尚未补正式隐私政策 / App Store 文案或 Pro gate。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：测试按钮会产生一次真实外部 API 调用和可能的 provider 计费；请求内容为虚构样例，不包含真实账单。若用户曾保存旧模型或自定义 endpoint，测试会按当前设置页保存后的配置发送。
+- 回滚方式：回退提交 `feat: add external assist provider test` 及本轮文档回填即可移除测试入口，外部辅助主链路和本地规则识别不受影响。
+- 结论：`GOAL-1609F` 已完成命令级验证，下一步可以在真机用 DeepSeek API key 做外部辅助设置页测试和真实截图端到端测试。
+- 下一步建议：真机进入设置 -> 外部辅助识别，选择 DeepSeek，确认模型为 `deepseek-v4-flash`，保存 API key 后先点“测试 Provider”；通过后再用支付成功截图验证商户候选增强。
 
 ### ITER-187 GOAL-1609E DeepSeek 默认模型调整
 - 日期：2026-06-13

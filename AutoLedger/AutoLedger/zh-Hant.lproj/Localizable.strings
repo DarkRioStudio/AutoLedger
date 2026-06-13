@@ -563,6 +563,7 @@
 "external_assist.enable.subtitle" = "預設關閉。請只填寫你信任的 endpoint 和 API key。";
 "external_assist.provider.title" = "Provider";
 "external_assist.provider.save" = "儲存 Provider 設定";
+"external_assist.provider.test" = "測試 Provider";
 "external_assist.model.title" = "模型";
 "external_assist.model.placeholder" = "deepseek-v4-flash";
 "external_assist.endpoint.title" = "Endpoint";
@@ -575,6 +576,10 @@
 "external_assist.api_key.clear" = "清除";
 "external_assist.status.provider_saved" = "Provider 設定已儲存。";
 "external_assist.status.endpoint_saved" = "Endpoint 已儲存。";
+"external_assist.status.test_missing_key" = "請先儲存 API key。";
+"external_assist.status.test_succeeded" = "Provider 測試通過，已返回可解析商戶候選。";
+"external_assist.status.test_empty" = "Provider 已回應，但沒有返回商戶候選。";
+"external_assist.status.test_failed" = "Provider 測試失敗，請檢查 API key、模型、Endpoint 或網路。";
 "external_assist.status.key_saved" = "API key 已儲存到 Keychain。";
 "external_assist.status.key_failed" = "API key 儲存失敗。";
 "external_assist.status.key_cleared" = "API key 已清除。";

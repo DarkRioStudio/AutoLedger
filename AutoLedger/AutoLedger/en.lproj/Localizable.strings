@@ -560,6 +560,7 @@
 "external_assist.enable.subtitle" = "Default off. Use only with an endpoint and API key you trust.";
 "external_assist.provider.title" = "Provider";
 "external_assist.provider.save" = "Save Provider Settings";
+"external_assist.provider.test" = "Test Provider";
 "external_assist.model.title" = "Model";
 "external_assist.model.placeholder" = "deepseek-v4-flash";
 "external_assist.endpoint.title" = "Endpoint";
@@ -572,6 +573,10 @@
 "external_assist.api_key.clear" = "Clear";
 "external_assist.status.provider_saved" = "Provider settings saved.";
 "external_assist.status.endpoint_saved" = "Endpoint saved.";
+"external_assist.status.test_missing_key" = "Save an API key first.";
+"external_assist.status.test_succeeded" = "Provider test passed and returned a parsable merchant candidate.";
+"external_assist.status.test_empty" = "Provider responded, but no merchant candidate was returned.";
+"external_assist.status.test_failed" = "Provider test failed. Check the API key, model, endpoint, or network.";
 "external_assist.status.key_saved" = "API key saved to Keychain.";
 "external_assist.status.key_failed" = "Could not save the API key.";
 "external_assist.status.key_cleared" = "API key cleared.";
