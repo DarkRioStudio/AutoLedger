@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-13（GOAL-1609F Provider 测试入口）
+更新日期：2026-06-13（GOAL-1609G 真机 API 调用验证）
 
 ## 记录规则
 
@@ -43,6 +43,26 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-189 GOAL-1609G 真机 API 调用验证
+- 日期：2026-06-13
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：真机验证 / 能力收口
+- 目标：记录外部辅助识别真实 provider 调用的真机验证结果，并收口 `GOAL-1609` 功能侧状态。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：新增 `GOAL-1609G` 真机验证结果，将 `GOAL-1609` 功能侧标记为已完成，并补充发布前隐私 / Pro gate 检查保留项。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录真机回填结果。
+- 未改动范围：未修改 App 代码、API key 存储、provider endpoint、模型名、本地规则主链路、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或 Xcode Cloud 脚本。
+- 完成内容：根据用户真机回填，外部 provider 基本测试已通过且已看到真实 API 调用；provider / model / endpoint / Keychain API key / OpenAI-compatible request 主链路具备真机闭环证据。
+- 未完成内容：发布前仍需复核隐私政策、App Store 审核说明和 Pro gate 取舍；后续仍可继续观察不同真实截图上的商户候选质量。
+- 测试情况：
+  - PASS：用户真机基本测试通过，已看到外部 API 调用。
+  - PASS：本轮为文档回填，未新增代码。
+- 风险与注意事项：本记录不保存 API key、provider 响应原文、请求日志、真实账单 OCR 或截图内容；外部 API 能力仍保持默认关闭，用户需主动开启并自行配置 key。
+- 回滚方式：回退本轮文档回填即可将 `GOAL-1609` 状态恢复为进行中；不影响代码。
+- 结论：`GOAL-1609` 功能侧已完成，可从识别链路外部辅助试点转入版本发布前人工检查。
+- 下一步建议：继续处理 `GOAL-1610` 真机编辑保存链路收口，或进入 tvOS / visionOS 是否本版落代码的最终取舍。
 
 ### ITER-188 GOAL-1609F Provider 测试入口
 - 日期：2026-06-13
