@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-13（GOAL-1609G 真机 API 调用验证）
+更新日期：2026-06-13（GOAL-1610C 真机编辑保存验证）
 
 ## 记录规则
 
@@ -43,6 +43,26 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-190 GOAL-1610C 真机编辑保存验证
+- 日期：2026-06-13
+- 所属版本：v1.5.1
+- 所属阶段：Phase D2 / 账单编辑保存链路稳定性
+- 类型：真机验证 / Bugfix 收口
+- 目标：记录账单编辑保存链路的真机回填结果，并收口 `GOAL-1610` 功能侧状态。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：新增 `GOAL-1610C` 真机验证结果，将 `GOAL-1610` 功能侧标记为已完成。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录真机回填结果。
+- 未改动范围：未修改 App 代码、SQLite schema、Widget、iCloud、CloudKit、外部辅助识别、Bundle ID、signing、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：根据用户真机回填，编辑保存基本测试已通过，保存按钮状态、保存后展示一致性和商户别名确认式学习功能侧没有继续出现阻断问题。
+- 未完成内容：若后续真实使用仍出现卡顿或保存不一致，再按 `TransactionEditorView -> LedgerStore.updateTransaction -> SQLiteTransactionStore.update -> Widget / Backup / CloudKit` 分段继续定位。
+- 测试情况：
+  - PASS：用户真机基本测试通过，编辑保存没有继续出现问题。
+  - PASS：本轮为文档回填，未新增代码。
+- 风险与注意事项：本记录不保存真实账单内容、商户名、金额或截图；商户别名确认式学习仍建议在更多真实识别样本中继续观察。
+- 回滚方式：回退本轮文档回填即可将 `GOAL-1610` 状态恢复为进行中；不影响代码。
+- 结论：`GOAL-1610` 功能侧已完成，可转入版本后续平台与发布收口。
+- 下一步建议：进入 tvOS / visionOS 是否本版落代码的最终取舍，或继续执行最终 smoke 前的发布检查清单。
 
 ### ITER-189 GOAL-1609G 真机 API 调用验证
 - 日期：2026-06-13
