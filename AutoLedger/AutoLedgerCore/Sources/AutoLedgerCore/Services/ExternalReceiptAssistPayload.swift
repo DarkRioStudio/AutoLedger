@@ -68,7 +68,7 @@ public enum ExternalReceiptAssistProvider: String, CaseIterable, Codable, Equata
     public var defaultModel: String {
         switch self {
         case .deepSeek:
-            return "deepseek-chat"
+            return "deepseek-v4-flash"
         case .qwen:
             return "qwen-plus"
         case .openAI:

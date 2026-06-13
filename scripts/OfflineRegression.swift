@@ -416,8 +416,8 @@ struct OfflineRegression {
             "ExternalReceiptAssistProvider provides OpenAI chat completions endpoint"
         )
         reporter.check(
-            ExternalReceiptAssistProvider.deepSeek.defaultModel.isEmpty == false,
-            "ExternalReceiptAssistProvider provides editable default model"
+            ExternalReceiptAssistProvider.deepSeek.defaultModel == "deepseek-v4-flash",
+            "ExternalReceiptAssistProvider uses current DeepSeek V4 Flash model"
         )
     }
 

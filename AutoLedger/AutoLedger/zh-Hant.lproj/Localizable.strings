@@ -564,7 +564,7 @@
 "external_assist.provider.title" = "Provider";
 "external_assist.provider.save" = "儲存 Provider 設定";
 "external_assist.model.title" = "模型";
-"external_assist.model.placeholder" = "deepseek-chat";
+"external_assist.model.placeholder" = "deepseek-v4-flash";
 "external_assist.endpoint.title" = "Endpoint";
 "external_assist.endpoint.placeholder" = "https://api.deepseek.com/chat/completions";
 "external_assist.endpoint.save" = "儲存 Endpoint";

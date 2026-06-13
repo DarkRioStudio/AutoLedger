@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-12（GOAL-1609E 真实外部 provider 接入）
+更新日期：2026-06-13（GOAL-1609E DeepSeek 默认模型调整）
 
 ## 记录规则
 
@@ -44,6 +44,28 @@
 
 ## 日志条目
 
+### ITER-187 GOAL-1609E DeepSeek 默认模型调整
+- 日期：2026-06-13
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：能力增强 / 配置修正
+- 目标：将 DeepSeek provider 默认模型从兼容别名切换到当前正式 V4 Flash 模型，避免新用户真机测试时落到即将退役的模型名。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/ExternalReceiptAssistPayload.swift`：DeepSeek 默认模型改为 `deepseek-v4-flash`。
+  - `AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings`、`AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings`、`AutoLedger/AutoLedger/en.lproj/Localizable.strings`：同步设置页模型 placeholder。
+  - `scripts/OfflineRegression.swift`：DeepSeek provider preset 回归改为断言 `deepseek-v4-flash`。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
+- 未改动范围：未修改 endpoint、API key 存储、外部辅助默认关闭状态、本地规则主链路、SQLite schema、Bundle ID、signing、entitlements 或 CloudKit 配置。
+- 完成内容：DeepSeek 新配置默认走 `deepseek-v4-flash`，用户仍可在设置页手动覆盖模型名。
+- 未完成内容：尚未用真实 DeepSeek API key 做真机端到端网络识别。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+- 风险与注意事项：已经保存过旧模型名的用户本地 UserDefaults 可能继续保留自定义模型值；真机测试时如曾保存 `deepseek-chat`，需要在设置页重新选择 DeepSeek 或手动改为 `deepseek-v4-flash`。
+- 回滚方式：回退提交 `fix: update deepseek default model` 及本轮文档回填即可恢复 `deepseek-chat` 默认值。
+- 结论：DeepSeek provider 默认模型已对齐当前官方 V4 Flash 模型。
+- 下一步建议：真机填写 API key 后，先用支付宝支付成功页样本测试商户候选增强链路。
+
 ### ITER-186 GOAL-1609E 真实外部 provider 接入
 - 日期：2026-06-12
 - 所属版本：v1.5.1
@@ -58,7 +80,7 @@
   - `scripts/OfflineRegression.swift`：新增 provider preset 和 OpenAI-compatible codec 回归。
   - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本步结果。
 - 未改动范围：未默认开启外部辅助识别，未接 Pro / IAP gate，未修改本地规则主链路、SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置或 Xcode Cloud 脚本。
-- 完成内容：设置页现在可选择 DeepSeek / Qwen / OpenAI / Custom；DeepSeek 默认 endpoint 为 `https://api.deepseek.com/chat/completions`，默认模型为 `deepseek-chat`；Qwen 和 OpenAI 也有默认 endpoint / model；用户仍可手动覆盖模型和 endpoint。真实请求只发送脱敏 payload，并要求模型只返回商户候选、分类提示、置信度和解释。
+- 完成内容：设置页现在可选择 DeepSeek / Qwen / OpenAI / Custom；DeepSeek 默认 endpoint 为 `https://api.deepseek.com/chat/completions`，默认模型为 `deepseek-v4-flash`；Qwen 和 OpenAI 也有默认 endpoint / model；用户仍可手动覆盖模型和 endpoint。真实请求只发送脱敏 payload，并要求模型只返回商户候选、分类提示、置信度和解释。
 - 未完成内容：尚未用真实 DeepSeek API key 在真机跑通端到端网络识别；尚未接 Pro gate、正式隐私政策文案或 App Store 审核说明。
 - 测试情况：
   - RED：新增 provider / codec 回归后，`bash scripts/run_offline_regression.sh` 先因缺少新类型失败。
