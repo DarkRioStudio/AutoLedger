@@ -445,6 +445,16 @@ enum FeedbackBundleBuilder {
             entry += "source=\(record.source.rawValue) "
             entry += "image_source=\(record.imageSource.rawValue) "
             entry += "used_llm=\(record.usedLLM) "
+            if let provider = record.llmProvider {
+                entry += "llm_provider=\(provider) "
+            }
+            if let latency = record.llmLatencyMs {
+                entry += "llm_latency_ms=\(latency) "
+            }
+            if let confidence = record.llmConfidence {
+                entry += "llm_confidence=\(String(format: "%.2f", confidence)) "
+            }
+            entry += "used_rule_fallback=\(record.usedRuleFallback) "
             entry += "summary=\(record.summary)"
             lines.append(entry)
 

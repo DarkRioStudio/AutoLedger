@@ -505,7 +505,7 @@ struct DebugView: View {
                         Text(record.imageSource.title)
                         if record.usedLLM {
                             Text("·")
-                            Text("LLM")
+                            Text(record.llmProvider ?? "LLM")
                                 .fontWeight(.bold)
                                 .foregroundStyle(AppTheme.accent)
                         }
@@ -697,10 +697,22 @@ struct DebugView: View {
         if !store.debugRecords.isEmpty {
             lines.append("最近调试记录：")
             for record in store.debugRecords.prefix(10) {
-                lines.append("- [\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(record.usedLLM ? "LLM" : "规则") · \(AppFormatters.exportDateTime(record.createdAt))")
+                let parseMode = record.usedLLM ? (record.llmProvider ?? "LLM") : "规则"
+                lines.append("- [\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(parseMode) · \(AppFormatters.exportDateTime(record.createdAt))")
                 lines.append("  结论：\(record.summary)")
                 if let receipt = record.parsedReceipt {
                     lines.append("  解析：\(receipt.merchant) · \(AppFormatters.currency(receipt.amount)) · \(receipt.suggestedCategory.title)")
+                }
+                if record.usedLLM {
+                    var modelLine = "  模型链路：\(record.llmProvider ?? "unknown")"
+                    if let latency = record.llmLatencyMs {
+                        modelLine += " · \(latency)ms"
+                    }
+                    if let confidence = record.llmConfidence {
+                        modelLine += " · confidence \(String(format: "%.2f", confidence))"
+                    }
+                    modelLine += " · 规则金额/兜底 \(record.usedRuleFallback ? "是" : "否")"
+                    lines.append(modelLine)
                 }
                 if let txID = record.transactionID,
                    let tx = store.transactions.first(where: { $0.id == txID }) {
@@ -748,6 +760,18 @@ struct DebugView: View {
             lines.append("- 分类：\(receipt.suggestedCategory.title)")
             lines.append("- 时间：\(AppFormatters.exportDateTime(receipt.occurredAt))")
             lines.append("- 摘要：\(receipt.summary)")
+        }
+
+        if record.usedLLM {
+            lines.append("模型链路：")
+            lines.append("- Provider：\(record.llmProvider ?? "unknown")")
+            if let latency = record.llmLatencyMs {
+                lines.append("- 耗时：\(latency)ms")
+            }
+            if let confidence = record.llmConfidence {
+                lines.append("- 置信度：\(String(format: "%.2f", confidence))")
+            }
+            lines.append("- 使用规则金额/兜底：\(record.usedRuleFallback ? "是" : "否")")
         }
 
         if let txID = record.transactionID,

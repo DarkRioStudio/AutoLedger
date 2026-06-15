@@ -38,8 +38,17 @@ struct SmartReceiptParser {
     struct LLMTrace {
         let prompt: String
         let response: String
-        let provider: LLMProvider
+        let providerID: String
+        let providerDisplayName: String
         let latencyMs: Int
+
+        init(prompt: String, response: String, provider: LLMProvider, latencyMs: Int) {
+            self.prompt = prompt
+            self.response = response
+            self.providerID = provider.rawValue
+            self.providerDisplayName = provider.displayName
+            self.latencyMs = latencyMs
+        }
     }
 
     struct SmartResult {

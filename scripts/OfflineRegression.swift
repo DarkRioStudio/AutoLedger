@@ -1754,6 +1754,63 @@ struct OfflineRegression {
         reporter.check(conflictOutcome == .conflictPendingReview, "SQLite remote sync flags same-revision divergent conflict")
         reporter.check(conflictMetadata?.conflictState == .conflictPendingReview, "SQLite remote sync stores conflict state")
 
+        let batchInsertID = UUID(uuidString: "00000000-0000-0000-0000-000000151502") ?? UUID()
+        let batchUpdateID = batchInsertID
+        let batchDeleteID = remoteInsertedID
+        let batchSummary = try store.applyRemoteSyncRecords([
+            TransactionSyncRecord(
+                transaction: Transaction(
+                    id: batchInsertID,
+                    merchant: "Batch Demo Coffee",
+                    amount: 12.34,
+                    occurredAt: Date(timeIntervalSince1970: 1_780_300_000),
+                    category: .dining,
+                    source: .manual,
+                    note: "batch insert"
+                ),
+                metadata: TransactionSyncMetadata(
+                    transactionID: batchInsertID,
+                    updatedAt: Date(timeIntervalSince1970: 1_780_300_100),
+                    syncRevision: 1,
+                    deviceID: "remote-device",
+                    idempotencyKey: "transaction:\(batchInsertID.uuidString)"
+                )
+            ),
+            TransactionSyncRecord(
+                transaction: Transaction(
+                    id: batchUpdateID,
+                    merchant: "Batch Updated Store",
+                    amount: 66,
+                    occurredAt: Date(timeIntervalSince1970: 1_780_300_200),
+                    category: .shopping,
+                    source: .manual,
+                    note: "batch update"
+                ),
+                metadata: TransactionSyncMetadata(
+                    transactionID: batchUpdateID,
+                    updatedAt: Date(timeIntervalSince1970: 1_780_300_300),
+                    syncRevision: 3,
+                    deviceID: "remote-device",
+                    idempotencyKey: "transaction:\(batchUpdateID.uuidString)"
+                )
+            ),
+            TransactionSyncRecord(
+                transaction: remoteUpdated.transaction,
+                metadata: TransactionSyncMetadata(
+                    transactionID: batchDeleteID,
+                    updatedAt: Date(timeIntervalSince1970: 1_780_300_400),
+                    syncRevision: 6,
+                    deviceID: "remote-device",
+                    idempotencyKey: "transaction:\(batchDeleteID.uuidString)",
+                    deletedAt: Date(timeIntervalSince1970: 1_780_300_400)
+                )
+            )
+        ])
+        reporter.check(batchSummary.inserted == 1, "SQLite batch remote sync reports inserted count")
+        reporter.check(batchSummary.updated == 1, "SQLite batch remote sync reports updated count")
+        reporter.check(batchSummary.deleted == 1, "SQLite batch remote sync reports deleted count")
+        reporter.check(batchSummary.conflicts == 0, "SQLite batch remote sync avoids false conflicts")
+
         try store.delete(transactionID: updated.id)
         try store.permanentlyDeleteTransaction(id: updated.id)
         let activeAfterPermanentDelete = try store.loadTransactions()

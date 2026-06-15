@@ -536,60 +536,97 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         var records: [TransactionSyncRecord] = []
         while sqlite3_step(statement) == SQLITE_ROW {
-            guard
-                let idCString = sqlite3_column_text(statement, 0),
-                let merchantCString = sqlite3_column_text(statement, 1),
-                let occurredCString = sqlite3_column_text(statement, 3),
-                let categoryCString = sqlite3_column_text(statement, 4),
-                let sourceCString = sqlite3_column_text(statement, 5),
-                let noteCString = sqlite3_column_text(statement, 6),
-                let updatedCString = sqlite3_column_text(statement, 7),
-                let deviceCString = sqlite3_column_text(statement, 10),
-                let conflictCString = sqlite3_column_text(statement, 12),
-                let id = UUID(uuidString: String(cString: idCString)),
-                let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString)),
-                let updatedAt = Self.storageFormatter.date(from: String(cString: updatedCString))
-            else {
-                continue
+            if let record = try? mapTransactionSyncRecord(from: statement) {
+                records.append(record)
             }
-
-            let deletedAt: Date? = {
-                guard sqlite3_column_type(statement, 8) != SQLITE_NULL,
-                      let deletedCString = sqlite3_column_text(statement, 8) else { return nil }
-                return Self.storageFormatter.date(from: String(cString: deletedCString))
-            }()
-            let idempotencyKey: String? = sqlite3_column_type(statement, 11) != SQLITE_NULL
-                ? String(cString: sqlite3_column_text(statement, 11))
-                : nil
-            let conflictState = SyncConflictState(rawValue: String(cString: conflictCString)) ?? .clean
-            let transaction = Transaction(
-                id: id,
-                merchant: String(cString: merchantCString),
-                amount: sqlite3_column_double(statement, 2),
-                occurredAt: occurredAt,
-                categoryLabel: String(cString: categoryCString),
-                sourceLabel: String(cString: sourceCString),
-                note: String(cString: noteCString)
-            )
-            let metadata = TransactionSyncMetadata(
-                transactionID: id,
-                updatedAt: updatedAt,
-                syncRevision: Int(sqlite3_column_int(statement, 9)),
-                deviceID: String(cString: deviceCString),
-                idempotencyKey: idempotencyKey,
-                deletedAt: deletedAt,
-                conflictState: conflictState
-            )
-            records.append(TransactionSyncRecord(transaction: transaction, metadata: metadata))
         }
 
         return records
+    }
+
+    private func mapTransactionSyncRecord(from statement: OpaquePointer?) throws -> TransactionSyncRecord? {
+        guard
+            let idCString = sqlite3_column_text(statement, 0),
+            let merchantCString = sqlite3_column_text(statement, 1),
+            let occurredCString = sqlite3_column_text(statement, 3),
+            let categoryCString = sqlite3_column_text(statement, 4),
+            let sourceCString = sqlite3_column_text(statement, 5),
+            let noteCString = sqlite3_column_text(statement, 6),
+            let updatedCString = sqlite3_column_text(statement, 7),
+            let deviceCString = sqlite3_column_text(statement, 10),
+            let conflictCString = sqlite3_column_text(statement, 12),
+            let id = UUID(uuidString: String(cString: idCString)),
+            let occurredAt = Self.storageFormatter.date(from: String(cString: occurredCString)),
+            let updatedAt = Self.storageFormatter.date(from: String(cString: updatedCString))
+        else {
+            return nil
+        }
+
+        let deletedAt: Date? = {
+            guard sqlite3_column_type(statement, 8) != SQLITE_NULL,
+                  let deletedCString = sqlite3_column_text(statement, 8) else { return nil }
+            return Self.storageFormatter.date(from: String(cString: deletedCString))
+        }()
+        let idempotencyKey: String? = sqlite3_column_type(statement, 11) != SQLITE_NULL
+            ? String(cString: sqlite3_column_text(statement, 11))
+            : nil
+        let conflictState = SyncConflictState(rawValue: String(cString: conflictCString)) ?? .clean
+        let transaction = Transaction(
+            id: id,
+            merchant: String(cString: merchantCString),
+            amount: sqlite3_column_double(statement, 2),
+            occurredAt: occurredAt,
+            categoryLabel: String(cString: categoryCString),
+            sourceLabel: String(cString: sourceCString),
+            note: String(cString: noteCString)
+        )
+        let metadata = TransactionSyncMetadata(
+            transactionID: id,
+            updatedAt: updatedAt,
+            syncRevision: Int(sqlite3_column_int(statement, 9)),
+            deviceID: String(cString: deviceCString),
+            idempotencyKey: idempotencyKey,
+            deletedAt: deletedAt,
+            conflictState: conflictState
+        )
+        return TransactionSyncRecord(transaction: transaction, metadata: metadata)
     }
 
     public func applyRemoteSyncRecord(_ remote: TransactionSyncRecord) throws -> TransactionSyncApplyOutcome {
         let localRecord = try loadTransactionSyncRecords(includeDeleted: true)
             .first { $0.transaction.id == remote.transaction.id }
 
+        return try applyRemoteSyncRecord(remote, localRecord: localRecord)
+    }
+
+    public func applyRemoteSyncRecords(_ remotes: [TransactionSyncRecord]) throws -> TransactionSyncApplySummary {
+        let localRecords = try loadTransactionSyncRecords(includeDeleted: true)
+        var localRecordsByID = Dictionary(uniqueKeysWithValues: localRecords.map { ($0.transaction.id, $0) })
+        var summary = TransactionSyncApplySummary()
+
+        for remote in remotes {
+            let outcome = try applyRemoteSyncRecord(remote, localRecord: localRecordsByID[remote.transaction.id])
+            summary.record(outcome)
+
+            switch outcome {
+            case .inserted, .updated, .deleted, .conflictPendingReview:
+                if let updatedLocal = try loadTransactionSyncRecord(transactionID: remote.transaction.id) {
+                    localRecordsByID[remote.transaction.id] = updatedLocal
+                } else {
+                    localRecordsByID.removeValue(forKey: remote.transaction.id)
+                }
+            case .keptLocal:
+                break
+            }
+        }
+
+        return summary
+    }
+
+    private func applyRemoteSyncRecord(
+        _ remote: TransactionSyncRecord,
+        localRecord: TransactionSyncRecord?
+    ) throws -> TransactionSyncApplyOutcome {
         guard let localRecord else {
             guard remote.metadata.deletedAt == nil else {
                 return .keptLocal
@@ -608,6 +645,29 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             try updateFromRemoteSyncRecord(remote)
             return remote.metadata.deletedAt == nil ? .updated : .deleted
         }
+    }
+
+    private func loadTransactionSyncRecord(transactionID: UUID) throws -> TransactionSyncRecord? {
+        let sql = """
+        SELECT id, merchant, amount, occurred_at, category, source, note,
+               updated_at, deleted_at, sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state
+        FROM transactions
+        WHERE id = ?
+        LIMIT 1;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, transactionID.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_ROW else {
+            return nil
+        }
+
+        return try mapTransactionSyncRecord(from: statement)
     }
 
     private func backfillSyncMetadataDefaults() throws {

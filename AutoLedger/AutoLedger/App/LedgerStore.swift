@@ -263,7 +263,7 @@ final class LedgerStore: ObservableObject {
                     summary: diagnosticSummary.isEmpty ? summary : "\(summary)\n调试：\(diagnosticSummary)",
                     llmPrompt: result.llmTrace?.prompt,
                     llmResponse: result.llmTrace?.response,
-                    llmProvider: result.llmTrace?.provider.rawValue,
+                    llmProvider: result.llmTrace?.providerID,
                     llmLatencyMs: result.llmTrace?.latencyMs,
                     llmConfidence: result.receipt.confidence,
                     usedRuleFallback: result.usedRuleFallback
@@ -271,7 +271,7 @@ final class LedgerStore: ObservableObject {
 
             case .transaction(let result, let normalizedText, _, let multiReceiptDetected):
                 lastParsedReceipt = result.receipt
-                let providerName = result.llmTrace?.provider.displayName ?? "规则"
+                let providerName = result.llmTrace?.providerDisplayName ?? "规则"
                 let latency = result.llmTrace?.latencyMs ?? 0
                 logger.info("[解析] 模型=\(providerName) 耗时=\(latency)ms 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) 规则兜底=\(result.usedRuleFallback ? "是" : "否")")
                 createTransaction(
@@ -1114,7 +1114,7 @@ final class LedgerStore: ObservableObject {
                 summary: summary,
                 llmPrompt: llmTrace?.prompt,
                 llmResponse: llmTrace?.response,
-                llmProvider: llmTrace?.provider.rawValue,
+                llmProvider: llmTrace?.providerID,
                 llmLatencyMs: llmTrace?.latencyMs,
                 llmConfidence: receipt.confidence,
                 usedRuleFallback: usedRuleFallback
@@ -1148,7 +1148,7 @@ final class LedgerStore: ObservableObject {
                 summary: summary,
                 llmPrompt: llmTrace?.prompt,
                 llmResponse: llmTrace?.response,
-                llmProvider: llmTrace?.provider.rawValue,
+                llmProvider: llmTrace?.providerID,
                 llmLatencyMs: llmTrace?.latencyMs,
                 llmConfidence: receipt.confidence,
                 usedRuleFallback: usedRuleFallback
@@ -1172,7 +1172,7 @@ final class LedgerStore: ObservableObject {
             llmPrompt: llmTrace?.prompt,
             llmResponse: llmTrace?.response,
             transactionID: transaction.id,
-            llmProvider: llmTrace?.provider.rawValue,
+            llmProvider: llmTrace?.providerID,
             llmLatencyMs: llmTrace?.latencyMs,
             llmConfidence: receipt.confidence,
             usedRuleFallback: usedRuleFallback
@@ -1806,38 +1806,16 @@ extension LedgerStore {
         updateLedgerCloudSyncStatus("正在拉取远端账单...")
         let remotePayloads = try await adapter.fetchAllTransactionRecords()
 
-        var inserted = 0
-        var updated = 0
-        var deleted = 0
-        var keptLocal = 0
-        var conflicts = 0
-
         updateLedgerCloudSyncStatus("拉取完成，正在写入本地账本...")
-        for (index, payload) in remotePayloads.enumerated() {
-            switch try sqlStore.applyRemoteSyncRecord(payload.syncRecord) {
-            case .inserted:
-                inserted += 1
-            case .updated:
-                updated += 1
-            case .deleted:
-                deleted += 1
-            case .keptLocal:
-                keptLocal += 1
-            case .conflictPendingReview:
-                conflicts += 1
-            }
-
-            if (index + 1).isMultiple(of: 100) {
-                await Task.yield()
-            }
-        }
+        let summary = try sqlStore.applyRemoteSyncRecords(remotePayloads.map(\.syncRecord))
+        await Task.yield()
         return (
             remoteCount: remotePayloads.count,
-            inserted: inserted,
-            updated: updated,
-            deleted: deleted,
-            keptLocal: keptLocal,
-            conflicts: conflicts
+            inserted: summary.inserted,
+            updated: summary.updated,
+            deleted: summary.deleted,
+            keptLocal: summary.keptLocal,
+            conflicts: summary.conflicts
         )
     }
 

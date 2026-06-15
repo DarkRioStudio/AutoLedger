@@ -58,6 +58,43 @@ public enum TransactionSyncApplyOutcome: Equatable, Sendable {
     case conflictPendingReview
 }
 
+public struct TransactionSyncApplySummary: Equatable, Sendable {
+    public var inserted: Int
+    public var updated: Int
+    public var deleted: Int
+    public var keptLocal: Int
+    public var conflicts: Int
+
+    public init(
+        inserted: Int = 0,
+        updated: Int = 0,
+        deleted: Int = 0,
+        keptLocal: Int = 0,
+        conflicts: Int = 0
+    ) {
+        self.inserted = inserted
+        self.updated = updated
+        self.deleted = deleted
+        self.keptLocal = keptLocal
+        self.conflicts = conflicts
+    }
+
+    public mutating func record(_ outcome: TransactionSyncApplyOutcome) {
+        switch outcome {
+        case .inserted:
+            inserted += 1
+        case .updated:
+            updated += 1
+        case .deleted:
+            deleted += 1
+        case .keptLocal:
+            keptLocal += 1
+        case .conflictPendingReview:
+            conflicts += 1
+        }
+    }
+}
+
 public enum TransactionSyncConflictResolver {
     public static func resolve(
         local: TransactionSyncRecord,

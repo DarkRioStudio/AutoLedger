@@ -12,14 +12,37 @@ struct SmartReceiptParser: Sendable {
     struct LLMTrace: Sendable {
         let prompt: String
         let response: String
-        let provider: LLMProvider
+        let providerID: String
+        let providerDisplayName: String
         let latencyMs: Int
+
+        init(prompt: String, response: String, provider: LLMProvider, latencyMs: Int) {
+            self.prompt = prompt
+            self.response = response
+            self.providerID = provider.rawValue
+            self.providerDisplayName = provider.displayName
+            self.latencyMs = latencyMs
+        }
+
+        init(prompt: String, response: String, providerID: String, providerDisplayName: String, latencyMs: Int) {
+            self.prompt = prompt
+            self.response = response
+            self.providerID = providerID
+            self.providerDisplayName = providerDisplayName
+            self.latencyMs = latencyMs
+        }
     }
 
     struct SmartResult: Sendable {
         let receipt: ImportedReceipt
         let llmTrace: LLMTrace?
         let usedRuleFallback: Bool
+    }
+
+    private struct ExternalAssistMergeResult: Sendable {
+        let receipt: ImportedReceipt
+        let trace: LLMTrace
+        let usedRuleAmount: Bool
     }
 
     private let ruleParser = ReceiptParser()
@@ -56,7 +79,7 @@ struct SmartReceiptParser: Sendable {
         ) {
             return SmartResult(
                 receipt: externalMerged.receipt,
-                llmTrace: nil,
+                llmTrace: externalMerged.trace,
                 usedRuleFallback: externalMerged.usedRuleAmount
             )
         }
@@ -107,7 +130,7 @@ struct SmartReceiptParser: Sendable {
         ) {
             return SmartResult(
                 receipt: externalMerged.receipt,
-                llmTrace: nil,
+                llmTrace: externalMerged.trace,
                 usedRuleFallback: externalMerged.usedRuleAmount
             )
         }
@@ -308,7 +331,7 @@ struct SmartReceiptParser: Sendable {
         text: String,
         source: ReceiptSource,
         ruleResult: ImportedReceipt?
-    ) async -> SmartReceiptMergeOutcome? {
+    ) async -> ExternalAssistMergeResult? {
         let apiKey = ExternalReceiptAssistSettings.runtimeAPIKey
         let configuration = ExternalReceiptAssistSettings.gateConfiguration(apiKey: apiKey)
         let payload = ExternalReceiptAssistPayloadBuilder().build(rawText: text, source: source)
@@ -322,11 +345,13 @@ struct SmartReceiptParser: Sendable {
         }
 
         do {
+            let startTime = CFAbsoluteTimeGetCurrent()
             let suggestion = try await externalAssistClient.requestSuggestion(
                 payload: payload,
                 configuration: configuration,
                 apiKey: apiKey
             )
+            let latencyMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
             guard let aiSuggestion = ExternalReceiptAssistSuggestionMapper().makeAISuggestion(from: suggestion),
                   let merged = mergePolicy.merge(
                     aiSuggestion: aiSuggestion,
@@ -339,11 +364,47 @@ struct SmartReceiptParser: Sendable {
                 return nil
             }
             logger.info("[ExternalAssist] 已合并外部辅助候选，商户=\(merged.receipt.merchant) 规则金额=\(merged.usedRuleAmount ? "是" : "否")")
-            return merged
+            return ExternalAssistMergeResult(
+                receipt: merged.receipt,
+                trace: LLMTrace(
+                    prompt: Self.externalAssistPromptSummary(payload: payload, configuration: configuration),
+                    response: Self.externalAssistResponseSummary(suggestion),
+                    providerID: "external_\(configuration.provider.rawValue)",
+                    providerDisplayName: "\(configuration.provider.displayName) 外部辅助",
+                    latencyMs: latencyMs
+                ),
+                usedRuleAmount: merged.usedRuleAmount
+            )
         } catch {
             logger.info("[ExternalAssist] 外部辅助识别失败，继续本地解析: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    private static func externalAssistPromptSummary(
+        payload: ExternalReceiptAssistPayload,
+        configuration: ExternalReceiptAssistConfiguration
+    ) -> String {
+        """
+        External Assist 请求摘要
+        Provider: \(configuration.provider.displayName)
+        Model: \(configuration.modelName)
+        Sanitized OCR:
+        \(payload.sanitizedText)
+        """
+    }
+
+    private static func externalAssistResponseSummary(_ suggestion: ExternalReceiptAssistSuggestion) -> String {
+        let merchants = suggestion.merchantCandidates.joined(separator: ", ")
+        let category = suggestion.categoryHint ?? "未返回"
+        let confidence = suggestion.confidence.map { String(format: "%.2f", $0) } ?? "未返回"
+        let explanation = suggestion.explanation ?? "未返回"
+        return """
+        merchantCandidates: \(merchants.isEmpty ? "未返回" : merchants)
+        categoryHint: \(category)
+        confidence: \(confidence)
+        explanation: \(explanation)
+        """
     }
 
     /// 金额字符串 → Double

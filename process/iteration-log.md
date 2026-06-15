@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-15（GOAL-1608F 地铁规则解析前置）
+更新日期：2026-06-15（GOAL-1611 外部调试记录与 iCloud 同步卡顿修复）
 
 ## 记录规则
 
@@ -43,6 +43,31 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-192 GOAL-1611 外部调试记录与 iCloud 同步卡顿修复
+- 日期：2026-06-15
+- 所属版本：v1.5.1
+- 所属阶段：Phase D / 当前主线平台稳定收口
+- 类型：Bugfix / 可观测性 / 性能
+- 目标：补齐外部辅助识别是否命中、provider / model / 结果摘要等调试记录，并缓解 iCloud 同步大量账单时 App UI 无响应卡顿。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/SmartReceiptParser.swift`：将模型 trace 改为通用 provider id / display name；外部辅助命中时记录脱敏请求摘要、商户候选、分类提示、置信度、解释和耗时。
+  - `AutoLedger/AutoLedger/App/LedgerStore.swift`：调试记录改用通用 provider id；CloudKit 拉取写入本地时改用 SQLite 批量 apply summary。
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/SyncMetadata.swift`、`SQLiteTransactionStore.swift`：新增 `TransactionSyncApplySummary` 与批量 `applyRemoteSyncRecords`，避免逐条远端记录触发全表读取。
+  - `AutoLedger/AutoLedger/Features/Settings/DebugView.swift`、`FeedbackBundleBuilder.swift`：调试卡片、单条复制、整页导出和反馈 trace 显示 provider、耗时、置信度与规则兜底信息。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：补齐批量远端同步回归与 SmartReceiptParser stub 字段。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：记录本次修复。
+- 未改动范围：未修改 CloudKit schema、iCloud Container、Bundle ID、signing、entitlements、Xcode Cloud 脚本、外部 API key 存储策略或默认开关策略；未把 SQLite store 迁移到跨线程后台 actor。
+- 完成内容：外部辅助识别命中后，单条调试记录可看到 provider / model / 脱敏请求摘要 / 模型候选 / 置信度 / 耗时；iCloud 拉取写库从近似 N² 的逐条全表扫描改为一次建索引后批量 apply，降低 TestFlight / 真机同步时 UI 卡死风险。
+- 未完成内容：未完成 Instruments trace 对比；如果真机大量同步仍卡顿，下一步应把 SQLite 同步写入迁到明确串行后台执行器，并审计 `refreshFromStore()` 的全量刷新频率。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：外部模型调试记录只写脱敏 payload，不写 API key、图片或完整未脱敏原始 OCR；批量 apply 仍在当前同步路径内执行，已移除最明显的重复全表读取，但极端大账本仍建议后续继续后台化。
+- 回滚方式：回退 `SmartReceiptParser.LLMTrace` 通用 provider 改动、DebugView / FeedbackBundleBuilder 展示改动，以及 `SQLiteTransactionStore.applyRemoteSyncRecords` 和 `LedgerStore.pullRemoteLedgerChanges` 调用切换即可恢复旧行为。
+- 结论：本轮完成，外部模型识别链路已经可从调试记录判断是否命中；iCloud 同步写库卡顿的主要 N² 根因已修复。
+- 下一步建议：TestFlight 中部署 Production CloudKit schema 后，使用 300 条左右账本做一次强制刷新，观察 UI 响应；同时复制一条外部辅助命中的调试记录确认日志内容符合预期。
 
 ### ITER-191 GOAL-1608F 地铁规则解析前置
 - 日期：2026-06-15

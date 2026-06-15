@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 修复（v1.5.1）
+- [2026-06-15 +0800] 完成 `GOAL-1611` iCloud 同步卡顿修复：CloudKit 拉取远端账单后写入本地 SQLite 的流程从逐条 `applyRemoteSyncRecord` 改为批量 `applyRemoteSyncRecords`，先一次性加载本地 sync records 建索引，再应用远端新增 / 更新 / 删除 / 冲突，避免每处理一条远端记录都全表读取一次导致 TestFlight / 真机同步时 UI 无响应。新增离线回归覆盖批量远端同步 summary 的新增 / 更新 / 删除统计；已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-15 +0800] 完成 `GOAL-1608F` 地铁 / 公交储值卡识别链路前置：`LedgerTextInterpreterCore` 和 App 层 `ReceiptParser` 在通用金额 / 商户解析前优先识别 `地铁：CN¥金额 + 路线行` / `公交：金额 + 路线行` 形态，直接输出路线商户、车费金额和出行分类，避免被城市卡名称、余额行或后续社媒噪声抢走。新增脱敏离线回归覆盖“城市卡 + 地铁金额 + 路线 + 社媒噪声”样例，不提交真实路线、截图或 OCR 原文。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-13 +0800] 收口 `GOAL-1610` 账单编辑保存链路：根据真机回填，编辑保存基本测试已通过，保存按钮状态、保存后展示一致性和商户别名确认式学习功能侧没有继续出现阻断问题；版本计划将 `GOAL-1610` 功能侧标记为已完成。本记录不保存真实账单内容、商户名、金额或截图。
 - [2026-06-12 +0800] 完成 `GOAL-1608E` 支付成功页商户候选修正：针对支付宝支付成功页中“真实商户 + 优惠 / 奖励 / 付款方式 / 推荐红包”混排的 OCR 文本，`ReceiptParser` 不再把“碰友日立减”等优惠文案识别为商户；`MerchantResolver` 过滤回首页、付款方式、立减、红包、森林能量等 UI / 营销噪声，并提高便利店 / 门店括号等真实商户形态的候选优先级。新增真实形态回归覆盖“易择便利（陈塘科创园店）”优先于优惠文案，金额保持 `¥14.32`。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
@@ -17,6 +18,7 @@
 - [2026-06-11 +0800] 推进 `GOAL-1610` 账单编辑保存链路稳定性：新增金额输入解析器，编辑页金额字段支持货币符号、全角数字、小数逗号和“元”等常见输入形态，避免真机输入法下保存按钮异常置灰；`LedgerStore.updateTransaction` 改为显式返回保存结果，SQLite 写入成功后才刷新内存、触发 Widget / 备份 / iCloud 推送，失败时编辑页不关闭并显示错误；普通手动账单编辑不再学习商户别名，避免一次商户名修正污染后续账单。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 
 ### 变更（v1.5.1）
+- [2026-06-15 +0800] `GOAL-1611` 补齐外部辅助识别调试可观测性：`SmartReceiptParser` 的模型 trace 改为通用 provider id / display name，DeepSeek / Qwen / OpenAI / Custom 外部辅助命中后会把 provider、model、脱敏请求摘要、商户候选、分类提示、置信度、解释和耗时写入调试记录；调试页卡片、单条复制、整页导出和反馈 trace 均展示模型来源与规则兜底信息。本步不记录 API key、图片、完整未脱敏原始 OCR 或真实 secret。
 - [2026-06-13 +0800] 收口 `GOAL-1609` 外部辅助识别试点：根据真机回填，外部 provider 基本测试已通过且已看到真实 API 调用，说明 provider / model / endpoint / Keychain API key / OpenAI-compatible request 主链路具备真机闭环证据；版本计划将 `GOAL-1609` 功能侧标记为已完成。发布前仍需复核隐私政策、App Store 审核说明和 Pro gate 取舍，本记录不保存 API key、provider 响应原文、请求日志、真实账单 OCR 或截图内容。
 - [2026-06-13 +0800] 推进 `GOAL-1609F` 外部辅助识别 Provider 测试入口：设置页新增“测试 Provider”按钮，使用虚构脱敏样例 `Demo Coffee / 支付金额 12.34` 调用当前 provider / model / endpoint，复用真实 Keychain API key、OpenAI-compatible request codec 和 response decoder，用于真机验证 DeepSeek / Qwen / OpenAI 配置是否返回可解析商户候选；测试不读取账本、OCR、截图或真实账单数据，失败提示不输出 API key 或响应原文。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-13 +0800] 调整 `GOAL-1609E` DeepSeek 默认模型：将外部辅助识别 DeepSeek provider preset 从兼容别名 `deepseek-chat` 改为当前正式模型 `deepseek-v4-flash`，同步更新设置页三语 placeholder、版本计划和离线回归断言；endpoint 保持 `https://api.deepseek.com/chat/completions`，用户仍可在设置页手动覆盖模型。
