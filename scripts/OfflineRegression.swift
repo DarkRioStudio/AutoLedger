@@ -534,6 +534,47 @@ struct OfflineRegression {
             "LedgerTextInterpreterCore ignores OCR list/quantity numbers before amount"
         )
 
+        let metroTransitText = """
+        08:15
+        天津互联互通城市卡
+        地铁：CN¥2.70
+        示例站A→示例站B
+        你的新余额为CN¥39.90。
+        •共274人推荐＞
+        • 示例城市｜示例体育场
+        @示例用户・5月10日
+        #示例话题 #示例比赛 #示例球队#var 裁判评议
+        Q相关搜索•示例裁判说话原声
+        留下你的友善评论吧
+        61
+        现在
+        1.0万
+        1170
+        728
+        3384
+        SAMPLE-CODE-001
+        938
+        """
+        let metroTransitResult = interpreter.interpret(
+            InterpretInput(
+                rawText: metroTransitText,
+                sourceType: .ocr,
+                hints: LedgerInterpretHints(sourceHint: .payment)
+            )
+        )
+        reporter.check(
+            metroTransitResult.draft?.merchant == "地铁：示例站A→示例站B",
+            "LedgerTextInterpreterCore prefers metro route over city card and social feed noise (got '\(metroTransitResult.draft?.merchant ?? "")')"
+        )
+        reporter.check(
+            abs((metroTransitResult.draft?.amount ?? 0) - 2.70) < 0.001,
+            "LedgerTextInterpreterCore extracts metro fare amount from inline CN¥ row"
+        )
+        reporter.check(
+            metroTransitResult.draft?.category == TransactionCategory.transport.rawValue,
+            "LedgerTextInterpreterCore infers transport category for metro route"
+        )
+
         // Phase 1: Amount extraction - RM receipts with registration numbers
         let rmReceiptRegNumber = """
         MR D.I.Y. (JOHOR) SDN BHD
@@ -1496,6 +1537,38 @@ struct OfflineRegression {
             reporter.check(abs(receipt.amount - 14.32) < 0.001, "ReceiptParser keeps actual paid amount on discount success page")
         } else {
             reporter.check(false, "ReceiptParser parses discount success payment text")
+        }
+
+        let metroTransitText = """
+        08:15
+        天津互联互通城市卡
+        地铁：CN¥2.70
+        示例站A→示例站B
+        你的新余额为CN¥39.90。
+        •共274人推荐＞
+        • 示例城市｜示例体育场
+        @示例用户・5月10日
+        #示例话题 #示例比赛 #示例球队#var 裁判评议
+        Q相关搜索•示例裁判说话原声
+        留下你的友善评论吧
+        61
+        现在
+        1.0万
+        1170
+        728
+        3384
+        SAMPLE-CODE-001
+        938
+        """
+        if let receipt = parser.parse(text: metroTransitText, source: .manual) {
+            reporter.check(
+                receipt.merchant == "地铁：示例站A→示例站B",
+                "ReceiptParser prioritizes metro route before city card and social feed noise"
+            )
+            reporter.check(abs(receipt.amount - 2.70) < 0.001, "ReceiptParser extracts metro inline CN¥ amount")
+            reporter.check(receipt.suggestedCategory == .transport, "ReceiptParser categorizes metro receipt as transport")
+        } else {
+            reporter.check(false, "ReceiptParser parses metro stored-value payment text")
         }
     }
 

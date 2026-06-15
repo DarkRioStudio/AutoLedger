@@ -16,6 +16,11 @@ public struct ReceiptParser: Sendable {
         let priceCandidates: [Double]
     }
 
+    private struct TransitStoredValueReceipt {
+        let merchant: String
+        let amount: Double
+    }
+
     // MARK: - 多账单检测
 
     /// 检测 OCR 文本中是否疑似包含多笔独立账单。
@@ -88,6 +93,19 @@ public struct ReceiptParser: Sendable {
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+
+        if let transitReceipt = parseTransitStoredValueReceipt(lines: cleanedLines) {
+            return ImportedReceipt(
+                source: source,
+                merchant: transitReceipt.merchant,
+                amount: transitReceipt.amount,
+                occurredAt: extractDate(from: normalized) ?? .now,
+                rawText: normalized,
+                summary: "\(source.title) 地铁/公交规则解析",
+                confidence: 0.92,
+                suggestedCategory: .transport
+            )
+        }
 
         let paperReceipt = analyzePaperReceipt(lines: cleanedLines)
 
@@ -599,6 +617,79 @@ public struct ReceiptParser: Sendable {
             }
             return Double(String(line[range]))
         }
+    }
+
+    private func parseTransitStoredValueReceipt(lines: [String]) -> TransitStoredValueReceipt? {
+        let transitLabels: Set<String> = ["地铁", "公交"]
+
+        for (idx, line) in lines.enumerated() {
+            guard let colonRange = line.rangeOfCharacter(from: CharacterSet(charactersIn: ":：")) else { continue }
+            let label = String(line[line.startIndex..<colonRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+            guard transitLabels.contains(label) else { continue }
+
+            let inlinePart = String(line[colonRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let amount = transitAmount(in: inlinePart)
+                ?? lines.dropFirst(idx + 1).prefix(3).compactMap(transitAmount(in:)).first
+            guard let amount else { continue }
+
+            let stationText: String?
+            if !inlinePart.isEmpty && transitAmount(in: inlinePart) == nil {
+                stationText = inlinePart
+            } else {
+                stationText = lines.dropFirst(idx + 1).first(where: isTransitRouteLine(_:))
+            }
+            guard let stationText else { continue }
+
+            return TransitStoredValueReceipt(
+                merchant: "\(label)：\(normalizedTransitRoute(stationText))",
+                amount: amount
+            )
+        }
+
+        return nil
+    }
+
+    private func transitAmount(in line: String) -> Double? {
+        let pattern = #"(?i)(?:CN¥|CN￥|CNY|RMB|¥|￥)\s*([0-9]+(?:\.[0-9]{1,2})?)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
+        guard let match = regex.firstMatch(in: line, range: nsRange),
+              let range = Range(match.range(at: 1), in: line),
+              let amount = Double(String(line[range])),
+              amount > 0,
+              amount < 1000 else {
+            return nil
+        }
+        return amount
+    }
+
+    private func isTransitRouteLine(_ line: String) -> Bool {
+        guard transitAmount(in: line) == nil else { return false }
+        guard line.count >= 3 else { return false }
+        let skipContains = [
+            "余额", "推荐", "相关搜索", "评论", "裁判", "现在", "小红书",
+            "付款", "支付", "成功", "通知", "城市卡"
+        ]
+        guard !skipContains.contains(where: { line.contains($0) }) else { return false }
+        return line.contains("→")
+            || line.contains("->")
+            || line.contains("-")
+            || line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count >= 2
+    }
+
+    private func normalizedTransitRoute(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("→") {
+            return trimmed
+        }
+        if trimmed.contains("->") {
+            return trimmed.replacingOccurrences(of: "->", with: "→")
+        }
+        let stations = trimmed
+            .components(separatedBy: CharacterSet(charactersIn: "- "))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return stations.count >= 2 ? stations.joined(separator: " → ") : trimmed
     }
 
     /// 判断字符串是否是一个独立的金额（整行基本就是货币符号 + 数字）。

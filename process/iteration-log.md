@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-13（GOAL-1610C 真机编辑保存验证）
+更新日期：2026-06-15（GOAL-1608F 地铁规则解析前置）
 
 ## 记录规则
 
@@ -43,6 +43,30 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-191 GOAL-1608F 地铁规则解析前置
+- 日期：2026-06-15
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：Bugfix / 规则解析
+- 目标：将地铁 / 公交储值卡 OCR 形态放到识别链路最前面，纯规则优先输出路线商户、车费金额和出行分类。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/LedgerTextInterpreterCore.swift`：在通用 bill relevance、金额提取和商户 resolver 前增加地铁 / 公交储值卡专用规则。
+  - `AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift`：在 App 层规则解析入口最前面增加同类地铁 / 公交解析，覆盖快捷指令纯规则兜底路径。
+  - `scripts/OfflineRegression.swift`：新增脱敏回归，覆盖城市卡名称、`地铁：CN¥金额`、路线行和后续社媒噪声混排场景。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：记录本次修复。
+- 未改动范围：未修改 UI、SQLite schema、CloudKit / iCloud 同步、外部 API、LLM 合并策略、Bundle ID、signing、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：Core 与 App 规则入口均会优先识别 `地铁：CN¥X.XX` / `公交：¥X.XX` 及后续路线行，跳过余额、城市卡、推荐、评论、社媒数字等噪声；回归样例使用虚构站点和虚构社媒文本，不保存真实路线、截图或 OCR 原文。
+- 未完成内容：未做真实图片 OCR 端到端真机回归；如后续出现无冒号、站点换行更碎或缺少路线行的新形态，需要继续补充样例。
+- 测试情况：
+  - PASS：先新增 Core 失败回归，确认旧逻辑会输出城市卡名称并取错金额 / 分类。
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`git diff --check`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：规则只在明确 `地铁：` / `公交：` 标签命中时触发，避免误伤普通商户；样例已脱敏，未提交用户真实路线或社媒内容。
+- 回滚方式：回退 `LedgerTextInterpreterCore.swift` 和 `ReceiptParser.swift` 中新增的 transit stored-value 规则与 `OfflineRegression.swift` 对应回归即可。
+- 结论：地铁 / 公交储值卡识别已前置到纯规则链路，快捷指令和 App 规则解析路径都应优先输出路线账单。
+- 下一步建议：真机用同类地铁截图重新跑快捷指令，确认商户为路线、金额为车费、分类为出行。
 
 ### ITER-190 GOAL-1610C 真机编辑保存验证
 - 日期：2026-06-13
