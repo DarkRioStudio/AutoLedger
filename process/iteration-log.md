@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-16（GOAL-1608G 通知中心地铁样式规则短路）
+更新日期：2026-06-16（v1.5.1 当前平台回归基线）
 
 ## 记录规则
 
@@ -43,6 +43,27 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-194 v1.5.1 当前平台回归基线
+- 日期：2026-06-16
+- 所属版本：v1.5.1
+- 所属阶段：最终 smoke / 当前平台收口
+- 类型：测试 / 文档 / 治理
+- 目标：确认 iOS / iPad 当前是否仍有未落地内容、Mac Catalyst 当前测试覆盖到什么程度，并补齐发布前可重复执行的回归用例清单。
+- 改动范围：
+  - `versions/v1.5.1-regression-baseline.md`：新增 iOS / iPad / Mac Catalyst 当前落地状态、命令级回归、自动 / 离线覆盖、手工 smoke 用例和当前执行记录。
+  - `versions/v1.5.1-plan.md`：增加回归基线引用和当前平台回归结果说明。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本次回归治理更新。
+- 未改动范围：未修改业务代码、UI、SQLite schema、CloudKit、Bundle ID、signing、entitlements、Xcode project / workspace / scheme / target 或 Xcode Cloud 脚本。
+- 完成内容：明确 iOS / iPad / Mac 不是缺主线代码，而是缺最终端到端 smoke 记录；Mac Catalyst 当前已有 build、Core 离线回归和截图导出基线，但没有自动 UI 测试，发布前需要执行菜单、快捷键、拖拽、CSV / JSON、表格批量编辑、重复检查和 iCloud 同步手工回归。
+- 未完成内容：未执行 Mac UI 手工 smoke；未新增 UI 自动化测试 target。
+- 测试情况：
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+  - 已复用本轮前序验证：`git diff --check`、`bash scripts/run_offline_regression.sh`、iOS generic build 均已在同一工作区通过。
+- 风险与注意事项：Mac Catalyst build 通过不等于菜单 / 拖拽 / 文件导入等桌面交互已通过；这些仍必须由手工 smoke 或后续 UI 自动化覆盖。
+- 回滚方式：回退 `versions/v1.5.1-regression-baseline.md` 及本轮文档引用即可。
+- 结论：本轮完成，v1.5.1 当前平台发布前测试用例已经成型；下一步应按该基线执行 iOS / iPad / Mac 手工 smoke。
+- 下一步建议：先跑 `MAC-001` 到 `MAC-011`，再统一执行 iOS / iPad 真机 smoke 和 Xcode Cloud 验证构建。
 
 ### ITER-193 GOAL-1608G 通知中心地铁样式规则短路
 - 日期：2026-06-16
