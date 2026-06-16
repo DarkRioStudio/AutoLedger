@@ -22,6 +22,9 @@ swiftc \
   "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
+  "$CORE/Services/PaymentAmountExtractor.swift" \
+  "$CORE/Services/MerchantResolver.swift" \
+  "$CORE/Services/CategoryResolver.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$ROOT/tools/receipt_ocr/golden_regression.swift"
 

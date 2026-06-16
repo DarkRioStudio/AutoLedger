@@ -337,7 +337,7 @@ public struct PaymentAmountExtractor: Sendable {
         if lowered.contains("gst") || lowered.contains("tax") || lowered.contains("税") { return .tax }
         if lowered.contains("subtotal") || lowered.contains("sub total") || lowered.contains("小计") { return .subtotal }
         if totalLineScore(line) > 0 { return .total }
-        if lowered.contains("实付") || lowered.contains("付款金额") || lowered.contains("支付金额") { return .actualPaid }
+        if lowered.contains("实付") || lowered.contains("金额") || lowered.contains("付款金额") || lowered.contains("支付金额") { return .actualPaid }
         return .unknown
     }
 

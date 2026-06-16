@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-16（v1.5.1 发布边界收口）
+更新日期：2026-06-16（v1.5.1 本地 smoke 收口）
 
 ## 记录规则
 
@@ -43,6 +43,37 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-196 GOAL-1606 本地 smoke 收口
+- 日期：2026-06-16
+- 所属版本：v1.5.1
+- 所属阶段：最终 smoke / 发布收口
+- 类型：测试 / Bugfix / 文档
+- 目标：执行 `v1.5.1` 当前发布平台的本地 smoke，覆盖命令级回归、iOS / Mac Catalyst 构建和 iPhone / iPad / Mac / Watch 截图管线，并回填最终收口状态。
+- 改动范围：
+  - `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Services/PaymentAmountExtractor.swift`：将中文支付详情里的 `金额` 标签视为可靠已支付金额，避免支付宝详情样例被误标记为需复核。
+  - `scripts/run_golden_regression.sh`：补齐 `PaymentAmountExtractor`、`MerchantResolver`、`CategoryResolver` 编译清单。
+  - `versions/v1.5.1-plan.md`、`versions/v1.5.1-regression-baseline.md`、`CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1606` 本地 smoke 结果和剩余人工项。
+- 未改动范围：未修改 Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、CloudKit schema、Xcode Cloud 脚本、ASC 设置或发布 tag。
+- 完成内容：
+  - 修复 Golden 回归脚本在 Core 解析模块拆分后漏编的问题。
+  - 修复中文 `金额：￥xx` 支付详情在 Core 金额提取中被视为 approximate 的问题。
+  - 完成本地命令级回归、iOS generic build、Mac Catalyst build 和当前四个平台 `zh-Hans` 截图导出烟测。
+- 未完成内容：Xcode Cloud 验证构建、TestFlight 安装 smoke、ASC 隐私 / 审核说明 / 截图最终上传检查仍需人工执行。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' build`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ipad-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --mac-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans`
+- 风险与注意事项：Mac Catalyst 第一次与 iOS 构建并发执行时出现 DerivedData `build.db` lock，单独重跑后通过；该问题属于本地并发构建环境，不是源码或 signing 失败。截图烟测只覆盖 `zh-Hans`，正式提交前仍需按 ASC 需要复核全语言、全尺寸和网页上传状态。
+- 回滚方式：回退 `PaymentAmountExtractor` 的 `金额` 标签识别、`run_golden_regression.sh` 编译清单补充和本轮文档记录即可恢复到本轮前状态。
+- 结论：`GOAL-1606` 本地 smoke 已完成；当前无本地命令级 blocker，版本可进入 Xcode Cloud / TestFlight / ASC 人工收口。
+- 下一步建议：推送当前分支，触发 Xcode Cloud 验证构建；通过后在 TestFlight 执行 iPhone / iPad / Watch / Mac 安装 smoke，并完成 ASC 隐私、审核说明和截图最终检查。
 
 ### ITER-195 v1.5.1 发布边界收口
 - 日期：2026-06-16
