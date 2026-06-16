@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-16（v1.5.1 当前平台回归基线）
+更新日期：2026-06-16（v1.5.1 发布边界收口）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-195 v1.5.1 发布边界收口
+- 日期：2026-06-16
+- 所属版本：v1.5.1
+- 所属阶段：最终 smoke / 发布边界
+- 类型：文档 / 治理
+- 目标：明确 tvOS / visionOS 是否继续纳入 `v1.5.1` 落代码范围，并把后续推进重心收敛到当前发布平台最终 smoke。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：将 tvOS / visionOS 产品代码、截图和发布准备顺延到 `v1.6.0`；`GOAL-1603 / GOAL-1604` 标记为已顺延，`GOAL-1605` 调整为当前发布平台截图复核，`GOAL-1606` 标记为待执行。
+  - `CHANGELOG.md`、`process/iteration-log.md`：记录本次发布边界决策。
+- 未改动范围：未修改业务代码、target、Bundle ID、signing、entitlements、Xcode project / workspace / scheme、CloudKit、截图脚本或 Xcode Cloud 脚本。
+- 完成内容：`v1.5.1` 不再继续扩 tvOS / visionOS 产品代码，当前发布收口范围明确为 iPhone / iPad / Apple Watch / Mac Catalyst。
+- 未完成内容：尚未执行 `GOAL-1606` 最终 smoke、Xcode Cloud 和 ASC 收口。
+- 测试情况：文档边界调整，无代码构建；本轮未新增命令验证。
+- 风险与注意事项：tvOS / visionOS target 和设计评估仍保留，但不应在 `v1.5.1` 发布判断中被当作 blocker；后续 `v1.6.0` 需要重新建立平台实现与截图门禁。
+- 回滚方式：如决定重新纳入 tvOS / visionOS，可回退本轮文档改动并恢复 `GOAL-1603 / GOAL-1604 / GOAL-1605` 为规划中。
+- 结论：本轮完成，`v1.5.1` 进入当前发布平台最终 smoke 收口阶段。
+- 下一步建议：执行 `GOAL-1606`，先跑 iOS / iPad / Mac 手工 smoke，再跑 Xcode Cloud / TestFlight。
 
 ### ITER-194 v1.5.1 当前平台回归基线
 - 日期：2026-06-16
