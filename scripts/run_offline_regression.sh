@@ -85,9 +85,17 @@ struct SmartReceiptParser {
         source: ReceiptSource,
         fallbackMerchant: String? = nil
     ) async -> SmartResult? {
-        guard let receipt = parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {
-            return nil
-        }
+        let baseReceipt = parser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant)
+        let receipt = ImportedReceipt(
+            source: source,
+            merchant: "LLM should not run",
+            amount: baseReceipt?.amount ?? 999,
+            occurredAt: baseReceipt?.occurredAt ?? Date(),
+            rawText: text,
+            summary: "External assist stub",
+            confidence: 0.99,
+            suggestedCategory: baseReceipt?.suggestedCategory ?? .other
+        )
         return SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
     }
 }
@@ -97,7 +105,7 @@ cat > "$PREP_DIR/IOSStubs.swift" << 'IOSTUB'
 import Foundation
 
 enum ExternalReceiptAssistSettings {
-    static var isEnabled: Bool { false }
+    static var isEnabled: Bool = false
 }
 
 // --- UIKit stubs ---

@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 修复（v1.5.1）
+- [2026-06-16 +0800] 完成 `GOAL-1608G` 通知中心地铁样式规则短路：当 OCR 文本来自通知中心并包含“城市卡 / 储值消费成功 / 地铁：CN¥金额 / 路线行”等形态时，`LedgerTextInterpreter` 会采用 `LedgerTextInterpreterCore` 的 `transit_stored_value` 规则结果直接入账为 `地铁：示例站A→示例站B` / 出行分类，不再进入外部大模型辅助识别；快捷指令调试记录同步补齐 `llmProvider` 和耗时字段，避免外部模型命中时显示 `Provider: unknown`。新增离线回归覆盖外部 Assist 开启时地铁规则仍应短路；已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-15 +0800] 完成 `GOAL-1611` iCloud 同步卡顿修复：CloudKit 拉取远端账单后写入本地 SQLite 的流程从逐条 `applyRemoteSyncRecord` 改为批量 `applyRemoteSyncRecords`，先一次性加载本地 sync records 建索引，再应用远端新增 / 更新 / 删除 / 冲突，避免每处理一条远端记录都全表读取一次导致 TestFlight / 真机同步时 UI 无响应。新增离线回归覆盖批量远端同步 summary 的新增 / 更新 / 删除统计；已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-15 +0800] 完成 `GOAL-1608F` 地铁 / 公交储值卡识别链路前置：`LedgerTextInterpreterCore` 和 App 层 `ReceiptParser` 在通用金额 / 商户解析前优先识别 `地铁：CN¥金额 + 路线行` / `公交：金额 + 路线行` 形态，直接输出路线商户、车费金额和出行分类，避免被城市卡名称、余额行或后续社媒噪声抢走。新增脱敏离线回归覆盖“城市卡 + 地铁金额 + 路线 + 社媒噪声”样例，不提交真实路线、截图或 OCR 原文。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-13 +0800] 收口 `GOAL-1610` 账单编辑保存链路：根据真机回填，编辑保存基本测试已通过，保存按钮状态、保存后展示一致性和商户别名确认式学习功能侧没有继续出现阻断问题；版本计划将 `GOAL-1610` 功能侧标记为已完成。本记录不保存真实账单内容、商户名、金额或截图。

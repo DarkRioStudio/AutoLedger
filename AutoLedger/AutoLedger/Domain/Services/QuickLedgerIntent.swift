@@ -255,7 +255,9 @@ struct QuickLedgerIntent: AppIntent {
             summary: summary,
             llmPrompt: llmTrace?.prompt,
             llmResponse: llmTrace?.response,
-            transactionID: transactionID
+            transactionID: transactionID,
+            llmProvider: llmTrace?.providerID,
+            llmLatencyMs: llmTrace?.latencyMs
         )
         guard let store = try? SQLiteTransactionStore() else { return }
         try? store.saveDebugEvent(record)

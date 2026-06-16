@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-15（GOAL-1611 外部调试记录与 iCloud 同步卡顿修复）
+更新日期：2026-06-16（GOAL-1608G 通知中心地铁样式规则短路）
 
 ## 记录规则
 
@@ -43,6 +43,29 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-193 GOAL-1608G 通知中心地铁样式规则短路
+- 日期：2026-06-16
+- 所属版本：v1.5.1
+- 所属阶段：Phase C / 账单 OCR 与文本识别链路 Core 化重构
+- 类型：Bugfix / 规则解析 / 可观测性
+- 目标：让通知中心样式的地铁储值消费文本在 App 解析入口直接走纯规则链路，避免外部辅助识别把商户改成泛化运营主体；同时补齐快捷指令调试记录中的 provider 元数据。
+- 改动范围：
+  - `AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift`：对 Core 返回的 `transit_stored_value` 结果做硬前置，直接构造规则 `SmartResult`，短路 DeepSeek / Qwen / OpenAI 等外部辅助分支。
+  - `AutoLedger/AutoLedger/Domain/Services/QuickLedgerIntent.swift`：快捷指令调试记录写入 `llmProvider` 与 `llmLatencyMs`。
+  - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增通知中心地铁样式脱敏回归，并让外部 Assist stub 在开启时返回错误商户以证明规则短路生效。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：记录本次修复。
+- 未改动范围：未修改 UI、SQLite schema、外部 API key 存储、默认开关、CloudKit 同步逻辑、Bundle ID、signing、entitlements、Xcode project / workspace / scheme / target 或 Xcode Cloud 脚本。
+- 完成内容：通知中心“储值消费成功 + 城市卡 + 地铁：CN¥金额 + 路线行 + 步行 / 游戏 / 天气噪声”文本会解析为 `地铁：示例站A→示例站B`、金额 `2.70`、分类 `transport`，并且在外部 Assist 开启时仍不会进入模型分支；快捷指令外部模型调试记录后续可显示 provider 和耗时。
+- 未完成内容：未做真机重新识别验证；需要用户用同类地铁通知截图 / 快捷指令文本再跑一次确认调试记录为纯规则解析。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：本次规则只针对明确 `地铁：` / `公交：` 标签和金额 / 路线组合，避免泛化吞掉普通支付截图；调试记录仍不写 API key、图片、真实截图或未脱敏完整 secret。
+- 回滚方式：回退 `LedgerTextInterpreter.transitStoredValueSmartResult` 前置逻辑、`QuickLedgerIntent.writeDebugEvent` provider 字段补齐，以及本轮新增离线回归即可恢复旧行为。
+- 结论：本轮完成，地铁储值消费已从 App 入口短路外部模型，符合“特殊清晰样式不需要 LLM”的链路要求。
+- 下一步建议：真机重新导入同类地铁通知样式，确认解析模式为纯规则解析；若仍看到模型链路，继续检查 OCR 清洗后文本是否保留 `地铁：CN¥金额` 和路线行。
 
 ### ITER-192 GOAL-1611 外部调试记录与 iCloud 同步卡顿修复
 - 日期：2026-06-15

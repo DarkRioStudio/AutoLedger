@@ -48,6 +48,7 @@ struct OfflineRegression {
         verifyExternalReceiptAssistOpenAICompatibleCodec(reporter: reporter)
         verifyExternalReceiptAssistSuggestionMapping(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
+        await verifyLedgerTextInterpreterTransitShortcut(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
@@ -62,6 +63,37 @@ struct OfflineRegression {
         try verifyBackupRoundTrip(reporter: reporter)
 
         reporter.finish()
+    }
+
+    private static var notificationMetroTransitText: String {
+        """
+        中国联通
+        ：！！！39
+        支
+        6月16日周二・丙午年五月初二
+        08:16
+        消费成功通知
+        你的储值消费成功，查看详情>>
+        现在
+        天津互联互通城市卡
+        地铁：CN¥2.70
+        示例站A→示例站B
+        你的新余额为CN¥37.20。
+        现在
+        全部完成！
+        你的步行已就绪，可以查看。
+        14分钟前
+        Subway Showdown
+        16分钟前
+        Race other Surfers and advance to
+        the highest League！
+        网，具后多云：22°C~29°C·
+        空气质量70良
+        ▶25°
+        多云
+        最高31°最低21°
+        。
+        """
     }
 
     private static func verifyVoiceLedgerParsing(reporter: RegressionReporter) {
@@ -573,6 +605,22 @@ struct OfflineRegression {
         reporter.check(
             metroTransitResult.draft?.category == TransactionCategory.transport.rawValue,
             "LedgerTextInterpreterCore infers transport category for metro route"
+        )
+
+        let notificationMetroResult = interpreter.interpret(
+            InterpretInput(
+                rawText: notificationMetroTransitText,
+                sourceType: .ocr,
+                hints: LedgerInterpretHints(sourceHint: .payment)
+            )
+        )
+        reporter.check(
+            notificationMetroResult.draft?.merchant == "地铁：示例站A→示例站B",
+            "LedgerTextInterpreterCore extracts metro route from notification-center stored-value text"
+        )
+        reporter.check(
+            abs((notificationMetroResult.draft?.amount ?? 0) - 2.70) < 0.001,
+            "LedgerTextInterpreterCore extracts metro fare from notification-center stored-value text"
         )
 
         // Phase 1: Amount extraction - RM receipts with registration numbers
@@ -1569,6 +1617,45 @@ struct OfflineRegression {
             reporter.check(receipt.suggestedCategory == .transport, "ReceiptParser categorizes metro receipt as transport")
         } else {
             reporter.check(false, "ReceiptParser parses metro stored-value payment text")
+        }
+
+        if let receipt = parser.parse(text: notificationMetroTransitText, source: .manual) {
+            reporter.check(
+                receipt.merchant == "地铁：示例站A→示例站B",
+                "ReceiptParser extracts metro route from notification-center stored-value text"
+            )
+            reporter.check(abs(receipt.amount - 2.70) < 0.001, "ReceiptParser extracts notification-center metro fare")
+            reporter.check(receipt.suggestedCategory == .transport, "ReceiptParser categorizes notification-center metro receipt as transport")
+        } else {
+            reporter.check(false, "ReceiptParser parses notification-center metro stored-value text")
+        }
+    }
+
+    private static func verifyLedgerTextInterpreterTransitShortcut(reporter: RegressionReporter) async {
+        ExternalReceiptAssistSettings.isEnabled = true
+        defer { ExternalReceiptAssistSettings.isEnabled = false }
+
+        let interpreter = LedgerTextInterpreter()
+        let interpretation = await interpreter.interpret(
+            LedgerTextInterpretationInput(
+                text: notificationMetroTransitText,
+                preferredSource: .manual,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil
+            )
+        )
+
+        switch interpretation {
+        case .transaction(let result, _, _, let multiReceiptDetected):
+            reporter.check(
+                result.receipt.merchant == "地铁：示例站A→示例站B",
+                "LedgerTextInterpreter shortcuts metro stored-value text before external assist"
+            )
+            reporter.check(result.llmTrace == nil, "LedgerTextInterpreter does not attach LLM trace for metro shortcut")
+            reporter.check(result.usedRuleFallback, "LedgerTextInterpreter marks metro shortcut as rule fallback")
+            reporter.check(!multiReceiptDetected, "LedgerTextInterpreter does not mark metro shortcut as multi receipt")
+        default:
+            reporter.check(false, "LedgerTextInterpreter returns transaction for metro stored-value shortcut")
         }
     }
 

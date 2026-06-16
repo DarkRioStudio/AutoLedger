@@ -80,6 +80,14 @@ struct LedgerTextInterpreter {
                 debugTrace: coreResult.debugTrace
             )
         }
+        if let transitResult = coreResult.transitStoredValueSmartResult(source: source, rawText: cleanedText) {
+            return .transaction(
+                transitResult,
+                normalizedText: normalizedText,
+                source: source,
+                multiReceiptDetected: false
+            )
+        }
 
         let multiReceiptDetected = receiptParser.detectMultipleReceipts(text: cleanedText)
         let selectedProvider = LLMProvider.userSelected
@@ -126,6 +134,28 @@ struct LedgerTextInterpreter {
             source: source,
             multiReceiptDetected: multiReceiptDetected
         )
+    }
+}
+
+private extension InterpretResult {
+    func transitStoredValueSmartResult(source: ReceiptSource, rawText: String) -> SmartReceiptParser.SmartResult? {
+        guard debugTrace.contains(where: { $0.hasPrefix("transit_stored_value") }),
+              let draft,
+              let category = TransactionCategory(rawValue: draft.category) else {
+            return nil
+        }
+
+        let receipt = ImportedReceipt(
+            source: source,
+            merchant: draft.merchant,
+            amount: draft.amount,
+            occurredAt: draft.occurredAt,
+            rawText: rawText,
+            summary: "\(source.title) 地铁/公交规则解析",
+            confidence: confidence == .high ? 0.94 : 0.82,
+            suggestedCategory: category
+        )
+        return SmartReceiptParser.SmartResult(receipt: receipt, llmTrace: nil, usedRuleFallback: true)
     }
 }
 
