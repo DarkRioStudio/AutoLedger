@@ -3026,22 +3026,29 @@ private struct IPadLedgerWorkspaceView: View {
 
     #if targetEnvironment(macCatalyst)
     private var macLedgerWorkspace: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
-                macLedgerToolbar
-                macBatchEditPanel
-                macDuplicateReviewPanel
-                macTransactionTable
+        GeometryReader { geometry in
+            let showsInspector = geometry.size.width >= 1_220
+            let inspectorWidth = min(360, max(320, geometry.size.width * 0.28))
+
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 14) {
+                    macLedgerToolbar
+                    macBatchEditPanel
+                    macDuplicateReviewPanel
+                    macTransactionTable
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(AppTheme.canvas.opacity(0.45))
+
+                if showsInspector {
+                    Divider()
+
+                    transactionInspector
+                        .frame(width: inspectorWidth)
+                        .frame(maxHeight: .infinity)
+                }
             }
-            .padding(20)
-            .frame(minWidth: 720, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(AppTheme.canvas.opacity(0.45))
-
-            Divider()
-
-            transactionInspector
-                .frame(width: 380)
-                .frame(maxHeight: .infinity)
         }
     }
 
@@ -3130,43 +3137,52 @@ private struct IPadLedgerWorkspaceView: View {
     private var macTransactionTable: some View {
         Table(filteredTransactions, selection: $selectedTransactionIDs) {
             TableColumn(String(localized: "transaction_editor.date")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Text(AppFormatters.shortDateTime(transaction.occurredAt))
                     .font(.caption)
-                    .foregroundStyle(AppTheme.mutedInk)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.86) : AppTheme.mutedInk)
             }
             .width(min: 132, ideal: 150)
 
             TableColumn(String(localized: "transaction_editor.merchant")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Text(transaction.merchant)
                     .font(.body.weight(.semibold))
+                    .foregroundStyle(isSelected ? Color.white : AppTheme.ink)
                     .lineLimit(1)
             }
             .width(min: 180, ideal: 260)
 
             TableColumn(String(localized: "transaction_editor.amount")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Text(AppFormatters.currency(transaction.amount))
                     .font(.body.weight(.bold))
                     .monospacedDigit()
+                    .foregroundStyle(isSelected ? Color.white : AppTheme.ink)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .width(min: 96, ideal: 118)
 
             TableColumn(String(localized: "transaction_editor.category")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Label(transaction.categoryTitle, systemImage: transaction.categoryEnum.iconName)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.90) : AppTheme.ink)
                     .lineLimit(1)
             }
             .width(min: 128, ideal: 160)
 
             TableColumn(String(localized: "transaction_editor.source")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Text(transaction.sourceTitle)
-                    .foregroundStyle(AppTheme.mutedInk)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.78) : AppTheme.mutedInk)
                     .lineLimit(1)
             }
             .width(min: 96, ideal: 128)
 
             TableColumn(String(localized: "transaction_editor.note")) { transaction in
+                let isSelected = selectedTransactionIDs.contains(transaction.id)
                 Text(transaction.note.isEmpty ? "-" : transaction.note)
-                    .foregroundStyle(AppTheme.mutedInk)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.78) : AppTheme.mutedInk)
                     .lineLimit(1)
             }
             .width(min: 160, ideal: 260)

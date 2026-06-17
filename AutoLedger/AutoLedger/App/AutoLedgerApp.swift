@@ -59,7 +59,7 @@ private struct AutoLedgerRootView: View {
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
 
     var body: some View {
-        rootContent
+        sizedRootContent
             .environmentObject(store)
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
@@ -138,6 +138,16 @@ private struct AutoLedgerRootView: View {
         } else {
             HomeView()
         }
+    }
+
+    @ViewBuilder
+    private var sizedRootContent: some View {
+        #if targetEnvironment(macCatalyst)
+        rootContent
+            .frame(minWidth: 1320, idealWidth: 1440, minHeight: 760, idealHeight: 900)
+        #else
+        rootContent
+        #endif
     }
 
     private func scheduleLaunchCloudSyncIfNeeded() {

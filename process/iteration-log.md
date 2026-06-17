@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-17（App Store 营销素材截图视觉修正）
+更新日期：2026-06-17（v1.5.1 仓库侧收尾）
 
 ## 记录规则
 
@@ -43,6 +43,26 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-200 v1.5.1 仓库侧收尾
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：发布收口 / Release Candidate
+- 类型：文档 / 治理 / 发布收口
+- 目标：将 `v1.5.1` 从“开发中”收口为 release candidate，明确当前平台完成范围、App Preview v001 状态、Xcode Cloud / TestFlight / ASC 回填结果、顺延事项和保留风险。
+- 改动范围：
+  - `versions/v1.5.1-plan.md`：更新文档状态、版本定位、GOAL 队列、门禁结论、App Preview v001 验证记录和当前结论。
+  - `README.md`：将 Roadmap 中 `v1.5.1` 状态更新为“收尾完成”，并改写主要内容摘要。
+  - `CHANGELOG.md`：新增 `v1.5.1` release candidate 收口记录和 Hyperframes App Preview v001 记录。
+  - `process/iteration-log.md`：新增本条迭代日志。
+- 未改动范围：未修改 App 代码、Xcode project / workspace / scheme / target、Bundle ID、`DEVELOPMENT_TEAM`、App Group、iCloud Container、entitlements、Xcode Cloud 脚本、App Store Connect 配置、截图管线脚本或 Hyperframes 成片。
+- 完成内容：`v1.5.1` 已明确为 App Store `1.4.0` 的 TestFlight / 提审候选基线；当前发布平台范围收口为 iPhone / iPad / Apple Watch / Mac Catalyst；最低系统需求优化、识别链路 Core 化、外部辅助识别试点、账单编辑保存稳定性、iCloud 同步性能修复、当前平台截图与 App Preview v001 均已纳入完成范围。根据用户回填，Xcode Cloud archive、TestFlight 分发和 ASC 素材上传已完成。
+- 未完成内容：Mac 端素材尚未做 ASC 侧实测 / 预览确认，作为非阻断风险保留；tvOS / visionOS 产品代码、截图和平台发布准备顺延到 `v1.6.0`；多账本继续顺延。
+- 测试情况：文档收口，无新增构建；沿用 `versions/v1.5.1-plan.md` 中已记录的本地 smoke、iOS generic build、Mac Catalyst build、截图导出、Hyperframes render 和 ffprobe 验证结果。
+- 风险与注意事项：`收尾完成` 不等于 App Store 已上架；Xcode Cloud archive、TestFlight 分发和 ASC 素材上传虽已完成，但 Mac 端素材未做 ASC 侧实测，如果本次提交包含 Mac 平台展示素材，仍建议在提交审核前单独预览确认。
+- 回滚方式：若后续发现 blocker，可将 `versions/v1.5.1-plan.md` 文档状态改回“开发中 / 阻断”，把 README Roadmap 状态回退，并在 CHANGELOG 增加 blocker 记录。
+- 结论：本轮完成，`v1.5.1` 可以作为当前 App Store `1.4.0` 提审候选基线；Xcode Cloud archive、TestFlight 分发和 ASC 素材上传已完成。
+- 下一步建议：提交审核前如包含 Mac 平台素材，单独预览 Mac 展示素材；提审完成后再创建对应 tag 或 release 记录。
 
 ### ITER-199 App Store 截图视觉回归修正
 - 日期：2026-06-17

@@ -6,6 +6,12 @@ final class AutoLedgerSceneDelegate: NSObject, UIWindowSceneDelegate {
         willConnectTo session: UISceneSession,
         options connectionOptions: UIScene.ConnectionOptions
     ) {
+        #if targetEnvironment(macCatalyst)
+        if let windowScene = scene as? UIWindowScene {
+            windowScene.sizeRestrictions?.minimumSize = CGSize(width: 1320, height: 760)
+        }
+        #endif
+
         guard let shortcutItem = connectionOptions.shortcutItem else { return }
         AutoLedgerAppDelegate.handleHomeQuickAction(shortcutItem)
     }

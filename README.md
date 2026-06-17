@@ -155,7 +155,7 @@ bash scripts/run_golden_regression.sh
 | v1.3.5 | **1.2.0** | ✅ 已发布 | Worker API 可行性评估、712 样本批量回归（金额命中率 100%）、商户别名迁移 |
 | v1.4.0 | **1.3.0** | ✅ 已发布 | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强、中英繁本地化与截图管线、可选 Support Developer 内购 |
 | v1.5.0 | **1.4.0** | ✅ 基线完成 | iPad 工作台、批量导入 / 批量识别、数据清洗、基础多端数据同步、Watch 今日支出与表盘小组件、iPad / Mac 截图管线、Mac Catalyst 主线能力 |
-| v1.5.1 | **1.4.0** | 🚧 开发中 | 承接 `v1.5.0` 最终 smoke / Xcode Cloud / ASC 收口，补齐 tvOS / visionOS 第一版内容，并优化全平台最低系统需求；多账本继续顺延到后续版本 |
+| v1.5.1 | **1.4.0** | ✅ 收尾完成 | 最低系统需求优化、识别链路 Core 化、外部辅助识别试点、编辑保存稳定性、iCloud 同步性能、当前平台截图与 App Preview v001；tvOS / visionOS 与多账本顺延 |
 
 ## License
 
