@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-201 设置页当前版本说明更新
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：Release Candidate
+- 类型：文案 / 本地化
+- 目标：将设置页“当前版本”说明从旧的 v1.4.x 能力清单更新为当前 v1.5.1 release candidate 面向用户的版本说明。
+- 改动范围：更新简体中文、繁体中文、英文 `settings.version.body` 本地化文案；同步回填 CHANGELOG。
+- 未改动范围：未调整 `MARKETING_VERSION`、构建号、设置页布局、隐私策略、后续计划文案或发布计划。
+- 完成内容：当前版本说明改为概括 iPhone / iPad / Apple Watch / Mac 当前发布平台收口、iCloud 同步、截图与小票识别优化、账单编辑保存稳定性修复，以及可选脱敏外部辅助识别。
+- 未完成内容：未执行 Xcode 构建；本轮仅做本地化文案与文档记录。
+- 测试情况：执行 `plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings`，结果 PASS；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：设置页隐私策略和后续计划文案仍可能与当前 release candidate 存在口径差异，后续如需发布前全量文案收口应单独处理。
+- 回滚方式：恢复三语 `settings.version.body` 至上一版能力清单，并移除本次 CHANGELOG / iteration log 记录。
+- 结论：本轮完成，设置页“当前版本”说明已同步到 v1.5.1 release candidate 口径。
+- 下一步建议：发布前统一复核设置页隐私策略、后续计划和 App Store 文案是否一致。
+
 ### ITER-200 v1.5.1 仓库侧收尾
 - 日期：2026-06-17
 - 所属版本：v1.5.1

@@ -498,7 +498,7 @@
 "settings.support.title" = "Support AutoLedger";
 "settings.support.subtitle" = "Optional support for independent development; no features are unlocked";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "Apple Watch quick logging, Shortcuts and voice entry, historical monthly reports, iCloud backup and restore, merchant aliases, and bulk category cleanup.";
+"settings.version.body" = "This release candidate has been polished for iPhone, iPad, Apple Watch, and Mac, with iCloud sync, improved screenshot and receipt recognition, more reliable bill editing and saving, and optional redacted external recognition assistance.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "All data stays on your device. AutoLedger does not use cloud sync or third-party analytics. OCR and LLM inference both run locally. The only network request is Gemma model version checking and download via CDN; no user data is transmitted.";
 "settings.release_status.title" = "Coming Next";
