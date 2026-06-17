@@ -2,7 +2,9 @@ import Foundation
 
 enum ScreenshotScene: String, CaseIterable {
     case preview
+    case ocrBill = "ocr_bill"
     case quickCapture = "quick_capture"
+    case voiceEntry = "voice_entry"
     case importMethods = "import_methods"
     case autoExtract = "auto_extract"
     case reviewEdit = "review_edit"

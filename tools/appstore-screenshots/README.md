@@ -1,6 +1,8 @@
 # AutoLedger App Store Screenshot Export
 
-This folder contains a repeatable local pipeline for App Store screenshots. It captures deterministic screenshot-mode screens from the iOS, iPad, and Mac Catalyst app, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
+This folder contains a repeatable local pipeline for App Store screenshots and App Preview keyframe preparation. It captures deterministic screenshot-mode screens from the iOS, iPad, and Mac Catalyst app, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
+
+The same raw and store PNGs can be handed to Hyperframes or another video tool as keyframes for an App Store App Preview. This repository still does not upload assets to App Store Connect.
 
 ## Supported Output
 
@@ -9,7 +11,7 @@ This folder contains a repeatable local pipeline for App Store screenshots. It c
 - Mac Catalyst: zh-Hans, zh-Hant, and en, default desktop capture size `1440x900`.
 - Apple Watch: zh-Hans, zh-Hant, and en when the Watch scheme and a usable Watch simulator pair are available.
 
-The pipeline does not upload to App Store Connect or create official App Preview videos.
+The pipeline does not upload to App Store Connect or directly create official App Preview videos. App Preview / Hyperframes production material lives in `tools/appstore-screenshots/app-preview/`.
 
 ## Run
 
@@ -67,6 +69,43 @@ Open the preview:
 open tools/appstore-screenshots/output/preview.html
 ```
 
+## App Preview / Hyperframes
+
+This repository does not directly generate the official App Preview video. It now provides production material for a 15-20 second Hyperframes workflow:
+
+```text
+tools/appstore-screenshots/app-preview/
+  README.md
+  preview_script_zh-Hans.md
+  hyperframes_brief_zh-Hans.md
+  shotlist_zh-Hans.md
+  export_requirements.md
+```
+
+Recommended source export:
+
+```bash
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans
+```
+
+Recommended folders to hand to Hyperframes:
+
+```text
+tools/appstore-screenshots/output/store/ios/zh-Hans
+tools/appstore-screenshots/output/raw/ios/zh-Hans
+tools/appstore-screenshots/output/store/watch/zh-Hans
+tools/appstore-screenshots/output/raw/watch/zh-Hans
+```
+
+Suggested App Store asset review order:
+
+1. iPhone App Preview
+2. iPhone screenshots
+3. Apple Watch screenshots
+4. iPad screenshots
+5. Mac screenshots
+
 ## Output Layout
 
 Generated files are written under `tools/appstore-screenshots/output/`, which is ignored by git:
@@ -107,7 +146,7 @@ The iOS app supports screenshot mode:
 ```text
 --screenshot-mode
 --screenshot-platform ios
---screenshot-scene preview|quick_capture|import_methods|auto_extract|review_edit|monthly_report|settings_management
+--screenshot-scene preview|ocr_bill|quick_capture|voice_entry|import_methods|auto_extract|review_edit|monthly_report|settings_management
 ```
 
 To add a scene:
@@ -118,6 +157,8 @@ To add a scene:
 4. Run `bash tools/appstore-screenshots/scripts/export.sh --ios-only`.
 
 The screenshot host uses fixed fixtures and does not read the real ledger database, start OCR, access camera/photos, request notifications, or load LLM models.
+
+The `ocr_bill` and `voice_entry` scenes are screenshot-only fixtures. They do not request photo library, camera, microphone, OCR, speech recognition, network, iCloud, or LLM access.
 
 ## Apple Watch Scenes
 
@@ -162,7 +203,7 @@ Mac Catalyst capture uses the same screenshot workspace host, but launches a loc
 ```text
 --screenshot-mode
 --screenshot-platform mac
---screenshot-scene mac_capture|mac_ledger|mac_cleaning|mac_settings
+--screenshot-scene mac_capture|mac_ledger|mac_reports|mac_cleaning|mac_settings
 ```
 
 To add a scene:
@@ -200,6 +241,8 @@ python3 tools/appstore-screenshots/scripts/render_watch.py
 python3 tools/appstore-screenshots/scripts/build_preview.py
 ```
 
+The current automatic Watch pipeline does not capture a real watch face complication. If the App Store listing needs the complication itself, capture that image manually from a real Watch or simulator face and use it as supplemental App Store / App Preview material.
+
 ## Common Issues
 
 - Missing simulator: install an iOS or watchOS simulator in Xcode, or add the local device name to `deviceCandidates`.
@@ -219,7 +262,7 @@ python3 tools/appstore-screenshots/scripts/build_preview.py
 ## Not Implemented
 
 - App Store Connect API upload.
-- Official App Preview video.
+- Direct official App Preview video generation. Hyperframes production material is provided under `app-preview/`.
 - tvOS screenshots.
 - visionOS screenshots.
 - Figma or Canva integration.

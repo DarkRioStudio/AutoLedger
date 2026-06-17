@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-17（v1.5.1 地铁规则短路与外部 API 调试观测）
+更新日期：2026-06-17（App Store 营销素材截图管线升级）
 
 ## 记录规则
 
@@ -43,6 +43,37 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-198 App Store 营销素材截图管线升级
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：营销素材 / 发布收口
+- 类型：文档 / 截图管线 / 配置 / UI Fixture
+- 目标：在现有 `tools/appstore-screenshots` 管线基础上升级 App Store 截图策略、Watch 文案和 App Preview / Hyperframes 制作资料，不另起平行 marketing 目录。
+- 改动范围：
+  - `tools/appstore-screenshots/config/screenshots.json`：更新 iPhone / iPad / Mac / Watch 三语截图文案和 iPhone 截图顺序。
+  - `ScreenshotModeConfig` / `ScreenshotHostView`：新增 `ocr_bill` / `voice_entry` screenshot-only 静态场景，更新截图 fixture 为虚构演示账单。
+  - `tools/appstore-screenshots/docs/APPSTORE_SCREENSHOT_PIPELINE_AUDIT.md`：记录当前平台、locale、scene、自动化能力和人工项。
+  - `tools/appstore-screenshots/app-preview/`：新增 App Preview / Hyperframes README、中文脚本、brief、shotlist 和导出要求。
+  - `tools/appstore-screenshots/README.md`：补充 App Preview keyframe 说明、推荐导出命令、上传顺序和 Watch complication fallback。
+- 未改动范围：未修改 App Store Connect、证书、profile、entitlements、Bundle ID、DEVELOPMENT_TEAM、Xcode Cloud 脚本、真实 OCR / LLM / iCloud / 相册 / 相机 / 麦克风链路，也未引入真实支付截图或用户账本数据。
+- 完成内容：
+  - iPhone 截图收敛为 6 张：截图识别、语音记账、Watch 生态、月报、iCloud 同步、快捷指令导入。
+  - Watch 截图保留 4 张并更新为新版 Watch UI 方向；表盘复杂功能自动截图仍标记为人工 fallback。
+  - iPad / Mac 常规截图能力保留，文案转向大屏账本、桌面整理和多设备同步。
+  - Hyperframes 所需制作资料已放入现有工具目录，可使用截图管线输出作为关键帧。
+  - 截图 fixture 覆盖午饭 28 元、Demo Coffee 18 元、City Metro 4 元、Example Market 86.5 元、Sample Cinema 45 元、Mobile Carrier 50 元、Bookstore 39 元、Delivery Dinner 32 元等虚构演示数据。
+- 未完成内容：未生成官方 App Preview 视频；未上传 ASC；未人工复核全部平台截图最终视觉效果；Watch 真表盘复杂功能截图仍需人工捕获。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`python3 -m json.tool tools/appstore-screenshots/config/screenshots.json`
+  - PASS：截图管线敏感关键词检查未命中 API key / private key / `ghp_` / 证书类文件名 / 真实支付等风险词。
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans`
+- 风险与注意事项：`ocr_bill` / `voice_entry` 是静态截图 fixture，不代表自动读取相册、启动 OCR 或打开麦克风；Mac `mac_reports` 复用已有 workspace reports 映射，iPhone-only 导出时会提示 Mac raw 截图尚未重新生成，后续执行 `--mac-only` 后即可补齐；全部平台最终上传前仍需人工目视确认。
+- 回滚方式：回退 `screenshots.json`、`ocr_bill` / `voice_entry` scene、App Preview 文档和 README / audit 记录即可恢复上一轮截图管线状态。
+- 结论：本轮完成，现有截图导出脚本保持可用，iPhone `zh-Hans` 最小导出已通过。
+- 下一步建议：先执行 `export.sh --ios-only --locale zh-Hans` 生成 iPhone 首批截图，再人工打开 `output/preview.html` 复核排版。
 
 ### ITER-197 GOAL-1608G / GOAL-1611 地铁规则短路与外部 API 调试观测
 - 日期：2026-06-17

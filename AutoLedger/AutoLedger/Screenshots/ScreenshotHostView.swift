@@ -12,6 +12,10 @@ struct ScreenshotHostView: View {
                 switch ScreenshotScene(rawValue: sceneIdentifier) ?? .preview {
                 case .preview, .quickCapture:
                     ScreenshotAppPage(scene: .inbox)
+                case .ocrBill:
+                    ScreenshotOCRBillHost()
+                case .voiceEntry:
+                    ScreenshotVoiceEntryHost()
                 case .importMethods:
                     ScreenshotImportMethodsHost()
                 case .autoExtract:
@@ -127,6 +131,88 @@ private struct ScreenshotTransactionEditorHost: View {
     }
 }
 
+private struct ScreenshotOCRBillHost: View {
+    private var copy: ScreenshotCopy { .current }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(copy.text("支付截图识别", "支付截圖識別", "Screenshot recognition"))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(copy.text(
+                            "支付截图、小票和剪贴板文字都能整理成待保存账单。",
+                            "支付截圖、小票和剪貼簿文字都能整理成待儲存帳單。",
+                            "Payment screenshots, receipts, and copied text become ready-to-save records."
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    .padding(.top, 10)
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Text(copy.text("支付成功", "支付成功", "Payment complete"))
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(AppTheme.ink)
+                            Spacer()
+                            Text("¥18.00")
+                                .font(.title.weight(.black))
+                                .foregroundStyle(AppTheme.ink)
+                        }
+
+                        Divider()
+
+                        ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: "Demo Coffee")
+                        ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41"))
+                        ScreenshotVoiceField(label: copy.text("来源", "來源", "Source"), value: copy.text("支付截图", "支付截圖", "Screenshot"))
+                    }
+                    .padding(18)
+                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                        Text(copy.text("自动生成待保存账单", "自動產生待儲存帳單", "Record ready to save"))
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Label(copy.text("已识别", "已識別", "Recognized"), systemImage: "sparkles")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.accent)
+                            Spacer()
+                            Text("¥18.00")
+                                .font(.title.weight(.black))
+                                .foregroundStyle(AppTheme.ink)
+                        }
+
+                        VStack(spacing: 10) {
+                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: "Demo Coffee")
+                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category"), value: copy.text("餐饮", "餐飲", "Dining"))
+                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41"))
+                        }
+                    }
+                    .padding(18)
+                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+            }
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle("AutoLedger")
+        }
+        .preferredColorScheme(.light)
+    }
+}
+
 private struct ScreenshotWorkspaceHost: View {
     let section: IPadWorkspaceSection
     @StateObject private var store: LedgerStore
@@ -190,6 +276,96 @@ private struct ScreenshotImportMethodsHost: View {
             .navigationTitle("AutoLedger")
         }
         .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotVoiceEntryHost: View {
+    private var copy: ScreenshotCopy { .current }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(copy.text("一句话记账", "一句話記帳", "Voice entry"))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(copy.text(
+                            "输入一句“午饭 28 元”，自动整理成待保存账单。",
+                            "輸入一句「午餐 28 元」，自動整理成待儲存帳單。",
+                            "Enter a simple sentence and get a ready-to-save record."
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    .padding(.top, 10)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "waveform")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(AppTheme.accentSecondary)
+                            Text(copy.text("午饭 28 元", "午餐 28 元", "Lunch 28 yuan"))
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(AppTheme.ink)
+                            Spacer()
+                        }
+                        Text(copy.text(
+                            "像说一句话一样输入，AutoLedger 会准备好待保存账单。",
+                            "像說一句話一樣輸入，AutoLedger 會準備好待儲存帳單。",
+                            "Type or say a short sentence and get a ready-to-save record."
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    .padding(18)
+                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Label(copy.text("已生成账单", "已產生帳單", "Record ready"), systemImage: "checkmark.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.accent)
+                            Spacer()
+                            Text("¥28.00")
+                                .font(.title.weight(.black))
+                                .foregroundStyle(AppTheme.ink)
+                        }
+
+                        VStack(spacing: 10) {
+                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: copy.text("午饭", "午餐", "Lunch"))
+                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category"), value: copy.text("餐饮", "餐飲", "Dining"))
+                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 12:20", "今天 12:20", "Today 12:20"))
+                        }
+                    }
+                    .padding(18)
+                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+            }
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle("AutoLedger")
+        }
+        .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotVoiceField: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+        }
+        .padding(.vertical, 5)
     }
 }
 
@@ -263,12 +439,14 @@ private enum ScreenshotFixtures {
     }()
 
     static let transactions: [Transaction] = [
-        Transaction(merchant: "Blue Bottle Coffee", amount: 36, occurredAt: baseDate, category: .dining, source: .wechat, note: String(localized: "note.photo_import")),
-        Transaction(merchant: "Apple Services", amount: 68, occurredAt: baseDate.addingTimeInterval(-7_200), category: .digital, source: .appStore, note: String(localized: "quick_ledger.note")),
-        Transaction(merchant: "City Metro", amount: 7, occurredAt: baseDate.addingTimeInterval(-18_000), category: .transport, source: .alipay, note: ""),
-        Transaction(merchant: "Hema Fresh", amount: 128.6, occurredAt: baseDate.addingTimeInterval(-86_400), category: .groceries, source: .unionPay, note: ""),
-        Transaction(merchant: "MUJI", amount: 239, occurredAt: baseDate.addingTimeInterval(-172_800), category: .shopping, source: .manual, note: ""),
-        Transaction(merchant: "Spotify", amount: 18, occurredAt: baseDate.addingTimeInterval(-259_200), category: .digital, source: .appStore, note: "Subscription")
+        Transaction(merchant: "午饭", amount: 28, occurredAt: baseDate, category: .dining, source: .manual, note: String(localized: "quick_ledger.note")),
+        Transaction(merchant: "Demo Coffee", amount: 18, occurredAt: baseDate.addingTimeInterval(-7_200), category: .dining, source: .wechat, note: String(localized: "note.photo_import")),
+        Transaction(merchant: "City Metro", amount: 4, occurredAt: baseDate.addingTimeInterval(-18_000), category: .transport, source: .alipay, note: ""),
+        Transaction(merchant: "Example Market", amount: 86.5, occurredAt: baseDate.addingTimeInterval(-86_400), category: .groceries, source: .unionPay, note: ""),
+        Transaction(merchant: "Sample Cinema", amount: 45, occurredAt: baseDate.addingTimeInterval(-172_800), category: .entertainment, source: .manual, note: ""),
+        Transaction(merchant: "Mobile Carrier", amount: 50, occurredAt: baseDate.addingTimeInterval(-259_200), category: .utilities, source: .manual, note: ""),
+        Transaction(merchant: "Bookstore", amount: 39, occurredAt: baseDate.addingTimeInterval(-345_600), category: .shopping, source: .manual, note: ""),
+        Transaction(merchant: "Delivery Dinner", amount: 32, occurredAt: baseDate.addingTimeInterval(-432_000), category: .dining, source: .manual, note: "")
     ]
 
     static func installUserDefaults() {
