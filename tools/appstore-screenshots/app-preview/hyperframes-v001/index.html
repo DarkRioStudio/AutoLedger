@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=886, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      body {
+        font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        color: #1d2722;
+      }
+
+      #root {
+        position: relative;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene:not(:first-of-type) {
+        opacity: 0;
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        padding: 108px 54px 88px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 34px;
+      }
+
+      .bg-ring {
+        position: absolute;
+        border: 2px solid rgba(47, 134, 95, 0.13);
+        border-radius: 999px;
+        z-index: 0;
+      }
+
+      .bg-ring.one {
+        width: 1060px;
+        height: 1060px;
+        left: -360px;
+        top: -220px;
+      }
+
+      .bg-ring.two {
+        width: 720px;
+        height: 720px;
+        right: -260px;
+        bottom: 140px;
+        border-color: rgba(215, 122, 34, 0.12);
+      }
+
+      .soft-orb {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(47, 134, 95, 0.18), rgba(47, 134, 95, 0));
+        z-index: 0;
+      }
+
+      .soft-orb.green {
+        width: 680px;
+        height: 680px;
+        right: -230px;
+        top: 240px;
+      }
+
+      .soft-orb.orange {
+        width: 520px;
+        height: 520px;
+        left: -190px;
+        bottom: 190px;
+        background: radial-gradient(circle, rgba(215, 122, 34, 0.16), rgba(215, 122, 34, 0));
+      }
+
+      .label {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        align-self: flex-start;
+        padding: 12px 20px;
+        border-radius: 999px;
+        color: #2f865f;
+        background: rgba(47, 134, 95, 0.11);
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .label-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #2f865f;
+      }
+
+      .copy {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        color: #1d2722;
+        font-size: 76px;
+        line-height: 0.98;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        max-width: 760px;
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 720px;
+        color: #62706a;
+        font-size: 31px;
+        line-height: 1.24;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .phone-stage {
+        position: relative;
+        width: 100%;
+        min-height: 1130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .store-frame {
+        position: relative;
+        z-index: 1;
+        width: 540px;
+        height: 1169px;
+        border-radius: 50px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 38px 90px rgba(29, 39, 34, 0.2);
+      }
+
+      .store-frame.large {
+        z-index: 3;
+        width: 590px;
+        height: 1277px;
+      }
+
+      .store-frame img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .store-frame.left {
+        transform: rotate(-4deg) translateX(-28px);
+      }
+
+      .store-frame.right {
+        transform: rotate(3deg) translateX(32px);
+      }
+
+      .receipt-card {
+        position: absolute;
+        z-index: 7;
+        left: 22px;
+        top: 124px;
+        width: 308px;
+        min-height: 202px;
+        padding: 22px;
+        border-radius: 34px;
+        background: #fffdf7;
+        box-shadow: 0 22px 54px rgba(29, 39, 34, 0.14);
+        border: 1px solid rgba(47, 134, 95, 0.12);
+      }
+
+      .receipt-card.secondary {
+        z-index: 2;
+        left: auto;
+        right: 10px;
+        top: 336px;
+        transform: rotate(5deg);
+      }
+
+      .receipt-kicker {
+        color: #62706a;
+        font-size: 21px;
+        font-weight: 800;
+      }
+
+      .receipt-amount {
+        margin-top: 14px;
+        color: #1d2722;
+        font-size: 50px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .receipt-merchant {
+        margin-top: 8px;
+        color: #2f865f;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .highlight {
+        position: absolute;
+        z-index: 6;
+        border-radius: 999px;
+        border: 5px solid #2f865f;
+        box-shadow: 0 10px 38px rgba(47, 134, 95, 0.18);
+        pointer-events: none;
+      }
+
+      .highlight.ocr {
+        width: 330px;
+        height: 88px;
+        left: 282px;
+        top: 790px;
+      }
+
+      .highlight.voice {
+        width: 390px;
+        height: 100px;
+        left: 244px;
+        top: 966px;
+        border-color: #d77a22;
+        box-shadow: 0 10px 38px rgba(215, 122, 34, 0.2);
+      }
+
+      .callout {
+        position: absolute;
+        z-index: 8;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px 24px;
+        border-radius: 26px;
+        background: #1d2722;
+        color: #fffdf7;
+        font-size: 28px;
+        font-weight: 850;
+        box-shadow: 0 16px 46px rgba(29, 39, 34, 0.22);
+      }
+
+      .callout.ocr {
+        right: 30px;
+        top: 704px;
+      }
+
+      .callout.voice {
+        left: 36px;
+        top: 800px;
+        background: #d77a22;
+      }
+
+      .micro-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fffdf7;
+        color: #1d2722;
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .voice-card {
+        position: absolute;
+        left: 44px;
+        top: 250px;
+        width: 450px;
+        padding: 28px 32px;
+        border-radius: 36px;
+        background: #fffdf7;
+        box-shadow: 0 28px 70px rgba(29, 39, 34, 0.18);
+      }
+
+      .voice-line {
+        color: #1d2722;
+        font-size: 41px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .voice-result {
+        margin-top: 18px;
+        color: #62706a;
+        font-size: 25px;
+        font-weight: 750;
+      }
+
+      .watch-combo {
+        position: relative;
+        width: 100%;
+        min-height: 1160px;
+      }
+
+      .watch-panel {
+        position: absolute;
+        left: 20px;
+        bottom: 74px;
+        width: 310px;
+        padding: 22px;
+        border-radius: 62px;
+        background: #111512;
+        box-shadow: 0 24px 70px rgba(29, 39, 34, 0.25);
+      }
+
+      .watch-panel img {
+        width: 100%;
+        display: block;
+        border-radius: 44px;
+      }
+
+      .sync-line {
+        position: absolute;
+        left: 310px;
+        bottom: 330px;
+        width: 230px;
+        height: 4px;
+        background: linear-gradient(90deg, #2f865f, #d77a22);
+        border-radius: 999px;
+      }
+
+      .sync-pill {
+        position: absolute;
+        left: 352px;
+        bottom: 360px;
+        padding: 14px 20px;
+        border-radius: 999px;
+        background: #ddeadf;
+        color: #2f865f;
+        font-size: 25px;
+        font-weight: 850;
+      }
+
+      .report-card {
+        position: absolute;
+        left: 50%;
+        top: 232px;
+        width: 640px;
+        height: 920px;
+        transform: translateX(-50%);
+        border-radius: 56px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 34px 88px rgba(29, 39, 34, 0.19);
+      }
+
+      .report-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .final-lockup {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 24px;
+        align-self: flex-start;
+        border-radius: 36px;
+        background: rgba(255, 253, 247, 0.84);
+        box-shadow: 0 18px 52px rgba(29, 39, 34, 0.13);
+      }
+
+      .final-lockup img {
+        width: 70px;
+        height: 70px;
+        border-radius: 22px;
+      }
+
+      .final-title {
+        color: #1d2722;
+        font-size: 31px;
+        font-weight: 900;
+      }
+
+      .final-subtitle {
+        color: #62706a;
+        font-size: 20px;
+        font-weight: 750;
+      }
+
+      .bottom-note {
+        color: #62706a;
+        font-size: 24px;
+        font-weight: 760;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="886"
+      data-height="1920"
+    >
+      <audio
+        id="music-bed"
+        class="clip"
+        data-start="0"
+        data-duration="20"
+        data-track-index="9"
+        data-volume="0.38"
+        src="assets/app_preview_bed_v001.m4a"
+      ></audio>
+
+      <section id="scene-open" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-orb green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>AutoLedger 一键记账</div>
+            <h1>每天花钱，不想手动记？</h1>
+            <p class="subtitle">支付截图、小票、语音和快捷指令，都能变成可保存的账单。</p>
+          </div>
+          <div class="phone-stage">
+            <div id="open-card-a" class="receipt-card">
+              <div class="receipt-kicker">支付截图</div>
+              <div class="receipt-amount">¥28.00</div>
+              <div class="receipt-merchant">Demo Lunch</div>
+            </div>
+            <div id="open-card-b" class="receipt-card secondary">
+              <div class="receipt-kicker">小票识别</div>
+              <div class="receipt-amount">¥86.50</div>
+              <div class="receipt-merchant">Example Market</div>
+            </div>
+            <div class="store-frame right">
+              <img src="assets/ios_open_bill.png" alt="AutoLedger screenshot bill recognition" />
+            </div>
+          </div>
+          <p class="bottom-note">本视频使用演示数据，不包含真实账单。</p>
+        </div>
+      </section>
+
+      <section id="scene-ocr" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="soft-orb orange"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>截图识别</div>
+            <h2>截图账单，一键识别</h2>
+            <p class="subtitle">金额、商户、分类和时间自动整理，保存前仍可确认。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="store-frame large">
+              <img src="assets/ios_ocr_bill.png" alt="Screenshot recognition App Store frame" />
+            </div>
+            <div class="highlight ocr"></div>
+            <div class="callout ocr"><span class="micro-icon">¥</span>自动生成账单</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-voice" class="scene">
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-orb green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>一句话记账</div>
+            <h2>说一句话，快速记账</h2>
+            <p class="subtitle">像“午饭 28 元”这样说一句，就能生成待保存记录。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="store-frame left">
+              <img src="assets/ios_voice_entry.png" alt="Voice expense entry App Store frame" />
+            </div>
+            <div class="voice-card">
+              <div class="voice-line">“午饭 28 元”</div>
+              <div class="voice-result">识别为：午饭 · 餐饮 · ¥28.00</div>
+            </div>
+            <div class="highlight voice"></div>
+            <div class="callout voice"><span class="micro-icon">录</span>无需打开复杂表单</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-watch" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="soft-orb orange"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>Apple Watch</div>
+            <h2>抬腕也能记一笔</h2>
+            <p class="subtitle">Watch 快速开始记录，回到 iPhone 继续查看和编辑。</p>
+          </div>
+          <div class="watch-combo">
+            <div class="store-frame right">
+              <img src="assets/ios_watch_ecosystem.png" alt="iPhone and Apple Watch ecosystem frame" />
+            </div>
+            <div class="watch-panel">
+              <img src="assets/watch_quick_add.png" alt="Apple Watch quick entry screenshot" />
+            </div>
+            <div class="sync-line"></div>
+            <div class="sync-pill">自动同步</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-report" class="scene">
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-orb green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>消费统计</div>
+            <h2>月报统计，一眼看清</h2>
+            <p class="subtitle">分类、趋势和常用商户自动汇总，帮你快速回看本月消费。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="report-card">
+              <img src="assets/ios_monthly_report.png" alt="Monthly spending report App Store frame" />
+            </div>
+          </div>
+          <div class="final-lockup">
+            <img src="assets/app_icon.png" alt="AutoLedger app icon" />
+            <div>
+              <div class="final-title">AutoLedger - 一键记账</div>
+              <div class="final-subtitle">截图识别账单，语音快速记账</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(".bg-ring.one", { rotation: 7, duration: 19, ease: "sine.inOut" }, 0.2);
+      tl.to(".bg-ring.two", { rotation: -8, duration: 19, ease: "sine.inOut" }, 0.2);
+      tl.to(".soft-orb.green", { x: -28, y: 34, scale: 1.04, duration: 19, ease: "sine.inOut" }, 0.2);
+      tl.to(".soft-orb.orange", { x: 24, y: -18, scale: 1.03, duration: 19, ease: "sine.inOut" }, 0.2);
+
+      function enterCopy(scene, t) {
+        tl.from(`${scene} .label`, { y: 22, opacity: 0, duration: 0.42, ease: "power3.out" }, t);
+        tl.from(`${scene} h1, ${scene} h2`, { y: 54, opacity: 0, duration: 0.62, ease: "expo.out" }, t + 0.12);
+        tl.from(`${scene} .subtitle`, { x: -34, opacity: 0, duration: 0.5, ease: "power2.out" }, t + 0.32);
+      }
+
+      function blurTransition(oldScene, newScene, t) {
+        tl.to(oldScene, { filter: "blur(16px)", scale: 1.025, opacity: 0, duration: 0.58, ease: "power2.inOut" }, t);
+        tl.fromTo(newScene, { filter: "blur(14px)", scale: 0.975, opacity: 0 }, { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.66, ease: "power2.inOut" }, t + 0.06);
+      }
+
+      enterCopy("#scene-open", 0.18);
+      tl.from("#scene-open .store-frame", { x: 90, y: 32, rotation: 7, opacity: 0, duration: 0.78, ease: "power4.out" }, 0.42);
+      tl.from("#open-card-a", { x: -58, y: 26, rotation: -8, opacity: 0, duration: 0.56, ease: "back.out(1.5)" }, 0.72);
+      tl.from("#open-card-b", { x: 48, y: 48, rotation: 12, opacity: 0, duration: 0.5, ease: "power3.out" }, 0.94);
+      tl.from("#scene-open .bottom-note", { y: 18, opacity: 0, duration: 0.42, ease: "sine.out" }, 1.15);
+
+      blurTransition("#scene-open", "#scene-ocr", 3.08);
+      enterCopy("#scene-ocr", 3.34);
+      tl.from("#scene-ocr .store-frame", { y: 86, opacity: 0, duration: 0.66, ease: "power4.out" }, 3.58);
+      tl.from("#scene-ocr .highlight", { scale: 0.72, opacity: 0, duration: 0.42, ease: "back.out(1.8)" }, 4.06);
+      tl.from("#scene-ocr .callout", { x: 58, opacity: 0, duration: 0.46, ease: "expo.out" }, 4.22);
+
+      blurTransition("#scene-ocr", "#scene-voice", 7.55);
+      enterCopy("#scene-voice", 7.86);
+      tl.from("#scene-voice .store-frame", { x: -86, y: 22, rotation: -10, opacity: 0, duration: 0.7, ease: "power4.out" }, 8.12);
+      tl.from("#scene-voice .voice-card", { scale: 0.88, y: -26, opacity: 0, duration: 0.54, ease: "back.out(1.4)" }, 8.48);
+      tl.from("#scene-voice .highlight", { scaleX: 0.62, opacity: 0, duration: 0.38, ease: "power3.out" }, 8.76);
+      tl.from("#scene-voice .callout", { x: -52, opacity: 0, duration: 0.44, ease: "expo.out" }, 8.94);
+
+      tl.to("#scene-voice", { x: -886, duration: 0.54, ease: "power3.inOut" }, 11.62);
+      tl.fromTo("#scene-watch", { x: 886, opacity: 1 }, { x: 0, opacity: 1, duration: 0.54, ease: "power3.inOut" }, 11.62);
+      enterCopy("#scene-watch", 11.92);
+      tl.from("#scene-watch .store-frame", { x: 84, y: 36, rotation: 8, opacity: 0, duration: 0.68, ease: "power4.out" }, 12.14);
+      tl.from("#scene-watch .watch-panel", { scale: 0.82, x: -58, opacity: 0, duration: 0.54, ease: "back.out(1.6)" }, 12.5);
+      tl.from("#scene-watch .sync-line", { scaleX: 0, transformOrigin: "left center", opacity: 0, duration: 0.46, ease: "power3.out" }, 12.82);
+      tl.from("#scene-watch .sync-pill", { y: 26, opacity: 0, duration: 0.42, ease: "sine.out" }, 13.0);
+
+      blurTransition("#scene-watch", "#scene-report", 15.62);
+      enterCopy("#scene-report", 15.88);
+      tl.from("#scene-report .report-card", { y: 80, scale: 0.94, opacity: 0, duration: 0.68, ease: "power4.out" }, 16.16);
+      tl.from("#scene-report .final-lockup", { x: -48, opacity: 0, duration: 0.5, ease: "expo.out" }, 18.12);
+      tl.to("#scene-report .final-lockup", { scale: 0.98, opacity: 0.86, duration: 0.44, ease: "power2.in" }, 19.36);
+      tl.to("#scene-report", { opacity: 0, duration: 0.44, ease: "power2.in" }, 19.52);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
