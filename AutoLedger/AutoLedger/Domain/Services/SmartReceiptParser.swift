@@ -72,6 +72,10 @@ struct SmartReceiptParser: Sendable {
             fallbackMerchant: fallbackMerchant
         )
 
+        if let ruleResult, Self.shouldSkipExternalAssist(for: ruleResult) {
+            return SmartResult(receipt: ruleResult, llmTrace: nil, usedRuleFallback: true)
+        }
+
         if let externalMerged = await requestExternalAssistIfAvailable(
             text: text,
             source: source,
@@ -120,6 +124,10 @@ struct SmartReceiptParser: Sendable {
             imageData: imageData,
             fallbackMerchant: fallbackMerchant
         )
+
+        if let ruleResult, Self.shouldSkipExternalAssist(for: ruleResult) {
+            return SmartResult(receipt: ruleResult, llmTrace: nil, usedRuleFallback: true)
+        }
 
         let providerAvailable = await provider.isAvailable
 
@@ -405,6 +413,12 @@ struct SmartReceiptParser: Sendable {
         confidence: \(confidence)
         explanation: \(explanation)
         """
+    }
+
+    private static func shouldSkipExternalAssist(for receipt: ImportedReceipt) -> Bool {
+        guard receipt.suggestedCategory == .transport else { return false }
+        return receipt.merchant.hasPrefix("地铁：")
+            || receipt.merchant.hasPrefix("公交：")
     }
 
     /// 金额字符串 → Double

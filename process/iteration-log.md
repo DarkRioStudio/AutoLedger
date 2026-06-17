@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-16（v1.5.1 本地 smoke 收口）
+更新日期：2026-06-17（v1.5.1 地铁规则短路与外部 API 调试观测）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-197 GOAL-1608G / GOAL-1611 地铁规则短路与外部 API 调试观测
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：识别链路回归 / 调试观测
+- 类型：Bugfix / 测试 / UI
+- 目标：修复地铁 / 公交储值卡计费文本在快捷指令路径下仍进入外部大模型辅助的问题，并让调试页能观察外部 API 调用耗时。
+- 改动范围：
+  - `SmartReceiptParser`：当规则解析已明确得到地铁 / 公交路线商户和出行分类时，直接返回规则结果，跳过外部辅助识别。
+  - `DebugView`：新增外部 API 性能统计卡片；优化 provider 显示名和耗时格式；移除调试记录卡片右上角重复阶段胶囊。
+  - `OfflineRegression.swift` 与 Golden case：增加脱敏地铁通知样式回归，覆盖路线、金额、余额行和社媒噪声混排。
+  - `versions/v1.5.1-plan.md`、`CHANGELOG.md`、`process/iteration-log.md`：回填本轮验证结果。
+- 未改动范围：未修改 OCRService、SQLite schema、CloudKit schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或外部 provider 默认开关。
+- 完成内容：
+  - 快捷指令和主 App 识别路径在明确地铁 / 公交计费样式下都会优先采用纯规则解析，不再为了商户候选调用 DeepSeek / Qwen / OpenAI。
+  - 调试页可以看到外部 API 最近一次耗时、平均耗时、P50、P90 和样本数；单条导出使用 DeepSeek / Qwen / OpenAI 短名称，避免 `external_deepseek` 折行。
+  - 调试记录卡片去掉右上角“已入账”胶囊，减少重复状态展示。
+- 未完成内容：仍需真机用快捷指令或通知中心地铁样式重新验证，确认调试记录显示纯规则解析且不出现外部模型链路；外部 API 性能优化策略仍需基于更多真实耗时样本再判断。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`bash scripts/run_offline_regression.sh`
+  - PASS：`bash scripts/run_golden_regression.sh`
+  - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+- 风险与注意事项：当前短路条件只针对已经被规则解析为出行分类且商户以 `地铁：` / `公交：` 开头的确定性结果，避免扩大到普通城市卡、余额、交通资讯或含噪声截图；如果后续出现其他明确交通票据形态，应继续在规则层补专用识别，而不是放宽外部辅助短路条件。
+- 回滚方式：回退 `SmartReceiptParser` 的规则短路 helper、`DebugView` 外部 API 统计展示和本轮新增脱敏回归样例即可恢复到本轮前状态。
+- 结论：本轮完成，地铁 / 公交储值卡计费在代码层已经不会被外部模型覆盖；可进入真机复测。
+- 下一步建议：真机跑一次同类快捷指令样例，确认调试记录为纯规则解析；若外部 API 平均耗时仍偏高，再基于统计卡决定是否增加超时、缓存或更严格的触发门槛。
 
 ### ITER-196 GOAL-1606 本地 smoke 收口
 - 日期：2026-06-16

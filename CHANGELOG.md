@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 修复（v1.5.1）
+- [2026-06-17 +0800] 修复 `GOAL-1608G` 在快捷指令 / SmartReceiptParser 路径下仍可能进入外部大模型的问题：当规则解析已经明确识别为地铁 / 公交储值卡计费，并输出 `地铁：示例站A→示例站B` 或 `公交：示例站A→示例站B` / 出行分类时，`SmartReceiptParser` 会直接采用规则结果并跳过 DeepSeek / Qwen / OpenAI 外部辅助。新增脱敏 Golden 样例覆盖“城市卡 + 地铁金额 + 路线 + 社媒噪声”文本；已验证 `git diff --check`、`run_offline_regression.sh`、`run_golden_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-16 +0800] 收口 `GOAL-1606` 本地 smoke 时修复两处回归门禁问题：`run_golden_regression.sh` 补齐 `PaymentAmountExtractor`、`MerchantResolver`、`CategoryResolver` 编译清单，适配 Core 解析模块拆分；`PaymentAmountExtractor` 将中文支付详情中的 `金额` 标签视为可靠已支付金额，避免 `支付宝 / 金额：￥xx` 类型样例被误标记为需复核。已验证 `git diff --check`、`run_offline_regression.sh`、`run_golden_regression.sh`、iOS generic build、Mac Catalyst build 和当前四平台 `zh-Hans` 截图导出通过。
 - [2026-06-16 +0800] 完成 `GOAL-1608G` 通知中心地铁样式规则短路：当 OCR 文本来自通知中心并包含“城市卡 / 储值消费成功 / 地铁：CN¥金额 / 路线行”等形态时，`LedgerTextInterpreter` 会采用 `LedgerTextInterpreterCore` 的 `transit_stored_value` 规则结果直接入账为 `地铁：示例站A→示例站B` / 出行分类，不再进入外部大模型辅助识别；快捷指令调试记录同步补齐 `llmProvider` 和耗时字段，避免外部模型命中时显示 `Provider: unknown`。新增离线回归覆盖外部 Assist 开启时地铁规则仍应短路；已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-15 +0800] 完成 `GOAL-1611` iCloud 同步卡顿修复：CloudKit 拉取远端账单后写入本地 SQLite 的流程从逐条 `applyRemoteSyncRecord` 改为批量 `applyRemoteSyncRecords`，先一次性加载本地 sync records 建索引，再应用远端新增 / 更新 / 删除 / 冲突，避免每处理一条远端记录都全表读取一次导致 TestFlight / 真机同步时 UI 无响应。新增离线回归覆盖批量远端同步 summary 的新增 / 更新 / 删除统计；已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
@@ -20,6 +21,7 @@
 - [2026-06-11 +0800] 推进 `GOAL-1610` 账单编辑保存链路稳定性：新增金额输入解析器，编辑页金额字段支持货币符号、全角数字、小数逗号和“元”等常见输入形态，避免真机输入法下保存按钮异常置灰；`LedgerStore.updateTransaction` 改为显式返回保存结果，SQLite 写入成功后才刷新内存、触发 Widget / 备份 / iCloud 推送，失败时编辑页不关闭并显示错误；普通手动账单编辑不再学习商户别名，避免一次商户名修正污染后续账单。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 
 ### 变更（v1.5.1）
+- [2026-06-17 +0800] 调试页补齐外部 API 性能观测：新增外部 API 最近 / 平均 / P50 / P90 / 样本数统计卡片；调试记录卡片、单条复制和整页导出将 `external_deepseek` / `external_qwen` / `external_openai` 显示为更短的 DeepSeek / Qwen / OpenAI，并把毫秒耗时格式化为 `ms` 或 `s`，同时移除调试卡片右上角重复的“已入账”阶段胶囊。
 - [2026-06-16 +0800] 完成 `GOAL-1606` 本地 smoke 记录：命令级回归、iOS generic build、Mac Catalyst build、iPhone / iPad / Mac / Watch `zh-Hans` 截图导出均通过；`versions/v1.5.1-plan.md` 将 `GOAL-1606` 标记为部分完成，剩余 Xcode Cloud 验证构建、TestFlight 安装 smoke、ASC 隐私 / 审核说明 / 截图最终检查仍需人工执行。
 - [2026-06-16 +0800] 调整 `v1.5.1` 发布边界：tvOS 第一版只读看板和 visionOS 第一版展示产品代码、截图与发布准备顺延到 `v1.6.0`；`v1.5.1` 不再继续扩平台代码，改为围绕 iPhone / iPad / Apple Watch / Mac Catalyst 执行最终 smoke、Xcode Cloud 和 App Store Connect 收口。`GOAL-1603 / GOAL-1604` 标记为已顺延，`GOAL-1605` 调整为当前发布平台截图复核，`GOAL-1606` 成为下一步待执行主线。
 - [2026-06-16 +0800] 新增 `v1.5.1` 当前平台回归基线：`versions/v1.5.1-regression-baseline.md` 明确 iOS / iPad / Mac Catalyst 当前落地状态、命令级回归、自动 / 离线覆盖，以及发布前手工 smoke 用例；其中 Mac Catalyst 当前已有 build、Core 离线回归和截图导出基线，但仍需按菜单栏、键盘快捷键、拖拽、CSV / JSON、表格批量编辑、重复检查和 iCloud 同步执行 UI 操作层回归。已验证 Mac Catalyst Debug build 通过，保留既有 MediaPipe Catalyst slice warning 与 Swift 6 actor isolation warning。

@@ -78,21 +78,16 @@ struct OfflineRegression {
         天津互联互通城市卡
         地铁：CN¥2.70
         示例站A→示例站B
-        你的新余额为CN¥37.20。
+        你的新余额为 CN¥31.80。
         现在
-        全部完成！
-        你的步行已就绪，可以查看。
-        14分钟前
-        Subway Showdown
-        16分钟前
-        Race other Surfers and advance to
-        the highest League！
-        网，具后多云：22°C~29°C·
-        空气质量70良
-        ▶25°
-        多云
-        最高31°最低21°
-        。
+        示例动态内容
+        示例用户
+        关注
+        展开
+        说点什么…
+        638
+        42
+        30
         """
     }
 

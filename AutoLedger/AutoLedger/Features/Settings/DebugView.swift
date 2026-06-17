@@ -24,6 +24,7 @@ struct DebugView: View {
                 systemInfoCard
                 supportDebugCard
                 gemmaMetricsCard
+                externalAPIMetricsCard
                 containerInfoCard
 
                 if let summary = store.lastImportSummary {
@@ -261,6 +262,29 @@ struct DebugView: View {
                     svc.resetStats()
                 }
                 .font(.subheadline)
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
+    private var externalAPIMetricsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("外部 API 性能统计")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+
+            let samples = externalAPILatencySamples
+            if samples.isEmpty {
+                Text("暂无外部 API 调用记录")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+            } else {
+                infoRow("最近", formatLatencyMs(samples[0]))
+                infoRow("平均", formatLatencyMs(samples.reduce(0, +) / samples.count))
+                infoRow("P50", formatLatencyMs(percentile(samples, 0.5)))
+                infoRow("P90", formatLatencyMs(percentile(samples, 0.9)))
+                infoRow("样本数", "\(samples.count)")
             }
         }
         .padding(18)
@@ -505,9 +529,16 @@ struct DebugView: View {
                         Text(record.imageSource.title)
                         if record.usedLLM {
                             Text("·")
-                            Text(record.llmProvider ?? "LLM")
+                            Text(providerDisplayName(record.llmProvider))
                                 .fontWeight(.bold)
                                 .foregroundStyle(AppTheme.accent)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
+                            if let latency = record.llmLatencyMs {
+                                Text("·")
+                                Text(formatLatencyMs(latency))
+                                    .lineLimit(1)
+                            }
                         }
                     }
                     .font(.caption)
@@ -519,14 +550,6 @@ struct DebugView: View {
                 }
 
                 Spacer()
-
-                Text(record.stage.title)
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(stageColor(record.stage).opacity(0.14))
-                    .foregroundStyle(stageColor(record.stage))
-                    .clipShape(Capsule())
             }
 
             Text(record.summary)
@@ -662,6 +685,42 @@ struct DebugView: View {
         }
     }
 
+    private var externalAPILatencySamples: [Int] {
+        store.debugRecords.compactMap { record in
+            guard record.llmProvider?.hasPrefix("external_") == true else { return nil }
+            return record.llmLatencyMs
+        }
+    }
+
+    private func providerDisplayName(_ provider: String?) -> String {
+        switch provider {
+        case "external_deepseek": return "DeepSeek"
+        case "external_qwen": return "Qwen"
+        case "external_openai": return "OpenAI"
+        case "external_custom": return "Custom"
+        case "apple": return "Apple FM"
+        case "gemma": return "Gemma"
+        case let provider?:
+            return provider
+                .replacingOccurrences(of: "external_", with: "")
+                .replacingOccurrences(of: "_", with: " ")
+                .capitalized
+        case nil:
+            return "LLM"
+        }
+    }
+
+    private func formatLatencyMs(_ value: Int) -> String {
+        value >= 1000 ? String(format: "%.2fs", Double(value) / 1000.0) : "\(value)ms"
+    }
+
+    private func percentile(_ samples: [Int], _ p: Double) -> Int {
+        guard !samples.isEmpty else { return 0 }
+        let sorted = samples.sorted()
+        let index = min(max(Int((Double(sorted.count - 1) * p).rounded()), 0), sorted.count - 1)
+        return sorted[index]
+    }
+
     private var hasExportableContent: Bool {
         store.lastImportSummary != nil ||
         !store.lastRecognizedText.isEmpty ||
@@ -697,16 +756,16 @@ struct DebugView: View {
         if !store.debugRecords.isEmpty {
             lines.append("最近调试记录：")
             for record in store.debugRecords.prefix(10) {
-                let parseMode = record.usedLLM ? (record.llmProvider ?? "LLM") : "规则"
+                let parseMode = record.usedLLM ? providerDisplayName(record.llmProvider) : "规则"
                 lines.append("- [\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(parseMode) · \(AppFormatters.exportDateTime(record.createdAt))")
                 lines.append("  结论：\(record.summary)")
                 if let receipt = record.parsedReceipt {
                     lines.append("  解析：\(receipt.merchant) · \(AppFormatters.currency(receipt.amount)) · \(receipt.suggestedCategory.title)")
                 }
                 if record.usedLLM {
-                    var modelLine = "  模型链路：\(record.llmProvider ?? "unknown")"
+                    var modelLine = "  模型链路：\(providerDisplayName(record.llmProvider))"
                     if let latency = record.llmLatencyMs {
-                        modelLine += " · \(latency)ms"
+                        modelLine += " · \(formatLatencyMs(latency))"
                     }
                     if let confidence = record.llmConfidence {
                         modelLine += " · confidence \(String(format: "%.2f", confidence))"
@@ -764,9 +823,9 @@ struct DebugView: View {
 
         if record.usedLLM {
             lines.append("模型链路：")
-            lines.append("- Provider：\(record.llmProvider ?? "unknown")")
+            lines.append("- Provider：\(providerDisplayName(record.llmProvider))")
             if let latency = record.llmLatencyMs {
-                lines.append("- 耗时：\(latency)ms")
+                lines.append("- 耗时：\(formatLatencyMs(latency))")
             }
             if let confidence = record.llmConfidence {
                 lines.append("- 置信度：\(String(format: "%.2f", confidence))")
