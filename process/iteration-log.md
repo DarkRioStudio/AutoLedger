@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-202 修复简体中文本地化 plist 解析失败
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：正式发布
+- 类型：Bugfix / 本地化
+- 目标：修复 Xcode Cloud validation failed: Couldn't parse property list because the input data was in an invalid format。
+- 改动范围：修正简体中文 `settings.privacy.body` 中未转义英文双引号；同步回填 CHANGELOG。
+- 未改动范围：未调整设置页功能、版本号、构建号、隐私行为或其他语言文案语义。
+- 完成内容：将简体中文“外部辅助识别”的包裹符号改为中文引号，避免 `.strings` 文件被 plist parser 识别为非法字符串。
+- 未完成内容：未执行完整 Xcode Cloud archive；需由云端流水线重新验证。
+- 测试情况：执行 `plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings`，结果 PASS；执行全仓库 plist / entitlements / xcprivacy / strings / xcsettings lint，结果 PASS；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：本轮仅修复资源格式问题，不改变运行时逻辑；若 Xcode Cloud 仍失败，应继续检查构建产物中的其他 InfoPlist.strings 或生成式 Info.plist。
+- 回滚方式：恢复本轮 `Localizable.strings`、CHANGELOG 和 iteration log 改动。
+- 结论：本轮完成，已定位并修复导致 property list validation 失败的简体中文本地化格式错误。
+- 下一步建议：重新触发 Xcode Cloud 构建，确认 validation 阶段通过。
+
 ### ITER-201 设置页当前版本说明更新
 - 日期：2026-06-17
 - 所属版本：v1.5.1
