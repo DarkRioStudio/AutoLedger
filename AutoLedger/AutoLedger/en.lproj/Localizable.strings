@@ -498,9 +498,9 @@
 "settings.support.title" = "Support AutoLedger";
 "settings.support.subtitle" = "Optional support for independent development; no features are unlocked";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "This release candidate has been polished for iPhone, iPad, Apple Watch, and Mac, with iCloud sync, improved screenshot and receipt recognition, more reliable bill editing and saving, and optional redacted external recognition assistance.";
+"settings.version.body" = "This release has been polished for iPhone, iPad, Apple Watch, and Mac, with iCloud sync, improved screenshot and receipt recognition, more reliable bill editing and saving, and optional redacted external recognition assistance.";
 "settings.privacy.title" = "Privacy";
-"settings.privacy.body" = "All data stays on your device. AutoLedger does not use cloud sync or third-party analytics. OCR and LLM inference both run locally. The only network request is Gemma model version checking and download via CDN; no user data is transmitted.";
+"settings.privacy.body" = "All ledger data is stored on your device and synced across your Apple devices via iCloud (CloudKit). AutoLedger does not use third-party analytics. OCR and LLM inference run locally. Network requests include iCloud sync (scoped to your Apple ID) and Gemma model version checking and download via CDN; no ledger content is transmitted. The optional External Recognition Assist feature is off by default; when enabled, it sends only a redacted summary to external services and never transmits raw screenshots or full ledger data.";
 "settings.release_status.title" = "Coming Next";
 "settings.release_status.body" = "Internal 1.5.0 development has started, focused on the iPad workspace, batch import and recognition, multi-ledger cleanup, and Watch daily-spend widgets.";
 
