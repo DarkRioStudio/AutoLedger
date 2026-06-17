@@ -31,9 +31,10 @@ Create a clean, warm, Apple-ecosystem product preview for AutoLedger. The video 
 
 ## Audio
 
-- Use a very low-volume procedural background bed generated locally with FFmpeg.
+- Use a low-volume background bed generated through the existing EverestBaseCamp audio pipeline.
+- Post-process the bed for App Store preview delivery: AAC LC, 48kHz, stereo, gentle loudness, softened high frequencies, and fade in/out.
 - Keep the bed non-melodramatic and app-demo friendly: soft, warm, and quiet enough for silent viewing.
-- Do not use third-party music, stock tracks, copyrighted samples, or real recorded user audio.
+- Do not use stock tracks, copyrighted samples, real recorded user audio, or audio that implies unsupported app functionality.
 
 ## What NOT To Do
 

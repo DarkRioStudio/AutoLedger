@@ -32,7 +32,7 @@ It uses only local, generated App Store screenshot assets from `tools/appstore-s
 - `assets/watch_quick_add.png` from Watch zh-Hans store screenshot `00_watch_quick_add`
 - `assets/watch_sync.png` from Watch zh-Hans store screenshot `03_watch_sync`
 - `assets/app_icon.png` from the local app icon asset catalog
-- `assets/app_preview_bed_v001.m4a` is a local FFmpeg-generated procedural background bed, with no third-party music or samples
+- `assets/app_preview_bed_v001.m4a` is generated through the existing EverestBaseCamp audio pipeline, then normalized to AAC LC / 48kHz / stereo for App Store preview upload
 
 ## Commands
 
