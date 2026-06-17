@@ -52,6 +52,7 @@
 - 目标：修复 App Store 截图升级后 iPhone 画面过小、Apple Watch 标题与截图内容不匹配、Watch 输出仍像旧截图的问题。
 - 改动范围：
   - `render_marketing.py`：放大 iPhone store 渲染框，改为顶部 cover 裁切，减少画面过小和下方留白。
+  - `export_mac.sh` / `render_marketing.py`：Mac 截图改为按 AutoLedger 窗口 ID 捕获，并在营销渲染时裁掉系统窗口阴影，避免屏幕上重叠窗口污染截图。
   - `ScreenshotModeConfig` / `ScreenshotHostView`：新增 `watch_ecosystem` screenshot-only 静态场景，用虚构 Watch + iPhone 同步画面承接第三张 iPhone 截图。
   - `WatchScreenshotModeConfig` / `WatchScreenshotHostView`：将旧 `watch_confirm` 替换为 `watch_complication`，新增表盘复杂功能静态预览，并刷新 Watch 虚构演示数据。
   - `screenshots.json` / 截图管线 README / audit 文档：同步 iPhone 与 Watch scene 映射。
@@ -66,6 +67,8 @@
   - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans`
   - PASS：`bash tools/appstore-screenshots/scripts/export.sh --locale zh-Hant --locale en`
   - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale en`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --mac-only --locale zh-Hant`
 - 风险与注意事项：`watch_ecosystem` 和 `watch_complication` 均为 screenshot-only 静态 fixture，不触发 WatchConnectivity、真实数据库、iCloud、OCR、LLM、相册、相机或麦克风；当前修正优先保证 App Store 截图表达一致性，不代表真实 Watch 表盘系统截图。
 - 回滚方式：回退 `watch_ecosystem` / `watch_complication` scene、`screenshots.json` 映射和 iPhone 渲染框调整，即可恢复 ITER-198 的截图输出。
 - 结论：本轮完成，iPhone 与 Watch 截图的主要视觉回归已修复，可继续进行全平台目视复核。

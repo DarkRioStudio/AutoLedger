@@ -137,7 +137,48 @@ OSA
   fi
 
   IFS=, read -r x_pos y_pos win_width win_height <<< "$bounds"
-  screencapture -x -R "${x_pos},${y_pos},${win_width},${win_height}" "$tmp_path"
+  local window_id
+  window_id=$(
+    swift - "$APP_NAME" <<'SWIFT'
+import CoreGraphics
+import Foundation
+
+let appName = CommandLine.arguments[1]
+guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+    exit(1)
+}
+
+let candidates = windows.compactMap { info -> (id: Int, area: Double)? in
+    guard
+        let owner = info[kCGWindowOwnerName as String] as? String,
+        owner == appName,
+        let number = info[kCGWindowNumber as String] as? Int,
+        let layer = info[kCGWindowLayer as String] as? Int,
+        layer == 0,
+        let bounds = info[kCGWindowBounds as String] as? [String: Any],
+        let width = bounds["Width"] as? Double,
+        let height = bounds["Height"] as? Double,
+        width > 200,
+        height > 200
+    else {
+        return nil
+    }
+    return (number, width * height)
+}
+
+guard let best = candidates.max(by: { $0.area < $1.area }) else {
+    exit(1)
+}
+print(best.id)
+SWIFT
+  )
+  if [[ -z "$window_id" ]]; then
+    kill "$app_pid" >/dev/null 2>&1 || true
+    wait "$app_pid" >/dev/null 2>&1 || true
+    return 1
+  fi
+
+  screencapture -x -l "$window_id" "$tmp_path"
   mv "$tmp_path" "$out_path"
 
   kill "$app_pid" >/dev/null 2>&1 || true

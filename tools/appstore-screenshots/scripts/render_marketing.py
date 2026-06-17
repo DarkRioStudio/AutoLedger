@@ -155,6 +155,16 @@ def fit_resize(image: Image.Image, size: tuple[int, int]) -> Image.Image:
     return canvas
 
 
+def trim_window_shadow(image: Image.Image) -> Image.Image:
+    rgba = image.convert("RGBA")
+    alpha = rgba.getchannel("A")
+    solid = alpha.point(lambda value: 255 if value > 200 else 0)
+    bbox = solid.getbbox()
+    if bbox is None:
+        return rgba
+    return rgba.crop(bbox)
+
+
 def rounded_mask(size: tuple[int, int], radius: int) -> Image.Image:
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0], size[1]), radius=radius, fill=255)
@@ -203,6 +213,7 @@ def paste_window_capture(
     shadow = shadow.filter(ImageFilter.GaussianBlur(20))
     canvas.alpha_composite(shadow, (0, 14))
 
+    raw = trim_window_shadow(raw)
     if mode == "cover":
         screenshot = cover_resize(raw.convert("RGB"), (w, h), align_y=align_y).convert("RGBA")
     else:
