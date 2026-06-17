@@ -121,7 +121,7 @@
     },
     {
       "id": "02_watch_ecosystem",
-      "scene": "quick_capture",
+      "scene": "watch_ecosystem",
       "title": {
         "zh-Hans": "Apple Watch 随手记一笔",
         "zh-Hant": "Apple Watch 隨手記一筆",
@@ -336,8 +336,8 @@
       }
     },
     {
-      "id": "02_watch_confirm",
-      "scene": "watch_confirm",
+      "id": "02_watch_complication",
+      "scene": "watch_complication",
       "title": {
         "zh-Hans": "表盘信息随时可见",
         "zh-Hant": "錶盤資訊隨時可見",

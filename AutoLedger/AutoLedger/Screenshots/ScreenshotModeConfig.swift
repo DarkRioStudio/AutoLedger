@@ -5,6 +5,7 @@ enum ScreenshotScene: String, CaseIterable {
     case ocrBill = "ocr_bill"
     case quickCapture = "quick_capture"
     case voiceEntry = "voice_entry"
+    case watchEcosystem = "watch_ecosystem"
     case importMethods = "import_methods"
     case autoExtract = "auto_extract"
     case reviewEdit = "review_edit"

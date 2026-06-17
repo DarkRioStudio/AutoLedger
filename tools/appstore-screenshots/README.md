@@ -146,7 +146,7 @@ The iOS app supports screenshot mode:
 ```text
 --screenshot-mode
 --screenshot-platform ios
---screenshot-scene preview|ocr_bill|quick_capture|voice_entry|import_methods|auto_extract|review_edit|monthly_report|settings_management
+--screenshot-scene preview|ocr_bill|quick_capture|voice_entry|watch_ecosystem|import_methods|auto_extract|review_edit|monthly_report|settings_management
 ```
 
 To add a scene:
@@ -158,7 +158,7 @@ To add a scene:
 
 The screenshot host uses fixed fixtures and does not read the real ledger database, start OCR, access camera/photos, request notifications, or load LLM models.
 
-The `ocr_bill` and `voice_entry` scenes are screenshot-only fixtures. They do not request photo library, camera, microphone, OCR, speech recognition, network, iCloud, or LLM access.
+The `ocr_bill`, `voice_entry`, and `watch_ecosystem` scenes are screenshot-only fixtures. They do not request photo library, camera, microphone, OCR, speech recognition, WatchConnectivity, network, iCloud, or LLM access.
 
 ## Apple Watch Scenes
 
@@ -167,7 +167,7 @@ The Watch app supports screenshot mode:
 ```text
 --screenshot-mode
 --screenshot-platform watch
---screenshot-scene watch_quick_add|watch_recent|watch_confirm|watch_sync
+--screenshot-scene watch_quick_add|watch_recent|watch_complication|watch_sync
 ```
 
 To add a scene:
@@ -231,7 +231,7 @@ If automatic Watch launch fails, iPhone export still succeeds and `preview.html`
 3. Save PNGs using these names:
    - `output/raw/watch/zh-Hans/00_watch_quick_add.png`
    - `output/raw/watch/zh-Hans/01_watch_recent.png`
-   - `output/raw/watch/zh-Hans/02_watch_confirm.png`
+   - `output/raw/watch/zh-Hans/02_watch_complication.png`
    - `output/raw/watch/zh-Hans/03_watch_sync.png`
    - same names under `output/raw/watch/zh-Hant/` and `output/raw/watch/en/`
 4. Run:

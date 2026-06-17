@@ -13,8 +13,8 @@ struct WatchScreenshotHostView: View {
                 WatchQuickAddScreenshot()
             case .recent:
                 WatchRecentScreenshot()
-            case .confirm:
-                WatchConfirmScreenshot()
+            case .complication:
+                WatchComplicationScreenshot(copy: copy)
             case .sync:
                 WatchSyncScreenshot(copy: copy)
             }
@@ -66,15 +66,15 @@ private enum WatchScreenshotFixtures {
     static func recentViewModel() -> WatchLedgerViewModel {
         let viewModel = WatchLedgerViewModel()
         viewModel.recentTransactions = [
-            WatchTransaction(merchant: "Blue Bottle", amount: 36, note: "Dining", occurredAt: baseDate),
-            WatchTransaction(merchant: "City Metro", amount: 7, note: "Transport", occurredAt: baseDate.addingTimeInterval(-18_000)),
-            WatchTransaction(merchant: "App Store", amount: 68, note: "Digital", occurredAt: baseDate.addingTimeInterval(-86_400))
+            WatchTransaction(merchant: "Demo Coffee", amount: 18, note: "Dining", occurredAt: baseDate),
+            WatchTransaction(merchant: "City Metro", amount: 4, note: "Transport", occurredAt: baseDate.addingTimeInterval(-18_000)),
+            WatchTransaction(merchant: "Example Market", amount: 86.5, note: "Groceries", occurredAt: baseDate.addingTimeInterval(-86_400))
         ]
         viewModel.todaySummary = WatchTodaySummary(
             ledgerName: "Local Ledger",
-            totalExpense: 43,
-            transactionCount: 2,
-            recentDisplayName: "Blue Bottle",
+            totalExpense: 108.5,
+            transactionCount: 3,
+            recentDisplayName: "Demo Coffee",
             updatedAt: baseDate
         )
         viewModel.pendingCount = 0
@@ -84,15 +84,8 @@ private enum WatchScreenshotFixtures {
     static func quickAddViewModel() -> WatchLedgerViewModel {
         let viewModel = WatchLedgerViewModel()
         viewModel.quickAddCategoryRaw = TransactionCategory.dining.rawValue
-        viewModel.quickAddAmountText = "36.00"
-        viewModel.quickAddMerchant = "Blue Bottle"
-        viewModel.customCategories = ["咖啡"]
-        return viewModel
-    }
-
-    static func confirmViewModel() -> WatchLedgerViewModel {
-        let viewModel = WatchLedgerViewModel()
-        viewModel.voiceDraft = WatchLedgerDraft(merchant: "Blue Bottle", amount: 36, category: .dining, occurredAt: baseDate)
+        viewModel.quickAddAmountText = "28.00"
+        viewModel.quickAddMerchant = "午饭"
         viewModel.customCategories = ["咖啡"]
         return viewModel
     }
@@ -105,8 +98,12 @@ private struct WatchQuickAddScreenshot: View {
         NavigationStack {
             QuickAddView()
                 .environment(viewModel)
+                .navigationTitle(copy.text("快速记账", "快速記帳", "Quick Add"))
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
+
+    private var copy: WatchScreenshotCopy { .current }
 }
 
 private struct WatchRecentScreenshot: View {
@@ -118,14 +115,59 @@ private struct WatchRecentScreenshot: View {
     }
 }
 
-private struct WatchConfirmScreenshot: View {
-    @State private var viewModel = WatchScreenshotFixtures.confirmViewModel()
+private struct WatchComplicationScreenshot: View {
+    let copy: WatchScreenshotCopy
 
     var body: some View {
-        NavigationStack {
-            WatchVoiceConfirmView()
-                .environment(viewModel)
+        VStack(alignment: .leading, spacing: 10) {
+            Spacer(minLength: 0)
+            HStack(alignment: .bottom, spacing: 8) {
+                ZStack {
+                    Circle()
+                        .stroke(.white.opacity(0.16), lineWidth: 8)
+                    Circle()
+                        .trim(from: 0, to: 0.54)
+                        .stroke(
+                            AngularGradient(
+                                colors: [.green, .yellow, .orange, .red],
+                                center: .center
+                            ),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(135))
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 8, height: 8)
+                        .offset(x: -24, y: 18)
+                    Text("52.26")
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(width: 92, height: 92)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Image(systemName: "applewatch")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.green)
+                    Text(copy.text("表盘可见", "錶盤可見", "Face"))
+                        .font(.headline)
+                        .lineLimit(2)
+                    Text(copy.text("今日支出", "今日支出", "Today"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(copy.text("把今日支出和快速入口放到表盘上。", "把今日支出和快速入口放到錶盤上。", "Keep today's spending and quick access on the watch face."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 6)
+        .preferredColorScheme(.dark)
     }
 }
 

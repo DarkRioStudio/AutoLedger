@@ -3,7 +3,7 @@ import Foundation
 enum WatchScreenshotScene: String, CaseIterable {
     case quickAdd = "watch_quick_add"
     case recent = "watch_recent"
-    case confirm = "watch_confirm"
+    case complication = "watch_complication"
     case sync = "watch_sync"
 }
 

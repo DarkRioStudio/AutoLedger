@@ -37,6 +37,7 @@ Current scenes:
 - `ocr_bill`
 - `quick_capture`
 - `voice_entry`
+- `watch_ecosystem`
 - `import_methods`
 - `auto_extract`
 - `review_edit`
@@ -47,7 +48,7 @@ Current configured iPhone shots:
 
 - `00_ocr_bill` -> `ocr_bill`
 - `01_voice_entry` -> `voice_entry`
-- `02_watch_ecosystem` -> `quick_capture`
+- `02_watch_ecosystem` -> `watch_ecosystem`
 - `03_monthly_report` -> `monthly_report`
 - `04_icloud_sync` -> `settings_management`
 - `05_shortcuts_import` -> `import_methods`
@@ -105,17 +106,17 @@ Current scenes:
 
 - `watch_quick_add`
 - `watch_recent`
-- `watch_confirm`
+- `watch_complication`
 - `watch_sync`
 
 Current configured Watch shots:
 
 - `00_watch_quick_add` -> `watch_quick_add`
 - `01_watch_recent` -> `watch_recent`
-- `02_watch_confirm` -> `watch_confirm`
+- `02_watch_complication` -> `watch_complication`
 - `03_watch_sync` -> `watch_sync`
 
-There is no automated watch face complication screenshot scene yet. The `02_watch_confirm` slot now carries watch face complication marketing copy, but a real complication screenshot should be captured manually when needed.
+The `02_watch_complication` slot renders a static screenshot-mode complication preview. A real watch face complication screenshot can still be captured manually when an App Store listing needs the exact face chrome.
 
 ## What The Scripts Automate
 

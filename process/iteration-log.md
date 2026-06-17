@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-17（App Store 营销素材截图管线升级）
+更新日期：2026-06-17（App Store 营销素材截图视觉修正）
 
 ## 记录规则
 
@@ -43,6 +43,33 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-199 App Store 截图视觉回归修正
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：营销素材 / 发布收口
+- 类型：Bugfix / 截图管线 / UI Fixture
+- 目标：修复 App Store 截图升级后 iPhone 画面过小、Apple Watch 标题与截图内容不匹配、Watch 输出仍像旧截图的问题。
+- 改动范围：
+  - `render_marketing.py`：放大 iPhone store 渲染框，改为顶部 cover 裁切，减少画面过小和下方留白。
+  - `ScreenshotModeConfig` / `ScreenshotHostView`：新增 `watch_ecosystem` screenshot-only 静态场景，用虚构 Watch + iPhone 同步画面承接第三张 iPhone 截图。
+  - `WatchScreenshotModeConfig` / `WatchScreenshotHostView`：将旧 `watch_confirm` 替换为 `watch_complication`，新增表盘复杂功能静态预览，并刷新 Watch 虚构演示数据。
+  - `screenshots.json` / 截图管线 README / audit 文档：同步 iPhone 与 Watch scene 映射。
+- 未改动范围：未修改 App Store Connect、证书、profile、entitlements、Bundle ID、DEVELOPMENT_TEAM、Xcode Cloud 脚本、真实 OCR / LLM / iCloud / 相册 / 相机 / 麦克风链路，也未引入真实支付截图或用户账本数据。
+- 完成内容：iPhone 首图和第三张导出图已目视确认画面更大；第三张不再是普通 iPhone 页面，而是 Watch 生态静态展示；Watch `zh-Hans` 导出已生成 `02_watch_complication`；`zh-Hant` / `en` 本地化截图已补齐到 iPhone 6 张、iPad 5 张、Mac 4 张、Watch 4 张；旧 iPhone / Watch 生成残留已从 output 目录清理；preview.html 已重建。
+- 未完成内容：仍需人工最终目视复核全平台 store 图，尤其是真实 App Store 上传前的多语言输出；真实表盘复杂功能截图仍可作为人工 fallback。
+- 测试情况：
+  - PASS：`git diff --check`
+  - PASS：`python3 -m json.tool tools/appstore-screenshots/config/screenshots.json`
+  - PASS：`xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --locale zh-Hant --locale en`
+  - PASS：`bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale en`
+- 风险与注意事项：`watch_ecosystem` 和 `watch_complication` 均为 screenshot-only 静态 fixture，不触发 WatchConnectivity、真实数据库、iCloud、OCR、LLM、相册、相机或麦克风；当前修正优先保证 App Store 截图表达一致性，不代表真实 Watch 表盘系统截图。
+- 回滚方式：回退 `watch_ecosystem` / `watch_complication` scene、`screenshots.json` 映射和 iPhone 渲染框调整，即可恢复 ITER-198 的截图输出。
+- 结论：本轮完成，iPhone 与 Watch 截图的主要视觉回归已修复，可继续进行全平台目视复核。
+- 下一步建议：打开 `tools/appstore-screenshots/output/preview.html` 逐张复核 zh-Hans 输出；确认后再补跑 zh-Hant / en 导出。
 
 ### ITER-198 App Store 营销素材截图管线升级
 - 日期：2026-06-17
@@ -2972,7 +2999,7 @@
   - PASS：`bash scripts/run_golden_regression.sh`
   - PASS：`find 'AutoLedger/AutoLedgerWatch Watch App' -path '*lproj/Localizable.strings' -print0 | xargs -0 plutil -lint`
   - PASS：`git diff --check`
-  - PASS：人工查看 `tools/appstore-screenshots/output/raw/watch/zh-Hans/00_watch_quick_add.png` 与 `02_watch_confirm.png`
+  - PASS：人工查看 Watch 快速记账与旧版确认页截图输出
 - 风险与注意事项：快速记账页曾尝试使用 watchOS toolbar 放“确认”，但 screenshot-mode quick_add 会黑屏，已回退为页内提交按钮；最终上架前仍建议用真机 Watch 点验同步延迟与金额输入手感。
 - 回滚方式：回退 WatchConnectivityHost / LedgerStore 同步改动、Watch session/view model 状态监听、Watch 快速记账/语音确认 UI 文件和新增的 WatchCategoryGrid / WatchCategoryOption。
 - 结论：本轮修复了 Watch 端同步分叉、自定义分类丢失和主要 UI 偏移问题，并让 App Store Watch 截图重新来自当前真实 Watch UI。

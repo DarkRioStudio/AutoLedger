@@ -221,10 +221,12 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
             "textWidth": canvas_w - 220,
             "titlePos": (110, 205),
             "lineWidth": 98,
-            "captureBox": (canvas_w // 2 - 420, 765, 840, min(canvas_h - 857, 1180)),
+            "captureBox": (canvas_w // 2 - 470, 545, 940, min(canvas_h - 848, 1840)),
             "kind": "framed",
-            "radius": 72,
-            "inset": 11,
+            "radius": 82,
+            "inset": 10,
+            "frameMode": "cover",
+            "frameAlignY": "top",
         }
 
     if platform == "ipad":

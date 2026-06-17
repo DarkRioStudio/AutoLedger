@@ -16,6 +16,8 @@ struct ScreenshotHostView: View {
                     ScreenshotOCRBillHost()
                 case .voiceEntry:
                     ScreenshotVoiceEntryHost()
+                case .watchEcosystem:
+                    ScreenshotWatchEcosystemHost()
                 case .importMethods:
                     ScreenshotImportMethodsHost()
                 case .autoExtract:
@@ -227,6 +229,100 @@ private struct ScreenshotWorkspaceHost: View {
         IPadWorkspaceView(initialSection: section)
             .environmentObject(store)
             .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotWatchEcosystemHost: View {
+    private var copy: ScreenshotCopy { .current }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(copy.text("腕上快速记账", "腕上快速記帳", "Wrist-first logging"))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(copy.text(
+                            "在 Apple Watch 上随手记录，回到 iPhone 继续查看和编辑。",
+                            "在 Apple Watch 上隨手記錄，回到 iPhone 繼續查看和編輯。",
+                            "Start from Apple Watch, then review and edit on iPhone."
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    .padding(.top, 10)
+
+                    HStack(alignment: .center, spacing: 14) {
+                        VStack(spacing: 12) {
+                            Image(systemName: "applewatch")
+                                .font(.system(size: 38, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text(copy.text("今日支出", "今日支出", "Today"))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.75))
+                            Text("¥52.26")
+                                .font(.title2.weight(.black))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                            Text(copy.text("2 笔", "2 筆", "2 records"))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                        .frame(width: 132, height: 172)
+                        .background(.black, in: RoundedRectangle(cornerRadius: 42, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 42, style: .continuous)
+                                .stroke(.white.opacity(0.16), lineWidth: 1)
+                        )
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label(copy.text("抬腕记一笔", "抬腕記一筆", "Quick add"), systemImage: "plus.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.accent)
+                            Text(copy.text("金额和最近账单会同步回 iPhone。", "金額和最近帳單會同步回 iPhone。", "Amounts and recent records sync back to iPhone."))
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.mutedInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Demo Coffee")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.ink)
+                                    Text(copy.text("刚刚同步", "剛剛同步", "Synced just now"))
+                                        .font(.caption2)
+                                        .foregroundStyle(AppTheme.mutedInk)
+                                }
+                                Spacer()
+                                Text("¥18.00")
+                                    .font(.headline.weight(.black))
+                                    .foregroundStyle(AppTheme.ink)
+                            }
+                            .padding(12)
+                            .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(18)
+                    .background(AppTheme.card.opacity(0.75), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label(copy.text("iPhone 继续整理", "iPhone 繼續整理", "Continue on iPhone"), systemImage: "iphone")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
+                        ScreenshotVoiceField(label: copy.text("最近", "最近", "Latest"), value: "Demo Coffee ¥18.00")
+                        ScreenshotVoiceField(label: copy.text("同步", "同步", "Sync"), value: copy.text("已完成", "已完成", "Done"))
+                    }
+                    .padding(18)
+                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+            }
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle("AutoLedger")
+        }
+        .preferredColorScheme(.light)
     }
 }
 
@@ -452,7 +548,7 @@ private enum ScreenshotFixtures {
     static func installUserDefaults() {
         UserDefaults.standard.set(["WeChat Pay", "Alipay", "App Store", "Watch"], forKey: "customSources")
         UserDefaults.standard.set(["Coffee", "Work", "Family"], forKey: "customCategories")
-        UserDefaults.standard.set(["BlueBottle": "Blue Bottle Coffee"], forKey: "merchantAliases")
+        UserDefaults.standard.set(["DemoCafe": "Demo Coffee"], forKey: "merchantAliases")
         UserDefaults.standard.set(false, forKey: "subscriptionReminder")
         UserDefaults.standard.set(false, forKey: "autoClipboardImport")
     }
