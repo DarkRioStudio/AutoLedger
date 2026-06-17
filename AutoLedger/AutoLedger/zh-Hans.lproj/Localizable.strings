@@ -500,7 +500,7 @@
 "settings.version.title" = "当前版本";
 "settings.version.body" = "当前正式版已收口 iPhone / iPad / Apple Watch / Mac 体验；支持 iCloud 同步、截图与小票识别优化、账单编辑保存稳定性修复，以及可选脱敏外部辅助识别。";
 "settings.privacy.title" = "隐私策略";
-"settings.privacy.body" = "所有账单数据存储在设备本地，并通过 iCloud（CloudKit）在您的 Apple 设备间同步，不接入第三方分析。OCR 与 LLM 推理均在本地完成。网络请求包括：iCloud 同步（仅限您的 Apple ID）和 Gemma 模型版本检查与下载（CDN），不传输账单原文。可选"外部辅助识别"功能默认关闭；开启后仅向外部服务发送脱敏摘要，不传输原始截图或完整账单数据。";
+"settings.privacy.body" = "所有账单数据存储在设备本地，并通过 iCloud（CloudKit）在您的 Apple 设备间同步，不接入第三方分析。OCR 与 LLM 推理均在本地完成。网络请求包括：iCloud 同步（仅限您的 Apple ID）和 Gemma 模型版本检查与下载（CDN），不传输账单原文。可选“外部辅助识别”功能默认关闭；开启后仅向外部服务发送脱敏摘要，不传输原始截图或完整账单数据。";
 "settings.release_status.title" = "后续计划";
 "settings.release_status.body" = "内部 1.5.0 开发线已开启，重点推进 iPad 工作台、批量导入与识别、多账本整理和 Watch 今日支出小组件。";
 

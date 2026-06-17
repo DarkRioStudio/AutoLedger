@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 修复（v1.5.1）
+- [2026-06-17 +0800] 修复简体中文 `Localizable.strings` 中设置页隐私策略文案未转义英文双引号导致的 plist 解析失败；改用中文引号包裹“外部辅助识别”，恢复 Xcode Cloud 对本地化资源的 property list validation。已验证三语 `Localizable.strings` 与仓库 plist / strings 资源 lint 通过。
 - [2026-06-17 +0800] 修正 App Store 截图管线升级后的视觉回归：iPhone store 渲染框放大并改为顶部 cover 裁切，避免 App 画面过小；iPhone 第三张 `02_watch_ecosystem` 改用 screenshot-only Watch 生态静态场景，避免“Apple Watch”标题下仍展示普通 iPhone 页面；Watch 第三张从旧确认页切换为 `watch_complication` 表盘复杂功能预览，并刷新 Watch 虚构演示数据；Mac 截图改为按 AutoLedger 窗口 ID 捕获并在渲染时裁掉系统阴影，避免被重叠窗口污染。已验证 `git diff --check`、`screenshots.json` JSON 校验、主 App iOS generic build、iPhone / Watch `zh-Hans` 导出、全平台 `zh-Hant` / `en` 导出、iPhone `zh-Hans` 重导出和 Mac `zh-Hant` 重导出通过，并清理旧 iPhone / Watch 输出残留。
 - [2026-06-17 +0800] 修复 `GOAL-1608G` 在快捷指令 / SmartReceiptParser 路径下仍可能进入外部大模型的问题：当规则解析已经明确识别为地铁 / 公交储值卡计费，并输出 `地铁：示例站A→示例站B` 或 `公交：示例站A→示例站B` / 出行分类时，`SmartReceiptParser` 会直接采用规则结果并跳过 DeepSeek / Qwen / OpenAI 外部辅助。新增脱敏 Golden 样例覆盖“城市卡 + 地铁金额 + 路线 + 社媒噪声”文本；已验证 `git diff --check`、`run_offline_regression.sh`、`run_golden_regression.sh` 与主 App iOS generic build 通过。
 - [2026-06-16 +0800] 收口 `GOAL-1606` 本地 smoke 时修复两处回归门禁问题：`run_golden_regression.sh` 补齐 `PaymentAmountExtractor`、`MerchantResolver`、`CategoryResolver` 编译清单，适配 Core 解析模块拆分；`PaymentAmountExtractor` 将中文支付详情中的 `金额` 标签视为可靠已支付金额，避免 `支付宝 / 金额：￥xx` 类型样例被误标记为需复核。已验证 `git diff --check`、`run_offline_regression.sh`、`run_golden_regression.sh`、iOS generic build、Mac Catalyst build 和当前四平台 `zh-Hans` 截图导出通过。
