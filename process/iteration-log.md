@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-201 设置页当前版本说明更新
+- 日期：2026-06-17
+- 所属版本：v1.5.1
+- 所属阶段：正式发布
+- 类型：文案 / 本地化
+- 目标：将设置页"当前版本"说明从旧的 v1.4.x 能力清单更新为当前 v1.5.1 正式发布版面向用户的版本说明，并同步修正设置页隐私策略文案。
+- 改动范围：更新简体中文、繁体中文、英文 `settings.version.body` 本地化文案；修正三语 `settings.privacy.body`，补充 iCloud（CloudKit）同步说明和可选外部辅助识别的脱敏摘要行为；同步回填 CHANGELOG。
+- 未改动范围：未调整 `MARKETING_VERSION`、构建号、设置页布局、后续计划文案或发布计划。
+- 完成内容：当前版本说明改为概括 iPhone / iPad / Apple Watch / Mac 当前发布平台收口、iCloud 同步、截图与小票识别优化、账单编辑保存稳定性修复，以及可选脱敏外部辅助识别；隐私策略文案同步更正为准确描述 iCloud 同步和外部辅助行为。
+- 未完成内容：未执行 Xcode 构建；本轮仅做本地化文案与文档记录。
+- 测试情况：执行 `plutil -lint AutoLedger/AutoLedger/zh-Hans.lproj/Localizable.strings AutoLedger/AutoLedger/zh-Hant.lproj/Localizable.strings AutoLedger/AutoLedger/en.lproj/Localizable.strings`，结果 PASS；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：无。
+- 回滚方式：恢复三语 `settings.version.body` 和 `settings.privacy.body` 至上一版本，并移除本次 CHANGELOG / iteration log 记录。
+- 结论：本轮完成，设置页"当前版本"说明已同步到 v1.5.1 正式发布口径，隐私策略文案已与实际功能对齐。
+- 下一步建议：发布前统一复核 App Store 文案是否一致。
+
 ### ITER-200 v1.5.1 仓库侧收尾
 - 日期：2026-06-17
 - 所属版本：v1.5.1

@@ -22,6 +22,7 @@
 - [2026-06-11 +0800] 推进 `GOAL-1610` 账单编辑保存链路稳定性：新增金额输入解析器，编辑页金额字段支持货币符号、全角数字、小数逗号和“元”等常见输入形态，避免真机输入法下保存按钮异常置灰；`LedgerStore.updateTransaction` 改为显式返回保存结果，SQLite 写入成功后才刷新内存、触发 Widget / 备份 / iCloud 推送，失败时编辑页不关闭并显示错误；普通手动账单编辑不再学习商户别名，避免一次商户名修正污染后续账单。已验证 `git diff --check`、`run_offline_regression.sh` 与主 App iOS generic build 通过。
 
 ### 变更（v1.5.1）
+- [2026-06-17 +0800] 更新设置页"当前版本"三语说明文字：面向 `v1.5.1` 正式发布版，改为概括 iPhone / iPad / Apple Watch / Mac 当前发布平台收口、iCloud 同步、截图与小票识别优化、账单编辑保存稳定性修复，以及可选脱敏外部辅助识别；同步修正设置页隐私策略文案，补充 iCloud（CloudKit）同步说明和可选外部辅助识别的脱敏摘要行为；不调整版本号和发布计划。
 - [2026-06-17 +0800] 收口 `v1.5.1` release candidate：当前版本已完成最低系统需求优化、识别链路 Core 化、脱敏外部 API 辅助识别试点、账单编辑保存链路稳定性、iCloud 同步性能修复、当前发布平台截图与 App Preview v001；`versions/v1.5.1-plan.md` 将 `GOAL-1605 / GOAL-1606` 标记为完成。根据用户回填，Xcode Cloud archive、TestFlight 分发和 ASC 素材上传已完成；Mac 端素材尚未做 ASC 侧实测，作为非阻断风险保留。tvOS / visionOS 产品代码、截图和平台发布准备顺延到 `v1.6.0`，多账本继续顺延。
 - [2026-06-17 +0800] 完成 Hyperframes App Preview v001：在 `tools/appstore-screenshots/app-preview/hyperframes-v001` 生成 iPhone 竖屏 App Preview 源工程、关键帧、contact sheet 和 `886x1920` MP4 成片；视频素材只使用截图管线输出和虚构演示数据，不触发真实 OCR、LLM、iCloud、相册、相机、麦克风或 App Store Connect。第一版程序生成音频因底噪偏刺耳，已替换为 EverestBaseCamp 音频管线生成的低音量背景音，并后处理为 AAC LC / 48kHz / stereo。
 - [2026-06-17 +0800] 升级 App Store 营销素材截图管线：在现有 `tools/appstore-screenshots` 下更新 iPhone / iPad / Mac / Watch 三语截图文案，新增 iPhone `ocr_bill` / `voice_entry` screenshot-only 静态场景和虚构演示账单 fixture；新增截图管线审计文档与 App Preview / Hyperframes 制作资料。本轮不修改 App Store Connect、不引入真实用户数据、不新增平行 marketing 目录，也不改变 signing / entitlement / Bundle ID。

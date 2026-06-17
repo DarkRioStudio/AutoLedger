@@ -501,9 +501,9 @@
 "settings.support.title" = "支持 AutoLedger";
 "settings.support.subtitle" = "自願支持獨立開發，不解鎖額外功能";
 "settings.version.title" = "目前版本";
-"settings.version.body" = "Apple Watch 輕量記帳；捷徑與語音記帳；月報歷史月份；iCloud 備份恢復；商戶別名與分類批次整理";
+"settings.version.body" = "目前正式版已收口 iPhone / iPad / Apple Watch / Mac 體驗；支援 iCloud 同步、截圖與收據識別最佳化、帳單編輯儲存穩定性修復，以及可選脫敏外部輔助識別。";
 "settings.privacy.title" = "隱私政策";
-"settings.privacy.body" = "所有資料保留在裝置本機，不接入任何雲端同步或第三方分析。OCR 與 LLM 推理均在本機完成。唯一網路請求：Gemma 模型版本檢查與下載（CDN），不傳輸任何使用者資料。";
+"settings.privacy.body" = "所有帳單資料儲存在裝置本機，並透過 iCloud（CloudKit）在您的 Apple 裝置間同步，不接入第三方分析。OCR 與 LLM 推理均在本機完成。網路請求包括：iCloud 同步（僅限您的 Apple ID）和 Gemma 模型版本檢查與下載（CDN），不傳輸帳單原文。可選「外部輔助識別」功能預設關閉；開啟後僅向外部服務傳送脫敏摘要，不傳輸原始截圖或完整帳單資料。";
 "settings.release_status.title" = "後續計畫";
 "settings.release_status.body" = "內部 1.5.0 開發線已開啟，重點推進 iPad 工作台、批次匯入與識別、多帳本整理和 Watch 今日支出小工具。";
 
