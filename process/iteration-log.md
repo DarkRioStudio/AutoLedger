@@ -4498,6 +4498,20 @@
 - 结论：本轮完成，AutoLedger 已具备真机上观察 OCR→解析→入账链路的内置调试能力。
 - 下一步建议：进入 `ITER-005C`，用真实截图在真机上连续回归并沉淀记录，再决定是否需要对 `ReceiptParser` 做小范围修正。
 
+### ITER-1700 v1.6.0 第一版推进与 ASC 版本号更新
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1700
+- 类型：版本推进 / 文档 / 发布配置
+- 目标：将 `v1.6.0` 从规划草稿推进为第一版开发线，并把 App Store / ASC 对外版本推进到 `1.5.0`。
+- 改动范围：更新全 target `MARKETING_VERSION`、`versions/v1.6.0-plan.md`、README Roadmap、CHANGELOG、迭代日志和版本读取兜底值。
+- 未改动范围：未实现订阅管理、AI 订阅判断、学习缓存、tvOS / visionOS UI；未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：工程版本号已统一到 `1.5.0`；`v1.6.0` 计划文档状态改为第一版推进中；`GOAL-1700` 标记完成；README / README.en Roadmap 同步 App Store 版本映射。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `xcodebuild -list -workspace AutoLedger/AutoLedger.xcworkspace`，结果 PASS。
+- 风险与注意事项：本轮只推进版本号与计划，不代表 `v1.6.0` 功能完成；后续每个 GOAL 仍需独立构建、回归和真机 / 平台 smoke。
+- 回滚方式：如需回退到上一条发布线，可将 `MARKETING_VERSION` 恢复为 `1.4.0`，并回退 README / v1.6.0 计划 / CHANGELOG / 迭代日志中的本轮状态记录。
+- 结论：本轮完成，下一步可进入 `GOAL-1710` 订阅管理基础 CRUD。
+
 ### ITER-005A 发布收口前的最小回归证据补齐
 - 日期：2026-03-27
 - 所属版本：v0.1.0
