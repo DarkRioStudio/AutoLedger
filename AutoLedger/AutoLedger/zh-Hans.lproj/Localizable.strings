@@ -502,7 +502,7 @@
 "settings.privacy.title" = "隐私策略";
 "settings.privacy.body" = "所有账单数据存储在设备本地，并通过 iCloud（CloudKit）在您的 Apple 设备间同步，不接入第三方分析。OCR 与 LLM 推理均在本地完成。网络请求包括：iCloud 同步（仅限您的 Apple ID）和 Gemma 模型版本检查与下载（CDN），不传输账单原文。可选“外部辅助识别”功能默认关闭；开启后仅向外部服务发送脱敏摘要，不传输原始截图或完整账单数据。";
 "settings.release_status.title" = "后续计划";
-"settings.release_status.body" = "下一阶段会继续打磨 Mac 与全平台体验，评估 tvOS / visionOS 展示版，并优化截图、小票和复杂支付场景识别。多账本会在后续版本单独规划。";
+"settings.release_status.body" = "下一阶段会加强订阅管理，探索 AI 订阅判断和常用商户识别学习；同时继续打磨 Mac 与全平台体验，评估 tvOS / visionOS 展示版。多账本会在后续版本单独规划。";
 
 "support.title" = "支持 AutoLedger";
 "support.description" = "AutoLedger 目前保持免费使用。如果它帮你节省了记账时间，可以通过这里支持后续开发。";

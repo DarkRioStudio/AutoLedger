@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-18（外部辅助识别请求瘦身）
+更新日期：2026-06-18（v1.6.0 计划落地）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-205 v1.6.0 版本计划落地
+- 日期：2026-06-18
+- 所属版本：v1.6.0
+- 所属阶段：计划 / Draft
+- 类型：文档 / 产品规划 / 本地化
+- 目标：在 `v1.5.1` 提审前落下一条后续开发线，把订阅管理补强、AI 订阅判断、识别学习缓存、tvOS / visionOS 展示版和 Mac / 全平台 polish 纳入 `v1.6.0` 计划。
+- 改动范围：新增 `versions/v1.6.0-plan.md`；更新中文 / 英文 README Roadmap；更新三语设置页“后续计划”文案；同步回填 CHANGELOG。
+- 未改动范围：未修改 App 功能代码、Xcode project / workspace / scheme / target、Bundle ID、entitlements、iCloud / App Group、Xcode Cloud 脚本、App Store Connect 配置或多账本数据模型。
+- 完成内容：`v1.6.0` 明确以订阅管理基础 CRUD、账单转订阅、外部模型订阅 hint、商户 / 分类 / 订阅倾向学习缓存、tvOS 只读看板、visionOS 展示版和 Mac / 多端 polish 为主要方向；多账本继续顺延。
+- 未完成内容：`v1.6.0` 仅建立计划，未开始编码实现。
+- 测试情况：执行三语 `Localizable.strings` plist lint，结果 PASS；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：设置页后续计划仅作为路线预告，不声明订阅 AI、tvOS 或 visionOS 已在当前版本可用。
+- 回滚方式：删除 `versions/v1.6.0-plan.md`，恢复 README Roadmap 和三语 `settings.release_status.body`，移除本次 CHANGELOG / iteration log 记录。
+- 结论：本轮完成，`v1.6.0` 后续开发线已落文档并与 App 内后续计划对齐。
+- 下一步建议：`v1.5.1` 可继续按当前 release candidate 进入 ASC 审核；审核后按 `GOAL-1700` 冻结 `v1.6.0` 计划。
 
 ### ITER-204 外部辅助识别请求瘦身
 - 日期：2026-06-18
