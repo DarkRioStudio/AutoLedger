@@ -25,7 +25,7 @@ struct InboxView: View {
 
     private var upcomingSubscriptions: [Subscription] {
         let sevenDaysLater = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
-        return store.subscriptions.filter { $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+        return store.subscriptions.filter { $0.status.isActive && $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
     }
 
     var body: some View {

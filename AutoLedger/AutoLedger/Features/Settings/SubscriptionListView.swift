@@ -7,7 +7,7 @@ struct SubscriptionListView: View {
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImporting = false
-    @State private var editingSubscription: Subscription?
+    @State private var editor: SubscriptionEditorPresentation?
     @State private var annualPriceOverrides: [String: Double] = [:]
     @State private var subscriptionNotes: [String: String] = [:]
     private let ocrService = OCRService()
@@ -34,7 +34,14 @@ struct SubscriptionListView: View {
         .background(AppTheme.screenGradient.ignoresSafeArea())
         .navigationTitle("settings.subscriptions.title")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    editor = .create
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .help(String(localized: "subscriptions.add_help"))
+
                 Button {
                     store.detectAndUpsertSubscriptions()
                 } label: {
@@ -43,13 +50,18 @@ struct SubscriptionListView: View {
                 .help(String(localized: "subscriptions.scan_history_help"))
             }
         }
-        .sheet(item: $editingSubscription) { subscription in
+        .sheet(item: $editor) { presentation in
             SubscriptionEditView(
-                subscription: subscription,
-                annualPrice: annualPriceOverrides[subscription.id.uuidString],
-                note: subscriptionNotes[subscription.id.uuidString] ?? ""
+                subscription: presentation.subscription,
+                mode: presentation.mode,
+                annualPrice: annualPriceOverrides[presentation.subscription.id.uuidString],
+                note: subscriptionNotes[presentation.subscription.id.uuidString] ?? ""
             ) { updated, annualPrice, note in
-                store.updateSubscription(updated)
+                if presentation.isNew {
+                    store.createSubscription(updated)
+                } else {
+                    store.updateSubscription(updated)
+                }
                 saveAnnualPrice(annualPrice, for: updated)
                 saveNote(note, for: updated)
                 store.requestAutomaticBackup()
@@ -64,7 +76,11 @@ struct SubscriptionListView: View {
 
     private var upcomingSubscriptions: [Subscription] {
         let sevenDaysLater = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
-        return store.subscriptions.filter { $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+        return store.subscriptions.filter { $0.status.isActive && $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+    }
+
+    private var activeSubscriptions: [Subscription] {
+        store.subscriptions.filter { $0.status.isActive }
     }
 
     @ViewBuilder
@@ -97,7 +113,7 @@ struct SubscriptionListView: View {
                     .foregroundStyle(AppTheme.mutedInk)
             }
 
-            let monthlyCost = store.subscriptions.reduce(0.0) { sum, sub in
+            let monthlyCost = activeSubscriptions.reduce(0.0) { sum, sub in
                 switch sub.period {
                 case .weekly:  return sum + sub.amount * 4.33
                 case .monthly: return sum + sub.amount
@@ -117,9 +133,9 @@ struct SubscriptionListView: View {
     }
 
     private var annualSummaryCard: some View {
-        let annualCost = store.subscriptions.reduce(0.0) { $0 + estimatedAnnualCost(for: $1) }
+        let annualCost = activeSubscriptions.reduce(0.0) { $0 + estimatedAnnualCost(for: $1) }
         let monthlyCost = annualCost / 12.0
-        let knownSavings = store.subscriptions.reduce(0.0) { sum, sub in
+        let knownSavings = activeSubscriptions.reduce(0.0) { sum, sub in
             guard let suggestion = savingsSuggestion(for: sub) else { return sum }
             return sum + max(0, suggestion.savings)
         }
@@ -229,7 +245,7 @@ struct SubscriptionListView: View {
             VStack(alignment: .trailing, spacing: 8) {
                 HStack(spacing: 6) {
                     Button {
-                        editingSubscription = sub
+                        editor = .edit(sub)
                     } label: {
                         Image(systemName: "pencil")
                             .font(.caption.weight(.bold))
@@ -240,6 +256,23 @@ struct SubscriptionListView: View {
                     .background(AppTheme.accent.opacity(0.10))
                     .clipShape(Circle())
                     .help(String(localized: "subscriptions.edit_help"))
+
+                    statusToggleButton(for: sub)
+
+                    if sub.status != .canceled {
+                        Button(role: .destructive) {
+                            updateSubscriptionStatus(sub, .canceled)
+                        } label: {
+                            Image(systemName: "xmark.circle")
+                                .font(.caption.weight(.bold))
+                                .frame(width: 28, height: 28)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.orange)
+                        .background(Color.orange.opacity(0.10))
+                        .clipShape(Circle())
+                        .help(String(localized: "subscriptions.cancel_help"))
+                    }
 
                     Button(role: .destructive) {
                         deleteSubscription(sub)
@@ -259,6 +292,10 @@ struct SubscriptionListView: View {
                     Text(AppFormatters.currency(sub.amount))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
+
+                    Text(sub.status.title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(statusTint(for: sub.status))
 
                     if highlight {
                         Text(daysUntil(sub.nextChargedAt))
@@ -289,11 +326,34 @@ struct SubscriptionListView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(AppTheme.card)
         )
+        .opacity(sub.status.isActive ? 1 : 0.72)
         .contextMenu {
             Button {
-                editingSubscription = sub
+                editor = .edit(sub)
             } label: {
                 Label("common.edit", systemImage: "pencil")
+            }
+
+            if sub.status == .active {
+                Button {
+                    updateSubscriptionStatus(sub, .paused)
+                } label: {
+                    Label("subscriptions.pause", systemImage: "pause.circle")
+                }
+            } else {
+                Button {
+                    updateSubscriptionStatus(sub, .active)
+                } label: {
+                    Label("subscriptions.resume", systemImage: "play.circle")
+                }
+            }
+
+            if sub.status != .canceled {
+                Button(role: .destructive) {
+                    updateSubscriptionStatus(sub, .canceled)
+                } label: {
+                    Label("subscriptions.cancel_subscription", systemImage: "xmark.circle")
+                }
             }
 
             Button(role: .destructive) {
@@ -320,6 +380,17 @@ struct SubscriptionListView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.mutedInk)
                 .multilineTextAlignment(.center)
+
+            Button {
+                editor = .create
+            } label: {
+                Label("subscriptions.add", systemImage: "plus.circle.fill")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.accent)
 
             PhotosPicker(
                 selection: $selectedPhoto,
@@ -383,6 +454,45 @@ struct SubscriptionListView: View {
         subscriptionNotes = UserDefaults.standard.dictionary(forKey: subscriptionNotesKey) as? [String: String] ?? [:]
     }
 
+    @ViewBuilder
+    private func statusToggleButton(for sub: Subscription) -> some View {
+        if sub.status == .active {
+            Button {
+                updateSubscriptionStatus(sub, .paused)
+            } label: {
+                Image(systemName: "pause")
+                    .font(.caption.weight(.bold))
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.accentSecondary)
+            .background(AppTheme.accentSecondary.opacity(0.10))
+            .clipShape(Circle())
+            .help(String(localized: "subscriptions.pause_help"))
+        } else {
+            Button {
+                updateSubscriptionStatus(sub, .active)
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.caption.weight(.bold))
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.accent)
+            .background(AppTheme.accent.opacity(0.10))
+            .clipShape(Circle())
+            .help(String(localized: "subscriptions.resume_help"))
+        }
+    }
+
+    private func statusTint(for status: SubscriptionStatus) -> Color {
+        switch status {
+        case .active: return AppTheme.accent
+        case .paused: return AppTheme.accentSecondary
+        case .canceled: return .red
+        }
+    }
+
     private func saveAnnualPrice(_ value: Double?, for sub: Subscription) {
         if let value, value > 0 {
             annualPriceOverrides[sub.id.uuidString] = value
@@ -413,6 +523,10 @@ struct SubscriptionListView: View {
         store.recordSubscriptionMetadataChanged()
     }
 
+    private func updateSubscriptionStatus(_ sub: Subscription, _ status: SubscriptionStatus) {
+        store.updateSubscriptionStatus(sub, status: status)
+    }
+
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
         isImporting = true
         defer {
@@ -429,10 +543,44 @@ struct SubscriptionListView: View {
     }
 }
 
+private struct SubscriptionEditorPresentation: Identifiable {
+    enum Mode {
+        case create
+        case edit
+    }
+
+    let id = UUID()
+    let mode: Mode
+    let subscription: Subscription
+
+    var isNew: Bool {
+        mode == .create
+    }
+
+    static var create: SubscriptionEditorPresentation {
+        SubscriptionEditorPresentation(
+            mode: .create,
+            subscription: Subscription(
+                merchant: "",
+                planName: "",
+                period: .monthly,
+                amount: 0,
+                lastChargedAt: .now,
+                status: .active
+            )
+        )
+    }
+
+    static func edit(_ subscription: Subscription) -> SubscriptionEditorPresentation {
+        SubscriptionEditorPresentation(mode: .edit, subscription: subscription)
+    }
+}
+
 private struct SubscriptionEditView: View {
     @Environment(\.dismiss) private var dismiss
 
     let subscription: Subscription
+    let mode: SubscriptionEditorPresentation.Mode
     let onSave: (Subscription, Double?, String) -> Void
 
     @State private var merchant: String
@@ -441,23 +589,27 @@ private struct SubscriptionEditView: View {
     @State private var amountText: String
     @State private var lastChargedAt: Date
     @State private var nextChargedAt: Date
+    @State private var status: SubscriptionStatus
     @State private var annualPriceText: String
     @State private var note: String
 
     init(
         subscription: Subscription,
+        mode: SubscriptionEditorPresentation.Mode,
         annualPrice: Double?,
         note: String,
         onSave: @escaping (Subscription, Double?, String) -> Void
     ) {
         self.subscription = subscription
+        self.mode = mode
         self.onSave = onSave
         _merchant = State(initialValue: subscription.merchant)
         _planName = State(initialValue: subscription.planName)
         _period = State(initialValue: subscription.period)
-        _amountText = State(initialValue: Self.text(from: subscription.amount))
+        _amountText = State(initialValue: mode == .create ? "" : Self.text(from: subscription.amount))
         _lastChargedAt = State(initialValue: subscription.lastChargedAt)
         _nextChargedAt = State(initialValue: subscription.nextChargedAt)
+        _status = State(initialValue: subscription.status)
         _annualPriceText = State(initialValue: annualPrice.map(Self.text(from:)) ?? "")
         _note = State(initialValue: note)
     }
@@ -475,6 +627,11 @@ private struct SubscriptionEditView: View {
                     }
                     TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                    Picker("subscriptions.edit.status", selection: $status) {
+                        ForEach(SubscriptionStatus.allCases, id: \.self) { item in
+                            Text(item.title).tag(item)
+                        }
+                    }
                 }
 
                 Section("subscriptions.edit.section.charge_dates") {
@@ -498,7 +655,7 @@ private struct SubscriptionEditView: View {
                         .lineLimit(3...5)
                 }
             }
-            .navigationTitle("subscriptions.edit.title")
+            .navigationTitle(mode == .create ? "subscriptions.add.title" : "subscriptions.edit.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -527,7 +684,8 @@ private struct SubscriptionEditView: View {
     }
 
     private var canSave: Bool {
-        !merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount != nil
+        guard let amount else { return false }
+        return !merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount > 0
     }
 
     private var savingsText: String? {
@@ -549,6 +707,7 @@ private struct SubscriptionEditView: View {
             amount: amount,
             lastChargedAt: lastChargedAt,
             nextChargedAt: nextChargedAt,
+            status: status,
             createdAt: subscription.createdAt
         )
         onSave(updated, annualPrice, note)

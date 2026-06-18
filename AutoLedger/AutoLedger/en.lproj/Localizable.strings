@@ -390,6 +390,9 @@
 "data_management.restore_failed_format" = "Restore failed: %@";
 
 "subscriptions.scan_history_help" = "Scan historical transactions to detect subscriptions";
+"subscriptions.add" = "Add Subscription";
+"subscriptions.add.title" = "Add Subscription";
+"subscriptions.add_help" = "Add a subscription manually";
 "subscriptions.upcoming" = "Upcoming Charges";
 "subscriptions.all" = "All Subscriptions";
 "subscriptions.count_format" = "%d items";
@@ -401,14 +404,21 @@
 "subscriptions.next_charge_format" = "Next %@";
 "subscriptions.edit_help" = "Edit subscription";
 "subscriptions.delete_help" = "Delete subscription";
+"subscriptions.pause" = "Pause Subscription";
+"subscriptions.pause_help" = "Pause this subscription so it is not counted in upcoming charges or reminders";
+"subscriptions.resume" = "Resume Subscription";
+"subscriptions.resume_help" = "Resume subscription reminders and totals";
+"subscriptions.cancel_subscription" = "Cancel Subscription";
+"subscriptions.cancel_help" = "Mark as canceled";
 "subscriptions.annual_savings_short_format" = "Switch to annual and save %@/year";
 "subscriptions.empty.title" = "No Subscriptions Yet";
-"subscriptions.empty.description" = "Import a renewal email screenshot, or tap the top-right scan button to detect recurring subscriptions from history.";
+"subscriptions.empty.description" = "Add a subscription manually, import a renewal email screenshot, or tap the top-right scan button to detect recurring subscriptions from history.";
 "subscriptions.upload_renewal_screenshot" = "Upload Renewal Email Screenshot";
 "subscriptions.renewal_screenshot_note" = "Subscription renewal email screenshot";
 "subscriptions.edit.section.subscription" = "Subscription";
 "subscriptions.edit.plan_name" = "Plan Name";
 "subscriptions.edit.period" = "Period";
+"subscriptions.edit.status" = "Status";
 "subscriptions.edit.section.charge_dates" = "Charge Dates";
 "subscriptions.edit.last_charged" = "Last Charged";
 "subscriptions.edit.next_charge" = "Next Charge";
@@ -418,6 +428,9 @@
 "subscriptions.edit.title" = "Edit Subscription";
 "subscriptions.annual_savings_full_format" = "Switch to annual and save %@/year";
 "subscriptions.no_annual_savings" = "The current annual price is not lower than monthly billing.";
+"subscription.status.active" = "Active";
+"subscription.status.paused" = "Paused";
+"subscription.status.canceled" = "Canceled";
 
 "feedback.result.title" = "Send Result";
 "feedback.result.ok" = "OK";

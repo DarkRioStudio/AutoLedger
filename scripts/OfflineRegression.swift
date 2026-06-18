@@ -53,6 +53,7 @@ struct OfflineRegression {
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
+        verifySubscriptionStatusCodable(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
@@ -804,6 +805,44 @@ struct OfflineRegression {
         reporter.check(detected.contains { $0.merchant == "Apple Services" }, "SubscriptionDetector scans digital service subscriptions")
         reporter.check(!detected.contains { $0.merchant == "Demo Burger" }, "SubscriptionDetector excludes dining transactions")
         reporter.check(!detected.contains { $0.merchant.contains("地铁") }, "SubscriptionDetector excludes transport transactions")
+    }
+
+    private static func verifySubscriptionStatusCodable(reporter: RegressionReporter) {
+        let legacyJSON = """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "merchant": "Legacy Music",
+          "planName": "Monthly",
+          "period": "monthly",
+          "amount": 18.0,
+          "lastChargedAt": 1772326800,
+          "nextChargedAt": 1775005200,
+          "createdAt": 1772326800
+        }
+        """.data(using: .utf8)!
+
+        do {
+            let decoded = try JSONDecoder().decode(Subscription.self, from: legacyJSON)
+            reporter.check(decoded.status == .active, "Subscription status decodes legacy backups as active")
+        } catch {
+            reporter.check(false, "Subscription status decodes legacy backups without throwing")
+        }
+
+        let paused = Subscription(
+            merchant: "Demo Cloud",
+            planName: "Pro",
+            period: .monthly,
+            amount: 28,
+            lastChargedAt: AppFormatters.parseFlexibleDate("2026-04-01 09:00") ?? .now,
+            status: .paused
+        )
+        do {
+            let data = try JSONEncoder().encode(paused)
+            let decoded = try JSONDecoder().decode(Subscription.self, from: data)
+            reporter.check(decoded.status == .paused, "Subscription status round-trips through Codable")
+        } catch {
+            reporter.check(false, "Subscription status round-trips through Codable without throwing")
+        }
     }
 
     private static func verifyTodaySpendingSummary(reporter: RegressionReporter) {
@@ -1916,6 +1955,10 @@ struct OfflineRegression {
         )
         try store.saveSubscription(subscription)
         let persistedSubscription = try store.loadSubscriptions().first { $0.id == subscription.id } ?? subscription
+        reporter.check(
+            persistedSubscription.status == .active,
+            "SQLite subscription defaults to active status"
+        )
 
         let editedSubscription = Subscription(
             id: persistedSubscription.id,
@@ -1925,6 +1968,7 @@ struct OfflineRegression {
             amount: 188.00,
             lastChargedAt: persistedSubscription.lastChargedAt,
             nextChargedAt: AppFormatters.parseFlexibleDate("2027-03-01 09:00") ?? persistedSubscription.nextChargedAt,
+            status: .paused,
             createdAt: persistedSubscription.createdAt
         )
         try store.updateSubscription(editedSubscription)
@@ -1933,6 +1977,10 @@ struct OfflineRegression {
         reporter.check(
             loadedSubscriptions.contains(editedSubscription),
             "SQLite subscription update persists edited fields"
+        )
+        reporter.check(
+            loadedSubscriptions.first { $0.id == editedSubscription.id }?.status == .paused,
+            "SQLite subscription update persists paused status"
         )
     }
 
@@ -2431,7 +2479,8 @@ struct OfflineRegression {
             planName: "Pro",
             period: .monthly,
             amount: 18,
-            lastChargedAt: AppFormatters.parseFlexibleDate("2026-04-01 09:00") ?? .now
+            lastChargedAt: AppFormatters.parseFlexibleDate("2026-04-01 09:00") ?? .now,
+            status: .canceled
         )
         sourceLedger.upsertSubscription(subscription)
         UserDefaults.standard.set([subscription.id.uuidString: 168.0], forKey: "subscriptionAnnualPriceOverrides")
@@ -2454,6 +2503,7 @@ struct OfflineRegression {
             restoredSubscription?.merchant == subscription.merchant &&
             restoredSubscription?.planName == subscription.planName &&
             restoredSubscription?.period == subscription.period &&
+            restoredSubscription?.status == .canceled &&
             abs((restoredSubscription?.amount ?? 0) - subscription.amount) < 0.001,
             "Backup restore keeps subscriptions"
         )

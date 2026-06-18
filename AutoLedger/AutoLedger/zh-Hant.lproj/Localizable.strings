@@ -393,6 +393,9 @@
 "data_management.restore_failed_format" = "恢復失敗：%@";
 
 "subscriptions.scan_history_help" = "掃描歷史帳單自動識別訂閱";
+"subscriptions.add" = "手動新增訂閱";
+"subscriptions.add.title" = "新增訂閱";
+"subscriptions.add_help" = "手動新增訂閱";
 "subscriptions.upcoming" = "即將扣費";
 "subscriptions.all" = "全部訂閱";
 "subscriptions.count_format" = "%d 項";
@@ -404,14 +407,21 @@
 "subscriptions.next_charge_format" = "下次 %@";
 "subscriptions.edit_help" = "編輯訂閱";
 "subscriptions.delete_help" = "刪除訂閱";
+"subscriptions.pause" = "暫停訂閱";
+"subscriptions.pause_help" = "暫停訂閱，不再計入即將扣費和提醒";
+"subscriptions.resume" = "恢復訂閱";
+"subscriptions.resume_help" = "恢復訂閱提醒和統計";
+"subscriptions.cancel_subscription" = "取消訂閱";
+"subscriptions.cancel_help" = "標記為已取消";
 "subscriptions.annual_savings_short_format" = "切換年付可省 %@/年";
 "subscriptions.empty.title" = "暫無訂閱記錄";
-"subscriptions.empty.description" = "匯入訂閱續期郵件截圖，或點擊右上角掃描歷史帳單自動識別週期性訂閱。";
+"subscriptions.empty.description" = "可以手動新增訂閱，匯入續期郵件截圖，或點擊右上角掃描歷史帳單自動識別週期性訂閱。";
 "subscriptions.upload_renewal_screenshot" = "上傳續期郵件截圖";
 "subscriptions.renewal_screenshot_note" = "訂閱續期郵件截圖";
 "subscriptions.edit.section.subscription" = "訂閱";
 "subscriptions.edit.plan_name" = "方案名稱";
 "subscriptions.edit.period" = "週期";
+"subscriptions.edit.status" = "狀態";
 "subscriptions.edit.section.charge_dates" = "扣費日期";
 "subscriptions.edit.last_charged" = "最近扣費";
 "subscriptions.edit.next_charge" = "下次扣費";
@@ -421,6 +431,9 @@
 "subscriptions.edit.title" = "編輯訂閱";
 "subscriptions.annual_savings_full_format" = "切換年付可節省 %@/年";
 "subscriptions.no_annual_savings" = "目前年付價格不低於月付累計。";
+"subscription.status.active" = "進行中";
+"subscription.status.paused" = "已暫停";
+"subscription.status.canceled" = "已取消";
 
 "feedback.result.title" = "發送結果";
 "feedback.result.ok" = "好的";

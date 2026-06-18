@@ -465,6 +465,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             amount REAL NOT NULL,
             last_charged_at TEXT NOT NULL,
             next_charged_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -472,6 +473,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         guard sqlite3_exec(db, subscriptionsSQL, nil, nil, nil) == SQLITE_OK else {
             throw SQLiteTransactionStoreError.executeStatement(subscriptionsSQL)
+        }
+
+        let subscriptionColumns = Self.columnNames(db: db, table: "subscriptions")
+        if !subscriptionColumns.contains("status") {
+            sqlite3_exec(db, "ALTER TABLE subscriptions ADD COLUMN status TEXT NOT NULL DEFAULT 'active';", nil, nil, nil)
         }
 
         let correctionsSQL = """
@@ -1163,7 +1169,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadSubscriptions() throws -> [Subscription] {
         let sql = """
-        SELECT id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, created_at
+        SELECT id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, status, created_at
         FROM subscriptions
         ORDER BY next_charged_at ASC;
         """
@@ -1183,7 +1189,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 let periodCStr     = sqlite3_column_text(statement, 3),
                 let lastCStr       = sqlite3_column_text(statement, 5),
                 let nextCStr       = sqlite3_column_text(statement, 6),
-                let createdCStr    = sqlite3_column_text(statement, 7),
+                let statusCStr     = sqlite3_column_text(statement, 7),
+                let createdCStr    = sqlite3_column_text(statement, 8),
                 let id             = UUID(uuidString: String(cString: idCStr)),
                 let period         = SubscriptionPeriod(rawValue: String(cString: periodCStr)),
                 let lastChargedAt  = Self.storageFormatter.date(from: String(cString: lastCStr)),
@@ -1192,6 +1199,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             else { continue }
 
             let amount = sqlite3_column_double(statement, 4)
+            let status = SubscriptionStatus(rawValue: String(cString: statusCStr)) ?? .active
 
             items.append(Subscription(
                 id: id,
@@ -1201,6 +1209,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 amount: amount,
                 lastChargedAt: lastChargedAt,
                 nextChargedAt: nextChargedAt,
+                status: status,
                 createdAt: createdAt
             ))
         }
@@ -1210,8 +1219,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func saveSubscription(_ sub: Subscription) throws {
         let sql = """
         INSERT INTO subscriptions
-            (id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            (id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -1237,7 +1246,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         UPDATE subscriptions
         SET merchant = ?, plan_name = ?, period = ?, amount = ?,
-            last_charged_at = ?, next_charged_at = ?, updated_at = ?
+            last_charged_at = ?, next_charged_at = ?, status = ?, updated_at = ?
         WHERE id = ?;
         """
         var statement: OpaquePointer?
@@ -1254,8 +1263,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_double(statement, 4, sub.amount)
         sqlite3_bind_text(statement, 5, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
         sqlite3_bind_text(statement, 6, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 7, now,                                               -1, sqliteTransient)
-        sqlite3_bind_text(statement, 8, sub.id.uuidString,                                 -1, sqliteTransient)
+        sqlite3_bind_text(statement, 7, sub.status.rawValue,                               -1, sqliteTransient)
+        sqlite3_bind_text(statement, 8, now,                                               -1, sqliteTransient)
+        sqlite3_bind_text(statement, 9, sub.id.uuidString,                                 -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -1290,8 +1300,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_double(statement, 5, sub.amount)
         sqlite3_bind_text(statement, 6, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
         sqlite3_bind_text(statement, 7, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 8, createdAt,                                             -1, sqliteTransient)
-        sqlite3_bind_text(statement, 9, updatedAt,                                             -1, sqliteTransient)
+        sqlite3_bind_text(statement, 8, sub.status.rawValue,                                   -1, sqliteTransient)
+        sqlite3_bind_text(statement, 9, createdAt,                                             -1, sqliteTransient)
+        sqlite3_bind_text(statement, 10, updatedAt,                                            -1, sqliteTransient)
     }
 
     // MARK: - Category Corrections

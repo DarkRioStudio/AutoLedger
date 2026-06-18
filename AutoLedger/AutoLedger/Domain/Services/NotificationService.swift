@@ -62,9 +62,15 @@ final class NotificationService: Sendable {
 
         guard UserDefaults.standard.bool(forKey: "subscriptionReminder") else { return }
 
-        for sub in subscriptions {
+        for sub in subscriptions where sub.status.isActive {
             scheduleReminder(for: sub)
         }
+    }
+
+    func cancelSubscriptionReminder(id: UUID) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [
+            "sub-\(id.uuidString)"
+        ])
     }
 
     func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {

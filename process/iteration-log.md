@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-18（v1.6.0 计划落地）
+更新日期：2026-06-19（GOAL-1710 订阅管理基础 CRUD）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-206 GOAL-1710 订阅管理基础 CRUD
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 1 / 订阅管理补强
+- 类型：能力增强 / 数据迁移 / 测试
+- 目标：让订阅管理从“自动识别和展示”升级为可维护的基础 CRUD，支持手动新增、编辑、暂停 / 恢复、取消和删除订阅。
+- 改动范围：`Subscription` 新增 `active / paused / canceled` 状态；SQLite 订阅表新增 `status` 字段和迁移；订阅管理页新增手动创建、状态编辑、暂停 / 恢复 / 取消操作；暂停 / 取消订阅不再进入即将扣费、摘要统计和本地提醒；补齐三语文案和离线回归。
+- 未改动范围：未实现账单详情一键创建订阅；未实现外部模型订阅判断；未做多账本订阅归属；未修改 Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：用户可从订阅管理页新增订阅，保存后进入现有 SQLite / 备份 / iCloud 配置推送链路；已有订阅可编辑状态；暂停 / 取消订阅降权展示，并从提醒和即将扣费统计中排除；旧备份或旧同步 payload 缺少 `status` 时默认兼容为 active。
+- 未完成内容：账单转订阅、AI 订阅 hint、识别学习缓存仍按 `GOAL-1715 / 1720 / 1730` 后续推进。
+- 测试情况：执行 `git diff --check`、三语 `Localizable.strings` plist lint、`bash scripts/run_offline_regression.sh` 和主 App iOS generic Debug build，结果 PASS。
+- 风险与注意事项：订阅状态进入备份和配置同步 payload，旧版本 App 可读性依赖旧客户端的 Codable 兼容；建议多端都升级到 `v1.6.0` 后再长期混用暂停 / 取消状态。
+- 回滚方式：恢复 `Subscription` / SQLite 订阅 schema / `SubscriptionListView` / `LedgerStore` / `NotificationService` / `InboxView` 本轮改动，并移除新增本地化、离线回归和文档记录；若已发布到测试设备，需要按数据迁移策略处理新增 `status` 字段。
+- 结论：本轮完成，`GOAL-1710` 可作为 `v1.6.0` 第一批订阅管理能力基线。
+- 下一步建议：进入 `GOAL-1715`，在账单详情里补“创建订阅”显式确认链路，再接 `GOAL-1720` 外部辅助识别订阅 hint。
 
 ### ITER-205 v1.6.0 版本计划落地
 - 日期：2026-06-18

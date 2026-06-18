@@ -147,6 +147,7 @@ final class NotificationService: Sendable {
     static let shared = NotificationService()
     func requestPermissionIfNeeded() {}
     func scheduleUpcomingChargeReminders(for subscriptions: [Subscription]) {}
+    func cancelSubscriptionReminder(id: UUID) {}
 }
 
 enum ICloudBackupServiceError: Error {

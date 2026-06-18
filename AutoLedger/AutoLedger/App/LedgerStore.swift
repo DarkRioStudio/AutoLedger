@@ -1294,11 +1294,23 @@ final class LedgerStore: ObservableObject {
         requestAutomaticBackup()
     }
 
+    func createSubscription(_ sub: Subscription) {
+        guard let sqlStore = transactionStore as? SQLiteTransactionStore else { return }
+        subscriptions.append(sub)
+        subscriptions.sort { $0.nextChargedAt < $1.nextChargedAt }
+        try? sqlStore.saveSubscription(sub)
+        NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+    }
+
     func deleteSubscription(_ sub: Subscription) {
         subscriptions.removeAll { $0.id == sub.id }
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.deleteSubscription(id: sub.id)
         }
+        NotificationService.shared.cancelSubscriptionReminder(id: sub.id)
         NotificationService.shared.scheduleUpcomingChargeReminders(for: subscriptions)
         markLedgerConfigurationChanged()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -1316,6 +1328,10 @@ final class LedgerStore: ObservableObject {
         markLedgerConfigurationChanged()
         scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
+    }
+
+    func updateSubscriptionStatus(_ sub: Subscription, status: SubscriptionStatus) {
+        updateSubscription(sub.updated(status: status))
     }
 
     func recordSubscriptionMetadataChanged() {

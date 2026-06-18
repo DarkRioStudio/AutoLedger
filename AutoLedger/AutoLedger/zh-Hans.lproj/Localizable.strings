@@ -390,6 +390,9 @@
 "data_management.restore_failed_format" = "恢复失败：%@";
 
 "subscriptions.scan_history_help" = "扫描历史账单自动识别订阅";
+"subscriptions.add" = "手动新增订阅";
+"subscriptions.add.title" = "新增订阅";
+"subscriptions.add_help" = "手动新增订阅";
 "subscriptions.upcoming" = "即将扣费";
 "subscriptions.all" = "全部订阅";
 "subscriptions.count_format" = "%d 项";
@@ -401,14 +404,21 @@
 "subscriptions.next_charge_format" = "下次 %@";
 "subscriptions.edit_help" = "编辑订阅";
 "subscriptions.delete_help" = "删除订阅";
+"subscriptions.pause" = "暂停订阅";
+"subscriptions.pause_help" = "暂停订阅，不再计入即将扣费和提醒";
+"subscriptions.resume" = "恢复订阅";
+"subscriptions.resume_help" = "恢复订阅提醒和统计";
+"subscriptions.cancel_subscription" = "取消订阅";
+"subscriptions.cancel_help" = "标记为已取消";
 "subscriptions.annual_savings_short_format" = "切换年付可省 %@/年";
 "subscriptions.empty.title" = "暂无订阅记录";
-"subscriptions.empty.description" = "导入订阅续期邮件截图，或点击右上角扫描历史账单自动识别周期性订阅。";
+"subscriptions.empty.description" = "可以手动新增订阅，导入续期邮件截图，或点击右上角扫描历史账单自动识别周期性订阅。";
 "subscriptions.upload_renewal_screenshot" = "上传续期邮件截图";
 "subscriptions.renewal_screenshot_note" = "订阅续期邮件截图";
 "subscriptions.edit.section.subscription" = "订阅";
 "subscriptions.edit.plan_name" = "方案名称";
 "subscriptions.edit.period" = "周期";
+"subscriptions.edit.status" = "状态";
 "subscriptions.edit.section.charge_dates" = "扣费日期";
 "subscriptions.edit.last_charged" = "最近扣费";
 "subscriptions.edit.next_charge" = "下次扣费";
@@ -418,6 +428,9 @@
 "subscriptions.edit.title" = "编辑订阅";
 "subscriptions.annual_savings_full_format" = "切换年付可节省 %@/年";
 "subscriptions.no_annual_savings" = "当前年付价格不低于月付累计。";
+"subscription.status.active" = "进行中";
+"subscription.status.paused" = "已暂停";
+"subscription.status.canceled" = "已取消";
 
 "feedback.result.title" = "发送结果";
 "feedback.result.ok" = "好的";
