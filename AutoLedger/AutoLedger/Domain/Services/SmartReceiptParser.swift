@@ -406,12 +406,10 @@ struct SmartReceiptParser: Sendable {
         let merchants = suggestion.merchantCandidates.joined(separator: ", ")
         let category = suggestion.categoryHint ?? "未返回"
         let confidence = suggestion.confidence.map { String(format: "%.2f", $0) } ?? "未返回"
-        let explanation = suggestion.explanation ?? "未返回"
         return """
         merchantCandidates: \(merchants.isEmpty ? "未返回" : merchants)
         categoryHint: \(category)
         confidence: \(confidence)
-        explanation: \(explanation)
         """
     }
 

@@ -501,11 +501,11 @@
 "settings.support.title" = "支持 AutoLedger";
 "settings.support.subtitle" = "自願支持獨立開發，不解鎖額外功能";
 "settings.version.title" = "目前版本";
-"settings.version.body" = "目前正式版已收口 iPhone / iPad / Apple Watch / Mac 體驗；支援 iCloud 同步、截圖與收據識別最佳化、帳單編輯儲存穩定性修復，以及可選脫敏外部輔助識別。";
+"settings.version.body" = "這個版本把快速記帳體驗延伸到 iPhone、iPad、Apple Watch 和 Mac，並改進了 iCloud 同步、截圖識別、收據識別和帳單編輯儲存。需要時，也可以手動開啟脫敏外部輔助識別來處理更複雜的商戶文字。";
 "settings.privacy.title" = "隱私政策";
 "settings.privacy.body" = "所有帳單資料儲存在裝置本機，並透過 iCloud（CloudKit）在您的 Apple 裝置間同步，不接入第三方分析。OCR 與 LLM 推理均在本機完成。網路請求包括：iCloud 同步（僅限您的 Apple ID）和 Gemma 模型版本檢查與下載（CDN），不傳輸帳單原文。可選「外部輔助識別」功能預設關閉；開啟後僅向外部服務傳送脫敏摘要，不傳輸原始截圖或完整帳單資料。";
 "settings.release_status.title" = "後續計畫";
-"settings.release_status.body" = "內部 1.5.0 開發線已開啟，重點推進 iPad 工作台、批次匯入與識別、多帳本整理和 Watch 今日支出小工具。";
+"settings.release_status.body" = "下一階段會繼續打磨 Mac 與全平台體驗，評估 tvOS / visionOS 展示版，並最佳化截圖、收據和複雜支付場景識別。多帳本會在後續版本單獨規劃。";
 
 "support.title" = "支持 AutoLedger";
 "support.description" = "AutoLedger 目前保持免費使用。如果它幫你節省了記帳時間，可以透過這裡支持後續開發。";

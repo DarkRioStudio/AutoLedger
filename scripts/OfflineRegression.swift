@@ -374,6 +374,10 @@ struct OfflineRegression {
         reporter.check(!payload.sanitizedText.contains("天津市和平区Example Road 88号"), "ExternalReceiptAssistPayload redacts address-like lines")
         reporter.check(!payload.sanitizedText.contains("X510123456789"), "ExternalReceiptAssistPayload redacts sample file identifiers")
         reporter.check(payload.redactionCount >= 6, "ExternalReceiptAssistPayload records redaction count")
+
+        let longText = String(repeating: "Demo Coffee 支付成功 23.80\n", count: 80)
+        let cappedPayload = ExternalReceiptAssistPayloadBuilder().build(rawText: longText, source: .alipay)
+        reporter.check(cappedPayload.sanitizedText.count <= 800, "ExternalReceiptAssistPayload defaults to compact 800-character cap")
     }
 
     private static func verifyExternalReceiptAssistGate(reporter: RegressionReporter) {
@@ -463,6 +467,7 @@ struct OfflineRegression {
 
         reporter.check(requestJSON.contains("\"model\""), "ExternalReceiptAssistOpenAICompatibleCodec includes model")
         reporter.check(requestJSON.contains("merchantCandidates"), "ExternalReceiptAssistOpenAICompatibleCodec asks for merchant candidates")
+        reporter.check(!requestJSON.contains("explanation"), "ExternalReceiptAssistOpenAICompatibleCodec does not request explanation by default")
         reporter.check(requestJSON.contains("Demo Coffee"), "ExternalReceiptAssistOpenAICompatibleCodec includes sanitized text")
         reporter.check(!requestJSON.contains("raw OCR"), "ExternalReceiptAssistOpenAICompatibleCodec avoids raw OCR wording")
 

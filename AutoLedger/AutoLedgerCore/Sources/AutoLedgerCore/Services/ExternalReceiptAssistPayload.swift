@@ -187,7 +187,7 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
         You are AutoLedger's redacted receipt merchant assistant. Return JSON only.
         Find likely real merchant names from minimized redacted payment OCR text.
         Do not infer or return transaction amount, account, card, order id, address, or personal data.
-        Output keys: merchantCandidates, categoryHint, confidence, explanation.
+        Output keys: merchantCandidates, categoryHint, confidence.
         merchantCandidates must be ordered by likelihood and should prefer store or brand names over rewards, coupons, banks, payment methods, addresses, routes, or UI labels.
         categoryHint may be dining, transport, groceries, digital, shopping, other, or null.
         confidence must be a number from 0 to 1.
@@ -263,7 +263,7 @@ public struct ExternalReceiptAssistPayloadBuilder: Sendable {
     public func build(
         rawText: String,
         source: ReceiptSource,
-        maxCharacters: Int = 1_200
+        maxCharacters: Int = 800
     ) -> ExternalReceiptAssistPayload {
         let lines = rawText
             .replacingOccurrences(of: "\r\n", with: "\n")

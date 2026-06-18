@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-17（v1.5.1 仓库侧收尾）
+更新日期：2026-06-18（外部辅助识别请求瘦身）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-204 外部辅助识别请求瘦身
+- 日期：2026-06-18
+- 所属版本：v1.5.1
+- 所属阶段：正式发布
+- 类型：性能优化 / 隐私 / 测试
+- 目标：在保持外部辅助识别高频触发策略不变的前提下，降低单次外部 API 请求 payload 和输出 token 规模。
+- 改动范围：`ExternalReceiptAssistPayloadBuilder` 默认截断上限从 1200 字符降到 800 字符；OpenAI-compatible prompt 不再要求模型返回 explanation；调试记录的外部辅助响应摘要不再展示 explanation；离线回归补充 payload 800 字符上限和默认不请求 explanation 的断言；同步回填 CHANGELOG。
+- 未改动范围：未调整外部 Assist 触发频率、provider / model / endpoint 默认值、API key 存储、规则识别优先级、金额合并策略、UI 开关或 App Store Connect 配置。
+- 完成内容：外部辅助识别仍会积极参与疑难商户识别，但每次请求更短，模型输出字段更少；兼容解码仍保留 explanation 字段，避免自定义 provider 或旧响应返回 explanation 时失败。
+- 未完成内容：未接入 provider 级别流式输出、软超时、缓存或动态 payload 选线；这些可作为后续性能优化项。
+- 测试情况：执行 `git diff --check`、`bash scripts/run_offline_regression.sh`、主 App generic iOS Debug build，结果 PASS。
+- 风险与注意事项：payload 截断更短后，极长 OCR 文本中靠后的商户候选可能不进入外部请求；当前保留高频触发策略，后续可再做“金额/商户附近行优先保留”来降低此风险。
+- 回滚方式：将默认 `maxCharacters` 恢复为 1200，并把 prompt / 调试摘要恢复为包含 explanation；移除新增回归断言和本次文档记录。
+- 结论：本轮完成，外部辅助识别请求已瘦身，同时不降低触发频率。
+- 下一步建议：真机继续观察外部 API 最近 / 平均 / P50 / P90 指标，重点看 P50 是否下降、P90 是否更稳定。
+
+### ITER-203 设置页后续计划说明更新
+- 日期：2026-06-18
+- 所属版本：v1.5.1
+- 所属阶段：正式发布
+- 类型：文案 / 本地化
+- 目标：将设置页“当前版本”和“后续计划”从偏内部开发 / 发布总结的口径更新为更适合 App 内展示的用户可读说明。
+- 改动范围：更新简体中文、繁体中文、英文 `settings.version.body` 与 `settings.release_status.body` 本地化文案；同步回填 CHANGELOG。
+- 未改动范围：未调整设置页布局、版本号、构建号、功能逻辑、App Store Connect 配置、发布计划或多账本实现。
+- 完成内容：当前版本说明改为面向用户描述 iPhone / iPad / Apple Watch / Mac 快速记账、iCloud 同步、截图 / 小票识别、账单编辑保存和可选脱敏外部辅助识别；后续计划改为说明下一阶段继续打磨 Mac 与全平台体验、评估 tvOS / visionOS 展示版、优化截图 / 小票 / 复杂支付场景识别，并明确多账本后续版本单独规划。
+- 未完成内容：未执行 Xcode 构建；本轮仅做本地化文案与文档记录。
+- 测试情况：执行三语 `Localizable.strings` plist lint，结果 PASS；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：文案使用“评估”而非承诺 tvOS / visionOS 已落地，避免与当前发布能力不一致。
+- 回滚方式：恢复三语 `settings.version.body` 与 `settings.release_status.body` 至上一版本，并移除本次 CHANGELOG / iteration log 记录。
+- 结论：本轮完成，设置页版本说明已与 v1.5.1 当前能力和后续产品路线对齐。
+- 下一步建议：提交前如需，可在真机或模拟器设置页快速复核三语展示。
 
 ### ITER-202 修复简体中文本地化 plist 解析失败
 - 日期：2026-06-17

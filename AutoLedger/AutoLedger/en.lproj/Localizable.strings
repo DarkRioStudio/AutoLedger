@@ -498,11 +498,11 @@
 "settings.support.title" = "Support AutoLedger";
 "settings.support.subtitle" = "Optional support for independent development; no features are unlocked";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "This release has been polished for iPhone, iPad, Apple Watch, and Mac, with iCloud sync, improved screenshot and receipt recognition, more reliable bill editing and saving, and optional redacted external recognition assistance.";
+"settings.version.body" = "This version brings quick expense capture to iPhone, iPad, Apple Watch, and Mac, with improved iCloud sync, screenshot recognition, receipt recognition, and bill editing. When needed, you can manually enable redacted external recognition assist for more complex merchant text.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "All ledger data is stored on your device and synced across your Apple devices via iCloud (CloudKit). AutoLedger does not use third-party analytics. OCR and LLM inference run locally. Network requests include iCloud sync (scoped to your Apple ID) and Gemma model version checking and download via CDN; no ledger content is transmitted. The optional External Recognition Assist feature is off by default; when enabled, it sends only a redacted summary to external services and never transmits raw screenshots or full ledger data.";
 "settings.release_status.title" = "Coming Next";
-"settings.release_status.body" = "Internal 1.5.0 development has started, focused on the iPad workspace, batch import and recognition, multi-ledger cleanup, and Watch daily-spend widgets.";
+"settings.release_status.body" = "Next we will keep polishing the Mac and cross-platform experience, evaluate tvOS and visionOS showcase editions, and improve screenshot, receipt, and complex payment recognition. Multi-ledger support will be planned separately in a later release.";
 
 "support.title" = "Support AutoLedger";
 "support.description" = "AutoLedger is currently free to use. If it saves you time, you can support future development here.";
