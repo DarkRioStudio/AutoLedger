@@ -1172,6 +1172,47 @@ struct OfflineRegression {
             "TransactionSyncConflictResolver applies higher remote revision"
         )
 
+        let localEditedMetro = TransactionSyncRecord(
+            transaction: Transaction(
+                id: transactionID,
+                merchant: "地铁：琅西→金湖广场",
+                amount: 1.8,
+                occurredAt: baseTransaction.occurredAt,
+                category: .transport,
+                source: .manual,
+                note: "user edited metro station"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_000_040),
+                syncRevision: 2,
+                deviceID: "local-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        let remoteStaleMetro = TransactionSyncRecord(
+            transaction: Transaction(
+                id: transactionID,
+                merchant: "地铁：琅西 →",
+                amount: 1.8,
+                occurredAt: baseTransaction.occurredAt,
+                category: .transport,
+                source: .manual,
+                note: "user edited metro station"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: Date(timeIntervalSince1970: 1_780_000_030),
+                syncRevision: 3,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        reporter.check(
+            TransactionSyncConflictResolver.resolve(local: localEditedMetro, remote: remoteStaleMetro) == .keepLocal,
+            "TransactionSyncConflictResolver preserves newer local metro merchant edits even when remote revision is higher"
+        )
+
         let remoteConflict = TransactionSyncRecord(
             transaction: Transaction(
                 id: transactionID,
@@ -2023,6 +2064,49 @@ struct OfflineRegression {
         let conflictMetadata = try store.loadTransactionSyncMetadata(transactionID: conflictID)
         reporter.check(conflictOutcome == .conflictPendingReview, "SQLite remote sync flags same-revision divergent conflict")
         reporter.check(conflictMetadata?.conflictState == .conflictPendingReview, "SQLite remote sync stores conflict state")
+
+        let localEditID = UUID(uuidString: "00000000-0000-0000-0000-000000151503") ?? UUID()
+        let localMetroOriginal = Transaction(
+            id: localEditID,
+            merchant: "地铁：琅西 →",
+            amount: 1.8,
+            occurredAt: Date(timeIntervalSince1970: 1_780_250_000),
+            category: .transport,
+            source: .manual,
+            note: "快捷指令自动记账"
+        )
+        try store.save(transaction: localMetroOriginal)
+        let localMetroEdited = Transaction(
+            id: localEditID,
+            merchant: "地铁：琅西→金湖广场",
+            amount: 1.8,
+            occurredAt: localMetroOriginal.occurredAt,
+            category: .transport,
+            source: .manual,
+            note: "快捷指令自动记账"
+        )
+        try store.update(transaction: localMetroEdited)
+        guard let localEditMetadata = try store.loadTransactionSyncMetadata(transactionID: localEditID) else {
+            reporter.check(false, "SQLite local edit exposes sync metadata")
+            return
+        }
+        let staleRemoteMetro = TransactionSyncRecord(
+            transaction: localMetroOriginal,
+            metadata: TransactionSyncMetadata(
+                transactionID: localEditID,
+                updatedAt: localEditMetadata.updatedAt.addingTimeInterval(-60),
+                syncRevision: localEditMetadata.syncRevision + 1,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(localEditID.uuidString)"
+            )
+        )
+        let staleRemoteOutcome = try store.applyRemoteSyncRecord(staleRemoteMetro)
+        let transactionsAfterStaleRemote = try store.loadTransactions()
+        reporter.check(staleRemoteOutcome == .keptLocal, "SQLite remote sync keeps newer local metro merchant edit")
+        reporter.check(
+            transactionsAfterStaleRemote.contains(localMetroEdited),
+            "SQLite remote sync does not overwrite edited metro merchant with stale remote value"
+        )
 
         let batchInsertID = UUID(uuidString: "00000000-0000-0000-0000-000000151502") ?? UUID()
         let batchUpdateID = batchInsertID

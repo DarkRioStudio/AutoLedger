@@ -109,17 +109,17 @@ public enum TransactionSyncConflictResolver {
             return .conflictPendingReview
         }
 
-        if remote.metadata.syncRevision > local.metadata.syncRevision {
-            return .applyRemote
-        }
-        if local.metadata.syncRevision > remote.metadata.syncRevision {
-            return .keepLocal
-        }
-
         if remote.metadata.updatedAt > local.metadata.updatedAt {
             return .applyRemote
         }
         if local.metadata.updatedAt > remote.metadata.updatedAt {
+            return .keepLocal
+        }
+
+        if remote.metadata.syncRevision > local.metadata.syncRevision {
+            return .applyRemote
+        }
+        if local.metadata.syncRevision > remote.metadata.syncRevision {
             return .keepLocal
         }
 

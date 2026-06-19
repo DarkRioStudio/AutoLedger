@@ -18,6 +18,9 @@
 - [2026-06-19 +0800] 完成 `GOAL-1710` 订阅管理基础 CRUD：订阅管理页新增手动新增订阅入口，编辑页补齐状态字段，支持暂停 / 恢复 / 取消订阅；暂停或取消后的订阅不再进入即将扣费、月度 / 年度摘要和本地提醒调度。`AutoLedgerCore.Subscription` 新增 `active / paused / canceled` 状态并兼容旧备份默认 active，SQLite 订阅表新增 `status` 字段和迁移，离线回归覆盖 Codable 兼容、SQLite 持久化与备份恢复。本轮不实现账单转订阅、AI 订阅判断或多账本订阅归属，不修改 signing / entitlements / Xcode Cloud 配置。
 - [2026-06-19 +0800] 推进 `v1.6.0` 第一版：将内部开发线固定对应 App Store / ASC `1.5.0`，全 target `MARKETING_VERSION` 从 `1.4.0` 提升到 `1.5.0`；`versions/v1.6.0-plan.md` 从 Draft 调整为 Active，并将 `GOAL-1700` 标记完成。同步更新 README / README.en Roadmap 与版本读取兜底值。本轮不实现新功能，不修改 Bundle ID、signing team、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
 
+### 修复（v1.6.0）
+- [2026-06-19 +0800] 修复账单编辑后可能被 iCloud 旧远端记录覆盖的问题：`TransactionSyncConflictResolver` 对同一账单优先比较 `updatedAt`，仅在更新时间相同后再使用设备本地 `syncRevision` 作次级判断，避免“远端旧内容但 revision 更高”覆盖刚保存的本地商户编辑。新增离线回归覆盖 `地铁：琅西 →` 手动补全为 `地铁：琅西→金湖广场` 后，旧远端同步回放不会覆盖本地编辑。本轮不修改地铁 / 南宁地铁解析规则或金额计算。
+
 ### 修复（v1.5.1）
 - [2026-06-17 +0800] 修复简体中文 `Localizable.strings` 中设置页隐私策略文案未转义英文双引号导致的 plist 解析失败；改用中文引号包裹“外部辅助识别”，恢复 Xcode Cloud 对本地化资源的 property list validation。已验证三语 `Localizable.strings` 与仓库 plist / strings 资源 lint 通过。
 - [2026-06-17 +0800] 修正 App Store 截图管线升级后的视觉回归：iPhone store 渲染框放大并改为顶部 cover 裁切，避免 App 画面过小；iPhone 第三张 `02_watch_ecosystem` 改用 screenshot-only Watch 生态静态场景，避免“Apple Watch”标题下仍展示普通 iPhone 页面；Watch 第三张从旧确认页切换为 `watch_complication` 表盘复杂功能预览，并刷新 Watch 虚构演示数据；Mac 截图改为按 AutoLedger 窗口 ID 捕获并在渲染时裁掉系统阴影，避免被重叠窗口污染。已验证 `git diff --check`、`screenshots.json` JSON 校验、主 App iOS generic build、iPhone / Watch `zh-Hans` 导出、全平台 `zh-Hant` / `en` 导出、iPhone `zh-Hans` 重导出和 Mac `zh-Hant` 重导出通过，并清理旧 iPhone / Watch 输出残留。

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1740 tvOS 只读看板第一版）
+更新日期：2026-06-19（账单编辑同步冲突修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-212 账单编辑同步冲突修复
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 2 / 数据同步稳定性
+- 类型：Bugfix / 同步 / 测试
+- 目标：修复账单编辑保存后可能被 iCloud 旧远端记录覆盖，导致商户名补全看起来不生效的问题。
+- 改动范围：调整 `TransactionSyncConflictResolver` 的同一账单冲突判断顺序；新增离线回归覆盖本地手动补全地铁站名后，旧远端记录即使 `syncRevision` 更高也不会覆盖本地编辑；同步更新 `CHANGELOG.md` 和 `versions/v1.6.0-plan.md`。
+- 未改动范围：未修改地铁 / 南宁地铁解析规则、金额计算、CloudKit schema、SQLite schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：同一账单合并优先比较 `updatedAt`，只在更新时间相同后再比较设备本地 `syncRevision`；补充 resolver 层和 SQLite apply 层两组回归，覆盖 `地铁：琅西 →` 手动修改为 `地铁：琅西→金湖广场` 后不被旧远端覆盖。
+- 未完成内容：未做真机双设备重放验证；如果后续发现设备时钟严重偏移导致误判，需要再引入更明确的 CloudKit server change token / server timestamp 策略。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，结果 PASS。
+- 风险与注意事项：`syncRevision` 是设备本地递增值，不应作为跨设备全局新旧判断的首要依据；本轮改为本地优先保护最近用户编辑，但仍保留同时间戳下 revision 次级判断。
+- 回滚方式：回退 `SyncMetadata.swift` 中冲突判断顺序和 `scripts/OfflineRegression.swift` 新增用例，并恢复本轮文档记录。
+- 结论：本轮完成，账单编辑保存后的本地新内容不会再被更新时间更早的远端记录覆盖。
+- 下一步建议：真机上复测同一条地铁账单，编辑补全箭头后的终点站，等待 iCloud 同步后确认 iPhone / iPad 均保留编辑后的商户名。
 
 ### ITER-211 GOAL-1740 tvOS 只读看板第一版
 - 日期：2026-06-19
