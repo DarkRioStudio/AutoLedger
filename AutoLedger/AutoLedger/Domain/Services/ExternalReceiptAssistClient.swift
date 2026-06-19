@@ -1,4 +1,5 @@
 import AutoLedgerCore
+import CryptoKit
 import Foundation
 import Security
 
@@ -8,6 +9,7 @@ enum ExternalReceiptAssistSettings {
     static let endpointKey = "externalReceiptAssistEndpoint"
     static let modelKey = "externalReceiptAssistModel"
     static let apiKeyEnvironmentKey = "AUTOLEDGER_EXTERNAL_RECEIPT_ASSIST_API_KEY"
+    static let cacheStorageKey = "externalReceiptAssistShortTermCache.v1"
 
     static var isEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: enabledKey) }
@@ -98,6 +100,10 @@ enum ExternalReceiptAssistSettings {
         ExternalReceiptAssistAPIKeyStore.delete()
     }
 
+    static func clearShortTermCache() {
+        UserDefaults.standard.removeObject(forKey: cacheStorageKey)
+    }
+
     private static var storedAPIKey: String? {
         try? ExternalReceiptAssistAPIKeyStore.read()
     }
@@ -173,6 +179,7 @@ protocol ExternalReceiptAssistClientProtocol: Sendable {
 struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
     private let gate = ExternalReceiptAssistGate()
     private let codec = ExternalReceiptAssistOpenAICompatibleCodec()
+    private let cache = ExternalReceiptAssistShortTermCache()
 
     func requestSuggestion(
         payload: ExternalReceiptAssistPayload,
@@ -185,6 +192,10 @@ struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
         }
         guard let endpointURL = decision.endpointURL else {
             throw ExternalReceiptAssistClientError.missingEndpoint
+        }
+
+        if let cached = cache.suggestion(for: payload, configuration: configuration, now: Date()) {
+            return cached
         }
 
         var request = URLRequest(url: endpointURL)
@@ -204,6 +215,89 @@ struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
             throw ExternalReceiptAssistClientError.httpStatus(httpResponse.statusCode)
         }
 
-        return try codec.decodeSuggestion(from: data)
+        let suggestion = try codec.decodeSuggestion(from: data)
+        cache.store(suggestion, for: payload, configuration: configuration, now: Date())
+        return suggestion
+    }
+}
+
+private struct ExternalReceiptAssistShortTermCache: Sendable {
+    private let policy = ExternalReceiptAssistCachePolicy()
+
+    init() {}
+
+    func suggestion(
+        for payload: ExternalReceiptAssistPayload,
+        configuration: ExternalReceiptAssistConfiguration,
+        now: Date
+    ) -> ExternalReceiptAssistSuggestion? {
+        let cacheKey = makeCacheKey(payload: payload, configuration: configuration)
+        var records = loadRecords()
+        records = policy.pruned(records, now: now)
+        persist(records)
+        return policy.usableSuggestion(
+            from: records[cacheKey],
+            expectedCacheKey: cacheKey,
+            now: now
+        )
+    }
+
+    func store(
+        _ suggestion: ExternalReceiptAssistSuggestion,
+        for payload: ExternalReceiptAssistPayload,
+        configuration: ExternalReceiptAssistConfiguration,
+        now: Date
+    ) {
+        let cacheKey = makeCacheKey(payload: payload, configuration: configuration)
+        let record = policy.makeRecord(
+            suggestion: suggestion,
+            cacheKey: cacheKey,
+            payload: payload,
+            configuration: configuration,
+            endpointFingerprint: fingerprint(configuration.endpointURLString),
+            createdAt: now
+        )
+        var records = loadRecords()
+        records[cacheKey] = record
+        persist(policy.pruned(records, now: now))
+    }
+
+    private func makeCacheKey(
+        payload: ExternalReceiptAssistPayload,
+        configuration: ExternalReceiptAssistConfiguration
+    ) -> String {
+        policy.makeCacheKey(
+            payload: payload,
+            configuration: configuration,
+            sanitizedTextHash: fingerprint(payload.sanitizedText),
+            endpointFingerprint: fingerprint(configuration.endpointURLString)
+        )
+    }
+
+    private func loadRecords() -> [String: ExternalReceiptAssistCacheRecord] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let data = UserDefaults.standard.data(forKey: ExternalReceiptAssistSettings.cacheStorageKey),
+              let records = try? decoder.decode([String: ExternalReceiptAssistCacheRecord].self, from: data) else {
+            return [:]
+        }
+        return records
+    }
+
+    private func persist(_ records: [String: ExternalReceiptAssistCacheRecord]) {
+        if records.isEmpty {
+            UserDefaults.standard.removeObject(forKey: ExternalReceiptAssistSettings.cacheStorageKey)
+            return
+        }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(records) else { return }
+        UserDefaults.standard.set(data, forKey: ExternalReceiptAssistSettings.cacheStorageKey)
+    }
+
+    private func fingerprint(_ value: String?) -> String {
+        let normalized = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let digest = SHA256.hash(data: Data(normalized.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

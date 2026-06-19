@@ -46,6 +46,7 @@ struct OfflineRegression {
         verifyExternalReceiptAssistGate(reporter: reporter)
         verifyExternalReceiptAssistProviderPresets(reporter: reporter)
         verifyExternalReceiptAssistOpenAICompatibleCodec(reporter: reporter)
+        verifyExternalReceiptAssistCachePolicy(reporter: reporter)
         verifyExternalReceiptAssistSuggestionMapping(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         await verifyLedgerTextInterpreterTransitShortcut(reporter: reporter)
@@ -501,6 +502,113 @@ struct OfflineRegression {
         let snakeDecoded = try? codec.decodeSuggestion(from: snakeData)
         reporter.check(snakeDecoded?.merchantCandidates.first == "Demo Cloud", "ExternalReceiptAssistOpenAICompatibleCodec decodes snake case merchants")
         reporter.check(snakeDecoded?.subscriptionHint?.serviceName == "Demo Cloud", "ExternalReceiptAssistOpenAICompatibleCodec decodes snake case subscription hint")
+    }
+
+    private static func verifyExternalReceiptAssistCachePolicy(reporter: RegressionReporter) {
+        let policy = ExternalReceiptAssistCachePolicy()
+        let payload = ExternalReceiptAssistPayload(
+            source: .alipay,
+            sanitizedText: "支付成功\nDemo Coffee\n支付金额 23.80",
+            redactionCount: 0
+        )
+        let configuration = ExternalReceiptAssistConfiguration(
+            isEnabled: true,
+            endpointURLString: "https://api.deepseek.com/chat/completions",
+            hasAPIKey: true,
+            provider: .deepSeek,
+            modelName: "deepseek-v4-flash"
+        )
+        let key = policy.makeCacheKey(
+            payload: payload,
+            configuration: configuration,
+            sanitizedTextHash: "hash-demo-001",
+            endpointFingerprint: "endpoint-hash-001"
+        )
+        reporter.check(!key.contains("Demo Coffee"), "ExternalReceiptAssistCachePolicy key never embeds sanitized OCR text")
+        reporter.check(key.contains("hash-demo-001"), "ExternalReceiptAssistCachePolicy key uses supplied sanitized hash")
+
+        let otherModelKey = policy.makeCacheKey(
+            payload: payload,
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "https://api.deepseek.com/chat/completions",
+                hasAPIKey: true,
+                provider: .deepSeek,
+                modelName: "qwen-plus"
+            ),
+            sanitizedTextHash: "hash-demo-001",
+            endpointFingerprint: "endpoint-hash-001"
+        )
+        reporter.check(key != otherModelKey, "ExternalReceiptAssistCachePolicy isolates provider model changes")
+
+        let otherEndpointKey = policy.makeCacheKey(
+            payload: payload,
+            configuration: configuration,
+            sanitizedTextHash: "hash-demo-001",
+            endpointFingerprint: "endpoint-hash-002"
+        )
+        reporter.check(key != otherEndpointKey, "ExternalReceiptAssistCachePolicy isolates endpoint changes")
+
+        let otherSourceKey = policy.makeCacheKey(
+            payload: ExternalReceiptAssistPayload(
+                source: .wechat,
+                sanitizedText: payload.sanitizedText,
+                redactionCount: payload.redactionCount
+            ),
+            configuration: configuration,
+            sanitizedTextHash: "hash-demo-001",
+            endpointFingerprint: "endpoint-hash-001"
+        )
+        reporter.check(key != otherSourceKey, "ExternalReceiptAssistCachePolicy isolates receipt source changes")
+
+        let suggestion = ExternalReceiptAssistSuggestion(
+            merchantCandidates: ["Demo Coffee"],
+            categoryHint: "dining",
+            explanation: nil,
+            confidence: 0.88,
+            subscriptionHint: ExternalReceiptAssistSubscriptionHint(
+                isSubscription: false,
+                serviceName: nil,
+                billingCycle: nil,
+                confidence: 0.12
+            )
+        )
+        let now = Date(timeIntervalSince1970: 1_780_000_000)
+        let record = policy.makeRecord(
+            suggestion: suggestion,
+            cacheKey: key,
+            payload: payload,
+            configuration: configuration,
+            endpointFingerprint: "endpoint-hash-001",
+            createdAt: now,
+            ttl: 60
+        )
+        reporter.check(record.expiresAt == now.addingTimeInterval(60), "ExternalReceiptAssistCachePolicy records TTL expiry")
+        reporter.check(
+            policy.usableSuggestion(from: record, expectedCacheKey: key, now: now.addingTimeInterval(30)) == suggestion,
+            "ExternalReceiptAssistCachePolicy returns live cached suggestion"
+        )
+        reporter.check(
+            policy.usableSuggestion(from: record, expectedCacheKey: key, now: now.addingTimeInterval(61)) == nil,
+            "ExternalReceiptAssistCachePolicy rejects expired cached suggestion"
+        )
+        reporter.check(
+            policy.usableSuggestion(from: record, expectedCacheKey: otherModelKey, now: now.addingTimeInterval(30)) == nil,
+            "ExternalReceiptAssistCachePolicy rejects mismatched cache key"
+        )
+
+        let expired = policy.makeRecord(
+            suggestion: suggestion,
+            cacheKey: "expired",
+            payload: payload,
+            configuration: configuration,
+            endpointFingerprint: "endpoint-hash-001",
+            createdAt: now.addingTimeInterval(-120),
+            ttl: 30
+        )
+        let pruned = policy.pruned([key: record, "expired": expired], now: now)
+        reporter.check(pruned[key] == record, "ExternalReceiptAssistCachePolicy keeps live records while pruning")
+        reporter.check(pruned["expired"] == nil, "ExternalReceiptAssistCachePolicy prunes expired records")
     }
 
     private static func verifyExternalReceiptAssistSuggestionMapping(reporter: RegressionReporter) {
