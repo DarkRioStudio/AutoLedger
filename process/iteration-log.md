@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1715 账单详情创建订阅）
+更新日期：2026-06-19（GOAL-1720 外部辅助识别订阅 hint）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-208 GOAL-1720 外部辅助识别订阅 hint
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 1 / 订阅管理补强
+- 类型：能力增强 / 解析链路 / 测试
+- 目标：让外部辅助识别返回订阅候选判断，并在调试记录中可见，但不自动创建订阅。
+- 改动范围：`ExternalReceiptAssistSuggestion` 新增 `subscriptionHint`；新增 `ExternalReceiptAssistSubscriptionHint` 结构；OpenAI-compatible codec 提示词要求模型返回订阅 hint，并兼容 camelCase / snake_case；`SmartReceiptParser` 外部 Assist trace 增加订阅 hint 摘要；离线回归新增请求提示和解码断言。
+- 未改动范围：未自动写入订阅管理；未在入账后弹出订阅创建提示；未实现订阅倾向学习缓存或短期识别缓存；未修改 SQLite schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：外部模型可返回 `isSubscription / serviceName / billingCycle / confidence`；调试导出中的模型输出会显示 `subscriptionHint`；如果模型只返回订阅 hint 而没有有效商户增强，系统保留规则解析账单，只记录外部 Assist trace。
+- 未完成内容：高置信订阅 hint 后的用户确认提示、商户 / 分类 / 订阅倾向学习缓存和短期结果缓存继续按 `GOAL-1730 / 1735` 推进。
+- 测试情况：执行 `git diff --check`、`bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh` 和主 App iOS generic Debug build，结果 PASS。
+- 风险与注意事项：订阅 hint 目前只是调试可见的候选判断，不进入正式订阅数据；实际自动提示前需要再设计误判处理、重复订阅检测和用户确认文案。
+- 回滚方式：恢复 `ExternalReceiptAssistPayload.swift`、`SmartReceiptParser.swift`、`scripts/OfflineRegression.swift` 与本轮文档记录即可；本轮没有 schema 迁移。
+- 结论：本轮完成，外部辅助识别已经具备订阅 hint 观测能力。
+- 下一步建议：进入 `GOAL-1730`，先设计商户 / 分类 / 订阅倾向学习缓存边界，尤其明确不缓存原始 OCR 和敏感字段。
 
 ### ITER-207 GOAL-1715 账单详情创建订阅
 - 日期：2026-06-19
