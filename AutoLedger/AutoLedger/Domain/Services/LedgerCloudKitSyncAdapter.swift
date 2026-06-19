@@ -288,6 +288,44 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
+    func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let mappedRecord = try Self.mapDashboardSnapshotRecord(payload)
+        let dryRunResult = LedgerCloudKitDryRunResult(
+            mode: mode,
+            upsertCount: 1,
+            tombstoneCount: 0,
+            expiredTombstoneCount: 0,
+            mappedRecords: [mappedRecord]
+        )
+
+        do {
+            return try await modifyRecords(
+                recordsToSave: [makeCKRecord(from: mappedRecord)],
+                recordIDsToDelete: [],
+                dryRunResult: dryRunResult
+            )
+        } catch {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: Self.fieldSummary(for: makeCKRecord(from: mappedRecord)),
+                probeSummary: "dashboard-snapshot-save",
+                message: Self.describe(error)
+            )
+        }
+    }
+
     func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
         let recordID = CKRecord.ID(recordName: mappedRecord.recordName)
         let record = CKRecord(recordType: mappedRecord.recordType, recordID: recordID)
@@ -593,6 +631,28 @@ struct LedgerCloudKitSyncAdapter {
             recordName: payload.recordName,
             fields: [
                 CloudLedgerSyncSchema.Field.updatedAt: .date(payload.updatedAt),
+                CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
+                CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
+            ]
+        )
+    }
+
+    private static func mapDashboardSnapshotRecord(_ payload: LedgerDashboardCloudSnapshot) throws -> LedgerCloudKitMappedRecord {
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        guard let json = String(data: encoded, encoding: .utf8) else {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: "payloadJSON=encodingFailed",
+                probeSummary: "dashboard-snapshot-encode",
+                message: "Dashboard snapshot payload could not be encoded as UTF-8."
+            )
+        }
+
+        return LedgerCloudKitMappedRecord(
+            recordType: CloudLedgerSyncSchema.RecordType.dashboardSnapshot,
+            recordName: payload.recordName,
+            fields: [
+                CloudLedgerSyncSchema.Field.updatedAt: .date(payload.generatedAt),
                 CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
                 CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
             ]

@@ -6,6 +6,7 @@
 //
 
 import AutoLedgerCore
+import CloudKit
 import SwiftUI
 
 private typealias LedgerTransaction = AutoLedgerCore.Transaction
@@ -133,7 +134,11 @@ struct ContentView: View {
     }
 
     nonisolated private static func loadTransactions() async throws -> [LedgerTransaction] {
-        try await Task.detached(priority: .userInitiated) {
+        if let snapshot = try? await VisionDashboardCloudSnapshotClient.fetchSnapshot() {
+            return sortForDashboard(snapshot.displayTransactions)
+        }
+
+        return try await Task.detached(priority: .userInitiated) {
             let store = try SQLiteTransactionStore()
             return try store.loadTransactions()
                 .filter { $0.amount > 0 }
@@ -144,6 +149,43 @@ struct ContentView: View {
                     return lhs.occurredAt > rhs.occurredAt
                 }
         }.value
+    }
+
+    nonisolated private static func sortForDashboard(_ transactions: [LedgerTransaction]) -> [LedgerTransaction] {
+        transactions
+            .filter { $0.amount > 0 }
+            .sorted { lhs, rhs in
+                if lhs.occurredAt == rhs.occurredAt {
+                    return lhs.merchant < rhs.merchant
+                }
+                return lhs.occurredAt > rhs.occurredAt
+            }
+    }
+}
+
+private enum VisionDashboardCloudSnapshotClient {
+    static func fetchSnapshot() async throws -> LedgerDashboardCloudSnapshot? {
+        let recordID = CKRecord.ID(recordName: CloudLedgerSyncSchema.dashboardSnapshotRecordName())
+
+        do {
+            let record = try await CKContainer.default().privateCloudDatabase.record(for: recordID)
+            guard
+                let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
+                let data = json.data(using: .utf8)
+            else {
+                return nil
+            }
+
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(LedgerDashboardCloudSnapshot.self, from: data)
+        } catch {
+            if let ckError = error as? CKError,
+               ckError.code == .unknownItem {
+                return nil
+            }
+            throw error
+        }
     }
 }
 

@@ -1668,9 +1668,10 @@ extension LedgerStore {
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
             refreshFromStore()
+            let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
+            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -1707,9 +1708,10 @@ extension LedgerStore {
             let result = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
             refreshFromStore()
+            let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")。")
+            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -1764,8 +1766,9 @@ extension LedgerStore {
             }
 
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
+            let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
-            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条，配置\(result.configurationSaved ? "已推送" : "无需推送")。")
+            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条，配置\(result.configurationSaved ? "已推送" : "无需推送")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
             return true
         } catch {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
@@ -1833,6 +1836,24 @@ extension LedgerStore {
             keptLocal: summary.keptLocal,
             conflicts: summary.conflicts
         )
+    }
+
+    private func publishDashboardSnapshot(adapter: LedgerCloudKitSyncAdapter) async -> Bool {
+        updateLedgerCloudSyncStatus("正在发布 tvOS / visionOS 只读看板快照...")
+        do {
+            let now = Date()
+            let payload = LedgerDashboardCloudSnapshot(
+                transactions: transactions,
+                generatedAt: now,
+                referenceDate: now,
+                deviceID: localSyncDeviceID
+            )
+            _ = try await adapter.pushDashboardSnapshot(payload)
+            return true
+        } catch {
+            updateLedgerCloudSyncStatus("大屏只读快照发布失败：\(LedgerCloudKitSyncAdapter.describe(error))")
+            return false
+        }
     }
 
     private func pullRemoteLedgerConfiguration(

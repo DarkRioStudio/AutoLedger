@@ -4,6 +4,7 @@ public enum CloudLedgerSyncSchema {
     public enum RecordType {
         public static let transaction = "LedgerTransaction"
         public static let configuration = "LedgerConfiguration"
+        public static let dashboardSnapshot = "LedgerDashboardSnapshot"
     }
 
     public enum Field {
@@ -29,6 +30,10 @@ public enum CloudLedgerSyncSchema {
 
     public static func configurationRecordName() -> String {
         "ledger-configuration-default"
+    }
+
+    public static func dashboardSnapshotRecordName() -> String {
+        "ledger-dashboard-snapshot-default"
     }
 }
 

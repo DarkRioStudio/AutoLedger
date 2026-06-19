@@ -4640,6 +4640,20 @@
 - 回滚方式：如需回退到上一条发布线，可将 `MARKETING_VERSION` 恢复为 `1.4.0`，并回退 README / v1.6.0 计划 / CHANGELOG / 迭代日志中的本轮状态记录。
 - 结论：本轮完成，下一步可进入 `GOAL-1710` 订阅管理基础 CRUD。
 
+### ITER-1755 tvOS / visionOS 只读看板同步入口
+- 日期：2026-06-20
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1755
+- 类型：能力增强 / 数据同步 / 多平台展示
+- 目标：让 tvOS / visionOS 首版展示页可以读取 iPhone / iPad / Mac 主 App 发布的 CloudKit 只读看板快照，而不是只能依赖本机 SQLite 空数据。
+- 改动范围：新增 `LedgerDashboardCloudSnapshot` 展示快照模型；扩展 `CloudLedgerSyncSchema` 增加 `LedgerDashboardSnapshot` record type；扩展 `LedgerCloudKitSyncAdapter` 支持发布快照；`LedgerStore` 在 iCloud 同步 / 拉取 / 推送后发布大屏快照；tvOS / visionOS 看板加载时优先拉取 CloudKit 快照并回退本机 SQLite；为 tvOS / visionOS target 增加 CloudKit entitlements；更新 v1.6.0 计划、CHANGELOG 与离线回归脚本。
+- 未改动范围：未让 tvOS / visionOS 写入账本；未同步原始截图、支付截图、小票图片、OCR 原文、调试记录、`syncRevision`、`idempotencyKey` 或冲突状态；未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、主 App iCloud Container、Xcode Cloud 脚本或 App Store Connect。
+- 完成内容：主 App 发布一份面向大屏只读展示的 dashboard snapshot；tvOS / visionOS 可优先读取同一 Apple ID private database 中的快照展示月度看板、分类、趋势、摘要和最近账单；没有快照时仍保留本机 SQLite fallback。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `bash scripts/run_golden_regression.sh`，结果 PASS；执行主 App iOS generic build，结果 PASS；执行 tvOS / visionOS `CODE_SIGNING_ALLOWED=NO` generic build，结果 PASS。tvOS / visionOS signed generic build 当前因 provisioning profile 尚未包含 iCloud capability / `iCloud.top.darkrio326.AutoLedger` container 而失败，归为人工配置项。
+- 风险与注意事项：签名构建 tvOS / visionOS 前，需要在 Apple Developer Portal 为 `top.darkrio326.AutoLedger.tv` 和 `top.darkrio326.AutoLedger.vision` 的 App ID 启用 iCloud / CloudKit 并包含 `iCloud.top.darkrio326.AutoLedger`，随后刷新 Xcode managed provisioning profile。CloudKit Console Development schema 会新增 `LedgerDashboardSnapshot`，进入 TestFlight / App Store 前需确认并部署 Production schema。快照发布失败不会阻断主账本同步，但 tvOS / visionOS 会看到旧快照或空状态。
+- 回滚方式：如新平台签名或 CloudKit schema 阻塞发布，可回退 tvOS / visionOS entitlement 与 CloudKit snapshot 拉取入口，保留首版本机 SQLite 只读看板；主账本 iCloud 同步链路可独立保留。
+- 结论：本轮完成，tvOS / visionOS 已具备只读跨设备数据入口；下一步进入 `GOAL-1760` 多端 polish 与真机 / 模拟器 smoke。
+
 ### ITER-005A 发布收口前的最小回归证据补齐
 - 日期：2026-03-27
 - 所属版本：v0.1.0

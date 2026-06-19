@@ -197,6 +197,10 @@ struct LedgerCloudKitSyncAdapter {
         LedgerCloudKitPushResult(savedRecordNames: [])
     }
 
+    func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
+        LedgerCloudKitPushResult(savedRecordNames: [])
+    }
+
     func fetchAllTransactionRecords() async throws -> [LedgerTransactionSyncPayload] {
         []
     }
@@ -221,6 +225,7 @@ swiftc \
   "$CORE/Models/TodaySpendingSummary.swift" \
   "$CORE/Models/SyncMetadata.swift" \
   "$CORE/Models/LedgerSyncPlan.swift" \
+  "$CORE/Models/LedgerDashboardCloudSnapshot.swift" \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \
