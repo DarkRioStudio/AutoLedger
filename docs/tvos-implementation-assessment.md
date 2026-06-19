@@ -1,26 +1,28 @@
 # AutoLedger tvOS 看板实现评估
 
 更新日期：2026-06-06
-适用目标：`GOAL-1581`
-当前状态：评估完成，可进入 tvOS 最小 UI 骨架实现
+适用目标：`GOAL-1581` / `GOAL-1740`
+当前状态：`GOAL-1740` 第一版只读 UI 已落地，CloudKit 只读数据入口待后续实现
 
 ## 1. 评估结论
 
-`AutoLedgerTV` 已经不是纯占位 target。
+`AutoLedgerTV` 已经不是纯占位 target。`GOAL-1740` 已将模板入口替换为第一版 tvOS 只读看板。
 
 当前可确认：
 
 1. `AutoLedgerTV` scheme 能被 `xcodebuild` 正常识别。
 2. `generic/platform=tvOS` 构建通过。
 3. tvOS Simulator destination 可解析，`Apple TV 4K (3rd generation)` 模拟器构建通过。
-4. 当前 target 仍是 Xcode 模板入口，只有 `WindowGroup -> ContentView -> Hello, world!`。
-5. 当前没有 tvOS 专属 entitlements，也没有账本展示数据入口。
+4. 当前 target 已有 `总览 / 分类 / 趋势 / 摘要` 四页只读 dashboard。
+5. 当前 target 已链接 `AutoLedgerCore`，复用 `MonthlySnapshot` 和 `TodaySpendingSummary` 派生展示指标。
+6. 当前没有 tvOS 专属 iCloud / CloudKit entitlements，也没有跨设备只读 CloudKit 数据入口。
 
 所以 `GOAL-1581` 的结论不是“tvOS 还不能动”，而是：
 
 - target 基线已可用
 - 运行目标已可解析
-- 下一步真正的工作不在工程接入，而在“只读数据入口”和“最小 dashboard scene”
+- 最小 dashboard scene 已落地
+- 下一步真正的工作不在工程接入，而在“CloudKit 只读数据入口 / dashboard snapshot”
 
 ## 2. 当前工程事实
 
@@ -39,13 +41,23 @@
 
 ### 2.2 运行入口现状
 
-当前 [AutoLedgerTVApp.swift](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/AutoLedger/AutoLedgerTV/AutoLedgerTVApp.swift) 和 [ContentView.swift](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/AutoLedger/AutoLedgerTV/ContentView.swift) 仍是模板：
+当前 [AutoLedgerTVApp.swift](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/AutoLedger/AutoLedgerTV/AutoLedgerTVApp.swift) 保持单 `WindowGroup`，入口仍然是 [ContentView.swift](/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio/AutoLedger/AutoLedgerTV/ContentView.swift)。
 
-- 单 `WindowGroup`
-- 单 `ContentView`
-- 无焦点导航模型
-- 无只读账本视图模型
-- 无数据加载状态
+`GOAL-1740` 后 `ContentView.swift` 包含：
+
+- `总览 / 分类 / 趋势 / 摘要` 四页切换
+- tvOS 专用只读 dashboard store
+- `loading / empty / unavailable / ready` 状态
+- 隐私隐藏切换
+- 本机正式账本 SQLite 只读加载
+- `MonthlySnapshot` / `TodaySpendingSummary` 指标派生
+
+仍未包含：
+
+- CloudKit 只读拉取
+- dashboard snapshot record
+- tvOS 专属同步状态
+- tvOS 三语本地化资源拆分
 
 ### 2.3 构建与 destinations 证据
 

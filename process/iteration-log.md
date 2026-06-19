@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1735 外部辅助识别短期缓存）
+更新日期：2026-06-19（GOAL-1740 tvOS 只读看板第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-211 GOAL-1740 tvOS 只读看板第一版
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 2 / tvOS 展示端
+- 类型：能力增强 / UI / 平台扩展
+- 目标：把 `AutoLedgerTV` 从模板入口推进为可构建运行的只读账本看板第一版。
+- 改动范围：`AutoLedgerTV` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerTV/ContentView.swift` 替换为 tvOS dashboard 根页面；`versions/v1.6.0-plan.md`、`docs/tvos-implementation-assessment.md` 和 `CHANGELOG.md` 回填状态。
+- 未改动范围：未修改主 App / Watch / Extension 的 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本；未新增 tvOS iCloud / CloudKit capability；未接 App Store Connect 平台；未加入导入、编辑、删除、数据清洗、多账本或真实样例数据。
+- 完成内容：新增 `总览 / 分类 / 趋势 / 摘要` 四页只读 dashboard；复用 `MonthlySnapshot` 和 `TodaySpendingSummary` 计算本月总览、分类占比、最近 7 天趋势、近 6 个月趋势、年度累计、Top 商户和最近账单；提供 loading、empty、unavailable 状态、刷新入口和隐私隐藏切换。
+- 未完成内容：tvOS 仍未接 CloudKit 只读正式账本拉取或 dashboard snapshot；当前 Apple TV 只读取 tvOS 本机正式账本 SQLite；未做 tvOS 真机 smoke、截图管线或 ASC 平台素材。
+- 测试情况：执行 `git diff --check`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build` 和主 App iOS generic Debug build，结果 PASS。tvOS build 仅保留 AppIntents metadata extraction warning，因为 target 不依赖 AppIntents，不影响构建。
+- 风险与注意事项：tvOS 当前有 UI 骨架和本地只读统计，但还不是跨设备家庭大屏最终数据链路；如果要在 Apple TV 上看到 iPhone / iPad 账本，需要后续单独实现 CloudKit dashboard snapshot 或只读拉取，并补能力配置与真机 smoke。
+- 回滚方式：回退 `feat(tvos): add read-only ledger dashboard` 提交，并恢复本轮文档记录；本轮没有 schema 迁移或 entitlements 变更。
+- 结论：本轮完成，`GOAL-1740` 已具备可构建运行的 tvOS 只读看板第一版。
+- 下一步建议：进入 `GOAL-1750` visionOS 展示版第一版；tvOS 跨设备数据入口另立后续小目标。
 
 ### ITER-210 GOAL-1735 外部辅助识别短期结果缓存
 - 日期：2026-06-19
