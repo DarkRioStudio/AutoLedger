@@ -34,6 +34,7 @@ enum ExternalReceiptAssistSettings {
             } else if newValue == .custom {
                 UserDefaults.standard.removeObject(forKey: modelKey)
             }
+            clearShortTermCache()
         }
     }
 
@@ -51,6 +52,7 @@ enum ExternalReceiptAssistSettings {
             } else {
                 UserDefaults.standard.removeObject(forKey: endpointKey)
             }
+            clearShortTermCache()
         }
     }
 
@@ -69,6 +71,7 @@ enum ExternalReceiptAssistSettings {
             } else {
                 UserDefaults.standard.set(trimmed, forKey: modelKey)
             }
+            clearShortTermCache()
         }
     }
 
@@ -98,6 +101,7 @@ enum ExternalReceiptAssistSettings {
 
     static func clearStoredAPIKey() {
         ExternalReceiptAssistAPIKeyStore.delete()
+        clearShortTermCache()
     }
 
     static func clearShortTermCache() {
