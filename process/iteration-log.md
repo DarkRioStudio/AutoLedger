@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1720 外部辅助识别订阅 hint）
+更新日期：2026-06-19（GOAL-1730 学习缓存设计）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-209 GOAL-1730 商户 / 分类 / 订阅倾向学习缓存设计
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 1 / 订阅管理补强
+- 类型：文档 / 架构设计 / 隐私边界
+- 目标：冻结商户、分类和订阅倾向学习缓存的安全边界，明确不缓存原始 OCR 和敏感字段。
+- 改动范围：新增 `docs/recognition-learning-cache-design.md`；`versions/v1.6.0-plan.md` 标记 `GOAL-1730` 完成并补充设计记录；`CHANGELOG.md` 回填本轮变更。
+- 未改动范围：未实现运行时代码；未新增 SQLite schema；未改变 iCloud 同步 schema；未修改 Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：学习缓存分层为 L1 用户确认规则、L2 商户级低风险画像、L3 短期脱敏 OCR hash 缓存；明确 L1 复用现有商户别名、分类修正和用户确认订阅；L2 只保存低风险商户级统计；L3 顺延到 `GOAL-1735`，不进入 iCloud 或 JSON 备份。
+- 未完成内容：短期脱敏 OCR hash 缓存、商户画像运行时代码、订阅提示负向学习和清除识别学习数据入口继续后续推进。
+- 测试情况：执行 `git diff --check`，结果 PASS。本轮仅文档设计，无需构建。
+- 风险与注意事项：后续实现必须继续遵守“缓存只增强候选，不覆盖金额和日期，不自动创建订阅”的边界；任何进入 iCloud 的学习数据都必须保持商户级低风险粒度。
+- 回滚方式：删除 `docs/recognition-learning-cache-design.md`，并恢复 `versions/v1.6.0-plan.md`、`CHANGELOG.md` 和本条 iteration log。
+- 结论：本轮完成，GOAL-1730 已冻结设计边界。
+- 下一步建议：进入 `GOAL-1735`，实现外部辅助识别短期脱敏 OCR hash 缓存，补 TTL 和隐私回归。
 
 ### ITER-208 GOAL-1720 外部辅助识别订阅 hint
 - 日期：2026-06-19
