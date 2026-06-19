@@ -10,6 +10,7 @@
 		0BECB7067388F3643094548F /* Pods_AutoLedger.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */; };
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
+		C0F1A8A02FD2A0000012F5E3 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8A12FD2A0000012F5E3 /* AutoLedgerCore */; };
 		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C030418E2FB4240500F02850 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C030418D2FB4240500F02850 /* AutoLedgerCore */; };
@@ -298,6 +299,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0F1A8A02FD2A0000012F5E3 /* AutoLedgerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -525,6 +527,7 @@
 			);
 			name = AutoLedgerTV;
 			packageProductDependencies = (
+				C0F1A8A12FD2A0000012F5E3 /* AutoLedgerCore */,
 			);
 			productName = AutoLedgerTV;
 			productReference = C0F1A87F2FD156E40012F5E3 /* AutoLedgerTV.app */;
@@ -1640,6 +1643,11 @@
 		C0F1A8922FD15B6C0012F5E3 /* RealityKitContent */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RealityKitContent;
+		};
+		C0F1A8A12FD2A0000012F5E3 /* AutoLedgerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AABB00010000000100000001 /* XCLocalSwiftPackageReference "AutoLedgerCore" */;
+			productName = AutoLedgerCore;
 		};
 		D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */ = {
 			isa = XCSwiftPackageProductDependency;
