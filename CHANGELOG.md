@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.0）
+- [2026-06-19 +0800] 完成 `GOAL-1750` visionOS 展示版第一版：`AutoLedgerVision` target 显式链接 `AutoLedgerCore`，从模板 `Model3D + Hello, world!` 替换为 SwiftUI 单窗口只读空间看板，包含月度支出空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表、隐私模式、刷新入口以及 loading / empty / unavailable 状态。首版继续保持 `WindowGroup`，不启用 immersive space / Volume，不新增导入、编辑、删除、清洗、多账本、CloudKit schema 或 SQLite schema；Apple Vision Pro simulator build、install、launch 和 empty 状态截图 smoke 已通过。
 - [2026-06-19 +0800] 完成 `GOAL-1740` tvOS 只读看板第一版：`AutoLedgerTV` target 显式链接 `AutoLedgerCore`，从模板入口替换为 `总览 / 分类 / 趋势 / 摘要` 四页只读 dashboard，复用 `MonthlySnapshot` 和 `TodaySpendingSummary` 展示本月支出、分类占比、最近趋势、年度累计、Top 商户和最近账单，并提供隐私隐藏与空状态。本轮不新增 tvOS iCloud / CloudKit capability、entitlements 或 CloudKit 只读拉取；Apple TV 当前读取本机正式账本，跨设备 dashboard snapshot / CloudKit 只读入口留待后续 GOAL。
 - [2026-06-19 +0800] 完成 `GOAL-1735` 外部辅助识别短期结果缓存：新增 L3 短期缓存，使用脱敏 OCR 文本 SHA-256 指纹、来源、provider、model 和 endpoint 指纹组成 key；缓存值只保存模型候选结果，默认 TTL 24 小时、最多 80 条，provider / endpoint / model / API key 变化会清理。缓存仅存在本机 `UserDefaults` 专用 key，不进入 iCloud 配置快照或 JSON 备份；不缓存原始 OCR、截图、脱敏 OCR 原文、金额、日期、订单号、卡号、手机号或地址。
 - [2026-06-19 +0800] 完成 `GOAL-1730` 商户 / 分类 / 订阅倾向学习缓存设计：新增 `docs/recognition-learning-cache-design.md`，将缓存拆为 L1 用户确认规则、L2 商户级低风险画像和 L3 短期脱敏 OCR hash 缓存。设计明确缓存只增强候选，不覆盖金额和日期，不自动保存账单，不自动创建订阅；原始 OCR、截图、完整支付文本、金额、时间、订单号、卡号、手机号和地址不得进入学习缓存。本轮仅文档设计，不新增 schema 或运行时代码。

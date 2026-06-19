@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（账单编辑同步冲突修复）
+更新日期：2026-06-19（GOAL-1750 visionOS 展示版第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-213 GOAL-1750 visionOS 展示版第一版
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 2 / visionOS 展示端
+- 类型：能力增强 / UI / 平台扩展
+- 目标：把 `AutoLedgerVision` 从模板入口推进为可构建、可运行的只读空间展示窗口第一版。
+- 改动范围：`AutoLedgerVision` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerVision/ContentView.swift` 替换模板 `Model3D + Hello, world!`；新增 SwiftUI 月度空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表、隐私模式、刷新入口和 loading / empty / unavailable 状态；同步更新 `versions/v1.6.0-plan.md`、`docs/visionos-implementation-assessment.md` 和 `CHANGELOG.md`。
+- 未改动范围：未修改主 App / Watch / Extension 的 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本；未启用 immersive space 或 Volume；未新增导入、编辑、删除、数据清洗、多账本、CloudKit schema、SQLite schema 或真实样例数据。
+- 完成内容：Vision 首版保持 `WindowGroup`，读取本机正式账本并复用 `MonthlySnapshot`、`TodaySpendingSummary` 派生展示；模拟器无账本数据时展示 empty 状态，不注入假数据；按钮样式改为自绘胶囊，避免 visionOS 默认 bordered 样式造成文字不可见。
+- 未完成内容：visionOS 仍未接 CloudKit 只读拉取或 dashboard snapshot；未做 Vision Pro 真机 smoke；未接 visionOS App Store 素材和截图管线；有真实账本数据后的四区展示仍需后续环境复测。
+- 测试情况：执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'platform=visionOS Simulator,name=Apple Vision Pro' build`、`xcrun simctl install`、`xcrun simctl launch top.darkrio326.AutoLedger.vision` 和 `xcrun simctl io ... screenshot`，结果 PASS；仅保留已知 AppIntents metadata extraction warning / Core formatter warning。
+- 风险与注意事项：当前 Vision 端有产品 UI 和本地只读数据入口，但还不是跨设备空间看板最终数据链路；如果要让 Vision Pro 直接看到 iPhone / iPad 账本，需要后续单独实现 CloudKit dashboard snapshot 或只读拉取，并补能力配置、真机 smoke 和素材。
+- 回滚方式：回退 `AutoLedgerVision` target 的 `AutoLedgerCore` 依赖与 `ContentView.swift`，并恢复本轮文档记录；本轮没有 schema 迁移或 entitlements 变更。
+- 结论：本轮完成，`GOAL-1750` 已具备可构建运行的 visionOS 展示版第一版。
+- 下一步建议：进入 `GOAL-1760`，集中处理 Mac / iPad / Watch 多端 polish 与已知刷新、布局、真机体验问题。
 
 ### ITER-212 账单编辑同步冲突修复
 - 日期：2026-06-19

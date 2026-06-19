@@ -15,17 +15,17 @@
 
 - target：`AutoLedgerVision`
 - bundle id：`top.darkrio326.AutoLedger.vision`
-- deployment target：`26.0`
+- deployment target：`1.0`
 - supported platforms：`xros xrsimulator`
 - targeted device family：`7`
 - 当前入口：`WindowGroup { ContentView() }`
-- 当前内容：`RealityKitContent + Hello, world!`
+- 当前内容：SwiftUI 单窗口只读空间看板
 
 额外事实：
 
 - 当前 target 没有单独的 `CODE_SIGN_ENTITLEMENTS` 配置。
-- `RealityKitContent` package 仍是 Xcode 模板资源，`README.md` 仍是默认占位文案。
-- 当前还没有任何 AutoLedger 账本数据接线、只读 view model 或空间展示组件。
+- `RealityKitContent` package 仍保留在 target 依赖中，但首版产品 UI 不再使用模板 `Model3D`。
+- 当前已经接入 `AutoLedgerCore`，可读取本机正式账本并派生月度、年度、分类和最近账单展示。
 
 ## Build Smoke Results
 
@@ -42,6 +42,32 @@
   - 通过
 
 结论：`AutoLedgerVision` 已经不是 blocker target，后续工作重点转为 scene 选择和数据接入，而不是平台组件安装。
+
+## GOAL-1750 Implementation Result
+
+2026-06-19 已完成 visionOS 展示版第一版。
+
+实现内容：
+
+- 保持 `WindowGroup` 单窗口入口。
+- 移除模板 `Model3D + Hello, world!` 首屏。
+- 为 `AutoLedgerVision` target 增加 `AutoLedgerCore` package product 依赖。
+- 新增 SwiftUI 四区只读展示：月度支出空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表。
+- 复用 `SQLiteTransactionStore`、`MonthlySnapshot`、`TodaySpendingSummary`，不新增 visionOS 独立统计口径。
+- 支持隐私模式、刷新入口、loading / empty / unavailable 状态。
+
+验证结果：
+
+- `generic/platform=visionOS` build 通过。
+- `platform=visionOS Simulator,name=Apple Vision Pro` build 通过。
+- 已在 Apple Vision Pro simulator 安装并 launch `top.darkrio326.AutoLedger.vision`。
+- 已通过 `simctl io screenshot` 确认主窗口可打开；当前模拟器无账本数据时展示 empty 状态，界面不空白、不重叠，模板 3D 内容不再遮挡 UI。
+
+保留限制：
+
+- 当前没有接 CloudKit 只读拉取或 dashboard snapshot。
+- 当前模拟器 smoke 覆盖的是空账本状态；有真实账本数据后的四区展示仍需后续环境复测。
+- 当前没有 visionOS App Store 素材、截图管线或真机 smoke。
 
 ## Scene Strategy Assessment
 
