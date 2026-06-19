@@ -284,6 +284,15 @@
 "transaction_editor.merchant_alias.message_format" = "之後是否將「%@」自動識別為「%@」？";
 "transaction_editor.save_failed.title" = "儲存失敗";
 "transaction_editor.save_failed.message" = "帳單沒有儲存成功，請檢查輸入後再試一次。";
+"transaction_subscription.section.title" = "訂閱";
+"transaction_subscription.section.description" = "如果這筆支出會週期性扣費，可以手動確認後加入訂閱管理。";
+"transaction_subscription.create" = "從這筆帳單建立訂閱";
+"transaction_subscription.create_help" = "開啟訂閱確認頁，預填目前帳單的商家、金額和扣費時間";
+"transaction_subscription.create.title" = "建立訂閱";
+"transaction_subscription.confirm.description" = "請確認週期、金額和下次扣費時間。儲存後會進入訂閱管理，不會修改目前帳單。";
+"transaction_subscription.existing.message_format" = "已存在「%@」的%@訂閱，請確認是否仍要新增一筆。";
+"transaction_subscription.created.title" = "訂閱已建立";
+"transaction_subscription.created.message_format" = "已將「%@」%@ 加入訂閱管理。";
 
 "report.category_breakdown.title" = "分類占比";
 "report.six_month_trend.title" = "近 6 個月趨勢";

@@ -21,6 +21,8 @@ struct TransactionEditorView: View {
     @State private var showMerchantAliasPrompt = false
     @State private var isSaving = false
     @State private var saveErrorMessage: String?
+    @State private var subscriptionDraft: Subscription?
+    @State private var subscriptionCreatedMessage: String?
 
     init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool, Bool) -> Bool) {
         self.transaction = transaction
@@ -71,6 +73,22 @@ struct TransactionEditorView: View {
 
                     TextField("transaction_editor.note", text: $note, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
+                }
+
+                if !isNew {
+                    Section("transaction_subscription.section.title") {
+                        Text("transaction_subscription.section.description")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.mutedInk)
+
+                        Button {
+                            subscriptionDraft = Subscription.draft(from: editedTransaction())
+                        } label: {
+                            Label("transaction_subscription.create", systemImage: "calendar.badge.plus")
+                        }
+                        .disabled(parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityHint(Text("transaction_subscription.create_help"))
+                    }
                 }
             }
             .navigationTitle(isNew ? String(localized: "transaction_editor.title.new") : String(localized: "transaction_editor.title.edit"))
@@ -125,6 +143,27 @@ struct TransactionEditorView: View {
             } message: {
                 Text(saveErrorMessage ?? String(localized: "transaction_editor.save_failed.message"))
             }
+            .sheet(item: $subscriptionDraft) { draft in
+                TransactionSubscriptionCreateView(
+                    subscription: draft,
+                    existingSubscription: existingSubscription(matching: draft)
+                ) { subscription in
+                    store.createSubscription(subscription)
+                    subscriptionCreatedMessage = String(
+                        format: String(localized: "transaction_subscription.created.message_format"),
+                        subscription.merchant,
+                        AppFormatters.currency(subscription.amount)
+                    )
+                }
+            }
+            .alert("transaction_subscription.created.title", isPresented: Binding(
+                get: { subscriptionCreatedMessage != nil },
+                set: { if !$0 { subscriptionCreatedMessage = nil } }
+            )) {
+                Button("common.done", role: .cancel) {}
+            } message: {
+                Text(subscriptionCreatedMessage ?? "")
+            }
         }
     }
 
@@ -151,6 +190,14 @@ struct TransactionEditorView: View {
 
     private func shouldPromptMerchantAlias(for updated: Transaction) -> Bool {
         !isNew && store.shouldOfferMerchantAlias(from: transaction, to: updated)
+    }
+
+    private func existingSubscription(matching draft: Subscription) -> Subscription? {
+        store.subscriptions.first {
+            $0.merchant == draft.merchant &&
+            $0.period == draft.period &&
+            $0.status != .canceled
+        }
     }
 
     private func beginSave(_ updated: Transaction) {
@@ -184,5 +231,120 @@ struct TransactionEditorView: View {
             isSaving = false
             saveErrorMessage = String(localized: "transaction_editor.save_failed.message")
         }
+    }
+}
+
+private struct TransactionSubscriptionCreateView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let subscription: Subscription
+    let existingSubscription: Subscription?
+    let onSave: (Subscription) -> Void
+
+    @State private var merchant: String
+    @State private var planName: String
+    @State private var period: SubscriptionPeriod
+    @State private var amountText: String
+    @State private var lastChargedAt: Date
+    @State private var nextChargedAt: Date
+
+    init(
+        subscription: Subscription,
+        existingSubscription: Subscription?,
+        onSave: @escaping (Subscription) -> Void
+    ) {
+        self.subscription = subscription
+        self.existingSubscription = existingSubscription
+        self.onSave = onSave
+        _merchant = State(initialValue: subscription.merchant)
+        _planName = State(initialValue: subscription.planName)
+        _period = State(initialValue: subscription.period)
+        _amountText = State(initialValue: String(format: "%.2f", subscription.amount))
+        _lastChargedAt = State(initialValue: subscription.lastChargedAt)
+        _nextChargedAt = State(initialValue: subscription.nextChargedAt)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("transaction_subscription.confirm.description")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+
+                    if let existingSubscription {
+                        Text(
+                            String(
+                                format: String(localized: "transaction_subscription.existing.message_format"),
+                                existingSubscription.merchant,
+                                existingSubscription.period.title
+                            )
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                    }
+                }
+
+                Section("subscriptions.edit.section.subscription") {
+                    TextField("transaction_editor.merchant", text: $merchant)
+                    TextField("subscriptions.edit.plan_name", text: $planName)
+                    Picker("subscriptions.edit.period", selection: $period) {
+                        ForEach(SubscriptionPeriod.allCases, id: \.self) { item in
+                            Text(item.title).tag(item)
+                        }
+                    }
+                    TextField("transaction_editor.amount", text: $amountText)
+                        .keyboardType(.decimalPad)
+                }
+
+                Section("subscriptions.edit.section.charge_dates") {
+                    DatePicker("subscriptions.edit.last_charged", selection: $lastChargedAt, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("subscriptions.edit.next_charge", selection: $nextChargedAt, displayedComponents: [.date, .hourAndMinute])
+                }
+            }
+            .navigationTitle("transaction_subscription.create.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.save") { save() }
+                        .disabled(!canSave)
+                }
+            }
+            .onChange(of: period) { _, newValue in
+                nextChargedAt = newValue.nextDate(from: lastChargedAt)
+            }
+            .onChange(of: lastChargedAt) { _, newValue in
+                nextChargedAt = period.nextDate(from: newValue)
+            }
+        }
+    }
+
+    private var amount: Double? {
+        LedgerAmountInputParser.parse(amountText)
+    }
+
+    private var canSave: Bool {
+        guard let amount else { return false }
+        return !merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount > 0
+    }
+
+    private func save() {
+        guard let amount else { return }
+        let updated = Subscription(
+            id: subscription.id,
+            merchant: merchant.trimmingCharacters(in: .whitespacesAndNewlines),
+            planName: planName.trimmingCharacters(in: .whitespacesAndNewlines),
+            period: period,
+            amount: amount,
+            lastChargedAt: lastChargedAt,
+            nextChargedAt: nextChargedAt,
+            status: .active,
+            createdAt: subscription.createdAt
+        )
+        onSave(updated)
+        dismiss()
     }
 }

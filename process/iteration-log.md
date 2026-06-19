@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1710 订阅管理基础 CRUD）
+更新日期：2026-06-19（GOAL-1715 账单详情创建订阅）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-207 GOAL-1715 账单详情创建订阅
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 1 / 订阅管理补强
+- 类型：能力增强 / UI / 测试
+- 目标：在已有账单详情 / 编辑页提供显式创建订阅入口，让用户确认后把当前账单转为订阅管理项。
+- 改动范围：`Subscription.draft(from:)` 新增账单转订阅草稿 helper；`TransactionEditorView` 已有账单模式新增“从这笔账单创建订阅”入口和确认 sheet；保存后调用 `LedgerStore.createSubscription`；三语本地化补齐入口、确认说明、重复提示和创建成功提示；离线回归新增草稿断言。
+- 未改动范围：未在新增账单模式展示入口；未实现外部模型订阅 hint；未做缓存；未修改 SQLite schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：从已有账单进入编辑页后可打开订阅确认页；确认页预填商户、金额、最近扣费时间和默认月付周期，允许用户编辑周期、金额和下次扣费时间；保存后订阅进入订阅管理，不修改当前账单。
+- 未完成内容：AI 订阅判断、入账后订阅提示和订阅倾向学习缓存继续按 `GOAL-1720 / 1730 / 1735` 推进。
+- 测试情况：执行 `git diff --check`、三语 `Localizable.strings` plist lint、`bash scripts/run_offline_regression.sh` 和主 App iOS generic Debug build，结果 PASS。
+- 风险与注意事项：重复同商户同周期订阅只提示不阻断，允许用户显式新增多条；后续如果要强去重，需要独立设计多方案 / 多服务名场景。
+- 回滚方式：恢复 `Subscription`、`TransactionEditorView`、三语本地化、离线回归和版本文档本轮改动即可；本轮未新增 schema。
+- 结论：本轮完成，账单详情到订阅管理的手动确认链路已打通。
+- 下一步建议：进入 `GOAL-1720`，让外部辅助识别返回订阅 hint，并在入账后只做用户确认提示。
 
 ### ITER-206 GOAL-1710 订阅管理基础 CRUD
 - 日期：2026-06-19

@@ -281,6 +281,15 @@
 "transaction_editor.merchant_alias.message_format" = "以后是否将“%@”自动识别为“%@”？";
 "transaction_editor.save_failed.title" = "保存失败";
 "transaction_editor.save_failed.message" = "账单没有保存成功，请检查输入后重试。";
+"transaction_subscription.section.title" = "订阅";
+"transaction_subscription.section.description" = "如果这笔支出会周期性扣费，可以手动确认后加入订阅管理。";
+"transaction_subscription.create" = "从这笔账单创建订阅";
+"transaction_subscription.create_help" = "打开订阅确认页，预填当前账单的商户、金额和扣费时间";
+"transaction_subscription.create.title" = "创建订阅";
+"transaction_subscription.confirm.description" = "请确认周期、金额和下次扣费时间。保存后会进入订阅管理，不会修改当前账单。";
+"transaction_subscription.existing.message_format" = "已存在“%@”的%@订阅，请确认是否仍要新增一条。";
+"transaction_subscription.created.title" = "订阅已创建";
+"transaction_subscription.created.message_format" = "已将“%@”%@ 加入订阅管理。";
 
 "report.category_breakdown.title" = "分类占比";
 "report.six_month_trend.title" = "近 6 个月趋势";

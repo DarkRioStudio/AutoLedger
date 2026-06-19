@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.0）
+- [2026-06-19 +0800] 完成 `GOAL-1715` 账单详情创建订阅：已有账单编辑页新增“从这笔账单创建订阅”入口，弹出确认页预填商户、金额和扣费时间，用户确认周期 / 金额 / 下次扣费时间后写入订阅管理，不修改当前账单。`AutoLedgerCore.Subscription` 新增 `draft(from:)` 草稿 helper，离线回归覆盖账单转订阅草稿的商户、金额、周期、状态和下次扣费计算。本轮不接外部模型订阅 hint、不做缓存、不修改 signing / entitlements / Xcode Cloud 配置。
 - [2026-06-19 +0800] 完成 `GOAL-1710` 订阅管理基础 CRUD：订阅管理页新增手动新增订阅入口，编辑页补齐状态字段，支持暂停 / 恢复 / 取消订阅；暂停或取消后的订阅不再进入即将扣费、月度 / 年度摘要和本地提醒调度。`AutoLedgerCore.Subscription` 新增 `active / paused / canceled` 状态并兼容旧备份默认 active，SQLite 订阅表新增 `status` 字段和迁移，离线回归覆盖 Codable 兼容、SQLite 持久化与备份恢复。本轮不实现账单转订阅、AI 订阅判断或多账本订阅归属，不修改 signing / entitlements / Xcode Cloud 配置。
 - [2026-06-19 +0800] 推进 `v1.6.0` 第一版：将内部开发线固定对应 App Store / ASC `1.5.0`，全 target `MARKETING_VERSION` 从 `1.4.0` 提升到 `1.5.0`；`versions/v1.6.0-plan.md` 从 Draft 调整为 Active，并将 `GOAL-1700` 标记完成。同步更新 README / README.en Roadmap 与版本读取兜底值。本轮不实现新功能，不修改 Bundle ID、signing team、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
 

@@ -103,6 +103,21 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         self.createdAt    = createdAt
     }
 
+    public static func draft(
+        from transaction: Transaction,
+        period: SubscriptionPeriod = .monthly,
+        planName: String = ""
+    ) -> Subscription {
+        Subscription(
+            merchant: transaction.merchant,
+            planName: planName,
+            period: period,
+            amount: transaction.amount,
+            lastChargedAt: transaction.occurredAt,
+            status: .active
+        )
+    }
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(UUID.self, forKey: .id)

@@ -281,6 +281,15 @@
 "transaction_editor.merchant_alias.message_format" = "Automatically recognize “%@” as “%@” next time?";
 "transaction_editor.save_failed.title" = "Save Failed";
 "transaction_editor.save_failed.message" = "The transaction was not saved. Check the fields and try again.";
+"transaction_subscription.section.title" = "Subscription";
+"transaction_subscription.section.description" = "If this expense renews regularly, confirm it manually and add it to Subscription Management.";
+"transaction_subscription.create" = "Create Subscription from This Transaction";
+"transaction_subscription.create_help" = "Open a subscription confirmation page prefilled with this merchant, amount, and charge time";
+"transaction_subscription.create.title" = "Create Subscription";
+"transaction_subscription.confirm.description" = "Confirm the period, amount, and next charge date. Saving adds it to Subscription Management without changing this transaction.";
+"transaction_subscription.existing.message_format" = "A %@ %@ subscription already exists. Confirm whether you still want to add another one.";
+"transaction_subscription.created.title" = "Subscription Created";
+"transaction_subscription.created.message_format" = "Added %@ %@ to Subscription Management.";
 
 "report.category_breakdown.title" = "Category Breakdown";
 "report.six_month_trend.title" = "Last 6 Months";

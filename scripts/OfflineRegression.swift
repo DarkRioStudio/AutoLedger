@@ -54,6 +54,7 @@ struct OfflineRegression {
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
+        verifySubscriptionDraftFromTransaction(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
@@ -843,6 +844,29 @@ struct OfflineRegression {
         } catch {
             reporter.check(false, "Subscription status round-trips through Codable without throwing")
         }
+    }
+
+    private static func verifySubscriptionDraftFromTransaction(reporter: RegressionReporter) {
+        let chargedAt = AppFormatters.parseFlexibleDate("2026-05-01 08:30") ?? .now
+        let transaction = Transaction(
+            merchant: "Demo Cloud",
+            amount: 28.0,
+            occurredAt: chargedAt,
+            category: .digital,
+            source: .manual,
+            note: "手动确认订阅"
+        )
+
+        let draft = Subscription.draft(from: transaction)
+        reporter.check(draft.merchant == transaction.merchant, "Subscription draft uses transaction merchant")
+        reporter.check(abs(draft.amount - transaction.amount) < 0.001, "Subscription draft uses transaction amount")
+        reporter.check(draft.period == .monthly, "Subscription draft defaults to monthly period")
+        reporter.check(draft.status == .active, "Subscription draft defaults to active status")
+        reporter.check(sameMinute(draft.lastChargedAt, chargedAt), "Subscription draft uses transaction date as last charge")
+        reporter.check(
+            sameMinute(draft.nextChargedAt, SubscriptionPeriod.monthly.nextDate(from: chargedAt)),
+            "Subscription draft computes next monthly charge"
+        )
     }
 
     private static func verifyTodaySpendingSummary(reporter: RegressionReporter) {
