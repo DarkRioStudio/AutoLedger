@@ -360,6 +360,13 @@ struct SmartReceiptParser: Sendable {
                 apiKey: apiKey
             )
             let latencyMs = Int((CFAbsoluteTimeGetCurrent() - startTime) * 1000)
+            let trace = LLMTrace(
+                prompt: Self.externalAssistPromptSummary(payload: payload, configuration: configuration),
+                response: Self.externalAssistResponseSummary(suggestion),
+                providerID: "external_\(configuration.provider.rawValue)",
+                providerDisplayName: "\(configuration.provider.displayName) 外部辅助",
+                latencyMs: latencyMs
+            )
             guard let aiSuggestion = ExternalReceiptAssistSuggestionMapper().makeAISuggestion(from: suggestion),
                   let merged = mergePolicy.merge(
                     aiSuggestion: aiSuggestion,
@@ -369,18 +376,20 @@ struct SmartReceiptParser: Sendable {
                     summary: "\(source.title) 外部辅助解析"
                   ),
                   merged.usedAIEnrichment else {
+                if let ruleResult, suggestion.subscriptionHint != nil {
+                    logger.info("[ExternalAssist] 已记录订阅 hint，保留本地规则解析结果")
+                    return ExternalAssistMergeResult(
+                        receipt: ruleResult,
+                        trace: trace,
+                        usedRuleAmount: true
+                    )
+                }
                 return nil
             }
             logger.info("[ExternalAssist] 已合并外部辅助候选，商户=\(merged.receipt.merchant) 规则金额=\(merged.usedRuleAmount ? "是" : "否")")
             return ExternalAssistMergeResult(
                 receipt: merged.receipt,
-                trace: LLMTrace(
-                    prompt: Self.externalAssistPromptSummary(payload: payload, configuration: configuration),
-                    response: Self.externalAssistResponseSummary(suggestion),
-                    providerID: "external_\(configuration.provider.rawValue)",
-                    providerDisplayName: "\(configuration.provider.displayName) 外部辅助",
-                    latencyMs: latencyMs
-                ),
+                trace: trace,
                 usedRuleAmount: merged.usedRuleAmount
             )
         } catch {
@@ -406,11 +415,24 @@ struct SmartReceiptParser: Sendable {
         let merchants = suggestion.merchantCandidates.joined(separator: ", ")
         let category = suggestion.categoryHint ?? "未返回"
         let confidence = suggestion.confidence.map { String(format: "%.2f", $0) } ?? "未返回"
+        let subscription = Self.externalAssistSubscriptionSummary(suggestion.subscriptionHint)
         return """
         merchantCandidates: \(merchants.isEmpty ? "未返回" : merchants)
         categoryHint: \(category)
         confidence: \(confidence)
+        subscriptionHint: \(subscription)
         """
+    }
+
+    private static func externalAssistSubscriptionSummary(_ hint: ExternalReceiptAssistSubscriptionHint?) -> String {
+        guard let hint else { return "未返回" }
+
+        let serviceName = hint.serviceName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let billingCycle = hint.billingCycle?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let confidence = hint.confidence.map { String(format: "%.2f", $0) } ?? "未返回"
+        let serviceText = serviceName?.isEmpty == false ? serviceName! : "未返回"
+        let cycleText = billingCycle?.isEmpty == false ? billingCycle! : "未返回"
+        return "isSubscription=\(hint.isSubscription ? "true" : "false"), serviceName=\(serviceText), billingCycle=\(cycleText), confidence=\(confidence)"
     }
 
     private static func shouldSkipExternalAssist(for receipt: ImportedReceipt) -> Bool {

@@ -469,6 +469,7 @@ struct OfflineRegression {
 
         reporter.check(requestJSON.contains("\"model\""), "ExternalReceiptAssistOpenAICompatibleCodec includes model")
         reporter.check(requestJSON.contains("merchantCandidates"), "ExternalReceiptAssistOpenAICompatibleCodec asks for merchant candidates")
+        reporter.check(requestJSON.contains("subscriptionHint"), "ExternalReceiptAssistOpenAICompatibleCodec asks for subscription hint")
         reporter.check(!requestJSON.contains("explanation"), "ExternalReceiptAssistOpenAICompatibleCodec does not request explanation by default")
         reporter.check(requestJSON.contains("Demo Coffee"), "ExternalReceiptAssistOpenAICompatibleCodec includes sanitized text")
         reporter.check(!requestJSON.contains("raw OCR"), "ExternalReceiptAssistOpenAICompatibleCodec avoids raw OCR wording")
@@ -478,7 +479,7 @@ struct OfflineRegression {
           "choices": [
             {
               "message": {
-                "content": "{\\"merchantCandidates\\":[\\"Demo Coffee\\",\\"Example Market\\"],\\"categoryHint\\":\\"dining\\",\\"confidence\\":0.84,\\"explanation\\":\\"merchant is closest to payment amount\\"}"
+                "content": "{\\"merchantCandidates\\":[\\"Demo Coffee\\",\\"Example Market\\"],\\"categoryHint\\":\\"dining\\",\\"confidence\\":0.84,\\"subscriptionHint\\":{\\"isSubscription\\":true,\\"serviceName\\":\\"Demo Coffee Pro\\",\\"billingCycle\\":\\"monthly\\",\\"confidence\\":0.91},\\"explanation\\":\\"merchant is closest to payment amount\\"}"
               }
             }
           ]
@@ -489,6 +490,17 @@ struct OfflineRegression {
         reporter.check(decoded?.merchantCandidates.first == "Demo Coffee", "ExternalReceiptAssistOpenAICompatibleCodec decodes chat completion content")
         reporter.check(decoded?.categoryHint == "dining", "ExternalReceiptAssistOpenAICompatibleCodec decodes category hint")
         reporter.check(decoded?.confidence == 0.84, "ExternalReceiptAssistOpenAICompatibleCodec decodes confidence")
+        reporter.check(decoded?.subscriptionHint?.isSubscription == true, "ExternalReceiptAssistOpenAICompatibleCodec decodes subscription hint")
+        reporter.check(decoded?.subscriptionHint?.serviceName == "Demo Coffee Pro", "ExternalReceiptAssistOpenAICompatibleCodec decodes subscription service name")
+        reporter.check(decoded?.subscriptionHint?.billingCycle == "monthly", "ExternalReceiptAssistOpenAICompatibleCodec decodes subscription billing cycle")
+        reporter.check(decoded?.subscriptionHint?.confidence == 0.91, "ExternalReceiptAssistOpenAICompatibleCodec decodes subscription confidence")
+
+        let snakeData = """
+        {"merchant_candidates":["Demo Cloud"],"category_hint":"digital","confidence":0.9,"subscription_hint":{"is_subscription":true,"service_name":"Demo Cloud","billing_cycle":"monthly","confidence":0.88}}
+        """.data(using: .utf8)!
+        let snakeDecoded = try? codec.decodeSuggestion(from: snakeData)
+        reporter.check(snakeDecoded?.merchantCandidates.first == "Demo Cloud", "ExternalReceiptAssistOpenAICompatibleCodec decodes snake case merchants")
+        reporter.check(snakeDecoded?.subscriptionHint?.serviceName == "Demo Cloud", "ExternalReceiptAssistOpenAICompatibleCodec decodes snake case subscription hint")
     }
 
     private static func verifyExternalReceiptAssistSuggestionMapping(reporter: RegressionReporter) {

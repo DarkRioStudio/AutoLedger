@@ -17,17 +17,129 @@ public struct ExternalReceiptAssistSuggestion: Codable, Equatable, Sendable {
     public let categoryHint: String?
     public let explanation: String?
     public let confidence: Double?
+    public let subscriptionHint: ExternalReceiptAssistSubscriptionHint?
 
     public init(
         merchantCandidates: [String],
         categoryHint: String?,
         explanation: String?,
-        confidence: Double?
+        confidence: Double?,
+        subscriptionHint: ExternalReceiptAssistSubscriptionHint? = nil
     ) {
         self.merchantCandidates = merchantCandidates
         self.categoryHint = categoryHint
         self.explanation = explanation
         self.confidence = confidence
+        self.subscriptionHint = subscriptionHint
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case merchantCandidates
+        case merchantCandidatesSnake = "merchant_candidates"
+        case categoryHint
+        case categoryHintSnake = "category_hint"
+        case explanation
+        case confidence
+        case subscriptionHint
+        case subscriptionHintSnake = "subscription_hint"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let hasSuggestionKey =
+            container.contains(.merchantCandidates) ||
+            container.contains(.merchantCandidatesSnake) ||
+            container.contains(.categoryHint) ||
+            container.contains(.categoryHintSnake) ||
+            container.contains(.confidence) ||
+            container.contains(.subscriptionHint) ||
+            container.contains(.subscriptionHintSnake)
+        guard hasSuggestionKey else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.merchantCandidates,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Missing external receipt assist suggestion fields"
+                )
+            )
+        }
+        merchantCandidates =
+            (try? container.decode([String].self, forKey: .merchantCandidates)) ??
+            (try? container.decode([String].self, forKey: .merchantCandidatesSnake)) ??
+            []
+        categoryHint =
+            (try? container.decodeIfPresent(String.self, forKey: .categoryHint)) ??
+            (try? container.decodeIfPresent(String.self, forKey: .categoryHintSnake)) ??
+            nil
+        explanation = try? container.decodeIfPresent(String.self, forKey: .explanation)
+        confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
+        subscriptionHint =
+            (try? container.decodeIfPresent(ExternalReceiptAssistSubscriptionHint.self, forKey: .subscriptionHint)) ??
+            (try? container.decodeIfPresent(ExternalReceiptAssistSubscriptionHint.self, forKey: .subscriptionHintSnake)) ??
+            nil
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(merchantCandidates, forKey: .merchantCandidates)
+        try container.encodeIfPresent(categoryHint, forKey: .categoryHint)
+        try container.encodeIfPresent(explanation, forKey: .explanation)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encodeIfPresent(subscriptionHint, forKey: .subscriptionHint)
+    }
+}
+
+public struct ExternalReceiptAssistSubscriptionHint: Codable, Equatable, Sendable {
+    public let isSubscription: Bool
+    public let serviceName: String?
+    public let billingCycle: String?
+    public let confidence: Double?
+
+    public init(
+        isSubscription: Bool,
+        serviceName: String?,
+        billingCycle: String?,
+        confidence: Double?
+    ) {
+        self.isSubscription = isSubscription
+        self.serviceName = serviceName
+        self.billingCycle = billingCycle
+        self.confidence = confidence
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case isSubscription
+        case isSubscriptionSnake = "is_subscription"
+        case serviceName
+        case serviceNameSnake = "service_name"
+        case billingCycle
+        case billingCycleSnake = "billing_cycle"
+        case confidence
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isSubscription =
+            (try? container.decode(Bool.self, forKey: .isSubscription)) ??
+            (try? container.decode(Bool.self, forKey: .isSubscriptionSnake)) ??
+            false
+        serviceName =
+            (try? container.decodeIfPresent(String.self, forKey: .serviceName)) ??
+            (try? container.decodeIfPresent(String.self, forKey: .serviceNameSnake)) ??
+            nil
+        billingCycle =
+            (try? container.decodeIfPresent(String.self, forKey: .billingCycle)) ??
+            (try? container.decodeIfPresent(String.self, forKey: .billingCycleSnake)) ??
+            nil
+        confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(isSubscription, forKey: .isSubscription)
+        try container.encodeIfPresent(serviceName, forKey: .serviceName)
+        try container.encodeIfPresent(billingCycle, forKey: .billingCycle)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
     }
 }
 
@@ -125,12 +237,14 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
         let categoryHint: String?
         let explanation: String?
         let confidence: Double?
+        let subscriptionHint: ExternalReceiptAssistSubscriptionHint?
 
         enum CodingKeys: String, CodingKey {
             case merchantCandidates = "merchant_candidates"
             case categoryHint = "category_hint"
             case explanation
             case confidence
+            case subscriptionHint = "subscription_hint"
         }
     }
 
@@ -175,7 +289,8 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
                 merchantCandidates: snake.merchantCandidates,
                 categoryHint: snake.categoryHint,
                 explanation: snake.explanation,
-                confidence: snake.confidence
+                confidence: snake.confidence,
+                subscriptionHint: snake.subscriptionHint
             )
         }
 
@@ -187,10 +302,12 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
         You are AutoLedger's redacted receipt merchant assistant. Return JSON only.
         Find likely real merchant names from minimized redacted payment OCR text.
         Do not infer or return transaction amount, account, card, order id, address, or personal data.
-        Output keys: merchantCandidates, categoryHint, confidence.
+        Output keys: merchantCandidates, categoryHint, confidence, subscriptionHint.
         merchantCandidates must be ordered by likelihood and should prefer store or brand names over rewards, coupons, banks, payment methods, addresses, routes, or UI labels.
         categoryHint may be dining, transport, groceries, digital, shopping, other, or null.
         confidence must be a number from 0 to 1.
+        subscriptionHint must be an object: {"isSubscription": boolean, "serviceName": string|null, "billingCycle": "weekly"|"monthly"|"yearly"|null, "confidence": number|null}.
+        Mark subscriptionHint.isSubscription true only for recurring memberships, digital subscriptions, renewal receipts, or repeated billing. When recurring evidence is absent, return isSubscription false. Do not treat ordinary one-time dining, shopping, transit, or grocery payments as subscriptions.
         """
     }
 
