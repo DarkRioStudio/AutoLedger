@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1730 学习缓存设计）
+更新日期：2026-06-19（GOAL-1735 外部辅助识别短期缓存）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-210 GOAL-1735 外部辅助识别短期结果缓存
+- 日期：2026-06-19
+- 所属版本：v1.6.0
+- 所属阶段：Phase 1 / 订阅管理补强
+- 类型：能力增强 / 性能优化 / 隐私回归
+- 目标：为外部辅助识别增加本机短期缓存，避免同一脱敏 OCR 在短时间内重复请求外部 provider。
+- 改动范围：新增 `ExternalReceiptAssistCache.swift` 作为 Core 层缓存策略；`ExternalReceiptAssistClient` 在请求前读取短期缓存，网络成功后写入缓存；provider / endpoint / model / API key 变化时清理缓存；离线回归新增缓存 key、TTL、prune 和隐私断言；版本计划与 CHANGELOG 回填。
+- 未改动范围：未缓存原始 OCR、截图、脱敏 OCR 原文、金额、日期、订单号、卡号、手机号或地址；未新增 SQLite 正式 schema；未把短期缓存写入 iCloud 配置快照或 JSON 备份；未改变金额 / 日期解析权重；未自动保存账单或自动创建订阅；未修改 Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：缓存 key 由脱敏 OCR 文本 SHA-256 指纹、来源、provider、model 和 endpoint 指纹组成；缓存值只保存模型候选结果；默认 TTL 24 小时，最多保留 80 条；过期记录会 prune；配置变化会清理。
+- 未完成内容：未实现 L2 商户级画像、订阅 hint 入账后用户提示、负向订阅学习或“清除识别学习数据”统一入口。
+- 测试情况：执行 `git diff --check`、`bash scripts/run_offline_regression.sh` 和主 App iOS generic Debug build，结果 PASS。
+- 风险与注意事项：缓存命中会复用外部模型候选，但仍只参与商户 / 分类 / 订阅 hint 增强，不参与金额、日期或自动保存；后续若要展示缓存命中状态，需要扩展 trace 结构。
+- 回滚方式：恢复 `ExternalReceiptAssistCache.swift`、`ExternalReceiptAssistClient.swift`、`scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh` 与本轮文档记录；缓存保存在 `externalReceiptAssistShortTermCache.v1`，回滚时可删除该 UserDefaults key。
+- 结论：本轮完成，外部辅助识别已具备本机短期缓存与隐私回归。
+- 下一步建议：根据产品优先级决定先补订阅 hint 用户确认提示，或按队列进入 `GOAL-1740` tvOS 只读看板第一版。
 
 ### ITER-209 GOAL-1730 商户 / 分类 / 订阅倾向学习缓存设计
 - 日期：2026-06-19

@@ -3,7 +3,7 @@
 更新日期：2026-06-19
 关联版本：`v1.6.0`
 关联 GOAL：`GOAL-1730`
-状态：设计冻结 / 待实现
+状态：设计冻结 / L3 第一版已实现
 
 ## 1. 目标
 
@@ -112,7 +112,7 @@ struct MerchantRecognitionProfile {
 
 ### 4.3 L3 短期脱敏 OCR hash 缓存
 
-L3 只用于性能优化，实施顺延到 `GOAL-1735`。
+L3 只用于性能优化，已在 `GOAL-1735` 完成第一版实现。
 
 允许保存：
 
@@ -143,6 +143,15 @@ L3 只用于性能优化，实施顺延到 `GOAL-1735`。
 - L3 不进入 iCloud 同步。
 - L3 不进入 JSON 备份。
 - L3 可以只保存在本机 SQLite 或 UserDefaults 的临时命名空间。
+
+当前实现：
+
+- Core 策略：`ExternalReceiptAssistCache.swift`
+- App 存储：`ExternalReceiptAssistClient.swift`
+- 存储位置：本机 `UserDefaults` 的 `externalReceiptAssistShortTermCache.v1`
+- key：脱敏 OCR 文本 SHA-256 指纹 + 来源 + provider + model + endpoint 指纹
+- 上限：最多 80 条
+- 配置变化：provider / endpoint / model / API key 变化时清理
 
 ## 5. 识别链路插入点
 
@@ -222,7 +231,7 @@ L3 只用于性能优化，实施顺延到 `GOAL-1735`。
 
 ### GOAL-1735
 
-- 实现 L3 短期脱敏 OCR hash 缓存。
+- 实现 L3 短期脱敏 OCR hash 缓存。（DONE）
 - TTL 默认 24 小时。
 - 只缓存候选，不缓存原文。
 - 离线回归覆盖 hash 不可逆输入、TTL 过期和 provider 配置变化清理。
