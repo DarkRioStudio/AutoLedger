@@ -1,5 +1,6 @@
 import AutoLedgerCore
 import SwiftUI
+import UIKit
 
 struct TransactionEditorView: View {
     let transaction: Transaction
@@ -23,6 +24,12 @@ struct TransactionEditorView: View {
     @State private var saveErrorMessage: String?
     @State private var subscriptionDraft: Subscription?
     @State private var subscriptionCreatedMessage: String?
+    @FocusState private var focusedField: EditorField?
+
+    private enum EditorField: Hashable {
+        case amount
+        case note
+    }
 
     init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool, Bool) -> Bool) {
         self.transaction = transaction
@@ -40,7 +47,10 @@ struct TransactionEditorView: View {
         NavigationStack {
             Form {
                 Section("transaction_editor.section.basic") {
-                    TextField("transaction_editor.merchant", text: $merchant)
+                    CompositionSafeTextField(
+                        placeholder: String(localized: "transaction_editor.merchant"),
+                        text: $merchant
+                    )
 
                     Picker("transaction_editor.source", selection: $source) {
                         ForEach(ReceiptSource.allCases) { item in
@@ -59,6 +69,7 @@ struct TransactionEditorView: View {
                 Section("transaction_editor.section.amount") {
                     TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                        .focused($focusedField, equals: .amount)
 
                     Picker("transaction_editor.category", selection: $category) {
                         ForEach(TransactionCategory.allCases) { item in
@@ -73,6 +84,7 @@ struct TransactionEditorView: View {
 
                     TextField("transaction_editor.note", text: $note, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
+                        .focused($focusedField, equals: .note)
                 }
 
                 if !isNew {
@@ -102,7 +114,7 @@ struct TransactionEditorView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
-                        beginSave(editedTransaction())
+                        prepareSave()
                     }
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
@@ -209,6 +221,17 @@ struct TransactionEditorView: View {
         }
     }
 
+    private func prepareSave() {
+        guard !isSaving else { return }
+        isSaving = true
+        focusedField = nil
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        Task { @MainActor in
+            await Task.yield()
+            beginSave(editedTransaction())
+        }
+    }
+
     private func continueSave(_ updated: Transaction, refreshSameMerchantCategory: Bool) {
         if shouldPromptMerchantAlias(for: updated) {
             pendingSave = updated
@@ -220,8 +243,6 @@ struct TransactionEditorView: View {
     }
 
     private func save(_ updated: Transaction, refreshSameMerchantCategory: Bool, saveMerchantAlias: Bool) {
-        guard !isSaving else { return }
-        isSaving = true
         let didSave = onSave(updated, refreshSameMerchantCategory, saveMerchantAlias)
         if didSave {
             pendingSave = nil
@@ -230,6 +251,65 @@ struct TransactionEditorView: View {
         } else {
             isSaving = false
             saveErrorMessage = String(localized: "transaction_editor.save_failed.message")
+        }
+    }
+}
+
+private struct CompositionSafeTextField: UIViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.placeholder = placeholder
+        textField.font = .preferredFont(forTextStyle: .body)
+        textField.adjustsFontForContentSizeCategory = true
+        textField.borderStyle = .none
+        textField.backgroundColor = .clear
+        textField.delegate = context.coordinator
+        textField.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        context.coordinator.text = $text
+        guard !context.coordinator.isEditing, uiView.text != text else { return }
+        uiView.text = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var text: Binding<String>
+        var isEditing = false
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            text.wrappedValue = textField.text ?? ""
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            isEditing = true
+            text.wrappedValue = textField.text ?? ""
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            text.wrappedValue = textField.text ?? ""
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            isEditing = false
+            let fieldText = textField.text ?? ""
+            if fieldText.count < text.wrappedValue.count {
+                textField.text = text.wrappedValue
+            } else {
+                text.wrappedValue = fieldText
+            }
         }
     }
 }

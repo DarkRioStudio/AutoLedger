@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-20（GOAL-1760B 最近本机编辑保护窗口与同步日志导出）
+更新日期：2026-06-21（GOAL-1760C 交易编辑页输入提交修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-215 GOAL-1760C 交易编辑页输入提交修复
+- 日期：2026-06-21
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1760
+- 类型：Bugfix / UI / 真机诊断
+- 目标：修复用户在商户输入框补全中文终点站后，输入框失焦即丢失新输入内容，导致保存仍使用旧商户名的问题。
+- 改动范围：`TransactionEditorView` 将商户输入框替换为 UIKit-backed `CompositionSafeTextField`，通过 `UITextFieldDelegate` 在编辑变化和选区变化时同步当前文本；失焦时避免系统取消 marked text 后覆盖已同步绑定值；保存按钮结束输入会话并等待一个主线程 tick 后再读取 `editedTransaction()`；同步更新 `CHANGELOG.md` 和 `versions/v1.6.0-plan.md`。
+- 未改动范围：未修改 iCloud 同步策略、SQLite / CloudKit schema、地铁识别、金额计算、外部模型链路、Bundle ID、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：根据 Debug 导出确认本次不是远端覆盖：iCloud 启动拉取、编辑后增量推送均成功；失败点在保存前，`LedgerStore.updateTransaction` 收到的 before / after 均为旧商户。商户输入框改为更稳的 UIKit 文本桥接，专门处理中文输入法组合文本在失焦时回退的问题。
+- 未完成内容：尚未做用户真机复测；若仍复现，需要进一步确认对应输入法的 marked text 是否进入 `UITextField.text`，再考虑 `shouldChangeCharactersIn` 草稿缓冲或显式完成输入按钮。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' build`，结果 PASS。
+- 风险与注意事项：本轮只把商户字段切到 UIKit-backed 输入框，金额 / 备注仍使用 SwiftUI TextField。UIKit bridge 需要真机输入法复测，尤其是第三方中文键盘。
+- 回滚方式：恢复 `TransactionEditorView` 商户字段为 SwiftUI `TextField`，移除 `CompositionSafeTextField` 和保存前 resign / yield 逻辑，并恢复本轮文档记录。
+- 结论：本轮代码侧完成，商户字段中文组合文本失焦丢失问题已针对性修复。
+- 下一步建议：真机编辑 `地铁：埌西→`，输入 `万象城` 后先失焦观察文本是否保留，再保存并导出 Debug 记录确认 `账单编辑开始` 中的新商户为完整文本。
 
 ### ITER-214 GOAL-1760B 最近本机编辑保护窗口与同步日志导出
 - 日期：2026-06-20
