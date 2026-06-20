@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-19（GOAL-1750 visionOS 展示版第一版）
+更新日期：2026-06-20（GOAL-1760B 最近本机编辑保护窗口与同步日志导出）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-214 GOAL-1760B 最近本机编辑保护窗口与同步日志导出
+- 日期：2026-06-20
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1760
+- 类型：Bugfix / 数据同步 / 真机诊断
+- 目标：继续修复真机上 `地铁：埌西 →` 补全终点站保存后仍可能回退的问题，并让 Debug 导出包含足够的 App 内部保存 / 同步证据。
+- 改动范围：`SQLiteTransactionStore.applyRemoteSyncRecords` 新增默认关闭的最近本机编辑保护参数；`LedgerStore.updateTransaction` 保存前后记录 sync metadata 摘要并标记 10 分钟保护窗口；`pullRemoteLedgerChanges` 批量拉取时传入最近编辑 ID 并记录保护结果；`DebugView` 整页和单条导出追加 iCloud 同步日志；`scripts/OfflineRegression.swift` 新增 `地铁：埌西 →` 编辑为 `地铁：埌西→万象城` 后不被同秒旧远端批量拉取覆盖的回归；同步更新 `CHANGELOG.md` 和 `versions/v1.6.0-plan.md`。
+- 未改动范围：未修改地铁 / 南宁地铁解析规则、金额计算、CloudKit record schema、SQLite schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：先新增回归并确认缺少 `protectedLocalTransactionIDs` 参数导致失败；随后实现 Core 默认兼容保护入口、App 层最近编辑 ID 标记、远端拉取保护和 Debug 可导出同步日志。
+- 未完成内容：尚未在用户真机上复测新 build；若仍复现，需要用本轮新增 Debug 日志判断是本地保存失败、自动推送未触发，还是保护窗口外被远端更新覆盖。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，修复前因 `extra argument 'protectedLocalTransactionIDs'` 预期失败；修复后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS。
+- 风险与注意事项：保护窗口只针对本机刚编辑过的同 ID 账单，可能在 10 分钟内优先保留本机修改；这是为了避免用户刚保存的内容被旧远端静默覆盖。跨设备真实同时编辑仍可能进入冲突保护，后续需通过同步日志观察。
+- 回滚方式：回退 `SQLiteTransactionStore.applyRemoteSyncRecords` 参数、`LedgerStore` 最近编辑保护与日志、`DebugView` 日志导出和新增离线回归，并恢复本轮文档记录。
+- 结论：本轮代码侧完成，账本编辑后的本机保护窗口和可导出同步证据已补上。
+- 下一步建议：打一个真机 build，复测 `地铁：埌西 →` 补全保存；若失败，复制 Debug 导出文本继续定位。
 
 ### ITER-213 GOAL-1750 visionOS 展示版第一版
 - 日期：2026-06-19

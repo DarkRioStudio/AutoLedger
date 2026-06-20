@@ -63,6 +63,7 @@ final class LedgerStore: ObservableObject {
     private var pendingBackupTask: Task<Void, Never>?
     private var pendingCloudKitPushTask: Task<Void, Never>?
     private var didRunLaunchCloudKitSync = false
+    private var recentlyEditedTransactionIDs: [UUID: Date] = [:]
     private var lastDataCleaningUndoSnapshot: DataCleaningUndoSnapshot?
     private let iCloudBackupService = ICloudBackupService()
 
@@ -590,13 +591,26 @@ final class LedgerStore: ObservableObject {
 
         let original = transactions[index]
         let categoryChanged = original.category != transaction.category
+        let beforeMetadata = (transactionStore as? SQLiteTransactionStore)
+            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: transaction.id) }
+        appendLedgerCloudSyncLog(
+            "账单编辑开始：\(shortID(transaction.id)) \(original.merchant) -> \(transaction.merchant)，before=\(syncMetadataSummary(beforeMetadata))"
+        )
 
         do {
             try transactionStore?.update(transaction: transaction)
         } catch {
             lastImportSummary = "账单保存失败：\(error.localizedDescription)"
+            appendLedgerCloudSyncLog("账单编辑失败：\(shortID(transaction.id)) \(error.localizedDescription)")
             return false
         }
+
+        let afterMetadata = (transactionStore as? SQLiteTransactionStore)
+            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: transaction.id) }
+        markRecentlyEdited(transaction.id)
+        appendLedgerCloudSyncLog(
+            "账单编辑落盘：\(shortID(transaction.id)) \(transaction.merchant)，after=\(syncMetadataSummary(afterMetadata))，已加入本地保护窗口"
+        )
 
         if saveMerchantAlias && shouldOfferMerchantAlias(from: original, to: transaction) {
             learnMerchantAliasIfNeeded(from: original, to: transaction)
@@ -626,6 +640,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        appendLedgerCloudSyncLog("账单编辑已安排 iCloud 推送：\(shortID(transaction.id))")
         return true
     }
 
@@ -1826,7 +1841,21 @@ extension LedgerStore {
         let remotePayloads = try await adapter.fetchAllTransactionRecords()
 
         updateLedgerCloudSyncStatus("拉取完成，正在写入本地账本...")
-        let summary = try sqlStore.applyRemoteSyncRecords(remotePayloads.map(\.syncRecord))
+        let protectedIDs = protectedRecentlyEditedTransactionIDs()
+        if !protectedIDs.isEmpty {
+            appendLedgerCloudSyncLog(
+                "远端拉取保护：本机刚编辑 \(protectedIDs.map(shortID).sorted().joined(separator: ","))"
+            )
+        }
+        let summary = try sqlStore.applyRemoteSyncRecords(
+            remotePayloads.map(\.syncRecord),
+            protectedLocalTransactionIDs: protectedIDs
+        )
+        if !protectedIDs.isEmpty {
+            appendLedgerCloudSyncLog(
+                "远端拉取保护结果：保留本地 \(summary.keptLocal)，冲突 \(summary.conflicts)"
+            )
+        }
         await Task.yield()
         return (
             remoteCount: remotePayloads.count,
@@ -1990,9 +2019,36 @@ extension LedgerStore {
     private func appendLedgerCloudSyncLog(_ message: String) {
         let timestamp = DateFormatter.localizedString(from: .now, dateStyle: .none, timeStyle: .medium)
         ledgerCloudSyncLog.append("[\(timestamp)] \(message)")
-        if ledgerCloudSyncLog.count > 12 {
-            ledgerCloudSyncLog.removeFirst(ledgerCloudSyncLog.count - 12)
+        if ledgerCloudSyncLog.count > 40 {
+            ledgerCloudSyncLog.removeFirst(ledgerCloudSyncLog.count - 40)
         }
+    }
+
+    private func markRecentlyEdited(_ transactionID: UUID, now: Date = .now) {
+        pruneRecentlyEditedTransactions(referenceDate: now)
+        recentlyEditedTransactionIDs[transactionID] = now
+    }
+
+    private func protectedRecentlyEditedTransactionIDs(referenceDate: Date = .now) -> Set<UUID> {
+        pruneRecentlyEditedTransactions(referenceDate: referenceDate)
+        return Set(recentlyEditedTransactionIDs.keys)
+    }
+
+    private func pruneRecentlyEditedTransactions(referenceDate: Date = .now) {
+        let retention: TimeInterval = 10 * 60
+        recentlyEditedTransactionIDs = recentlyEditedTransactionIDs.filter { _, editedAt in
+            referenceDate.timeIntervalSince(editedAt) <= retention
+        }
+    }
+
+    private func shortID(_ id: UUID) -> String {
+        String(id.uuidString.prefix(8))
+    }
+
+    private func syncMetadataSummary(_ metadata: TransactionSyncMetadata?) -> String {
+        guard let metadata else { return "nil" }
+        let deletedAt = metadata.deletedAt.map(AppFormatters.exportDateTime) ?? "nil"
+        return "rev=\(metadata.syncRevision), device=\(metadata.deviceID.prefix(8)), updated=\(AppFormatters.exportDateTime(metadata.updatedAt)), deleted=\(deletedAt), conflict=\(metadata.conflictState.rawValue)"
     }
 
     private var lastSuccessfulCloudKitPushAt: Date? {

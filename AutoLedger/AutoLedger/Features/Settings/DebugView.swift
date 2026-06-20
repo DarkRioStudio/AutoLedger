@@ -725,7 +725,8 @@ struct DebugView: View {
         store.lastImportSummary != nil ||
         !store.lastRecognizedText.isEmpty ||
         store.lastParsedReceipt != nil ||
-        !store.debugRecords.isEmpty
+        !store.debugRecords.isEmpty ||
+        !store.ledgerCloudSyncLog.isEmpty
     }
 
     private var exportText: String {
@@ -788,6 +789,11 @@ struct DebugView: View {
                     lines.append("  模型输出：\(response)")
                 }
             }
+        }
+
+        if !store.ledgerCloudSyncLog.isEmpty {
+            lines.append("iCloud 同步日志：")
+            lines.append(contentsOf: store.ledgerCloudSyncLog)
         }
 
         if !store.transactions.isEmpty {
@@ -858,6 +864,11 @@ struct DebugView: View {
         if let response = record.llmResponse {
             lines.append("模型输出：")
             lines.append(response)
+        }
+
+        if !store.ledgerCloudSyncLog.isEmpty {
+            lines.append("iCloud 同步日志：")
+            lines.append(contentsOf: store.ledgerCloudSyncLog)
         }
 
         return lines.joined(separator: "\n")

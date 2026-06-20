@@ -2142,6 +2142,52 @@ struct OfflineRegression {
             "SQLite remote sync does not overwrite edited metro merchant with stale remote value"
         )
 
+        let protectedEditID = UUID(uuidString: "00000000-0000-0000-0000-000000151504") ?? UUID()
+        let protectedMetroOriginal = Transaction(
+            id: protectedEditID,
+            merchant: "地铁：埌西 →",
+            amount: 1.8,
+            occurredAt: Date(timeIntervalSince1970: 1_780_260_000),
+            category: .transport,
+            source: .manual,
+            note: "快捷指令自动记账"
+        )
+        try store.save(transaction: protectedMetroOriginal)
+        let protectedMetroEdited = Transaction(
+            id: protectedEditID,
+            merchant: "地铁：埌西→万象城",
+            amount: 1.8,
+            occurredAt: protectedMetroOriginal.occurredAt,
+            category: .transport,
+            source: .manual,
+            note: "快捷指令自动记账"
+        )
+        try store.update(transaction: protectedMetroEdited)
+        guard let protectedEditMetadata = try store.loadTransactionSyncMetadata(transactionID: protectedEditID) else {
+            reporter.check(false, "SQLite protected local edit exposes sync metadata")
+            return
+        }
+        let remoteProtectedMetro = TransactionSyncRecord(
+            transaction: protectedMetroOriginal,
+            metadata: TransactionSyncMetadata(
+                transactionID: protectedEditID,
+                updatedAt: protectedEditMetadata.updatedAt,
+                syncRevision: protectedEditMetadata.syncRevision + 3,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(protectedEditID.uuidString)"
+            )
+        )
+        let protectedBatchSummary = try store.applyRemoteSyncRecords(
+            [remoteProtectedMetro],
+            protectedLocalTransactionIDs: [protectedEditID]
+        )
+        let transactionsAfterProtectedRemote = try store.loadTransactions()
+        reporter.check(protectedBatchSummary.keptLocal == 1, "SQLite batch sync keeps protected recent local edit")
+        reporter.check(
+            transactionsAfterProtectedRemote.contains(protectedMetroEdited),
+            "SQLite protected recent local edit is not overwritten by same-second remote pull"
+        )
+
         let batchInsertID = UUID(uuidString: "00000000-0000-0000-0000-000000151502") ?? UUID()
         let batchUpdateID = batchInsertID
         let batchDeleteID = remoteInsertedID

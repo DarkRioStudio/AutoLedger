@@ -605,13 +605,20 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return try applyRemoteSyncRecord(remote, localRecord: localRecord)
     }
 
-    public func applyRemoteSyncRecords(_ remotes: [TransactionSyncRecord]) throws -> TransactionSyncApplySummary {
+    public func applyRemoteSyncRecords(
+        _ remotes: [TransactionSyncRecord],
+        protectedLocalTransactionIDs: Set<UUID> = []
+    ) throws -> TransactionSyncApplySummary {
         let localRecords = try loadTransactionSyncRecords(includeDeleted: true)
         var localRecordsByID = Dictionary(uniqueKeysWithValues: localRecords.map { ($0.transaction.id, $0) })
         var summary = TransactionSyncApplySummary()
 
         for remote in remotes {
-            let outcome = try applyRemoteSyncRecord(remote, localRecord: localRecordsByID[remote.transaction.id])
+            let outcome = try applyRemoteSyncRecord(
+                remote,
+                localRecord: localRecordsByID[remote.transaction.id],
+                protectLocal: protectedLocalTransactionIDs.contains(remote.transaction.id)
+            )
             summary.record(outcome)
 
             switch outcome {
@@ -631,7 +638,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     private func applyRemoteSyncRecord(
         _ remote: TransactionSyncRecord,
-        localRecord: TransactionSyncRecord?
+        localRecord: TransactionSyncRecord?,
+        protectLocal: Bool = false
     ) throws -> TransactionSyncApplyOutcome {
         guard let localRecord else {
             guard remote.metadata.deletedAt == nil else {
@@ -639,6 +647,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             }
             try insertRemoteSyncRecord(remote)
             return .inserted
+        }
+
+        if protectLocal,
+           localRecord.metadata.deviceID != remote.metadata.deviceID,
+           (localRecord.transaction != remote.transaction || localRecord.metadata.deletedAt != remote.metadata.deletedAt) {
+            return .keptLocal
         }
 
         switch TransactionSyncConflictResolver.resolve(local: localRecord, remote: remote) {
