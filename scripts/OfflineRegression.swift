@@ -1169,7 +1169,7 @@ struct OfflineRegression {
         )
         reporter.check(
             TransactionSyncConflictResolver.resolve(local: local, remote: remoteNewer) == .applyRemote,
-            "TransactionSyncConflictResolver applies higher remote revision"
+            "TransactionSyncConflictResolver applies newer remote timestamp"
         )
 
         let localEditedMetro = TransactionSyncRecord(
@@ -1211,6 +1211,29 @@ struct OfflineRegression {
         reporter.check(
             TransactionSyncConflictResolver.resolve(local: localEditedMetro, remote: remoteStaleMetro) == .keepLocal,
             "TransactionSyncConflictResolver preserves newer local metro merchant edits even when remote revision is higher"
+        )
+
+        let remoteSameSecondHigherRevisionMetro = TransactionSyncRecord(
+            transaction: Transaction(
+                id: transactionID,
+                merchant: "地铁：埌西 →",
+                amount: 1.8,
+                occurredAt: baseTransaction.occurredAt,
+                category: .transport,
+                source: .manual,
+                note: "same second stale remote"
+            ),
+            metadata: TransactionSyncMetadata(
+                transactionID: transactionID,
+                updatedAt: localEditedMetro.metadata.updatedAt,
+                syncRevision: localEditedMetro.metadata.syncRevision + 3,
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(transactionID.uuidString)"
+            )
+        )
+        reporter.check(
+            TransactionSyncConflictResolver.resolve(local: localEditedMetro, remote: remoteSameSecondHigherRevisionMetro) == .conflictPendingReview,
+            "TransactionSyncConflictResolver does not let cross-device revision overwrite same-second local metro edits"
         )
 
         let remoteConflict = TransactionSyncRecord(
@@ -1330,6 +1353,17 @@ struct OfflineRegression {
         )
         reporter.check(incrementalBatch.upserts.isEmpty, "LedgerSyncPlanner filters unchanged active records by changedAfter")
         reporter.check(incrementalBatch.tombstones.map(\.transactionID) == [deletedID], "LedgerSyncPlanner keeps changed tombstones after changedAfter")
+
+        let equalTimestampBatch = LedgerSyncPlanner.makePushBatch(
+            from: [activeRecord],
+            changedAfter: activeRecord.metadata.updatedAt,
+            tombstoneRetentionDays: 30,
+            referenceDate: Date(timeIntervalSince1970: 1_780_040_000)
+        )
+        reporter.check(
+            equalTimestampBatch.upserts.map(\.transactionID) == [activeID],
+            "LedgerSyncPlanner includes records changed at the checkpoint second"
+        )
     }
 
     private static func verifyLedgerConfigurationSyncPolicy(reporter: RegressionReporter) {

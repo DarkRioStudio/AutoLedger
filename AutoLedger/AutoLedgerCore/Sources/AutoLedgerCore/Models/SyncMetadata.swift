@@ -116,16 +116,18 @@ public enum TransactionSyncConflictResolver {
             return .keepLocal
         }
 
-        if remote.metadata.syncRevision > local.metadata.syncRevision {
-            return .applyRemote
-        }
-        if local.metadata.syncRevision > remote.metadata.syncRevision {
-            return .keepLocal
-        }
-
         if local.transaction == remote.transaction &&
             local.metadata.deletedAt == remote.metadata.deletedAt {
             return .keepLocal
+        }
+
+        if local.metadata.deviceID == remote.metadata.deviceID {
+            if remote.metadata.syncRevision > local.metadata.syncRevision {
+                return .applyRemote
+            }
+            if local.metadata.syncRevision > remote.metadata.syncRevision {
+                return .keepLocal
+            }
         }
 
         return .conflictPendingReview

@@ -21,6 +21,7 @@
 - [2026-06-19 +0800] 推进 `v1.6.0` 第一版：将内部开发线固定对应 App Store / ASC `1.5.0`，全 target `MARKETING_VERSION` 从 `1.4.0` 提升到 `1.5.0`；`versions/v1.6.0-plan.md` 从 Draft 调整为 Active，并将 `GOAL-1700` 标记完成。同步更新 README / README.en Roadmap 与版本读取兜底值。本轮不实现新功能，不修改 Bundle ID、signing team、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
 
 ### 修复（v1.6.0）
+- [2026-06-20 +0800] 补强账单编辑后 iCloud 同步保护：`syncRevision` 仅在同一设备内作为同一时间戳的次级排序依据，跨设备同秒分歧不再靠本地 revision 覆盖用户编辑，避免地铁站名补全后被旧远端记录回写；增量推送边界从 `updatedAt > checkpoint` 调整为包含 checkpoint 秒，避免刚保存的编辑因时间精度落在边界而漏推。新增离线回归覆盖 `地铁：埌西 →` 同秒旧远端高 revision 不覆盖本地编辑，以及 checkpoint 秒内变更仍进入增量推送。
 - [2026-06-19 +0800] 修复账单编辑后可能被 iCloud 旧远端记录覆盖的问题：`TransactionSyncConflictResolver` 对同一账单优先比较 `updatedAt`，仅在更新时间相同后再使用设备本地 `syncRevision` 作次级判断，避免“远端旧内容但 revision 更高”覆盖刚保存的本地商户编辑。新增离线回归覆盖 `地铁：琅西 →` 手动补全为 `地铁：琅西→金湖广场` 后，旧远端同步回放不会覆盖本地编辑。本轮不修改地铁 / 南宁地铁解析规则或金额计算。
 
 ### 修复（v1.5.1）

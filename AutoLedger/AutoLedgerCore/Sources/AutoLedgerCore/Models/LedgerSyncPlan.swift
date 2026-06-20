@@ -295,7 +295,7 @@ public enum LedgerSyncPlanner {
     ) -> LedgerSyncPushBatch {
         let changedRecords = records.filter { record in
             guard let changedAfter else { return true }
-            return record.metadata.updatedAt > changedAfter
+            return record.metadata.updatedAt >= changedAfter
         }
 
         let retentionSeconds = TimeInterval(max(tombstoneRetentionDays, 0) * 24 * 60 * 60)

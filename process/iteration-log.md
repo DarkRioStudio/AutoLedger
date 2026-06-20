@@ -4654,6 +4654,20 @@
 - 回滚方式：如新平台签名或 CloudKit schema 阻塞发布，可回退 tvOS / visionOS entitlement 与 CloudKit snapshot 拉取入口，保留首版本机 SQLite 只读看板；主账本 iCloud 同步链路可独立保留。
 - 结论：本轮完成，tvOS / visionOS 已具备只读跨设备数据入口；下一步进入 `GOAL-1760` 多端 polish 与真机 / 模拟器 smoke。
 
+### ITER-1760A 同秒账单编辑同步保护补强
+- 日期：2026-06-20
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1760
+- 类型：Bugfix / 数据同步 / 账本编辑
+- 目标：修复真机上个别地铁账单编辑补全站名后仍可能回退的问题，尤其是 `地铁：埌西 →` 这类同金额、相近时间、连续编辑场景。
+- 改动范围：调整 `TransactionSyncConflictResolver` 的同时间戳决策；调整 `LedgerSyncPlanner` 的增量推送 checkpoint 边界；新增离线回归覆盖跨设备同秒旧远端高 revision 不覆盖本地编辑，以及 checkpoint 秒内变更仍进入增量推送。
+- 未改动范围：不修改地铁 / 南宁地铁解析规则；不修改金额计算；不修改 SQLite schema、CloudKit record schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
+- 完成内容：`syncRevision` 只在同一设备内作为同一时间戳下的次级排序依据；跨设备同秒分歧进入冲突保护，不再靠远端高 revision 覆盖本地商户编辑；增量推送包含 `updatedAt == checkpoint` 的边界记录，降低刚保存编辑漏推风险。
+- 测试情况：先新增两个失败回归并确认 `run_offline_regression.sh` 出现 2 个预期失败；修复后执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `bash scripts/run_golden_regression.sh`，结果 PASS；执行主 App iOS generic build，结果 PASS。
+- 风险与注意事项：跨设备同秒不同内容现在会进入冲突保护，可能让同步摘要里的冲突数增加，但比静默覆盖用户编辑更安全。若真机仍复现，需要导出保存后的 Debug 记录和 iCloud 同步日志，确认是本地保存失败、自动推送未触发，还是远端已有更新仍被判为更新。
+- 回滚方式：如该策略导致误报冲突过多，可回退 `SyncMetadata.swift` 和 `LedgerSyncPlan.swift` 的本轮改动，并保留新增回归作为后续设计参考。
+- 结论：本轮完成，账本编辑后的同秒跨设备同步覆盖风险已补强；下一步继续 `GOAL-1760` 的 Mac / iPad / Watch polish。
+
 ### ITER-005A 发布收口前的最小回归证据补齐
 - 日期：2026-03-27
 - 所属版本：v0.1.0
