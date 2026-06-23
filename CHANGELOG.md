@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.0）
+- [2026-06-22 +0800] 继续收口 `GOAL-1760` 的 tvOS / visionOS 多端 polish：tvOS 看板统一四个 tab 的内容区高度和顶部位置，补充遥控器左右切换、焦点样式、刷新按钮样式、CloudKit 账号 / 快照 / 远端账本诊断，以及 Apple TV 模拟器 DEBUG 演示数据；visionOS 展示版增加宽屏三栏空间布局、轻量 3D 倾斜层次和模拟器演示数据。两个新平台继续保持只读，不导入、不编辑、不删除、不写入账本；模拟器演示数据仅限 DEBUG simulator，不进入 Release。
 - [2026-06-20 +0800] 完成 `GOAL-1755` tvOS / visionOS 只读看板同步入口：主 App 在 iCloud 账本同步后发布 `LedgerDashboardSnapshot` 到 CloudKit private database，大屏端优先拉取该只读 dashboard snapshot，没有快照或读取失败时回退本机 SQLite。快照仅包含展示字段，不包含原始截图、OCR 原文、调试记录、syncRevision、idempotencyKey 或冲突状态；tvOS / visionOS 仍保持只读，不导入、不编辑、不删除。新增 tvOS / visionOS CloudKit entitlements，签名发布前需在 Apple Developer Portal 为对应 App ID / profile 启用 iCloud CloudKit 并确认 Production schema。
 - [2026-06-19 +0800] 完成 `GOAL-1750` visionOS 展示版第一版：`AutoLedgerVision` target 显式链接 `AutoLedgerCore`，从模板 `Model3D + Hello, world!` 替换为 SwiftUI 单窗口只读空间看板，包含月度支出空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表、隐私模式、刷新入口以及 loading / empty / unavailable 状态。首版继续保持 `WindowGroup`，不启用 immersive space / Volume，不新增导入、编辑、删除、清洗、多账本、CloudKit schema 或 SQLite schema；Apple Vision Pro simulator build、install、launch 和 empty 状态截图 smoke 已通过。
 - [2026-06-19 +0800] 完成 `GOAL-1740` tvOS 只读看板第一版：`AutoLedgerTV` target 显式链接 `AutoLedgerCore`，从模板入口替换为 `总览 / 分类 / 趋势 / 摘要` 四页只读 dashboard，复用 `MonthlySnapshot` 和 `TodaySpendingSummary` 展示本月支出、分类占比、最近趋势、年度累计、Top 商户和最近账单，并提供隐私隐藏与空状态。本轮不新增 tvOS iCloud / CloudKit capability、entitlements 或 CloudKit 只读拉取；Apple TV 当前读取本机正式账本，跨设备 dashboard snapshot / CloudKit 只读入口留待后续 GOAL。

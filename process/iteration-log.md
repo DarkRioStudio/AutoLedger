@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-21（GOAL-1760C 交易编辑页输入提交修复）
+更新日期：2026-06-22（GOAL-1760D tvOS / visionOS 多端 polish 收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-216 GOAL-1760D tvOS / visionOS 多端 polish 收口
+- 日期：2026-06-22
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1760
+- 类型：UI / 多平台展示 / 调试体验
+- 目标：收口 Apple TV 和 visionOS 展示版在模拟器与大屏场景下的第一版体验，减少空数据、布局错位和操作反馈不明确的问题。
+- 改动范围：调整 tvOS 看板 header、按钮、内容区固定高度、四个 tab 顶部对齐、右侧列宽和遥控器左右切换；为 tvOS 增加 CloudKit 账号状态、dashboard snapshot、远端账本兜底读取诊断和 DEBUG simulator 演示数据；调整 visionOS 隐私按钮文案，增加宽屏三栏空间布局、轻量 3D 倾斜层次和 DEBUG simulator 演示数据；新增 tvOS / visionOS shared scheme，便于 `xcodebuild -scheme AutoLedgerTV` / `AutoLedgerVision` 稳定构建。
+- 未改动范围：未让 tvOS / visionOS 写入正式账本；未新增导入、编辑、删除、清洗或多账本；未修改 Bundle ID、DEVELOPMENT_TEAM、主 App App Group、主 App iCloud Container、CloudKit schema 或 Xcode Cloud 脚本；未把模拟器样例数据带入 Release。
+- 完成内容：Apple TV 模拟器在未登录 iCloud 或无快照时可通过 DEBUG simulator 数据继续验证视觉和焦点；tvOS 四个 tab 的内容顶部更一致，隐私 / 刷新按钮可读性更明确；visionOS 在宽屏窗口下展示为月度看板、时间线 / 最近账单和分类卡片三栏空间布局，紧凑窗口继续使用原有布局。
+- 未完成内容：tvOS / visionOS 真机或 TestFlight 上的 iCloud private database 读取仍需人工 smoke；tvOS 分类页右侧卡片与最近账单的视觉距离还可继续微调；tvOS / visionOS App Store 平台素材和截图管线尚未进入 `GOAL-1770`。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`，结果 PASS，仅有 tvOS target 不依赖 AppIntents 时的 metadata extraction skipped warning；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`，结果 PASS。真机 / TestFlight 数据读取不由模拟器结果替代。
+- 风险与注意事项：Apple TV / visionOS 模拟器可能无法稳定登录 iCloud，因此 DEBUG simulator 数据只用于视觉和焦点验证，不能作为 CloudKit 同步成功证据。发布前仍需确认 `LedgerDashboardSnapshot` Production schema、平台 App ID 的 iCloud CloudKit capability 和 provisioning profile。
+- 回滚方式：如新平台 polish 影响构建或交互，可回退 `AutoLedgerTV/ContentView.swift`、`AutoLedgerVision/ContentView.swift` 和新增 shared scheme，保留 `GOAL-1755` 主 App 快照发布链路独立验证。
+- 结论：本轮完成后可将 `GOAL-1760` 视为代码侧基本收尾，下一步进入 `GOAL-1770` 发布资产与 smoke。
+- 下一步建议：跑完整构建门禁后提交本轮；随后补 `v1.6.0` 发布前 smoke 清单，决定 tvOS / visionOS 是否随 ASC 1.5.0 作为正式平台推进，或先作为内部预览保留。
 
 ### ITER-215 GOAL-1760C 交易编辑页输入提交修复
 - 日期：2026-06-21

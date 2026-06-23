@@ -20,31 +20,33 @@ struct ContentView: View {
             VisionDashboardTheme.background
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    header
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        header
 
-                    Group {
-                        switch loadState {
-                        case .loading:
-                            VisionLoadingView()
-                        case let .unavailable(message):
-                            VisionUnavailableView(message: message) {
-                                Task { await load() }
-                            }
-                        case let .ready(snapshot):
-                            if snapshot.isEmpty {
-                                VisionEmptyLedgerView(updatedAt: snapshot.generatedAt) {
+                        Group {
+                            switch loadState {
+                            case .loading:
+                                VisionLoadingView()
+                            case let .unavailable(message):
+                                VisionUnavailableView(message: message) {
                                     Task { await load() }
                                 }
-                            } else {
-                                dashboard(snapshot)
+                            case let .ready(snapshot):
+                                if snapshot.isEmpty {
+                                    VisionEmptyLedgerView(updatedAt: snapshot.generatedAt) {
+                                        Task { await load() }
+                                    }
+                                } else {
+                                    dashboard(snapshot, availableWidth: proxy.size.width - 84)
+                                }
                             }
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(42)
                 }
-                .padding(42)
             }
         }
         .task {
@@ -68,7 +70,7 @@ struct ContentView: View {
             Button {
                 privacyMode.toggle()
             } label: {
-                Label(privacyMode ? "隐私模式" : "标准显示", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
+                Label(privacyMode ? "显示金额" : "隐藏金额", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
@@ -92,7 +94,16 @@ struct ContentView: View {
         }
     }
 
-    private func dashboard(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
+    @ViewBuilder
+    private func dashboard(_ snapshot: VisionLedgerDashboardSnapshot, availableWidth: CGFloat) -> some View {
+        if availableWidth >= 1320 {
+            wideDashboard(snapshot)
+        } else {
+            compactDashboard(snapshot)
+        }
+    }
+
+    private func compactDashboard(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
         VStack(spacing: 28) {
             HStack(alignment: .top, spacing: 28) {
                 VisionMonthlyBoard(snapshot: snapshot, privacyMode: privacyMode)
@@ -112,6 +123,36 @@ struct ContentView: View {
                     .frame(minHeight: 300)
             }
         }
+    }
+
+    private func wideDashboard(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
+        HStack(alignment: .top, spacing: 28) {
+            VisionMonthlyBoard(snapshot: snapshot, privacyMode: privacyMode)
+                .frame(minWidth: 560, maxWidth: .infinity, minHeight: 640)
+                .rotation3DEffect(.degrees(-2.2), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
+                .shadow(color: .black.opacity(0.24), radius: 34, x: 10, y: 22)
+
+            VStack(spacing: 24) {
+                VisionYearTimelineWall(snapshot: snapshot, privacyMode: privacyMode)
+                    .frame(height: 306)
+                    .rotation3DEffect(.degrees(1.4), axis: (x: 0, y: 1, z: 0), anchor: .center)
+
+                VisionRecentRail(snapshot: snapshot, privacyMode: privacyMode)
+                    .frame(height: 310)
+                    .rotation3DEffect(.degrees(1.8), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+            }
+            .frame(width: 430)
+            .offset(y: 18)
+            .shadow(color: .black.opacity(0.18), radius: 26, x: 0, y: 18)
+
+            VisionCategoryCloud(snapshot: snapshot, privacyMode: privacyMode)
+                .frame(width: 360)
+                .frame(minHeight: 640)
+                .offset(y: 46)
+                .rotation3DEffect(.degrees(3.2), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+                .shadow(color: .black.opacity(0.26), radius: 36, x: -8, y: 24)
+        }
+        .frame(maxWidth: .infinity, minHeight: 710, alignment: .topLeading)
     }
 
     @MainActor
@@ -138,17 +179,13 @@ struct ContentView: View {
             return sortForDashboard(snapshot.displayTransactions)
         }
 
-        return try await Task.detached(priority: .userInitiated) {
-            let store = try SQLiteTransactionStore()
-            return try store.loadTransactions()
-                .filter { $0.amount > 0 }
-                .sorted { lhs, rhs in
-                    if lhs.occurredAt == rhs.occurredAt {
-                        return lhs.merchant < rhs.merchant
-                    }
-                    return lhs.occurredAt > rhs.occurredAt
-                }
-        }.value
+        #if DEBUG
+        #if targetEnvironment(simulator)
+        return sortForDashboard(VisionDashboardSimulatorData.transactions(referenceDate: Date()))
+        #endif
+        #endif
+
+        return []
     }
 
     nonisolated private static func sortForDashboard(_ transactions: [LedgerTransaction]) -> [LedgerTransaction] {
@@ -160,6 +197,34 @@ struct ContentView: View {
                 }
                 return lhs.occurredAt > rhs.occurredAt
             }
+    }
+}
+
+private enum VisionDashboardSimulatorData {
+    static func transactions(referenceDate: Date) -> [LedgerTransaction] {
+        let calendar = Calendar.autoupdatingCurrent
+        let specs: [(String, Double, Int, String, String)] = [
+            ("Demo Coffee", 18.00, 0, "餐饮", "截图识别"),
+            ("Example Market", 86.50, 0, "购物", "剪贴板"),
+            ("地铁：Example Station → Example Airport", 4.00, 1, "出行", "快捷指令"),
+            ("Sample Cinema", 45.00, 2, "娱乐", "手动录入"),
+            ("Sample Books", 39.00, 4, "学习", "截图识别"),
+            ("Mobile Carrier", 50.00, 8, "通讯", "自动导入"),
+            ("Lunch Bistro", 28.00, 12, "餐饮", "语音记账"),
+            ("Takeout Sample", 32.00, 16, "餐饮", "分享导入")
+        ]
+
+        return specs.enumerated().map { index, spec in
+            LedgerTransaction(
+                id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index + 1)) ?? UUID(),
+                merchant: spec.0,
+                amount: spec.1,
+                occurredAt: calendar.date(byAdding: .day, value: -spec.2, to: referenceDate) ?? referenceDate,
+                categoryLabel: spec.3,
+                sourceLabel: spec.4,
+                note: "visionOS 模拟器演示数据"
+            )
+        }
     }
 }
 

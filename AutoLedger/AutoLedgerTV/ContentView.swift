@@ -22,7 +22,7 @@ struct ContentView: View {
             TVDashboardTheme.background
                 .ignoresSafeArea()
 
-            VStack(spacing: 30) {
+            VStack(spacing: 22) {
                 header
 
                 TVDashboardTabs(
@@ -48,13 +48,17 @@ struct ContentView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .padding(.horizontal, 76)
-            .padding(.vertical, 48)
+            .padding(.horizontal, 88)
+            .padding(.top, 72)
+            .padding(.bottom, 46)
         }
         .onAppear {
             store.load()
+        }
+        .onMoveCommand { direction in
+            moveSelection(direction)
         }
     }
 
@@ -62,10 +66,10 @@ struct ContentView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("AutoLedger")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
                 Text("家庭大屏只读账本")
-                    .font(.system(size: 54, weight: .heavy, design: .rounded))
+                    .font(.system(size: 50, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
 
@@ -74,7 +78,7 @@ struct ContentView: View {
             Button {
                 privacyMode.toggle()
             } label: {
-                Label(privacyMode ? "已隐藏金额" : "标准显示", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
+                Label(privacyMode ? "显示金额" : "隐藏金额", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
@@ -87,30 +91,54 @@ struct ContentView: View {
             } label: {
                 Label("刷新", systemImage: "arrow.clockwise")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 26)
+                    .padding(.vertical, 16)
+                    .background(.white.opacity(0.12), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.24), lineWidth: 1))
             }
-            .buttonStyle(.bordered)
-            .tint(.white)
+            .buttonStyle(.plain)
         }
     }
 
     @ViewBuilder
     private func dashboard(_ snapshot: TVLedgerDashboardSnapshot) -> some View {
-        switch selectedPage {
-        case .overview:
-            TVOverviewPage(snapshot: snapshot, privacyMode: privacyMode)
-        case .categories:
-            TVCategoryPage(snapshot: snapshot, privacyMode: privacyMode)
-        case .trend:
-            TVTrendPage(snapshot: snapshot, privacyMode: privacyMode)
-        case .summary:
-            TVSummaryPage(snapshot: snapshot, privacyMode: privacyMode)
+        Group {
+            switch selectedPage {
+            case .overview:
+                TVOverviewPage(snapshot: snapshot, privacyMode: privacyMode)
+            case .categories:
+                TVCategoryPage(snapshot: snapshot, privacyMode: privacyMode)
+            case .trend:
+                TVTrendPage(snapshot: snapshot, privacyMode: privacyMode)
+            case .summary:
+                TVSummaryPage(snapshot: snapshot, privacyMode: privacyMode)
+            }
+        }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TVDashboardLayout.contentHeight,
+            maxHeight: TVDashboardLayout.contentHeight,
+            alignment: .topLeading
+        )
+    }
+
+    private func moveSelection(_ direction: MoveCommandDirection) {
+        let pages = TVDashboardPage.allCases
+        guard let currentIndex = pages.firstIndex(of: selectedPage) else { return }
+
+        switch direction {
+        case .left:
+            selectedPage = pages[max(currentIndex - 1, pages.startIndex)]
+        case .right:
+            selectedPage = pages[min(currentIndex + 1, pages.index(before: pages.endIndex))]
+        default:
+            break
         }
     }
 }
 
-private enum TVDashboardPage: String, CaseIterable, Identifiable {
+private enum TVDashboardPage: String, CaseIterable, Hashable, Identifiable {
     case overview
     case categories
     case trend
@@ -135,6 +163,15 @@ private enum TVDashboardPage: String, CaseIterable, Identifiable {
         case .summary: return "sparkles.rectangle.stack.fill"
         }
     }
+}
+
+private enum TVDashboardLayout {
+    static let contentHeight: CGFloat = 704
+    static let columnSpacing: CGFloat = 28
+    static let rowSpacing: CGFloat = 22
+    static let rightColumnWidth: CGFloat = 560
+    static let overviewTopRightHeight: CGFloat = 330
+    static let overviewRecentHeight: CGFloat = contentHeight - overviewTopRightHeight - rowSpacing
 }
 
 @MainActor
@@ -167,21 +204,43 @@ private final class TVLedgerDashboardStore: ObservableObject {
     }
 
     nonisolated private static func loadTransactions() async throws -> [LedgerTransaction] {
-        if let snapshot = try? await TVDashboardCloudSnapshotClient.fetchSnapshot() {
-            return sortForDashboard(snapshot.displayTransactions)
+        var diagnostics: [String] = []
+
+        do {
+            let accountStatus = try await TVDashboardCloudDiagnostics.accountStatusDescription()
+            diagnostics.append("iCloud 账号：\(accountStatus)")
+        } catch {
+            diagnostics.append("iCloud 账号检查失败：\(TVDashboardCloudDiagnostics.describe(error))")
         }
 
-        return try await Task.detached(priority: .userInitiated) {
-            let store = try SQLiteTransactionStore()
-            return try store.loadTransactions()
-                .filter { $0.amount > 0 }
-                .sorted { lhs, rhs in
-                    if lhs.occurredAt == rhs.occurredAt {
-                        return lhs.merchant < rhs.merchant
-                    }
-                    return lhs.occurredAt > rhs.occurredAt
-                }
-        }.value
+        do {
+            if let snapshot = try await TVDashboardCloudSnapshotClient.fetchSnapshot() {
+                let transactions = sortForDashboard(snapshot.displayTransactions)
+                diagnostics.append("大屏快照读取成功：\(transactions.count) 条。")
+                return transactions
+            }
+            diagnostics.append("大屏快照不存在：等待 iPhone / iPad / Mac 完成一次 iCloud 同步并发布快照。")
+        } catch {
+            diagnostics.append("大屏快照读取失败：\(TVDashboardCloudDiagnostics.describe(error))")
+        }
+
+        do {
+            let cloudTransactions = sortForDashboard(try await TVDashboardCloudTransactionClient.fetchTransactions())
+            diagnostics.append("远端账本兜底读取：\(cloudTransactions.count) 条。")
+            if !cloudTransactions.isEmpty {
+                return cloudTransactions
+            }
+        } catch {
+            diagnostics.append("远端账本兜底读取失败：\(TVDashboardCloudDiagnostics.describe(error))")
+        }
+
+        #if DEBUG
+        #if targetEnvironment(simulator)
+        return TVDashboardSimulatorData.transactions(referenceDate: Date())
+        #endif
+        #endif
+
+        throw TVDashboardCloudDataUnavailable(diagnostics: diagnostics)
     }
 
     nonisolated private static func sortForDashboard(_ transactions: [LedgerTransaction]) -> [LedgerTransaction] {
@@ -193,6 +252,143 @@ private final class TVLedgerDashboardStore: ObservableObject {
                 }
                 return lhs.occurredAt > rhs.occurredAt
             }
+    }
+}
+
+private enum TVDashboardSimulatorData {
+    static func transactions(referenceDate: Date) -> [LedgerTransaction] {
+        let calendar = Calendar.autoupdatingCurrent
+        let specs: [(String, Double, Int, String, String)] = [
+            ("Demo Coffee", 18.00, 0, "餐饮", "截图识别"),
+            ("Example Market", 86.50, 0, "购物", "剪贴板"),
+            ("地铁：Example Station → Example Airport", 4.00, 1, "出行", "快捷指令"),
+            ("Sample Cinema", 45.00, 2, "娱乐", "手动录入"),
+            ("Sample Books", 39.00, 4, "学习", "截图识别"),
+            ("Mobile Carrier", 50.00, 8, "通讯", "自动导入"),
+            ("Lunch Bistro", 28.00, 12, "餐饮", "语音记账"),
+            ("Takeout Sample", 32.00, 16, "餐饮", "分享导入")
+        ]
+
+        return specs.enumerated().map { index, spec in
+            LedgerTransaction(
+                id: UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", index + 1)) ?? UUID(),
+                merchant: spec.0,
+                amount: spec.1,
+                occurredAt: calendar.date(byAdding: .day, value: -spec.2, to: referenceDate) ?? referenceDate,
+                categoryLabel: spec.3,
+                sourceLabel: spec.4,
+                note: "tvOS 模拟器演示数据"
+            )
+        }
+    }
+}
+
+private struct TVDashboardCloudDataUnavailable: LocalizedError {
+    let diagnostics: [String]
+
+    var errorDescription: String? {
+        diagnostics.joined(separator: "\n")
+    }
+}
+
+private enum TVDashboardCloudDiagnostics {
+    nonisolated static func accountStatusDescription() async throws -> String {
+        switch try await CKContainer.default().accountStatus() {
+        case .available:
+            return "可用"
+        case .couldNotDetermine:
+            return "无法确定，请确认 Apple TV 模拟器已登录 iCloud。"
+        case .noAccount:
+            return "未登录，请在 Apple TV 模拟器设置里登录同一个 Apple ID。"
+        case .restricted:
+            return "受限，当前账号或设备限制了 iCloud。"
+        case .temporarilyUnavailable:
+            return "暂时不可用，稍后重试。"
+        @unknown default:
+            return "未知状态"
+        }
+    }
+
+    nonisolated static func describe(_ error: Error) -> String {
+        if let ckError = error as? CKError {
+            return "CKError \(ckError.errorCode) (\(ckError.code))：\(ckError.localizedDescription)"
+        }
+        return error.localizedDescription
+    }
+}
+
+private enum TVDashboardCloudTransactionClient {
+    static func fetchTransactions() async throws -> [LedgerTransaction] {
+        let desiredKeys = [
+            CloudLedgerSyncSchema.Field.transactionID,
+            CloudLedgerSyncSchema.Field.merchant,
+            CloudLedgerSyncSchema.Field.amount,
+            CloudLedgerSyncSchema.Field.occurredAt,
+            CloudLedgerSyncSchema.Field.category,
+            CloudLedgerSyncSchema.Field.source,
+            CloudLedgerSyncSchema.Field.note,
+            CloudLedgerSyncSchema.Field.deletedAt
+        ]
+        let query = CKQuery(
+            recordType: CloudLedgerSyncSchema.RecordType.transaction,
+            predicate: NSPredicate(value: true)
+        )
+        query.sortDescriptors = [
+            NSSortDescriptor(key: CloudLedgerSyncSchema.Field.occurredAt, ascending: false)
+        ]
+
+        var records: [CKRecord] = []
+        let database = CKContainer.default().privateCloudDatabase
+        let firstPage = try await database.records(
+            matching: query,
+            desiredKeys: desiredKeys,
+            resultsLimit: 500
+        )
+        records.append(contentsOf: decodedRecords(from: firstPage.matchResults))
+
+        var cursor = firstPage.queryCursor
+        while let currentCursor = cursor {
+            let page = try await database.records(
+                continuingMatchFrom: currentCursor,
+                desiredKeys: desiredKeys,
+                resultsLimit: 500
+            )
+            records.append(contentsOf: decodedRecords(from: page.matchResults))
+            cursor = page.queryCursor
+        }
+
+        return records.compactMap(transaction(from:))
+    }
+
+    private static func decodedRecords(
+        from results: [(CKRecord.ID, Result<CKRecord, Error>)]
+    ) -> [CKRecord] {
+        results.compactMap { _, result in
+            try? result.get()
+        }
+    }
+
+    private static func transaction(from record: CKRecord) -> LedgerTransaction? {
+        guard
+            record[CloudLedgerSyncSchema.Field.deletedAt] == nil,
+            let transactionIDString = record[CloudLedgerSyncSchema.Field.transactionID] as? String,
+            let transactionID = UUID(uuidString: transactionIDString),
+            let merchant = record[CloudLedgerSyncSchema.Field.merchant] as? String,
+            let amountNumber = record[CloudLedgerSyncSchema.Field.amount] as? NSNumber,
+            let occurredAt = record[CloudLedgerSyncSchema.Field.occurredAt] as? Date
+        else {
+            return nil
+        }
+
+        return LedgerTransaction(
+            id: transactionID,
+            merchant: merchant,
+            amount: amountNumber.doubleValue,
+            occurredAt: occurredAt,
+            categoryLabel: (record[CloudLedgerSyncSchema.Field.category] as? String) ?? "其他",
+            sourceLabel: (record[CloudLedgerSyncSchema.Field.source] as? String) ?? "iCloud",
+            note: (record[CloudLedgerSyncSchema.Field.note] as? String) ?? ""
+        )
     }
 }
 
@@ -320,6 +516,7 @@ private struct TVDailyMetric: Identifiable, Sendable {
 private struct TVDashboardTabs: View {
     @Binding var selectedPage: TVDashboardPage
     let pages: [TVDashboardPage]
+    @FocusState private var focusedPage: TVDashboardPage?
 
     var body: some View {
         HStack(spacing: 18) {
@@ -331,10 +528,20 @@ private struct TVDashboardTabs: View {
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .frame(width: 220, height: 72)
                 }
-                .buttonStyle(TVTabButtonStyle(isSelected: selectedPage == page))
+                .focused($focusedPage, equals: page)
+                .buttonStyle(TVTabButtonStyle(
+                    isSelected: selectedPage == page,
+                    isFocused: focusedPage == page
+                ))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            focusedPage = selectedPage
+        }
+        .onChange(of: selectedPage) { _, newValue in
+            focusedPage = newValue
+        }
     }
 }
 
@@ -343,8 +550,8 @@ private struct TVOverviewPage: View {
     let privacyMode: Bool
 
     var body: some View {
-        HStack(spacing: 26) {
-            VStack(alignment: .leading, spacing: 22) {
+        HStack(spacing: TVDashboardLayout.columnSpacing) {
+            VStack(alignment: .leading, spacing: 20) {
                 TVPanel {
                     VStack(alignment: .leading, spacing: 18) {
                         Text(snapshot.monthlySnapshot.monthLabel)
@@ -360,21 +567,32 @@ private struct TVOverviewPage: View {
                             .foregroundStyle(snapshot.monthOverMonthDelta > 0 ? .orange : .green)
                     }
                 }
-                .frame(height: 280)
+                .frame(height: 250)
 
                 HStack(spacing: 22) {
                     TVMetricCard(title: "今日支出", value: privacyMode ? "***" : TVFormatters.currency(snapshot.todaySummary.totalExpense), iconName: "sun.max.fill", tint: .yellow)
                     TVMetricCard(title: "本月笔数", value: "\(snapshot.monthlySnapshot.transactionCount)", iconName: "list.bullet.rectangle.fill", tint: .cyan)
                     TVMetricCard(title: "日均支出", value: privacyMode ? "***" : TVFormatters.currency(snapshot.averageDailyExpense), iconName: "calendar", tint: .green)
                 }
+                .frame(height: 220)
+
+                Spacer(minLength: 0)
             }
 
-            VStack(spacing: 22) {
+            VStack(spacing: TVDashboardLayout.rowSpacing) {
                 TVTopCategoryPanel(snapshot: snapshot, privacyMode: privacyMode)
+                    .frame(height: TVDashboardLayout.overviewTopRightHeight)
                 TVRecentPanel(transactions: snapshot.recentTransactions, privacyMode: privacyMode)
+                    .frame(height: TVDashboardLayout.overviewRecentHeight)
             }
-            .frame(width: 560)
+            .frame(width: TVDashboardLayout.rightColumnWidth)
         }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TVDashboardLayout.contentHeight,
+            maxHeight: TVDashboardLayout.contentHeight,
+            alignment: .topLeading
+        )
     }
 
     private var monthDeltaText: String {
@@ -392,7 +610,7 @@ private struct TVCategoryPage: View {
     let privacyMode: Bool
 
     var body: some View {
-        HStack(spacing: 28) {
+        HStack(spacing: TVDashboardLayout.columnSpacing) {
             TVPanel {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("本月分类占比")
@@ -415,13 +633,19 @@ private struct TVCategoryPage: View {
                 }
             }
 
-            VStack(spacing: 22) {
+            VStack(spacing: TVDashboardLayout.rowSpacing) {
                 TVMetricCard(title: "Top 分类", value: snapshot.monthlySnapshot.categoryBreakdown.first?.title ?? "暂无", iconName: "chart.pie.fill", tint: .orange)
                 TVMetricCard(title: "分类数量", value: "\(snapshot.monthlySnapshot.categoryBreakdown.count)", iconName: "square.grid.2x2.fill", tint: .green)
                 TVMetricCard(title: "本月总额", value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "yensign.circle.fill", tint: .cyan)
             }
-            .frame(width: 430)
+            .frame(width: TVDashboardLayout.rightColumnWidth)
         }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TVDashboardLayout.contentHeight,
+            maxHeight: TVDashboardLayout.contentHeight,
+            alignment: .topLeading
+        )
     }
 }
 
@@ -434,7 +658,7 @@ private struct TVTrendPage: View {
     }
 
     var body: some View {
-        HStack(spacing: 28) {
+        HStack(spacing: TVDashboardLayout.columnSpacing) {
             TVPanel {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("最近 7 天趋势")
@@ -464,8 +688,14 @@ private struct TVTrendPage: View {
                     Spacer()
                 }
             }
-            .frame(width: 470)
+            .frame(width: TVDashboardLayout.rightColumnWidth)
         }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TVDashboardLayout.contentHeight,
+            maxHeight: TVDashboardLayout.contentHeight,
+            alignment: .topLeading
+        )
     }
 }
 
@@ -474,18 +704,24 @@ private struct TVSummaryPage: View {
     let privacyMode: Bool
 
     var body: some View {
-        HStack(spacing: 28) {
-            VStack(spacing: 22) {
+        HStack(spacing: TVDashboardLayout.columnSpacing) {
+            VStack(spacing: TVDashboardLayout.rowSpacing) {
                 TVMetricCard(title: "年度累计", value: privacyMode ? "***" : TVFormatters.currency(snapshot.yearlyTotal), iconName: "sparkles", tint: .yellow)
                 TVMetricCard(title: "本月累计", value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "calendar.badge.clock", tint: .green)
                 TVMetricCard(title: "Top 商户", value: privacyMode ? "已隐藏" : snapshot.monthlySnapshot.topMerchant, iconName: "storefront.fill", tint: .orange)
             }
-            .frame(width: 430)
+            .frame(width: TVDashboardLayout.rightColumnWidth)
 
             TVTopMerchantPanel(snapshot: snapshot, privacyMode: privacyMode)
             TVRecentPanel(transactions: snapshot.recentTransactions, privacyMode: privacyMode)
-                .frame(width: 470)
+                .frame(width: TVDashboardLayout.rightColumnWidth)
         }
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TVDashboardLayout.contentHeight,
+            maxHeight: TVDashboardLayout.contentHeight,
+            alignment: .topLeading
+        )
     }
 }
 
@@ -573,7 +809,7 @@ private struct TVRecentPanel: View {
                 if transactions.isEmpty || privacyMode {
                     TVMutedText(privacyMode ? "最近账单已隐藏" : "暂无最近账单")
                 } else {
-                    ForEach(transactions.prefix(5)) { transaction in
+                    ForEach(transactions.prefix(4)) { transaction in
                         HStack(spacing: 16) {
                             Image(systemName: transaction.categoryEnum.iconName)
                                 .font(.system(size: 24, weight: .bold))
@@ -581,16 +817,16 @@ private struct TVRecentPanel: View {
                                 .frame(width: 36)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(transaction.merchant.isEmpty ? transaction.categoryTitle : transaction.merchant)
-                                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
                                     .lineLimit(1)
                                     .foregroundStyle(.white)
                                 Text(TVFormatters.shortDate.string(from: transaction.occurredAt))
-                                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.48))
                             }
                             Spacer()
                             Text(TVFormatters.currency(transaction.amount))
-                                .font(.system(size: 26, weight: .black, design: .rounded))
+                                .font(.system(size: 24, weight: .black, design: .rounded))
                                 .foregroundStyle(.white)
                         }
                     }
@@ -623,7 +859,7 @@ private struct TVMetricCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(minHeight: 190)
+        .frame(height: 220)
     }
 }
 
@@ -834,15 +1070,32 @@ private struct TVMutedText: View {
 
 private struct TVTabButtonStyle: ButtonStyle {
     let isSelected: Bool
+    let isFocused: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(isSelected ? .black : .white)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(isSelected ? Color.white : Color.white.opacity(configuration.isPressed ? 0.22 : 0.10))
+                    .fill(backgroundColor(isPressed: configuration.isPressed))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(isFocused ? Color.green : Color.white.opacity(0.18), lineWidth: isFocused ? 4 : 1)
+                    )
             )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.05 : 1))
+            .animation(.spring(response: 0.22, dampingFraction: 0.78), value: isFocused)
+            .animation(.spring(response: 0.18, dampingFraction: 0.85), value: configuration.isPressed)
+    }
+
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isSelected {
+            return .white
+        }
+        if isFocused {
+            return Color.white.opacity(isPressed ? 0.30 : 0.22)
+        }
+        return Color.white.opacity(isPressed ? 0.22 : 0.10)
     }
 }
 
