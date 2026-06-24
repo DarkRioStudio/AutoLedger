@@ -226,6 +226,7 @@ swiftc \
   "$CORE/Models/SyncMetadata.swift" \
   "$CORE/Models/LedgerSyncPlan.swift" \
   "$CORE/Models/LedgerDashboardCloudSnapshot.swift" \
+  "$CORE/Models/HotelStay.swift" \
   "$CORE/Models/Transaction.swift" \
   "$CORE/Models/Subscription.swift" \
   "$CORE/Models/BackupBundle.swift" \

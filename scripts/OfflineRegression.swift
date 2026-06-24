@@ -37,6 +37,7 @@ struct OfflineRegression {
         verifySampleParsing(using: parser, samples: sampleProvider.samples, reporter: reporter)
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyStructuredLedgerJSONParsing(reporter: reporter)
+        verifyHotelStayModels(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
@@ -178,6 +179,94 @@ struct OfflineRegression {
         } catch {
             reporter.check(false, "StructuredLedgerJSONParser reports the expected missing-amount error")
         }
+    }
+
+    private static func verifyHotelStayModels(reporter: RegressionReporter) {
+        let json = """
+        {
+          "hotel_name": "Demo Bay Hotel",
+          "brand": "Demo Suites",
+          "group": "Demo Hospitality",
+          "city": "Tokyo",
+          "country": "Japan",
+          "check_in_date": "2026-06-20",
+          "check_out_date": "2026-06-22",
+          "nights": 2,
+          "room_type": "King Bay View",
+          "confirmation_number": "ABC123",
+          "currency": "JPY",
+          "room_charge": 40000,
+          "tax": 4000,
+          "service_charge": 3000,
+          "food_beverage": 2500,
+          "other_charges": 500,
+          "total_amount": 50000,
+          "payment_method": "Visa",
+          "confidence": 0.91,
+          "raw_text_excerpt": "Demo folio excerpt"
+        }
+        """.data(using: .utf8) ?? Data()
+
+        let decoder = JSONDecoder()
+        let payload = try? decoder.decode(HotelFolioParsedPayload.self, from: json)
+        reporter.check(payload?.hotelName == "Demo Bay Hotel", "HotelFolioParsedPayload decodes hotel_name")
+        reporter.check(payload?.brand == "Demo Suites", "HotelFolioParsedPayload decodes brand")
+        reporter.check(payload?.group == "Demo Hospitality", "HotelFolioParsedPayload decodes group")
+        reporter.check(payload?.nights == 2, "HotelFolioParsedPayload decodes nights")
+        reporter.check(abs((payload?.totalAmount ?? 0) - 50000) < 0.001, "HotelFolioParsedPayload decodes total_amount")
+
+        let now = AppFormatters.parseFlexibleDate("2026-06-24 12:00") ?? Date(timeIntervalSince1970: 0)
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID,
+            sourceFileName: "demo-folio.pdf",
+            sourceEmailSubject: nil,
+            sourceEmailFrom: nil,
+            rawText: "Demo folio raw text",
+            parsedPayload: payload,
+            confidence: payload?.confidence ?? 0,
+            status: .needsReview,
+            createdAt: now,
+            updatedAt: now
+        )
+        reporter.check(draft.sourceType == .manualPDF, "HotelStayDraft records manual PDF source")
+        reporter.check(draft.targetLedgerID == TodaySpendingSummary.defaultLedgerID, "HotelStayDraft records target ledger id")
+        reporter.check(draft.status == .needsReview, "HotelStayDraft defaults to review workflow state")
+        reporter.check(draft.parsedPayload?.confirmationNumber == "ABC123", "HotelStayDraft stores parsed payload")
+
+        let record = HotelStayRecord(
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            linkedTransactionID: UUID(uuidString: "00000000-0000-0000-0000-000000000181"),
+            hotelName: payload?.hotelName ?? "",
+            hotelGroup: payload?.group,
+            hotelBrand: payload?.brand,
+            city: payload?.city,
+            country: payload?.country,
+            checkInDate: payload?.checkInDate,
+            checkOutDate: payload?.checkOutDate,
+            nights: payload?.nights,
+            roomType: payload?.roomType,
+            confirmationNumber: payload?.confirmationNumber,
+            currency: payload?.currency ?? "JPY",
+            roomCharge: payload?.roomCharge ?? 0,
+            taxAmount: payload?.tax ?? 0,
+            serviceCharge: payload?.serviceCharge ?? 0,
+            foodBeverageAmount: payload?.foodBeverage ?? 0,
+            otherAmount: payload?.otherCharges ?? 0,
+            totalAmount: payload?.totalAmount ?? 0,
+            paymentMethod: payload?.paymentMethod,
+            sourceType: .manualPDF,
+            sourceFileName: draft.sourceFileName,
+            confidence: draft.confidence,
+            rawText: draft.rawText,
+            createdAt: now,
+            updatedAt: now
+        )
+        reporter.check(record.linkedTransactionID?.uuidString == "00000000-0000-0000-0000-000000000181", "HotelStayRecord can link a transaction id")
+        reporter.check(record.hotelName == "Demo Bay Hotel", "HotelStayRecord records hotel name")
+        reporter.check(record.currency == "JPY", "HotelStayRecord records currency")
+        reporter.check(abs(record.totalAmount - 50000) < 0.001, "HotelStayRecord records total amount")
+        reporter.check(record.sourceType == .manualPDF, "HotelStayRecord records source type")
     }
 
     private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {

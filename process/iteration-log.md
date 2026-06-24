@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-225 GOAL-1852 日文支持基线落地）
+更新日期：2026-06-24（ITER-226 GOAL-1810 酒店消费模型与 schema）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-226 GOAL-1810 酒店消费模型与 schema
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1810
+- 类型：能力增强 / Core 模型 / 测试
+- 目标：为酒店水单 A 阶段建立来源类型、解析 schema、待确认草稿和正式酒店消费记录模型。
+- 改动范围：新增 `AutoLedgerCore` 酒店消费模型文件；更新离线回归编译清单和断言；回填 `versions/v1.6.1-plan.md`、CHANGELOG 与本迭代日志。
+- 未改动范围：未接 PDFKit；未接外部模型解析管线；未新增 macOS UI；未写 SQLite schema、CloudKit schema、BackupBundle、iCloud 同步或普通 `Transaction` 生成逻辑；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增 `HotelFolioSourceType`、`HotelStayDraftStatus`、`HotelFolioParsedPayload`、`HotelStayDraft`、`HotelStayRecord`；解析 payload 支持酒店水单 snake_case schema；草稿模型保留来源、目标账本、原始文本、解析结果、置信度和状态；正式记录保留酒店、入住、金额拆分、来源和关联流水 ID。
+- 未完成内容：模型尚未持久化；`Transaction.hotelStayRecordId` 仍未落地；酒店消费列表 / 详情 / 确认页、PDF 手动导入、PDFKit 文本提取和外部模型解析均留给后续 GOAL。
+- 测试情况：先新增酒店模型离线回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `HotelFolioParsedPayload`、`HotelStayDraft`、`HotelStayRecord` 等类型而失败；实现模型后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS。
+- 风险与注意事项：日期字段当前先按水单 schema 的字符串保留，后续确认页或持久化层需要再决定标准化 Date 存储策略；金额拆分当前只建模，不做平衡校验或自动入账。
+- 回滚方式：移除 `HotelStay.swift`、离线回归新增断言和编译清单改动，并回退版本文档、CHANGELOG 与本日志条目即可；当前无数据迁移。
+- 结论：GOAL-1810 已完成第一版 Core 模型与 schema 基线。
+- 下一步建议：进入 `GOAL-1811`，在 macOS 路径实现手动 PDF 导入与 PDFKit 文本提取，并只生成待处理输入，不直接入账。
 
 ### ITER-225 GOAL-1852 日文支持基线落地
 - 日期：2026-06-24
