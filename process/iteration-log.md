@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-238 GOAL-1851 硬编码字符串审计）
+更新日期：2026-06-24（ITER-239 GOAL-1852 日文支持发布素材）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-239 GOAL-1852 日文支持发布素材
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1852
+- 类型：本地化 / 发布素材 / 文档
+- 目标：补齐日文支持的发布素材第二段，包括截图配置、术语表、ASC metadata、TestFlight notes、Review Notes 边界和人工审校清单。
+- 改动范围：`tools/appstore-screenshots/config/screenshots.json` 新增 `ja` locale 和现有 26 个截图场景日文 copy；新增 `versions/v1.6.1-ja-release-materials.md`；版本计划、CHANGELOG 与本迭代日志回填 GOAL-1852 状态。
+- 未改动范围：未提交或修改 App Store Connect 线上元数据；未导出正式日文截图；未新增日文母语人工审校结论；未把邮箱自动扫描或 Worker 自动化写成公共用户已开放能力；未修改业务逻辑、SQLite schema、CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：截图管线配置具备 `ja_JP` locale；iPhone、iPad、Mac、Apple Watch、tvOS、visionOS 现有截图场景均有日文标题和副标题草稿；日文发布材料文档覆盖 `台帳`、`ホテル明細`、`ホテル滞在` 等术语，提供 ASC / TestFlight / Review Notes 草稿，并明确内部 `v1.6.1` 继续映射外部 ASC `1.5.0`。
+- 未完成内容：日文截图真实导出、逐平台目检、ASC 页面粘贴和日文母语审校仍需人工执行；App Intents / Shortcuts 的日文显示仍建议在 TestFlight 真机上复查。
+- 测试情况：执行 `python3 -m json.tool tools/appstore-screenshots/config/screenshots.json` 通过；执行脚本检查所有截图场景 `title` / `subtitle` 均含 `ja`；后续仍需执行日文截图导出命令并人工目检。
+- 风险与注意事项：当前日文 copy 是草稿，不应跳过人工审校直接提交；Review Notes 和 What's New 需要按实际 ASC `1.5.0` 构建内容删减，避免描述未开放的酒店、邮箱或 Worker 能力。
+- 回滚方式：回退截图配置新增 `ja` locale / copy、删除 `versions/v1.6.1-ja-release-materials.md`，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮不涉及数据迁移。
+- 结论：GOAL-1852 的日文发布素材第二段已完成，可进入后续人工日文审校 / 截图导出，或转入下一个功能 GOAL。
+- 下一步建议：按平台执行 `--locale ja` 截图导出，打开 preview 目检，再由人工确认 ASC metadata 与 Review Notes。
 
 ### ITER-238 GOAL-1851 硬编码字符串审计
 - 日期：2026-06-24

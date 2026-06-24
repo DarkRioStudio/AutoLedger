@@ -69,6 +69,7 @@ bash tools/appstore-screenshots/scripts/export.sh --tvos-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --visionos-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale en
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ja
 ```
 
 Re-render from existing raw screenshots:
@@ -103,6 +104,7 @@ Recommended source export:
 ```bash
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ja
 ```
 
 Recommended folders to hand to Hyperframes:

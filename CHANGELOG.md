@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.1）
+- [2026-06-24 +0800] 完成 `GOAL-1852` 日文支持落地第二段：`tools/appstore-screenshots/config/screenshots.json` 新增 `ja` locale，并为 iPhone、iPad、Mac、Apple Watch、tvOS、visionOS 现有 26 个截图场景补齐日文标题和副标题；新增 `versions/v1.6.1-ja-release-materials.md`，整理日文术语表、ASC metadata、TestFlight notes、Review Notes 边界和人工审校清单。当前仍不直接提交 ASC、不导出正式日文截图、不声称邮箱自动扫描或 Worker 自动化已对公共用户开放，`MARKETING_VERSION` 继续保持 ASC `1.5.0` 口径。
 - [2026-06-24 +0800] 完成 `GOAL-1851` 第一版硬编码字符串审计：将多账本移动账单的成功 / 失败结果提示从 `LedgerStore` 硬编码中文迁移为四语 `Localizable.strings` key，并把对应 key 纳入 `scripts/check_localization_coverage.py` 的 `v1.6.1` 必备文案门禁；新增 `versions/v1.6.1-hardcoded-string-audit.md` 记录解析规则、Debug / 诊断、历史 `lastImportSummary`、默认账本名和截图模式文案的残留分类。本轮不批量迁移所有历史导入摘要，不修改业务逻辑、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-24 +0800] 完成 `GOAL-1850` 新功能四语文案覆盖门禁：扩展 `scripts/check_localization_coverage.py`，除继续校验主 App、Watch App、Watch Widgets、Control Widget Extension、Share Extension 的 `zh-Hans` / `zh-Hant` / `en` / `ja` key 集合一致外，新增主 App `v1.6.1` 功能必备 key / prefix count 检查，覆盖酒店水单 PDF 错误、酒店消费复核 / 列表 / 详情、多账本管理、账本切换和移动账本。本轮不做硬编码审计、不新增截图 / ASC / Review Notes 文案。
 - [2026-06-24 +0800] 完成 `GOAL-1844` 统计、订阅、导入与展示端口径统一第一版：`LedgerStore.monthlySnapshot`、`todaySpendingSummary`、订阅扫描 / 过滤 helper 改为基于当前账本可见交易；iPhone Report / Inbox、iPad / Mac 工作台 overview / 报告 / 数据清洗预览、订阅列表和酒店归档展示组件支持当前账本 / 全部账本口径。本轮不新增 `Subscription.ledgerID` 或订阅迁移，不新增批量导入队列 `targetLedgerID` 字段，Watch / Widget / tvOS / visionOS 继续保持既有全量 / 只读展示策略。

@@ -101,7 +101,7 @@ AutoLedgerRio/
 ├── process/                       # 迭代工作流文档
 ├── scripts/                       # 回归测试脚本
 ├── tests/                         # Golden 回归样例
-├── tools/appstore-screenshots/    # App Store 截图导出管线（zh-Hans / zh-Hant / en）
+├── tools/appstore-screenshots/    # App Store 截图导出管线（zh-Hans / zh-Hant / en / ja）
 └── template/                      # 文档模板
 ```
 

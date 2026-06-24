@@ -116,6 +116,10 @@
     "en": {
       "appleLanguages": "(en)",
       "appleLocale": "en_US"
+    },
+    "ja": {
+      "appleLanguages": "(ja)",
+      "appleLocale": "ja_JP"
     }
   },
   "iosShots": [
@@ -125,12 +129,14 @@
       "title": {
         "zh-Hans": "截图账单，一键识别",
         "zh-Hant": "截圖帳單，一鍵識別",
-        "en": "Turn screenshots into records"
+        "en": "Turn screenshots into records",
+        "ja": "スクリーンショットを記録に変換"
       },
       "subtitle": {
         "zh-Hans": "支付截图、小票和剪贴板内容都能快速生成账单",
         "zh-Hant": "支付截圖、小票和剪貼簿內容都能快速生成帳單",
-        "en": "Read payment screenshots, receipts, and copied text"
+        "en": "Read payment screenshots, receipts, and copied text",
+        "ja": "支払いスクリーンショット、レシート、コピーしたテキストを読み取ります"
       }
     },
     {
@@ -139,12 +145,14 @@
       "title": {
         "zh-Hans": "说一句话，快速记账",
         "zh-Hant": "說一句話，快速記帳",
-        "en": "Log expenses by voice"
+        "en": "Log expenses by voice",
+        "ja": "音声で支出を記録"
       },
       "subtitle": {
         "zh-Hans": "像“午饭 28 元”这样说一句，就能生成记录",
         "zh-Hant": "像「午餐 28 元」這樣說一句，就能生成記錄",
-        "en": "Say a simple sentence and get a ready-to-save record"
+        "en": "Say a simple sentence and get a ready-to-save record",
+        "ja": "短い一言から保存前の記録を作成できます"
       }
     },
     {
@@ -153,12 +161,14 @@
       "title": {
         "zh-Hans": "Apple Watch 随手记一笔",
         "zh-Hant": "Apple Watch 隨手記一筆",
-        "en": "Log from Apple Watch"
+        "en": "Log from Apple Watch",
+        "ja": "Apple Watch から記録"
       },
       "subtitle": {
         "zh-Hans": "抬腕快速记录，回到 iPhone 继续查看和编辑",
         "zh-Hant": "抬腕快速記錄，回到 iPhone 繼續查看和編輯",
-        "en": "Start on your wrist, continue on iPhone"
+        "en": "Start on your wrist, continue on iPhone",
+        "ja": "手首で始めて、iPhone で確認と編集を続けられます"
       }
     },
     {
@@ -167,12 +177,14 @@
       "title": {
         "zh-Hans": "月报统计，消费一眼看清",
         "zh-Hant": "月報統計，消費一眼看清",
-        "en": "See monthly spending clearly"
+        "en": "See monthly spending clearly",
+        "ja": "月の支出を見やすく"
       },
       "subtitle": {
         "zh-Hans": "分类、趋势和常用商户自动汇总",
         "zh-Hant": "分類、趨勢和常用商家自動彙總",
-        "en": "Categories, trends, and frequent merchants summarized"
+        "en": "Categories, trends, and frequent merchants summarized",
+        "ja": "カテゴリ、推移、よく使う加盟店を自動で要約"
       }
     },
     {
@@ -181,12 +193,14 @@
       "title": {
         "zh-Hans": "iCloud 备份，多设备同步",
         "zh-Hant": "iCloud 備份，多裝置同步",
-        "en": "Backup and sync with iCloud"
+        "en": "Backup and sync with iCloud",
+        "ja": "iCloud でバックアップと同期"
       },
       "subtitle": {
         "zh-Hans": "记录本地优先保存，也能在苹果设备间延续使用",
         "zh-Hant": "記錄本地優先保存，也能在 Apple 裝置間延續使用",
-        "en": "Keep records local-first and continue across Apple devices"
+        "en": "Keep records local-first and continue across Apple devices",
+        "ja": "ローカル優先の記録を Apple デバイス間で継続利用"
       }
     },
     {
@@ -195,12 +209,14 @@
       "title": {
         "zh-Hans": "快捷指令，自动化导入",
         "zh-Hant": "捷徑指令，自動化匯入",
-        "en": "Automate imports with Shortcuts"
+        "en": "Automate imports with Shortcuts",
+        "ja": "ショートカットで取り込みを自動化"
       },
       "subtitle": {
         "zh-Hans": "操作按钮、剪贴板、相册和分享扩展都能接入",
         "zh-Hant": "操作按鈕、剪貼簿、相簿和分享擴充都能接入",
-        "en": "Use Action Button, clipboard, photos, and Share Extension"
+        "en": "Use Action Button, clipboard, photos, and Share Extension",
+        "ja": "アクションボタン、クリップボード、写真、共有拡張に対応"
       }
     }
   ],
@@ -211,12 +227,14 @@
       "title": {
         "zh-Hans": "大屏账本，收支更清楚",
         "zh-Hant": "大螢幕帳本，收支更清楚",
-        "en": "A clearer ledger on iPad"
+        "en": "A clearer ledger on iPad",
+        "ja": "iPad でより見やすい台帳"
       },
       "subtitle": {
         "zh-Hans": "用更大的空间查看账本、候选账单和近期消费。",
         "zh-Hant": "用更大的空間查看帳本、候選帳單和近期消費。",
-        "en": "Review records, candidates, and recent spending with more room."
+        "en": "Review records, candidates, and recent spending with more room.",
+        "ja": "記録、候補、最近の支出を広い画面で確認できます。"
       }
     },
     {
@@ -225,12 +243,14 @@
       "title": {
         "zh-Hans": "截图文本，快速导入",
         "zh-Hant": "截圖文字，快速匯入",
-        "en": "Import screenshots and text"
+        "en": "Import screenshots and text",
+        "ja": "スクリーンショットとテキストを取り込み"
       },
       "subtitle": {
         "zh-Hans": "相册、相机、剪贴板和识别队列在 iPad 上分层管理。",
         "zh-Hant": "相簿、相機、剪貼簿和識別佇列在 iPad 上分層管理。",
-        "en": "Keep photos, camera, clipboard, and the recognition queue organized."
+        "en": "Keep photos, camera, clipboard, and the recognition queue organized.",
+        "ja": "写真、カメラ、クリップボード、認識キューを整理できます。"
       }
     },
     {
@@ -239,12 +259,14 @@
       "title": {
         "zh-Hans": "候选账单，集中复核",
         "zh-Hant": "候選帳單，集中複核",
-        "en": "Review candidates together"
+        "en": "Review candidates together",
+        "ja": "候補をまとめて確認"
       },
       "subtitle": {
         "zh-Hans": "导入后的待确认账单可以继续筛选、修正和入账。",
         "zh-Hant": "匯入後的待確認帳單可以繼續篩選、修正和入帳。",
-        "en": "Filter, correct, and save imported candidates from one workspace."
+        "en": "Filter, correct, and save imported candidates from one workspace.",
+        "ja": "取り込んだ候補を絞り込み、修正して保存できます。"
       }
     },
     {
@@ -253,12 +275,14 @@
       "title": {
         "zh-Hans": "分类统计，月报一览",
         "zh-Hant": "分類統計，月報一覽",
-        "en": "Monthly reports at a glance"
+        "en": "Monthly reports at a glance",
+        "ja": "月次レポートを一覧"
       },
       "subtitle": {
         "zh-Hans": "分类、趋势和常用商户在横屏上更容易浏览。",
         "zh-Hant": "分類、趨勢和常用商家在橫向螢幕上更容易瀏覽。",
-        "en": "Scan categories, trends, and frequent merchants in landscape."
+        "en": "Scan categories, trends, and frequent merchants in landscape.",
+        "ja": "カテゴリ、推移、よく使う加盟店を横画面で確認できます。"
       }
     },
     {
@@ -267,12 +291,14 @@
       "title": {
         "zh-Hans": "iCloud 同步，手机平板都能用",
         "zh-Hant": "iCloud 同步，手機平板都能用",
-        "en": "Sync across iPhone and iPad"
+        "en": "Sync across iPhone and iPad",
+        "ja": "iPhone と iPad で同期"
       },
       "subtitle": {
         "zh-Hans": "本地优先保存，也能在 Apple 设备间继续整理。",
         "zh-Hant": "本地優先保存，也能在 Apple 裝置間繼續整理。",
-        "en": "Keep records local-first and continue across Apple devices."
+        "en": "Keep records local-first and continue across Apple devices.",
+        "ja": "ローカル優先で保存し、Apple デバイス間で整理を続けられます。"
       }
     }
   ],
@@ -283,12 +309,14 @@
       "title": {
         "zh-Hans": "桌面端查看账本",
         "zh-Hant": "桌面端查看帳本",
-        "en": "View your ledger on Mac"
+        "en": "View your ledger on Mac",
+        "ja": "Mac で台帳を確認"
       },
       "subtitle": {
         "zh-Hans": "更适合拖拽截图、文件导入和长时间整理账单。",
         "zh-Hant": "更適合拖放截圖、檔案匯入和長時間整理帳單。",
-        "en": "A better space for drag and drop, files, and longer cleanup sessions."
+        "en": "A better space for drag and drop, files, and longer cleanup sessions.",
+        "ja": "ドラッグ&ドロップ、ファイル取り込み、長時間の整理に適した画面です。"
       }
     },
     {
@@ -297,12 +325,14 @@
       "title": {
         "zh-Hans": "月报统计，一屏掌握",
         "zh-Hant": "月報統計，一屏掌握",
-        "en": "See reports on a larger screen"
+        "en": "See reports on a larger screen",
+        "ja": "大きな画面でレポート"
       },
       "subtitle": {
         "zh-Hans": "更大的列表、筛选和统计区域让整理更顺手。",
         "zh-Hant": "更大的列表、篩選和統計區域讓整理更順手。",
-        "en": "Bigger lists, filters, and report areas make cleanup easier."
+        "en": "Bigger lists, filters, and report areas make cleanup easier.",
+        "ja": "広いリスト、フィルタ、レポート領域で整理しやすくなります。"
       }
     },
     {
@@ -311,12 +341,14 @@
       "title": {
         "zh-Hans": "多设备同步记录",
         "zh-Hant": "多裝置同步記錄",
-        "en": "Keep records in sync"
+        "en": "Keep records in sync",
+        "ja": "記録を同期"
       },
       "subtitle": {
         "zh-Hans": "从 iPhone、iPad 到 Mac，都围绕同一本账继续整理。",
         "zh-Hant": "從 iPhone、iPad 到 Mac，都圍繞同一本帳繼續整理。",
-        "en": "Continue with the same ledger across iPhone, iPad, and Mac."
+        "en": "Continue with the same ledger across iPhone, iPad, and Mac.",
+        "ja": "iPhone、iPad、Mac で同じ台帳を続けて整理できます。"
       }
     },
     {
@@ -325,12 +357,14 @@
       "title": {
         "zh-Hans": "备份恢复更安心",
         "zh-Hant": "備份恢復更安心",
-        "en": "Backup and restore with confidence"
+        "en": "Backup and restore with confidence",
+        "ja": "安心してバックアップと復元"
       },
       "subtitle": {
         "zh-Hans": "把同步、导出、备份和偏好设置放在桌面入口中。",
         "zh-Hant": "把同步、匯出、備份和偏好設定放在桌面入口中。",
-        "en": "Keep sync, export, backup, and preferences in one desktop surface."
+        "en": "Keep sync, export, backup, and preferences in one desktop surface.",
+        "ja": "同期、書き出し、バックアップ、設定をデスクトップで管理できます。"
       }
     }
   ],
@@ -341,12 +375,14 @@
       "title": {
         "zh-Hans": "抬腕快速记账",
         "zh-Hant": "抬腕快速記帳",
-        "en": "Log from your wrist"
+        "en": "Log from your wrist",
+        "ja": "手首からすばやく記録"
       },
       "subtitle": {
         "zh-Hans": "在 Apple Watch 上快速开始记录",
         "zh-Hant": "在 Apple Watch 上快速開始記錄",
-        "en": "Start a record quickly on Apple Watch"
+        "en": "Start a record quickly on Apple Watch",
+        "ja": "Apple Watch ですばやく記録を始められます"
       }
     },
     {
@@ -355,12 +391,14 @@
       "title": {
         "zh-Hans": "最近账单一眼查看",
         "zh-Hant": "最近帳單一眼查看",
-        "en": "Recent records at a glance"
+        "en": "Recent records at a glance",
+        "ja": "最近の記録をひと目で"
       },
       "subtitle": {
         "zh-Hans": "不拿手机，也能查看刚记过的消费",
         "zh-Hant": "不拿手機，也能查看剛記過的消費",
-        "en": "Check recent spending without pulling out your phone"
+        "en": "Check recent spending without pulling out your phone",
+        "ja": "iPhone を取り出さずに直近の支出を確認"
       }
     },
     {
@@ -369,12 +407,14 @@
       "title": {
         "zh-Hans": "表盘信息随时可见",
         "zh-Hant": "錶盤資訊隨時可見",
-        "en": "Keep spending on your watch face"
+        "en": "Keep spending on your watch face",
+        "ja": "文字盤で支出を確認"
       },
       "subtitle": {
         "zh-Hans": "今日支出和快速入口可以放到表盘上",
         "zh-Hant": "今日支出和快速入口可以放到錶盤上",
-        "en": "Put today's spending and quick access on your watch face"
+        "en": "Put today's spending and quick access on your watch face",
+        "ja": "今日の支出とクイックアクセスを文字盤に配置"
       }
     },
     {
@@ -383,12 +423,14 @@
       "title": {
         "zh-Hans": "和 iPhone 自动同步",
         "zh-Hant": "和 iPhone 自動同步",
-        "en": "Sync with iPhone"
+        "en": "Sync with iPhone",
+        "ja": "iPhone と同期"
       },
       "subtitle": {
         "zh-Hans": "腕上记录后，回到手机继续编辑和统计",
         "zh-Hant": "腕上記錄後，回到手機繼續編輯和統計",
-        "en": "Continue editing and viewing reports on iPhone"
+        "en": "Continue editing and viewing reports on iPhone",
+        "ja": "手首で記録した後、iPhone で編集とレポートを続けられます"
       }
     }
   ],
@@ -399,12 +441,14 @@
       "title": {
         "zh-Hans": "家庭大屏，只读账本",
         "zh-Hant": "家庭大螢幕，只讀帳本",
-        "en": "A read-only ledger for the living room"
+        "en": "A read-only ledger for the living room",
+        "ja": "リビング向けの読み取り専用台帳"
       },
       "subtitle": {
         "zh-Hans": "在 Apple TV 上查看本月支出、分类和最近账单。",
         "zh-Hant": "在 Apple TV 上查看本月支出、分類和最近帳單。",
-        "en": "Review monthly spending, categories, and recent records on Apple TV."
+        "en": "Review monthly spending, categories, and recent records on Apple TV.",
+        "ja": "Apple TV で月の支出、カテゴリ、最近の記録を確認できます。"
       }
     },
     {
@@ -413,12 +457,14 @@
       "title": {
         "zh-Hans": "分类占比，一眼看清",
         "zh-Hant": "分類占比，一眼看清",
-        "en": "See category spending clearly"
+        "en": "See category spending clearly",
+        "ja": "カテゴリ支出を見やすく"
       },
       "subtitle": {
         "zh-Hans": "购物、餐饮、通讯和出行支出适合大屏浏览。",
         "zh-Hant": "購物、餐飲、通訊和出行支出適合大螢幕瀏覽。",
-        "en": "Browse category structure from across the room."
+        "en": "Browse category structure from across the room.",
+        "ja": "離れた場所からでも支出構成を確認できます。"
       }
     },
     {
@@ -427,12 +473,14 @@
       "title": {
         "zh-Hans": "趋势变化，家庭共享",
         "zh-Hant": "趨勢變化，家庭共享",
-        "en": "Spending trends for the big screen"
+        "en": "Spending trends for the big screen",
+        "ja": "大画面で支出の推移を確認"
       },
       "subtitle": {
         "zh-Hans": "最近 7 天和近 6 个月趋势以只读方式展示。",
         "zh-Hant": "最近 7 天和近 6 個月趨勢以只讀方式展示。",
-        "en": "Show recent and monthly trends without editing data."
+        "en": "Show recent and monthly trends without editing data.",
+        "ja": "最近の推移と月別トレンドを編集なしで表示します。"
       }
     },
     {
@@ -441,12 +489,14 @@
       "title": {
         "zh-Hans": "摘要看板，快速回顾",
         "zh-Hant": "摘要看板，快速回顧",
-        "en": "A quick spending summary"
+        "en": "A quick spending summary",
+        "ja": "支出サマリーをすばやく確認"
       },
       "subtitle": {
         "zh-Hans": "年度累计、常用商户和最近账单集中展示。",
         "zh-Hant": "年度累計、常用商家和最近帳單集中展示。",
-        "en": "Keep yearly totals, top merchants, and recent spending together."
+        "en": "Keep yearly totals, top merchants, and recent spending together.",
+        "ja": "年間合計、上位加盟店、最近の支出をまとめて表示します。"
       }
     }
   ],
@@ -457,12 +507,14 @@
       "title": {
         "zh-Hans": "月度支出，空间看板",
         "zh-Hant": "月度支出，空間看板",
-        "en": "A spatial monthly dashboard"
+        "en": "A spatial monthly dashboard",
+        "ja": "空間で見る月次ダッシュボード"
       },
       "subtitle": {
         "zh-Hans": "在 visionOS 上用宽屏空间视图浏览账本摘要。",
         "zh-Hant": "在 visionOS 上用寬螢幕空間視圖瀏覽帳本摘要。",
-        "en": "Explore your monthly ledger in a wide spatial layout."
+        "en": "Explore your monthly ledger in a wide spatial layout.",
+        "ja": "ワイドな空間レイアウトで月の台帳を確認できます。"
       }
     },
     {
@@ -471,12 +523,14 @@
       "title": {
         "zh-Hans": "分类卡片，漂浮展示",
         "zh-Hant": "分類卡片，漂浮展示",
-        "en": "Floating category cards"
+        "en": "Floating category cards",
+        "ja": "浮かぶカテゴリカード"
       },
       "subtitle": {
         "zh-Hans": "购物、餐饮、通讯等支出以只读卡片呈现。",
         "zh-Hant": "購物、餐飲、通訊等支出以只讀卡片呈現。",
-        "en": "Read category spending as lightweight spatial cards."
+        "en": "Read category spending as lightweight spatial cards.",
+        "ja": "カテゴリ別の支出を軽量な空間カードで確認できます。"
       }
     },
     {
@@ -485,12 +539,14 @@
       "title": {
         "zh-Hans": "年度时间线，回顾消费",
         "zh-Hant": "年度時間線，回顧消費",
-        "en": "Review spending over time"
+        "en": "Review spending over time",
+        "ja": "支出の推移を振り返る"
       },
       "subtitle": {
         "zh-Hans": "年度累计、近期账单和月度趋势并排查看。",
         "zh-Hant": "年度累計、近期帳單和月度趨勢並排查看。",
-        "en": "See yearly totals, recent records, and monthly trends side by side."
+        "en": "See yearly totals, recent records, and monthly trends side by side.",
+        "ja": "年間合計、最近の記録、月別トレンドを並べて表示します。"
       }
     }
   ]
