@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-22（GOAL-1760D tvOS / visionOS 多端 polish 收口）
+更新日期：2026-06-24（GOAL-1770 v1.6.0 发布资产与 smoke 基线）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-217 GOAL-1770 v1.6.0 发布资产与 smoke 基线
+- 日期：2026-06-24
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1770
+- 类型：测试 / 文档 / 发布治理
+- 目标：为 App Store / ASC 1.5.0 建立 v1.6.0 发布前命令级 smoke baseline、审核说明草稿和人工门禁清单。
+- 改动范围：新增 `versions/v1.6.0-regression-baseline.md`、`versions/v1.6.0-review-notes.md`；更新 `versions/v1.6.0-plan.md` 的 GOAL 状态和执行记录；同步 `CHANGELOG.md` 与本迭代日志。
+- 未改动范围：未修改业务代码、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置；未上传真实支付截图或真实用户数据。
+- 完成内容：`GOAL-1760` 标记为代码侧完成，`GOAL-1770` 标记为进行中；记录本地命令级构建矩阵、既有 warning、平台 smoke 边界、CloudKit Production schema 门禁和 ASC Review Notes 草稿。
+- 未完成内容：Xcode Cloud archive、TestFlight 多平台安装 smoke、ASC 截图 / App Preview / 平台元数据最终检查仍需人工执行；tvOS / visionOS 真机或 TestFlight iCloud private database 读取仍需实测。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `bash scripts/run_golden_regression.sh`，结果 PASS，36 个 case 通过；执行 `xcodebuild -list -workspace AutoLedger/AutoLedger.xcworkspace`，结果 PASS；执行 iOS generic、Mac Catalyst、watchOS generic、tvOS generic、visionOS generic Debug build，结果均 PASS。首次并行跑 iOS / Mac 时遇到 DerivedData `build.db` 锁，已改用独立 `-derivedDataPath` 顺序构建并通过。
+- 风险与注意事项：当前只是本地命令级 smoke，不替代 Xcode Cloud archive 和 TestFlight 真机 / 安装验证。tvOS / visionOS simulator DEBUG 演示数据不能证明 CloudKit 真实同步成功；如果随本版开放，需要先确认 `LedgerDashboardSnapshot` Production schema、平台 App ID capability、provisioning profile 和 ASC 素材。
+- 回滚方式：删除新增的两份 `versions/v1.6.0-*` 文档，并恢复 `versions/v1.6.0-plan.md`、`CHANGELOG.md` 和本日志本轮改动即可；本轮无代码或 schema 迁移。
+- 结论：本轮完成命令级发布基线文档，主发布线可进入 Xcode Cloud / TestFlight 人工验证；tvOS / visionOS 是否随 ASC 1.5.0 正式开放仍需人工决策。
+- 下一步建议：先跑 Xcode Cloud archive 和 TestFlight 多平台安装；确认 CloudKit Production schema；若 tvOS / visionOS 平台素材不足，可把它们继续作为内部预览，不阻塞 iPhone / iPad / Watch / Mac 主平台提交。
 
 ### ITER-216 GOAL-1760D tvOS / visionOS 多端 polish 收口
 - 日期：2026-06-22
