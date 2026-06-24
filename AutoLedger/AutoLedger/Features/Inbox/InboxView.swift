@@ -20,12 +20,11 @@ struct InboxView: View {
 
     private var hasShortcutEntries: Bool {
         let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
-        return store.transactions.contains { $0.note == shortcutNote }
+        return store.visibleTransactions.contains { $0.note == shortcutNote }
     }
 
     private var upcomingSubscriptions: [Subscription] {
-        let sevenDaysLater = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
-        return store.subscriptions.filter { $0.status.isActive && $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+        store.upcomingSubscriptionsForCurrentLedger()
     }
 
     var body: some View {
@@ -227,7 +226,7 @@ struct InboxView: View {
                         .foregroundStyle(AppTheme.ink)
 
                     let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
-                    let count = store.transactions.filter { $0.note == shortcutNote }.count
+                    let count = store.visibleTransactions.filter { $0.note == shortcutNote }.count
                     Text(String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -534,7 +533,7 @@ struct InboxView: View {
 
     private var merchantRankings: [(merchant: String, total: Double)] {
         var totals: [String: Double] = [:]
-        for t in store.transactions {
+        for t in store.visibleTransactions {
             totals[t.merchant, default: 0] += t.amount
         }
         return totals.map { (merchant: $0.key, total: $0.value) }

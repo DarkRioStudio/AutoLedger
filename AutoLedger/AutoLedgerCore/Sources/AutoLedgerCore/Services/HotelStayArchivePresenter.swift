@@ -127,7 +127,8 @@ public struct HotelStayDetailSnapshot: Equatable, Sendable {
 public struct HotelStayArchivePresenter: Sendable {
     public init() {}
 
-    public func makeListSnapshot(records: [HotelStayRecord]) -> HotelStayListSnapshot {
+    public func makeListSnapshot(records: [HotelStayRecord], ledgerID: String? = nil) -> HotelStayListSnapshot {
+        let records = filtered(records: records, ledgerID: ledgerID)
         let sorted = records.sorted { lhs, rhs in
             sortDate(for: lhs) > sortDate(for: rhs)
         }
@@ -145,8 +146,10 @@ public struct HotelStayArchivePresenter: Sendable {
 
     public func makeDetailSnapshot(
         record: HotelStayRecord,
-        transactions: [Transaction] = []
+        transactions: [Transaction] = [],
+        ledgerID: String? = nil
     ) -> HotelStayDetailSnapshot {
+        let transactions = filtered(transactions: transactions, ledgerID: ledgerID)
         let linkedTransaction = transactions.first { transaction in
             transaction.id == record.linkedTransactionID ||
             transaction.hotelStayRecordID == record.id
@@ -227,6 +230,16 @@ public struct HotelStayArchivePresenter: Sendable {
             )
         )
         return fields
+    }
+
+    private func filtered(records: [HotelStayRecord], ledgerID: String?) -> [HotelStayRecord] {
+        guard let targetLedgerID = trimmed(ledgerID) else { return records }
+        return records.filter { trimmed($0.ledgerID) == targetLedgerID }
+    }
+
+    private func filtered(transactions: [Transaction], ledgerID: String?) -> [Transaction] {
+        guard let targetLedgerID = trimmed(ledgerID) else { return transactions }
+        return transactions.filter { $0.resolvedLedgerID() == targetLedgerID }
     }
 
     private func compactFields(_ values: [(HotelStayDetailFieldKey, String?)]) -> [HotelStayDetailField] {

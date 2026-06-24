@@ -4,19 +4,22 @@ import SwiftUI
 struct HotelStayListView: View {
     let records: [HotelStayRecord]
     let transactions: [Transaction]
+    let ledgerID: String?
 
     private let presenter = HotelStayArchivePresenter()
 
     init(
         records: [HotelStayRecord],
-        transactions: [Transaction] = []
+        transactions: [Transaction] = [],
+        ledgerID: String? = nil
     ) {
         self.records = records
         self.transactions = transactions
+        self.ledgerID = ledgerID
     }
 
     private var snapshot: HotelStayListSnapshot {
-        presenter.makeListSnapshot(records: records)
+        presenter.makeListSnapshot(records: records, ledgerID: ledgerID)
     }
 
     var body: some View {
@@ -67,7 +70,7 @@ struct HotelStayListView: View {
             ForEach(snapshot.rows) { row in
                 if let record = records.first(where: { $0.id == row.id }) {
                     NavigationLink {
-                        HotelStayDetailView(record: record, transactions: transactions)
+                        HotelStayDetailView(record: record, transactions: transactions, ledgerID: ledgerID)
                     } label: {
                         HotelStayRowView(row: row)
                     }
@@ -188,19 +191,22 @@ private struct HotelStayRowView: View {
 struct HotelStayDetailView: View {
     let record: HotelStayRecord
     let transactions: [Transaction]
+    let ledgerID: String?
 
     private let presenter = HotelStayArchivePresenter()
 
     init(
         record: HotelStayRecord,
-        transactions: [Transaction] = []
+        transactions: [Transaction] = [],
+        ledgerID: String? = nil
     ) {
         self.record = record
         self.transactions = transactions
+        self.ledgerID = ledgerID
     }
 
     private var snapshot: HotelStayDetailSnapshot {
-        presenter.makeDetailSnapshot(record: record, transactions: transactions)
+        presenter.makeDetailSnapshot(record: record, transactions: transactions, ledgerID: ledgerID)
     }
 
     var body: some View {

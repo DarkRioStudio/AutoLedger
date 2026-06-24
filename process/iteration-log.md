@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-235 GOAL-1843 账本切换与账单移动）
+更新日期：2026-06-24（ITER-236 GOAL-1844 统计、订阅与展示口径）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-236 GOAL-1844 统计、订阅与展示口径
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1844
+- 类型：能力增强 / LedgerStore / UI / 统计口径 / 测试
+- 目标：统一主 App 中当前账本 / 全部账本的统计、订阅、导入展示和酒店归档展示口径，避免账单列表已经分账本但报表或首页仍显示全量数据。
+- 改动范围：`LedgerStore` 月报、今日摘要、订阅过滤和订阅历史扫描 helper；iPhone `ReportView` / `InboxView`；iPad / Mac 工作台 overview、报告、数据清洗预览和重复账单预览；`SubscriptionListView`；`HotelStayArchivePresenter` 与酒店列表 / 详情组件；离线回归、版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `Subscription.ledgerID` 或订阅 SQLite / Backup / CloudKit schema；未新增批量导入队列项的 `targetLedgerID` 持久化字段；未修改 Watch / Widget / tvOS / visionOS 展示口径；未新增账本 Profile 的 CloudKit / BackupBundle 同步 payload；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`LedgerStore.monthlySnapshot` / `monthlySnapshot(for:)` 与 `todaySpendingSummary` 基于 `visibleTransactions` 生成；当前账本模式只统计当前账本，全部账本模式聚合全部活跃交易；订阅扫描与列表首版按当前账本相关交易商户匹配过滤；iPhone 首页、报表、Top 商户、快捷指令计数、即将扣费订阅，iPad / Mac overview、报告和数据清洗预览均跟随当前账本 / 全部账本；酒店归档展示 presenter 支持可选 `ledgerID` 过滤。
+- 未完成内容：无历史交易的手动订阅暂时无法表达归属账本；批量导入队列仍未持久化目标账本；Watch / Widget / tvOS / visionOS 仍保持既有全量 / 只读展示策略；账本 Profile 仍未进入备份或 CloudKit 同步。
+- 测试情况：先新增 `verifyLedgerScopedSurfaces` 离线回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `monthlySnapshot(for:)`、订阅 helper 和酒店归档 `ledgerID` 参数而失败；实现后再次执行离线回归 PASS。随后执行 `python3 scripts/check_localization_coverage.py`、`find AutoLedger -path '*/build' -prune -o -path '*lproj/*.strings' -exec plutil -lint {} +`、`git diff --check` 和 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果均通过。
+- 风险与注意事项：订阅过滤目前是交易派生口径，不是订阅实体级账本归属；如果用户手动创建一个没有历史交易的订阅，它在当前账本过滤下无法稳定归属，后续需要单独设计 `Subscription.ledgerID` 迁移。大屏端继续展示全部账本聚合，若未来需要多账本切换，需要扩展 dashboard snapshot。
+- 回滚方式：回退 `LedgerStore` 新增统计 / 订阅 helper、Report / Inbox / iPadWorkspace / SubscriptionList / HotelStayArchive 口径改动、离线回归新增断言以及版本计划 / CHANGELOG / 本日志条目即可；本轮不新增数据库 schema。
+- 结论：GOAL-1844 的主 App 当前账本 / 全部账本展示口径已完成，可进入 `GOAL-1850` 新功能多语言文案覆盖或继续补订阅实体账本迁移设计。
+- 下一步建议：先做 `GOAL-1850 / GOAL-1851` 的文案覆盖和硬编码字符串审计，把多账本与酒店消费新增入口的四语文案收齐；订阅实体 `ledgerID` 建议作为独立后续 GOAL，不并入当前提交。
 
 ### ITER-235 GOAL-1843 账本切换与账单移动
 - 日期：2026-06-24

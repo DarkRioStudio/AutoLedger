@@ -97,11 +97,20 @@ final class LedgerStore: ObservableObject {
     }
 
     var monthlySnapshot: MonthlySnapshot {
-        MonthlySnapshot.build(from: transactions, referenceDate: .now)
+        monthlySnapshot(for: .now)
+    }
+
+    func monthlySnapshot(for referenceDate: Date) -> MonthlySnapshot {
+        MonthlySnapshot.build(from: visibleTransactions, referenceDate: referenceDate)
     }
 
     var todaySpendingSummary: TodaySpendingSummary {
-        TodaySpendingSummary.build(from: transactions, referenceDate: .now)
+        TodaySpendingSummary.build(
+            from: visibleTransactions,
+            referenceDate: .now,
+            ledgerID: currentLedgerScopeID,
+            ledgerName: currentLedgerScopeName
+        )
     }
 
     var activeLedgerProfiles: [LedgerProfile] {
@@ -116,6 +125,10 @@ final class LedgerStore: ObservableObject {
         transactionsForCurrentLedger(transactions)
     }
 
+    var visibleSubscriptions: [Subscription] {
+        subscriptionsForCurrentLedger(subscriptions)
+    }
+
     var targetLedgerIDForNewTransactions: String {
         isShowingAllLedgers ? defaultLedgerProfile.id : selectedLedgerID
     }
@@ -123,6 +136,26 @@ final class LedgerStore: ObservableObject {
     func transactionsForCurrentLedger(_ source: [Transaction]) -> [Transaction] {
         guard !isShowingAllLedgers else { return source }
         return source.filter { $0.resolvedLedgerID() == selectedLedgerID }
+    }
+
+    func subscriptionsForCurrentLedger(_ source: [Subscription]) -> [Subscription] {
+        guard !isShowingAllLedgers else { return source }
+        let currentMerchants = Set(visibleTransactions.map { normalizedMerchantKey($0.merchant) })
+        guard !currentMerchants.isEmpty else { return [] }
+        return source.filter { currentMerchants.contains(normalizedMerchantKey($0.merchant)) }
+    }
+
+    func detectSubscriptionsForCurrentLedger() -> [Subscription] {
+        subscriptionDetector.detectFromHistory(visibleTransactions)
+    }
+
+    func upcomingSubscriptionsForCurrentLedger(referenceDate: Date = .now, days: Int = 7) -> [Subscription] {
+        let upperBound = Calendar.current.date(byAdding: .day, value: days, to: referenceDate) ?? referenceDate
+        return visibleSubscriptions.filter {
+            $0.status.isActive &&
+            $0.nextChargedAt <= upperBound &&
+            $0.nextChargedAt >= referenceDate
+        }
     }
 
     func selectLedgerProfile(_ profile: LedgerProfile) {
@@ -141,6 +174,16 @@ final class LedgerStore: ObservableObject {
         let resolvedID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines)
         let targetID = resolvedID?.isEmpty == false ? resolvedID : TodaySpendingSummary.defaultLedgerID
         return ledgerProfiles.first { $0.id == targetID }?.name ?? TodaySpendingSummary.defaultLedgerName
+    }
+
+    private var currentLedgerScopeID: String {
+        isShowingAllLedgers ? Self.allLedgersScopeID : selectedLedgerID
+    }
+
+    private var currentLedgerScopeName: String {
+        isShowingAllLedgers
+            ? localizedMessage("ledger.scope.all", fallback: "全部账本")
+            : ledgerName(for: selectedLedgerID)
     }
 
     func saveCustomSources() {
@@ -1538,7 +1581,7 @@ final class LedgerStore: ObservableObject {
 
     /// 扫描全部历史账单，自动识别并保存周期性订阅
     func detectAndUpsertSubscriptions() {
-        let detected = subscriptionDetector.detectFromHistory(transactions)
+        let detected = detectSubscriptionsForCurrentLedger()
         for sub in detected { upsertSubscription(sub) }
     }
 
@@ -1668,6 +1711,12 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(selectedLedgerID, forKey: Self.selectedLedgerIDKey)
         UserDefaults.standard.set(isShowingAllLedgers, forKey: Self.showAllLedgersKey)
     }
+
+    private func normalizedMerchantKey(_ merchant: String) -> String {
+        merchant
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
 }
 
 private extension Transaction {
@@ -1749,6 +1798,7 @@ extension LedgerStore {
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
+    private static let allLedgersScopeID = "all-ledgers"
     private static let selectedLedgerIDKey = "selectedLedgerID"
     private static let showAllLedgersKey = "showAllLedgers"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"

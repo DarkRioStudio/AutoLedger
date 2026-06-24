@@ -66,6 +66,7 @@ struct OfflineRegression {
         try verifyLedgerDefaultAssignment(reporter: reporter)
         try verifyLedgerProfileManagement(reporter: reporter)
         try verifyLedgerSelectionAndTransactionMoves(reporter: reporter)
+        try verifyLedgerScopedSurfaces(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -1884,6 +1885,142 @@ struct OfflineRegression {
                 "LedgerStore current ledger includes moved transaction"
             )
         }
+    }
+
+    private static func verifyLedgerScopedSurfaces(reporter: RegressionReporter) throws {
+        UserDefaults.standard.removeObject(forKey: "selectedLedgerID")
+        UserDefaults.standard.removeObject(forKey: "showAllLedgers")
+
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerScopedSurfaceRegression-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let sqlStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-scoped-surfaces.sqlite3")
+        let ledgerStore = LedgerStore(transactionStore: sqlStore)
+        guard let travelLedger = ledgerStore.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY") else {
+            reporter.check(false, "LedgerStore creates travel ledger for scoped surfaces")
+            return
+        }
+
+        let calendar = AppFormatters.calendar
+        let referenceDate = Date()
+        let previousMonth = calendar.date(byAdding: .month, value: -1, to: referenceDate) ?? referenceDate.addingTimeInterval(-31 * 86_400)
+
+        let defaultCurrent = Transaction(
+            merchant: "Default Cloud",
+            amount: 18,
+            occurredAt: referenceDate,
+            category: .digital,
+            source: .appStore,
+            note: "default current"
+        )
+        let defaultPrevious = Transaction(
+            merchant: "Default Cloud",
+            amount: 18,
+            occurredAt: previousMonth,
+            category: .digital,
+            source: .appStore,
+            note: "default previous"
+        )
+        let travelCurrent = Transaction(
+            merchant: "Travel Cloud",
+            amount: 88,
+            occurredAt: referenceDate,
+            category: .digital,
+            source: .appStore,
+            note: "travel current",
+            ledgerID: travelLedger.id
+        )
+        let travelPrevious = Transaction(
+            merchant: "Travel Cloud",
+            amount: 88,
+            occurredAt: previousMonth,
+            category: .digital,
+            source: .appStore,
+            note: "travel previous",
+            ledgerID: travelLedger.id
+        )
+
+        reporter.check(ledgerStore.addTransaction(defaultPrevious), "LedgerStore saves default previous transaction for scoped surfaces")
+        reporter.check(ledgerStore.addTransaction(defaultCurrent), "LedgerStore saves default current transaction for scoped surfaces")
+        reporter.check(ledgerStore.addTransaction(travelPrevious), "LedgerStore saves travel previous transaction for scoped surfaces")
+        reporter.check(ledgerStore.addTransaction(travelCurrent), "LedgerStore saves travel current transaction for scoped surfaces")
+
+        let defaultSnapshot = ledgerStore.monthlySnapshot(for: referenceDate)
+        reporter.check(defaultSnapshot.transactionCount == 1, "LedgerStore monthly snapshot uses current default ledger")
+        reporter.check(abs(defaultSnapshot.totalExpense - 18) < 0.001, "LedgerStore monthly snapshot excludes other ledgers")
+        reporter.check(ledgerStore.todaySpendingSummary.transactionCount == 1, "LedgerStore today summary uses current default ledger")
+        reporter.check(abs(ledgerStore.todaySpendingSummary.totalExpense - 18) < 0.001, "LedgerStore today summary excludes other ledgers")
+
+        let defaultDetected = ledgerStore.detectSubscriptionsForCurrentLedger()
+        reporter.check(defaultDetected.map(\.merchant) == ["Default Cloud"], "LedgerStore detects subscriptions from current default ledger only")
+
+        let defaultSubscription = Subscription(
+            merchant: "Default Cloud",
+            planName: "",
+            period: .monthly,
+            amount: 18,
+            lastChargedAt: referenceDate
+        )
+        let travelSubscription = Subscription(
+            merchant: "Travel Cloud",
+            planName: "",
+            period: .monthly,
+            amount: 88,
+            lastChargedAt: referenceDate
+        )
+        reporter.check(
+            ledgerStore.subscriptionsForCurrentLedger([defaultSubscription, travelSubscription]).map(\.merchant) == ["Default Cloud"],
+            "LedgerStore filters subscription list by current ledger activity"
+        )
+
+        let defaultStay = HotelStayRecord(
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            hotelName: "Default Hotel",
+            currency: "CNY",
+            totalAmount: 300,
+            sourceType: .manualPDF,
+            updatedAt: previousMonth
+        )
+        let travelStay = HotelStayRecord(
+            ledgerID: travelLedger.id,
+            hotelName: "Travel Hotel",
+            currency: "JPY",
+            totalAmount: 50000,
+            sourceType: .manualPDF,
+            updatedAt: referenceDate
+        )
+        let scopedHotelSnapshot = HotelStayArchivePresenter().makeListSnapshot(
+            records: [defaultStay, travelStay],
+            ledgerID: travelLedger.id
+        )
+        reporter.check(scopedHotelSnapshot.rows.map(\.hotelName) == ["Travel Hotel"], "HotelStayArchivePresenter filters records by ledger id")
+
+        ledgerStore.selectLedgerProfile(travelLedger)
+        let travelSnapshot = ledgerStore.monthlySnapshot(for: referenceDate)
+        reporter.check(travelSnapshot.transactionCount == 1, "LedgerStore monthly snapshot switches to selected ledger")
+        reporter.check(abs(travelSnapshot.totalExpense - 88) < 0.001, "LedgerStore selected ledger snapshot uses travel amount")
+        reporter.check(
+            ledgerStore.detectSubscriptionsForCurrentLedger().map(\.merchant) == ["Travel Cloud"],
+            "LedgerStore detects subscriptions after switching ledger"
+        )
+        reporter.check(
+            ledgerStore.subscriptionsForCurrentLedger([defaultSubscription, travelSubscription]).map(\.merchant) == ["Travel Cloud"],
+            "LedgerStore filters subscriptions after switching ledger"
+        )
+
+        ledgerStore.selectAllLedgers()
+        let allSnapshot = ledgerStore.monthlySnapshot(for: referenceDate)
+        reporter.check(allSnapshot.transactionCount == 2, "LedgerStore all-ledgers monthly snapshot aggregates active ledgers")
+        reporter.check(abs(allSnapshot.totalExpense - 106) < 0.001, "LedgerStore all-ledgers monthly snapshot totals all ledgers")
+        reporter.check(ledgerStore.todaySpendingSummary.transactionCount == 2, "LedgerStore all-ledgers today summary aggregates ledgers")
+        reporter.check(
+            ledgerStore.subscriptionsForCurrentLedger([defaultSubscription, travelSubscription]).map(\.merchant) == ["Default Cloud", "Travel Cloud"],
+            "LedgerStore all-ledgers subscription filter returns all subscriptions"
+        )
     }
 
     private static func verifySyncConflictResolver(reporter: RegressionReporter) {

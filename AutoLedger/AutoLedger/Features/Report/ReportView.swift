@@ -27,9 +27,10 @@ struct ReportView: View {
     }
 
     var body: some View {
-        let snapshot = MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)
+        let snapshot = store.monthlySnapshot(for: selectedMonth)
+        let scopedTransactions = store.visibleTransactions
         let anomalyAlerts = isCurrentMonth ? insightService.detectAnomalies(
-            transactions: store.transactions,
+            transactions: scopedTransactions,
             thresholdPercent: anomalyThresholdPercent
         ) : []
 

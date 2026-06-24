@@ -21,7 +21,7 @@ struct SubscriptionListView: View {
                     importStatusBanner(summary)
                 }
 
-                if store.subscriptions.isEmpty {
+                if scopedSubscriptions.isEmpty {
                     emptyState
                 } else {
                     upcomingSection
@@ -74,13 +74,16 @@ struct SubscriptionListView: View {
 
     // MARK: - Upcoming
 
+    private var scopedSubscriptions: [Subscription] {
+        store.visibleSubscriptions
+    }
+
     private var upcomingSubscriptions: [Subscription] {
-        let sevenDaysLater = Calendar.current.date(byAdding: .day, value: 7, to: .now) ?? .now
-        return store.subscriptions.filter { $0.status.isActive && $0.nextChargedAt <= sevenDaysLater && $0.nextChargedAt >= .now }
+        store.upcomingSubscriptionsForCurrentLedger()
     }
 
     private var activeSubscriptions: [Subscription] {
-        store.subscriptions.filter { $0.status.isActive }
+        scopedSubscriptions.filter { $0.status.isActive }
     }
 
     @ViewBuilder
@@ -108,7 +111,7 @@ struct SubscriptionListView: View {
 
                 Spacer()
 
-                Text(String(format: String(localized: "subscriptions.count_format"), store.subscriptions.count))
+                Text(String(format: String(localized: "subscriptions.count_format"), scopedSubscriptions.count))
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -124,7 +127,7 @@ struct SubscriptionListView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.accentSecondary)
 
-            ForEach(store.subscriptions) { sub in
+            ForEach(scopedSubscriptions) { sub in
                 subscriptionCard(sub, highlight: false)
             }
 

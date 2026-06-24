@@ -185,11 +185,11 @@ private struct IPadWorkspaceOverviewView: View {
     let openCleaning: () -> Void
 
     private var snapshot: MonthlySnapshot {
-        MonthlySnapshot.build(from: store.transactions, referenceDate: .now)
+        store.monthlySnapshot
     }
 
     private var recentTransactions: [Transaction] {
-        store.transactions
+        store.visibleTransactions
             .sorted { $0.occurredAt > $1.occurredAt }
             .prefix(6)
             .map { $0 }
@@ -209,7 +209,7 @@ private struct IPadWorkspaceOverviewView: View {
 
                         MetricCard(
                             title: String(localized: "ipad.workspace.metric.recent"),
-                            value: "\(store.transactions.count)",
+                            value: "\(store.visibleTransactions.count)",
                             detail: String(localized: "ipad.workspace.metric.recent.detail"),
                             accent: AppTheme.accentSecondary
                         )
@@ -457,7 +457,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
 
     private var snapshot: DataCleaningPreviewSnapshot {
         DataCleaningPreviewPlanner().buildSnapshot(
-            transactions: store.transactions,
+            transactions: store.visibleTransactions,
             merchantAliases: store.merchantAliases,
             categoryCorrections: store.categoryCorrections
         )
@@ -478,7 +478,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
     private var affectedTransactions: [Transaction] {
         guard let selectedPreview else { return [] }
         let ids = Set(selectedPreview.affectedTransactionIDs)
-        return store.transactions
+        return store.visibleTransactions
             .filter { ids.contains($0.id) }
             .sorted { $0.occurredAt > $1.occurredAt }
     }
@@ -2394,7 +2394,7 @@ private struct IPadReportWorkspaceView: View {
     private let analysisPanelHeight: CGFloat = 396
 
     private var snapshot: MonthlySnapshot {
-        MonthlySnapshot.build(from: store.transactions, referenceDate: selectedMonth)
+        store.monthlySnapshot(for: selectedMonth)
     }
 
     private var isCurrentMonth: Bool {
@@ -2841,7 +2841,7 @@ private struct IPadLedgerWorkspaceView: View {
     private var macDuplicatePreviews: [DataCleaningPreviewItem] {
         DataCleaningPreviewPlanner()
             .buildSnapshot(
-                transactions: store.transactions,
+                transactions: store.visibleTransactions,
                 merchantAliases: store.merchantAliases,
                 categoryCorrections: store.categoryCorrections
             )
@@ -2859,7 +2859,7 @@ private struct IPadLedgerWorkspaceView: View {
     private var selectedDuplicateTransactions: [Transaction] {
         guard let selectedDuplicatePreview else { return [] }
         let affectedIDs = Set(selectedDuplicatePreview.affectedTransactionIDs)
-        return store.transactions
+        return store.visibleTransactions
             .filter { affectedIDs.contains($0.id) }
             .sorted { $0.occurredAt > $1.occurredAt }
     }
