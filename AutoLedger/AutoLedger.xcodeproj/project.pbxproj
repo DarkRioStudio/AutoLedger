@@ -10,8 +10,6 @@
 		0BECB7067388F3643094548F /* Pods_AutoLedger.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3EC5791F6A6EB325FD337255 /* Pods_AutoLedger.framework */; };
 		AABB00040000000400000004 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00020000000200000002 /* AutoLedgerCore */; };
 		AABB00050000000500000005 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = AABB00030000000300000003 /* AutoLedgerCore */; };
-		C0F1A8A02FD2A0000012F5E3 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8A12FD2A0000012F5E3 /* AutoLedgerCore */; };
-		C0F1A8A22FD2A0010012F5E3 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8A32FD2A0010012F5E3 /* AutoLedgerCore */; };
 		C017EEBA2F875C1600639DC8 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C017EEB02F875C1600639DC8 /* ShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C03041882FB4235100F02850 /* AutoLedgerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C030417E2FB4235000F02850 /* AutoLedgerWatch Watch App.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C030418E2FB4240500F02850 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C030418D2FB4240500F02850 /* AutoLedgerCore */; };
@@ -22,6 +20,8 @@
 		C0A00EE02FCFC9AC0072F729 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C08D1AEC2F9A0A3B00CF2B9E /* SwiftUI.framework */; };
 		C0A00EEF2FCFC9AF0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C0A00EDE2FCFC9AC0072F729 /* AutoLedgerWatchWidgetsExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0F1A8932FD15B6C0012F5E3 /* RealityKitContent in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8922FD15B6C0012F5E3 /* RealityKitContent */; };
+		C0F1A8A02FD2A0000012F5E3 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8A12FD2A0000012F5E3 /* AutoLedgerCore */; };
+		C0F1A8A22FD2A0010012F5E3 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C0F1A8A32FD2A0010012F5E3 /* AutoLedgerCore */; };
 		D0CC000A2FA68B0000639DC8 /* ControlWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D0CC00012FA68B0000639DC8 /* ControlWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D0CC000B2FA68B0000639DC8 /* AutoLedgerCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0CC000F2FA68B0000639DC8 /* AutoLedgerCore */; };
 /* End PBXBuildFile section */
@@ -181,6 +181,13 @@
 			);
 			target = C0F1A88D2FD15B6C0012F5E3 /* AutoLedgerVision */;
 		};
+		C0F1A8A02FD8C67B0012F5E3 /* Exceptions for "AutoLedgerTV" folder in "AutoLedgerTV" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C0F1A87E2FD156E40012F5E3 /* AutoLedgerTV */;
+		};
 		D0CC00032FA68B0000639DC8 /* Exceptions for "ControlWidgetExtension" folder in "ControlWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -231,6 +238,9 @@
 		};
 		C0F1A8802FD156E40012F5E3 /* AutoLedgerTV */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C0F1A8A02FD8C67B0012F5E3 /* Exceptions for "AutoLedgerTV" folder in "AutoLedgerTV" target */,
+			);
 			path = AutoLedgerTV;
 			sourceTree = "<group>";
 		};
@@ -1345,6 +1355,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				APS_ENVIRONMENT = development;
 				CODE_SIGN_ENTITLEMENTS = AutoLedgerTV/AutoLedgerTV.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -1352,6 +1363,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerTV/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AutoLedger;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1381,6 +1393,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				APS_ENVIRONMENT = production;
 				CODE_SIGN_ENTITLEMENTS = AutoLedgerTV/AutoLedgerTV.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -1388,6 +1401,7 @@
 				DEVELOPMENT_TEAM = 5QM62E2M2R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedgerTV/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AutoLedger;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1490,6 +1504,7 @@
 				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ClipboardLedge;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1499,7 +1514,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1521,6 +1535,7 @@
 				INFOPLIST_FILE = ControlWidgetExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ClipboardLedge;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1530,7 +1545,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = top.darkrio326.AutoLedger.ControlWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

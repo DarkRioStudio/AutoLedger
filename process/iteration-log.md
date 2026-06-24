@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（GOAL-1770C ASC 新平台 Bundle ID 与 visionOS 图标修复）
+更新日期：2026-06-24（GOAL-1770D tvOS / visionOS ASC 资产与 entitlement 修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-220 GOAL-1770D tvOS / visionOS ASC 资产与 entitlement 修复
+- 日期：2026-06-24
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1770
+- 类型：Bugfix / 发布资产 / ASC 上传
+- 目标：修复 tvOS / visionOS 新平台上传时的 App Icon、Top Shelf、Info.plist 和 tvOS push entitlement 校验问题。
+- 改动范围：补齐 `AutoLedgerVision` visionOS `AppIcon.solidimagestack` 三层 PNG；补齐 `AutoLedgerTV` tvOS 分层 App Icon、App Store Icon、Top Shelf Image 和 Top Shelf Wide Image；新增 `AutoLedgerTV/Info.plist`；补充 `AutoLedgerTV` 的 `aps-environment` entitlement 与 build setting；调整 `project.pbxproj` 排除 tvOS `Info.plist` 资源复制；更新 `CHANGELOG.md` 和 `versions/v1.6.0-plan.md`。
+- 未改动范围：未修改主 App Bundle ID、DEVELOPMENT_TEAM、主 App App Group、主 App iCloud Container、CloudKit schema、业务代码、账本数据、截图管线脚本或 App Store Connect 线上配置。
+- 完成内容：visionOS App Icon 不再套用 iOS 方形外壳，改为平台专用 Back / Middle / Front 分层素材；tvOS App Icon 和 Top Shelf 资产均有对应 PNG；tvOS 产物内包含 `CFBundleIcons.CFBundlePrimaryIcon`、`TVTopShelfImage.TVTopShelfPrimaryImageWide`、`aps-environment` 和 `Assets.car`；visionOS 产物内包含 `CFBundleIcons.CFBundlePrimaryIcon = AppIcon`，`Assets.car` 中可查到 `AppIcon / Back / Middle / Front`。
+- 未完成内容：尚未重新跑 Xcode Cloud archive / ASC 上传验证；tvOS / visionOS signing profile 是否已刷新到包含 iCloud + push entitlement 仍需云端或 Xcode 上传确认。
+- 测试情况：执行 `find AutoLedger/AutoLedgerTV/Assets.xcassets AutoLedger/AutoLedgerVision/Assets.xcassets -name Contents.json -print0 | xargs -0 -n1 python3 -m json.tool >/dev/null`，结果 PASS；执行 `plutil -lint AutoLedger/AutoLedgerTV/Info.plist AutoLedger/AutoLedgerTV/AutoLedgerTV.entitlements AutoLedger/AutoLedgerVision/Info.plist`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-tv-asset-check -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-vision-asset-check -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`，结果 PASS；产物 Info.plist / entitlements / Assets.car 检查均 PASS。
+- 风险与注意事项：本轮是 Debug generic build 级别验证，最终是否完全消除 ITMS 报错仍以 Xcode Cloud archive 上传结果为准；tvOS 带 CloudKit entitlement 时要求 `aps-environment`，因此发布 profile 也必须刷新；图标为首版平台适配素材，仍建议在 ASC / TestFlight 中目检。
+- 回滚方式：如需要回退，可移除新增 tvOS / visionOS 平台资产 PNG、`AutoLedgerTV/Info.plist`、tvOS `aps-environment` 设置与 project exception；但回退后 ASC 新平台上传会再次触发相同校验问题。
+- 结论：代码侧和本地产物结构已修复，可以重新触发 Xcode Cloud archive / ASC 上传验证。
+- 下一步建议：推送后重新跑 Xcode Cloud 新平台 archive；若 ASC 仍报图标或 entitlement，再对 archive 产物执行同样的 Info.plist / entitlements / `assetutil --info Assets.car` 检查。
 
 ### ITER-219 GOAL-1770C ASC 新平台 Bundle ID 与 visionOS 图标修复
 - 日期：2026-06-24
