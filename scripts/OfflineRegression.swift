@@ -40,6 +40,7 @@ struct OfflineRegression {
         verifyHotelStayModels(reporter: reporter)
         verifyHotelFolioParsePipeline(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
+        verifyHotelStayLedgerPosting(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
@@ -407,6 +408,99 @@ struct OfflineRegression {
         form.hotelName = "   "
         reporter.check(!form.isValid, "HotelStayReviewForm rejects missing hotel name")
         reporter.check((try? form.confirmedDraft(from: draft, updatedAt: confirmedAt)) == nil, "HotelStayReviewForm blocks invalid confirmation")
+    }
+
+    private static func verifyHotelStayLedgerPosting(reporter: RegressionReporter) {
+        let legacyJSON = """
+        {
+          "id": "00000000-0000-0000-0000-000000001814",
+          "merchant": "Legacy Coffee",
+          "amount": 12.5,
+          "occurredAt": "2026-06-24T00:00:00Z",
+          "category": "dining",
+          "source": "manual",
+          "note": "legacy"
+        }
+        """.data(using: .utf8)!
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let legacyTransaction = try? decoder.decode(Transaction.self, from: legacyJSON)
+        reporter.check(legacyTransaction?.hotelStayRecordID == nil, "Transaction decodes missing hotel stay link as nil")
+
+        let payload = HotelFolioParsedPayload(
+            hotelName: "Edited Demo Hotel",
+            brand: "Demo Suites",
+            group: "Demo Hospitality",
+            city: "Tokyo",
+            country: "Japan",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            roomType: "King Bay View",
+            confirmationNumber: "ABC123",
+            currency: "JPY",
+            roomCharge: 40000,
+            tax: 4000,
+            serviceCharge: 3000,
+            foodBeverage: 2500,
+            otherCharges: 500,
+            totalAmount: 50000,
+            paymentMethod: "Amex",
+            confidence: 0.91,
+            rawTextExcerpt: "Demo folio excerpt"
+        )
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID,
+            sourceFileName: "demo-folio.pdf",
+            rawText: "Demo folio raw text",
+            parsedPayload: payload,
+            confidence: 0.91,
+            status: .confirmed,
+            createdAt: Date(timeIntervalSince1970: 1_783_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_783_065_600)
+        )
+        let stayID = UUID(uuidString: "00000000-0000-0000-0000-000000001815")!
+        let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001816")!
+        let postedAt = Date(timeIntervalSince1970: 1_783_071_600)
+        let service = HotelStayLedgerPostingService(
+            now: { postedAt },
+            hotelStayIDGenerator: { stayID },
+            transactionIDGenerator: { transactionID }
+        )
+        let result = try? service.post(draft)
+
+        reporter.check(result?.draft.status == .postedToLedger, "HotelStayLedgerPostingService marks draft posted")
+        reporter.check(result?.draft.updatedAt == postedAt, "HotelStayLedgerPostingService refreshes posted draft timestamp")
+        reporter.check(result?.hotelStayRecord.id == stayID, "HotelStayLedgerPostingService uses supplied hotel stay id")
+        reporter.check(result?.hotelStayRecord.linkedTransactionID == transactionID, "HotelStayRecord links generated transaction")
+        reporter.check(result?.hotelStayRecord.ledgerID == TodaySpendingSummary.defaultLedgerID, "HotelStayRecord keeps target ledger id")
+        reporter.check(result?.hotelStayRecord.hotelName == "Edited Demo Hotel", "HotelStayRecord receives confirmed hotel name")
+        reporter.check(result?.hotelStayRecord.hotelBrand == "Demo Suites", "HotelStayRecord receives hotel brand")
+        reporter.check(result?.hotelStayRecord.hotelGroup == "Demo Hospitality", "HotelStayRecord receives hotel group")
+        reporter.check(abs((result?.hotelStayRecord.totalAmount ?? 0) - 50000) < 0.001, "HotelStayRecord receives total amount")
+        reporter.check(result?.transaction.id == transactionID, "HotelStayLedgerPostingService uses supplied transaction id")
+        reporter.check(result?.transaction.hotelStayRecordID == stayID, "Transaction links generated hotel stay record")
+        reporter.check(result?.transaction.merchant == "Edited Demo Hotel", "Hotel transaction uses hotel name as merchant")
+        reporter.check(abs((result?.transaction.amount ?? 0) - 50000) < 0.001, "Hotel transaction uses folio total amount")
+        reporter.check(result?.transaction.category == "酒店住宿", "Hotel transaction uses accommodation category label")
+        reporter.check(result?.transaction.source == ReceiptSource.manual.rawValue, "Hotel transaction uses manual source")
+        reporter.check(
+            result?.transaction.occurredAt == AppFormatters.parseFlexibleDate("2026-06-22"),
+            "Hotel transaction uses checkout date"
+        )
+        reporter.check(result?.transaction.note.contains("2026-06-20") == true, "Hotel transaction note includes check-in date")
+        reporter.check(result?.transaction.note.contains("2026-06-22") == true, "Hotel transaction note includes check-out date")
+        reporter.check(result?.transaction.note.contains("King Bay View") == true, "Hotel transaction note includes room type")
+        reporter.check(result?.transaction.note.contains("ABC123") == true, "Hotel transaction note includes confirmation number")
+
+        let unconfirmedDraft = HotelStayDraft(
+            sourceType: .manualPDF,
+            parsedPayload: payload,
+            confidence: 0.91,
+            status: .needsReview
+        )
+        reporter.check((try? service.post(unconfirmedDraft)) == nil, "HotelStayLedgerPostingService rejects unconfirmed draft")
     }
 
     private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {
@@ -1493,6 +1587,7 @@ struct OfflineRegression {
         let activeID = UUID(uuidString: "00000000-0000-0000-0000-000000001565") ?? UUID()
         let deletedID = UUID(uuidString: "00000000-0000-0000-0000-000000001566") ?? UUID()
         let expiredID = UUID(uuidString: "00000000-0000-0000-0000-000000001567") ?? UUID()
+        let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001568") ?? UUID()
         let activeTransaction = Transaction(
             id: activeID,
             merchant: "Demo Coffee",
@@ -1500,7 +1595,8 @@ struct OfflineRegression {
             occurredAt: Date(timeIntervalSince1970: 1_780_000_000),
             category: .dining,
             source: .manual,
-            note: "active sync"
+            note: "active sync",
+            hotelStayRecordID: hotelStayRecordID
         )
         let deletedTransaction = Transaction(
             id: deletedID,
@@ -1572,6 +1668,10 @@ struct OfflineRegression {
         reporter.check(batch.expiredTombstoneIDs == [expiredID], "LedgerSyncPlanner separates expired tombstones")
         reporter.check(batch.upserts.first?.recordName == CloudLedgerSyncSchema.recordName(for: activeID), "LedgerSyncPlanner payload carries record name")
         reporter.check(batch.upserts.first?.syncRecord.transaction == activeTransaction, "LedgerSyncPlanner payload round-trips transaction")
+        reporter.check(
+            batch.upserts.first?.syncRecord.transaction.hotelStayRecordID == hotelStayRecordID,
+            "LedgerSyncPlanner payload preserves hotel stay transaction link"
+        )
         reporter.check(batch.upserts.first?.syncRecord.metadata.syncRevision == 1, "LedgerSyncPlanner payload round-trips sync metadata")
 
         let incrementalBatch = LedgerSyncPlanner.makePushBatch(
@@ -2159,18 +2259,24 @@ struct OfflineRegression {
             filename: "offline.sqlite3",
             syncDeviceID: "offline-device"
         )
+        let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001817") ?? UUID()
         let transaction = Transaction(
             merchant: "离线回归商户",
             amount: 12.50,
             occurredAt: AppFormatters.parseFlexibleDate("2026-03-27 09:15") ?? .now,
             category: .dining,
             source: .alipay,
-            note: "offline regression"
+            note: "offline regression",
+            hotelStayRecordID: hotelStayRecordID
         )
         try store.save(transaction: transaction)
 
         let loaded = try store.loadTransactions()
         reporter.check(loaded.contains(transaction), "SQLite save/load retains inserted transaction")
+        reporter.check(
+            loaded.first { $0.id == transaction.id }?.hotelStayRecordID == hotelStayRecordID,
+            "SQLite save/load preserves hotel stay transaction link"
+        )
         guard let insertedMetadata = try store.loadTransactionSyncMetadata(transactionID: transaction.id) else {
             reporter.check(false, "SQLite exposes inserted transaction sync metadata")
             return
@@ -2191,12 +2297,17 @@ struct OfflineRegression {
             occurredAt: AppFormatters.parseFlexibleDate("2026-03-27 10:20") ?? .now,
             category: .shopping,
             source: .wechat,
-            note: "updated note"
+            note: "updated note",
+            hotelStayRecordID: hotelStayRecordID
         )
         try store.update(transaction: updated)
 
         let reloaded = try store.loadTransactions()
         reporter.check(reloaded.contains(updated), "SQLite update persists modified transaction")
+        reporter.check(
+            reloaded.first { $0.id == updated.id }?.hotelStayRecordID == hotelStayRecordID,
+            "SQLite update preserves hotel stay transaction link"
+        )
         let updatedMetadata = try store.loadTransactionSyncMetadata(transactionID: updated.id)
         reporter.check(updatedMetadata?.syncRevision == insertedMetadata.syncRevision + 1, "SQLite update increments sync revision")
         reporter.check(updatedMetadata?.deletedAt == nil, "SQLite update keeps sync tombstone empty")
@@ -2985,13 +3096,15 @@ struct OfflineRegression {
 
         let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
         let sourceLedger = LedgerStore(transactionStore: sourceStore)
+        let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001819") ?? UUID()
         let active = Transaction(
             merchant: "备份回归咖啡",
             amount: 21.00,
             occurredAt: AppFormatters.parseFlexibleDate("2026-04-24 08:30") ?? .now,
             categoryLabel: "咖啡",
             sourceLabel: "测试来源",
-            note: "active"
+            note: "active",
+            hotelStayRecordID: hotelStayRecordID
         )
         let deleted = Transaction(
             merchant: "备份回归删除",
@@ -3026,6 +3139,10 @@ struct OfflineRegression {
         let bundle = try sourceLedger.makeBackupBundle()
         reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
         reporter.check(bundle.summary.deletedTransactionCount == 1, "BackupBundle summary counts deleted transactions")
+        reporter.check(
+            bundle.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
+            "BackupBundle preserves hotel stay transaction link"
+        )
         reporter.check(bundle.customCategories == ["咖啡"], "BackupBundle includes custom categories")
         reporter.check(bundle.subscriptionMetadata.annualPriceOverrides[subscription.id.uuidString] == 168.0, "BackupBundle includes subscription annual price metadata")
 
@@ -3034,6 +3151,10 @@ struct OfflineRegression {
         try restoreLedger.restoreBackup(bundle)
 
         reporter.check(restoreLedger.transactions.contains(active), "Backup restore keeps active transaction")
+        reporter.check(
+            restoreLedger.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
+            "Backup restore keeps hotel stay transaction link"
+        )
         reporter.check(restoreLedger.deletedTransactions.contains(deleted), "Backup restore keeps deleted transaction")
         let restoredSubscription = restoreLedger.subscriptions.first { $0.id == subscription.id }
         reporter.check(

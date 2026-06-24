@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-229 GOAL-1813 酒店水单确认页）
+更新日期：2026-06-24（ITER-230 GOAL-1814 酒店消费归档与流水关联）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-230 GOAL-1814 酒店消费归档与流水关联
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1814
+- 类型：能力增强 / Core 归档 / SQLite / 同步 / 测试
+- 目标：让用户确认后的酒店水单草稿能够生成正式酒店消费记录和一条关联的普通支出流水。
+- 改动范围：新增 Core 层 `HotelStayLedgerPostingService`；`Transaction` 新增可选 `hotelStayRecordID`；`SQLiteTransactionStore` 新增 nullable `transactions.hotel_stay_record_id` 并支持读写 / 更新 / 远端同步 / 备份恢复；`BackupTransaction` 与 `LedgerTransactionSyncPayload` 保留酒店关联；CloudKit 交易 payload 映射预留 `hotelStayRecordID` 可选字段；更新离线回归断言和编译清单；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `HotelStayRecord` 独立持久化表；未新增酒店草稿持久化；未串接 PDF 导入后的实际导航入口；未新增酒店消费列表 / 详情页；未新增删除酒店记录流程；未新增邮箱 / Worker 自动化；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`HotelStayLedgerPostingService` 只接受 `.confirmed` 草稿，生成 `.postedToLedger` 草稿、`HotelStayRecord` 和普通 `Transaction`；普通流水使用酒店名作为 merchant、酒店总额作为 amount、退房日期作为 occurredAt、`酒店住宿` 作为自定义分类、`manual` 作为来源，并在 note 写入入住日期、退房日期、晚数、房型、订单号和支付方式摘要；`HotelStayRecord.linkedTransactionID` 与 `Transaction.hotelStayRecordID` 双向关联；SQLite、备份、Core sync payload 和 CloudKit payload 映射均保留普通流水的酒店关联字段。
+- 未完成内容：正式 `HotelStayRecord` 仍只作为服务输出对象，尚未进入独立数据库表或列表 / 详情页面；CloudKit Production schema 尚需在发布前部署新增的 `hotelStayRecordID` 可选字段；当前仍不自动入账，必须先由用户确认草稿。
+- 测试情况：先新增 `verifyHotelStayLedgerPosting`，因缺少 `Transaction.hotelStayRecordID` 与 `HotelStayLedgerPostingService` 失败；实现后离线回归通过。随后补充 SQLite、Backup 和 sync payload 的关联字段持久化断言，先因 `BackupTransaction.hotelStayRecordID` 缺失失败；补齐模型、SQLite 迁移、读写、备份和 sync payload 映射后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS。
+- 风险与注意事项：`transactions.hotel_stay_record_id` 是 nullable 兼容列，老账单默认 nil；CloudKit 新可选字段需要在 1.6.1 发布前部署 Production schema，否则带酒店关联的交易同步可能无法保存或会丢失该关联；`HotelStayRecord` 尚无独立持久化，后续列表 / 详情页需要继续补存储设计。
+- 回滚方式：移除 `HotelStayLedgerPostingService.swift`，回退 `Transaction.hotelStayRecordID`、SQLite 新列读写 / 迁移、Backup / sync payload 字段、CloudKit payload 映射、离线回归新增断言和编译清单，并回退版本文档、CHANGELOG 与本日志条目；若数据库已在本机创建新列，回滚代码后该 nullable 列会被旧代码忽略。
+- 结论：GOAL-1814 的确认后归档对象生成与普通流水关联已完成第一版，可进入 `GOAL-1815` 酒店消费列表与详情页。
+- 下一步建议：实现酒店消费列表 / 详情页和 `HotelStayRecord` 持久化策略，并补删除记录与来源追溯路径。
 
 ### ITER-229 GOAL-1813 酒店水单确认页
 - 日期：2026-06-24

@@ -15,6 +15,7 @@ public enum CloudLedgerSyncSchema {
         public static let category = "category"
         public static let source = "source"
         public static let note = "note"
+        public static let hotelStayRecordID = "hotelStayRecordID"
         public static let updatedAt = "updatedAt"
         public static let syncRevision = "syncRevision"
         public static let deviceID = "deviceID"
@@ -190,6 +191,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
     public let category: String
     public let source: String
     public let note: String
+    public let hotelStayRecordID: UUID?
     public let updatedAt: Date
     public let syncRevision: Int
     public let deviceID: String
@@ -206,6 +208,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         category: String,
         source: String,
         note: String,
+        hotelStayRecordID: UUID? = nil,
         updatedAt: Date,
         syncRevision: Int,
         deviceID: String,
@@ -221,6 +224,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.category = category
         self.source = source
         self.note = note
+        self.hotelStayRecordID = hotelStayRecordID
         self.updatedAt = updatedAt
         self.syncRevision = syncRevision
         self.deviceID = deviceID
@@ -238,6 +242,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.category = record.transaction.category
         self.source = record.transaction.source
         self.note = record.transaction.note
+        self.hotelStayRecordID = record.transaction.hotelStayRecordID
         self.updatedAt = record.metadata.updatedAt
         self.syncRevision = record.metadata.syncRevision
         self.deviceID = record.metadata.deviceID
@@ -259,7 +264,8 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
                 occurredAt: occurredAt,
                 categoryLabel: category,
                 sourceLabel: source,
-                note: note
+                note: note,
+                hotelStayRecordID: hotelStayRecordID
             ),
             metadata: TransactionSyncMetadata(
                 transactionID: transactionID,

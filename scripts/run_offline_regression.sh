@@ -241,6 +241,7 @@ swiftc \
   "$CORE/Services/ExternalReceiptAssistCache.swift" \
   "$CORE/Services/ExternalReceiptAssistPayload.swift" \
   "$CORE/Services/HotelFolioParsePipeline.swift" \
+  "$CORE/Services/HotelStayLedgerPostingService.swift" \
   "$CORE/Services/HotelStayReviewForm.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
