@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（GOAL-1770 v1.6.0 发布资产与 smoke 基线）
+更新日期：2026-06-24（GOAL-1770B tvOS / visionOS 截图管线扩展）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-218 GOAL-1770B tvOS / visionOS 截图管线扩展
+- 日期：2026-06-24
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1770
+- 类型：能力增强 / 发布资产 / 截图管线
+- 目标：在现有 `tools/appstore-screenshots` 管线内补齐 tvOS 和 visionOS 平台截图导出，不新建平行 marketing 目录，不影响真实 App 功能和 Xcode Cloud 发布链。
+- 改动范围：扩展 `screenshots.json` 的 app / target / shot 配置；新增 `export_tvos.sh`、`export_visionos.sh`；扩展 `export.sh`、`render_marketing.py`、`build_preview.py`、README 和截图管线审计文档；为 `AutoLedgerTV` / `AutoLedgerVision` 增加 screenshot mode scene 参数入口。
+- 未改动范围：未上传 App Store Connect；未引入真实用户数据；未修改 Bundle ID、DEVELOPMENT_TEAM、主 App App Group、主 App iCloud Container、CloudKit schema、entitlements、Xcode Cloud 脚本或生产账本读写链路。
+- 完成内容：Apple TV 支持 `overview / categories / trends / summary` 4 张截图；visionOS 支持 `dashboard / categories / timeline` 3 张截图；`preview.html` 增加 Apple TV 和 visionOS 分组；截图模式使用 DEBUG simulator 虚构数据，可直接落到对应展示页。
+- 未完成内容：本轮只验证 `zh-Hans` 导出；`zh-Hant` / `en` 仍需发布前按相同命令导出和目检。tvOS / visionOS 真机或 TestFlight 下的 iCloud private database 读取仍不由截图管线验证替代。
+- 测试情况：执行 `python3 -m json.tool tools/appstore-screenshots/config/screenshots.json`，结果 PASS；执行 `python3 -m py_compile tools/appstore-screenshots/scripts/render_marketing.py tools/appstore-screenshots/scripts/build_preview.py`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-shot-tv-build -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-shot-vision-build -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`，结果 PASS；执行 `bash tools/appstore-screenshots/scripts/export.sh --tvos-only --locale zh-Hans`，结果 PASS，生成 4 张 `3840x2160` store PNG；执行 `bash tools/appstore-screenshots/scripts/export.sh --visionos-only --locale zh-Hans`，结果 PASS，生成 3 张 `3840x2160` store PNG。
+- 风险与注意事项：visionOS 模拟器截图是窗口在模拟器环境中的合成画面，用于 ASC 平台素材首版和视觉验证，不能代表真机空间交互 smoke；tvOS / visionOS 仍需在 ASC 新平台提交前做人工文案、裁切、截图顺序和真实 TestFlight 数据读取确认。
+- 回滚方式：回退本轮截图配置、两个新增导出脚本、`export.sh` / `render_marketing.py` / `build_preview.py` 扩展，以及 tvOS / visionOS screenshot scene 参数入口即可；输出目录下 PNG 不纳入版本控制。
+- 结论：本轮完成，截图管线已经覆盖 iPhone / iPad / Mac / Apple Watch / Apple TV / visionOS 的首版平台分组；tvOS / visionOS `zh-Hans` 输出可进入人工目检。
+- 下一步建议：发布前运行 `--tvos-only` / `--visionos-only` 的 `zh-Hant` 和 `en` 导出，打开 `tools/appstore-screenshots/output/preview.html` 逐张目检；随后再决定是否直接上传 ASC 新平台素材。
 
 ### ITER-217 GOAL-1770 v1.6.0 发布资产与 smoke 基线
 - 日期：2026-06-24

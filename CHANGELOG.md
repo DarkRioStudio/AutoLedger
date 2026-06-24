@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.0）
+- [2026-06-24 +0800] 扩展 App Store 截图管线覆盖 tvOS / visionOS：在现有 `tools/appstore-screenshots` 体系内新增 Apple TV 与 visionOS 的配置、导出脚本、营销渲染、预览页分组和 README 说明；tvOS / visionOS screenshot mode 支持按 scene 直接进入对应展示页，使用 DEBUG simulator 虚构演示数据，不访问真实账本、iCloud、网络或用户截图。已验证 tvOS 4 张、visionOS 3 张 `zh-Hans` store PNG 导出为 `3840x2160`，两个新平台 generic build 均通过。
 - [2026-06-24 +0800] 推进 `GOAL-1770` v1.6.0 发布资产与 smoke 收口：新增 `versions/v1.6.0-regression-baseline.md` 和 `versions/v1.6.0-review-notes.md`，记录 App Store / ASC 1.5.0 的命令级回归、全平台构建矩阵、审核说明草稿、TestFlight 测试说明和人工发布门禁。已验证离线回归、Golden 回归、iOS / iPad、Mac Catalyst、Apple Watch、tvOS、visionOS 构建均通过；Xcode Cloud archive、TestFlight 多平台安装、CloudKit Production schema、tvOS / visionOS 平台素材仍需人工确认。
 - [2026-06-22 +0800] 继续收口 `GOAL-1760` 的 tvOS / visionOS 多端 polish：tvOS 看板统一四个 tab 的内容区高度和顶部位置，补充遥控器左右切换、焦点样式、刷新按钮样式、CloudKit 账号 / 快照 / 远端账本诊断，以及 Apple TV 模拟器 DEBUG 演示数据；visionOS 展示版增加宽屏三栏空间布局、轻量 3D 倾斜层次和模拟器演示数据。两个新平台继续保持只读，不导入、不编辑、不删除、不写入账本；模拟器演示数据仅限 DEBUG simulator，不进入 Release。
 - [2026-06-20 +0800] 完成 `GOAL-1755` tvOS / visionOS 只读看板同步入口：主 App 在 iCloud 账本同步后发布 `LedgerDashboardSnapshot` 到 CloudKit private database，大屏端优先拉取该只读 dashboard snapshot，没有快照或读取失败时回退本机 SQLite。快照仅包含展示字段，不包含原始截图、OCR 原文、调试记录、syncRevision、idempotencyKey 或冲突状态；tvOS / visionOS 仍保持只读，不导入、不编辑、不删除。新增 tvOS / visionOS CloudKit entitlements，签名发布前需在 Apple Developer Portal 为对应 App ID / profile 启用 iCloud CloudKit 并确认 Production schema。

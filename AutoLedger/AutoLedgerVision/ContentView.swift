@@ -14,6 +14,7 @@ private typealias LedgerTransaction = AutoLedgerCore.Transaction
 struct ContentView: View {
     @State private var loadState: VisionLedgerLoadState = .loading
     @State private var privacyMode = false
+    @State private var screenshotScene = VisionScreenshotScene.current
 
     var body: some View {
         ZStack {
@@ -60,7 +61,7 @@ struct ContentView: View {
                 Text("AutoLedger")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.68))
-                Text("月度支出空间看板")
+                Text(screenshotScene.title)
                     .font(.system(size: 52, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
             }
@@ -126,33 +127,71 @@ struct ContentView: View {
     }
 
     private func wideDashboard(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
-        HStack(alignment: .top, spacing: 28) {
-            VisionMonthlyBoard(snapshot: snapshot, privacyMode: privacyMode)
-                .frame(minWidth: 560, maxWidth: .infinity, minHeight: 640)
-                .rotation3DEffect(.degrees(-2.2), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
-                .shadow(color: .black.opacity(0.24), radius: 34, x: 10, y: 22)
-
-            VStack(spacing: 24) {
-                VisionYearTimelineWall(snapshot: snapshot, privacyMode: privacyMode)
-                    .frame(height: 306)
-                    .rotation3DEffect(.degrees(1.4), axis: (x: 0, y: 1, z: 0), anchor: .center)
-
-                VisionRecentRail(snapshot: snapshot, privacyMode: privacyMode)
-                    .frame(height: 310)
-                    .rotation3DEffect(.degrees(1.8), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+        Group {
+            switch screenshotScene {
+            case .dashboard:
+                HStack(alignment: .top, spacing: 28) {
+                    monthlyBoard(snapshot)
+                    timelineAndRecent(snapshot)
+                    categoryCloud(snapshot)
+                }
+            case .categories:
+                HStack(alignment: .top, spacing: 28) {
+                    VisionCategoryCloud(snapshot: snapshot, privacyMode: privacyMode)
+                        .frame(width: 560)
+                        .frame(minHeight: 640)
+                        .rotation3DEffect(.degrees(-2.4), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
+                        .shadow(color: .black.opacity(0.26), radius: 36, x: 10, y: 24)
+                    monthlyBoard(snapshot)
+                    VisionRecentRail(snapshot: snapshot, privacyMode: privacyMode)
+                        .frame(width: 390)
+                        .frame(minHeight: 640)
+                        .offset(y: 40)
+                        .rotation3DEffect(.degrees(2.6), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+                }
+            case .timeline:
+                HStack(alignment: .top, spacing: 28) {
+                    VisionYearTimelineWall(snapshot: snapshot, privacyMode: privacyMode)
+                        .frame(minWidth: 620, maxWidth: .infinity, minHeight: 640)
+                        .rotation3DEffect(.degrees(-2.0), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
+                        .shadow(color: .black.opacity(0.24), radius: 34, x: 10, y: 22)
+                    monthlyBoard(snapshot)
+                    categoryCloud(snapshot)
+                }
             }
-            .frame(width: 430)
-            .offset(y: 18)
-            .shadow(color: .black.opacity(0.18), radius: 26, x: 0, y: 18)
-
-            VisionCategoryCloud(snapshot: snapshot, privacyMode: privacyMode)
-                .frame(width: 360)
-                .frame(minHeight: 640)
-                .offset(y: 46)
-                .rotation3DEffect(.degrees(3.2), axis: (x: 0, y: 1, z: 0), anchor: .leading)
-                .shadow(color: .black.opacity(0.26), radius: 36, x: -8, y: 24)
         }
         .frame(maxWidth: .infinity, minHeight: 710, alignment: .topLeading)
+    }
+
+    private func monthlyBoard(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
+        VisionMonthlyBoard(snapshot: snapshot, privacyMode: privacyMode)
+            .frame(minWidth: 560, maxWidth: .infinity, minHeight: 640)
+            .rotation3DEffect(.degrees(-2.2), axis: (x: 0, y: 1, z: 0), anchor: .trailing)
+            .shadow(color: .black.opacity(0.24), radius: 34, x: 10, y: 22)
+    }
+
+    private func timelineAndRecent(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
+        VStack(spacing: 24) {
+            VisionYearTimelineWall(snapshot: snapshot, privacyMode: privacyMode)
+                .frame(height: 306)
+                .rotation3DEffect(.degrees(1.4), axis: (x: 0, y: 1, z: 0), anchor: .center)
+
+            VisionRecentRail(snapshot: snapshot, privacyMode: privacyMode)
+                .frame(height: 310)
+                .rotation3DEffect(.degrees(1.8), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+        }
+        .frame(width: 430)
+        .offset(y: 18)
+        .shadow(color: .black.opacity(0.18), radius: 26, x: 0, y: 18)
+    }
+
+    private func categoryCloud(_ snapshot: VisionLedgerDashboardSnapshot) -> some View {
+        VisionCategoryCloud(snapshot: snapshot, privacyMode: privacyMode)
+            .frame(width: 360)
+            .frame(minHeight: 640)
+            .offset(y: 46)
+            .rotation3DEffect(.degrees(3.2), axis: (x: 0, y: 1, z: 0), anchor: .leading)
+            .shadow(color: .black.opacity(0.26), radius: 36, x: -8, y: 24)
     }
 
     @MainActor
@@ -175,6 +214,14 @@ struct ContentView: View {
     }
 
     nonisolated private static func loadTransactions() async throws -> [LedgerTransaction] {
+        #if DEBUG
+        #if targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("--screenshot-mode") {
+            return sortForDashboard(VisionDashboardSimulatorData.transactions(referenceDate: Date()))
+        }
+        #endif
+        #endif
+
         if let snapshot = try? await VisionDashboardCloudSnapshotClient.fetchSnapshot() {
             return sortForDashboard(snapshot.displayTransactions)
         }
@@ -197,6 +244,44 @@ struct ContentView: View {
                 }
                 return lhs.occurredAt > rhs.occurredAt
             }
+    }
+}
+
+private enum VisionScreenshotScene {
+    case dashboard
+    case categories
+    case timeline
+
+    static var current: VisionScreenshotScene {
+        guard
+            ProcessInfo.processInfo.arguments.contains("--screenshot-mode"),
+            let rawValue = ProcessInfo.processInfo.argumentValue(after: "--screenshot-scene")
+        else {
+            return .dashboard
+        }
+
+        switch rawValue {
+        case "categories": return .categories
+        case "timeline": return .timeline
+        default: return .dashboard
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .dashboard: return "月度支出空间看板"
+        case .categories: return "分类支出卡片"
+        case .timeline: return "年度消费时间线"
+        }
+    }
+}
+
+private extension ProcessInfo {
+    func argumentValue(after key: String) -> String? {
+        guard let index = arguments.firstIndex(of: key) else { return nil }
+        let valueIndex = arguments.index(after: index)
+        guard arguments.indices.contains(valueIndex) else { return nil }
+        return arguments[valueIndex]
     }
 }
 

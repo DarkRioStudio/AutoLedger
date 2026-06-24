@@ -10,6 +10,8 @@ IOS_ONLY=false
 IPAD_ONLY=false
 MAC_ONLY=false
 WATCH_ONLY=false
+TVOS_ONLY=false
+VISIONOS_ONLY=false
 RENDER_ONLY=false
 LOCALE_ARGS=()
 
@@ -31,6 +33,14 @@ while [[ $# -gt 0 ]]; do
       WATCH_ONLY=true
       shift
       ;;
+    --tvos-only)
+      TVOS_ONLY=true
+      shift
+      ;;
+    --visionos-only|--vision-only)
+      VISIONOS_ONLY=true
+      shift
+      ;;
     --render-only)
       RENDER_ONLY=true
       shift
@@ -48,6 +58,8 @@ Options:
   --ipad-only      Capture and render iPad screenshots only.
   --mac-only       Capture and render Mac Catalyst screenshots only.
   --watch-only     Capture and render Apple Watch screenshots only.
+  --tvos-only      Capture and render Apple TV screenshots only.
+  --visionos-only  Capture and render visionOS screenshots only.
   --render-only    Re-render store images and preview.html from existing raw screenshots.
   --locale LOCALE  Limit capture to zh-Hans, zh-Hant, or en. Can be repeated.
 EOF
@@ -94,29 +106,37 @@ if [[ "$RENDER_ONLY" == true ]]; then
 fi
 
 selected_only_count=0
-for flag in "$IOS_ONLY" "$IPAD_ONLY" "$MAC_ONLY" "$WATCH_ONLY"; do
+for flag in "$IOS_ONLY" "$IPAD_ONLY" "$MAC_ONLY" "$WATCH_ONLY" "$TVOS_ONLY" "$VISIONOS_ONLY"; do
   [[ "$flag" == true ]] && ((selected_only_count+=1))
 done
 
 if (( selected_only_count > 1 )); then
-  echo "Only one of --ios-only, --ipad-only, --mac-only, or --watch-only can be used at a time." >&2
+  echo "Only one of --ios-only, --ipad-only, --mac-only, --watch-only, --tvos-only, or --visionos-only can be used at a time." >&2
   exit 2
 fi
 
-if [[ "$WATCH_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true ]]; then
+if [[ "$WATCH_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true && "$TVOS_ONLY" != true && "$VISIONOS_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_ios.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 
-if [[ "$IOS_ONLY" != true && "$WATCH_ONLY" != true && "$MAC_ONLY" != true ]]; then
+if [[ "$IOS_ONLY" != true && "$WATCH_ONLY" != true && "$MAC_ONLY" != true && "$TVOS_ONLY" != true && "$VISIONOS_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_ipad.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 
-if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$WATCH_ONLY" != true ]]; then
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$WATCH_ONLY" != true && "$TVOS_ONLY" != true && "$VISIONOS_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_mac.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 
-if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true ]]; then
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true && "$TVOS_ONLY" != true && "$VISIONOS_ONLY" != true ]]; then
   bash "$SCRIPT_DIR/export_watch.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
+fi
+
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true && "$WATCH_ONLY" != true && "$VISIONOS_ONLY" != true ]]; then
+  bash "$SCRIPT_DIR/export_tvos.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
+fi
+
+if [[ "$IOS_ONLY" != true && "$IPAD_ONLY" != true && "$MAC_ONLY" != true && "$WATCH_ONLY" != true && "$TVOS_ONLY" != true ]]; then
+  bash "$SCRIPT_DIR/export_visionos.sh" ${LOCALE_ARGS[@]+"${LOCALE_ARGS[@]}"}
 fi
 
 python3 "$SCRIPT_DIR/build_preview.py"

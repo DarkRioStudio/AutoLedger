@@ -28,6 +28,8 @@ PLATFORM_DEFS = {
     "ios": {"shotsKey": "iosShots", "targetKey": "ios_65", "label": "iPhone"},
     "ipad": {"shotsKey": "ipadShots", "targetKey": "ipad_13", "label": "iPad"},
     "mac": {"shotsKey": "macShots", "targetKey": "mac_desktop", "label": "Mac"},
+    "tvos": {"shotsKey": "tvosShots", "targetKey": "tvos", "label": "Apple TV"},
+    "visionos": {"shotsKey": "visionosShots", "targetKey": "visionos", "label": "visionOS"},
 }
 
 
@@ -258,6 +260,44 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
             "inset": 16,
             "frameMode": "cover",
             "frameAlignY": "top",
+        }
+
+    if platform == "tvos":
+        capture_w = 3300
+        capture_h = 1856
+        return {
+            "brandPos": (164, 96),
+            "brandFont": font(48, "bold"),
+            "titleFont": font(112 if locale != "en" else 96, "bold"),
+            "subtitleFont": font(48, "regular"),
+            "textWidth": canvas_w - 328,
+            "titlePos": (164, 190),
+            "lineWidth": 148,
+            "captureBox": ((canvas_w - capture_w) // 2, 650, capture_w, capture_h),
+            "kind": "window",
+            "radius": 58,
+            "inset": 0,
+            "frameMode": "cover",
+            "frameAlignY": "top",
+        }
+
+    if platform == "visionos":
+        capture_w = 3260
+        capture_h = 1834
+        return {
+            "brandPos": (168, 90),
+            "brandFont": font(48, "bold"),
+            "titleFont": font(108 if locale != "en" else 94, "bold"),
+            "subtitleFont": font(46, "regular"),
+            "textWidth": canvas_w - 336,
+            "titlePos": (168, 184),
+            "lineWidth": 148,
+            "captureBox": ((canvas_w - capture_w) // 2, 654, capture_w, capture_h),
+            "kind": "window",
+            "radius": 66,
+            "inset": 0,
+            "frameMode": "cover",
+            "frameAlignY": "center",
         }
 
     capture_w = 1248

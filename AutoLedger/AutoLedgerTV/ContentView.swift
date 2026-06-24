@@ -14,7 +14,7 @@ private typealias LedgerTransaction = AutoLedgerCore.Transaction
 
 struct ContentView: View {
     @StateObject private var store = TVLedgerDashboardStore()
-    @State private var selectedPage: TVDashboardPage = .overview
+    @State private var selectedPage: TVDashboardPage = .screenshotInitialPage
     @State private var privacyMode = false
 
     var body: some View {
@@ -163,6 +163,32 @@ private enum TVDashboardPage: String, CaseIterable, Hashable, Identifiable {
         case .summary: return "sparkles.rectangle.stack.fill"
         }
     }
+
+    static var screenshotInitialPage: TVDashboardPage {
+        guard
+            ProcessInfo.processInfo.arguments.contains("--screenshot-mode"),
+            let rawValue = ProcessInfo.processInfo.argumentValue(after: "--screenshot-scene")
+        else {
+            return .overview
+        }
+
+        switch rawValue {
+        case "overview": return .overview
+        case "categories": return .categories
+        case "trend", "trends": return .trend
+        case "summary": return .summary
+        default: return .overview
+        }
+    }
+}
+
+private extension ProcessInfo {
+    func argumentValue(after key: String) -> String? {
+        guard let index = arguments.firstIndex(of: key) else { return nil }
+        let valueIndex = arguments.index(after: index)
+        guard arguments.indices.contains(valueIndex) else { return nil }
+        return arguments[valueIndex]
+    }
 }
 
 private enum TVDashboardLayout {
@@ -204,6 +230,14 @@ private final class TVLedgerDashboardStore: ObservableObject {
     }
 
     nonisolated private static func loadTransactions() async throws -> [LedgerTransaction] {
+        #if DEBUG
+        #if targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("--screenshot-mode") {
+            return sortForDashboard(TVDashboardSimulatorData.transactions(referenceDate: Date()))
+        }
+        #endif
+        #endif
+
         var diagnostics: [String] = []
 
         do {

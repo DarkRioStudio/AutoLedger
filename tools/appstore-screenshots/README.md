@@ -1,6 +1,6 @@
 # AutoLedger App Store Screenshot Export
 
-This folder contains a repeatable local pipeline for App Store screenshots and App Preview keyframe preparation. It captures deterministic screenshot-mode screens from the iOS, iPad, and Mac Catalyst app, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
+This folder contains a repeatable local pipeline for App Store screenshots and App Preview keyframe preparation. It captures deterministic screenshot-mode screens from the iOS, iPad, Mac Catalyst, tvOS, and visionOS apps, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
 
 The same raw and store PNGs can be handed to Hyperframes or another video tool as keyframes for an App Store App Preview. This repository still does not upload assets to App Store Connect.
 
@@ -10,6 +10,8 @@ The same raw and store PNGs can be handed to Hyperframes or another video tool a
 - iPad: zh-Hans, zh-Hant, and en, default 13-inch landscape App Store size `2732x2048`.
 - Mac Catalyst: zh-Hans, zh-Hant, and en, default desktop capture size `1440x900`.
 - Apple Watch: zh-Hans, zh-Hant, and en when the Watch scheme and a usable Watch simulator pair are available.
+- Apple TV: zh-Hans, zh-Hant, and en, default 4K landscape App Store size `3840x2160`.
+- visionOS: zh-Hans, zh-Hant, and en, default landscape marketing size `3840x2160`.
 
 The pipeline does not upload to App Store Connect or directly create official App Preview videos. App Preview / Hyperframes production material lives in `tools/appstore-screenshots/app-preview/`.
 
@@ -45,12 +47,26 @@ Only Apple Watch:
 bash tools/appstore-screenshots/scripts/export.sh --watch-only
 ```
 
+Only Apple TV:
+
+```bash
+bash tools/appstore-screenshots/scripts/export.sh --tvos-only
+```
+
+Only visionOS:
+
+```bash
+bash tools/appstore-screenshots/scripts/export.sh --visionos-only
+```
+
 Limit to one locale:
 
 ```bash
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --ipad-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --mac-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --tvos-only --locale zh-Hans
+bash tools/appstore-screenshots/scripts/export.sh --visionos-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale en
 ```
@@ -105,6 +121,8 @@ Suggested App Store asset review order:
 3. Apple Watch screenshots
 4. iPad screenshots
 5. Mac screenshots
+6. Apple TV screenshots
+7. visionOS screenshots
 
 ## Output Layout
 
@@ -117,11 +135,15 @@ output/
     ipad/{zh-Hans,zh-Hant,en}/
     mac/{zh-Hans,zh-Hant,en}/
     watch/{zh-Hans,zh-Hant,en}/
+    tvos/{zh-Hans,zh-Hant,en}/
+    visionos/{zh-Hans,zh-Hant,en}/
   store/
     ios/{zh-Hans,zh-Hant,en}/
     ipad/{zh-Hans,zh-Hant,en}/
     mac/{zh-Hans,zh-Hant,en}/
     watch/{zh-Hans,zh-Hant,en}/
+    tvos/{zh-Hans,zh-Hant,en}/
+    visionos/{zh-Hans,zh-Hant,en}/
   preview.html
 ```
 
@@ -138,6 +160,10 @@ Detected defaults in this project:
 - iOS bundle ID: `top.darkrio326.AutoLedger`
 - Watch scheme: `AutoLedgerWatch Watch App`
 - Watch bundle ID: `top.darkrio326.AutoLedger.watchkitapp`
+- Apple TV scheme: `AutoLedgerTV`
+- Apple TV bundle ID: `top.darkrio326.AutoLedger.tv`
+- visionOS scheme: `AutoLedgerVision`
+- visionOS bundle ID: `top.darkrio326.AutoLedger.vision`
 
 ## iPhone Scenes
 
@@ -212,6 +238,42 @@ To add a scene:
 2. Add an entry to `macShots` in `screenshots.json`.
 3. Run `bash tools/appstore-screenshots/scripts/export.sh --mac-only`.
 
+## Apple TV Scenes
+
+The tvOS app supports screenshot mode by reading the launch scene and selecting the matching read-only dashboard tab:
+
+```text
+--screenshot-mode
+--screenshot-platform tvos
+--screenshot-scene overview|categories|trends|summary
+```
+
+To add a scene:
+
+1. Extend the `TVDashboardPage.screenshotInitialPage` mapping in `AutoLedgerTV/ContentView.swift`.
+2. Add an entry to `tvosShots` in `screenshots.json`.
+3. Run `bash tools/appstore-screenshots/scripts/export.sh --tvos-only`.
+
+The tvOS screenshot path uses DEBUG simulator fictional data when iCloud is unavailable. It remains read-only and does not import, edit, delete, or write ledger data.
+
+## visionOS Scenes
+
+The visionOS app supports screenshot mode by reading the launch scene and arranging the first window for the selected marketing view:
+
+```text
+--screenshot-mode
+--screenshot-platform visionos
+--screenshot-scene dashboard|categories|timeline
+```
+
+To add a scene:
+
+1. Extend `VisionScreenshotScene` in `AutoLedgerVision/ContentView.swift`.
+2. Add an entry to `visionosShots` in `screenshots.json`.
+3. Run `bash tools/appstore-screenshots/scripts/export.sh --visionos-only`.
+
+The visionOS screenshot path uses DEBUG simulator fictional data when iCloud is unavailable. It remains read-only and does not import, edit, delete, or write ledger data.
+
 ## Sizes
 
 iPhone defaults to `ios_65` (`1242x2688`). To switch to the reserved 6.9-inch target, enable `targets.ios_69`, update `render_marketing.py` target selection if needed, and ensure the selected simulator produces suitable raw screenshots.
@@ -221,6 +283,8 @@ iPad defaults to `ipad_13` (`2732x2048`). The renderer keeps the workspace scree
 Mac defaults to `mac_desktop` (`1440x900`). The exporter launches the built Mac Catalyst app, resizes the front window with AppleScript, and captures that window rectangle from the desktop.
 
 Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, and en Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
+
+Apple TV and visionOS default to `3840x2160` in `targets.tvos` and `targets.visionos`. The renderer places the simulator capture inside a marketing canvas with title and subtitle copy.
 
 ## Manual Watch Fallback
 
@@ -252,6 +316,8 @@ The current automatic Watch pipeline does not capture a real watch face complica
 - iPad screenshot is blank white or still loading: the capture scripts retry incomplete frames; if it still happens, increase `capture.stabilizeSeconds` or use a screenshot scene with stable fixture content.
 - Mac export is skipped: enable Accessibility permission for the terminal or Codex app so `System Events` can move and resize the AutoLedger window before `screencapture`.
 - Watch does not enter screenshot mode: confirm the Watch app bundle ID and launch arguments in `screenshots.json`.
+- Apple TV export cannot find the app: confirm `AutoLedgerTV` shared scheme exists and the target builds for an Apple TV simulator.
+- visionOS export cannot find the app: confirm `AutoLedgerVision` shared scheme exists and the target builds for an Apple Vision Pro simulator.
 - First screenshot is black or white: capture scripts retry incomplete frames before writing raw PNGs; if it still happens, increase `capture.stabilizeSeconds`.
 - UI text looks oversized: screenshot hosts pin Dynamic Type to the default `.large` size, independent of the simulator's Accessibility text size.
 - Permission prompts appear: screenshot host should not call camera, photo library, OCR, notifications, iCloud, or network paths; check any newly added scene for live dependencies.
@@ -263,7 +329,5 @@ The current automatic Watch pipeline does not capture a real watch face complica
 
 - App Store Connect API upload.
 - Direct official App Preview video generation. Hyperframes production material is provided under `app-preview/`.
-- tvOS screenshots.
-- visionOS screenshots.
 - Figma or Canva integration.
 - Real OCR or real user data capture.

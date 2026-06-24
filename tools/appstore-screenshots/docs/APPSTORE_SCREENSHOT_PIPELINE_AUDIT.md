@@ -10,8 +10,10 @@ This audit records the current state of the existing `tools/appstore-screenshots
 - iPadOS
 - Mac Catalyst
 - Apple Watch
+- Apple TV
+- visionOS
 
-The pipeline does not currently support tvOS or visionOS screenshots.
+tvOS and visionOS were added after the initial audit. They use their own app targets and simulator captures, then reuse the same marketing renderer and `preview.html` output.
 
 ## Supported Locales
 

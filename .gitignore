@@ -64,3 +64,4 @@ autoledger_store_assets_*/
 receiptsample/
 tools/appstore-screenshots/output/
 tools/appstore-screenshots/output-*/
+tools/appstore-screenshots/.derivedData*/

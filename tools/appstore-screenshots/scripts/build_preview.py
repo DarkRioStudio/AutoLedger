@@ -116,6 +116,8 @@ def main() -> int:
     watch_sections = "\n".join(locale_section("watch", locale) for locale in locales)
     ipad_sections = "\n".join(locale_section("ipad", locale) for locale in locales)
     mac_sections = "\n".join(locale_section("mac", locale) for locale in locales)
+    tvos_sections = "\n".join(locale_section("tvos", locale) for locale in locales)
+    visionos_sections = "\n".join(locale_section("visionos", locale) for locale in locales)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     html_text = f"""<!doctype html>
@@ -240,6 +242,12 @@ def main() -> int:
   <h2>Mac</h2>
   {mac_status_html()}
   {mac_sections}
+
+  <h2>Apple TV</h2>
+  {tvos_sections}
+
+  <h2>visionOS</h2>
+  {visionos_sections}
 </body>
 </html>
 """

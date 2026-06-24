@@ -43,6 +43,24 @@
         "Apple Watch Series 9 (45mm)",
         "Apple Watch Series 8 (45mm)"
       ]
+    },
+    "tvos": {
+      "scheme": "AutoLedgerTV",
+      "bundleId": "top.darkrio326.AutoLedger.tv",
+      "productName": "AutoLedgerTV",
+      "deviceCandidates": [
+        "Apple TV 4K (3rd generation)",
+        "Apple TV 4K (3rd generation) (at 1080p)",
+        "Apple TV"
+      ]
+    },
+    "visionos": {
+      "scheme": "AutoLedgerVision",
+      "bundleId": "top.darkrio326.AutoLedger.vision",
+      "productName": "AutoLedgerVision",
+      "deviceCandidates": [
+        "Apple Vision Pro"
+      ]
     }
   },
   "targets": {
@@ -70,6 +88,16 @@
       "width": 410,
       "height": 502,
       "enabled": "auto"
+    },
+    "tvos": {
+      "width": 3840,
+      "height": 2160,
+      "enabled": true
+    },
+    "visionos": {
+      "width": 3840,
+      "height": 2160,
+      "enabled": true
     }
   },
   "capture": {
@@ -361,6 +389,108 @@
         "zh-Hans": "腕上记录后，回到手机继续编辑和统计",
         "zh-Hant": "腕上記錄後，回到手機繼續編輯和統計",
         "en": "Continue editing and viewing reports on iPhone"
+      }
+    }
+  ],
+  "tvosShots": [
+    {
+      "id": "00_tvos_overview",
+      "scene": "overview",
+      "title": {
+        "zh-Hans": "家庭大屏，只读账本",
+        "zh-Hant": "家庭大螢幕，只讀帳本",
+        "en": "A read-only ledger for the living room"
+      },
+      "subtitle": {
+        "zh-Hans": "在 Apple TV 上查看本月支出、分类和最近账单。",
+        "zh-Hant": "在 Apple TV 上查看本月支出、分類和最近帳單。",
+        "en": "Review monthly spending, categories, and recent records on Apple TV."
+      }
+    },
+    {
+      "id": "01_tvos_categories",
+      "scene": "categories",
+      "title": {
+        "zh-Hans": "分类占比，一眼看清",
+        "zh-Hant": "分類占比，一眼看清",
+        "en": "See category spending clearly"
+      },
+      "subtitle": {
+        "zh-Hans": "购物、餐饮、通讯和出行支出适合大屏浏览。",
+        "zh-Hant": "購物、餐飲、通訊和出行支出適合大螢幕瀏覽。",
+        "en": "Browse category structure from across the room."
+      }
+    },
+    {
+      "id": "02_tvos_trends",
+      "scene": "trends",
+      "title": {
+        "zh-Hans": "趋势变化，家庭共享",
+        "zh-Hant": "趨勢變化，家庭共享",
+        "en": "Spending trends for the big screen"
+      },
+      "subtitle": {
+        "zh-Hans": "最近 7 天和近 6 个月趋势以只读方式展示。",
+        "zh-Hant": "最近 7 天和近 6 個月趨勢以只讀方式展示。",
+        "en": "Show recent and monthly trends without editing data."
+      }
+    },
+    {
+      "id": "03_tvos_summary",
+      "scene": "summary",
+      "title": {
+        "zh-Hans": "摘要看板，快速回顾",
+        "zh-Hant": "摘要看板，快速回顧",
+        "en": "A quick spending summary"
+      },
+      "subtitle": {
+        "zh-Hans": "年度累计、常用商户和最近账单集中展示。",
+        "zh-Hant": "年度累計、常用商家和最近帳單集中展示。",
+        "en": "Keep yearly totals, top merchants, and recent spending together."
+      }
+    }
+  ],
+  "visionosShots": [
+    {
+      "id": "00_vision_dashboard",
+      "scene": "dashboard",
+      "title": {
+        "zh-Hans": "月度支出，空间看板",
+        "zh-Hant": "月度支出，空間看板",
+        "en": "A spatial monthly dashboard"
+      },
+      "subtitle": {
+        "zh-Hans": "在 visionOS 上用宽屏空间视图浏览账本摘要。",
+        "zh-Hant": "在 visionOS 上用寬螢幕空間視圖瀏覽帳本摘要。",
+        "en": "Explore your monthly ledger in a wide spatial layout."
+      }
+    },
+    {
+      "id": "01_vision_categories",
+      "scene": "categories",
+      "title": {
+        "zh-Hans": "分类卡片，漂浮展示",
+        "zh-Hant": "分類卡片，漂浮展示",
+        "en": "Floating category cards"
+      },
+      "subtitle": {
+        "zh-Hans": "购物、餐饮、通讯等支出以只读卡片呈现。",
+        "zh-Hant": "購物、餐飲、通訊等支出以只讀卡片呈現。",
+        "en": "Read category spending as lightweight spatial cards."
+      }
+    },
+    {
+      "id": "02_vision_timeline",
+      "scene": "timeline",
+      "title": {
+        "zh-Hans": "年度时间线，回顾消费",
+        "zh-Hant": "年度時間線，回顧消費",
+        "en": "Review spending over time"
+      },
+      "subtitle": {
+        "zh-Hans": "年度累计、近期账单和月度趋势并排查看。",
+        "zh-Hant": "年度累計、近期帳單和月度趨勢並排查看。",
+        "en": "See yearly totals, recent records, and monthly trends side by side."
       }
     }
   ]
