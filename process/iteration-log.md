@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-227 GOAL-1811 酒店水单 PDF 文本提取）
+更新日期：2026-06-24（ITER-228 GOAL-1812 酒店水单解析管线）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-228 GOAL-1812 酒店水单解析管线
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1812
+- 类型：能力增强 / Core 解析 / 测试
+- 目标：建立来源无关的酒店水单解析管线，把 PDFKit 或后续邮箱 / Worker 传入的文本转换为结构化酒店水单 payload，并进入用户复核状态。
+- 改动范围：新增 Core 层 `HotelFolioParsePayloadBuilder`、`HotelFolioOpenAICompatibleCodec`、`HotelFolioParsePipeline`；更新离线回归断言和编译清单；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未接真实网络请求或 API key；未新增设置入口、确认页、列表页、详情页或侧边栏入口；未持久化 `HotelStayDraft`；未生成 `HotelStayRecord` 或普通 `Transaction`；未写 SQLite schema、CloudKit schema、BackupBundle、iCloud 同步；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`HotelFolioParsePayloadBuilder` 支持从任意 `HotelFolioSourceType` 的原文生成脱敏 payload，并保留酒店名、确认号等解析所需信息；脱敏覆盖邮箱、手机号、会员号 / 身份证 / 护照类编号和银行卡号；`HotelFolioOpenAICompatibleCodec` 生成 OpenAI-compatible JSON request，prompt 约束酒店水单 schema，并能解码 direct JSON 或 chat completion content；`HotelFolioParsePipeline` 可将解析 payload 回填到原 draft，状态推进为 `.needsReview`，同时保留来源、原文、目标账本和置信度。
+- 未完成内容：外部模型调用仍需 App 层 client 接入；金额平衡校验、字段编辑、拒绝草稿、正式归档和普通流水关联留给后续 GOAL；当前不自动入账。
+- 测试情况：先新增 `verifyHotelFolioParsePipeline` 离线回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `HotelFolioParsePayloadBuilder`、`HotelFolioOpenAICompatibleCodec`、`HotelFolioParsePipeline` 失败；实现后第一次回归暴露全可选 schema 会把 chat wrapper 误解为空 payload，修正为必须包含至少一个酒店字段后再次执行，结果 PASS。
+- 风险与注意事项：当前脱敏规则覆盖常见敏感字段，但不同酒店 PDF 的会员号、证件号和支付卡号格式差异较大，后续真实样例进入前需要继续扩充脱敏回归；Core 只生成外部模型 payload 和解析结果，不负责网络请求、API key、持久化或 UI。
+- 回滚方式：移除 `HotelFolioParsePipeline.swift`、离线回归新增断言和编译清单改动，并回退版本文档、CHANGELOG 与本日志条目即可；当前无数据迁移。
+- 结论：GOAL-1812 的来源无关解析管线已完成第一版，后续可进入 `GOAL-1813` 识别结果确认页。
+- 下一步建议：实现酒店水单确认页，展示可编辑字段、置信度、原始文本摘要和拒绝 / 继续复核动作，仍保持用户确认前不写正式账本。
 
 ### ITER-227 GOAL-1811 酒店水单 PDF 文本提取
 - 日期：2026-06-24

@@ -38,6 +38,7 @@ struct OfflineRegression {
         verifyVoiceLedgerParsing(reporter: reporter)
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyHotelStayModels(reporter: reporter)
+        verifyHotelFolioParsePipeline(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
@@ -267,6 +268,78 @@ struct OfflineRegression {
         reporter.check(record.currency == "JPY", "HotelStayRecord records currency")
         reporter.check(abs(record.totalAmount - 50000) < 0.001, "HotelStayRecord records total amount")
         reporter.check(record.sourceType == .manualPDF, "HotelStayRecord records source type")
+    }
+
+    private static func verifyHotelFolioParsePipeline(reporter: RegressionReporter) {
+        let rawText = """
+        Demo Bay Hotel
+        Guest Email: traveler@example.com
+        Phone: 13800138000
+        Member No: GOLD123456789
+        Card Number: 4111111111111111
+        Confirmation: ABC123
+        Check In: 2026-06-20
+        Check Out: 2026-06-22
+        Total Amount: JPY 50000
+        """
+
+        let builder = HotelFolioParsePayloadBuilder()
+        let payload = builder.build(rawText: rawText, sourceType: .manualPDF)
+        reporter.check(payload.sourceType == .manualPDF, "HotelFolioParsePayload records source type")
+        reporter.check(payload.sanitizedText.contains("Demo Bay Hotel"), "HotelFolioParsePayload keeps hotel name")
+        reporter.check(payload.sanitizedText.contains("Confirmation: ABC123"), "HotelFolioParsePayload keeps confirmation number")
+        reporter.check(!payload.sanitizedText.contains("traveler@example.com"), "HotelFolioParsePayload redacts email")
+        reporter.check(!payload.sanitizedText.contains("13800138000"), "HotelFolioParsePayload redacts phone")
+        reporter.check(!payload.sanitizedText.contains("GOLD123456789"), "HotelFolioParsePayload redacts member number")
+        reporter.check(!payload.sanitizedText.contains("4111111111111111"), "HotelFolioParsePayload redacts card number")
+        reporter.check(payload.redactionCount >= 4, "HotelFolioParsePayload records redaction count")
+
+        let codec = HotelFolioOpenAICompatibleCodec()
+        let requestData = try? codec.makeRequestData(
+            payload: payload,
+            model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+        )
+        let requestJSON = requestData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        reporter.check(requestJSON.contains("hotel_name"), "HotelFolioOpenAICompatibleCodec asks for hotel_name")
+        reporter.check(requestJSON.contains("total_amount"), "HotelFolioOpenAICompatibleCodec asks for total_amount")
+        reporter.check(requestJSON.contains("manualPDF"), "HotelFolioOpenAICompatibleCodec includes source type")
+        reporter.check(!requestJSON.contains("traveler@example.com"), "HotelFolioOpenAICompatibleCodec avoids raw email")
+        reporter.check(!requestJSON.contains("4111111111111111"), "HotelFolioOpenAICompatibleCodec avoids raw card number")
+
+        let responseData = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": "{\\"hotel_name\\":\\"Demo Bay Hotel\\",\\"brand\\":\\"Demo Suites\\",\\"group\\":\\"Demo Hospitality\\",\\"city\\":\\"Tokyo\\",\\"country\\":\\"Japan\\",\\"check_in_date\\":\\"2026-06-20\\",\\"check_out_date\\":\\"2026-06-22\\",\\"nights\\":2,\\"room_type\\":\\"King Bay View\\",\\"confirmation_number\\":\\"ABC123\\",\\"currency\\":\\"JPY\\",\\"room_charge\\":40000,\\"tax\\":4000,\\"service_charge\\":3000,\\"food_beverage\\":2500,\\"other_charges\\":500,\\"total_amount\\":50000,\\"payment_method\\":\\"Visa\\",\\"confidence\\":0.91,\\"raw_text_excerpt\\":\\"Demo folio excerpt\\"}"
+              }
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try? codec.decodeParsedPayload(from: responseData)
+        reporter.check(decoded?.hotelName == "Demo Bay Hotel", "HotelFolioOpenAICompatibleCodec decodes chat completion payload")
+        reporter.check(decoded?.confirmationNumber == "ABC123", "HotelFolioOpenAICompatibleCodec decodes confirmation number")
+        reporter.check(abs((decoded?.totalAmount ?? 0) - 50000) < 0.001, "HotelFolioOpenAICompatibleCodec decodes total amount")
+
+        let pipeline = HotelFolioParsePipeline(now: { Date(timeIntervalSince1970: 1_783_065_600) })
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID,
+            sourceFileName: "demo-folio.pdf",
+            rawText: rawText,
+            status: .textExtracted,
+            createdAt: Date(timeIntervalSince1970: 1_783_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_783_000_000)
+        )
+        let parsedDraft = decoded.flatMap { try? pipeline.apply($0, to: draft) }
+        reporter.check(parsedDraft?.status == .needsReview, "HotelFolioParsePipeline routes parsed folio to review")
+        reporter.check(parsedDraft?.parsedPayload?.hotelName == "Demo Bay Hotel", "HotelFolioParsePipeline stores parsed payload")
+        reporter.check(parsedDraft?.confidence == 0.91, "HotelFolioParsePipeline stores confidence")
+        reporter.check(parsedDraft?.sourceType == .manualPDF, "HotelFolioParsePipeline preserves source type")
+        reporter.check(parsedDraft?.rawText == rawText, "HotelFolioParsePipeline preserves raw text")
+        reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
     }
 
     private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {

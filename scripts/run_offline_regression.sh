@@ -240,6 +240,7 @@ swiftc \
   "$CORE/Services/SmartReceiptMergePolicy.swift" \
   "$CORE/Services/ExternalReceiptAssistCache.swift" \
   "$CORE/Services/ExternalReceiptAssistPayload.swift" \
+  "$CORE/Services/HotelFolioParsePipeline.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
