@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（GOAL-1770B tvOS / visionOS 截图管线扩展）
+更新日期：2026-06-24（GOAL-1770C ASC 新平台 Bundle ID 与 visionOS 图标修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-219 GOAL-1770C ASC 新平台 Bundle ID 与 visionOS 图标修复
+- 日期：2026-06-24
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1770
+- 类型：Bugfix / 发布配置 / ASC 上传
+- 目标：修复 ASC 上传 tvOS / visionOS 新平台构建时出现的 `ITMS-90055` Bundle ID 不一致和 `ITMS-90970` visionOS App Icon Info.plist 缺失问题。
+- 改动范围：调整 `AutoLedgerTV` / `AutoLedgerVision` target 的 `PRODUCT_BUNDLE_IDENTIFIER`；补充 `AutoLedgerVision/Info.plist` 的 visionOS App Icon 声明；同步截图管线配置、README、v1.6.0 计划和 CHANGELOG。
+- 未改动范围：未修改主 App Bundle ID、DEVELOPMENT_TEAM、主 App App Group、主 App iCloud Container、CloudKit schema、业务代码、账本数据、Xcode Cloud 脚本或 App Store Connect 线上配置。
+- 完成内容：tvOS / visionOS 新平台 target 均对齐现有 ASC App 记录的 Bundle ID `top.darkrio326.AutoLedger`；visionOS 包显式声明 `CFBundleIcons -> CFBundlePrimaryIcon = AppIcon`。
+- 未完成内容：尚未重新跑 Xcode Cloud archive / Transporter 上传验证；签名 profile 可能需要 Xcode 或 Xcode Cloud 重新刷新。
+- 测试情况：待本轮构建验证补记。
+- 风险与注意事项：如果未来要把 tvOS / visionOS 做成独立 ASC App，才应使用 `.tv` / `.vision` 这类独立 Bundle ID；当前路线是加入现有 AutoLedger App 记录，因此必须保持 Bundle ID 一致。重新上传前需要确认主 App ID `top.darkrio326.AutoLedger` 的 iCloud / CloudKit capability 和 provisioning profile 已覆盖新平台。
+- 回滚方式：如决定创建独立 tvOS / visionOS ASC App，可恢复 `.tv` / `.vision` Bundle ID，并在 App Store Connect 创建独立应用记录；否则不建议回滚。
+- 结论：代码侧修复完成，下一步重新构建 archive 并上传验证 ASC 校验结果。
+- 下一步建议：跑 tvOS / visionOS Release archive 或 Xcode Cloud workflow；如果 ASC 仍报图标问题，再检查 archive 内 `Info.plist` 的 `CFBundleIcons.CFBundlePrimaryIcon` 实际值。
 
 ### ITER-218 GOAL-1770B tvOS / visionOS 截图管线扩展
 - 日期：2026-06-24

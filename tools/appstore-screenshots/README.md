@@ -161,9 +161,9 @@ Detected defaults in this project:
 - Watch scheme: `AutoLedgerWatch Watch App`
 - Watch bundle ID: `top.darkrio326.AutoLedger.watchkitapp`
 - Apple TV scheme: `AutoLedgerTV`
-- Apple TV bundle ID: `top.darkrio326.AutoLedger.tv`
+- Apple TV bundle ID: `top.darkrio326.AutoLedger` (same App Store Connect app record as iPhone / iPad)
 - visionOS scheme: `AutoLedgerVision`
-- visionOS bundle ID: `top.darkrio326.AutoLedger.vision`
+- visionOS bundle ID: `top.darkrio326.AutoLedger` (same App Store Connect app record as iPhone / iPad)
 
 ## iPhone Scenes
 

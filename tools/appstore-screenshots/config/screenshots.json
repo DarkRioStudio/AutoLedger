@@ -46,7 +46,7 @@
     },
     "tvos": {
       "scheme": "AutoLedgerTV",
-      "bundleId": "top.darkrio326.AutoLedger.tv",
+      "bundleId": "top.darkrio326.AutoLedger",
       "productName": "AutoLedgerTV",
       "deviceCandidates": [
         "Apple TV 4K (3rd generation)",
@@ -56,7 +56,7 @@
     },
     "visionos": {
       "scheme": "AutoLedgerVision",
-      "bundleId": "top.darkrio326.AutoLedger.vision",
+      "bundleId": "top.darkrio326.AutoLedger",
       "productName": "AutoLedgerVision",
       "deviceCandidates": [
         "Apple Vision Pro"
