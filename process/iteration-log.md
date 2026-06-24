@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-228 GOAL-1812 酒店水单解析管线）
+更新日期：2026-06-24（ITER-229 GOAL-1813 酒店水单确认页）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-229 GOAL-1813 酒店水单确认页
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1813
+- 类型：能力增强 / UI / Core 表单 / 测试
+- 目标：为酒店水单解析结果建立用户确认前的可编辑复核表单，确保正式入账前仍由用户确认。
+- 改动范围：新增 Core 层 `HotelStayReviewForm` 与金额平衡状态；新增 App 层 `HotelStayReviewView`；更新离线回归断言和编译清单；补齐四语确认页文案；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增持久化；未写 SQLite schema、CloudKit schema、BackupBundle 或 iCloud 同步；未生成 `HotelStayRecord`；未生成或关联普通 `Transaction`；未串接 PDF 导入后的实际导航入口；未新增酒店消费列表 / 详情页；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`HotelStayReviewForm` 可从 `HotelStayDraft` 初始化酒店、入住、房型、订单号、币种、金额拆分、支付方式、来源、置信度和原始文本；金额拆分支持与总额做平衡复核；确认会回填 `.confirmed` 草稿并刷新编辑后的 parsed payload；拒绝会回填 `.rejected` 草稿；`HotelStayReviewView` 展示酒店、入住、费用、来源、置信度和原始文本，提供确认 / 拒绝动作；四语本地化 key 已补齐。
+- 未完成内容：确认后的正式归档、普通支出流水生成、草稿持久化、导入流程导航、列表页和详情页留给后续 GOAL；当前仍不会自动正式入账。
+- 测试情况：先新增 `verifyHotelStayReviewForm` 离线回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `HotelStayReviewForm` 和金额平衡枚举失败；实现表单后再次执行离线回归通过。随后执行主 App iOS generic build，首次因 `Section` header / footer 重载推断失败报错，修正为显式 header / footer 后再次构建通过。
+- 风险与注意事项：当前确认页是可复用 SwiftUI 组件，尚未接入真实 PDF 导入导航和持久化链路；金额字段先复用文本输入解析，后续正式入账时还需要在归档层再次校验总额、日期和账本归属。
+- 回滚方式：移除 `HotelStayReviewForm.swift`、`HotelStayReviewView.swift`、离线回归新增断言和编译清单改动，并回退四语本地化、版本文档、CHANGELOG 与本日志条目即可；当前无数据迁移。
+- 结论：GOAL-1813 的识别结果确认页第一版已完成，可进入 `GOAL-1814` 正式归档与普通 `Transaction` 关联。
+- 下一步建议：实现确认后创建 `HotelStayRecord` 并生成或关联普通支出流水，继续保持用户确认后才写正式账本。
 
 ### ITER-228 GOAL-1812 酒店水单解析管线
 - 日期：2026-06-24

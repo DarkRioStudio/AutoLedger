@@ -39,6 +39,7 @@ struct OfflineRegression {
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyHotelStayModels(reporter: reporter)
         verifyHotelFolioParsePipeline(reporter: reporter)
+        verifyHotelStayReviewForm(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
@@ -340,6 +341,72 @@ struct OfflineRegression {
         reporter.check(parsedDraft?.sourceType == .manualPDF, "HotelFolioParsePipeline preserves source type")
         reporter.check(parsedDraft?.rawText == rawText, "HotelFolioParsePipeline preserves raw text")
         reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
+    }
+
+    private static func verifyHotelStayReviewForm(reporter: RegressionReporter) {
+        let payload = HotelFolioParsedPayload(
+            hotelName: "Demo Bay Hotel",
+            brand: "Demo Suites",
+            group: "Demo Hospitality",
+            city: "Tokyo",
+            country: "Japan",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            roomType: "King Bay View",
+            confirmationNumber: "ABC123",
+            currency: "JPY",
+            roomCharge: 40000,
+            tax: 4000,
+            serviceCharge: 3000,
+            foodBeverage: 2500,
+            otherCharges: 500,
+            totalAmount: 50000,
+            paymentMethod: "Visa",
+            confidence: 0.91,
+            rawTextExcerpt: "Demo folio excerpt"
+        )
+        let originalUpdatedAt = Date(timeIntervalSince1970: 1_783_000_000)
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID,
+            sourceFileName: "demo-folio.pdf",
+            rawText: "Demo folio raw text",
+            parsedPayload: payload,
+            confidence: 0.91,
+            status: .needsReview,
+            createdAt: originalUpdatedAt,
+            updatedAt: originalUpdatedAt
+        )
+
+        var form = HotelStayReviewForm(draft: draft)
+        reporter.check(form.hotelName == "Demo Bay Hotel", "HotelStayReviewForm copies hotel name")
+        reporter.check(form.totalAmountText == "50000", "HotelStayReviewForm formats total amount")
+        reporter.check(form.amountBalanceStatus == .balanced, "HotelStayReviewForm detects balanced charges")
+        reporter.check(form.isValid, "HotelStayReviewForm accepts complete required fields")
+
+        form.totalAmountText = "49000"
+        reporter.check(form.amountBalanceStatus == .imbalanced, "HotelStayReviewForm flags amount imbalance")
+        reporter.check(abs(form.amountBalanceDelta + 1000) < 0.001, "HotelStayReviewForm reports amount balance delta")
+
+        form.totalAmountText = "50000"
+        form.hotelName = "Edited Demo Hotel"
+        form.paymentMethod = "Amex"
+        let confirmedAt = Date(timeIntervalSince1970: 1_783_065_600)
+        let confirmedDraft = try? form.confirmedDraft(from: draft, updatedAt: confirmedAt)
+        reporter.check(confirmedDraft?.status == .confirmed, "HotelStayReviewForm confirms draft")
+        reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes edited hotel name")
+        reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Amex", "HotelStayReviewForm writes edited payment method")
+        reporter.check(confirmedDraft?.updatedAt == confirmedAt, "HotelStayReviewForm refreshes confirmed timestamp")
+
+        let rejectedAt = Date(timeIntervalSince1970: 1_783_071_600)
+        let rejectedDraft = form.rejectedDraft(from: draft, updatedAt: rejectedAt)
+        reporter.check(rejectedDraft.status == .rejected, "HotelStayReviewForm rejects draft")
+        reporter.check(rejectedDraft.updatedAt == rejectedAt, "HotelStayReviewForm refreshes rejected timestamp")
+
+        form.hotelName = "   "
+        reporter.check(!form.isValid, "HotelStayReviewForm rejects missing hotel name")
+        reporter.check((try? form.confirmedDraft(from: draft, updatedAt: confirmedAt)) == nil, "HotelStayReviewForm blocks invalid confirmation")
     }
 
     private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {
