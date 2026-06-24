@@ -10,6 +10,7 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
     /// 存储 `ReceiptSource` 的 rawValue 字符串，或用户自定义来源名。
     public let source: String
     public let note: String
+    public let ledgerID: String?
     public let hotelStayRecordID: UUID?
 
     /// 映射到内置分类枚举；自定义分类回退为 `.other`。
@@ -41,6 +42,7 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
         category: TransactionCategory,
         source: ReceiptSource,
         note: String,
+        ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil
     ) {
         self.id = id
@@ -50,6 +52,7 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
         self.category = category.rawValue
         self.source = source.rawValue
         self.note = note
+        self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
     }
 
@@ -62,6 +65,7 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
         categoryLabel: String,
         sourceLabel: String,
         note: String,
+        ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil
     ) {
         self.id = id
@@ -71,6 +75,7 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
         self.category = categoryLabel
         self.source = sourceLabel
         self.note = note
+        self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
     }
 }

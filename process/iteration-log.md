@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-231 GOAL-1815 酒店消费列表与详情页）
+更新日期：2026-06-24（ITER-232 GOAL-1840 多账本 schema 基线）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-232 GOAL-1840 多账本 schema 基线
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1840
+- 类型：能力增强 / Core 模型 / SQLite / 同步 / 备份 / 测试
+- 目标：建立多账本基础 schema，使正式流水具备可选账本归属字段，并为后续默认账本迁移、账本管理 UI 和账单移动提供兼容基线。
+- 改动范围：新增 Core 层 `LedgerProfile`；`Transaction` 新增可选 `ledgerID`；SQLite `transactions` 新增 nullable `ledger_id`；`BackupTransaction`、`LedgerTransactionSyncPayload` 和 App 层 CloudKit 交易 payload 映射保留 `ledgerID`；酒店消费入账和商户别名刷新保留账本字段；更新离线回归断言和编译清单；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `LedgerProfile` 独立持久化表；未实现旧账单默认账本回填；未实现账本创建 / 重命名 / 归档 / 默认账本 UI；未实现当前账本筛选、全部账本聚合切换或单笔移动账本；未新增 Watch / Widget / tvOS / visionOS 账本切换；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`LedgerProfile.defaultLocal()` 与 `TodaySpendingSummary.defaultLedgerID/defaultLedgerName` 对齐；`Transaction.ledgerID` 以可选字段兼容旧 JSON；SQLite 新库和旧库迁移都会具备 `ledger_id TEXT`；本地保存、更新、远端同步插入 / 更新、备份导出 / 恢复和 sync payload round-trip 均保留账本归属；酒店消费确认生成的普通支出流水继承目标账本。
+- 未完成内容：旧数据中 `ledgerID == nil` 仍只作为兼容状态保留，后续 `GOAL-1841` 需要实现读取时视为默认账本和新增账单写明确账本的策略；CloudKit Production schema 需要在发布前部署新增 `ledgerID` 可选字段。
+- 测试情况：先新增 `verifyMultiLedgerSchema` 与回归编译清单，执行 `bash scripts/run_offline_regression.sh` 因缺少 `LedgerProfile.swift` 失败；实现后离线回归通过。随后补充 SQLite、Backup、Sync、酒店入账的 `ledgerID` 保留断言并再次执行离线回归，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 `** BUILD SUCCEEDED **`。
+- 风险与注意事项：当前只是 schema 基线，未引入真实账本列表存储，因此 UI 侧仍无法创建或切换账本；CloudKit 新字段为可选字段，发布前需部署 Production schema；后续编辑账单和批量操作继续接入账本字段时，需要避免重建 `Transaction` 时丢失 `ledgerID`。
+- 回滚方式：移除 `LedgerProfile.swift`，回退 `Transaction.ledgerID`、SQLite `ledger_id` 读写 / 迁移、Backup / sync payload / CloudKit 映射字段、酒店入账与商户别名保留逻辑、离线回归新增断言和编译清单，并回退版本文档、CHANGELOG 与本日志条目；若数据库已创建 nullable `ledger_id` 列，回滚代码后该列会被旧代码忽略。
+- 结论：GOAL-1840 的多账本 schema 基线已完成，可进入 `GOAL-1841` 默认账本迁移与兼容读取。
+- 下一步建议：实现默认账本持久化与读取口径，让旧账单 `ledgerID == nil` 在展示和统计中视为默认账本，新账单写入明确 `ledgerID`。
 
 ### ITER-231 GOAL-1815 酒店消费列表与详情页
 - 日期：2026-06-24

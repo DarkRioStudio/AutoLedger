@@ -62,6 +62,7 @@ struct OfflineRegression {
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
+        verifyMultiLedgerSchema(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -482,6 +483,7 @@ struct OfflineRegression {
         reporter.check(abs((result?.hotelStayRecord.totalAmount ?? 0) - 50000) < 0.001, "HotelStayRecord receives total amount")
         reporter.check(result?.transaction.id == transactionID, "HotelStayLedgerPostingService uses supplied transaction id")
         reporter.check(result?.transaction.hotelStayRecordID == stayID, "Transaction links generated hotel stay record")
+        reporter.check(result?.transaction.ledgerID == TodaySpendingSummary.defaultLedgerID, "Hotel transaction keeps target ledger id")
         reporter.check(result?.transaction.merchant == "Edited Demo Hotel", "Hotel transaction uses hotel name as merchant")
         reporter.check(abs((result?.transaction.amount ?? 0) - 50000) < 0.001, "Hotel transaction uses folio total amount")
         reporter.check(result?.transaction.category == "酒店住宿", "Hotel transaction uses accommodation category label")
@@ -1561,6 +1563,92 @@ struct OfflineRegression {
         reporter.check(fallbackSummary.recentDisplayName == "交通", "TodaySpendingSummary falls back to category when merchant is blank")
     }
 
+    private static func verifyMultiLedgerSchema(reporter: RegressionReporter) {
+        let createdAt = Date(timeIntervalSince1970: 1_780_300_000)
+        let updatedAt = Date(timeIntervalSince1970: 1_780_300_600)
+        let archivedAt = Date(timeIntervalSince1970: 1_780_301_200)
+        let travelLedgerID = "travel-ledger"
+
+        let defaultLedger = LedgerProfile.defaultLocal(createdAt: createdAt)
+        reporter.check(defaultLedger.id == TodaySpendingSummary.defaultLedgerID, "LedgerProfile default id matches summary default")
+        reporter.check(defaultLedger.name == TodaySpendingSummary.defaultLedgerName, "LedgerProfile default name matches summary default")
+        reporter.check(defaultLedger.isDefault, "LedgerProfile default ledger is marked default")
+        reporter.check(!defaultLedger.isArchived, "LedgerProfile default ledger starts active")
+
+        let travelLedger = LedgerProfile(
+            id: travelLedgerID,
+            name: "Travel",
+            iconName: "airplane",
+            colorName: "teal",
+            currency: "JPY",
+            isDefault: false,
+            sortOrder: 10,
+            archivedAt: archivedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+        reporter.check(travelLedger.id == travelLedgerID, "LedgerProfile records custom ledger id")
+        reporter.check(travelLedger.currency == "JPY", "LedgerProfile records default currency")
+        reporter.check(travelLedger.isArchived, "LedgerProfile reports archived state")
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decodedLedger: LedgerProfile? = {
+            guard let data = try? encoder.encode(travelLedger) else { return nil }
+            return try? decoder.decode(LedgerProfile.self, from: data)
+        }()
+        reporter.check(decodedLedger == travelLedger, "LedgerProfile round-trips through JSON")
+
+        let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001840") ?? UUID()
+        let transaction = Transaction(
+            id: transactionID,
+            merchant: "Travel Hotel",
+            amount: 888,
+            occurredAt: createdAt,
+            category: .dining,
+            source: .manual,
+            note: "multi ledger",
+            ledgerID: travelLedgerID
+        )
+        reporter.check(transaction.ledgerID == travelLedgerID, "Transaction records ledger id")
+
+        let legacyTransactionJSON = """
+        {
+          "id": "00000000-0000-0000-0000-000000001841",
+          "merchant": "Legacy Ledger Store",
+          "amount": 12.5,
+          "occurredAt": "2026-04-24T08:30:00Z",
+          "category": "shopping",
+          "source": "manual",
+          "note": "legacy transaction",
+          "hotelStayRecordID": null
+        }
+        """.data(using: .utf8) ?? Data()
+        let legacyTransaction = try? decoder.decode(Transaction.self, from: legacyTransactionJSON)
+        reporter.check(legacyTransaction?.ledgerID == nil, "Transaction decodes missing ledger id as nil")
+
+        let backup = BackupTransaction(transaction: transaction)
+        reporter.check(backup.ledgerID == travelLedgerID, "BackupTransaction preserves ledger id")
+        reporter.check(backup.transaction.ledgerID == travelLedgerID, "BackupTransaction restores transaction ledger id")
+
+        let payload = LedgerTransactionSyncPayload(
+            record: TransactionSyncRecord(
+                transaction: transaction,
+                metadata: TransactionSyncMetadata(
+                    transactionID: transactionID,
+                    updatedAt: updatedAt,
+                    syncRevision: 2,
+                    deviceID: "local-device",
+                    idempotencyKey: "transaction:\(transactionID.uuidString)"
+                )
+            )
+        )
+        reporter.check(payload.ledgerID == travelLedgerID, "LedgerTransactionSyncPayload preserves ledger id")
+        reporter.check(payload.syncRecord.transaction.ledgerID == travelLedgerID, "LedgerTransactionSyncPayload restores transaction ledger id")
+    }
+
     private static func verifySyncConflictResolver(reporter: RegressionReporter) {
         let transactionID = UUID()
         let baseTransaction = Transaction(
@@ -1690,6 +1778,7 @@ struct OfflineRegression {
         let deletedID = UUID(uuidString: "00000000-0000-0000-0000-000000001566") ?? UUID()
         let expiredID = UUID(uuidString: "00000000-0000-0000-0000-000000001567") ?? UUID()
         let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001568") ?? UUID()
+        let ledgerID = "travel-ledger"
         let activeTransaction = Transaction(
             id: activeID,
             merchant: "Demo Coffee",
@@ -1698,6 +1787,7 @@ struct OfflineRegression {
             category: .dining,
             source: .manual,
             note: "active sync",
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
         )
         let deletedTransaction = Transaction(
@@ -1770,6 +1860,10 @@ struct OfflineRegression {
         reporter.check(batch.expiredTombstoneIDs == [expiredID], "LedgerSyncPlanner separates expired tombstones")
         reporter.check(batch.upserts.first?.recordName == CloudLedgerSyncSchema.recordName(for: activeID), "LedgerSyncPlanner payload carries record name")
         reporter.check(batch.upserts.first?.syncRecord.transaction == activeTransaction, "LedgerSyncPlanner payload round-trips transaction")
+        reporter.check(
+            batch.upserts.first?.syncRecord.transaction.ledgerID == ledgerID,
+            "LedgerSyncPlanner payload preserves transaction ledger id"
+        )
         reporter.check(
             batch.upserts.first?.syncRecord.transaction.hotelStayRecordID == hotelStayRecordID,
             "LedgerSyncPlanner payload preserves hotel stay transaction link"
@@ -2362,6 +2456,7 @@ struct OfflineRegression {
             syncDeviceID: "offline-device"
         )
         let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001817") ?? UUID()
+        let ledgerID = "travel-ledger"
         let transaction = Transaction(
             merchant: "离线回归商户",
             amount: 12.50,
@@ -2369,12 +2464,17 @@ struct OfflineRegression {
             category: .dining,
             source: .alipay,
             note: "offline regression",
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
         )
         try store.save(transaction: transaction)
 
         let loaded = try store.loadTransactions()
         reporter.check(loaded.contains(transaction), "SQLite save/load retains inserted transaction")
+        reporter.check(
+            loaded.first { $0.id == transaction.id }?.ledgerID == ledgerID,
+            "SQLite save/load preserves transaction ledger id"
+        )
         reporter.check(
             loaded.first { $0.id == transaction.id }?.hotelStayRecordID == hotelStayRecordID,
             "SQLite save/load preserves hotel stay transaction link"
@@ -2400,12 +2500,17 @@ struct OfflineRegression {
             category: .shopping,
             source: .wechat,
             note: "updated note",
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
         )
         try store.update(transaction: updated)
 
         let reloaded = try store.loadTransactions()
         reporter.check(reloaded.contains(updated), "SQLite update persists modified transaction")
+        reporter.check(
+            reloaded.first { $0.id == updated.id }?.ledgerID == ledgerID,
+            "SQLite update preserves transaction ledger id"
+        )
         reporter.check(
             reloaded.first { $0.id == updated.id }?.hotelStayRecordID == hotelStayRecordID,
             "SQLite update preserves hotel stay transaction link"
@@ -2453,7 +2558,8 @@ struct OfflineRegression {
                 occurredAt: Date(timeIntervalSince1970: 1_780_100_000),
                 category: .dining,
                 source: .manual,
-                note: "remote insert"
+                note: "remote insert",
+                ledgerID: ledgerID
             ),
             metadata: TransactionSyncMetadata(
                 transactionID: remoteInsertedID,
@@ -2467,7 +2573,12 @@ struct OfflineRegression {
         let transactionsAfterRemoteInsert = try store.loadTransactions()
         reporter.check(remoteInsertOutcome == .inserted, "SQLite remote sync inserts new active transaction")
         reporter.check(transactionsAfterRemoteInsert.contains(remoteInserted.transaction), "SQLite remote inserted transaction becomes active")
+        reporter.check(
+            transactionsAfterRemoteInsert.first { $0.id == remoteInsertedID }?.ledgerID == ledgerID,
+            "SQLite remote inserted transaction preserves ledger id"
+        )
 
+        let remoteUpdatedLedgerID = "travel-ledger-updated"
         let remoteUpdated = TransactionSyncRecord(
             transaction: Transaction(
                 id: remoteInsertedID,
@@ -2476,7 +2587,8 @@ struct OfflineRegression {
                 occurredAt: Date(timeIntervalSince1970: 1_780_100_200),
                 category: .groceries,
                 source: .wechat,
-                note: "remote update"
+                note: "remote update",
+                ledgerID: remoteUpdatedLedgerID
             ),
             metadata: TransactionSyncMetadata(
                 transactionID: remoteInsertedID,
@@ -2490,6 +2602,10 @@ struct OfflineRegression {
         let transactionsAfterRemoteUpdate = try store.loadTransactions()
         reporter.check(remoteUpdateOutcome == .updated, "SQLite remote sync applies higher remote revision")
         reporter.check(transactionsAfterRemoteUpdate.contains(remoteUpdated.transaction), "SQLite remote updated transaction becomes active")
+        reporter.check(
+            transactionsAfterRemoteUpdate.first { $0.id == remoteInsertedID }?.ledgerID == remoteUpdatedLedgerID,
+            "SQLite remote updated transaction preserves ledger id"
+        )
 
         let remoteDeleted = TransactionSyncRecord(
             transaction: remoteUpdated.transaction,
@@ -3199,6 +3315,7 @@ struct OfflineRegression {
         let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
         let sourceLedger = LedgerStore(transactionStore: sourceStore)
         let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001819") ?? UUID()
+        let ledgerID = "travel-ledger"
         let active = Transaction(
             merchant: "备份回归咖啡",
             amount: 21.00,
@@ -3206,6 +3323,7 @@ struct OfflineRegression {
             categoryLabel: "咖啡",
             sourceLabel: "测试来源",
             note: "active",
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
         )
         let deleted = Transaction(
@@ -3242,6 +3360,10 @@ struct OfflineRegression {
         reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
         reporter.check(bundle.summary.deletedTransactionCount == 1, "BackupBundle summary counts deleted transactions")
         reporter.check(
+            bundle.transactions.first { $0.id == active.id }?.ledgerID == ledgerID,
+            "BackupBundle preserves transaction ledger id"
+        )
+        reporter.check(
             bundle.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "BackupBundle preserves hotel stay transaction link"
         )
@@ -3253,6 +3375,10 @@ struct OfflineRegression {
         try restoreLedger.restoreBackup(bundle)
 
         reporter.check(restoreLedger.transactions.contains(active), "Backup restore keeps active transaction")
+        reporter.check(
+            restoreLedger.transactions.first { $0.id == active.id }?.ledgerID == ledgerID,
+            "Backup restore keeps transaction ledger id"
+        )
         reporter.check(
             restoreLedger.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "Backup restore keeps hotel stay transaction link"

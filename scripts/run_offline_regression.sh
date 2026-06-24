@@ -223,6 +223,7 @@ swiftc \
   "$CORE/Models/SampleReceipt.swift" \
   "$CORE/Models/MonthlySnapshot.swift" \
   "$CORE/Models/TodaySpendingSummary.swift" \
+  "$CORE/Models/LedgerProfile.swift" \
   "$CORE/Models/SyncMetadata.swift" \
   "$CORE/Models/LedgerSyncPlan.swift" \
   "$CORE/Models/LedgerDashboardCloudSnapshot.swift" \

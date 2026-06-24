@@ -109,6 +109,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
     public let category: String
     public let source: String
     public let note: String
+    public let ledgerID: String?
     public let hotelStayRecordID: UUID?
     public let deletedAt: Date?
     public let syncMetadata: TransactionSyncMetadata?
@@ -121,6 +122,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         category: String,
         source: String,
         note: String,
+        ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil,
         deletedAt: Date?,
         syncMetadata: TransactionSyncMetadata? = nil
@@ -132,6 +134,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         self.category = category
         self.source = source
         self.note = note
+        self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
         self.deletedAt = deletedAt
         self.syncMetadata = syncMetadata
@@ -146,6 +149,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
             category: transaction.category,
             source: transaction.source,
             note: transaction.note,
+            ledgerID: transaction.ledgerID,
             hotelStayRecordID: transaction.hotelStayRecordID,
             deletedAt: deletedAt
         )
@@ -160,6 +164,7 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
             categoryLabel: category,
             sourceLabel: source,
             note: note,
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
         )
     }

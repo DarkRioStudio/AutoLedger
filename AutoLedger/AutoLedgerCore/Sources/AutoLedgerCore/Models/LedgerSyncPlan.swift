@@ -15,6 +15,7 @@ public enum CloudLedgerSyncSchema {
         public static let category = "category"
         public static let source = "source"
         public static let note = "note"
+        public static let ledgerID = "ledgerID"
         public static let hotelStayRecordID = "hotelStayRecordID"
         public static let updatedAt = "updatedAt"
         public static let syncRevision = "syncRevision"
@@ -191,6 +192,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
     public let category: String
     public let source: String
     public let note: String
+    public let ledgerID: String?
     public let hotelStayRecordID: UUID?
     public let updatedAt: Date
     public let syncRevision: Int
@@ -208,6 +210,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         category: String,
         source: String,
         note: String,
+        ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil,
         updatedAt: Date,
         syncRevision: Int,
@@ -224,6 +227,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.category = category
         self.source = source
         self.note = note
+        self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
         self.updatedAt = updatedAt
         self.syncRevision = syncRevision
@@ -242,6 +246,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.category = record.transaction.category
         self.source = record.transaction.source
         self.note = record.transaction.note
+        self.ledgerID = record.transaction.ledgerID
         self.hotelStayRecordID = record.transaction.hotelStayRecordID
         self.updatedAt = record.metadata.updatedAt
         self.syncRevision = record.metadata.syncRevision
@@ -265,6 +270,7 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
                 categoryLabel: category,
                 sourceLabel: source,
                 note: note,
+                ledgerID: ledgerID,
                 hotelStayRecordID: hotelStayRecordID
             ),
             metadata: TransactionSyncMetadata(

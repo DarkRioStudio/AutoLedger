@@ -607,6 +607,9 @@ struct LedgerCloudKitSyncAdapter {
         if let deletedAt = payload.deletedAt {
             fields[CloudLedgerSyncSchema.Field.deletedAt] = .date(deletedAt)
         }
+        if let ledgerID = payload.ledgerID {
+            fields[CloudLedgerSyncSchema.Field.ledgerID] = .string(ledgerID)
+        }
         if let hotelStayRecordID = payload.hotelStayRecordID {
             fields[CloudLedgerSyncSchema.Field.hotelStayRecordID] = .string(hotelStayRecordID.uuidString)
         }
@@ -724,6 +727,7 @@ struct LedgerCloudKitSyncAdapter {
             category: category,
             source: source,
             note: note,
+            ledgerID: record[CloudLedgerSyncSchema.Field.ledgerID] as? String,
             hotelStayRecordID: (record[CloudLedgerSyncSchema.Field.hotelStayRecordID] as? String).flatMap(UUID.init(uuidString:)),
             updatedAt: updatedAt,
             syncRevision: syncRevisionNumber.intValue,

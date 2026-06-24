@@ -66,6 +66,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             categoryLabel: "酒店住宿",
             sourceLabel: ReceiptSource.manual.rawValue,
             note: transactionNote(from: payload),
+            ledgerID: ledgerID,
             hotelStayRecordID: hotelStayID
         )
 

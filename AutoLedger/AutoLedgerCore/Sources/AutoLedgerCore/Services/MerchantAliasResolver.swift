@@ -72,7 +72,9 @@ public enum MerchantAliasResolver {
             occurredAt: transaction.occurredAt,
             categoryLabel: transaction.category,
             sourceLabel: transaction.source,
-            note: transaction.note
+            note: transaction.note,
+            ledgerID: transaction.ledgerID,
+            hotelStayRecordID: transaction.hotelStayRecordID
         )
     }
 }
