@@ -891,3 +891,21 @@
 "mac.ledger.duplicate.apply" = "Move to Recently Deleted";
 "mac.ledger.duplicate.confirm_title" = "Confirm Duplicate Handling";
 "mac.ledger.duplicate.confirm_message" = "Move the older %d suspected duplicate transactions to Recently Deleted. They can be restored.";
+
+// MARK: - Ledger Profiles
+"settings.ledger_profiles.title" = "Ledger Management";
+"settings.ledger_profiles.subtitle" = "Create, rename, archive, and set the default ledger";
+"ledger_profiles.title" = "Ledger Management";
+"ledger_profiles.active" = "Active Ledgers";
+"ledger_profiles.archived" = "Archived";
+"ledger_profiles.add" = "New Ledger";
+"ledger_profiles.add.title" = "New Ledger";
+"ledger_profiles.rename.title" = "Rename Ledger";
+"ledger_profiles.name.placeholder" = "Ledger name";
+"ledger_profiles.currency.placeholder" = "Default currency (optional)";
+"ledger_profiles.currency.none" = "No currency";
+"ledger_profiles.badge.default" = "Default";
+"ledger_profiles.badge.archived" = "Archived";
+"ledger_profiles.action.rename" = "Rename";
+"ledger_profiles.action.set_default" = "Set Default";
+"ledger_profiles.action.archive" = "Archive";

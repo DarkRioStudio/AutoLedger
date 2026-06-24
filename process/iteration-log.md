@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-233 GOAL-1841 默认账本兼容读取）
+更新日期：2026-06-24（ITER-234 GOAL-1842 账本管理基础 UI）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-234 GOAL-1842 账本管理基础 UI
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1842
+- 类型：能力增强 / SQLite / LedgerStore / UI / 本地化 / 测试
+- 目标：为多账本提供第一版真实账本 Profile 持久化和设置页基础管理入口，支持新建、重命名、归档和设置默认账本。
+- 改动范围：SQLite 新增 `ledger_profiles` 表；`SQLiteTransactionStore` 新增账本 Profile 读取、保存、重命名、归档和默认账本切换；`LedgerStore` 新增账本状态与管理 API；新增 `LedgerProfileManagementView` 并接入 `SettingsView`；补齐主 App 四语文案；更新离线回归、版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未实现当前账本 / 全部账本筛选；未实现单笔或批量移动账本；未改月报、订阅、导入、酒店消费和 Watch / Widget / tvOS / visionOS 展示口径；未新增账本 Profile 的 CloudKit / BackupBundle 同步 payload；未做旧 SQLite 交易行物理回填；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：空库会自动初始化默认本地账本；自定义账本可保存币种、图标、颜色和排序；账本可重命名、归档、设置默认，且同一时间只有一个活跃默认账本；`LedgerStore` 发布 `ledgerProfiles` / `activeLedgerProfiles` / `defaultLedgerProfile` 并提供 UI 可调用操作；设置页新增账本管理入口，管理页支持新增、重命名、设为默认和归档。
+- 未完成内容：账单列表仍未按当前账本过滤；账单详情和编辑页还不能选择或移动账本；统计、订阅、导入、酒店消费尚未切换到当前账本 / 全部账本口径；账本 Profile 尚未进入备份或 CloudKit 同步。
+- 测试情况：先新增 `verifyLedgerProfileManagement` 离线回归并执行 `bash scripts/run_offline_regression.sh`，先后因缺少 `SQLiteTransactionStore` 账本 Profile API 和 `LedgerStore` 账本管理 API 失败；实现后离线回归 PASS。随后执行 `python3 scripts/check_localization_coverage.py`、`find AutoLedger -path '*/build' -prune -o -path '*lproj/*.strings' -exec plutil -lint {} +` 和 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果均通过。
+- 风险与注意事项：当前设置页已经可以创建账本，但正式交易列表仍未按账本筛选，用户看到的账单仍是全量；账本 Profile 尚未同步到 CloudKit 或备份，后续 `GOAL-1843 / GOAL-1844` 需要补迁移和同步策略。
+- 回滚方式：回退 `SQLiteTransactionStore` 的 `ledger_profiles` 表和相关 API、`LedgerStore` 账本 Profile 状态与操作、`LedgerProfileManagementView`、`SettingsView` 入口、四语文案、离线回归断言以及版本计划 / CHANGELOG / 本日志条目；若本地数据库已创建 `ledger_profiles` 表，回滚代码后该表会被旧代码忽略。
+- 结论：GOAL-1842 的账本管理基础 UI 已完成，可进入 `GOAL-1843` 当前账本 / 全部账本切换与单笔移动账本。
+- 下一步建议：先实现当前账本状态和账单列表过滤，再实现账单详情 / 编辑页的移动账本，最后统一统计、订阅、导入和酒店消费的账本口径。
 
 ### ITER-233 GOAL-1841 默认账本兼容读取
 - 日期：2026-06-24

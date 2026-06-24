@@ -48,6 +48,7 @@ final class LedgerStore: ObservableObject {
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
     @Published private(set) var merchantAliases: [String: String] = [:]
+    @Published private(set) var ledgerProfiles: [LedgerProfile] = []
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
@@ -83,6 +84,7 @@ final class LedgerStore: ObservableObject {
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
+        self.ledgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
         self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         seedLegacyLedgerConfigurationTimestampIfNeeded()
@@ -95,6 +97,14 @@ final class LedgerStore: ObservableObject {
 
     var todaySpendingSummary: TodaySpendingSummary {
         TodaySpendingSummary.build(from: transactions, referenceDate: .now)
+    }
+
+    var activeLedgerProfiles: [LedgerProfile] {
+        ledgerProfiles.filter { !$0.isArchived }
+    }
+
+    var defaultLedgerProfile: LedgerProfile {
+        activeLedgerProfiles.first { $0.isDefault } ?? LedgerProfile.defaultLocal()
     }
 
     func saveCustomSources() {
@@ -160,6 +170,93 @@ final class LedgerStore: ObservableObject {
             }
         }
         saveMerchantAliases()
+    }
+
+    @discardableResult
+    func createLedgerProfile(
+        name: String,
+        iconName: String? = nil,
+        colorName: String? = nil,
+        currency: String? = nil
+    ) -> LedgerProfile? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return nil }
+
+        let now = Date()
+        let nextSortOrder = ((ledgerProfiles.map(\.sortOrder).max() ?? 0) + 10)
+        let normalizedCurrency = currency?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        let profile = LedgerProfile(
+            id: UUID().uuidString,
+            name: trimmedName,
+            iconName: iconName,
+            colorName: colorName,
+            currency: normalizedCurrency?.isEmpty == true ? nil : normalizedCurrency,
+            isDefault: false,
+            sortOrder: nextSortOrder,
+            createdAt: now,
+            updatedAt: now
+        )
+
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.saveLedgerProfile(profile)
+            reloadLedgerProfiles()
+        } else {
+            ledgerProfiles.append(profile)
+            sortLedgerProfiles()
+        }
+        recordLedgerProfileConfigurationChanged()
+        return ledgerProfiles.first { $0.id == profile.id }
+    }
+
+    func renameLedgerProfile(_ profile: LedgerProfile, name: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        let updatedAt = Date()
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.renameLedgerProfile(id: profile.id, name: trimmedName, updatedAt: updatedAt)
+            reloadLedgerProfiles()
+        } else {
+            replaceLedgerProfile(profile.replacing(name: trimmedName, updatedAt: updatedAt))
+        }
+        recordLedgerProfileConfigurationChanged()
+    }
+
+    func archiveLedgerProfile(_ profile: LedgerProfile) {
+        guard profile.id != TodaySpendingSummary.defaultLedgerID else { return }
+
+        let archivedAt = Date()
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.archiveLedgerProfile(id: profile.id, archivedAt: archivedAt)
+            reloadLedgerProfiles()
+        } else {
+            replaceLedgerProfile(profile.replacing(isDefault: false, archivedAt: archivedAt, updatedAt: archivedAt))
+            if ledgerProfiles.filter({ $0.isDefault && !$0.isArchived }).isEmpty {
+                setDefaultLedgerProfile(LedgerProfile.defaultLocal(createdAt: archivedAt))
+                return
+            }
+        }
+        recordLedgerProfileConfigurationChanged()
+    }
+
+    func setDefaultLedgerProfile(_ profile: LedgerProfile) {
+        let updatedAt = Date()
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.setDefaultLedgerProfile(id: profile.id, updatedAt: updatedAt)
+            reloadLedgerProfiles()
+        } else {
+            ledgerProfiles = ledgerProfiles.map {
+                $0.replacing(
+                    isDefault: $0.id == profile.id,
+                    archivedAt: $0.id == profile.id ? nil : $0.archivedAt,
+                    updatedAt: $0.id == profile.id ? updatedAt : $0.updatedAt
+                )
+            }
+            sortLedgerProfiles()
+        }
+        recordLedgerProfileConfigurationChanged()
     }
 
     func importSample(_ sample: SampleReceipt) {
@@ -1429,6 +1526,53 @@ final class LedgerStore: ObservableObject {
         }
         return fromSQL
     }
+
+    private static func loadInitialLedgerProfiles(using store: TransactionStore?) -> [LedgerProfile] {
+        guard let sqlStore = store as? SQLiteTransactionStore else {
+            return [LedgerProfile.defaultLocal()]
+        }
+        let profiles = (try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? []
+        return profiles.isEmpty ? [LedgerProfile.defaultLocal()] : profiles
+    }
+
+    private func reloadLedgerProfiles() {
+        guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
+            sortLedgerProfiles()
+            return
+        }
+        ledgerProfiles = ((try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? ledgerProfiles)
+        if ledgerProfiles.isEmpty {
+            ledgerProfiles = [LedgerProfile.defaultLocal()]
+        }
+        sortLedgerProfiles()
+    }
+
+    private func sortLedgerProfiles() {
+        ledgerProfiles.sort {
+            if $0.sortOrder == $1.sortOrder {
+                if $0.createdAt == $1.createdAt {
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.sortOrder < $1.sortOrder
+        }
+    }
+
+    private func replaceLedgerProfile(_ profile: LedgerProfile) {
+        if let index = ledgerProfiles.firstIndex(where: { $0.id == profile.id }) {
+            ledgerProfiles[index] = profile
+        } else {
+            ledgerProfiles.append(profile)
+        }
+        sortLedgerProfiles()
+    }
+
+    private func recordLedgerProfileConfigurationChanged() {
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+    }
 }
 
 private extension Transaction {
@@ -1458,6 +1602,28 @@ private extension Transaction {
             note: note,
             ledgerID: ledgerID,
             hotelStayRecordID: hotelStayRecordID
+        )
+    }
+}
+
+private extension LedgerProfile {
+    func replacing(
+        name: String? = nil,
+        isDefault: Bool? = nil,
+        archivedAt: Date?? = nil,
+        updatedAt: Date? = nil
+    ) -> LedgerProfile {
+        LedgerProfile(
+            id: id,
+            name: name ?? self.name,
+            iconName: iconName,
+            colorName: colorName,
+            currency: currency,
+            isDefault: isDefault ?? self.isDefault,
+            sortOrder: sortOrder,
+            archivedAt: archivedAt ?? self.archivedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt ?? self.updatedAt
         )
     }
 }

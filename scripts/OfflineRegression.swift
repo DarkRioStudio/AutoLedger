@@ -64,6 +64,7 @@ struct OfflineRegression {
         verifyTodaySpendingSummary(reporter: reporter)
         verifyMultiLedgerSchema(reporter: reporter)
         try verifyLedgerDefaultAssignment(reporter: reporter)
+        try verifyLedgerProfileManagement(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -1739,6 +1740,88 @@ struct OfflineRegression {
             storedTravel?.ledgerID == "travel-ledger",
             "LedgerStore preserves existing ledger id when update payload omits it"
         )
+    }
+
+    private static func verifyLedgerProfileManagement(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerProfileManagementRegression-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-profiles.sqlite3")
+        let bootstrapped = try store.loadLedgerProfiles()
+        reporter.check(bootstrapped.count == 1, "SQLite ledger profile store bootstraps one default ledger")
+        reporter.check(bootstrapped.first?.id == TodaySpendingSummary.defaultLedgerID, "SQLite ledger profile store bootstraps default ledger id")
+        reporter.check(bootstrapped.first?.isDefault == true, "SQLite ledger profile store marks bootstrap ledger as default")
+
+        let createdAt = Date(timeIntervalSince1970: 1_780_500_000)
+        let updatedAt = Date(timeIntervalSince1970: 1_780_500_600)
+        let archivedAt = Date(timeIntervalSince1970: 1_780_501_200)
+        let travelLedger = LedgerProfile(
+            id: "travel-ledger",
+            name: "Travel",
+            iconName: "airplane",
+            colorName: "teal",
+            currency: "JPY",
+            isDefault: false,
+            sortOrder: 10,
+            createdAt: createdAt,
+            updatedAt: createdAt
+        )
+        try store.saveLedgerProfile(travelLedger)
+        let withTravel = try store.loadLedgerProfiles()
+        reporter.check(withTravel.map(\.id) == [TodaySpendingSummary.defaultLedgerID, "travel-ledger"], "SQLite ledger profile store orders ledgers by sort order")
+        reporter.check(withTravel.last?.currency == "JPY", "SQLite ledger profile store persists ledger currency")
+
+        try store.renameLedgerProfile(id: travelLedger.id, name: "Trip Wallet", updatedAt: updatedAt)
+        let renamed = try store.loadLedgerProfiles().first { $0.id == travelLedger.id }
+        reporter.check(renamed?.name == "Trip Wallet", "SQLite ledger profile store renames custom ledger")
+        reporter.check(renamed?.updatedAt == updatedAt, "SQLite ledger profile store records rename timestamp")
+
+        try store.setDefaultLedgerProfile(id: travelLedger.id, updatedAt: updatedAt)
+        let defaultSwitched = try store.loadLedgerProfiles()
+        reporter.check(defaultSwitched.filter(\.isDefault).map(\.id) == [travelLedger.id], "SQLite ledger profile store keeps one default ledger")
+
+        try store.setDefaultLedgerProfile(id: TodaySpendingSummary.defaultLedgerID, updatedAt: updatedAt)
+        try store.archiveLedgerProfile(id: travelLedger.id, archivedAt: archivedAt)
+        let activeOnly = try store.loadLedgerProfiles(includeArchived: false)
+        let withArchived = try store.loadLedgerProfiles(includeArchived: true)
+        reporter.check(activeOnly.map(\.id) == [TodaySpendingSummary.defaultLedgerID], "SQLite ledger profile store hides archived ledgers from active listing")
+        reporter.check(withArchived.first { $0.id == travelLedger.id }?.archivedAt == archivedAt, "SQLite ledger profile store persists archive timestamp")
+
+        let uiStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-profiles-ui.sqlite3")
+        let ledgerStore = LedgerStore(transactionStore: uiStore)
+        reporter.check(ledgerStore.ledgerProfiles.map(\.id) == [TodaySpendingSummary.defaultLedgerID], "LedgerStore exposes bootstrapped ledger profiles")
+
+        let createdLedger = ledgerStore.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY")
+        reporter.check(createdLedger?.name == "Travel", "LedgerStore creates a custom ledger profile")
+        reporter.check(ledgerStore.ledgerProfiles.contains { $0.id == createdLedger?.id }, "LedgerStore publishes created ledger profile")
+
+        if let createdLedger {
+            ledgerStore.renameLedgerProfile(createdLedger, name: "Trip Wallet")
+            reporter.check(
+                ledgerStore.ledgerProfiles.first { $0.id == createdLedger.id }?.name == "Trip Wallet",
+                "LedgerStore renames custom ledger profile"
+            )
+
+            ledgerStore.setDefaultLedgerProfile(createdLedger)
+            reporter.check(
+                ledgerStore.ledgerProfiles.filter(\.isDefault).map(\.id) == [createdLedger.id],
+                "LedgerStore switches default ledger profile"
+            )
+
+            ledgerStore.archiveLedgerProfile(createdLedger)
+            reporter.check(
+                ledgerStore.ledgerProfiles.first { $0.id == createdLedger.id }?.isArchived == true,
+                "LedgerStore archives custom ledger profile"
+            )
+            reporter.check(
+                ledgerStore.ledgerProfiles.filter(\.isDefault).map(\.id) == [TodaySpendingSummary.defaultLedgerID],
+                "LedgerStore restores default local ledger when archiving current default"
+            )
+        }
     }
 
     private static func verifySyncConflictResolver(reporter: RegressionReporter) {

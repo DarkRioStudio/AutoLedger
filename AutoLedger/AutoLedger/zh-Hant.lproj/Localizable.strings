@@ -894,3 +894,21 @@
 "mac.ledger.duplicate.apply" = "移入最近刪除";
 "mac.ledger.duplicate.confirm_title" = "確認處理疑似重複";
 "mac.ledger.duplicate.confirm_message" = "將較舊的 %d 筆疑似重複帳單移入最近刪除，可從最近刪除恢復。";
+
+// MARK: - Ledger Profiles
+"settings.ledger_profiles.title" = "帳本管理";
+"settings.ledger_profiles.subtitle" = "建立、重新命名、歸檔和設定預設帳本";
+"ledger_profiles.title" = "帳本管理";
+"ledger_profiles.active" = "目前帳本";
+"ledger_profiles.archived" = "已歸檔";
+"ledger_profiles.add" = "新增帳本";
+"ledger_profiles.add.title" = "新增帳本";
+"ledger_profiles.rename.title" = "重新命名帳本";
+"ledger_profiles.name.placeholder" = "帳本名稱";
+"ledger_profiles.currency.placeholder" = "預設幣種（可選）";
+"ledger_profiles.currency.none" = "未設定幣種";
+"ledger_profiles.badge.default" = "預設";
+"ledger_profiles.badge.archived" = "已歸檔";
+"ledger_profiles.action.rename" = "重新命名";
+"ledger_profiles.action.set_default" = "設為預設";
+"ledger_profiles.action.archive" = "歸檔";

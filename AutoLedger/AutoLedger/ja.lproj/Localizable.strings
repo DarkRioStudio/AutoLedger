@@ -891,3 +891,21 @@
 "mac.ledger.duplicate.apply" = "最近削除した項目へ移動";
 "mac.ledger.duplicate.confirm_title" = "重複処理を確認";
 "mac.ledger.duplicate.confirm_message" = "古い重複候補 %d 件を最近削除した項目へ移動します。復元できます。";
+
+// MARK: - Ledger Profiles
+"settings.ledger_profiles.title" = "台帳管理";
+"settings.ledger_profiles.subtitle" = "台帳の作成、名前変更、アーカイブ、既定設定";
+"ledger_profiles.title" = "台帳管理";
+"ledger_profiles.active" = "使用中の台帳";
+"ledger_profiles.archived" = "アーカイブ済み";
+"ledger_profiles.add" = "台帳を追加";
+"ledger_profiles.add.title" = "台帳を追加";
+"ledger_profiles.rename.title" = "台帳名を変更";
+"ledger_profiles.name.placeholder" = "台帳名";
+"ledger_profiles.currency.placeholder" = "既定通貨（任意）";
+"ledger_profiles.currency.none" = "通貨未設定";
+"ledger_profiles.badge.default" = "既定";
+"ledger_profiles.badge.archived" = "アーカイブ済み";
+"ledger_profiles.action.rename" = "名前変更";
+"ledger_profiles.action.set_default" = "既定に設定";
+"ledger_profiles.action.archive" = "アーカイブ";

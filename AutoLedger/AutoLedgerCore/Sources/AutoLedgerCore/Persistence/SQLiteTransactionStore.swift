@@ -393,6 +393,251 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return try loadTransactions()
     }
 
+    // MARK: - Ledger Profiles
+
+    public func loadLedgerProfiles(includeArchived: Bool = true) throws -> [LedgerProfile] {
+        try ensureDefaultLedgerProfileIfNeeded()
+
+        let archivedFilter = includeArchived ? "" : "WHERE archived_at IS NULL"
+        let sql = """
+        SELECT id, name, icon_name, color_name, currency, is_default, sort_order, archived_at, created_at, updated_at
+        FROM ledger_profiles
+        \(archivedFilter)
+        ORDER BY sort_order ASC, created_at ASC, name COLLATE NOCASE ASC;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        var profiles: [LedgerProfile] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let profile = Self.ledgerProfile(from: statement) else { continue }
+            profiles.append(profile)
+        }
+        return profiles
+    }
+
+    public func saveLedgerProfile(_ profile: LedgerProfile) throws {
+        if profile.isDefault {
+            try execute("BEGIN IMMEDIATE TRANSACTION;")
+            do {
+                try execute("UPDATE ledger_profiles SET is_default = 0;")
+                try upsertLedgerProfile(profile)
+                try execute("COMMIT;")
+            } catch {
+                try? execute("ROLLBACK;")
+                throw error
+            }
+        } else {
+            try upsertLedgerProfile(profile)
+        }
+    }
+
+    public func renameLedgerProfile(id: String, name: String, updatedAt: Date = .now) throws {
+        let sql = """
+        UPDATE ledger_profiles
+        SET name = ?, updated_at = ?
+        WHERE id = ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, name, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, Self.storageFormatter.string(from: updatedAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, id, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    public func archiveLedgerProfile(id: String, archivedAt: Date = .now) throws {
+        let sql = """
+        UPDATE ledger_profiles
+        SET archived_at = ?, is_default = 0, updated_at = ?
+        WHERE id = ? AND id != ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let archivedAtString = Self.storageFormatter.string(from: archivedAt)
+        sqlite3_bind_text(statement, 1, archivedAtString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, archivedAtString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, id, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 4, TodaySpendingSummary.defaultLedgerID, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+        try ensureDefaultLedgerProfileIsSelected(updatedAt: archivedAt)
+    }
+
+    public func setDefaultLedgerProfile(id: String, updatedAt: Date = .now) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try execute("UPDATE ledger_profiles SET is_default = 0;")
+            let sql = """
+            UPDATE ledger_profiles
+            SET is_default = 1, archived_at = NULL, updated_at = ?
+            WHERE id = ?;
+            """
+            var statement: OpaquePointer?
+            defer { sqlite3_finalize(statement) }
+
+            guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+                throw SQLiteTransactionStoreError.prepareStatement(sql)
+            }
+
+            sqlite3_bind_text(statement, 1, Self.storageFormatter.string(from: updatedAt), -1, sqliteTransient)
+            sqlite3_bind_text(statement, 2, id, -1, sqliteTransient)
+
+            guard sqlite3_step(statement) == SQLITE_DONE else {
+                throw SQLiteTransactionStoreError.executeStatement(sql)
+            }
+            try execute("COMMIT;")
+        } catch {
+            try? execute("ROLLBACK;")
+            throw error
+        }
+        try ensureDefaultLedgerProfileIsSelected(updatedAt: updatedAt)
+    }
+
+    private func ensureDefaultLedgerProfileIfNeeded() throws {
+        let sql = "SELECT COUNT(*) FROM ledger_profiles;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let count: Int
+        if sqlite3_step(statement) == SQLITE_ROW {
+            count = Int(sqlite3_column_int(statement, 0))
+        } else {
+            count = 0
+        }
+
+        guard count == 0 else {
+            return
+        }
+        try saveLedgerProfile(LedgerProfile.defaultLocal(createdAt: .now))
+    }
+
+    private func ensureDefaultLedgerProfileIsSelected(updatedAt: Date) throws {
+        let sql = "SELECT COUNT(*) FROM ledger_profiles WHERE is_default = 1 AND archived_at IS NULL;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        let activeDefaultCount: Int
+        if sqlite3_step(statement) == SQLITE_ROW {
+            activeDefaultCount = Int(sqlite3_column_int(statement, 0))
+        } else {
+            activeDefaultCount = 0
+        }
+
+        guard activeDefaultCount == 0 else {
+            return
+        }
+        try saveLedgerProfile(LedgerProfile.defaultLocal(createdAt: updatedAt))
+    }
+
+    private func upsertLedgerProfile(_ profile: LedgerProfile) throws {
+        let sql = """
+        INSERT INTO ledger_profiles (
+            id, name, icon_name, color_name, currency, is_default, sort_order, archived_at, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            icon_name = excluded.icon_name,
+            color_name = excluded.color_name,
+            currency = excluded.currency,
+            is_default = excluded.is_default,
+            sort_order = excluded.sort_order,
+            archived_at = excluded.archived_at,
+            updated_at = excluded.updated_at;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        bind(profile: profile, to: statement)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    private func bind(profile: LedgerProfile, to statement: OpaquePointer?) {
+        sqlite3_bind_text(statement, 1, profile.id, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, profile.name, -1, sqliteTransient)
+        bindOptionalString(profile.iconName, to: statement, at: 3)
+        bindOptionalString(profile.colorName, to: statement, at: 4)
+        bindOptionalString(profile.currency, to: statement, at: 5)
+        sqlite3_bind_int(statement, 6, profile.isDefault ? 1 : 0)
+        sqlite3_bind_int(statement, 7, Int32(profile.sortOrder))
+        if let archivedAt = profile.archivedAt {
+            sqlite3_bind_text(statement, 8, Self.storageFormatter.string(from: archivedAt), -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, 8)
+        }
+        sqlite3_bind_text(statement, 9, Self.storageFormatter.string(from: profile.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 10, Self.storageFormatter.string(from: profile.updatedAt), -1, sqliteTransient)
+    }
+
+    private static func ledgerProfile(from statement: OpaquePointer?) -> LedgerProfile? {
+        guard
+            let idCString = sqlite3_column_text(statement, 0),
+            let nameCString = sqlite3_column_text(statement, 1),
+            let createdCString = sqlite3_column_text(statement, 8),
+            let updatedCString = sqlite3_column_text(statement, 9),
+            let createdAt = storageFormatter.date(from: String(cString: createdCString)),
+            let updatedAt = storageFormatter.date(from: String(cString: updatedCString))
+        else {
+            return nil
+        }
+
+        let archivedAt: Date? = {
+            guard sqlite3_column_type(statement, 7) != SQLITE_NULL,
+                  let archivedCString = sqlite3_column_text(statement, 7) else {
+                return nil
+            }
+            return storageFormatter.date(from: String(cString: archivedCString))
+        }()
+
+        return LedgerProfile(
+            id: String(cString: idCString),
+            name: String(cString: nameCString),
+            iconName: string(from: statement, index: 2),
+            colorName: string(from: statement, index: 3),
+            currency: string(from: statement, index: 4),
+            isDefault: sqlite3_column_int(statement, 5) != 0,
+            sortOrder: Int(sqlite3_column_int(statement, 6)),
+            archivedAt: archivedAt,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
     private func createTableIfNeeded() throws {
         let transactionSQL = """
         CREATE TABLE IF NOT EXISTS transactions (
@@ -437,6 +682,25 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN hotel_stay_record_id TEXT;", nil, nil, nil)
         }
         try backfillSyncMetadataDefaults()
+
+        let ledgerProfilesSQL = """
+        CREATE TABLE IF NOT EXISTS ledger_profiles (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            icon_name TEXT,
+            color_name TEXT,
+            currency TEXT,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            archived_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """
+
+        guard sqlite3_exec(db, ledgerProfilesSQL, nil, nil, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.executeStatement(ledgerProfilesSQL)
+        }
 
         let debugSQL = """
         CREATE TABLE IF NOT EXISTS debug_events (

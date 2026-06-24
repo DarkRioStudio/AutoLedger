@@ -44,6 +44,19 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
 
                     NavigationLink {
+                        LedgerProfileManagementView()
+                            .environmentObject(store)
+                    } label: {
+                        settingsRow(
+                            icon: "books.vertical.fill",
+                            iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
+                            title: "settings.ledger_profiles.title",
+                            subtitle: "settings.ledger_profiles.subtitle"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
                         CategoryManagementView()
                             .environmentObject(store)
                     } label: {
