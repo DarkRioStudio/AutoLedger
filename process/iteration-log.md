@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-230 GOAL-1814 酒店消费归档与流水关联）
+更新日期：2026-06-24（ITER-231 GOAL-1815 酒店消费列表与详情页）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-231 GOAL-1815 酒店消费列表与详情页
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1815
+- 类型：能力增强 / UI / Core 展示模型 / 测试 / 本地化
+- 目标：为已确认的酒店消费记录提供列表与详情页展示模型，覆盖来源、原始文本和关联普通流水状态。
+- 改动范围：新增 Core 层 `HotelStayArchivePresenter`；新增 App 层 `HotelStayListView` 与 `HotelStayDetailView`；补齐主 App 四语酒店消费归档文案；更新离线回归断言和编译清单；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `HotelStayRecord` 独立持久化表；未持久化 `HotelStayDraft`；未串接 PDF 导入、确认页、侧边栏或 App 根导航；未实现删除酒店草稿或正式酒店记录；未新增邮箱 / Worker 自动化；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`HotelStayArchivePresenter` 可按退房日期倒序生成列表快照，计算记录数、总晚数、总金额和平均每晚价格，展示酒店、城市 / 国家、品牌 / 集团、日期范围、晚数、金额、来源和关联状态；详情快照可展示身份、入住、费用、来源、置信度、原始文本，并解析关联普通 `Transaction`。`HotelStayListView` / `HotelStayDetailView` 提供可复用 SwiftUI 组件，包含空状态、摘要、列表行、费用明细、来源信息、原始文本和关联账单区块。
+- 未完成内容：当前 UI 组件尚未接入真实 App 导航和数据 store；正式酒店消费记录仍无独立数据库表；删除酒店记录、删除草稿、列表跳转账单详情和账单详情跳回酒店消费记录留给后续 GOAL。
+- 测试情况：先新增 `verifyHotelStayArchivePresentation` 离线回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `HotelStayArchivePresenter`、列表状态和详情字段失败；实现后离线回归通过。随后补齐四语 `.strings` 并执行本地化覆盖检查、plist lint、diff whitespace 检查和主 App iOS generic build。
+- 风险与注意事项：列表 / 详情当前依赖调用方传入内存中的 `HotelStayRecord` 和 `Transaction`；后续接入真实 store 时需决定 `HotelStayRecord` 的持久化、删除策略、与普通流水的级联关系以及 CloudKit / BackupBundle 同步策略。
+- 回滚方式：移除 `HotelStayArchivePresenter.swift`、`HotelStayArchiveView.swift`、离线回归新增断言和编译清单改动，并回退四语本地化、版本文档、CHANGELOG 与本日志条目即可；当前未新增数据迁移。
+- 结论：GOAL-1815 的酒店消费列表与详情展示第一版已完成，可进入多账本基础能力 GOAL 或继续补酒店消费持久化 / 导航串接。
+- 下一步建议：若继续酒店主线，优先补 `HotelStayRecord` 独立持久化、列表入口接入和删除策略；若切换到版本计划主线，可进入 `GOAL-1840` 多账本 schema 与迁移设计。
 
 ### ITER-230 GOAL-1814 酒店消费归档与流水关联
 - 日期：2026-06-24

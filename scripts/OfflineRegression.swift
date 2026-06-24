@@ -41,6 +41,7 @@ struct OfflineRegression {
         verifyHotelFolioParsePipeline(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
+        verifyHotelStayArchivePresentation(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
@@ -501,6 +502,107 @@ struct OfflineRegression {
             status: .needsReview
         )
         reporter.check((try? service.post(unconfirmedDraft)) == nil, "HotelStayLedgerPostingService rejects unconfirmed draft")
+    }
+
+    private static func verifyHotelStayArchivePresentation(reporter: RegressionReporter) {
+        let tokyoStayID = UUID(uuidString: "00000000-0000-0000-0000-000000001820")!
+        let tokyoTransactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001821")!
+        let osakaStayID = UUID(uuidString: "00000000-0000-0000-0000-000000001822")!
+        let tokyoStay = HotelStayRecord(
+            id: tokyoStayID,
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            linkedTransactionID: tokyoTransactionID,
+            hotelName: "Demo Bay Hotel",
+            hotelGroup: "Demo Hospitality",
+            hotelBrand: "Demo Suites",
+            city: "Tokyo",
+            country: "Japan",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            roomType: "King Bay View",
+            confirmationNumber: "ABC123",
+            currency: "JPY",
+            roomCharge: 40000,
+            taxAmount: 4000,
+            serviceCharge: 3000,
+            foodBeverageAmount: 2500,
+            otherAmount: 500,
+            totalAmount: 50000,
+            paymentMethod: "Amex",
+            sourceType: .manualPDF,
+            sourceFileName: "demo-folio.pdf",
+            confidence: 0.91,
+            rawText: "Demo folio raw text",
+            createdAt: Date(timeIntervalSince1970: 1_783_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_783_071_600)
+        )
+        let osakaStay = HotelStayRecord(
+            id: osakaStayID,
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            linkedTransactionID: nil,
+            hotelName: "Sample Garden Hotel",
+            hotelGroup: nil,
+            hotelBrand: nil,
+            city: "Osaka",
+            country: "Japan",
+            checkInDate: "2026-05-01",
+            checkOutDate: "2026-05-02",
+            nights: 1,
+            roomType: nil,
+            confirmationNumber: nil,
+            currency: "JPY",
+            roomCharge: 11000,
+            taxAmount: 1000,
+            serviceCharge: 0,
+            foodBeverageAmount: 0,
+            otherAmount: 0,
+            totalAmount: 12000,
+            paymentMethod: nil,
+            sourceType: .cloudWorker,
+            sourceFileName: nil,
+            confidence: 0.8,
+            rawText: "",
+            createdAt: Date(timeIntervalSince1970: 1_779_000_000),
+            updatedAt: Date(timeIntervalSince1970: 1_779_000_000)
+        )
+        let linkedTransaction = Transaction(
+            id: tokyoTransactionID,
+            merchant: "Demo Bay Hotel",
+            amount: 50000,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-06-22") ?? .now,
+            categoryLabel: "酒店住宿",
+            sourceLabel: ReceiptSource.manual.rawValue,
+            note: "入住：2026-06-20；退房：2026-06-22",
+            hotelStayRecordID: tokyoStayID
+        )
+
+        let presenter = HotelStayArchivePresenter()
+        let list = presenter.makeListSnapshot(records: [osakaStay, tokyoStay])
+        reporter.check(list.rows.map(\.id) == [tokyoStayID, osakaStayID], "HotelStayArchivePresenter sorts rows by checkout date descending")
+        reporter.check(list.totalNights == 3, "HotelStayArchivePresenter totals nights")
+        reporter.check(abs(list.totalAmount - 62000) < 0.001, "HotelStayArchivePresenter totals amount")
+        reporter.check(abs((list.averageNightlyRate ?? 0) - (62000.0 / 3.0)) < 0.001, "HotelStayArchivePresenter computes average nightly rate")
+        reporter.check(list.rows.first?.locationText == "Tokyo, Japan", "HotelStayListRow formats location")
+        reporter.check(list.rows.first?.brandGroupText == "Demo Suites / Demo Hospitality", "HotelStayListRow formats brand and group")
+        reporter.check(list.rows.first?.dateRangeText == "2026-06-20 - 2026-06-22", "HotelStayListRow formats stay date range")
+        reporter.check(list.rows.first?.nightsText == "2", "HotelStayListRow formats nights")
+        reporter.check(list.rows.first?.totalAmountText == "JPY 50000", "HotelStayListRow formats amount with currency")
+        reporter.check(list.rows.first?.linkStatus == .postedToLedger, "HotelStayListRow marks linked stays as posted")
+        reporter.check(list.rows.last?.linkStatus == .missingTransaction, "HotelStayListRow marks missing linked transaction")
+
+        let detail = presenter.makeDetailSnapshot(record: tokyoStay, transactions: [linkedTransaction])
+        reporter.check(detail.row.id == tokyoStayID, "HotelStayDetailSnapshot exposes list row")
+        reporter.check(detail.linkedTransaction?.id == tokyoTransactionID, "HotelStayDetailSnapshot resolves linked transaction")
+        reporter.check(detail.rawText == "Demo folio raw text", "HotelStayDetailSnapshot keeps raw text")
+        reporter.check(detail.chargeFields.first { $0.key == .roomCharge }?.value == "JPY 40000", "HotelStayDetailSnapshot includes room charge")
+        reporter.check(detail.chargeFields.first { $0.key == .taxAmount }?.value == "JPY 4000", "HotelStayDetailSnapshot includes tax amount")
+        reporter.check(detail.sourceFields.first { $0.key == .sourceFileName }?.value == "demo-folio.pdf", "HotelStayDetailSnapshot includes source file")
+        reporter.check(detail.sourceFields.first { $0.key == .confidence }?.value == "91%", "HotelStayDetailSnapshot formats confidence")
+
+        let missingLinkDetail = presenter.makeDetailSnapshot(record: osakaStay, transactions: [linkedTransaction])
+        reporter.check(missingLinkDetail.linkedTransaction == nil, "HotelStayDetailSnapshot leaves missing linked transaction nil")
+        reporter.check(missingLinkDetail.row.linkStatus == .missingTransaction, "HotelStayDetailSnapshot carries missing transaction status")
     }
 
     private static func verifyLedgerAmountInputParsing(reporter: RegressionReporter) {
