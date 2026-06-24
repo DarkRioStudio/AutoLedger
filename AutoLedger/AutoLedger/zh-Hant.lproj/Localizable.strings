@@ -414,6 +414,9 @@
 "ledger.footer_format" = "共 %d 筆，點按任一帳單可修正金額、分類和備註。";
 "ledger.search.prompt" = "搜尋帳單";
 "ledger.search.no_results" = "沒有找到符合的帳單";
+"ledger.scope.all" = "全部帳本";
+"ledger.action.move" = "移動帳本";
+"ledger.move.title" = "移動到帳本";
 
 "deleted_transactions.title" = "最近刪除";
 "deleted_transactions.empty.title" = "暫無已刪除帳單";

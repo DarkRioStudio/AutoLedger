@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-234 GOAL-1842 账本管理基础 UI）
+更新日期：2026-06-24（ITER-235 GOAL-1843 账本切换与账单移动）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-235 GOAL-1843 账本切换与账单移动
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1843
+- 类型：能力增强 / LedgerStore / UI / 本地化 / 测试
+- 目标：提供第一版当前账本 / 全部账本切换，并允许用户把单笔普通账单移动到其他账本。
+- 改动范围：`LedgerStore` 新增当前账本、全部账本、可见交易过滤、新流水目标账本和单笔移动账本 API；iPhone 账单列表新增账本范围菜单、行级账本名称和移动账本操作；iPad / Mac 工作台账单列表改用同一可见账本口径并提供账本菜单；补齐主 App 四语文案；更新离线回归、版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未实现批量移动账本；未改统计、订阅、导入和酒店消费的账本过滤口径；未修改 Watch / Widget / tvOS / visionOS 展示口径；未新增账本 Profile 的 CloudKit / BackupBundle 同步 payload；未对旧 SQLite 交易行执行物理账本回填；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：当前选中账本和全部账本状态保存在本机 `UserDefaults`；`visibleTransactions` 会按当前账本过滤，全部账本视图展示所有活跃交易；新建普通流水默认写入当前账本，全部账本视图回落默认账本；单笔移动账本复用既有更新路径并触发本地持久化、Widget / Backup 刷新和 CloudKit 推送安排；iPhone、iPad 和 Mac 的账单列表可以切换账本范围，iPhone 账单行可以移动到其他活跃账本。
+- 未完成内容：统计、订阅、导入、酒店消费和展示端聚合仍按旧全量口径，统一留给 `GOAL-1844`；iPad / Mac 本轮只落地账本范围切换，单笔移动入口先在 iPhone 账单列表提供；账本 Profile 尚未进入备份或 CloudKit 同步。
+- 测试情况：先新增 `verifyLedgerSelectionAndTransactionMoves` 离线回归并执行 `bash scripts/run_offline_regression.sh`，先因缺少 `LedgerStore` 账本选择 / 移动 API 失败；实现后离线回归 PASS。随后执行 `python3 scripts/check_localization_coverage.py`、`find AutoLedger -path '*/build' -prune -o -path '*lproj/*.strings' -exec plutil -lint {} +` 和 `git diff --check`，结果均通过。第一次 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 因 `ledgerScopeMenu` 被包在 Mac Catalyst 条件编译内导致 iPad 编译不可见而失败，修正作用域后重跑同一命令通过。
+- 风险与注意事项：用户已经可以切换账本列表并移动单笔账单，但报表、订阅、导入和酒店消费若继续展示全量数据，体验上会出现“列表已分账本、统计还未分账本”的阶段性不一致；后续 `GOAL-1844` 需要统一聚合口径并决定 Watch / Widget / tvOS / visionOS 是否继续保持全量。
+- 回滚方式：回退 `LedgerStore` 账本选择 / 可见交易 / 单笔移动 API、`LedgerView` 和 `iPadWorkspaceView` 的账本范围 UI、四语本地化新增 key、离线回归断言以及版本计划 / CHANGELOG / 本日志条目即可；本轮不新增 SQLite schema。
+- 结论：GOAL-1843 的账本切换与 iPhone 单笔移动账本第一版已完成，可进入 `GOAL-1844` 统计、订阅、导入与展示端口径统一。
+- 下一步建议：优先梳理月报 / 今日摘要 / 订阅 / 导入 / 酒店消费的 current ledger 与 all ledgers 口径，避免同一版本内各入口看到的数据范围不一致。
 
 ### ITER-234 GOAL-1842 账本管理基础 UI
 - 日期：2026-06-24

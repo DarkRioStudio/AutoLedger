@@ -411,6 +411,9 @@
 "ledger.footer_format" = "%d 件。任意の取引をタップして金額、カテゴリ、メモを修正できます。";
 "ledger.search.prompt" = "取引を検索";
 "ledger.search.no_results" = "一致する取引はありません";
+"ledger.scope.all" = "すべての台帳";
+"ledger.action.move" = "台帳を移動";
+"ledger.move.title" = "台帳へ移動";
 
 "deleted_transactions.title" = "最近削除した項目";
 "deleted_transactions.empty.title" = "削除済み取引なし";

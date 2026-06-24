@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.1）
+- [2026-06-24 +0800] 完成 `GOAL-1843` 账本切换与账单移动第一版：`LedgerStore` 新增当前账本 / 全部账本状态、可见交易过滤、当前账本写入目标和单笔移动账本 API；手动新增与 OCR / 文本 / 语音 / 分享等正式入账路径默认写入当前账本，全部账本视图回落默认账本。iPhone 账单页新增账本菜单、所属账本展示和移动账本操作，iPad / Mac 工作台切换到同一可见账本口径并提供账本菜单。本轮不实现批量移动，不改统计、订阅、导入、酒店消费、Watch / Widget / tvOS / visionOS 的账本口径。
 - [2026-06-24 +0800] 完成 `GOAL-1842` 账本管理基础 UI 第一版：SQLite 新增 `ledger_profiles` 表并自动初始化默认本地账本，`SQLiteTransactionStore` 支持账本 Profile 保存、重命名、归档和设置默认账本；`LedgerStore` 新增账本管理状态与操作 API；设置页新增“账本管理”入口和 `LedgerProfileManagementView`，支持新增账本、重命名、设为默认和归档，并补齐四语 UI 文案。本轮不实现当前账本 / 全部账本筛选、账单移动、统计口径改造、账本 Profile 云同步或旧交易物理回填。
 - [2026-06-24 +0800] 完成 `GOAL-1841` 默认账本兼容与新流水归属第一版：`Transaction` 新增 `resolvedLedgerID` 和 `assigningLedgerIDIfMissing`，旧数据 `ledgerID == nil` 可按默认本地账本解释；`LedgerStore` 手动新增、OCR / 语音 / 分享等正式入账路径会为新 `Transaction` 写入默认账本，编辑、批量更新、数据清洗和商户别名刷新会保留既有账本归属。本轮不做旧数据库物理批量回填、不新增账本选择 UI、不实现账本切换或账单移动。
 - [2026-06-24 +0800] 完成 `GOAL-1840` 多账本 schema 基线第一版：新增 Core 层 `LedgerProfile`，定义默认本地账本、归档状态、图标 / 颜色 / 币种等账本元数据；`Transaction` 新增可选 `ledgerID`，并贯穿 SQLite `transactions.ledger_id` nullable 列、`BackupTransaction`、`LedgerTransactionSyncPayload` 和 App 层 CloudKit 交易 payload 映射。酒店消费确认生成的普通流水会继承目标账本，商户别名刷新会保留 `ledgerID` 和酒店关联。本轮不新增 `LedgerProfile` 独立持久化表、不做旧账单默认账本回填、不实现账本管理 UI、账本切换或账单移动。

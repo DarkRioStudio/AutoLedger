@@ -65,6 +65,7 @@ struct OfflineRegression {
         verifyMultiLedgerSchema(reporter: reporter)
         try verifyLedgerDefaultAssignment(reporter: reporter)
         try verifyLedgerProfileManagement(reporter: reporter)
+        try verifyLedgerSelectionAndTransactionMoves(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -1820,6 +1821,67 @@ struct OfflineRegression {
             reporter.check(
                 ledgerStore.ledgerProfiles.filter(\.isDefault).map(\.id) == [TodaySpendingSummary.defaultLedgerID],
                 "LedgerStore restores default local ledger when archiving current default"
+            )
+        }
+    }
+
+    private static func verifyLedgerSelectionAndTransactionMoves(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerSelectionRegression-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let sqlStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-selection.sqlite3")
+        let ledgerStore = LedgerStore(transactionStore: sqlStore)
+        let travelLedger = ledgerStore.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY")
+        reporter.check(travelLedger != nil, "LedgerStore creates ledger for selection regression")
+
+        let date = Date(timeIntervalSince1970: 1_780_600_000)
+        let defaultTransaction = Transaction(
+            merchant: "Local Coffee",
+            amount: 18,
+            occurredAt: date,
+            category: .dining,
+            source: .manual,
+            note: "default ledger"
+        )
+        reporter.check(ledgerStore.addTransaction(defaultTransaction), "LedgerStore saves default-ledger transaction before selection")
+        reporter.check(ledgerStore.selectedLedgerID == TodaySpendingSummary.defaultLedgerID, "LedgerStore starts on default ledger")
+        reporter.check(!ledgerStore.isShowingAllLedgers, "LedgerStore starts in current ledger mode")
+        reporter.check(ledgerStore.visibleTransactions.map(\.id) == [defaultTransaction.id], "LedgerStore visible transactions start with default ledger")
+
+        if let travelLedger {
+            ledgerStore.selectLedgerProfile(travelLedger)
+            reporter.check(ledgerStore.selectedLedgerID == travelLedger.id, "LedgerStore selects custom ledger")
+            reporter.check(ledgerStore.visibleTransactions.isEmpty, "LedgerStore filters current ledger before travel transaction exists")
+
+            let travelTransaction = Transaction(
+                merchant: "Airport Hotel",
+                amount: 888,
+                occurredAt: date.addingTimeInterval(60),
+                category: .other,
+                source: .manual,
+                note: "current ledger"
+            )
+            reporter.check(ledgerStore.addTransaction(travelTransaction), "LedgerStore saves transaction into selected ledger")
+            let storedTravel = try sqlStore.loadTransactions().first { $0.id == travelTransaction.id }
+            reporter.check(storedTravel?.ledgerID == travelLedger.id, "LedgerStore writes selected ledger id for new transaction")
+            reporter.check(ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id], "LedgerStore filters to selected ledger transaction")
+
+            ledgerStore.selectAllLedgers()
+            reporter.check(ledgerStore.isShowingAllLedgers, "LedgerStore switches to all-ledgers mode")
+            reporter.check(ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id, defaultTransaction.id], "LedgerStore shows all ledgers when selected")
+
+            reporter.check(ledgerStore.moveTransaction(defaultTransaction, toLedgerID: travelLedger.id), "LedgerStore moves single transaction to another ledger")
+            let moved = try sqlStore.loadTransactions().first { $0.id == defaultTransaction.id }
+            reporter.check(moved?.ledgerID == travelLedger.id, "LedgerStore persists moved transaction ledger id")
+
+            ledgerStore.selectLedgerProfile(travelLedger)
+            reporter.check(
+                ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id, defaultTransaction.id],
+                "LedgerStore current ledger includes moved transaction"
             )
         }
     }

@@ -411,6 +411,9 @@
 "ledger.footer_format" = "%d entries. Tap any transaction to correct amount, category, or note.";
 "ledger.search.prompt" = "Search transactions";
 "ledger.search.no_results" = "No matching transactions";
+"ledger.scope.all" = "All Ledgers";
+"ledger.action.move" = "Move Ledger";
+"ledger.move.title" = "Move to Ledger";
 
 "deleted_transactions.title" = "Recently Deleted";
 "deleted_transactions.empty.title" = "No Deleted Transactions";

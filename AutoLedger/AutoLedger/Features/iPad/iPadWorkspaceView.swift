@@ -2798,7 +2798,7 @@ private struct IPadLedgerWorkspaceView: View {
     @State private var showsDuplicateApplyConfirmation = false
 
     private var transactions: [Transaction] {
-        sortedTransactions(store.transactions)
+        sortedTransactions(store.visibleTransactions)
     }
 
     private var filteredTransactions: [Transaction] {
@@ -2814,18 +2814,24 @@ private struct IPadLedgerWorkspaceView: View {
 
     private var selectedTransaction: Transaction? {
         if let selectedTransactionID,
-           let transaction = store.transactions.first(where: { $0.id == selectedTransactionID }) {
+           let transaction = store.visibleTransactions.first(where: { $0.id == selectedTransactionID }) {
             return transaction
         }
         if let firstSelectedID = selectedTransactionIDs.first,
-           let transaction = store.transactions.first(where: { $0.id == firstSelectedID }) {
+           let transaction = store.visibleTransactions.first(where: { $0.id == firstSelectedID }) {
             return transaction
         }
         return filteredTransactions.first
     }
 
     private var selectedTransactions: [Transaction] {
-        store.transactions.filter { selectedTransactionIDs.contains($0.id) }
+        store.visibleTransactions.filter { selectedTransactionIDs.contains($0.id) }
+    }
+
+    private var ledgerScopeTitle: String {
+        store.isShowingAllLedgers
+            ? String(localized: "ledger.scope.all")
+            : store.ledgerName(for: store.selectedLedgerID)
     }
 
     private var batchCategoryTitle: String {
@@ -2990,6 +2996,10 @@ private struct IPadLedgerWorkspaceView: View {
     private var transactionList: some View {
         List {
             Section {
+                ledgerScopeMenu
+            }
+
+            Section {
                 ForEach(transactions) { transaction in
                     Button {
                         selectedTransactionID = transaction.id
@@ -3024,6 +3034,37 @@ private struct IPadLedgerWorkspaceView: View {
         )
     }
 
+    private var ledgerScopeMenu: some View {
+        Menu {
+            Button {
+                store.selectAllLedgers()
+                selectedTransactionIDs.removeAll()
+                selectedTransactionID = filteredTransactions.first?.id
+            } label: {
+                Label("ledger.scope.all", systemImage: store.isShowingAllLedgers ? "checkmark.circle.fill" : "books.vertical")
+            }
+
+            Divider()
+
+            ForEach(store.activeLedgerProfiles) { profile in
+                Button {
+                    store.selectLedgerProfile(profile)
+                    selectedTransactionIDs.removeAll()
+                    selectedTransactionID = filteredTransactions.first?.id
+                } label: {
+                    Label(
+                        profile.name,
+                        systemImage: !store.isShowingAllLedgers && store.selectedLedgerID == profile.id ? "checkmark.circle.fill" : (profile.iconName ?? "wallet.pass")
+                    )
+                }
+            }
+        } label: {
+            Label(ledgerScopeTitle, systemImage: store.isShowingAllLedgers ? "books.vertical" : "wallet.pass")
+                .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(.bordered)
+    }
+
     #if targetEnvironment(macCatalyst)
     private var macLedgerWorkspace: some View {
         GeometryReader { geometry in
@@ -3054,6 +3095,8 @@ private struct IPadLedgerWorkspaceView: View {
 
     private var macLedgerToolbar: some View {
         HStack(spacing: 12) {
+            ledgerScopeMenu
+
             TextField("mac.ledger.search", text: $macSearchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 240, maxWidth: 360)

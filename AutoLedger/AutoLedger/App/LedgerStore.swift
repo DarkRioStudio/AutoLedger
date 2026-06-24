@@ -49,6 +49,8 @@ final class LedgerStore: ObservableObject {
     @Published var customCategories: [String] = []
     @Published private(set) var merchantAliases: [String: String] = [:]
     @Published private(set) var ledgerProfiles: [LedgerProfile] = []
+    @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID
+    @Published private(set) var isShowingAllLedgers = false
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
@@ -84,7 +86,10 @@ final class LedgerStore: ObservableObject {
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
-        self.ledgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
+        let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
+        self.ledgerProfiles = initialLedgerProfiles
+        self.selectedLedgerID = LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
+        self.isShowingAllLedgers = UserDefaults.standard.bool(forKey: Self.showAllLedgersKey)
         self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         seedLegacyLedgerConfigurationTimestampIfNeeded()
@@ -105,6 +110,37 @@ final class LedgerStore: ObservableObject {
 
     var defaultLedgerProfile: LedgerProfile {
         activeLedgerProfiles.first { $0.isDefault } ?? LedgerProfile.defaultLocal()
+    }
+
+    var visibleTransactions: [Transaction] {
+        transactionsForCurrentLedger(transactions)
+    }
+
+    var targetLedgerIDForNewTransactions: String {
+        isShowingAllLedgers ? defaultLedgerProfile.id : selectedLedgerID
+    }
+
+    func transactionsForCurrentLedger(_ source: [Transaction]) -> [Transaction] {
+        guard !isShowingAllLedgers else { return source }
+        return source.filter { $0.resolvedLedgerID() == selectedLedgerID }
+    }
+
+    func selectLedgerProfile(_ profile: LedgerProfile) {
+        guard !profile.isArchived else { return }
+        selectedLedgerID = profile.id
+        isShowingAllLedgers = false
+        saveLedgerSelection()
+    }
+
+    func selectAllLedgers() {
+        isShowingAllLedgers = true
+        saveLedgerSelection()
+    }
+
+    func ledgerName(for ledgerID: String?) -> String {
+        let resolvedID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let targetID = resolvedID?.isEmpty == false ? resolvedID : TodaySpendingSummary.defaultLedgerID
+        return ledgerProfiles.first { $0.id == targetID }?.name ?? TodaySpendingSummary.defaultLedgerName
     }
 
     func saveCustomSources() {
@@ -238,6 +274,7 @@ final class LedgerStore: ObservableObject {
                 return
             }
         }
+        normalizeLedgerSelection()
         recordLedgerProfileConfigurationChanged()
     }
 
@@ -585,7 +622,7 @@ final class LedgerStore: ObservableObject {
             to: transaction,
             aliases: merchantAliases
         )
-        .assigningLedgerIDIfMissing()
+        .assigningLedgerIDIfMissing(targetLedgerIDForNewTransactions)
 
         guard let store = transactionStore else {
             // 无持久化层（预览/测试场景）：直接更新内存
@@ -606,6 +643,37 @@ final class LedgerStore: ObservableObject {
         transactions.insert(resolvedTransaction, at: 0)
         sortTransactions()
         lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
+    }
+
+    @discardableResult
+    func moveTransaction(_ transaction: Transaction, toLedgerID ledgerID: String) -> Bool {
+        let trimmedLedgerID = ledgerID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedLedgerID.isEmpty,
+              activeLedgerProfiles.contains(where: { $0.id == trimmedLedgerID }) else {
+            lastImportSummary = "移动账单失败：目标账本不可用。"
+            return false
+        }
+
+        guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
+            lastImportSummary = "移动账单失败：未找到要移动的账单。"
+            return false
+        }
+
+        let updated = transactions[index].replacingLedgerID(trimmedLedgerID)
+        do {
+            try transactionStore?.update(transaction: updated)
+        } catch {
+            lastImportSummary = "移动账单失败：\(error.localizedDescription)"
+            return false
+        }
+
+        transactions[index] = updated
+        sortTransactions()
+        lastImportSummary = "已将 \(updated.merchant) 移动到账本 \(ledgerName(for: trimmedLedgerID))。"
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -1256,7 +1324,7 @@ final class LedgerStore: ObservableObject {
             category: receipt.suggestedCategory,
             source: receipt.source,
             note: notePrefix,
-            ledgerID: TodaySpendingSummary.defaultLedgerID
+            ledgerID: targetLedgerIDForNewTransactions
         )
         recentImports.insert(receipt, at: 0)
         transactions.insert(transaction, at: 0)
@@ -1535,6 +1603,16 @@ final class LedgerStore: ObservableObject {
         return profiles.isEmpty ? [LedgerProfile.defaultLocal()] : profiles
     }
 
+    private static func loadInitialSelectedLedgerID(from profiles: [LedgerProfile]) -> String {
+        let activeProfiles = profiles.filter { !$0.isArchived }
+        let activeIDs = Set(activeProfiles.map(\.id))
+        if let saved = UserDefaults.standard.string(forKey: Self.selectedLedgerIDKey),
+           activeIDs.contains(saved) {
+            return saved
+        }
+        return activeProfiles.first { $0.isDefault }?.id ?? TodaySpendingSummary.defaultLedgerID
+    }
+
     private func reloadLedgerProfiles() {
         guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
             sortLedgerProfiles()
@@ -1545,6 +1623,7 @@ final class LedgerStore: ObservableObject {
             ledgerProfiles = [LedgerProfile.defaultLocal()]
         }
         sortLedgerProfiles()
+        normalizeLedgerSelection()
     }
 
     private func sortLedgerProfiles() {
@@ -1573,6 +1652,22 @@ final class LedgerStore: ObservableObject {
         scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
     }
+
+    private func normalizeLedgerSelection() {
+        let activeIDs = Set(activeLedgerProfiles.map(\.id))
+        guard !activeIDs.contains(selectedLedgerID) else {
+            saveLedgerSelection()
+            return
+        }
+        selectedLedgerID = defaultLedgerProfile.id
+        isShowingAllLedgers = false
+        saveLedgerSelection()
+    }
+
+    private func saveLedgerSelection() {
+        UserDefaults.standard.set(selectedLedgerID, forKey: Self.selectedLedgerIDKey)
+        UserDefaults.standard.set(isShowingAllLedgers, forKey: Self.showAllLedgersKey)
+    }
 }
 
 private extension Transaction {
@@ -1592,6 +1687,20 @@ private extension Transaction {
     }
 
     func replacingCategory(_ category: String) -> Transaction {
+        Transaction(
+            id: id,
+            merchant: merchant,
+            amount: amount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note,
+            ledgerID: ledgerID,
+            hotelStayRecordID: hotelStayRecordID
+        )
+    }
+
+    func replacingLedgerID(_ ledgerID: String) -> Transaction {
         Transaction(
             id: id,
             merchant: merchant,
@@ -1640,6 +1749,8 @@ extension LedgerStore {
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
+    private static let selectedLedgerIDKey = "selectedLedgerID"
+    private static let showAllLedgersKey = "showAllLedgers"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
