@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-236 GOAL-1844 统计、订阅与展示口径）
+更新日期：2026-06-24（ITER-237 GOAL-1850 新功能文案覆盖门禁）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-237 GOAL-1850 新功能文案覆盖门禁
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1850
+- 类型：本地化 / 测试门禁 / 文档
+- 目标：把酒店消费、多账本、错误提示和设置说明的新功能文案覆盖从人工检查固化为可重复执行的本地化门禁。
+- 改动范围：`scripts/check_localization_coverage.py` 新增主 App `v1.6.1` 必备 key 和 prefix count 检查；版本计划、CHANGELOG 与本迭代日志回填 GOAL-1850 状态。
+- 未改动范围：未新增或重写具体 `.strings` 文案；未做硬编码字符串审计；未新增截图文案、ASC metadata、TestFlight notes、Review Notes 或日文术语表；未修改业务逻辑、SQLite schema、CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：覆盖检查继续验证主 App、Watch App、Watch Widgets、Control Widget Extension 和 Share Extension 的 `zh-Hans` / `zh-Hant` / `en` / `ja` key 集合一致；主 App 新增酒店水单 PDF 错误、酒店消费复核 / 列表 / 详情、多账本设置入口、账本管理动作、账本范围切换和移动账本的必备 key 检查；新增 `hotel_stay.`、`hotel_folio.import.error.` 和 `ledger_profiles.` prefix 数量下限检查。
+- 未完成内容：日文文案人工审校、截图 / ASC / TestFlight / Review Notes 草稿和术语表仍留给 `GOAL-1852`；SwiftUI / AppIntents / Debug 的硬编码字符串审计仍留给 `GOAL-1851`。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过，确认当前四语资源满足新增必备 key / prefix count 门禁。
+- 风险与注意事项：本轮保证“关键 key 存在且四语对齐”，不保证日文译文已达到商店发布质量；文案质量和截断风险仍需人工审校。
+- 回滚方式：回退 `scripts/check_localization_coverage.py` 新增必备 key / prefix count 检查以及版本计划 / CHANGELOG / 本日志条目即可；不会影响 App 运行时代码。
+- 结论：GOAL-1850 的 App 内新功能四语文案覆盖门禁已完成，可进入 `GOAL-1851` 硬编码字符串审计。
+- 下一步建议：用脚本先锁定 `AutoLedger/AutoLedger` 中用户可见硬编码中文 / 英文，按“新功能和主路径优先、调试导出可豁免”的规则收口。
 
 ### ITER-236 GOAL-1844 统计、订阅与展示口径
 - 日期：2026-06-24

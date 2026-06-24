@@ -22,6 +22,37 @@ BASELINE_LOCALE = "en"
 REQUIRED_LOCALES = ["zh-Hans", "zh-Hant", "en", "ja"]
 STRING_FILE_PATTERN = re.compile(r'^\s*"((?:[^"\\]|\\.)+)"\s*=')
 
+MAIN_APP_REQUIRED_KEYS = {
+    "hotel_folio.import.error.unsupported_file",
+    "hotel_folio.import.error.cannot_open_pdf",
+    "hotel_folio.import.error.empty_text",
+    "hotel_stay.review.title",
+    "hotel_stay.review.hotel_name",
+    "hotel_stay.review.total",
+    "hotel_stay.review.validation.required",
+    "hotel_stay.list.title",
+    "hotel_stay.list.empty.title",
+    "hotel_stay.detail.title",
+    "hotel_stay.detail.linked_transaction",
+    "hotel_stay.detail.raw_text",
+    "settings.ledger_profiles.title",
+    "settings.ledger_profiles.subtitle",
+    "ledger_profiles.title",
+    "ledger_profiles.add",
+    "ledger_profiles.action.rename",
+    "ledger_profiles.action.set_default",
+    "ledger_profiles.action.archive",
+    "ledger.scope.all",
+    "ledger.action.move",
+    "ledger.move.title",
+}
+
+MAIN_APP_REQUIRED_PREFIX_COUNTS = {
+    "hotel_stay.": 60,
+    "hotel_folio.import.error.": 3,
+    "ledger_profiles.": 14,
+}
+
 
 def collect_strings_files(resource_root: Path) -> set[str]:
     names: set[str] = set()
@@ -78,6 +109,23 @@ def main() -> int:
                         f"{localized_path.relative_to(ROOT)}: has {len(extra)} extra keys"
                         f" (sample: {sample})"
                     )
+
+                if relative_root == "AutoLedger/AutoLedger" and strings_file == "Localizable.strings":
+                    missing_required = sorted(MAIN_APP_REQUIRED_KEYS - localized_keys)
+                    if missing_required:
+                        sample = ", ".join(missing_required[:8])
+                        failures.append(
+                            f"{localized_path.relative_to(ROOT)}: missing required v1.6.1 feature keys"
+                            f" (sample: {sample})"
+                        )
+
+                    for prefix, minimum_count in MAIN_APP_REQUIRED_PREFIX_COUNTS.items():
+                        matched_count = sum(1 for key in localized_keys if key.startswith(prefix))
+                        if matched_count < minimum_count:
+                            failures.append(
+                                f"{localized_path.relative_to(ROOT)}: expected at least {minimum_count}"
+                                f" keys with prefix {prefix!r}, found {matched_count}"
+                            )
 
     if failures:
         print("Localization coverage check failed:")
