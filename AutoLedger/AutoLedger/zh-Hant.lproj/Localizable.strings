@@ -70,6 +70,9 @@
 "mac.import.drop.subtitle" = "支援從 Finder 拖入圖片、PDF 或文字檔；匯入後會先進入識別隊列。";
 "mac.import.drop.no_files" = "未能讀取拖入的檔案。";
 "mac.import.drop.imported_summary" = "已從拖放加入 %d 個檔案到識別隊列。";
+"hotel_folio.import.error.unsupported_file" = "請選擇酒店水單 PDF 檔案。";
+"hotel_folio.import.error.cannot_open_pdf" = "無法開啟這個 PDF，請嘗試其他酒店水單檔案。";
+"hotel_folio.import.error.empty_text" = "這個 PDF 中沒有可讀取文字，請嘗試文字型酒店水單 PDF。";
 "mac.data_exchange.csv.title" = "CSV 匯入匯出";
 "mac.data_exchange.csv.subtitle" = "匯出正式帳單，或把 CSV 行匯入候選隊列後再複核。";
 "mac.data_exchange.json.title" = "JSON 備份";

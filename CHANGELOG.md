@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.1）
+- [2026-06-24 +0800] 完成 `GOAL-1811` 酒店水单手动 PDF 导入与 PDFKit 文本提取适配层：新增 App 层 `HotelFolioManualPDFImporter`，支持安全作用域 URL 读取、本地 PDF 类型校验、PDFKit 文本提取、`HotelStayDraft(status: .textExtracted)` 生成，以及非 PDF / 无法打开 / 无可读文本三类错误态；补齐四语错误提示，并新增 `scripts/run_hotel_pdf_import_smoke.sh` 生成临时 PDF 做真实提取 smoke。本轮不接解析管线、不调用外部模型、不写 schema、不新增确认页或入账逻辑。
 - [2026-06-24 +0800] 完成 `GOAL-1810` 酒店消费模型与 schema 第一版：在 `AutoLedgerCore` 新增 `HotelFolioSourceType`、`HotelStayDraftStatus`、`HotelFolioParsedPayload`、`HotelStayDraft` 和 `HotelStayRecord`，解析 payload 支持酒店水单 snake_case schema；离线回归新增酒店模型断言，覆盖 schema 解码、来源、目标账本、草稿状态、正式记录金额和关联流水 ID。本轮不接 PDFKit、不接外部模型、不写 SQLite / CloudKit schema、不新增 UI，也不生成普通 `Transaction`。
 - [2026-06-24 +0800] 落地 `GOAL-1852` 第一段日文支持基线：新增主 App、Watch App、Watch Widgets、Control Widget Extension、Share Extension 的 `ja.lproj` 字符串资源，Xcode project `knownRegions` 新增 `ja`，并新增 `scripts/check_localization_coverage.py` 检查五组资源集的四语 key 对齐；同步确认内部 `v1.6.1` 继续映射 ASC `1.5.0`，不修改 `MARKETING_VERSION`。本轮不修改业务逻辑、SQLite schema、CloudKit schema、signing、entitlements 或 Xcode Cloud 脚本。
 - [2026-06-24 +0800] 调整 `v1.6.1` 多语言范围：将 `ja` 从新增语言候选升级为本版本明确落地的日文支持，范围覆盖 `ja.lproj`、App 内关键路径、酒店消费、多账本、设置、错误提示、App Intents / Shortcuts、截图文案、ASC 元数据、TestFlight notes、Review Notes、术语表和人工审校清单；`ko` 保留为后续候选。同步更新 README / README.en Roadmap；本轮仅文档更新，不实现代码或业务逻辑。

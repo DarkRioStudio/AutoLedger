@@ -70,6 +70,9 @@
 "mac.import.drop.subtitle" = "Finder から画像、PDF、テキストファイルをドロップします。インポートしたファイルはまず認識キューに入ります。";
 "mac.import.drop.no_files" = "読み取れるドロップファイルがありませんでした。";
 "mac.import.drop.imported_summary" = "%d 件のドロップファイルを認識キューに追加しました。";
+"hotel_folio.import.error.unsupported_file" = "ホテル明細の PDF ファイルを選択してください。";
+"hotel_folio.import.error.cannot_open_pdf" = "この PDF を開けませんでした。別のホテル明細ファイルをお試しください。";
+"hotel_folio.import.error.empty_text" = "この PDF に読み取れるテキストが見つかりません。テキスト形式のホテル明細 PDF をお試しください。";
 "mac.data_exchange.csv.title" = "CSV インポート / エクスポート";
 "mac.data_exchange.csv.subtitle" = "正式な取引をエクスポートするか、CSV 行をレビュー用の候補キューにインポートします。";
 "mac.data_exchange.json.title" = "JSON バックアップ";

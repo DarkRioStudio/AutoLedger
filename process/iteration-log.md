@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-226 GOAL-1810 酒店消费模型与 schema）
+更新日期：2026-06-24（ITER-227 GOAL-1811 酒店水单 PDF 文本提取）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-227 GOAL-1811 酒店水单 PDF 文本提取
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1811
+- 类型：能力增强 / macOS 导入 / 测试
+- 目标：建立酒店水单手动 PDF 导入的本地适配层，使用 PDFKit 提取文本并生成待处理草稿。
+- 改动范围：新增 App 层 `HotelFolioManualPDFImporter`；新增 PDF 导入 smoke 脚本和临时 PDF 生成测试；补齐四语错误提示；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未接外部模型；未实现 `HotelFolioParsePipeline`；未新增确认页、列表页、详情页或侧边栏入口；未写 SQLite schema、CloudKit schema、BackupBundle、iCloud 同步或普通 `Transaction` 生成逻辑；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`HotelFolioManualPDFImporter` 支持安全作用域 URL 读取、本地 PDF 类型校验、PDFKit 文本提取、`HotelStayDraft(status: .textExtracted)` 生成、来源文件名和目标账本 ID 保留；错误态覆盖非 PDF、无法打开 PDF 和 PDF 无可读文本；四语错误文案已补齐。
+- 未完成内容：酒店消费可视化入口仍未实现；PDF 文本尚未进入模型解析；草稿尚未持久化；用户确认和正式入账仍留给后续 GOAL。
+- 测试情况：先新增 `scripts/run_hotel_pdf_import_smoke.sh` 和 smoke 断言，执行后因缺少 `HotelFolioManualPDFImporter` / `HotelFolioManualPDFImportError` 失败；实现 importer 后再次执行 `bash scripts/run_hotel_pdf_import_smoke.sh`，结果 PASS。
+- 风险与注意事项：PDFKit 只能提取文本型 PDF；扫描图片型水单仍会进入无可读文本错误，后续如要支持扫描 PDF 需要单独 OCR 设计。当前 importer 只生成内存草稿，不承担持久化和入账。
+- 回滚方式：移除 `HotelFolioManualPDFImporter.swift`、PDF smoke 脚本、四语错误文案和版本文档 / CHANGELOG / 本日志条目即可；当前无数据迁移。
+- 结论：GOAL-1811 的 PDFKit 文本提取适配层已完成，后续可进入 `GOAL-1812` 解析管线。
+- 下一步建议：实现 `HotelFolioParsePipeline`，让来源无关的文本输入转换为结构化酒店水单 payload，并继续保持用户确认前不入账。
 
 ### ITER-226 GOAL-1810 酒店消费模型与 schema
 - 日期：2026-06-24

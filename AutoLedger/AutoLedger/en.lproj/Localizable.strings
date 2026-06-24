@@ -70,6 +70,9 @@
 "mac.import.drop.subtitle" = "Drop images, PDFs, or text files from Finder. Imported files enter the recognition queue first.";
 "mac.import.drop.no_files" = "No dropped files could be read.";
 "mac.import.drop.imported_summary" = "Added %d dropped files to the recognition queue.";
+"hotel_folio.import.error.unsupported_file" = "Choose a hotel folio PDF file.";
+"hotel_folio.import.error.cannot_open_pdf" = "Could not open this PDF. Try another hotel folio file.";
+"hotel_folio.import.error.empty_text" = "No readable text was found in this PDF. Try a text-based hotel folio PDF.";
 "mac.data_exchange.csv.title" = "CSV Import / Export";
 "mac.data_exchange.csv.subtitle" = "Export official transactions, or import CSV rows into the candidate queue for review.";
 "mac.data_exchange.json.title" = "JSON Backup";
