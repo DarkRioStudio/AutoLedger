@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（GOAL-1770D tvOS / visionOS ASC 资产与 entitlement 修复）
+更新日期：2026-06-24（GOAL-1770E ASC 出口合规与平台元数据修正）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-221 GOAL-1770E ASC 出口合规与平台元数据修正
+- 日期：2026-06-24
+- 所属版本：v1.6.0
+- 所属阶段：GOAL-1770
+- 类型：发布配置 / 文档 / ASC 元数据
+- 目标：补齐 tvOS / visionOS 新平台的出口合规标志，并修正 ASC 1.5.0 元数据口径，避免把 tvOS / visionOS 写成版本新增功能。
+- 改动范围：`AutoLedgerTV` 与 `AutoLedgerVision` 的 Info.plist / build settings；`versions/v1.6.0-review-notes.md` 的 ASC 元数据草稿；`CHANGELOG.md` 与本迭代日志。
+- 未改动范围：未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、CloudKit schema、业务代码、截图管线、Xcode Cloud 脚本或 App Store Connect 线上配置。
+- 完成内容：`AutoLedgerTV` 和 `AutoLedgerVision` 均新增 `ITSAppUsesNonExemptEncryption = false`；ASC 元数据草稿增加 App Description、平台描述、What’s New 和 Export Compliance 口径；tvOS / visionOS 被描述为只读展示平台，而不是 1.5.0 的新增功能条目。
+- 未完成内容：ASC 页面仍需人工根据本草稿复制粘贴并最终确认；出口合规最终选择仍以 App Store Connect 表单为准。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `plutil -lint AutoLedger/AutoLedgerTV/Info.plist AutoLedger/AutoLedgerVision/Info.plist`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-tv-export-check -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'generic/platform=tvOS' build`，结果 PASS；执行 `xcodebuild -quiet -derivedDataPath /tmp/autoledger-vision-export-check -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`，结果 PASS；产物检查确认 `AutoLedgerTV.app/Info.plist` 与 `AutoLedgerVision.app/Info.plist` 均包含 `ITSAppUsesNonExemptEncryption => false`。
+- 风险与注意事项：当前口径基于 App 不提供 VPN、加密通信、端到端通信工具或通用加密能力，只使用系统平台能力、iCloud 和 HTTPS；如后续引入自研加密或新的安全通信能力，需要重新评估出口合规。
+- 回滚方式：如 ASC 要求改用人工出口合规问卷或合规文档，可移除 tvOS / visionOS 的 `ITSAppUsesNonExemptEncryption` 标志，并按 ASC 要求提交文档；元数据文案可回退到上一版草稿。
+- 结论：代码侧标志与元数据草稿已补齐，下一步重新验证 tvOS / visionOS 产物 Info.plist。
+- 下一步建议：Xcode Cloud archive 后抽查上传包 Info.plist 中的 `ITSAppUsesNonExemptEncryption`，并在 ASC 页面将 tvOS / visionOS 放入 App 描述，不放入版本更新说明。
 
 ### ITER-220 GOAL-1770D tvOS / visionOS ASC 资产与 entitlement 修复
 - 日期：2026-06-24

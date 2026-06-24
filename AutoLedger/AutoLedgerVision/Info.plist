@@ -7,6 +7,8 @@
 		<key>CFBundlePrimaryIcon</key>
 		<string>AppIcon</string>
 	</dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationPreferredDefaultSceneSessionRole</key>
