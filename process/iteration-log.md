@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-232 GOAL-1840 多账本 schema 基线）
+更新日期：2026-06-24（ITER-233 GOAL-1841 默认账本兼容读取）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-233 GOAL-1841 默认账本兼容读取
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1841
+- 类型：能力增强 / Core 策略 / LedgerStore / 测试
+- 目标：让旧流水缺失 `ledgerID` 时可解释为默认账本，并让 App 新增和编辑正式流水时保留或补齐账本归属。
+- 改动范围：`Transaction` 新增 `resolvedLedgerID` 与 `assigningLedgerIDIfMissing`；`LedgerStore` 手动新增、OCR / 语音 / 分享入账、账单编辑、批量编辑、数据清洗、商户别名和分类刷新路径保留或补齐默认账本；更新离线回归断言；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `LedgerProfile` 独立持久化表；未对既有 SQLite 数据执行物理批量回填；未新增当前账本状态、账本选择器、账本管理 UI、账本切换、单笔移动账本或统计筛选；未修改 Watch / Widget / tvOS / visionOS 展示口径；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：旧 `Transaction.ledgerID == nil` 可通过 `resolvedLedgerID()` 解释为 `TodaySpendingSummary.defaultLedgerID`；新手动入账、OCR / 文本 / 语音导入入账默认写入默认账本；编辑 payload 没有 `ledgerID` 时继承原交易的账本归属；批量编辑、数据清洗、商户别名刷新和分类刷新不再丢失既有 `ledgerID` 与 `hotelStayRecordID`。
+- 未完成内容：旧数据库中已经存在的 nil `ledger_id` 不会在本轮被物理更新；读取列表按账本过滤、全部账本聚合、默认账本设置和账本迁移 UI 留给后续 GOAL。
+- 测试情况：先新增默认账本回归并执行 `bash scripts/run_offline_regression.sh`，因缺少 `Transaction.resolvedLedgerID` 和 `assigningLedgerIDIfMissing` 失败；实现后回归发现备份恢复删除账单测试仍按旧 nil 语义比较，调整为默认账本语义后再次执行离线回归，结果 PASS。
+- 风险与注意事项：当前兼容策略主要在 App 写入路径补齐默认账本，底层 SQLite 仍允许 nil，以便兼容旧设备、旧备份和旧 CloudKit payload；后续做账本筛选时必须统一使用 `resolvedLedgerID()` 或先执行明确迁移。
+- 回滚方式：回退 `Transaction` 默认账本 helper、`LedgerStore` 写入 / 编辑 / 清洗路径的默认账本补齐、离线回归新增断言和版本文档 / CHANGELOG / 本日志条目即可；不涉及新数据库列之外的额外数据迁移。
+- 结论：GOAL-1841 的默认账本兼容读取和新流水默认归属已完成，可进入 `GOAL-1842` 账本管理基础 UI 或先补 `LedgerProfile` 持久化。
+- 下一步建议：先落最小 `LedgerProfile` 持久化与账本管理入口，再做当前账本 / 全部账本筛选和移动账本，避免 UI 没有真实账本来源。
 
 ### ITER-232 GOAL-1840 多账本 schema 基线
 - 日期：2026-06-24

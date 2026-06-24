@@ -33,6 +33,32 @@ public struct Transaction: Identifiable, Equatable, Codable, Sendable {
         ReceiptSource(rawValue: source)?.title ?? source
     }
 
+    public func resolvedLedgerID(defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID) -> String {
+        if let trimmedLedgerID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !trimmedLedgerID.isEmpty {
+            return trimmedLedgerID
+        }
+        return defaultLedgerID
+    }
+
+    public func assigningLedgerIDIfMissing(_ defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID) -> Transaction {
+        guard ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false else {
+            return self
+        }
+
+        return Transaction(
+            id: id,
+            merchant: merchant,
+            amount: amount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note,
+            ledgerID: defaultLedgerID,
+            hotelStayRecordID: hotelStayRecordID
+        )
+    }
+
     /// 向后兼容的初始化方法，接受内置枚举类型（内部存为 rawValue）。
     public init(
         id: UUID = UUID(),

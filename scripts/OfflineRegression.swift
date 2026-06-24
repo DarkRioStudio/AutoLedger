@@ -63,6 +63,7 @@ struct OfflineRegression {
         verifySubscriptionDraftFromTransaction(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
         verifyMultiLedgerSchema(reporter: reporter)
+        try verifyLedgerDefaultAssignment(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -1647,6 +1648,97 @@ struct OfflineRegression {
         )
         reporter.check(payload.ledgerID == travelLedgerID, "LedgerTransactionSyncPayload preserves ledger id")
         reporter.check(payload.syncRecord.transaction.ledgerID == travelLedgerID, "LedgerTransactionSyncPayload restores transaction ledger id")
+    }
+
+    private static func verifyLedgerDefaultAssignment(reporter: RegressionReporter) throws {
+        let date = Date(timeIntervalSince1970: 1_780_400_000)
+        let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001842") ?? UUID()
+        let legacyTransaction = Transaction(
+            merchant: "Legacy Default Store",
+            amount: 18,
+            occurredAt: date,
+            category: .shopping,
+            source: .manual,
+            note: "legacy nil ledger",
+            hotelStayRecordID: hotelStayRecordID
+        )
+        reporter.check(
+            legacyTransaction.resolvedLedgerID() == TodaySpendingSummary.defaultLedgerID,
+            "Transaction resolves missing ledger id to default ledger"
+        )
+
+        let assigned = legacyTransaction.assigningLedgerIDIfMissing()
+        reporter.check(assigned.ledgerID == TodaySpendingSummary.defaultLedgerID, "Transaction assigns default ledger when missing")
+        reporter.check(assigned.hotelStayRecordID == hotelStayRecordID, "Transaction default ledger assignment preserves hotel link")
+
+        let customLedger = legacyTransaction.assigningLedgerIDIfMissing("travel-ledger")
+        reporter.check(customLedger.ledgerID == "travel-ledger", "Transaction can assign a supplied default ledger")
+
+        let existingLedger = Transaction(
+            id: legacyTransaction.id,
+            merchant: legacyTransaction.merchant,
+            amount: legacyTransaction.amount,
+            occurredAt: legacyTransaction.occurredAt,
+            category: .shopping,
+            source: .manual,
+            note: legacyTransaction.note,
+            ledgerID: "travel-ledger",
+            hotelStayRecordID: hotelStayRecordID
+        )
+        reporter.check(
+            existingLedger.assigningLedgerIDIfMissing().ledgerID == "travel-ledger",
+            "Transaction keeps existing ledger id during default assignment"
+        )
+
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerDefaultLedgerRegression-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-default.sqlite3")
+        let ledger = LedgerStore(transactionStore: store)
+        let manual = Transaction(
+            merchant: "Manual Default Store",
+            amount: 21,
+            occurredAt: date,
+            category: .dining,
+            source: .manual,
+            note: "manual default"
+        )
+        reporter.check(ledger.addTransaction(manual), "LedgerStore accepts manual transaction for default ledger assignment")
+        let storedManual = try store.loadTransactions().first { $0.id == manual.id }
+        reporter.check(
+            storedManual?.ledgerID == TodaySpendingSummary.defaultLedgerID,
+            "LedgerStore writes default ledger id for new manual transaction"
+        )
+
+        let travel = Transaction(
+            merchant: "Travel Existing Store",
+            amount: 33,
+            occurredAt: date,
+            category: .shopping,
+            source: .manual,
+            note: "travel ledger",
+            ledgerID: "travel-ledger"
+        )
+        reporter.check(ledger.addTransaction(travel), "LedgerStore accepts transaction with existing ledger id")
+        let travelEditWithoutLedger = Transaction(
+            id: travel.id,
+            merchant: "Travel Existing Store Edited",
+            amount: travel.amount,
+            occurredAt: travel.occurredAt,
+            category: .shopping,
+            source: .manual,
+            note: "travel ledger edited"
+        )
+        reporter.check(ledger.updateTransaction(travelEditWithoutLedger), "LedgerStore updates transaction while preserving ledger assignment")
+        let storedTravel = try store.loadTransactions().first { $0.id == travel.id }
+        reporter.check(
+            storedTravel?.ledgerID == "travel-ledger",
+            "LedgerStore preserves existing ledger id when update payload omits it"
+        )
     }
 
     private static func verifySyncConflictResolver(reporter: RegressionReporter) {
@@ -3383,7 +3475,7 @@ struct OfflineRegression {
             restoreLedger.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "Backup restore keeps hotel stay transaction link"
         )
-        reporter.check(restoreLedger.deletedTransactions.contains(deleted), "Backup restore keeps deleted transaction")
+        reporter.check(restoreLedger.deletedTransactions.contains(deleted.assigningLedgerIDIfMissing()), "Backup restore keeps deleted transaction")
         let restoredSubscription = restoreLedger.subscriptions.first { $0.id == subscription.id }
         reporter.check(
             restoredSubscription?.merchant == subscription.merchant &&

@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.1）
+- [2026-06-24 +0800] 完成 `GOAL-1841` 默认账本兼容与新流水归属第一版：`Transaction` 新增 `resolvedLedgerID` 和 `assigningLedgerIDIfMissing`，旧数据 `ledgerID == nil` 可按默认本地账本解释；`LedgerStore` 手动新增、OCR / 语音 / 分享等正式入账路径会为新 `Transaction` 写入默认账本，编辑、批量更新、数据清洗和商户别名刷新会保留既有账本归属。本轮不做旧数据库物理批量回填、不新增账本选择 UI、不实现账本切换或账单移动。
 - [2026-06-24 +0800] 完成 `GOAL-1840` 多账本 schema 基线第一版：新增 Core 层 `LedgerProfile`，定义默认本地账本、归档状态、图标 / 颜色 / 币种等账本元数据；`Transaction` 新增可选 `ledgerID`，并贯穿 SQLite `transactions.ledger_id` nullable 列、`BackupTransaction`、`LedgerTransactionSyncPayload` 和 App 层 CloudKit 交易 payload 映射。酒店消费确认生成的普通流水会继承目标账本，商户别名刷新会保留 `ledgerID` 和酒店关联。本轮不新增 `LedgerProfile` 独立持久化表、不做旧账单默认账本回填、不实现账本管理 UI、账本切换或账单移动。
 - [2026-06-24 +0800] 完成 `GOAL-1815` 酒店消费列表与详情页第一版：新增 Core 层 `HotelStayArchivePresenter`，把 `HotelStayRecord` 转换为列表行、详情快照、年度摘要口径、来源、状态和关联流水展示状态；新增 App 层 `HotelStayListView` / `HotelStayDetailView` 可复用组件，展示酒店名称、城市、品牌 / 集团、入住退房日期、晚数、金额、来源、置信度、原始文本和关联普通流水，并补齐四语 UI 文案。本轮仍不新增 `HotelStayRecord` 独立持久化表、不串接真实导航入口、不实现删除草稿 / 删除正式记录或邮箱 / Worker 自动化。
 - [2026-06-24 +0800] 完成 `GOAL-1814` 酒店消费正式归档与普通流水关联第一版：新增 Core 层 `HotelStayLedgerPostingService`，仅接受 `.confirmed` 酒店草稿并生成 `HotelStayRecord + Transaction`，普通流水使用酒店名、总额、退房日期、`酒店住宿` 分类和入住 / 退房 / 房型 / 订单号摘要备注；`Transaction` 新增可选 `hotelStayRecordID`，与 `HotelStayRecord.linkedTransactionID` 双向关联，并在 SQLite、备份与 Core sync payload 中保留。SQLite `transactions` 新增 nullable `hotel_stay_record_id`，CloudKit 交易 payload 预留 `hotelStayRecordID` 可选字段，发布前需部署 Production schema。本轮仍不新增 `HotelStayRecord` 独立持久化表、不串接 PDF 导入导航、不实现酒店消费列表 / 详情。

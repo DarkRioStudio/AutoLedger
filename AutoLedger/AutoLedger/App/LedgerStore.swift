@@ -488,6 +488,7 @@ final class LedgerStore: ObservableObject {
             to: transaction,
             aliases: merchantAliases
         )
+        .assigningLedgerIDIfMissing()
 
         guard let store = transactionStore else {
             // 无持久化层（预览/测试场景）：直接更新内存
@@ -590,57 +591,60 @@ final class LedgerStore: ObservableObject {
         }
 
         let original = transactions[index]
-        let categoryChanged = original.category != transaction.category
+        let resolvedTransaction = transaction.ledgerID == nil
+            ? transaction.assigningLedgerIDIfMissing(original.resolvedLedgerID())
+            : transaction
+        let categoryChanged = original.category != resolvedTransaction.category
         let beforeMetadata = (transactionStore as? SQLiteTransactionStore)
-            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: transaction.id) }
+            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: resolvedTransaction.id) }
         appendLedgerCloudSyncLog(
-            "账单编辑开始：\(shortID(transaction.id)) \(original.merchant) -> \(transaction.merchant)，before=\(syncMetadataSummary(beforeMetadata))"
+            "账单编辑开始：\(shortID(resolvedTransaction.id)) \(original.merchant) -> \(resolvedTransaction.merchant)，before=\(syncMetadataSummary(beforeMetadata))"
         )
 
         do {
-            try transactionStore?.update(transaction: transaction)
+            try transactionStore?.update(transaction: resolvedTransaction)
         } catch {
             lastImportSummary = "账单保存失败：\(error.localizedDescription)"
-            appendLedgerCloudSyncLog("账单编辑失败：\(shortID(transaction.id)) \(error.localizedDescription)")
+            appendLedgerCloudSyncLog("账单编辑失败：\(shortID(resolvedTransaction.id)) \(error.localizedDescription)")
             return false
         }
 
         let afterMetadata = (transactionStore as? SQLiteTransactionStore)
-            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: transaction.id) }
-        markRecentlyEdited(transaction.id)
+            .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: resolvedTransaction.id) }
+        markRecentlyEdited(resolvedTransaction.id)
         appendLedgerCloudSyncLog(
-            "账单编辑落盘：\(shortID(transaction.id)) \(transaction.merchant)，after=\(syncMetadataSummary(afterMetadata))，已加入本地保护窗口"
+            "账单编辑落盘：\(shortID(resolvedTransaction.id)) \(resolvedTransaction.merchant)，after=\(syncMetadataSummary(afterMetadata))，已加入本地保护窗口"
         )
 
-        if saveMerchantAlias && shouldOfferMerchantAlias(from: original, to: transaction) {
-            learnMerchantAliasIfNeeded(from: original, to: transaction)
+        if saveMerchantAlias && shouldOfferMerchantAlias(from: original, to: resolvedTransaction) {
+            learnMerchantAliasIfNeeded(from: original, to: resolvedTransaction)
         }
 
         // 检测分类修正——仅对内置分类记录用户偏好（自定义分类直接以字符串存储在 Transaction）
         if categoryChanged,
-           let builtIn = TransactionCategory(rawValue: transaction.category) {
-            recordCategoryCorrection(merchant: transaction.merchant, category: builtIn)
+           let builtIn = TransactionCategory(rawValue: resolvedTransaction.category) {
+            recordCategoryCorrection(merchant: resolvedTransaction.merchant, category: builtIn)
         }
 
-        transactions[index] = transaction
+        transactions[index] = resolvedTransaction
 
         let refreshedCount = refreshSameMerchantCategory && categoryChanged
             ? applyCategoryToExistingTransactions(
-                merchant: transaction.merchant,
-                category: transaction.category,
-                excluding: transaction.id
+                merchant: resolvedTransaction.merchant,
+                category: resolvedTransaction.category,
+                excluding: resolvedTransaction.id
             )
             : 0
         sortTransactions()
         if refreshedCount > 0 {
-            lastImportSummary = "已保存 \(transaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
+            lastImportSummary = "已保存 \(resolvedTransaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
         } else {
-            lastImportSummary = "已保存 \(transaction.merchant) 的修正。"
+            lastImportSummary = "已保存 \(resolvedTransaction.merchant) 的修正。"
         }
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
-        appendLedgerCloudSyncLog("账单编辑已安排 iCloud 推送：\(shortID(transaction.id))")
+        appendLedgerCloudSyncLog("账单编辑已安排 iCloud 推送：\(shortID(resolvedTransaction.id))")
         return true
     }
 
@@ -686,7 +690,9 @@ final class LedgerStore: ObservableObject {
                 occurredAt: transaction.occurredAt,
                 categoryLabel: nextCategory,
                 sourceLabel: transaction.source,
-                note: transaction.note
+                note: transaction.note,
+                ledgerID: transaction.resolvedLedgerID(),
+                hotelStayRecordID: transaction.hotelStayRecordID
             )
 
             transactions[index] = updated
@@ -988,12 +994,21 @@ final class LedgerStore: ObservableObject {
     }
 
     private func updateTransactionForDataCleaning(_ transaction: Transaction) throws {
+        let resolvedTransaction: Transaction
         if let index = transactions.firstIndex(where: { $0.id == transaction.id }) {
-            transactions[index] = transaction
+            resolvedTransaction = transaction.ledgerID == nil
+                ? transaction.assigningLedgerIDIfMissing(transactions[index].resolvedLedgerID())
+                : transaction
+            transactions[index] = resolvedTransaction
         } else if let index = deletedTransactions.firstIndex(where: { $0.id == transaction.id }) {
-            deletedTransactions[index] = transaction
+            resolvedTransaction = transaction.ledgerID == nil
+                ? transaction.assigningLedgerIDIfMissing(deletedTransactions[index].resolvedLedgerID())
+                : transaction
+            deletedTransactions[index] = resolvedTransaction
+        } else {
+            resolvedTransaction = transaction.assigningLedgerIDIfMissing()
         }
-        try transactionStore?.update(transaction: transaction)
+        try transactionStore?.update(transaction: resolvedTransaction)
     }
 
     private func softDeleteTransactionForDataCleaning(_ transaction: Transaction) throws {
@@ -1143,7 +1158,8 @@ final class LedgerStore: ObservableObject {
             occurredAt: receipt.occurredAt,
             category: receipt.suggestedCategory,
             source: receipt.source,
-            note: notePrefix
+            note: notePrefix,
+            ledgerID: TodaySpendingSummary.defaultLedgerID
         )
         recentImports.insert(receipt, at: 0)
         transactions.insert(transaction, at: 0)
@@ -1425,7 +1441,9 @@ private extension Transaction {
             occurredAt: occurredAt,
             categoryLabel: category,
             sourceLabel: source,
-            note: note
+            note: note,
+            ledgerID: ledgerID,
+            hotelStayRecordID: hotelStayRecordID
         )
     }
 
@@ -1437,7 +1455,9 @@ private extension Transaction {
             occurredAt: occurredAt,
             categoryLabel: category,
             sourceLabel: source,
-            note: note
+            note: note,
+            ledgerID: ledgerID,
+            hotelStayRecordID: hotelStayRecordID
         )
     }
 }
