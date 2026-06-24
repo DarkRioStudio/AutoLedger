@@ -45,6 +45,10 @@ MAIN_APP_REQUIRED_KEYS = {
     "ledger.scope.all",
     "ledger.action.move",
     "ledger.move.title",
+    "ledger.move.error.unavailable_target",
+    "ledger.move.error.not_found",
+    "ledger.move.error.persistence_failed_format",
+    "ledger.move.success_format",
 }
 
 MAIN_APP_REQUIRED_PREFIX_COUNTS = {

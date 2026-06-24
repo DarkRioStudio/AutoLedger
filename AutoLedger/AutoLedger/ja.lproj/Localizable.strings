@@ -414,6 +414,10 @@
 "ledger.scope.all" = "すべての台帳";
 "ledger.action.move" = "台帳を移動";
 "ledger.move.title" = "台帳へ移動";
+"ledger.move.error.unavailable_target" = "取引を移動できませんでした。移動先の台帳を利用できません。";
+"ledger.move.error.not_found" = "取引を移動できませんでした。移動する取引が見つかりません。";
+"ledger.move.error.persistence_failed_format" = "取引を移動できませんでした: %@";
+"ledger.move.success_format" = "%@ を %@ に移動しました。";
 
 "deleted_transactions.title" = "最近削除した項目";
 "deleted_transactions.empty.title" = "削除済み取引なし";

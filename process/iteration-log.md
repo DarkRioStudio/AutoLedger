@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-237 GOAL-1850 新功能文案覆盖门禁）
+更新日期：2026-06-24（ITER-238 GOAL-1851 硬编码字符串审计）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-238 GOAL-1851 硬编码字符串审计
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1851
+- 类型：本地化 / 治理 / 文档
+- 目标：审计 `v1.6.1` 新增路径和主路径中的硬编码用户可见字符串，先收口本轮新增多账本移动提示，并把剩余硬编码按风险分类记录。
+- 改动范围：`LedgerStore.moveTransaction(_:toLedgerID:)` 多账本移动结果提示；主 App 四语 `Localizable.strings`；`scripts/check_localization_coverage.py` 必备 key；新增 `versions/v1.6.1-hardcoded-string-audit.md`；版本计划、CHANGELOG 与本迭代日志回填 GOAL-1851 状态。
+- 未改动范围：未批量迁移所有历史 `lastImportSummary`；未本地化 OCR / 支付截图解析关键词；未修改默认账本持久化名称；未改变 Debug / diagnostics 导出策略；未新增截图文案、ASC metadata、TestFlight notes、Review Notes 或日文术语表；未修改业务逻辑、SQLite schema、CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：多账本移动成功、目标账本不可用、找不到账单和持久化失败四类提示改为 `ledger.move.*` 本地化 key；四语资源补齐；本地化覆盖检查新增对应必备 key；审计文档记录解析规则、Debug / 诊断、历史导入摘要、默认账本名和截图模式文案的残留分类与后续建议。
+- 未完成内容：`LedgerStore` 中删除 / 恢复、手动记账、批量编辑、数据清洗、备份恢复和 iCloud 同步等历史用户提示仍需后续按组迁移；日文截图 / ASC / Review Notes 草稿仍留给 `GOAL-1852`。
+- 测试情况：先扩展 `scripts/check_localization_coverage.py` 后执行 `python3 scripts/check_localization_coverage.py`，确认缺少 4 个 `ledger.move.*` key 时失败；补齐 Swift 和四语资源后再次执行同一命令通过。
+- 风险与注意事项：解析规则中的中文关键词是识别逻辑，不应作为 UI 文案盲目本地化；默认账本名是持久化数据，迁移策略需单独设计；历史 `lastImportSummary` 用户提示数量较多，建议后续小步拆分。
+- 回滚方式：回退 `LedgerStore.moveTransaction` 的本地化改动、四语新增 `ledger.move.*` key、覆盖检查新增必备 key、审计文档以及版本计划 / CHANGELOG / 本日志条目即可；本轮不涉及数据迁移。
+- 结论：GOAL-1851 第一版硬编码字符串审计完成，可进入 `GOAL-1852` 日文发布素材与术语表补齐。
+- 下一步建议：优先为日文支持整理术语表、截图文案、ASC metadata、TestFlight notes 和 Review Notes 草稿，并标明人工审校要求。
 
 ### ITER-237 GOAL-1850 新功能文案覆盖门禁
 - 日期：2026-06-24

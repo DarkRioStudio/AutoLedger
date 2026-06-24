@@ -414,6 +414,10 @@
 "ledger.scope.all" = "全部账本";
 "ledger.action.move" = "移动账本";
 "ledger.move.title" = "移动到账本";
+"ledger.move.error.unavailable_target" = "移动账单失败：目标账本不可用。";
+"ledger.move.error.not_found" = "移动账单失败：未找到要移动的账单。";
+"ledger.move.error.persistence_failed_format" = "移动账单失败：%@";
+"ledger.move.success_format" = "已将 %@ 移动到账本 %@。";
 
 "deleted_transactions.title" = "最近删除";
 "deleted_transactions.empty.title" = "暂无已删除账单";

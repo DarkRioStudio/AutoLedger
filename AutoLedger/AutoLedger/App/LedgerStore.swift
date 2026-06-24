@@ -697,12 +697,18 @@ final class LedgerStore: ObservableObject {
         let trimmedLedgerID = ledgerID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedLedgerID.isEmpty,
               activeLedgerProfiles.contains(where: { $0.id == trimmedLedgerID }) else {
-            lastImportSummary = "移动账单失败：目标账本不可用。"
+            lastImportSummary = localizedMessage(
+                "ledger.move.error.unavailable_target",
+                fallback: "移动账单失败：目标账本不可用。"
+            )
             return false
         }
 
         guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
-            lastImportSummary = "移动账单失败：未找到要移动的账单。"
+            lastImportSummary = localizedMessage(
+                "ledger.move.error.not_found",
+                fallback: "移动账单失败：未找到要移动的账单。"
+            )
             return false
         }
 
@@ -710,13 +716,26 @@ final class LedgerStore: ObservableObject {
         do {
             try transactionStore?.update(transaction: updated)
         } catch {
-            lastImportSummary = "移动账单失败：\(error.localizedDescription)"
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "ledger.move.error.persistence_failed_format",
+                    fallback: "移动账单失败：%@"
+                ),
+                error.localizedDescription
+            )
             return false
         }
 
         transactions[index] = updated
         sortTransactions()
-        lastImportSummary = "已将 \(updated.merchant) 移动到账本 \(ledgerName(for: trimmedLedgerID))。"
+        lastImportSummary = String(
+            format: localizedMessage(
+                "ledger.move.success_format",
+                fallback: "已将 %@ 移动到账本 %@。"
+            ),
+            updated.merchant,
+            ledgerName(for: trimmedLedgerID)
+        )
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()

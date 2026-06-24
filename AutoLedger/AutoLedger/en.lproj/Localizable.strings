@@ -414,6 +414,10 @@
 "ledger.scope.all" = "All Ledgers";
 "ledger.action.move" = "Move Ledger";
 "ledger.move.title" = "Move to Ledger";
+"ledger.move.error.unavailable_target" = "Could not move the transaction: the target ledger is unavailable.";
+"ledger.move.error.not_found" = "Could not move the transaction: the transaction was not found.";
+"ledger.move.error.persistence_failed_format" = "Could not move the transaction: %@";
+"ledger.move.success_format" = "Moved %@ to %@.";
 
 "deleted_transactions.title" = "Recently Deleted";
 "deleted_transactions.empty.title" = "No Deleted Transactions";

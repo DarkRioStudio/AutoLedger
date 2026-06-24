@@ -417,6 +417,10 @@
 "ledger.scope.all" = "全部帳本";
 "ledger.action.move" = "移動帳本";
 "ledger.move.title" = "移動到帳本";
+"ledger.move.error.unavailable_target" = "移動帳單失敗：目標帳本不可用。";
+"ledger.move.error.not_found" = "移動帳單失敗：找不到要移動的帳單。";
+"ledger.move.error.persistence_failed_format" = "移動帳單失敗：%@";
+"ledger.move.success_format" = "已將 %@ 移動到帳本 %@。";
 
 "deleted_transactions.title" = "最近刪除";
 "deleted_transactions.empty.title" = "暫無已刪除帳單";
