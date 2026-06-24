@@ -9,6 +9,12 @@
 
 ## [Unreleased]
 
+### 变更（v1.6.1）
+- [2026-06-24 +0800] 落地 `GOAL-1852` 第一段日文支持基线：新增主 App、Watch App、Watch Widgets、Control Widget Extension、Share Extension 的 `ja.lproj` 字符串资源，Xcode project `knownRegions` 新增 `ja`，并新增 `scripts/check_localization_coverage.py` 检查五组资源集的四语 key 对齐；同步确认内部 `v1.6.1` 继续映射 ASC `1.5.0`，不修改 `MARKETING_VERSION`。本轮不修改业务逻辑、SQLite schema、CloudKit schema、signing、entitlements 或 Xcode Cloud 脚本。
+- [2026-06-24 +0800] 调整 `v1.6.1` 多语言范围：将 `ja` 从新增语言候选升级为本版本明确落地的日文支持，范围覆盖 `ja.lproj`、App 内关键路径、酒店消费、多账本、设置、错误提示、App Intents / Shortcuts、截图文案、ASC 元数据、TestFlight notes、Review Notes、术语表和人工审校清单；`ko` 保留为后续候选。同步更新 README / README.en Roadmap；本轮仅文档更新，不实现代码或业务逻辑。
+- [2026-06-24 +0800] 继续完善 `versions/v1.6.1-plan.md`：将 `v1.6.1` 从单一酒店水单规划扩展为“酒店水单识别 + 多账本基础 + 新一轮多语言支持”三条主线；补充 `LedgerProfile`、默认账本迁移、`Transaction.ledgerId`、账本切换 / 归档 / 移动、酒店消费账本归属、三语文案覆盖、硬编码字符串审计、`ja` 新语言候选和对应 GOAL 队列。同步更新 README / README.en Roadmap；本轮仅文档更新，不实现代码或业务逻辑。
+- [2026-06-24 +0800] 新增 `versions/v1.6.1-plan.md`，规划 macOS 酒店水单识别与酒店消费归档能力：当前版本只纳入 A 阶段手动 PDF 导入、PDFKit 文本提取、酒店水单 schema、识别结果确认页、酒店消费列表 / 详情和确认后关联普通支出流水；B 阶段本地邮箱半自动导入与 C 阶段 Worker 云端自动化仅作为后续路线记录。同步更新 README / README.en Roadmap；本轮仅文档更新，不实现代码或业务逻辑。
+
 ### 变更（v1.6.0）
 - [2026-06-24 +0800] 扩展 App Store 截图管线覆盖 tvOS / visionOS：在现有 `tools/appstore-screenshots` 体系内新增 Apple TV 与 visionOS 的配置、导出脚本、营销渲染、预览页分组和 README 说明；tvOS / visionOS screenshot mode 支持按 scene 直接进入对应展示页，使用 DEBUG simulator 虚构演示数据，不访问真实账本、iCloud、网络或用户截图。已验证 tvOS 4 张、visionOS 3 张 `zh-Hans` store PNG 导出为 `3840x2160`，两个新平台 generic build 均通过。
 - [2026-06-24 +0800] 推进 `GOAL-1770` v1.6.0 发布资产与 smoke 收口：新增 `versions/v1.6.0-regression-baseline.md` 和 `versions/v1.6.0-review-notes.md`，记录 App Store / ASC 1.5.0 的命令级回归、全平台构建矩阵、审核说明草稿、TestFlight 测试说明和人工发布门禁。已验证离线回归、Golden 回归、iOS / iPad、Mac Catalyst、Apple Watch、tvOS、visionOS 构建均通过；Xcode Cloud archive、TestFlight 多平台安装、CloudKit Production schema、tvOS / visionOS 平台素材仍需人工确认。

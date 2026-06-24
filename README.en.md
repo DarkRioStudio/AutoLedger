@@ -123,6 +123,7 @@ The `main` branch is intended to remain the real AutoLedger development and rele
 | v1.5.0 | 1.4.0 | Baseline complete | iPad workspace, batch import, batch OCR / receipt cleanup, foundational multi-device data sync, Apple Watch complications, iPad / Mac screenshot pipeline, and Mac Catalyst workflow |
 | v1.5.1 | 1.4.0 | Release candidate | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, and App Preview v001; tvOS / visionOS and multi-ledger support are deferred |
 | v1.6.0 | 1.5.0 | First iteration in progress | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, and continued Mac / cross-platform polish |
+| v1.6.1 | 1.5.0 | Internal development | Hotel folio recognition, foundational multi-ledger support, and a new localization round: macOS manual PDF import, hotel stay review and ledger posting, default-ledger migration, ledger switching, full zh-Hans / zh-Hant / en coverage, and Japanese localization; the store version stays on ASC 1.5.0 for internal patch lines |
 
 ## License
 

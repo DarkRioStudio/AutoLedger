@@ -1,0 +1,5 @@
+"control.clipboard.title" = "クリップボード記帳";
+"control.clipboard.description" = "クリップボードの支払いスクリーンショットを読み取り、自動で保存します";
+"clipboard_import_intent.title" = "クリップボード記帳";
+"clipboard_import_intent.description" = "クリップボードの支払いスクリーンショットを読み取り、自動で保存します";
+"clipboard_import_intent.running" = "クリップボードからインポート中...";

@@ -1,0 +1,10 @@
+"widget.today.title" = "今日";
+"widget.corner_text.title" = "今日のテキスト";
+"widget.default_ledger" = "ローカル台帳";
+"widget.no_expense" = "支出なし";
+"widget.count_format" = "%d 件";
+"widget.updated_format" = "%@ 更新";
+"widget.sync_pending" = "同期待ち";
+"widget.today.description" = "文字盤で今日の AutoLedger 支出を確認します。";
+"widget.corner_text.description" = "今日の支出をアイコンと隅のラベルで文字盤に表示します。";
+"widget.corner_text.format" = "今日: %@";

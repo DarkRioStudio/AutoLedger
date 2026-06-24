@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（GOAL-1770E ASC 出口合规与平台元数据修正）
+更新日期：2026-06-24（ITER-225 GOAL-1852 日文支持基线落地）
 
 ## 记录规则
 
@@ -43,6 +43,70 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-225 GOAL-1852 日文支持基线落地
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1852
+- 类型：能力增强 / 本地化 / 测试
+- 目标：在不修改业务逻辑和对外商店版本号的前提下，落地日文支持第一段基线。
+- 改动范围：新增主 App、Watch App、Watch Widgets、Control Widget Extension、Share Extension 的 `ja.lproj` 字符串资源；Xcode project `knownRegions` 新增 `ja`；新增 `scripts/check_localization_coverage.py`；更新 `versions/v1.6.1-plan.md`、README / README.en Roadmap、CHANGELOG 与本迭代日志。
+- 未改动范围：未修改 OCR、账本、订阅、酒店水单业务逻辑；未修改 SQLite schema、CloudKit schema、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：五组资源集均已具备 `ja.lproj`；主 App、Watch App、Watch Widgets、Control Widget Extension、Share Extension 的日文 `.strings` 文件通过 plist lint；新增覆盖检查脚本可验证 `zh-Hans` / `zh-Hant` / `en` / `ja` 的 `.strings` 文件存在性和 key 集合一致性；`v1.6.1` 计划明确内部开发线继续映射 ASC `1.5.0`。
+- 未完成内容：酒店消费和多账本新功能文案需随功能实现继续补齐；日文截图文案、ASC metadata、TestFlight notes、Review Notes、术语表和人工审校尚未完成；未做真机日文 UI 截断目检。
+- 测试情况：先执行 `python3 scripts/check_localization_coverage.py`，确认缺少 `ja.lproj` 时脚本失败；补齐资源后再次执行该脚本，结果 PASS；执行 `find AutoLedger -path '*/build' -prune -o -path '*lproj/*.strings' -print0 | xargs -0 plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS；构建产物中抽查到 5 个 `ja.lproj` 目录，覆盖主 App、Watch App、Watch Widget、Control Widget 和 Share Extension。
+- 风险与注意事项：日文文案是发布前基线，仍需人工审校和多设备目检；App Store 元数据和截图不得使用未经审校的日文；后续新增字符串必须同步更新四语资源并跑覆盖检查。
+- 回滚方式：移除新增 `ja.lproj` 资源、覆盖检查脚本和 `knownRegions` 中的 `ja`，并回退版本文档、README、CHANGELOG 与本日志条目即可；不涉及数据迁移。
+- 结论：GOAL-1852 第一段日文资源基线已落地，对外版本仍保持 ASC `1.5.0`。
+- 下一步建议：把覆盖检查接入本地回归清单；随后按 GOAL-1810 / GOAL-1840 推进酒店水单和多账本时同步补新增 key 的日文文案。
+
+### ITER-224 v1.6.1 日文支持纳入范围
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：规划 / 本地化
+- 类型：文档 / 产品设计 / 本地化规划
+- 目标：将 `ja` 从新增语言候选调整为 `v1.6.1` 明确落地的日文支持，并更新 Roadmap 与版本计划。
+- 改动范围：更新 `versions/v1.6.1-plan.md`、`README.md`、`README.en.md`、`CHANGELOG.md` 与本迭代日志。
+- 未改动范围：未新增 `ja.lproj`；未修改 App 源码、本地化字符串文件、截图管线配置、ASC 元数据文件、业务逻辑、SQLite schema、CloudKit schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：`v1.6.1` 多语言目标明确包含日文支持；范围覆盖 `ja.lproj`、App 内关键路径、酒店消费、多账本、设置、错误提示、App Intents / Shortcuts、截图文案、ASC 元数据、TestFlight notes、Review Notes、术语表和人工审校清单；`ko` 保留为后续候选；`GOAL-1852` 从候选准备调整为 P0 的日文支持落地。
+- 未完成内容：本轮不落日文实际 strings、不做截图导出、不提交 ASC 日文元数据、不做人工审校。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `rg -n "日文支持|ja\\.lproj|ja|Japanese|GOAL-1852|ko|候选新增语言|新增语言候选|待本轮文档校验" versions/v1.6.1-plan.md README.md README.en.md CHANGELOG.md process/iteration-log.md`，确认 `ja` 已作为日文支持范围落入版本计划、Roadmap、CHANGELOG 和 GOAL 队列，`ko` 仅保留为后续候选；本轮仅文档变更，未运行构建或业务回归。
+- 风险与注意事项：日文发布前必须人工审校，尤其是酒店水单、账本、默认账本、归档账本、外部辅助识别等术语；未审校日文不应进入 App Store 元数据。
+- 回滚方式：如日文支持需要推迟，可把 `GOAL-1852` 恢复为候选评估，并将 README / CHANGELOG / 本日志中的“日文支持”改回“新增语言候选评估”。
+- 结论：日文支持已纳入 `v1.6.1` 规划范围，但实现仍需后续 GOAL 落地。
+- 下一步建议：实现前先建立日文术语表和 key 命名清单，再新增 `ja.lproj`，避免后续翻译反复替换 key。
+
+### ITER-223 v1.6.1 三主线规划扩展
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：规划 / 版本设计
+- 类型：文档 / 产品设计 / 架构规划
+- 目标：在既有酒店水单规划基础上，补齐 `v1.6.1` 遗留的多账本基础能力和新一轮多语言支持规划，明确本版本三条主线。
+- 改动范围：扩展 `versions/v1.6.1-plan.md`；更新 `README.md`、`README.en.md` Roadmap；更新 `CHANGELOG.md` 与本迭代日志。
+- 未改动范围：未实现代码；未修改业务逻辑、SQLite schema、CloudKit schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：`v1.6.1` 文档从单一酒店水单规划扩展为酒店水单识别、多账本基础和多语言支持三条主线；补充 `LedgerProfile`、默认账本迁移、`Transaction.ledgerId`、账本创建 / 重命名 / 归档 / 默认账本 / 账单移动、酒店消费账本归属、统计 / 导入 / 订阅 / 展示端账本口径；补充三语文案覆盖、硬编码字符串审计、Review Notes / 截图文案维护、`ja` 新语言候选和对应 GOAL 队列。
+- 未完成内容：本轮不实现多账本 schema、迁移、UI、本地化文件或新增语言；酒店水单 B/C 阶段仍只作为后续路线记录。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `rg -n "酒店水单 A 阶段|多账本基础|新一轮多语言|LedgerProfile|Transaction\\.ledgerId|targetLedgerId|HotelStayRecord\\.ledgerId|ja|GOAL-1840|GOAL-1850|待本轮文档校验" versions/v1.6.1-plan.md README.md README.en.md CHANGELOG.md process/iteration-log.md`，确认三主线、模型字段、GOAL 队列和 Roadmap / 变更记录均可检索；本轮仅文档变更，未运行构建或业务回归。
+- 风险与注意事项：多账本后续实现会涉及 SQLite / CloudKit / BackupBundle / Widget / Watch / 展示端口径，需要按 GOAL 拆小后逐步验证；新增语言不得使用未经审校的机器翻译直接发布。
+- 回滚方式：如 `v1.6.1` 需要重新收窄，可回退本轮对 `versions/v1.6.1-plan.md`、README Roadmap、CHANGELOG 和本日志条目的文档变更；不涉及代码和数据迁移。
+- 结论：`v1.6.1` 已调整为三主线规划，`v1.6.0 / ASC 1.5.0` 发布线不再阻碍新版本文档设计。
+- 下一步建议：实现前优先冻结 `LedgerProfile` / `Transaction.ledgerId` 迁移策略，再启动酒店水单模型与本地化 key 设计，避免三条主线在数据模型层反复返工。
+
+### ITER-222 v1.6.1 酒店水单识别规划
+- 日期：2026-06-24
+- 所属版本：v1.6.1
+- 所属阶段：规划 / A 阶段设计
+- 类型：文档 / 产品设计 / 架构规划
+- 目标：在版本规划和 roadmap 中补充 macOS 酒店水单识别与酒店消费归档设计，并明确当前版本只规划 A 阶段手动 PDF 导入识别。
+- 改动范围：新增 `versions/v1.6.1-plan.md`；更新 `README.md`、`README.en.md` Roadmap；更新 `CHANGELOG.md` 与本迭代日志。
+- 未改动范围：未实现代码；未修改业务逻辑、SQLite schema、Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements 或 Xcode Cloud 脚本。
+- 完成内容：新增酒店消费模块版本设计，覆盖 A/B/C 三阶段路线、来源无关识别管线、`HotelFolioSourceType`、`HotelStayDraft`、`HotelStayRecord`、`Transaction` 关联、酒店水单 schema、macOS 列表 / 详情 / 确认页建议、隐私安全要求和当前版本 A 阶段 GOAL 拆分。
+- 未完成内容：B 阶段本地邮箱半自动导入和 C 阶段 Worker 云端自动化仅作为后续路线记录；本轮不做实现、不新增测试样例、不接 PDFKit 或外部模型运行时。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `rg -n "v1\\.6\\.1|HotelStayDraft|HotelFolioSourceType|待本轮" versions/v1.6.1-plan.md README.md README.en.md CHANGELOG.md process/iteration-log.md`，确认新版本规划、数据模型和 roadmap 入口可检索；本轮仅文档变更，未运行构建或业务回归。
+- 风险与注意事项：后续实现时必须保持所有识别结果默认待确认，邮箱授权码不得上传云端，云模型调用前需要尽量脱敏；App Review 需要示例 PDF 或 Demo Mode，避免审核员必须登录真实邮箱。
+- 回滚方式：如暂不进入 v1.6.1 路线，可回退 `versions/v1.6.1-plan.md`、README Roadmap、CHANGELOG 和本日志条目；不涉及代码和数据迁移。
+- 结论：v1.6.1 酒店水单识别设计已进入文档规划，当前实现范围限定为 A 阶段手动 PDF 导入。
+- 下一步建议：进入实现前先冻结 A 阶段字段 schema、Demo PDF、隐私脱敏规则和 `Transaction` 关联策略，再拆分最小实现 GOAL。
 
 ### ITER-221 GOAL-1770E ASC 出口合规与平台元数据修正
 - 日期：2026-06-24

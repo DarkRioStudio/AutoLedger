@@ -1,0 +1,13 @@
+"share.status.recognizing" = "認識中...";
+"share.error.no_image" = "画像が見つかりません";
+"share.error.read_image_failed" = "画像を読み取れませんでした";
+"share.error.ocr_failed_format" = "OCR に失敗しました: %@";
+"share.error.recognition_failed" = "認識に失敗しました。AutoLedger を開いて手動でインポートしてください。";
+"share.error.database_failed" = "データベースを開けませんでした";
+"share.duplicate_format" = "%@ ¥%.2f はすでに存在します";
+"share.note" = "共有拡張機能からインポート";
+"share.saved_format" = "保存済み: %@ ¥%.2f";
+"share.multi_receipt_warning" = "\n画像に複数の請求が含まれている可能性があります。1 件のみ認識しました。別々のスクリーンショットとしてインポートすることを検討してください。";
+"share.error.persistence_failed" = "保存に失敗しました。AutoLedger を開いて確認してください。";
+"share.debug.parse_failed" = "共有拡張機能の解析に失敗しました";
+"share.debug.persistence_failed_format" = "保存に失敗しました: %@";
