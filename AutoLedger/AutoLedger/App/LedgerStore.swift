@@ -826,6 +826,55 @@ final class LedgerStore: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func deleteHotelStayRecord(_ record: HotelStayRecord) -> Bool {
+        let linkedTransactions = transactions.filter { transaction in
+            transaction.id == record.linkedTransactionID || transaction.hotelStayRecordID == record.id
+        }
+
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            do {
+                try sqlStore.deleteHotelStayRecord(id: record.id)
+            } catch {
+                lastImportSummary = String(
+                    format: localizedMessage(
+                        "hotel_stay.delete.error_format",
+                        fallback: "酒店消费删除失败：%@"
+                    ),
+                    error.localizedDescription
+                )
+                return false
+            }
+        } else if transactionStore != nil {
+            lastImportSummary = localizedMessage(
+                "hotel_stay.delete.error.unsupported_store",
+                fallback: "当前存储暂不支持删除酒店消费。"
+            )
+            return false
+        }
+
+        hotelStayRecords.removeAll { $0.id == record.id }
+        if !linkedTransactions.isEmpty {
+            let linkedIDs = Set(linkedTransactions.map(\.id))
+            transactions.removeAll { linkedIDs.contains($0.id) }
+            deletedTransactions.insert(contentsOf: linkedTransactions, at: 0)
+            if deletedTransactions.count > 50 {
+                deletedTransactions = Array(deletedTransactions.prefix(50))
+            }
+        }
+        lastImportSummary = String(
+            format: localizedMessage(
+                "hotel_stay.delete.success_format",
+                fallback: "已删除酒店消费：%@。"
+            ),
+            record.hotelName
+        )
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
+    }
+
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
     private func loadShareExtensionResult() {
         guard let defaults = UserDefaults(suiteName: "group.top.darkrio326.AutoLedger") else { return }

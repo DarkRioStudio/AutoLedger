@@ -8,6 +8,7 @@ struct HotelStayListView: View {
     let isImporting: Bool
     let statusMessage: String?
     let onImportPDF: (() -> Void)?
+    let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
 
@@ -17,7 +18,8 @@ struct HotelStayListView: View {
         ledgerID: String? = nil,
         isImporting: Bool = false,
         statusMessage: String? = nil,
-        onImportPDF: (() -> Void)? = nil
+        onImportPDF: (() -> Void)? = nil,
+        onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.records = records
         self.transactions = transactions
@@ -25,6 +27,7 @@ struct HotelStayListView: View {
         self.isImporting = isImporting
         self.statusMessage = statusMessage
         self.onImportPDF = onImportPDF
+        self.onDeleteRecord = onDeleteRecord
     }
 
     private var snapshot: HotelStayListSnapshot {
@@ -146,7 +149,12 @@ struct HotelStayListView: View {
             ForEach(snapshot.rows) { row in
                 if let record = records.first(where: { $0.id == row.id }) {
                     NavigationLink {
-                        HotelStayDetailView(record: record, transactions: transactions, ledgerID: ledgerID)
+                        HotelStayDetailView(
+                            record: record,
+                            transactions: transactions,
+                            ledgerID: ledgerID,
+                            onDeleteRecord: onDeleteRecord
+                        )
                     } label: {
                         HotelStayRowView(row: row)
                     }
@@ -265,20 +273,26 @@ private struct HotelStayRowView: View {
 }
 
 struct HotelStayDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var showsDeleteConfirmation = false
+
     let record: HotelStayRecord
     let transactions: [Transaction]
     let ledgerID: String?
+    let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
 
     init(
         record: HotelStayRecord,
         transactions: [Transaction] = [],
-        ledgerID: String? = nil
+        ledgerID: String? = nil,
+        onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.record = record
         self.transactions = transactions
         self.ledgerID = ledgerID
+        self.onDeleteRecord = onDeleteRecord
     }
 
     private var snapshot: HotelStayDetailSnapshot {
@@ -299,6 +313,31 @@ struct HotelStayDetailView: View {
         .background(AppTheme.screenGradient.ignoresSafeArea())
         .navigationTitle("hotel_stay.detail.title")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if onDeleteRecord != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(role: .destructive) {
+                        showsDeleteConfirmation = true
+                    } label: {
+                        Label("hotel_stay.delete.button", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .confirmationDialog(
+            "hotel_stay.delete.confirm.title",
+            isPresented: $showsDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("hotel_stay.delete.confirm.action", role: .destructive) {
+                if onDeleteRecord?(record) == true {
+                    dismiss()
+                }
+            }
+            Button("common.cancel", role: .cancel) {}
+        } message: {
+            Text("hotel_stay.delete.confirm.message")
+        }
     }
 
     private var detailHeader: some View {

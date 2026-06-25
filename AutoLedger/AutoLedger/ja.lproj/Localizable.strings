@@ -138,6 +138,13 @@
 "hotel_stay.post.success_format" = "ホテル滞在を保存しました：%@ %@ %.2f。";
 "hotel_stay.post.error.invalid_draft_format" = "ホテル滞在の記帳に失敗しました：%@";
 "hotel_stay.post.error.persistence_failed_format" = "ホテル滞在のローカル保存に失敗しました：%@";
+"hotel_stay.delete.button" = "削除";
+"hotel_stay.delete.confirm.title" = "ホテル滞在を削除しますか？";
+"hotel_stay.delete.confirm.message" = "リンク済みの支出取引も最近削除した項目に移動します。";
+"hotel_stay.delete.confirm.action" = "ホテル滞在を削除";
+"hotel_stay.delete.success_format" = "ホテル滞在を削除しました：%@。";
+"hotel_stay.delete.error_format" = "ホテル滞在の削除に失敗しました：%@";
+"hotel_stay.delete.error.unsupported_store" = "この保存先では、ホテル滞在の削除はまだサポートされていません。";
 "hotel_stay.source.manual_pdf" = "手動 PDF";
 "hotel_stay.source.local_email_imap" = "ローカルメール";
 "hotel_stay.source.cloud_worker" = "クラウド Worker";

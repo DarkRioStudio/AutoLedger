@@ -436,6 +436,38 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     }
 
     public func deleteHotelStayRecord(id: UUID) throws {
+        let linkedTransactionID = try loadLinkedTransactionIDForHotelStayRecord(id: id)
+
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            if let linkedTransactionID {
+                try delete(transactionID: linkedTransactionID)
+            }
+            try deleteHotelStayRecordOnly(id: id)
+            try execute("COMMIT;")
+        } catch {
+            try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
+    private func loadLinkedTransactionIDForHotelStayRecord(id: UUID) throws -> UUID? {
+        let sql = "SELECT linked_transaction_id FROM hotel_stay_records WHERE id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, id.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_ROW else {
+            return nil
+        }
+        return Self.uuid(from: statement, index: 0)
+    }
+
+    private func deleteHotelStayRecordOnly(id: UUID) throws {
         let sql = "DELETE FROM hotel_stay_records WHERE id = ?;"
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }

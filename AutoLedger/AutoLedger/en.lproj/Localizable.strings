@@ -138,6 +138,13 @@
 "hotel_stay.post.success_format" = "Archived hotel stay: %@ %@ %.2f.";
 "hotel_stay.post.error.invalid_draft_format" = "Hotel stay posting failed: %@";
 "hotel_stay.post.error.persistence_failed_format" = "Hotel stay local save failed: %@";
+"hotel_stay.delete.button" = "Delete";
+"hotel_stay.delete.confirm.title" = "Delete hotel stay?";
+"hotel_stay.delete.confirm.message" = "The linked expense transaction will also move to Recently Deleted.";
+"hotel_stay.delete.confirm.action" = "Delete Hotel Stay";
+"hotel_stay.delete.success_format" = "Deleted hotel stay: %@.";
+"hotel_stay.delete.error_format" = "Hotel stay deletion failed: %@";
+"hotel_stay.delete.error.unsupported_store" = "This storage does not support deleting hotel stays yet.";
 "hotel_stay.source.manual_pdf" = "Manual PDF";
 "hotel_stay.source.local_email_imap" = "Local Email";
 "hotel_stay.source.cloud_worker" = "Cloud Worker";

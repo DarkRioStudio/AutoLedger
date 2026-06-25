@@ -3621,7 +3621,17 @@ struct OfflineRegression {
 
         try reopenedStore.deleteHotelStayRecord(id: hotelStayID)
         let recordsAfterDelete = try reopenedStore.loadHotelStayRecords()
+        let transactionsAfterDelete = try reopenedStore.loadTransactions()
+        let deletedTransactionsAfterDelete = try reopenedStore.loadDeletedTransactions()
         reporter.check(recordsAfterDelete.isEmpty, "SQLite deletes hotel stay record")
+        reporter.check(
+            !transactionsAfterDelete.contains { $0.id == transactionID },
+            "SQLite deleting hotel stay removes linked transaction from active ledger"
+        )
+        reporter.check(
+            deletedTransactionsAfterDelete.contains { $0.id == transactionID && $0.hotelStayRecordID == hotelStayID },
+            "SQLite deleting hotel stay keeps linked transaction tombstone"
+        )
     }
 
     private static func verifyLedgerStoreHotelStayPosting(reporter: RegressionReporter) throws {
@@ -3674,10 +3684,35 @@ struct OfflineRegression {
             "LedgerStore links hotel transaction to posted stay"
         )
 
+        guard let postedRecord = ledgerStore.hotelStayRecords.first,
+              let linkedTransaction = ledgerStore.transactions.first else {
+            reporter.check(false, "LedgerStore exposes posted hotel stay and transaction before delete")
+            return
+        }
+        reporter.check(ledgerStore.deleteHotelStayRecord(postedRecord), "LedgerStore deletes posted hotel stay record")
+        reporter.check(ledgerStore.hotelStayRecords.isEmpty, "LedgerStore removes deleted hotel stay from memory")
+        reporter.check(
+            !ledgerStore.transactions.contains { $0.id == linkedTransaction.id },
+            "LedgerStore removes linked hotel transaction from active memory"
+        )
+        reporter.check(
+            ledgerStore.deletedTransactions.contains { $0.id == linkedTransaction.id && $0.hotelStayRecordID == postedRecord.id },
+            "LedgerStore keeps linked hotel transaction in deleted memory"
+        )
+        reporter.check((try? sqlStore.loadHotelStayRecords())?.isEmpty == true, "LedgerStore persists deleted hotel stay")
+        reporter.check(
+            (try? sqlStore.loadTransactions())?.contains { $0.id == linkedTransaction.id } == false,
+            "LedgerStore persists linked hotel transaction soft delete"
+        )
+        reporter.check(
+            (try? sqlStore.loadDeletedTransactions())?.contains { $0.id == linkedTransaction.id && $0.hotelStayRecordID == postedRecord.id } == true,
+            "LedgerStore persists linked hotel transaction tombstone"
+        )
+
         let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-ledger-store.sqlite3")
         let reopenedLedgerStore = LedgerStore(transactionStore: reopenedStore)
-        reporter.check(reopenedLedgerStore.hotelStayRecords.count == 1, "LedgerStore reloads hotel stays from SQLite")
-        reporter.check(reopenedLedgerStore.transactions.count == 1, "LedgerStore reloads linked hotel transaction")
+        reporter.check(reopenedLedgerStore.hotelStayRecords.isEmpty, "LedgerStore reloads deleted hotel stays from SQLite")
+        reporter.check(reopenedLedgerStore.transactions.isEmpty, "LedgerStore reloads linked hotel transaction soft delete")
     }
 
     private static func verifyLedgerImportFlow(using reporter: RegressionReporter) async throws {

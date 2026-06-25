@@ -2411,6 +2411,11 @@ private struct IPadHotelStayWorkspaceView: View {
             statusMessage: statusMessage,
             onImportPDF: {
                 showsPDFImporter = true
+            },
+            onDeleteRecord: { record in
+                let didDelete = store.deleteHotelStayRecord(record)
+                statusMessage = store.lastImportSummary
+                return didDelete
             }
         )
         .fileImporter(

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-251 GOAL-1863 日期格式候选解析）
+更新日期：2026-06-25（ITER-252 GOAL-1817 酒店消费删除闭环）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-252 GOAL-1817 酒店消费删除闭环
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1817
+- 类型：能力增强 / 酒店消费 / 持久化 / UI
+- 目标：补齐正式酒店消费的用户可见删除闭环，删除酒店消费时同步处理关联普通支出流水，避免列表和账本状态不一致。
+- 改动范围：`SQLiteTransactionStore.deleteHotelStayRecord(id:)` 改为事务化删除并软删除关联普通流水；`LedgerStore` 新增 `deleteHotelStayRecord(_:)` 并同步内存状态、最近删除、Widget、自动备份和 CloudKit push 调度；酒店消费详情页新增删除按钮和确认弹窗；iPad / Mac 酒店消费工作台传入删除回调；主 App 四语删除文案补齐；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未持久化 `HotelStayDraft` 草稿队列；未实现草稿删除列表；未实现酒店消费详情跳转普通账单详情 / 编辑页；未新增 `HotelStayRecord` 备份 / CloudKit 同步 payload；未新增邮箱 / Worker 自动化；未修改 signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：SQLite 删除酒店消费时会先读取 `linked_transaction_id`，同一事务内把关联普通支出流水软删除为 tombstone，再删除正式酒店消费记录；`LedgerStore` 删除成功后从 `hotelStayRecords` 和 active `transactions` 移除相关对象，并把关联普通流水放入 `deletedTransactions`；详情页删除需二次确认，成功后返回列表并展示状态消息。
+- 未完成内容：酒店消费详情到普通账单详情的导航、酒店草稿队列持久化 / 删除、酒店记录备份 / CloudKit 同步留给后续 goal。
+- 测试情况：先新增 SQLite 删除关联流水回归并运行 `bash scripts/run_offline_regression.sh`，观察到“关联普通流水仍在 active ledger、没有 tombstone”的 RED 失败；实现 SQLite 事务化删除后同一回归通过。随后新增 `LedgerStore.deleteHotelStayRecord(_:)` 行为回归，观察到方法缺失的 RED 编译失败；实现状态层和 UI 回调后执行 `bash scripts/run_offline_regression.sh` 通过。执行 `bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 均通过；首次并行运行 Mac Catalyst build 时命中 DerivedData `build.db` locked，待 iOS build 结束后单独执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 通过。
+- 风险与注意事项：当前删除酒店消费会把确认时自动生成 / 关联的普通支出移入最近删除；如果未来支持一个酒店消费关联多条普通流水，需要扩展关联模型和删除确认文案。当前 `HotelStayRecord` 本身仍未进入备份 / CloudKit payload，跨设备酒店归档同步仍未完成。
+- 回滚方式：回退 `SQLiteTransactionStore.deleteHotelStayRecord(id:)` 的事务化删除、移除 `LedgerStore.deleteHotelStayRecord(_:)`、撤销酒店详情删除按钮 / 工作台回调 / 四语文案，并删除离线回归新增断言与版本文档记录即可；本轮无 schema 迁移。
+- 结论：酒店消费 A 阶段已具备用户可见的正式记录删除闭环，删除后普通账本不会残留孤立酒店支出。
+- 下一步建议：继续补酒店消费详情到普通账单详情 / 编辑页跳转，或推进 `HotelStayRecord` 备份 / CloudKit 同步 payload。
 
 ### ITER-251 GOAL-1863 日期格式候选解析
 - 日期：2026-06-25
