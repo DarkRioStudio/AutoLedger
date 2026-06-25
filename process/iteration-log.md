@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-241 GOAL-1815 Mac 酒店消费入口修复）
+更新日期：2026-06-25（ITER-242 GOAL-1816 Mac 酒店消费 A 阶段可测试闭环）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-242 GOAL-1816 Mac 酒店消费 A 阶段可测试闭环
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1816
+- 类型：能力增强 / macOS / 酒店消费
+- 目标：把 Mac 端“酒店消费”从可见入口推进到可人工测试的 A 阶段闭环：手动导入本地酒店水单 PDF，提取文本，进入模型解析或人工复核，用户确认后生成正式酒店消费记录和关联普通支出流水。
+- 改动范围：`SQLiteTransactionStore` 酒店记录持久化；`LedgerStore` 酒店消费状态与确认入账 API；Mac / iPad 工作台酒店消费页 PDF 导入、解析状态和复核 sheet；App 层 OpenAI-compatible 酒店水单解析 client；主 App 四语导入 / 入账提示文案；离线回归；版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未持久化 `HotelStayDraft` 草稿队列；未实现本地邮箱 / IMAP 扫描、Worker 云端自动化、酒店消费删除 UI、酒店详情跳普通账单详情、酒店记录备份 / CloudKit 同步；未修改 signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增 `hotel_stay_records` SQLite 表，支持 `HotelStayRecord` 保存 / 读取 / 删除；新增原子保存 `HotelStayRecord + Transaction` 路径；`LedgerStore` 启动和刷新时加载酒店消费记录，确认草稿后写入正式酒店记录与普通流水并刷新列表；Mac / iPad “酒店消费”页支持选择 PDF、PDFKit 文本提取、外部辅助识别解析、复核 sheet、确认入账和状态提示；外部识别未启用、缺 key / endpoint 或请求失败时仍打开带原始文本的人工复核草稿。
+- 未完成内容：待确认草稿列表、删除 UI、酒店记录备份 / CloudKit 同步、详情页跳转普通账单、邮箱半自动导入和 Worker 自动化仍留给后续 GOAL。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh` 通过，新增覆盖酒店记录 SQLite 持久化和 `LedgerStore` 确认酒店草稿后生成 `HotelStayRecord + Transaction`；执行 `bash scripts/run_hotel_pdf_import_smoke.sh`、`python3 scripts/check_localization_coverage.py`、`git diff --check`、Mac Catalyst build 和 iOS generic build 均通过。
+- 风险与注意事项：外部模型解析复用现有外部辅助识别设置，未配置时不会自动解析，只进入人工复核；当前没有草稿队列，关闭复核 sheet 后需重新导入；酒店记录尚未进入备份 / CloudKit 同步，跨设备展示仍需后续补齐。
+- 回滚方式：回退 `SQLiteTransactionStore` 酒店记录表和 API、`LedgerStore` 酒店记录状态 / 入账 API、酒店消费页 PDF 导入串接、`HotelFolioExternalParseClient`、新增本地化 key、离线回归断言以及版本计划 / CHANGELOG / 本日志条目；已创建的本地 `hotel_stay_records` 表可保留为空兼容表。
+- 结论：Mac 端酒店消费 A 阶段已经具备手动 PDF 导入、复核确认、正式归档和关联普通流水的最小可测闭环。
+- 下一步建议：用真实或 Demo 酒店水单 PDF 在 Mac App 上做人工验收；若体验稳定，下一轮优先补酒店记录删除 UI 和酒店记录备份 / CloudKit 同步边界。
 
 ### ITER-241 GOAL-1815 Mac 酒店消费入口修复
 - 日期：2026-06-25

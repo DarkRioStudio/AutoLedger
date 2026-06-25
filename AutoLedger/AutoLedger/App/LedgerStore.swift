@@ -40,6 +40,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var recentImports: [ImportedReceipt] = []
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
+    @Published private(set) var hotelStayRecords: [HotelStayRecord] = []
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
     @Published var lastImportSummary: String?
@@ -83,6 +84,7 @@ final class LedgerStore: ObservableObject {
         self.subscriptions = LedgerStore.loadInitialSubscriptions(using: transactionStore)
         self.categoryCorrections = LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
+        self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
@@ -538,6 +540,7 @@ final class LedgerStore: ObservableObject {
             subscriptions       = (try? sqlStore.loadSubscriptions())        ?? subscriptions
             categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
             merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
+            hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())     ?? hotelStayRecords
         }
         loadShareExtensionResult()
     }
@@ -768,6 +771,59 @@ final class LedgerStore: ObservableObject {
             imageSource: .voiceIntent,
             usedRuleFallback: true
         )
+    }
+
+    @discardableResult
+    func postConfirmedHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
+        let postingService = HotelStayLedgerPostingService()
+        let result: HotelStayLedgerPostingResult
+        do {
+            result = try postingService.post(draft)
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.post.error.invalid_draft_format",
+                    fallback: "酒店消费入账失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        do {
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                try sqlStore.save(hotelStayRecord: result.hotelStayRecord, linkedTransaction: result.transaction)
+            } else {
+                try transactionStore?.save(transaction: result.transaction)
+            }
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.post.error.persistence_failed_format",
+                    fallback: "酒店消费写入本地存储失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        hotelStayRecords.insert(result.hotelStayRecord, at: 0)
+        sortHotelStayRecords()
+        transactions.insert(result.transaction, at: 0)
+        sortTransactions()
+        lastImportSummary = String(
+            format: localizedMessage(
+                "hotel_stay.post.success_format",
+                fallback: "已归档酒店消费：%@ %@ %.2f。"
+            ),
+            result.hotelStayRecord.hotelName,
+            result.hotelStayRecord.currency,
+            result.hotelStayRecord.totalAmount
+        )
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
     }
 
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
@@ -1470,6 +1526,17 @@ final class LedgerStore: ObservableObject {
         }
     }
 
+    private func sortHotelStayRecords() {
+        hotelStayRecords.sort { lhs, rhs in
+            let lhsDate = lhs.checkOutDate ?? ""
+            let rhsDate = rhs.checkOutDate ?? ""
+            if lhsDate == rhsDate {
+                return lhs.createdAt > rhs.createdAt
+            }
+            return lhsDate > rhsDate
+        }
+    }
+
     private func localizedMessage(_ key: String, fallback: String) -> String {
         let value = NSLocalizedString(key, comment: "")
         return value == key ? fallback : value
@@ -1523,6 +1590,11 @@ final class LedgerStore: ObservableObject {
     private static func loadInitialDebugRecords(using store: TransactionStore?) -> [ImportDebugRecord] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
         return (try? sqlStore.loadDebugEvents()) ?? []
+    }
+
+    private static func loadInitialHotelStayRecords(using store: TransactionStore?) -> [HotelStayRecord] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
+        return (try? sqlStore.loadHotelStayRecords()) ?? []
     }
 
     // MARK: - Subscriptions

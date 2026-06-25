@@ -5,17 +5,26 @@ struct HotelStayListView: View {
     let records: [HotelStayRecord]
     let transactions: [Transaction]
     let ledgerID: String?
+    let isImporting: Bool
+    let statusMessage: String?
+    let onImportPDF: (() -> Void)?
 
     private let presenter = HotelStayArchivePresenter()
 
     init(
         records: [HotelStayRecord],
         transactions: [Transaction] = [],
-        ledgerID: String? = nil
+        ledgerID: String? = nil,
+        isImporting: Bool = false,
+        statusMessage: String? = nil,
+        onImportPDF: (() -> Void)? = nil
     ) {
         self.records = records
         self.transactions = transactions
         self.ledgerID = ledgerID
+        self.isImporting = isImporting
+        self.statusMessage = statusMessage
+        self.onImportPDF = onImportPDF
     }
 
     private var snapshot: HotelStayListSnapshot {
@@ -25,14 +34,28 @@ struct HotelStayListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if records.isEmpty {
-                    ContentUnavailableView(
-                        "hotel_stay.list.empty.title",
-                        systemImage: "bed.double",
-                        description: Text("hotel_stay.list.empty.description")
-                    )
+                if snapshot.rows.isEmpty {
+                    VStack(spacing: 16) {
+                        if onImportPDF != nil {
+                            importButton
+                        }
+                        if let statusMessage {
+                            statusRow(statusMessage)
+                                .padding(.horizontal, 20)
+                        }
+                        ContentUnavailableView(
+                            "hotel_stay.list.empty.title",
+                            systemImage: "bed.double",
+                            description: Text("hotel_stay.list.empty.description")
+                        )
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(AppTheme.screenGradient.ignoresSafeArea())
                 } else {
                     List {
+                        if onImportPDF != nil || statusMessage != nil {
+                            importSection
+                        }
                         summarySection
                         staySection
                     }
@@ -41,6 +64,59 @@ struct HotelStayListView: View {
                 }
             }
             .navigationTitle("hotel_stay.list.title")
+            .toolbar {
+                if onImportPDF != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            onImportPDF?()
+                        } label: {
+                            Label("hotel_stay.import.pdf", systemImage: "doc.badge.plus")
+                        }
+                        .disabled(isImporting)
+                    }
+                }
+            }
+        }
+    }
+
+    private var importSection: some View {
+        Section {
+            if onImportPDF != nil {
+                importButton
+            }
+            if let statusMessage {
+                statusRow(statusMessage)
+            }
+        }
+        .listRowBackground(AppTheme.card)
+    }
+
+    private var importButton: some View {
+        Button {
+            onImportPDF?()
+        } label: {
+            Label(
+                isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.pdf",
+                systemImage: isImporting ? "hourglass" : "doc.badge.plus"
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(isImporting)
+    }
+
+    private func statusRow(_ message: String) -> some View {
+        Label {
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(AppTheme.mutedInk)
+                .textSelection(.enabled)
+        } icon: {
+            if isImporting {
+                ProgressView()
+            } else {
+                Image(systemName: "info.circle")
+            }
         }
     }
 

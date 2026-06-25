@@ -2393,6 +2393,10 @@ private struct IPadBatchImportWorkspaceView: View {
 
 private struct IPadHotelStayWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
+    @State private var showsPDFImporter = false
+    @State private var reviewDraft: HotelStayDraft?
+    @State private var statusMessage: String?
+    @State private var isImporting = false
 
     private var ledgerID: String? {
         store.isShowingAllLedgers ? nil : store.selectedLedgerID
@@ -2400,10 +2404,78 @@ private struct IPadHotelStayWorkspaceView: View {
 
     var body: some View {
         HotelStayListView(
-            records: [],
+            records: store.hotelStayRecords,
             transactions: store.visibleTransactions,
-            ledgerID: ledgerID
+            ledgerID: ledgerID,
+            isImporting: isImporting,
+            statusMessage: statusMessage,
+            onImportPDF: {
+                showsPDFImporter = true
+            }
         )
+        .fileImporter(
+            isPresented: $showsPDFImporter,
+            allowedContentTypes: [.pdf],
+            allowsMultipleSelection: false
+        ) { result in
+            Task {
+                await importSelectedPDF(result)
+            }
+        }
+        .sheet(item: $reviewDraft) { draft in
+            HotelStayReviewView(
+                draft: draft,
+                onConfirm: { confirmedDraft in
+                    if store.postConfirmedHotelStayDraft(confirmedDraft) {
+                        statusMessage = String(localized: "hotel_stay.import.status.posted")
+                    } else {
+                        statusMessage = store.lastImportSummary
+                    }
+                },
+                onReject: { _ in
+                    statusMessage = String(localized: "hotel_stay.import.status.rejected")
+                }
+            )
+        }
+    }
+
+    @MainActor
+    private func importSelectedPDF(_ result: Result<[URL], Error>) async {
+        isImporting = true
+        statusMessage = String(localized: "hotel_stay.import.status.extracting")
+        defer {
+            isImporting = false
+        }
+
+        do {
+            guard let url = try result.get().first else {
+                statusMessage = String(localized: "hotel_stay.import.error.no_file")
+                return
+            }
+
+            var draft = try HotelFolioManualPDFImporter().importPDF(
+                at: url,
+                targetLedgerID: store.targetLedgerIDForNewTransactions
+            )
+            statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
+
+            do {
+                draft = try await HotelFolioExternalParseClient().parse(draft)
+                statusMessage = String(localized: "hotel_stay.import.status.parsed")
+            } catch {
+                statusMessage = String(
+                    format: String(localized: "hotel_stay.import.status.manual_review_format"),
+                    error.localizedDescription
+                )
+            }
+
+            reviewDraft = draft
+        } catch {
+            statusMessage = String(
+                format: String(localized: "hotel_stay.import.status.failed_format"),
+                error.localizedDescription
+            )
+        }
     }
 }
 

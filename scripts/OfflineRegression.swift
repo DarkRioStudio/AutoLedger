@@ -71,6 +71,8 @@ struct OfflineRegression {
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
+        try verifyHotelStaySQLitePersistence(reporter: reporter)
+        try verifyLedgerStoreHotelStayPosting(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyLedgerCSVCodec(reporter: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -3222,6 +3224,135 @@ struct OfflineRegression {
             loadedSubscriptions.first { $0.id == editedSubscription.id }?.status == .paused,
             "SQLite subscription update persists paused status"
         )
+    }
+
+    private static func verifyHotelStaySQLitePersistence(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerHotelStayPersistence-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-stays.sqlite3")
+        let hotelStayID = UUID(uuidString: "00000000-0000-0000-0000-000000001861") ?? UUID()
+        let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001862") ?? UUID()
+        let createdAt = AppFormatters.parseFlexibleDate("2026-06-25 10:00") ?? .now
+        let record = HotelStayRecord(
+            id: hotelStayID,
+            ledgerID: "travel-ledger",
+            linkedTransactionID: transactionID,
+            hotelName: "Demo Bay Hotel",
+            hotelGroup: "Demo Hospitality",
+            hotelBrand: "Demo Suites",
+            city: "Tokyo",
+            country: "Japan",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            roomType: "King Bay View",
+            confirmationNumber: "ABC123",
+            currency: "JPY",
+            roomCharge: 40000,
+            taxAmount: 4000,
+            serviceCharge: 3000,
+            foodBeverageAmount: 2500,
+            otherAmount: 500,
+            totalAmount: 50000,
+            paymentMethod: "Visa",
+            sourceType: .manualPDF,
+            sourceFileName: "demo-folio.pdf",
+            confidence: 0.91,
+            rawText: "Demo Bay Hotel raw folio text",
+            createdAt: createdAt,
+            updatedAt: createdAt
+        )
+        let transaction = Transaction(
+            id: transactionID,
+            merchant: "Demo Bay Hotel",
+            amount: 50000,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-06-22") ?? createdAt,
+            categoryLabel: "酒店住宿",
+            sourceLabel: ReceiptSource.manual.rawValue,
+            note: "入住：2026-06-20；退房：2026-06-22",
+            ledgerID: "travel-ledger",
+            hotelStayRecordID: hotelStayID
+        )
+
+        try store.save(hotelStayRecord: record, linkedTransaction: transaction)
+
+        let loadedRecords = try store.loadHotelStayRecords()
+        let loadedTransactions = try store.loadTransactions()
+        reporter.check(loadedRecords == [record], "SQLite saves hotel stay record")
+        reporter.check(loadedTransactions.contains(transaction), "SQLite saves linked hotel transaction")
+        reporter.check(
+            loadedTransactions.first { $0.id == transactionID }?.hotelStayRecordID == hotelStayID,
+            "SQLite linked hotel transaction keeps hotel stay id"
+        )
+
+        let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-stays.sqlite3")
+        let reopenedRecords = try reopenedStore.loadHotelStayRecords()
+        reporter.check(reopenedRecords == [record], "SQLite hotel stay records survive store reopen")
+
+        try reopenedStore.deleteHotelStayRecord(id: hotelStayID)
+        let recordsAfterDelete = try reopenedStore.loadHotelStayRecords()
+        reporter.check(recordsAfterDelete.isEmpty, "SQLite deletes hotel stay record")
+    }
+
+    private static func verifyLedgerStoreHotelStayPosting(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerHotelStayLedgerStore-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let sqlStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-ledger-store.sqlite3")
+        let ledgerStore = LedgerStore(transactionStore: sqlStore)
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            targetLedgerID: "travel-ledger",
+            sourceFileName: "demo-folio.pdf",
+            rawText: "Demo Bay Hotel raw folio text",
+            parsedPayload: HotelFolioParsedPayload(
+                hotelName: "Demo Bay Hotel",
+                brand: "Demo Suites",
+                group: "Demo Hospitality",
+                city: "Tokyo",
+                country: "Japan",
+                checkInDate: "2026-06-20",
+                checkOutDate: "2026-06-22",
+                nights: 2,
+                roomType: "King Bay View",
+                confirmationNumber: "ABC123",
+                currency: "JPY",
+                roomCharge: 40000,
+                tax: 4000,
+                serviceCharge: 3000,
+                foodBeverage: 2500,
+                otherCharges: 500,
+                totalAmount: 50000,
+                paymentMethod: "Visa",
+                confidence: 0.91,
+                rawTextExcerpt: "Demo folio excerpt"
+            ),
+            confidence: 0.91,
+            status: .confirmed
+        )
+
+        let didPost = ledgerStore.postConfirmedHotelStayDraft(draft)
+        reporter.check(didPost, "LedgerStore posts confirmed hotel stay draft")
+        reporter.check(ledgerStore.hotelStayRecords.count == 1, "LedgerStore publishes hotel stay record")
+        reporter.check(ledgerStore.transactions.count == 1, "LedgerStore publishes linked hotel transaction")
+        reporter.check(
+            ledgerStore.transactions.first?.hotelStayRecordID == ledgerStore.hotelStayRecords.first?.id,
+            "LedgerStore links hotel transaction to posted stay"
+        )
+
+        let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-ledger-store.sqlite3")
+        let reopenedLedgerStore = LedgerStore(transactionStore: reopenedStore)
+        reporter.check(reopenedLedgerStore.hotelStayRecords.count == 1, "LedgerStore reloads hotel stays from SQLite")
+        reporter.check(reopenedLedgerStore.transactions.count == 1, "LedgerStore reloads linked hotel transaction")
     }
 
     private static func verifyLedgerImportFlow(using reporter: RegressionReporter) async throws {

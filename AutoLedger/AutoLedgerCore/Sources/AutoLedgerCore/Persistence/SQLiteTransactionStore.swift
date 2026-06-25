@@ -393,6 +393,113 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         return try loadTransactions()
     }
 
+    // MARK: - Hotel Stays
+
+    public func loadHotelStayRecords() throws -> [HotelStayRecord] {
+        let sql = """
+        SELECT id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
+               check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
+               room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
+               payment_method, source_type, source_file_name, confidence, raw_text, created_at, updated_at
+        FROM hotel_stay_records
+        ORDER BY check_out_date DESC, created_at DESC;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        var records: [HotelStayRecord] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let record = Self.hotelStayRecord(from: statement) else { continue }
+            records.append(record)
+        }
+        return records
+    }
+
+    public func save(hotelStayRecord record: HotelStayRecord) throws {
+        try upsertHotelStayRecord(record)
+    }
+
+    public func save(hotelStayRecord record: HotelStayRecord, linkedTransaction transaction: Transaction) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try save(transaction: transaction)
+            try upsertHotelStayRecord(record)
+            try execute("COMMIT;")
+        } catch {
+            try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
+    public func deleteHotelStayRecord(id: UUID) throws {
+        let sql = "DELETE FROM hotel_stay_records WHERE id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, id.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    private func upsertHotelStayRecord(_ record: HotelStayRecord) throws {
+        let sql = """
+        INSERT INTO hotel_stay_records (
+            id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
+            check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
+            room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
+            payment_method, source_type, source_file_name, confidence, raw_text, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            ledger_id = excluded.ledger_id,
+            linked_transaction_id = excluded.linked_transaction_id,
+            hotel_name = excluded.hotel_name,
+            hotel_group = excluded.hotel_group,
+            hotel_brand = excluded.hotel_brand,
+            city = excluded.city,
+            country = excluded.country,
+            check_in_date = excluded.check_in_date,
+            check_out_date = excluded.check_out_date,
+            nights = excluded.nights,
+            room_type = excluded.room_type,
+            confirmation_number = excluded.confirmation_number,
+            currency = excluded.currency,
+            room_charge = excluded.room_charge,
+            tax_amount = excluded.tax_amount,
+            service_charge = excluded.service_charge,
+            food_beverage_amount = excluded.food_beverage_amount,
+            other_amount = excluded.other_amount,
+            total_amount = excluded.total_amount,
+            payment_method = excluded.payment_method,
+            source_type = excluded.source_type,
+            source_file_name = excluded.source_file_name,
+            confidence = excluded.confidence,
+            raw_text = excluded.raw_text,
+            updated_at = excluded.updated_at;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        bind(hotelStayRecord: record, to: statement)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
     // MARK: - Ledger Profiles
 
     public func loadLedgerProfiles(includeArchived: Bool = true) throws -> [LedgerProfile] {
@@ -700,6 +807,42 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         guard sqlite3_exec(db, ledgerProfilesSQL, nil, nil, nil) == SQLITE_OK else {
             throw SQLiteTransactionStoreError.executeStatement(ledgerProfilesSQL)
+        }
+
+        let hotelStayRecordsSQL = """
+        CREATE TABLE IF NOT EXISTS hotel_stay_records (
+            id TEXT PRIMARY KEY,
+            ledger_id TEXT NOT NULL,
+            linked_transaction_id TEXT,
+            hotel_name TEXT NOT NULL,
+            hotel_group TEXT,
+            hotel_brand TEXT,
+            city TEXT,
+            country TEXT,
+            check_in_date TEXT,
+            check_out_date TEXT,
+            nights INTEGER,
+            room_type TEXT,
+            confirmation_number TEXT,
+            currency TEXT NOT NULL,
+            room_charge REAL NOT NULL DEFAULT 0,
+            tax_amount REAL NOT NULL DEFAULT 0,
+            service_charge REAL NOT NULL DEFAULT 0,
+            food_beverage_amount REAL NOT NULL DEFAULT 0,
+            other_amount REAL NOT NULL DEFAULT 0,
+            total_amount REAL NOT NULL,
+            payment_method TEXT,
+            source_type TEXT NOT NULL,
+            source_file_name TEXT,
+            confidence REAL NOT NULL DEFAULT 0,
+            raw_text TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """
+
+        guard sqlite3_exec(db, hotelStayRecordsSQL, nil, nil, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.executeStatement(hotelStayRecordsSQL)
         }
 
         let debugSQL = """
@@ -1407,6 +1550,93 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
 
         return items
+    }
+
+    private func bind(hotelStayRecord record: HotelStayRecord, to statement: OpaquePointer?) {
+        sqlite3_bind_text(statement, 1, record.id.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, record.ledgerID, -1, sqliteTransient)
+        bindOptionalUUID(record.linkedTransactionID, to: statement, at: 3)
+        sqlite3_bind_text(statement, 4, record.hotelName, -1, sqliteTransient)
+        bindOptionalString(record.hotelGroup, to: statement, at: 5)
+        bindOptionalString(record.hotelBrand, to: statement, at: 6)
+        bindOptionalString(record.city, to: statement, at: 7)
+        bindOptionalString(record.country, to: statement, at: 8)
+        bindOptionalString(record.checkInDate, to: statement, at: 9)
+        bindOptionalString(record.checkOutDate, to: statement, at: 10)
+        if let nights = record.nights {
+            sqlite3_bind_int(statement, 11, Int32(nights))
+        } else {
+            sqlite3_bind_null(statement, 11)
+        }
+        bindOptionalString(record.roomType, to: statement, at: 12)
+        bindOptionalString(record.confirmationNumber, to: statement, at: 13)
+        sqlite3_bind_text(statement, 14, record.currency, -1, sqliteTransient)
+        sqlite3_bind_double(statement, 15, record.roomCharge)
+        sqlite3_bind_double(statement, 16, record.taxAmount)
+        sqlite3_bind_double(statement, 17, record.serviceCharge)
+        sqlite3_bind_double(statement, 18, record.foodBeverageAmount)
+        sqlite3_bind_double(statement, 19, record.otherAmount)
+        sqlite3_bind_double(statement, 20, record.totalAmount)
+        bindOptionalString(record.paymentMethod, to: statement, at: 21)
+        sqlite3_bind_text(statement, 22, record.sourceType.rawValue, -1, sqliteTransient)
+        bindOptionalString(record.sourceFileName, to: statement, at: 23)
+        sqlite3_bind_double(statement, 24, record.confidence)
+        sqlite3_bind_text(statement, 25, record.rawText, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 26, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 27, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
+    }
+
+    private static func hotelStayRecord(from statement: OpaquePointer?) -> HotelStayRecord? {
+        guard
+            let idCString = sqlite3_column_text(statement, 0),
+            let ledgerCString = sqlite3_column_text(statement, 1),
+            let hotelNameCString = sqlite3_column_text(statement, 3),
+            let currencyCString = sqlite3_column_text(statement, 13),
+            let sourceTypeCString = sqlite3_column_text(statement, 21),
+            let rawTextCString = sqlite3_column_text(statement, 24),
+            let createdCString = sqlite3_column_text(statement, 25),
+            let updatedCString = sqlite3_column_text(statement, 26),
+            let id = UUID(uuidString: String(cString: idCString)),
+            let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
+            let createdAt = storageFormatter.date(from: String(cString: createdCString)),
+            let updatedAt = storageFormatter.date(from: String(cString: updatedCString))
+        else {
+            return nil
+        }
+
+        let nights: Int? = sqlite3_column_type(statement, 10) == SQLITE_NULL
+            ? nil
+            : Int(sqlite3_column_int(statement, 10))
+
+        return HotelStayRecord(
+            id: id,
+            ledgerID: String(cString: ledgerCString),
+            linkedTransactionID: uuid(from: statement, index: 2),
+            hotelName: String(cString: hotelNameCString),
+            hotelGroup: string(from: statement, index: 4),
+            hotelBrand: string(from: statement, index: 5),
+            city: string(from: statement, index: 6),
+            country: string(from: statement, index: 7),
+            checkInDate: string(from: statement, index: 8),
+            checkOutDate: string(from: statement, index: 9),
+            nights: nights,
+            roomType: string(from: statement, index: 11),
+            confirmationNumber: string(from: statement, index: 12),
+            currency: String(cString: currencyCString),
+            roomCharge: sqlite3_column_double(statement, 14),
+            taxAmount: sqlite3_column_double(statement, 15),
+            serviceCharge: sqlite3_column_double(statement, 16),
+            foodBeverageAmount: sqlite3_column_double(statement, 17),
+            otherAmount: sqlite3_column_double(statement, 18),
+            totalAmount: sqlite3_column_double(statement, 19),
+            paymentMethod: string(from: statement, index: 20),
+            sourceType: sourceType,
+            sourceFileName: string(from: statement, index: 22),
+            confidence: sqlite3_column_double(statement, 23),
+            rawText: String(cString: rawTextCString),
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
     }
 
     private func bindOptionalUUID(_ value: UUID?, to statement: OpaquePointer?, at index: Int32) {
