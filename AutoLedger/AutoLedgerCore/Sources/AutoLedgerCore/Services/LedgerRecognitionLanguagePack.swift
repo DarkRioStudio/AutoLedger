@@ -7,6 +7,76 @@ public enum LedgerRecognitionPackProvenance: String, Codable, Sendable, Equatabl
     case reviewedCommunity
 }
 
+public struct LedgerAmountFormat: Codable, Sendable, Equatable {
+    public let currencySymbols: [String]
+    public let decimalSeparator: String
+    public let groupingSeparator: String?
+    public let fractionDigits: Int
+
+    public init(
+        currencySymbols: [String],
+        decimalSeparator: String,
+        groupingSeparator: String?,
+        fractionDigits: Int
+    ) {
+        self.currencySymbols = currencySymbols
+        self.decimalSeparator = decimalSeparator
+        self.groupingSeparator = groupingSeparator
+        self.fractionDigits = fractionDigits
+    }
+
+    public static let generic = LedgerAmountFormat(
+        currencySymbols: ["¥", "￥", "$", "€", "£", "RM"],
+        decimalSeparator: ".",
+        groupingSeparator: ",",
+        fractionDigits: 2
+    )
+}
+
+public struct LedgerAmountLabelSet: Codable, Sendable, Equatable {
+    public let actualPaid: [String]
+    public let total: [String]
+    public let subtotal: [String]
+    public let tax: [String]
+    public let discount: [String]
+    public let deposit: [String]
+    public let refund: [String]
+    public let change: [String]
+    public let serviceCharge: [String]
+
+    public init(
+        actualPaid: [String] = [],
+        total: [String] = [],
+        subtotal: [String] = [],
+        tax: [String] = [],
+        discount: [String] = [],
+        deposit: [String] = [],
+        refund: [String] = [],
+        change: [String] = [],
+        serviceCharge: [String] = []
+    ) {
+        self.actualPaid = actualPaid
+        self.total = total
+        self.subtotal = subtotal
+        self.tax = tax
+        self.discount = discount
+        self.deposit = deposit
+        self.refund = refund
+        self.change = change
+        self.serviceCharge = serviceCharge
+    }
+}
+
+public struct LedgerDateFormat: Codable, Sendable, Equatable {
+    public let pattern: String
+    public let example: String?
+
+    public init(pattern: String, example: String? = nil) {
+        self.pattern = pattern
+        self.example = example
+    }
+}
+
 public struct LedgerRecognitionLanguagePack: Codable, Sendable, Equatable {
     public let id: String
     public let schemaVersion: Int
@@ -23,6 +93,10 @@ public struct LedgerRecognitionLanguagePack: Codable, Sendable, Equatable {
     public let nonMerchantKeywords: [String]
     public let categoryKeywordMap: [String: TransactionCategory]
     public let provenance: LedgerRecognitionPackProvenance
+    public let amountFormat: LedgerAmountFormat
+    public let amountLabelSet: LedgerAmountLabelSet
+    public let dateFormats: [LedgerDateFormat]
+    public let ocrRecognitionLanguages: [String]
 
     public init(
         id: String,
@@ -39,7 +113,11 @@ public struct LedgerRecognitionLanguagePack: Codable, Sendable, Equatable {
         merchantLabels: [String],
         nonMerchantKeywords: [String],
         categoryKeywordMap: [String: TransactionCategory],
-        provenance: LedgerRecognitionPackProvenance
+        provenance: LedgerRecognitionPackProvenance,
+        amountFormat: LedgerAmountFormat = .generic,
+        amountLabelSet: LedgerAmountLabelSet? = nil,
+        dateFormats: [LedgerDateFormat] = [],
+        ocrRecognitionLanguages: [String] = []
     ) {
         self.id = id
         self.schemaVersion = schemaVersion
@@ -56,6 +134,20 @@ public struct LedgerRecognitionLanguagePack: Codable, Sendable, Equatable {
         self.nonMerchantKeywords = nonMerchantKeywords
         self.categoryKeywordMap = categoryKeywordMap
         self.provenance = provenance
+        self.amountFormat = amountFormat
+        self.amountLabelSet = amountLabelSet ?? LedgerAmountLabelSet(
+            actualPaid: amountLabels,
+            total: totalLabels,
+            subtotal: totalLabels.filter {
+                $0.localizedCaseInsensitiveContains("小计") ||
+                    $0.localizedCaseInsensitiveContains("小計") ||
+                    $0.localizedCaseInsensitiveContains("subtotal")
+            },
+            tax: taxLabels,
+            discount: discountLabels
+        )
+        self.dateFormats = dateFormats
+        self.ocrRecognitionLanguages = ocrRecognitionLanguages
     }
 }
 
@@ -117,8 +209,16 @@ public struct LedgerRecognitionLanguagePackSet: Sendable {
             merchantLabels: unique(chain.flatMap(\.merchantLabels)),
             nonMerchantKeywords: unique(chain.flatMap(\.nonMerchantKeywords)),
             categoryKeywordMap: mergedCategoryMap(chain),
-            provenance: first.provenance
+            provenance: first.provenance,
+            amountFormat: first.amountFormat,
+            amountLabelSet: mergedAmountLabelSet(chain),
+            dateFormats: uniqueDateFormats(chain.flatMap(\.dateFormats)),
+            ocrRecognitionLanguages: unique(chain.flatMap(\.ocrRecognitionLanguages))
         )
+    }
+
+    public func ocrRecognitionLanguages(for localeIdentifier: String?) -> [String] {
+        mergedPack(for: localeIdentifier)?.ocrRecognitionLanguages ?? []
     }
 
     private func primaryPack(for localeIdentifier: String?) -> LedgerRecognitionLanguagePack? {
@@ -154,6 +254,31 @@ public struct LedgerRecognitionLanguagePackSet: Sendable {
         }
     }
 
+    private func mergedAmountLabelSet(_ packs: [LedgerRecognitionLanguagePack]) -> LedgerAmountLabelSet {
+        LedgerAmountLabelSet(
+            actualPaid: unique(packs.flatMap(\.amountLabelSet.actualPaid)),
+            total: unique(packs.flatMap(\.amountLabelSet.total)),
+            subtotal: unique(packs.flatMap(\.amountLabelSet.subtotal)),
+            tax: unique(packs.flatMap(\.amountLabelSet.tax)),
+            discount: unique(packs.flatMap(\.amountLabelSet.discount)),
+            deposit: unique(packs.flatMap(\.amountLabelSet.deposit)),
+            refund: unique(packs.flatMap(\.amountLabelSet.refund)),
+            change: unique(packs.flatMap(\.amountLabelSet.change)),
+            serviceCharge: unique(packs.flatMap(\.amountLabelSet.serviceCharge))
+        )
+    }
+
+    private func uniqueDateFormats(_ values: [LedgerDateFormat]) -> [LedgerDateFormat] {
+        var seen = Set<String>()
+        var result: [LedgerDateFormat] = []
+        for value in values {
+            guard !seen.contains(value.pattern) else { continue }
+            seen.insert(value.pattern)
+            result.append(value)
+        }
+        return result
+    }
+
     private static func normalize(_ localeIdentifier: String) -> String {
         localeIdentifier.replacingOccurrences(of: "_", with: "-").lowercased()
     }
@@ -162,7 +287,7 @@ public struct LedgerRecognitionLanguagePackSet: Sendable {
 public extension LedgerRecognitionLanguagePack {
     static let builtInSimplifiedChinese = LedgerRecognitionLanguagePack(
         id: "zh-Hans",
-        schemaVersion: 1,
+        schemaVersion: 2,
         packVersion: "1.0.0",
         localeIdentifiers: ["zh", "zh-Hans", "zh-CN", "zh-SG"],
         billKeywords: [
@@ -176,7 +301,10 @@ public extension LedgerRecognitionLanguagePack {
         taxLabels: ["税", "税费", "增值税"],
         dateLabels: ["时间", "交易时间", "付款时间", "账单日期"],
         merchantLabels: ["商户", "商户名称", "收款方", "店铺", "门店"],
-        nonMerchantKeywords: ["订单号", "交易单号", "流水号", "验证码", "广告"],
+        nonMerchantKeywords: [
+            "订单号", "交易单号", "流水号", "验证码", "广告", "发票号", "终端号",
+            "房号", "收银员", "税号", "纳税人识别号", "会员号"
+        ],
         categoryKeywordMap: [
             "星巴克": .dining,
             "咖啡": .dining,
@@ -187,12 +315,35 @@ public extension LedgerRecognitionLanguagePack {
             "公交": .transport,
             "app store": .digital,
         ],
-        provenance: .builtIn
+        provenance: .builtIn,
+        amountFormat: LedgerAmountFormat(
+            currencySymbols: ["¥", "￥", "CNY", "RMB"],
+            decimalSeparator: ".",
+            groupingSeparator: ",",
+            fractionDigits: 2
+        ),
+        amountLabelSet: LedgerAmountLabelSet(
+            actualPaid: ["金额", "实付", "支付金额", "付款金额", "交易金额"],
+            total: ["合计", "总计", "总金额", "总额", "应付", "实付"],
+            subtotal: ["小计"],
+            tax: ["税", "税费", "增值税"],
+            discount: ["优惠", "折扣", "立减", "满减"],
+            deposit: ["押金", "保证金", "预授权"],
+            refund: ["退款", "退货", "返还"],
+            change: ["找零", "找回"],
+            serviceCharge: ["服务费"]
+        ),
+        dateFormats: [
+            LedgerDateFormat(pattern: "yyyy-MM-dd", example: "2026-06-25"),
+            LedgerDateFormat(pattern: "yyyy/MM/dd", example: "2026/06/25"),
+            LedgerDateFormat(pattern: "yyyy年M月d日", example: "2026年6月25日"),
+        ],
+        ocrRecognitionLanguages: ["zh-Hans", "en-US"]
     )
 
     static let builtInTraditionalChinese = LedgerRecognitionLanguagePack(
         id: "zh-Hant",
-        schemaVersion: 1,
+        schemaVersion: 2,
         packVersion: "1.0.0",
         localeIdentifiers: ["zh-Hant", "zh-TW", "zh-HK", "zh-MO"],
         billKeywords: [
@@ -206,7 +357,10 @@ public extension LedgerRecognitionLanguagePack {
         taxLabels: ["稅", "稅費", "營業稅"],
         dateLabels: ["時間", "交易時間", "付款時間", "帳單日期"],
         merchantLabels: ["商戶", "商戶名稱", "收款方", "店鋪", "門店"],
-        nonMerchantKeywords: ["訂單號", "交易單號", "流水號", "驗證碼", "廣告"],
+        nonMerchantKeywords: [
+            "訂單號", "交易單號", "流水號", "驗證碼", "廣告", "發票號", "終端號",
+            "房號", "收銀員", "稅號", "會員號"
+        ],
         categoryKeywordMap: [
             "星巴克": .dining,
             "咖啡": .dining,
@@ -216,12 +370,35 @@ public extension LedgerRecognitionLanguagePack {
             "公交": .transport,
             "app store": .digital,
         ],
-        provenance: .builtIn
+        provenance: .builtIn,
+        amountFormat: LedgerAmountFormat(
+            currencySymbols: ["NT$", "HK$", "MOP$", "¥", "￥"],
+            decimalSeparator: ".",
+            groupingSeparator: ",",
+            fractionDigits: 2
+        ),
+        amountLabelSet: LedgerAmountLabelSet(
+            actualPaid: ["金額", "實付", "支付金額", "付款金額", "交易金額"],
+            total: ["合計", "總計", "總金額", "總額", "應付", "實付"],
+            subtotal: ["小計"],
+            tax: ["稅", "稅費", "營業稅"],
+            discount: ["優惠", "折扣", "立減", "滿減"],
+            deposit: ["押金", "保證金", "預授權"],
+            refund: ["退款", "退貨", "返還"],
+            change: ["找零", "找回"],
+            serviceCharge: ["服務費"]
+        ),
+        dateFormats: [
+            LedgerDateFormat(pattern: "yyyy-MM-dd", example: "2026-06-25"),
+            LedgerDateFormat(pattern: "yyyy/MM/dd", example: "2026/06/25"),
+            LedgerDateFormat(pattern: "yyyy年M月d日", example: "2026年6月25日"),
+        ],
+        ocrRecognitionLanguages: ["zh-Hant", "en-US"]
     )
 
     static let builtInEnglish = LedgerRecognitionLanguagePack(
         id: "en",
-        schemaVersion: 1,
+        schemaVersion: 2,
         packVersion: "1.0.0",
         localeIdentifiers: ["en", "en-US", "en-GB", "en-SG", "en-MY"],
         billKeywords: [
@@ -235,7 +412,10 @@ public extension LedgerRecognitionLanguagePack {
         taxLabels: ["tax", "gst", "vat", "service charge"],
         dateLabels: ["date", "time", "transaction time", "invoice date"],
         merchantLabels: ["merchant", "store", "shop", "seller", "cashier"],
-        nonMerchantKeywords: ["order no", "invoice no", "receipt#", "ref no", "advertisement"],
+        nonMerchantKeywords: [
+            "order no", "invoice no", "receipt#", "ref no", "advertisement", "terminal no",
+            "room no", "room number", "cashier", "tax id", "vat no", "member no"
+        ],
         categoryKeywordMap: [
             "mcdonald": .dining,
             "starbucks": .dining,
@@ -247,12 +427,35 @@ public extension LedgerRecognitionLanguagePack {
             "app store": .digital,
             "netflix": .digital,
         ],
-        provenance: .builtIn
+        provenance: .builtIn,
+        amountFormat: LedgerAmountFormat(
+            currencySymbols: ["$", "US$", "S$", "£", "RM"],
+            decimalSeparator: ".",
+            groupingSeparator: ",",
+            fractionDigits: 2
+        ),
+        amountLabelSet: LedgerAmountLabelSet(
+            actualPaid: ["amount", "paid", "payment amount", "amount due", "total due"],
+            total: ["total", "grand total", "amount due", "total due", "total sales"],
+            subtotal: ["subtotal", "sub total"],
+            tax: ["tax", "gst", "vat"],
+            discount: ["discount", "coupon", "promotion"],
+            deposit: ["deposit", "preauth", "pre-authorization"],
+            refund: ["refund", "return"],
+            change: ["change", "change due"],
+            serviceCharge: ["service charge"]
+        ),
+        dateFormats: [
+            LedgerDateFormat(pattern: "yyyy-MM-dd", example: "2026-06-25"),
+            LedgerDateFormat(pattern: "MM/dd/yyyy", example: "06/25/2026"),
+            LedgerDateFormat(pattern: "dd/MM/yyyy", example: "25/06/2026"),
+        ],
+        ocrRecognitionLanguages: ["en-US"]
     )
 
     static let builtInJapanese = LedgerRecognitionLanguagePack(
         id: "ja",
-        schemaVersion: 1,
+        schemaVersion: 2,
         packVersion: "1.0.0",
         localeIdentifiers: ["ja", "ja-JP"],
         billKeywords: [
@@ -266,7 +469,10 @@ public extension LedgerRecognitionLanguagePack {
         taxLabels: ["税", "税込", "消費税", "税抜"],
         dateLabels: ["日付", "日時", "取引日時", "発行日"],
         merchantLabels: ["店舗", "加盟店", "店名", "販売者"],
-        nonMerchantKeywords: ["注文番号", "取引番号", "伝票番号", "広告"],
+        nonMerchantKeywords: [
+            "注文番号", "取引番号", "伝票番号", "広告", "発票番号", "端末番号",
+            "部屋番号", "客室番号", "レジ担当", "担当者", "税番号", "会員番号"
+        ],
         categoryKeywordMap: [
             "コーヒー": .dining,
             "カフェ": .dining,
@@ -277,6 +483,29 @@ public extension LedgerRecognitionLanguagePack {
             "タクシー": .transport,
             "app store": .digital,
         ],
-        provenance: .builtIn
+        provenance: .builtIn,
+        amountFormat: LedgerAmountFormat(
+            currencySymbols: ["¥", "￥", "JPY"],
+            decimalSeparator: ".",
+            groupingSeparator: ",",
+            fractionDigits: 0
+        ),
+        amountLabelSet: LedgerAmountLabelSet(
+            actualPaid: ["金額", "支払金額", "お支払い金額", "決済金額"],
+            total: ["合計", "総合計", "税込合計", "お支払い合計"],
+            subtotal: ["小計"],
+            tax: ["税", "税込", "消費税", "税抜"],
+            discount: ["割引", "値引", "クーポン"],
+            deposit: ["預り金", "保証金", "デポジット"],
+            refund: ["返金", "返品"],
+            change: ["お釣り", "釣銭"],
+            serviceCharge: ["サービス料"]
+        ),
+        dateFormats: [
+            LedgerDateFormat(pattern: "yyyy/MM/dd", example: "2026/06/25"),
+            LedgerDateFormat(pattern: "yyyy-MM-dd", example: "2026-06-25"),
+            LedgerDateFormat(pattern: "yyyy年M月d日", example: "2026年6月25日"),
+        ],
+        ocrRecognitionLanguages: ["ja-JP", "en-US"]
     )
 }

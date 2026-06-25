@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-248 GOAL-1859 分类 resolver 语言包接入）
+更新日期：2026-06-25（ITER-249 GOAL-1861 语言包高级配置 schema）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-249 GOAL-1861 语言包高级配置 schema
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1861
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：把金额格式、日期格式、金额标签分层、非商户排除词增强和 OCR 语言 hint 纳入语言包 schema，并让金额提取器先消费金额格式配置。
+- 改动范围：`LedgerRecognitionLanguagePack` schema、内置中 / 英 / 日语言包数据、`LedgerRecognitionLanguagePackSet` 合并逻辑、`PaymentAmountExtractor` 金额格式与分层标签消费、离线回归、版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未修改 App 层 `OCRService` 的 Vision `recognitionLanguages`；未新增独立日期解析器或正式入账日期策略；未实现用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增 `LedgerAmountFormat`、`LedgerAmountLabelSet`、`LedgerDateFormat` 和 `ocrRecognitionLanguages`；内置语言包 schema version 升级为 2；日文包暴露 `¥` 金额格式、`yyyy/MM/dd` 等日期格式和 `["ja-JP", "en-US"]` OCR hint；非商户排除词覆盖发票号、终端号、房号、收银员、税号和会员号；`PaymentAmountExtractor` 可按语言包解析 `€1.234,56` 并区分押金 / 退款 / 找零等非入账角色。
+- 未完成内容：App OCR 按语言包 hint 调整 Vision request、日期解析器消费 `dateFormats`、用户本地纠错覆盖包和社区语言包导入 / 导出留给后续 goal。
+- 测试情况：先新增高级配置和欧洲金额格式回归并运行 `bash scripts/run_offline_regression.sh`，观察到 `LedgerAmountFormat` / `LedgerAmountLabelSet` / `dateFormats` / `ocrRecognitionLanguages` 缺失的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：金额格式配置开始影响解析器行为，后续新增地区包时必须配套金额格式 golden case，避免千分位和小数位互换造成金额放大或缩小；OCR hint 目前只暴露在 Core，不会改变现有 OCR 行为。
+- 回滚方式：恢复语言包 schema version 1 和旧字段集合，恢复 `PaymentAmountExtractor` 的旧金额正则 / normalize / 标签判断，移除新增高级配置回归，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：语言包已经具备继续扩语言的核心配置面，后续新增语言优先补数据和回归，不需要改主解析架构；App OCR hint 和日期解析可作为独立小步消费这些配置。
+- 下一步建议：接入 App 层 `OCRService` 的 `recognitionLanguages`，让当前 locale 或用户选择语言包驱动 Vision OCR hint，但保持默认 fallback 到 `zh-Hans + en-US`。
 
 ### ITER-248 GOAL-1859 分类 resolver 语言包接入
 - 日期：2026-06-25

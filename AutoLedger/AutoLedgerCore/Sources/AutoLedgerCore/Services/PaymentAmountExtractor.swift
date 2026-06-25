@@ -5,6 +5,7 @@ public enum AmountRole: String, Sendable {
     case total
     case subtotal
     case discount
+    case deposit
     case refund
     case cash
     case change
@@ -84,7 +85,7 @@ public struct PaymentAmountExtractor: Sendable {
     )
 
     private static let currencyAmountRegex = try? NSRegularExpression(
-        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB)?(?![A-Za-z0-9./])"#,
+        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:[,.][0-9]{3})+(?:[,.][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB|[¥￥$€£])?(?![A-Za-z0-9./])"#,
         options: [.caseInsensitive]
     )
 
@@ -266,7 +267,9 @@ public struct PaymentAmountExtractor: Sendable {
             if lineLooksLikeItemCodeLine(line) { continue }
             guard let amount = extractAmountFromLine(line) else { continue }
             if amount < 0.5 || amount > 10_000 { continue }
-            return candidate(amount: amount, role: role(for: line), lineIndex: index, evidence: line, ruleName: "last_explicit")
+            let role = role(for: line)
+            if shouldSkipAsPaidFallback(role) { continue }
+            return candidate(amount: amount, role: role, lineIndex: index, evidence: line, ruleName: "last_explicit")
         }
         return nil
     }
@@ -278,9 +281,11 @@ public struct PaymentAmountExtractor: Sendable {
             if lineLooksLikeItemCodeLine(line) { continue }
             guard let amount = extractAmountFromLine(line) else { continue }
             if amount < 0.01 || amount > 1_000_000 { continue }
+            let role = role(for: line)
+            if shouldSkipAsPaidFallback(role) { continue }
             return AmountCandidate(
                 amount: amount,
-                role: role(for: line),
+                role: role,
                 confidence: 0.55,
                 lineIndex: index,
                 evidence: line,
@@ -335,9 +340,11 @@ public struct PaymentAmountExtractor: Sendable {
         if lineLooksLikeIdentifierLine(line) { return .identifier }
         if lineLooksLikeQtyLine(line) { return .quantity }
         if lowered.contains("change") { return .change }
+        if containsAny(changeKeywords, in: line) { return .change }
         if lowered.hasPrefix("cash") || lowered.contains("cash tendered") { return .cash }
         if containsAny(discountKeywords, in: line) { return .discount }
-        if lowered.contains("refund") || lowered.contains("退款") || lowered.contains("退货") { return .refund }
+        if containsAny(depositKeywords, in: line) { return .deposit }
+        if lowered.contains("refund") || lowered.contains("退款") || lowered.contains("退货") || containsAny(refundKeywords, in: line) { return .refund }
         if containsAny(taxKeywords, in: line) { return .tax }
         if containsAny(subtotalKeywords, in: line) { return .subtotal }
         if totalLineScore(line) > 0 { return .total }
@@ -351,8 +358,17 @@ public struct PaymentAmountExtractor: Sendable {
         case .total: return 0.94
         case .subtotal: return 0.82
         case .unknown: return totalLineScore(line) > 0 ? 0.9 : 0.65
-        case .cash, .change, .discount, .refund, .tax, .quantity, .identifier:
+        case .cash, .change, .discount, .deposit, .refund, .tax, .quantity, .identifier:
             return 0.35
+        }
+    }
+
+    private func shouldSkipAsPaidFallback(_ role: AmountRole) -> Bool {
+        switch role {
+        case .cash, .change, .discount, .deposit, .refund, .tax, .quantity, .identifier:
+            return true
+        case .actualPaid, .total, .subtotal, .unknown:
+            return false
         }
     }
 
@@ -366,6 +382,7 @@ public struct PaymentAmountExtractor: Sendable {
     }
 
     private func totalLineScore(_ line: String) -> Int {
+        if containsAny(subtotalKeywords, in: line) { return 0 }
         let score = allTotalKeywords.filter { line.localizedCaseInsensitiveContains($0) }.count
         if line.localizedCaseInsensitiveContains("total") && !line.localizedCaseInsensitiveContains("subtotal") { return score + 2 }
         if line.localizedCaseInsensitiveContains("jumlah") { return score + 2 }
@@ -373,19 +390,19 @@ public struct PaymentAmountExtractor: Sendable {
     }
 
     private var allTotalKeywords: [String] {
-        Self.totalKeywords + (languagePack?.totalLabels ?? [])
+        Self.totalKeywords + (languagePack?.amountLabelSet.total ?? languagePack?.totalLabels ?? [])
     }
 
     private var actualPaidKeywords: [String] {
-        Self.actualPaidKeywords + (languagePack?.amountLabels ?? [])
+        Self.actualPaidKeywords + (languagePack?.amountLabels ?? []) + (languagePack?.amountLabelSet.actualPaid ?? [])
     }
 
     private var discountKeywords: [String] {
-        Self.discountKeywords + (languagePack?.discountLabels ?? [])
+        Self.discountKeywords + (languagePack?.discountLabels ?? []) + (languagePack?.amountLabelSet.discount ?? [])
     }
 
     private var taxKeywords: [String] {
-        Self.taxKeywords + (languagePack?.taxLabels ?? [])
+        Self.taxKeywords + (languagePack?.taxLabels ?? []) + (languagePack?.amountLabelSet.tax ?? []) + (languagePack?.amountLabelSet.serviceCharge ?? [])
     }
 
     private var subtotalKeywords: [String] {
@@ -394,29 +411,62 @@ public struct PaymentAmountExtractor: Sendable {
                 || label.localizedCaseInsensitiveContains("小計")
                 || label.localizedCaseInsensitiveContains("subtotal")
         } ?? []
-        return Self.subtotalKeywords + packSubtotals
+        return Self.subtotalKeywords + packSubtotals + (languagePack?.amountLabelSet.subtotal ?? [])
+    }
+
+    private var depositKeywords: [String] {
+        Self.depositKeywords + (languagePack?.amountLabelSet.deposit ?? [])
+    }
+
+    private var refundKeywords: [String] {
+        Self.refundKeywords + (languagePack?.amountLabelSet.refund ?? [])
+    }
+
+    private var changeKeywords: [String] {
+        Self.changeKeywords + (languagePack?.amountLabelSet.change ?? [])
     }
 
     private static let actualPaidKeywords = ["实付", "金额", "付款金额", "支付金额"]
     private static let discountKeywords = ["discount", "优惠", "折扣"]
     private static let taxKeywords = ["gst", "tax", "税"]
     private static let subtotalKeywords = ["subtotal", "sub total", "小计"]
+    private static let depositKeywords = ["deposit", "押金"]
+    private static let refundKeywords = ["refund", "退款", "退货"]
+    private static let changeKeywords = ["change", "change due", "找零"]
 
     private func containsAny(_ keywords: [String], in line: String) -> Bool {
         keywords.contains { line.localizedCaseInsensitiveContains($0) }
     }
 
     private func normalizeAmountLiteral(_ raw: String) -> String {
+        let amountFormat = languagePack?.amountFormat ?? .generic
+        if let groupingSeparator = amountFormat.groupingSeparator,
+           isGroupedAmount(raw, groupingSeparator: groupingSeparator, decimalSeparator: amountFormat.decimalSeparator) {
+            return raw
+                .replacingOccurrences(of: groupingSeparator, with: "")
+                .replacingOccurrences(of: amountFormat.decimalSeparator, with: ".")
+        }
+        if amountFormat.decimalSeparator != ".", raw.contains(amountFormat.decimalSeparator) {
+            return raw.replacingOccurrences(of: amountFormat.decimalSeparator, with: ".")
+        }
         if raw.range(of: #"^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$"#, options: .regularExpression) != nil {
             return raw.replacingOccurrences(of: ",", with: "")
         }
         return raw.replacingOccurrences(of: ",", with: ".")
     }
 
+    private func isGroupedAmount(_ raw: String, groupingSeparator: String, decimalSeparator: String) -> Bool {
+        let grouping = NSRegularExpression.escapedPattern(for: groupingSeparator)
+        let decimal = NSRegularExpression.escapedPattern(for: decimalSeparator)
+        let pattern = #"^\d{1,3}(?:"# + grouping + #"\d{3})+(?:"# + decimal + #"\d{1,2})?$"#
+        return raw.range(of: pattern, options: .regularExpression) != nil
+    }
+
     private func lineLooksLikeChangeOrCashLine(_ line: String) -> Bool {
         let lowered = line.lowercased().trimmingCharacters(in: .whitespaces)
         if lowered.hasPrefix("change") || lowered.hasPrefix("cash") || lowered.hasPrefix("change due") { return true }
         if lowered == "change" || lowered == "cash" { return true }
+        if containsAny(changeKeywords, in: line) { return true }
         return false
     }
 

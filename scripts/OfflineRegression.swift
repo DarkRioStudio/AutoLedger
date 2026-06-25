@@ -697,6 +697,42 @@ struct OfflineRegression {
             japaneseResult.selectedCandidate?.role == .total,
             "PaymentAmountExtractor classifies Japanese 合計 as total"
         )
+
+        let euroPack = LedgerRecognitionLanguagePack(
+            id: "de",
+            schemaVersion: 2,
+            packVersion: "0.1.0",
+            localeIdentifiers: ["de-DE"],
+            billKeywords: ["rechnung"],
+            paymentKeywords: [],
+            amountLabels: [],
+            totalLabels: ["gesamt"],
+            discountLabels: [],
+            taxLabels: [],
+            dateLabels: [],
+            merchantLabels: [],
+            nonMerchantKeywords: [],
+            categoryKeywordMap: [:],
+            provenance: .reviewedCommunity,
+            amountFormat: LedgerAmountFormat(
+                currencySymbols: ["€"],
+                decimalSeparator: ",",
+                groupingSeparator: ".",
+                fractionDigits: 2
+            ),
+            amountLabelSet: LedgerAmountLabelSet(total: ["gesamt"])
+        )
+        let euroResult = PaymentAmountExtractor(
+            localeIdentifier: "de-DE",
+            languagePackSet: LedgerRecognitionLanguagePackSet(packs: [euroPack], fallbackPackIDs: [])
+        ).extract(from: """
+        Rechnung
+        Gesamt €1.234,56
+        """)
+        reporter.check(
+            abs((euroResult.paidAmount ?? 0) - 1234.56) < 0.01,
+            "PaymentAmountExtractor uses language pack amount format for European grouped decimals"
+        )
     }
 
     private static func verifyMerchantExtraction(reporter: RegressionReporter) {
@@ -807,6 +843,32 @@ struct OfflineRegression {
         reporter.check(
             japaneseChain.first?.billKeywords.contains("領収書") == true,
             "Japanese recognition pack contains receipt keyword"
+        )
+        let japanesePack = packSet.mergedPack(for: "ja-JP")
+        reporter.check(
+            japanesePack?.amountFormat.currencySymbols.contains("¥") == true &&
+                japanesePack?.amountFormat.groupingSeparator == "," &&
+                japanesePack?.amountFormat.decimalSeparator == ".",
+            "Japanese recognition pack exposes amount format"
+        )
+        reporter.check(
+            japanesePack?.amountLabelSet.deposit.contains("預り金") == true &&
+                japanesePack?.amountLabelSet.refund.contains("返金") == true &&
+                japanesePack?.amountLabelSet.change.contains("お釣り") == true,
+            "Japanese recognition pack exposes layered amount labels"
+        )
+        reporter.check(
+            japanesePack?.dateFormats.contains { $0.pattern == "yyyy/MM/dd" } == true,
+            "Japanese recognition pack exposes date formats"
+        )
+        reporter.check(
+            japanesePack?.ocrRecognitionLanguages == ["ja-JP", "en-US"],
+            "Japanese recognition pack exposes OCR language hints"
+        )
+        reporter.check(
+            japanesePack?.nonMerchantKeywords.contains("部屋番号") == true &&
+                japanesePack?.nonMerchantKeywords.contains("税番号") == true,
+            "Japanese recognition pack expands non-merchant keywords"
         )
 
         let japaneseReceipt = """
