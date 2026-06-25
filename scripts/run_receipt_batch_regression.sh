@@ -23,7 +23,12 @@ swiftc \
   "$CORE/Models/LedgerInterpretationModels.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/LedgerRecognitionLanguagePack.swift" \
+  "$CORE/Services/LedgerDateCandidateExtractor.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
+  "$CORE/Services/LedgerAmountInputParser.swift" \
+  "$CORE/Services/PaymentAmountExtractor.swift" \
+  "$CORE/Services/MerchantResolver.swift" \
+  "$CORE/Services/CategoryResolver.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$ROOT/tools/receipt_ocr/batch_parse.swift"
 

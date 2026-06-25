@@ -22,6 +22,7 @@ swiftc \
   "$PREP_DIR/ReceiptParser.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
   "$CORE/Services/LedgerRecognitionLanguagePack.swift" \
+  "$CORE/Services/LedgerDateCandidateExtractor.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/PaymentAmountExtractor.swift" \
   "$CORE/Services/MerchantResolver.swift" \

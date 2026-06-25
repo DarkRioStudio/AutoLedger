@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-250 GOAL-1862 App OCR 语言 hint 接入）
+更新日期：2026-06-25（ITER-251 GOAL-1863 日期格式候选解析）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-251 GOAL-1863 日期格式候选解析
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1863
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：让语言包中的 `dateFormats` 成为平台无关层可消费的日期候选解析能力，同时不直接改变普通记账正式入账日期。
+- 改动范围：新增 `LedgerDateCandidateExtractor`、`LedgerDateCandidate` 和 `LedgerDateCandidateConfidence`；离线回归新增日文 / 英文日期候选解析与主解释链路不自动套用候选日期断言；`run_offline_regression.sh`、`run_golden_regression.sh`、`run_receipt_batch_regression.sh` 手动 swiftc 文件清单加入新 Core 服务；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未修改 `LedgerTextInterpreterCore` 的 `TransactionDraft.occurredAt` 决策；未把日期候选写入 SQLite / CloudKit / Backup；未新增日期冲突复核 UI、用户账单语言选择 UI、用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`LedgerDateCandidateExtractor` 可按 locale 读取语言包 `dateFormats`，从文本行中提取日期候选；命中 `dateLabels` 的日期行标记为高置信，否则为中置信；候选记录包含标准化 `Date`、原始文本、命中 pattern、标签、置信度和行号；日文 `取引日時: 2026年6月25日` 和英文 `Invoice Date: 06/25/2026` 已纳入离线回归。
+- 未完成内容：正式账单日期策略、候选日期冲突复核 UI、外部辅助识别 prompt 携带日期候选、用户本地纠错覆盖包和社区语言包导入 / 导出留给后续 goal。
+- 测试情况：先新增日期候选回归并运行 `bash scripts/run_offline_regression.sh`，观察到 `LedgerDateCandidateExtractor` 缺失的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。仓库内当前没有正式 OCR JSONL fixture，因此未跑完整批量 fixture 回归；已用 `/tmp` 临时 OCR JSONL 运行 `bash scripts/run_receipt_batch_regression.sh <ocr.jsonl> <output.jsonl>` 完成最小编译和执行烟测。
+- 风险与注意事项：日期格式候选能力进入 Core 后，未来若直接接管 `occurredAt` 需要处理地区歧义，例如 `06/07/2026` 在 `MM/dd/yyyy` 与 `dd/MM/yyyy` 间的冲突；当前只产出候选，避免低置信误入账。
+- 回滚方式：删除 `LedgerDateCandidateExtractor.swift`，移除三个回归脚本的文件清单新增项和离线日期候选断言，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：语言包的日期配置已经具备可测试的消费点，后续可以在复核页或外部辅助 prompt 中展示日期候选，而不是直接修改正式账本日期。
+- 下一步建议：接入外部辅助识别 prompt 或候选复核 UI，先展示日期候选和冲突提示，再评估是否在高置信单候选时自动填入草稿日期。
 
 ### ITER-250 GOAL-1862 App OCR 语言 hint 接入
 - 日期：2026-06-25

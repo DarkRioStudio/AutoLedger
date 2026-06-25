@@ -46,6 +46,7 @@ struct OfflineRegression {
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
+        verifyLedgerDateCandidateExtraction(reporter: reporter)
         verifyRecognitionLanguagePacks(reporter: reporter)
         verifySmartReceiptMergePolicy(reporter: reporter)
         verifyExternalReceiptAssistPayload(reporter: reporter)
@@ -831,6 +832,61 @@ struct OfflineRegression {
         reporter.check(
             japaneseResolver.resolve(text: "駅前コンビニ") == .groceries,
             "CategoryResolver maps Japanese コンビニ keyword from language pack"
+        )
+    }
+
+    private static func verifyLedgerDateCandidateExtraction(reporter: RegressionReporter) {
+        func isLocalDate(_ date: Date?, year: Int, month: Int, day: Int) -> Bool {
+            guard let date else { return false }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+            let components = calendar.dateComponents([.year, .month, .day], from: date)
+            return components.year == year && components.month == month && components.day == day
+        }
+
+        let japaneseCandidates = LedgerDateCandidateExtractor(localeIdentifier: "ja-JP").extractCandidates(from: """
+        領収書
+        取引日時: 2026年6月25日
+        店舗: Demo Cafe
+        合計 ¥1,080
+        """)
+        reporter.check(
+            isLocalDate(japaneseCandidates.first?.date, year: 2026, month: 6, day: 25),
+            "LedgerDateCandidateExtractor parses Japanese date format from language pack"
+        )
+        reporter.check(
+            japaneseCandidates.first?.matchedFormat == "yyyy年M月d日",
+            "LedgerDateCandidateExtractor records matched Japanese date format"
+        )
+
+        let englishCandidates = LedgerDateCandidateExtractor(localeIdentifier: "en-US").extractCandidates(from: """
+        TAX INVOICE
+        Invoice Date: 06/25/2026
+        Total $8.08
+        """)
+        reporter.check(
+            isLocalDate(englishCandidates.first?.date, year: 2026, month: 6, day: 25),
+            "LedgerDateCandidateExtractor parses English slash date from language pack"
+        )
+        reporter.check(
+            englishCandidates.first?.confidence == .high,
+            "LedgerDateCandidateExtractor marks labeled date as high confidence"
+        )
+
+        let interpreterResult = LedgerTextInterpreterCore().interpret(InterpretInput(
+            rawText: """
+            領収書
+            取引日時: 2026年5月24日
+            店舗: Demo Cafe
+            合計 ¥1,080
+            支払方法 カード
+            """,
+            sourceType: .ocr,
+            localeIdentifier: "ja-JP"
+        ))
+        reporter.check(
+            interpreterResult.draft.map { !isLocalDate($0.occurredAt, year: 2026, month: 5, day: 24) } ?? false,
+            "LedgerTextInterpreterCore does not auto-apply language-pack date candidates yet"
         )
     }
 
