@@ -94,9 +94,6 @@ struct QuickLedgerIntent: AppIntent {
         let smartParser = await SmartReceiptParser()
         let cleanedText = await OCRTextCleaner.clean(text)
         let ruleParser = ReceiptParser()
-
-        // 多账单检测
-        let multiReceipt = ruleParser.detectMultipleReceipts(text: cleanedText)
         if let diagnostics = ruleParser.receiptDiagnostics(text: cleanedText) {
             intentLogger.info("[Intent][Receipt] \(diagnostics.debugSummary)")
         }
@@ -229,9 +226,6 @@ struct QuickLedgerIntent: AppIntent {
                 "receipt.multi_item_single_expense_notice",
                 fallback: "Multi-item receipt detected. The current version will record the total amount as a single expense."
             )
-        }
-        if multiReceipt {
-            msg += String(localized: "quick_ledger.multi_receipt_warning")
         }
         writeDebugEvent(stage: .persisted, source: source, rawText: text, receipt: receipt, summary: msg, llmTrace: result.llmTrace, transactionID: transaction.id)
         return .result(value: msg)

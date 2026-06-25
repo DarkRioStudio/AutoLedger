@@ -55,6 +55,7 @@ struct OfflineRegression {
         verifyExternalReceiptAssistSuggestionMapping(reporter: reporter)
         verifyLedgerTextInterpreterCore(reporter: reporter)
         await verifyLedgerTextInterpreterTransitShortcut(reporter: reporter)
+        await verifyLedgerTextInterpreterSuppressesMultipleReceiptWarning(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
@@ -2815,6 +2816,37 @@ struct OfflineRegression {
             reporter.check(!multiReceiptDetected, "LedgerTextInterpreter does not mark metro shortcut as multi receipt")
         default:
             reporter.check(false, "LedgerTextInterpreter returns transaction for metro stored-value shortcut")
+        }
+    }
+
+    private static func verifyLedgerTextInterpreterSuppressesMultipleReceiptWarning(reporter: RegressionReporter) async {
+        ExternalReceiptAssistSettings.isEnabled = false
+
+        let interpreter = LedgerTextInterpreter()
+        let text = """
+        支付成功
+        星巴克咖啡
+        ¥35.00
+        付款方式
+        ¥35.00
+        优惠
+        ¥5.00
+        """
+        let interpretation = await interpreter.interpret(
+            LedgerTextInterpretationInput(
+                text: text,
+                preferredSource: .manual,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil
+            )
+        )
+
+        switch interpretation {
+        case .transaction(let result, _, _, let multiReceiptDetected):
+            reporter.check(result.receipt.amount > 0, "LedgerTextInterpreter parses payment text with repeated amount lines")
+            reporter.check(!multiReceiptDetected, "LedgerTextInterpreter suppresses multiple receipt warning while feature is paused")
+        default:
+            reporter.check(false, "LedgerTextInterpreter returns transaction when multiple receipt warning is paused")
         }
     }
 

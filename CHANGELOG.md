@@ -10,9 +10,11 @@
 ## [Unreleased]
 
 ### 修复（v1.6.1）
+- [2026-06-25 +0800] 完成 `GOAL-1870` 识别链路误提示收敛：暂时暂停 App 主链路、QuickLedgerIntent 和 Share Extension 中 `detectMultipleReceipts` 的调用，不再因重复金额行、优惠行或支付渠道金额行追加“可能包含多笔账单”提示；保留多商品纸质小票 total 缺失拦截和 total 命中后的单笔总额提示。本轮不删除 `ReceiptParser.detectMultipleReceipts` 函数，不实现多笔账单自动拆分，不修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-25 +0800] 修复 Mac Catalyst 本地构建后看不到“酒店消费”入口的问题：Mac Catalyst 根视图显式进入 `IPadWorkspaceView`，iPad / Mac 工作台侧边栏新增“酒店消费”入口，当前展示已有 `HotelStayListView` 的列表 / 空状态并沿用当前账本口径。本轮不新增 `HotelStayRecord` 独立持久化表，不串接 PDF 导入 / 确认页到真实酒店归档数据源，不修改 schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
 ### 变更（v1.6.1）
+- [2026-06-25 +0800] 新增 `GOAL-1854` 多语言账单识别语言包设计：将 UI 本地化与账单识别多语言拆层，规划在 `AutoLedgerCore` 增加 `LedgerRecognitionLanguagePack` / PackSet，用语言包承载账单相关性、支付金额、总额、折扣、税费、商户标签、非商户排除词和分类关键词；App 主链路后续传入 locale / OCR language hint，外部辅助识别 prompt 同步携带语言上下文。首批语言为 `zh-Hans`、`zh-Hant`、`en`、`ja`，`ko` 继续作为后续候选。本轮只补设计，不实现语言包代码。
 - [2026-06-25 +0800] 完成 `GOAL-1816` Mac 酒店消费 A 阶段可测试闭环：`HotelStayRecord` 新增 SQLite 独立持久化表和原子保存 `HotelStayRecord + Transaction` 路径；`LedgerStore` 新增酒店消费记录状态，Mac / iPad 工作台“酒店消费”页支持手动选择 PDF、PDFKit 文本提取、复用现有外部辅助识别设置调用 OpenAI-compatible 酒店水单解析、打开可编辑复核 sheet，并在用户确认后写入正式酒店消费记录和关联普通支出流水。外部识别未配置或失败时会进入人工复核草稿，不自动入账。本轮不持久化 `HotelStayDraft` 草稿队列，不实现邮箱 / Worker 自动化、酒店记录删除 UI、酒店记录备份 / CloudKit 同步、signing / entitlements / Xcode Cloud 脚本或 `MARKETING_VERSION` 修改。
 - [2026-06-25 +0800] 新增并完成 `GOAL-1860` 跨平台 App Icon 重绘：新增 `tools/app-icons` 生成 / 验证 / 平台形状预览工具，用确定性本地绘制方式重建 iOS、Apple Watch、tvOS、visionOS App Icon PNG；保留蓝绿背景、钱包、金币、闪电和星光元素，闪电改为尖角尾部和平台专用比例，tvOS / visionOS 通过前景覆盖率门禁避免再次被压成细线；预览工具可按 iOS / Mac Catalyst 圆角矩形、Watch / visionOS 圆形、tvOS 横向矩形目检最终观感。本轮不修改 Top Shelf Image、Bundle ID、signing、entitlements、schema、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-24 +0800] 完成 `GOAL-1852` 日文支持落地第二段：`tools/appstore-screenshots/config/screenshots.json` 新增 `ja` locale，并为 iPhone、iPad、Mac、Apple Watch、tvOS、visionOS 现有 26 个截图场景补齐日文标题和副标题；新增 `versions/v1.6.1-ja-release-materials.md`，整理日文术语表、ASC metadata、TestFlight notes、Review Notes 边界和人工审校清单。当前仍不直接提交 ASC、不导出正式日文截图、不声称邮箱自动扫描或 Worker 自动化已对公共用户开放，`MARKETING_VERSION` 继续保持 ASC `1.5.0` 口径。

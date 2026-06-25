@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-242 GOAL-1816 Mac 酒店消费 A 阶段可测试闭环）
+更新日期：2026-06-25（ITER-243 GOAL-1870 / GOAL-1854 识别链路误提示收敛与多语言识别语言包设计）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-243 GOAL-1870 / GOAL-1854 识别链路误提示收敛与多语言识别语言包设计
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1870 / GOAL-1854
+- 类型：Bugfix / 设计 / 识别链路 / 本地化
+- 目标：暂时移除主链路中的多笔账单误触发提示，降低重复金额行、优惠行或支付渠道金额行导致的用户干扰；同时规划平台无关层和 App 主链路后续的多语言账单识别语言包设计。
+- 改动范围：`LedgerTextInterpreter`、`QuickLedgerIntent`、`ShareViewController` 的 `detectMultipleReceipts` 调用点；离线回归新增误触发保护断言；`versions/v1.6.1-plan.md` 新增多语言账单识别语言包设计和 GOAL；CHANGELOG 与本迭代日志。
+- 未改动范围：未删除 `ReceiptParser.detectMultipleReceipts` 函数；未实现多笔账单自动拆分；未修改多商品纸质小票 total 缺失拦截；未实现 `LedgerRecognitionLanguagePack` 代码；未修改 UI 本地化 key、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：App 主链路不再计算或追加 `multiReceiptDetected` warning；QuickLedgerIntent 不再计算 `multiReceipt` 或追加 `quick_ledger.multi_receipt_warning`；Share Extension 不再计算 `multiReceipt` 或追加 `share.multi_receipt_warning`；新增离线回归样例覆盖重复金额行文本仍能正常解析且不再标记多笔账单；版本计划新增 `LedgerRecognitionLanguagePack` / PackSet 设计，明确 Core 语言包字段、App locale / OCR hint 传递、外部辅助 prompt 语言上下文和多语言 golden cases。
+- 未完成内容：多语言识别语言包代码、现有中文 / 英文关键词迁移、日文识别包、OCR 语言 hint 接入和多语言 golden cases 尚未实现；多笔账单拆分后续如需恢复，应改为独立待确认队列，不再用高误触发 warning。
+- 测试情况：先执行 `bash scripts/run_offline_regression.sh` 观察到新增 RED 用例失败，失败点为 `LedgerTextInterpreter suppresses multiple receipt warning while feature is paused`；实现暂停调用后再次执行同一命令通过。
+- 风险与注意事项：暂停多笔账单提示后，极少数真正包含多笔独立账单的截图不会再提醒用户裁剪；当前保留多商品小票 total 保护，避免纸质小票金额取错。语言包设计目前只写入计划，后续实现需要分阶段迁移，避免一次性改动普通 OCR 主链路。
+- 回滚方式：恢复 `LedgerTextInterpreter`、`QuickLedgerIntent`、`ShareViewController` 中对 `detectMultipleReceipts` 的调用和提示拼接，移除新增离线回归断言，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：多笔账单误触发提示已从主路径暂停；多语言账单识别语言包的后续架构方向已记录在 v1.6.1 计划中。
+- 下一步建议：下一轮若推进识别多语言化，先新增 `LedgerRecognitionLanguagePack` 模型和中英文内置包，用回归保证结果不变，再补 `ja` 日文包。
 
 ### ITER-242 GOAL-1816 Mac 酒店消费 A 阶段可测试闭环
 - 日期：2026-06-25

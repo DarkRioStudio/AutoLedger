@@ -89,7 +89,6 @@ struct LedgerTextInterpreter {
             )
         }
 
-        let multiReceiptDetected = receiptParser.detectMultipleReceipts(text: cleanedText)
         let selectedProvider = LLMProvider.userSelected
         let enhancementOn = LLMProvider.isEnhancementEnabled
 
@@ -132,7 +131,7 @@ struct LedgerTextInterpreter {
             result,
             normalizedText: normalizedText,
             source: source,
-            multiReceiptDetected: multiReceiptDetected
+            multiReceiptDetected: false
         )
     }
 }

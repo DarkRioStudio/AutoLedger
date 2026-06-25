@@ -99,9 +99,7 @@ class ShareViewController: UIViewController {
                 source = ReceiptSource.infer(from: text)
             }
 
-            // 多账单检测
             let parser = ReceiptParser()
-            let multiReceipt = parser.detectMultipleReceipts(text: text)
 
             // 解析
             guard let receipt = parser.parse(text: text, source: source, imageData: imageData) else {
@@ -160,9 +158,6 @@ class ShareViewController: UIViewController {
                 self.markLedgerSaveNeedsCloudPush()
                 self.writeShareResult(ocrText: text, receipt: receiptForSave)
                 var msg = String(format: String(localized: "share.saved_format"), receiptForSave.merchant, receiptForSave.amount)
-                if multiReceipt {
-                    msg += String(localized: "share.multi_receipt_warning")
-                }
                 self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receiptForSave, summary: msg, transactionID: transaction.id)
                 DispatchQueue.main.async { self.finish(message: msg) }
             } catch {
