@@ -6,6 +6,7 @@ struct LedgerTextInterpretationInput {
     let preferredSource: ReceiptSource?
     let fallbackMerchant: String?
     let ocrMinConfidence: Float?
+    let localeIdentifier: String?
     let categoryCorrections: [String: TransactionCategory]
 
     init(
@@ -13,12 +14,14 @@ struct LedgerTextInterpretationInput {
         preferredSource: ReceiptSource?,
         fallbackMerchant: String?,
         ocrMinConfidence: Float?,
+        localeIdentifier: String? = nil,
         categoryCorrections: [String: TransactionCategory] = [:]
     ) {
         self.text = text
         self.preferredSource = preferredSource
         self.fallbackMerchant = fallbackMerchant
         self.ocrMinConfidence = ocrMinConfidence
+        self.localeIdentifier = localeIdentifier
         self.categoryCorrections = categoryCorrections
     }
 }
@@ -69,6 +72,7 @@ struct LedgerTextInterpreter {
             InterpretInput(
                 rawText: cleanedText,
                 sourceType: source.ledgerInputSourceType,
+                localeIdentifier: input.localeIdentifier ?? Locale.autoupdatingCurrent.identifier,
                 hints: LedgerInterpretHints(sourceHint: source.ledgerSourceHint),
                 categoryCorrections: input.categoryCorrections.mapValues(\.rawValue)
             )

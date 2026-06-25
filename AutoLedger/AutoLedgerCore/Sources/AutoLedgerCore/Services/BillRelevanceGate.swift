@@ -16,10 +16,17 @@ public struct BillRelevanceResult: Sendable, Codable, Equatable {
 
 public struct BillRelevanceGate: Sendable {
     private let amountPattern = #"(¥|￥|\$|€|£)?\s*[0-9]+(?:[.,][0-9]{1,2})?\s*(元|块|rmb|RMB)?"#
+    private let languagePackSet: LedgerRecognitionLanguagePackSet
 
-    public init() {}
+    public init(languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn) {
+        self.languagePackSet = languagePackSet
+    }
 
-    public func evaluate(_ rawText: String, sourceHint: LedgerSourceHint = .unknown) -> BillRelevanceResult {
+    public func evaluate(
+        _ rawText: String,
+        sourceHint: LedgerSourceHint = .unknown,
+        localeIdentifier: String? = nil
+    ) -> BillRelevanceResult {
         let normalized = normalize(rawText)
         guard !normalized.isEmpty else {
             return BillRelevanceResult(
@@ -44,11 +51,16 @@ public struct BillRelevanceGate: Sendable {
             score += 2
         }
 
-        let paymentKeywords = [
+        let languagePacks = languagePackSet.packs(for: localeIdentifier)
+        let builtInPaymentKeywords = [
             "付款成功", "支付成功", "交易成功", "交易详情", "订单详情", "支付金额", "交易金额",
             "商户名称", "商户名", "收款方", "付款方式", "实付", "合计", "小计", "总计",
             "total", "grand total", "subtotal", "amount", "receipt", "invoice", "cashier", "tax"
         ]
+        let languagePaymentKeywords = languagePacks.flatMap { pack in
+            pack.billKeywords + pack.paymentKeywords + pack.amountLabels + pack.totalLabels + pack.taxLabels
+        }
+        let paymentKeywords = builtInPaymentKeywords + languagePaymentKeywords
         if containsAny(paymentKeywords, in: normalized) {
             positives.append("payment_or_receipt_keyword")
             score += 3
@@ -63,7 +75,9 @@ public struct BillRelevanceGate: Sendable {
             score += 2
         }
 
-        let nonBillHints = ["聊天", "朋友圈", "微博", "新闻", "天气", "设置", "登录", "验证码", "广告"]
+        let nonBillHints = [
+            "聊天", "朋友圈", "微博", "新闻", "天气", "设置", "登录", "验证码", "广告"
+        ] + languagePacks.flatMap { $0.nonMerchantKeywords }
         if containsAny(nonBillHints, in: normalized), positives.isEmpty {
             negatives.append("non_bill_context")
             score -= 2

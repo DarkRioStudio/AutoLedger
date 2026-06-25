@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-244 GOAL-1855 语言包扩展与社区共享设计）
+更新日期：2026-06-25（ITER-245 GOAL-1856 Core 语言包骨架与账单相关性门控接入）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-245 GOAL-1856 Core 语言包骨架与账单相关性门控接入
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1856
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：开始落地多语言账单识别语言包设计，在平台无关层新增语言包数据结构和内置语言包，并先把账单相关性门控接入语言包与 App locale hint。
+- 改动范围：`AutoLedgerCore` 新增 `LedgerRecognitionLanguagePack` / `LedgerRecognitionLanguagePackSet`；`BillRelevanceGate` 增加语言包依赖和 locale-aware evaluate；`LedgerTextInterpreterCore` 将 `InterpretInput.localeIdentifier` 传入门控；App `LedgerTextInterpreter` 输入模型支持显式 locale，并默认传 `Locale.autoupdatingCurrent.identifier`；离线 / golden / batch flat swiftc 脚本纳入新增 Core 文件；版本计划与 CHANGELOG 回填。
+- 未改动范围：未实现用户纠错上传、社区包远程分发、远程语言包热更新或服务端收集通道；未迁移 `PaymentAmountExtractor`、`RuleMerchantExtractor`、`MerchantResolver`、`CategoryResolver` 到语言包；未修改 SQLite / CloudKit schema、UI 本地化 key、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增 `schemaVersion`、`packVersion`、`provenance`、locale identifiers、账单关键词、支付关键词、金额 / total / 折扣 / 税费 / 日期 / 商户标签、非商户关键词和分类关键词 map；内置 `zh-Hans` / `zh-Hant` / `en` / `ja` 包；PackSet 支持 locale 匹配、fallback 和 merged pack；`BillRelevanceGate` 继续保留旧关键词兼容，同时读取语言包关键词；App 主链路可把显式 `ja-JP` 或当前系统 locale 传给 Core 非账单门控。
+- 未完成内容：日文金额千位逗号、日文商户标签、日文分类关键词、用户本地纠错覆盖包、社区包导入 / 导出和外部辅助 prompt 语言包 ID 尚未实现。
+- 测试情况：先新增 Core 语言包回归并运行 `bash scripts/run_offline_regression.sh`，观察到缺少 `LedgerRecognitionLanguagePackSet` / `LedgerRecognitionLanguagePack` / `BillRelevanceGate(languagePackSet:)` 的 RED 编译失败；实现后回归通过。随后新增 App locale hint 回归，再次观察到 `LedgerTextInterpretationInput` 缺少 `localeIdentifier` 的 RED 编译失败；实现后回归通过。最终验证 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`git diff --check`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：当前只把语言包接入非账单门控，尚不代表日文账单可以完整解析金额 / 商户 / 分类；日文 `¥1,080` 等格式后续需要在金额迁移时补专门回归。Xcode build 仍有既有 Swift 6 actor / deprecated API warning，本轮未处理。
+- 回滚方式：删除 `LedgerRecognitionLanguagePack.swift`，恢复 `BillRelevanceGate` 构造器和 `evaluate` 签名、恢复 `LedgerTextInterpreterCore` / App `LedgerTextInterpreter` locale 参数传递、移除新增回归与脚本编译项，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：多语言识别语言包已经从文档进入 Core 第一段可运行代码，日文和社区审核包关键词可以参与账单相关性判断，App 主链路已经具备 locale hint 传递。
+- 下一步建议：继续按小步迁移金额标签和 total 规则到语言包，优先补 `ja` 金额格式与 `PaymentAmountExtractor` 回归，再迁移商户 / 分类 resolver。
 
 ### ITER-244 GOAL-1855 语言包扩展与社区共享设计
 - 日期：2026-06-25

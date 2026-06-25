@@ -22,6 +22,7 @@ swiftc \
   "$CORE/Models/ImportedReceipt.swift" \
   "$CORE/Models/LedgerInterpretationModels.swift" \
   "$CORE/Services/VoiceLedgerParser.swift" \
+  "$CORE/Services/LedgerRecognitionLanguagePack.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$ROOT/tools/receipt_ocr/batch_parse.swift"

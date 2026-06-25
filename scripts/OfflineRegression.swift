@@ -46,6 +46,7 @@ struct OfflineRegression {
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
+        verifyRecognitionLanguagePacks(reporter: reporter)
         verifySmartReceiptMergePolicy(reporter: reporter)
         verifyExternalReceiptAssistPayload(reporter: reporter)
         verifyExternalReceiptAssistGate(reporter: reporter)
@@ -56,6 +57,7 @@ struct OfflineRegression {
         verifyLedgerTextInterpreterCore(reporter: reporter)
         await verifyLedgerTextInterpreterTransitShortcut(reporter: reporter)
         await verifyLedgerTextInterpreterSuppressesMultipleReceiptWarning(reporter: reporter)
+        await verifyLedgerTextInterpreterUsesLocaleLanguagePack(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
@@ -749,6 +751,53 @@ struct OfflineRegression {
         reporter.check(resolver.resolve(text: "NTUC FAIRPRICE") == .groceries, "CategoryResolver maps known grocery merchant")
         reporter.check(resolver.resolve(text: "滴滴出行") == .transport, "CategoryResolver maps known transport merchant")
         reporter.check(resolver.resolve(text: "OpenAI ChatGPT") == .digital, "CategoryResolver maps known digital merchant")
+    }
+
+    private static func verifyRecognitionLanguagePacks(reporter: RegressionReporter) {
+        let packSet = LedgerRecognitionLanguagePackSet.builtIn
+        let japaneseChain = packSet.packs(for: "ja-JP")
+
+        reporter.check(japaneseChain.first?.id == "ja", "RecognitionLanguagePackSet selects Japanese pack for ja-JP")
+        reporter.check(japaneseChain.map(\.id).contains("en"), "RecognitionLanguagePackSet keeps English fallback for Japanese pack")
+        reporter.check(
+            japaneseChain.first?.billKeywords.contains("領収書") == true,
+            "Japanese recognition pack contains receipt keyword"
+        )
+
+        let japaneseReceipt = """
+        領収書
+        店舗: Demo Cafe
+        合計 ¥1,080
+        支払方法 カード
+        """
+        let builtInGate = BillRelevanceGate(languagePackSet: packSet)
+        let japaneseRelevance = builtInGate.evaluate(japaneseReceipt, localeIdentifier: "ja-JP")
+        reporter.check(japaneseRelevance.isRelevant, "BillRelevanceGate accepts Japanese receipt via language pack")
+        reporter.check(
+            japaneseRelevance.positiveSignals.contains("payment_or_receipt_keyword"),
+            "BillRelevanceGate records language-pack receipt keyword signal"
+        )
+
+        let communityPack = LedgerRecognitionLanguagePack(
+            id: "x-community",
+            schemaVersion: 1,
+            packVersion: "0.1.0",
+            localeIdentifiers: ["x-community"],
+            billKeywords: ["ticketstub"],
+            paymentKeywords: [],
+            amountLabels: [],
+            totalLabels: [],
+            discountLabels: [],
+            taxLabels: [],
+            dateLabels: [],
+            merchantLabels: [],
+            nonMerchantKeywords: [],
+            categoryKeywordMap: ["ticketstub": .entertainment],
+            provenance: .reviewedCommunity
+        )
+        let communityGate = BillRelevanceGate(languagePackSet: LedgerRecognitionLanguagePackSet(packs: [communityPack]))
+        let communityRelevance = communityGate.evaluate("ticketstub $3.25", localeIdentifier: "x-community")
+        reporter.check(communityRelevance.isRelevant, "BillRelevanceGate accepts reviewed community language pack keywords")
     }
 
     private static func verifySmartReceiptMergePolicy(reporter: RegressionReporter) {
@@ -2847,6 +2896,33 @@ struct OfflineRegression {
             reporter.check(!multiReceiptDetected, "LedgerTextInterpreter suppresses multiple receipt warning while feature is paused")
         default:
             reporter.check(false, "LedgerTextInterpreter returns transaction when multiple receipt warning is paused")
+        }
+    }
+
+    private static func verifyLedgerTextInterpreterUsesLocaleLanguagePack(reporter: RegressionReporter) async {
+        ExternalReceiptAssistSettings.isEnabled = false
+
+        let interpreter = LedgerTextInterpreter()
+        let text = """
+        領収書
+        店舗: Demo Cafe
+        支払方法 カード
+        """
+        let interpretation = await interpreter.interpret(
+            LedgerTextInterpretationInput(
+                text: text,
+                preferredSource: .manual,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil,
+                localeIdentifier: "ja-JP"
+            )
+        )
+
+        switch interpretation {
+        case .nonBillImage:
+            reporter.check(false, "LedgerTextInterpreter uses locale language pack before non-bill rejection")
+        default:
+            reporter.check(true, "LedgerTextInterpreter uses locale language pack before non-bill rejection")
         }
     }
 

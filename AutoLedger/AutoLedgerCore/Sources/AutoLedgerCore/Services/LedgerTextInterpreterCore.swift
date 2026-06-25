@@ -27,7 +27,11 @@ public struct LedgerTextInterpreterCore: Sendable {
             return transit
         }
 
-        let relevance = relevanceGate.evaluate(normalizedText, sourceHint: input.hints.sourceHint)
+        let relevance = relevanceGate.evaluate(
+            normalizedText,
+            sourceHint: input.hints.sourceHint,
+            localeIdentifier: input.localeIdentifier
+        )
         guard relevance.isRelevant else {
             return InterpretResult(draft: nil, confidence: .low, needsReview: true, warnings: [.nonBillImage],
                 debugTrace: ["non_bill_image score=\(relevance.score) negative=\(relevance.negativeSignals.joined(separator: ","))"])
