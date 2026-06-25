@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.6.1）
+- [2026-06-25 +0800] 新增 `GOAL-1820` 酒店消费 B 阶段本地邮箱半自动导入主线规划：明确公共用户后续只走用户主动触发、本机 IMAP 拉取、Keychain 保存授权码、PDF 本地提取、脱敏后解析、待确认后入账的链路；补充邮箱来源 metadata、去重策略、错误降级、隐私审核、Demo Mode 和后续 `GOAL-1821` 至 `GOAL-1825` 拆分。本轮只更新版本规划文档，不实现 IMAP、Keychain、邮箱设置 UI、草稿持久化、自动扫描或 Worker 代拉邮箱。
+
 ### 修复（v1.6.1）
 - [2026-06-25 +0800] 完成 `GOAL-1870` 识别链路误提示收敛：暂时暂停 App 主链路、QuickLedgerIntent 和 Share Extension 中 `detectMultipleReceipts` 的调用，不再因重复金额行、优惠行或支付渠道金额行追加“可能包含多笔账单”提示；保留多商品纸质小票 total 缺失拦截和 total 命中后的单笔总额提示。本轮不删除 `ReceiptParser.detectMultipleReceipts` 函数，不实现多笔账单自动拆分，不修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-25 +0800] 修复 Mac Catalyst 本地构建后看不到“酒店消费”入口的问题：Mac Catalyst 根视图显式进入 `IPadWorkspaceView`，iPad / Mac 工作台侧边栏新增“酒店消费”入口，当前展示已有 `HotelStayListView` 的列表 / 空状态并沿用当前账本口径。本轮不新增 `HotelStayRecord` 独立持久化表，不串接 PDF 导入 / 确认页到真实酒店归档数据源，不修改 schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-252 GOAL-1817 酒店消费删除闭环）
+更新日期：2026-06-25（ITER-253 GOAL-1820 酒店消费 B 阶段规划）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-253 GOAL-1820 酒店消费 B 阶段规划
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1820
+- 类型：文档 / 产品规划 / 隐私设计
+- 目标：把酒店消费 B 阶段从路线记录扩展为可执行的本地邮箱半自动导入主线规划，为后续公共用户能力拆分实现 goal。
+- 改动范围：更新 `versions/v1.6.1-plan.md` 的 B 阶段用户流程、模块边界、邮箱来源 metadata、去重策略、错误降级、隐私原则、审核说明、Demo Mode、前置条件和 B 阶段回归验收点；将 B 阶段拆为 `GOAL-1821` 至 `GOAL-1825`；回填 CHANGELOG 和本日志。
+- 未改动范围：未实现 IMAP 客户端、Keychain 凭据读写、邮箱设置 UI、连接测试、PDF 附件下载、邮箱扫描任务、`HotelStayDraft` 跨会话持久化、待确认草稿队列、邮箱来源模型解析、后台自动扫描、Worker 代拉邮箱或自动入账；未修改 SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：B 阶段被定义为用户主动触发的一次性本地扫描；授权码只保存在本机 Keychain；App 本地连接 QQ 邮箱 / 通用 IMAP；只下载候选 PDF；PDFKit 本地提取文本；脱敏后复用现有解析管线；所有结果进入待确认，用户确认后才写入 `HotelStayRecord + Transaction`。
+- 未完成内容：B 阶段所有代码实现和真实邮箱测试留给后续 `GOAL-1821` 起的实现轮次。
+- 测试情况：本轮只更新文档；执行 `git diff --check` 通过。
+- 风险与注意事项：B 阶段涉及邮箱授权、IMAP 风控和隐私审核，后续实现必须先完成 Keychain / 日志脱敏 / Demo Mode / 草稿持久化，不应直接从 IMAP 扫描结果自动入账。
+- 回滚方式：回退 `versions/v1.6.1-plan.md` 中 B 阶段扩展规划、GOAL 表拆分、回归验收点，以及 CHANGELOG / 本日志条目即可；本轮无代码和 schema 变更。
+- 结论：酒店消费 B 阶段已经具备可拆解的实施路线，但仍明确不属于当前 `v1.6.1` 实现范围。
+- 下一步建议：进入 `GOAL-1821` 前，先决定是否把 `HotelStayDraft` 持久化队列作为 B 阶段前置 blocker 单独拆出。
 
 ### ITER-252 GOAL-1817 酒店消费删除闭环
 - 日期：2026-06-25
