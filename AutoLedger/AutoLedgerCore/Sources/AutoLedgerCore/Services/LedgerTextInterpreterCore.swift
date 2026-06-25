@@ -48,7 +48,9 @@ public struct LedgerTextInterpreterCore: Sendable {
 
         let merchantResult = extractMerchant(from: normalizedText, localeIdentifier: input.localeIdentifier)
         let merchant = merchantResult.merchant
-        let categoryResult = CategoryResolver().resolveDetailed(text: merchant.isEmpty ? normalizedText : merchant)
+        let categoryResult = CategoryResolver(localeIdentifier: input.localeIdentifier).resolveDetailed(
+            text: merchant.isEmpty ? normalizedText : merchant
+        )
         let category = categoryResult.category
 
         var warnings: [InterpretWarning] = []

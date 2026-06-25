@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-247 GOAL-1858 商户提取器语言包接入）
+更新日期：2026-06-25（ITER-248 GOAL-1859 分类 resolver 语言包接入）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-248 GOAL-1859 分类 resolver 语言包接入
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1859
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：继续落地多语言账单识别语言包，将 `CategoryResolver` 从静态分类关键词推进到 locale-aware `categoryKeywordMap`，并优先补日文餐饮 / 日用品分类样例。
+- 改动范围：`CategoryResolver` locale / language pack 注入、分类关键词读取 `LedgerRecognitionLanguagePack.categoryKeywordMap`；`LedgerTextInterpreterCore` 将 `InterpretInput.localeIdentifier` 传给分类 resolver；离线回归新增日文分类样例；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未修改 `TransactionCategory` 枚举、分类 UI 文案、用户自定义分类体系；未实现用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`CategoryResolver` 新增 `localeIdentifier` 与 `languagePackSet` 初始化参数，并保持无参数调用兼容；语言包分类关键词命中时输出 `language_pack_keyword` debug trace，再回落既有静态商户关键词和 `TransactionCategory.infer`；日文 `東京カフェ` 可推断为 `dining`，`駅前コンビニ` 可推断为 `groceries`，完整日文小票可在 Core 主链路生成餐饮分类。
+- 未完成内容：用户本地纠错覆盖包、社区包导入 / 导出、外部辅助 prompt 携带 language pack ID、更多日文分类词条和母语审校仍留给后续 goal。
+- 测试情况：先新增日文分类回归并运行 `bash scripts/run_offline_regression.sh`，观察到 `CategoryResolver(localeIdentifier:)` 尚不存在的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：分类语言包命中优先于静态规则，未来社区包若加入过宽泛关键词可能提高误分类风险；社区包仍应通过 reviewed provenance、脱敏样例和 golden case 门禁进入。
+- 回滚方式：恢复 `CategoryResolver` 无语言包状态和旧初始化方式，恢复 `LedgerTextInterpreterCore` 对 `CategoryResolver()` 的无 locale 调用，移除新增日文分类回归，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：平台无关普通记账解析链路已完成账单相关性、金额、商户、分类四段语言包接入，日文小票从相关性判断到结构化草稿已具备第一条完整本地回归路径。
+- 下一步建议：继续补用户本地纠错覆盖包或外部辅助 prompt 的语言上下文，优先保持所有共享 / 上传能力默认关闭和用户 opt-in。
 
 ### ITER-247 GOAL-1858 商户提取器语言包接入
 - 日期：2026-06-25

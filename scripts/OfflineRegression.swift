@@ -786,6 +786,16 @@ struct OfflineRegression {
         reporter.check(resolver.resolve(text: "NTUC FAIRPRICE") == .groceries, "CategoryResolver maps known grocery merchant")
         reporter.check(resolver.resolve(text: "滴滴出行") == .transport, "CategoryResolver maps known transport merchant")
         reporter.check(resolver.resolve(text: "OpenAI ChatGPT") == .digital, "CategoryResolver maps known digital merchant")
+
+        let japaneseResolver = CategoryResolver(localeIdentifier: "ja-JP")
+        reporter.check(
+            japaneseResolver.resolve(text: "東京カフェ") == .dining,
+            "CategoryResolver maps Japanese カフェ keyword from language pack"
+        )
+        reporter.check(
+            japaneseResolver.resolve(text: "駅前コンビニ") == .groceries,
+            "CategoryResolver maps Japanese コンビニ keyword from language pack"
+        )
     }
 
     private static func verifyRecognitionLanguagePacks(reporter: RegressionReporter) {
@@ -1347,6 +1357,25 @@ struct OfflineRegression {
         reporter.check(
             japaneseResult.draft?.merchant == "Demo Cafe",
             "LedgerTextInterpreterCore extracts Japanese 店舗 merchant using language pack (got '\(japaneseResult.draft?.merchant ?? "")')"
+        )
+
+        let japaneseCafeReceipt = """
+        領収書
+        店舗: 東京カフェ
+        合計 ¥1,080
+        支払方法 カード
+        """
+        let japaneseCafeResult = interpreter.interpret(
+            InterpretInput(
+                rawText: japaneseCafeReceipt,
+                sourceType: .ocr,
+                localeIdentifier: "ja-JP",
+                hints: LedgerInterpretHints(sourceHint: .receipt)
+            )
+        )
+        reporter.check(
+            japaneseCafeResult.draft?.category == TransactionCategory.dining.rawValue,
+            "LedgerTextInterpreterCore infers Japanese カフェ category using language pack (got '\(japaneseCafeResult.draft?.category ?? "")')"
         )
 
         // Phase 2: Merchant extraction excludes blacklisted headers
