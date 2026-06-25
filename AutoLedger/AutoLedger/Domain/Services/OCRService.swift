@@ -1,4 +1,5 @@
 import Foundation
+import AutoLedgerCore
 import Vision
 
 public enum OCRServiceError: LocalizedError {
@@ -24,7 +25,18 @@ public struct OCRResult: Sendable {
 }
 
 public struct OCRService: Sendable {
-    public init() {}
+    private let recognitionLanguages: [String]
+
+    public init(
+        localeIdentifier: String? = Locale.autoupdatingCurrent.identifier,
+        languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn,
+        recognitionLanguages: [String]? = nil
+    ) {
+        self.recognitionLanguages = recognitionLanguages ?? LedgerOCRLanguageHintResolver(
+            localeIdentifier: localeIdentifier,
+            languagePackSet: languagePackSet
+        ).recognitionLanguages
+    }
 
     /// 识别图片中的文本，同时返回最低单词置信度。
     /// 当 `minimumWordConfidence < 0.75` 时，建议将结果交由 LLM 二次验证金额字段。
@@ -32,7 +44,7 @@ public struct OCRService: Sendable {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        request.recognitionLanguages = recognitionLanguages
 
         let handler = VNImageRequestHandler(data: data)
         try handler.perform([request])

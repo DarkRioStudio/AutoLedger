@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-249 GOAL-1861 语言包高级配置 schema）
+更新日期：2026-06-25（ITER-250 GOAL-1862 App OCR 语言 hint 接入）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-250 GOAL-1862 App OCR 语言 hint 接入
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1862
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：让主 App OCR 服务实际消费语言包中的 `ocrRecognitionLanguages`，使日文账单 OCR 可优先使用 `ja-JP + en-US`，同时保持无匹配语言包时的旧默认行为。
+- 改动范围：`LedgerRecognitionLanguagePack` 文件中新增 `LedgerOCRLanguageHintResolver`；`OCRService` 初始化和 Vision `recognitionLanguages` 接入 resolver；离线回归新增日文 OCR hint 与未知 locale 默认 hint 断言；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未修改 `ReceiptParser` 的滴滴车费局部 OCR 专用请求；未新增日期解析器或正式入账日期策略；未新增用户语言选择 UI；未实现用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增平台无关 `LedgerOCRLanguageHintResolver`，按 locale 匹配主语言包并返回去重后的 OCR language hints；日文 locale 返回 `["ja-JP", "en-US"]`，未知 locale 返回旧默认 `["zh-Hans", "en-US"]`；`OCRService` 默认读取 `Locale.autoupdatingCurrent` 对应 resolver 结果，也支持通过初始化参数显式注入 `recognitionLanguages`。
+- 未完成内容：日期格式 `dateFormats` 的正式 parser 消费、用户手动选择账单语言、用户本地纠错覆盖包和社区语言包导入 / 导出留给后续 goal。
+- 测试情况：先新增 `LedgerOCRLanguageHintResolver` 回归并运行 `bash scripts/run_offline_regression.sh`，观察到 resolver 缺失的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：Vision OCR 语言提示会影响真实截图识别结果；本轮只对当前 locale 已有语言包启用 hint，并为未知 locale 保留旧默认，降低公共主链路突变风险。日文真实截图仍需要 TestFlight / 真机样例补充人工回归。
+- 回滚方式：恢复 `OCRService` 硬编码 `["zh-Hans", "en-US"]`，移除 `LedgerOCRLanguageHintResolver` 和对应离线回归，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：语言包的 OCR hint 已从 schema 进入 App 主 OCR 链路，后续新增语言包时可通过数据配置影响 OCR 基础识别，不需要改 Vision 调用代码。
+- 下一步建议：继续以独立 goal 接入 `dateFormats` 的平台无关日期解析，优先只产出候选日期和置信提示，不直接改变低置信账单的正式入账。
 
 ### ITER-249 GOAL-1861 语言包高级配置 schema
 - 日期：2026-06-25

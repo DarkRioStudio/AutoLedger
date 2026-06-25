@@ -284,6 +284,73 @@ public struct LedgerRecognitionLanguagePackSet: Sendable {
     }
 }
 
+public struct LedgerOCRLanguageHintResolver: Sendable {
+    public let localeIdentifier: String?
+    public let languagePackSet: LedgerRecognitionLanguagePackSet
+    public let defaultRecognitionLanguages: [String]
+
+    public init(
+        localeIdentifier: String? = Locale.autoupdatingCurrent.identifier,
+        languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn,
+        defaultRecognitionLanguages: [String] = ["zh-Hans", "en-US"]
+    ) {
+        self.localeIdentifier = localeIdentifier
+        self.languagePackSet = languagePackSet
+        self.defaultRecognitionLanguages = defaultRecognitionLanguages
+    }
+
+    public var recognitionLanguages: [String] {
+        guard let localeIdentifier else {
+            return Self.unique(defaultRecognitionLanguages)
+        }
+
+        guard let primaryPack = primaryPack(for: localeIdentifier) else {
+            return Self.unique(defaultRecognitionLanguages)
+        }
+
+        if !primaryPack.ocrRecognitionLanguages.isEmpty {
+            return Self.unique(primaryPack.ocrRecognitionLanguages)
+        }
+
+        let mergedHints = languagePackSet.ocrRecognitionLanguages(for: localeIdentifier)
+        if !mergedHints.isEmpty {
+            return Self.unique(mergedHints)
+        }
+
+        return Self.unique(defaultRecognitionLanguages)
+    }
+
+    private func primaryPack(for localeIdentifier: String) -> LedgerRecognitionLanguagePack? {
+        let normalized = Self.normalize(localeIdentifier)
+        return languagePackSet.packs.first { pack in
+            if Self.normalize(pack.id) == normalized { return true }
+            if normalized.hasPrefix(Self.normalize(pack.id) + "-") { return true }
+            return pack.localeIdentifiers.contains { candidate in
+                let normalizedCandidate = Self.normalize(candidate)
+                return normalizedCandidate == normalized || normalized.hasPrefix(normalizedCandidate + "-")
+            }
+        }
+    }
+
+    private static func unique(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for value in values {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let key = trimmed.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(trimmed)
+        }
+        return result
+    }
+
+    private static func normalize(_ localeIdentifier: String) -> String {
+        localeIdentifier.replacingOccurrences(of: "_", with: "-").lowercased()
+    }
+}
+
 public extension LedgerRecognitionLanguagePack {
     static let builtInSimplifiedChinese = LedgerRecognitionLanguagePack(
         id: "zh-Hans",

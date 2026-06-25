@@ -865,6 +865,16 @@ struct OfflineRegression {
             japanesePack?.ocrRecognitionLanguages == ["ja-JP", "en-US"],
             "Japanese recognition pack exposes OCR language hints"
         )
+        let japaneseOCRHints = LedgerOCRLanguageHintResolver(localeIdentifier: "ja-JP").recognitionLanguages
+        reporter.check(
+            japaneseOCRHints == ["ja-JP", "en-US"],
+            "LedgerOCRLanguageHintResolver uses Japanese language pack OCR hints"
+        )
+        let fallbackOCRHints = LedgerOCRLanguageHintResolver(localeIdentifier: "fr-FR").recognitionLanguages
+        reporter.check(
+            fallbackOCRHints == ["zh-Hans", "en-US"],
+            "LedgerOCRLanguageHintResolver preserves default OCR hints when locale has no primary pack"
+        )
         reporter.check(
             japanesePack?.nonMerchantKeywords.contains("部屋番号") == true &&
                 japanesePack?.nonMerchantKeywords.contains("税番号") == true,
