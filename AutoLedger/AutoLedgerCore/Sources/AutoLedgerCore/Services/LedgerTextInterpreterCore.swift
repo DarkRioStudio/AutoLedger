@@ -37,7 +37,10 @@ public struct LedgerTextInterpreterCore: Sendable {
                 debugTrace: ["non_bill_image score=\(relevance.score) negative=\(relevance.negativeSignals.joined(separator: ","))"])
         }
 
-        let amountResult = PaymentAmountExtractor().extract(from: normalizedText, lines: lines)
+        let amountResult = PaymentAmountExtractor(localeIdentifier: input.localeIdentifier).extract(
+            from: normalizedText,
+            lines: lines
+        )
         guard let amount = amountResult.paidAmount else {
             return InterpretResult(draft: nil, confidence: .low, needsReview: true, warnings: [.missingAmount],
                 debugTrace: ["bill_relevant_but_missing_amount score=\(relevance.score)"])

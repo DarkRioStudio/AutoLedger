@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-245 GOAL-1856 Core 语言包骨架与账单相关性门控接入）
+更新日期：2026-06-25（ITER-246 GOAL-1857 金额提取器语言包接入）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-246 GOAL-1857 金额提取器语言包接入
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1857
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：继续落地多语言账单识别语言包，将 `PaymentAmountExtractor` 从静态金额标签推进到 locale-aware 语言包标签，并优先补日文总额和千位金额格式。
+- 改动范围：`PaymentAmountExtractor` locale / language pack 注入、金额正则千位分隔支持、total / actual paid / subtotal / tax / discount 标签读取语言包；`LedgerTextInterpreterCore` 将 `InterpretInput.localeIdentifier` 传给金额提取器；离线回归新增日文金额样例；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未迁移 `RuleMerchantExtractor`、`MerchantResolver`、`CategoryResolver` 到语言包；未实现用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 SQLite / CloudKit schema、UI 本地化 key、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`PaymentAmountExtractor` 新增 `localeIdentifier` 与 `languagePackSet` 初始化参数，并保持无参数调用兼容；金额正则支持 `¥1,080` / `1,234.56` 这类千位分隔金额，同时保留 `12,30` 逗号小数兼容；角色判断可读取语言包中的 `amountLabels`、`totalLabels`、`discountLabels`、`taxLabels`；`LedgerTextInterpreterCore(localeIdentifier: "ja-JP")` 可以解析日文 `合計 ¥1,080` 为 1080。
+- 未完成内容：日文商户标签、日文分类关键词、更多地区货币格式、用户本地纠错覆盖包和社区包导入 / 导出仍留给后续 goal。
+- 测试情况：先新增日文金额回归并运行 `bash scripts/run_offline_regression.sh`，观察到 `PaymentAmountExtractor(localeIdentifier:)` 尚不存在的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`git diff --check`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：金额正则新增千位分隔支持，已保留逗号小数路径；后续如支持更多地区格式，应继续用语言包和 golden case 约束，避免把订单号、日期或数量误识别为金额。Xcode build 仍可能输出既有 Swift 6 actor / deprecated API warning，本轮不处理。
+- 回滚方式：恢复 `PaymentAmountExtractor` 无语言包状态和旧金额正则，恢复 `LedgerTextInterpreterCore` 对 `PaymentAmountExtractor()` 的无 locale 调用，移除新增日文金额回归，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：金额提取器已进入语言包链路，日文总额与千位金额格式具备第一条可回归路径。
+- 下一步建议：继续迁移商户标签和 `MerchantResolver` 到语言包，优先覆盖日文 `店舗` / `加盟店` / `店名` 和英文 / 中文既有标签行为不变。
 
 ### ITER-245 GOAL-1856 Core 语言包骨架与账单相关性门控接入
 - 日期：2026-06-25

@@ -680,6 +680,23 @@ struct OfflineRegression {
             "PaymentAmountExtractor falls back to last amount when no total label exists"
         )
         reporter.check(fallbackResult.isApproximate, "PaymentAmountExtractor flags unlabeled fallback as approximate")
+
+        let japaneseResult = PaymentAmountExtractor(localeIdentifier: "ja-JP").extract(from: """
+        領収書
+        店舗: Demo Cafe
+        小計 ¥980
+        消費税 ¥100
+        合計 ¥1,080
+        支払方法 カード
+        """)
+        reporter.check(
+            abs((japaneseResult.paidAmount ?? 0) - 1080) < 0.01,
+            "PaymentAmountExtractor uses Japanese pack to parse thousands total"
+        )
+        reporter.check(
+            japaneseResult.selectedCandidate?.role == .total,
+            "PaymentAmountExtractor classifies Japanese 合計 as total"
+        )
     }
 
     private static func verifyMerchantExtraction(reporter: RegressionReporter) {
@@ -1287,6 +1304,27 @@ struct OfflineRegression {
         reporter.check(
             abs((malayResult.draft?.amount ?? 0) - 112.45) < 0.01,
             "LedgerTextInterpreterCore extracts Total (RM): 112.45 with RM prefix (got \(malayResult.draft?.amount ?? -1))"
+        )
+
+        let japaneseReceipt = """
+        領収書
+        店舗: Demo Cafe
+        小計 ¥980
+        消費税 ¥100
+        合計 ¥1,080
+        支払方法 カード
+        """
+        let japaneseResult = interpreter.interpret(
+            InterpretInput(
+                rawText: japaneseReceipt,
+                sourceType: .ocr,
+                localeIdentifier: "ja-JP",
+                hints: LedgerInterpretHints(sourceHint: .receipt)
+            )
+        )
+        reporter.check(
+            abs((japaneseResult.draft?.amount ?? 0) - 1080) < 0.01,
+            "LedgerTextInterpreterCore extracts Japanese 合計 ¥1,080 using language pack (got \(japaneseResult.draft?.amount ?? -1))"
         )
 
         // Phase 2: Merchant extraction excludes blacklisted headers

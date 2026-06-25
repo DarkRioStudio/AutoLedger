@@ -68,6 +68,8 @@ public struct AmountExtractionResult: Sendable {
 }
 
 public struct PaymentAmountExtractor: Sendable {
+    private let languagePack: LedgerRecognitionLanguagePack?
+
     private static let totalKeywords: [String] = [
         "合计", "总计", "总金额", "总额", "小计", "实付", "实收", "应付", "付款金额",
         "total", "grand total", "subtotal", "amount due", "total due", "total rounded",
@@ -82,11 +84,13 @@ public struct PaymentAmountExtractor: Sendable {
     )
 
     private static let currencyAmountRegex = try? NSRegularExpression(
-        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB)?(?![A-Za-z0-9./])"#,
+        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB)?(?![A-Za-z0-9./])"#,
         options: [.caseInsensitive]
     )
 
-    public init() {}
+    public init(localeIdentifier: String? = nil, languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn) {
+        self.languagePack = languagePackSet.mergedPack(for: localeIdentifier)
+    }
 
     public func extract(from rawText: String) -> AmountExtractionResult {
         let normalizedText = rawText.replacingOccurrences(of: "\r\n", with: "\n")
@@ -319,7 +323,7 @@ public struct PaymentAmountExtractor: Sendable {
         var values: [Double] = []
         for match in matches {
             guard let numberRange = Range(match.range(at: 2), in: line) else { continue }
-            let raw = String(line[numberRange]).replacingOccurrences(of: ",", with: ".")
+            let raw = normalizeAmountLiteral(String(line[numberRange]))
             guard let value = Double(raw), value > 0, value < 100_000 else { continue }
             values.append(value)
         }
@@ -332,12 +336,12 @@ public struct PaymentAmountExtractor: Sendable {
         if lineLooksLikeQtyLine(line) { return .quantity }
         if lowered.contains("change") { return .change }
         if lowered.hasPrefix("cash") || lowered.contains("cash tendered") { return .cash }
-        if lowered.contains("discount") || lowered.contains("优惠") || lowered.contains("折扣") { return .discount }
+        if containsAny(discountKeywords, in: line) { return .discount }
         if lowered.contains("refund") || lowered.contains("退款") || lowered.contains("退货") { return .refund }
-        if lowered.contains("gst") || lowered.contains("tax") || lowered.contains("税") { return .tax }
-        if lowered.contains("subtotal") || lowered.contains("sub total") || lowered.contains("小计") { return .subtotal }
+        if containsAny(taxKeywords, in: line) { return .tax }
+        if containsAny(subtotalKeywords, in: line) { return .subtotal }
         if totalLineScore(line) > 0 { return .total }
-        if lowered.contains("实付") || lowered.contains("金额") || lowered.contains("付款金额") || lowered.contains("支付金额") { return .actualPaid }
+        if containsAny(actualPaidKeywords, in: line) { return .actualPaid }
         return .unknown
     }
 
@@ -362,10 +366,51 @@ public struct PaymentAmountExtractor: Sendable {
     }
 
     private func totalLineScore(_ line: String) -> Int {
-        let score = Self.totalKeywords.filter { line.localizedCaseInsensitiveContains($0) }.count
+        let score = allTotalKeywords.filter { line.localizedCaseInsensitiveContains($0) }.count
         if line.localizedCaseInsensitiveContains("total") && !line.localizedCaseInsensitiveContains("subtotal") { return score + 2 }
         if line.localizedCaseInsensitiveContains("jumlah") { return score + 2 }
         return score
+    }
+
+    private var allTotalKeywords: [String] {
+        Self.totalKeywords + (languagePack?.totalLabels ?? [])
+    }
+
+    private var actualPaidKeywords: [String] {
+        Self.actualPaidKeywords + (languagePack?.amountLabels ?? [])
+    }
+
+    private var discountKeywords: [String] {
+        Self.discountKeywords + (languagePack?.discountLabels ?? [])
+    }
+
+    private var taxKeywords: [String] {
+        Self.taxKeywords + (languagePack?.taxLabels ?? [])
+    }
+
+    private var subtotalKeywords: [String] {
+        let packSubtotals = languagePack?.totalLabels.filter { label in
+            label.localizedCaseInsensitiveContains("小计")
+                || label.localizedCaseInsensitiveContains("小計")
+                || label.localizedCaseInsensitiveContains("subtotal")
+        } ?? []
+        return Self.subtotalKeywords + packSubtotals
+    }
+
+    private static let actualPaidKeywords = ["实付", "金额", "付款金额", "支付金额"]
+    private static let discountKeywords = ["discount", "优惠", "折扣"]
+    private static let taxKeywords = ["gst", "tax", "税"]
+    private static let subtotalKeywords = ["subtotal", "sub total", "小计"]
+
+    private func containsAny(_ keywords: [String], in line: String) -> Bool {
+        keywords.contains { line.localizedCaseInsensitiveContains($0) }
+    }
+
+    private func normalizeAmountLiteral(_ raw: String) -> String {
+        if raw.range(of: #"^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$"#, options: .regularExpression) != nil {
+            return raw.replacingOccurrences(of: ",", with: "")
+        }
+        return raw.replacingOccurrences(of: ",", with: ".")
     }
 
     private func lineLooksLikeChangeOrCashLine(_ line: String) -> Bool {
