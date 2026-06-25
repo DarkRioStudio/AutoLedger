@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-240 GOAL-1860 跨平台 App Icon 重绘）
+更新日期：2026-06-25（ITER-241 GOAL-1815 Mac 酒店消费入口修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-241 GOAL-1815 Mac 酒店消费入口修复
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1815
+- 类型：Bugfix / macOS / 导航
+- 目标：修复本地编译后 Mac 端看不到“酒店消费”tab / 侧边栏入口的问题，让已完成的酒店消费列表组件能在 Mac Catalyst 工作台中被发现。
+- 改动范围：`AutoLedgerRootView` 的 Mac Catalyst 根视图选择；`IPadWorkspaceSection` 与 `IPadWorkspaceView` 侧边栏 / detail switch；版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未新增 `HotelStayRecord` 独立持久化表；未持久化 `HotelStayDraft`；未串接 PDF 导入、解析或确认页到真实酒店消费数据源；未实现删除酒店记录或列表跳转普通账单详情；未修改 SQLite schema、CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Mac Catalyst 显式使用 `IPadWorkspaceView`，避免在 Mac 上落回 iPhone `HomeView`；iPad / Mac 工作台侧边栏新增“酒店消费”入口，使用 `bed.double.fill` 图标和已有四语 `hotel_stay.list.title` 文案；入口展示 `HotelStayListView`，并把当前账本 / 全部账本口径传入酒店归档展示组件。
+- 未完成内容：酒店列表当前仍没有独立持久化数据源，真实记录进入列表需要后续补 `HotelStayRecord` 存储和 PDF 导入 / 确认页数据流；列表到普通账单详情的真实跳转仍未实现。
+- 测试情况：执行 Mac Catalyst build 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过；后续仍建议在本机 Mac App 实际启动后目检侧边栏入口和空状态。
+- 风险与注意事项：本轮修复的是入口可见性，不代表酒店 PDF 导入后的数据已经进入列表；用户当前在 Mac 端应能看到“酒店消费”入口，但列表可能为空，这是现阶段缺少独立酒店记录持久化的预期行为。
+- 回滚方式：回退 `AutoLedgerRootView` 的 Mac Catalyst root 选择、`IPadWorkspaceSection` 的 `hotelStays` 入口和 `IPadHotelStayWorkspaceView`，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：Mac 端“酒店消费”入口不可见的问题已定位并修复，可继续后续酒店消费持久化和导入数据流 GOAL。
+- 下一步建议：下一轮若继续酒店主线，优先补 `HotelStayRecord` 独立持久化与 PDF 导入 / 确认页到列表的数据串接。
 
 ### ITER-240 GOAL-1860 跨平台 App Icon 重绘
 - 日期：2026-06-25

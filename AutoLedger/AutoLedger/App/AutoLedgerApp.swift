@@ -133,11 +133,15 @@ private struct AutoLedgerRootView: View {
 
     @ViewBuilder
     private var rootContent: some View {
+        #if targetEnvironment(macCatalyst)
+        IPadWorkspaceView()
+        #else
         if UIDevice.current.userInterfaceIdiom == .pad {
             IPadWorkspaceView()
         } else {
             HomeView()
         }
+        #endif
     }
 
     @ViewBuilder

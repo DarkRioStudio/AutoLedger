@@ -9,6 +9,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case overview
     case capture
     case ledger
+    case hotelStays
     case reports
     case reviewQueue
     case cleaning
@@ -21,6 +22,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .overview: return "ipad.workspace.overview"
         case .capture: return "ipad.workspace.capture"
         case .ledger: return "ipad.workspace.ledger"
+        case .hotelStays: return "hotel_stay.list.title"
         case .reports: return "ipad.workspace.reports"
         case .reviewQueue: return "ipad.workspace.review_queue"
         case .cleaning: return "ipad.workspace.cleaning"
@@ -33,6 +35,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .overview: return "rectangle.grid.2x2.fill"
         case .capture: return "tray.full.fill"
         case .ledger: return "list.bullet.rectangle"
+        case .hotelStays: return "bed.double.fill"
         case .reports: return "chart.pie.fill"
         case .reviewQueue: return "checklist"
         case .cleaning: return "wand.and.sparkles"
@@ -125,6 +128,8 @@ struct IPadWorkspaceView: View {
             )
         case .ledger:
             IPadLedgerWorkspaceView()
+        case .hotelStays:
+            IPadHotelStayWorkspaceView()
         case .reports:
             IPadReportWorkspaceView()
         case .reviewQueue:
@@ -2384,6 +2389,22 @@ private struct IPadBatchImportWorkspaceView: View {
         String(format: "%.0f%%", confidence * 100)
     }
 
+}
+
+private struct IPadHotelStayWorkspaceView: View {
+    @EnvironmentObject private var store: LedgerStore
+
+    private var ledgerID: String? {
+        store.isShowingAllLedgers ? nil : store.selectedLedgerID
+    }
+
+    var body: some View {
+        HotelStayListView(
+            records: [],
+            transactions: store.visibleTransactions,
+            ledgerID: ledgerID
+        )
+    }
 }
 
 private struct IPadReportWorkspaceView: View {

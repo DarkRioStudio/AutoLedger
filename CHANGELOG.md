@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.6.1）
+- [2026-06-25 +0800] 修复 Mac Catalyst 本地构建后看不到“酒店消费”入口的问题：Mac Catalyst 根视图显式进入 `IPadWorkspaceView`，iPad / Mac 工作台侧边栏新增“酒店消费”入口，当前展示已有 `HotelStayListView` 的列表 / 空状态并沿用当前账本口径。本轮不新增 `HotelStayRecord` 独立持久化表，不串接 PDF 导入 / 确认页到真实酒店归档数据源，不修改 schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+
 ### 变更（v1.6.1）
 - [2026-06-25 +0800] 新增并完成 `GOAL-1860` 跨平台 App Icon 重绘：新增 `tools/app-icons` 生成 / 验证 / 平台形状预览工具，用确定性本地绘制方式重建 iOS、Apple Watch、tvOS、visionOS App Icon PNG；保留蓝绿背景、钱包、金币、闪电和星光元素，闪电改为尖角尾部和平台专用比例，tvOS / visionOS 通过前景覆盖率门禁避免再次被压成细线；预览工具可按 iOS / Mac Catalyst 圆角矩形、Watch / visionOS 圆形、tvOS 横向矩形目检最终观感。本轮不修改 Top Shelf Image、Bundle ID、signing、entitlements、schema、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-24 +0800] 完成 `GOAL-1852` 日文支持落地第二段：`tools/appstore-screenshots/config/screenshots.json` 新增 `ja` locale，并为 iPhone、iPad、Mac、Apple Watch、tvOS、visionOS 现有 26 个截图场景补齐日文标题和副标题；新增 `versions/v1.6.1-ja-release-materials.md`，整理日文术语表、ASC metadata、TestFlight notes、Review Notes 边界和人工审校清单。当前仍不直接提交 ASC、不导出正式日文截图、不声称邮箱自动扫描或 Worker 自动化已对公共用户开放，`MARKETING_VERSION` 继续保持 ASC `1.5.0` 口径。
