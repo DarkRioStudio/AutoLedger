@@ -243,6 +243,7 @@ swiftc \
   "$CORE/Services/SmartReceiptMergePolicy.swift" \
   "$CORE/Services/ExternalReceiptAssistCache.swift" \
   "$CORE/Services/ExternalReceiptAssistPayload.swift" \
+  "$CORE/Services/HotelFolioEmailImportPlanning.swift" \
   "$CORE/Services/HotelFolioParsePipeline.swift" \
   "$CORE/Services/HotelStayArchivePresenter.swift" \
   "$CORE/Services/HotelStayLedgerPostingService.swift" \

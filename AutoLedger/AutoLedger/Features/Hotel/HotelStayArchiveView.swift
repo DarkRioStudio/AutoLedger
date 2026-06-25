@@ -8,6 +8,7 @@ struct HotelStayListView: View {
     let isImporting: Bool
     let statusMessage: String?
     let onImportPDF: (() -> Void)?
+    let onImportEmail: (() -> Void)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
@@ -19,6 +20,7 @@ struct HotelStayListView: View {
         isImporting: Bool = false,
         statusMessage: String? = nil,
         onImportPDF: (() -> Void)? = nil,
+        onImportEmail: (() -> Void)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.records = records
@@ -27,7 +29,12 @@ struct HotelStayListView: View {
         self.isImporting = isImporting
         self.statusMessage = statusMessage
         self.onImportPDF = onImportPDF
+        self.onImportEmail = onImportEmail
         self.onDeleteRecord = onDeleteRecord
+    }
+
+    private var hasImportActions: Bool {
+        onImportPDF != nil || onImportEmail != nil
     }
 
     private var snapshot: HotelStayListSnapshot {
@@ -39,8 +46,8 @@ struct HotelStayListView: View {
             Group {
                 if snapshot.rows.isEmpty {
                     VStack(spacing: 16) {
-                        if onImportPDF != nil {
-                            importButton
+                        if hasImportActions {
+                            importButtons
                         }
                         if let statusMessage {
                             statusRow(statusMessage)
@@ -56,7 +63,7 @@ struct HotelStayListView: View {
                     .background(AppTheme.screenGradient.ignoresSafeArea())
                 } else {
                     List {
-                        if onImportPDF != nil || statusMessage != nil {
+                        if hasImportActions || statusMessage != nil {
                             importSection
                         }
                         summarySection
@@ -68,12 +75,25 @@ struct HotelStayListView: View {
             }
             .navigationTitle("hotel_stay.list.title")
             .toolbar {
-                if onImportPDF != nil {
+                if hasImportActions {
                     ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            onImportPDF?()
+                        Menu {
+                            if onImportPDF != nil {
+                                Button {
+                                    onImportPDF?()
+                                } label: {
+                                    Label("hotel_stay.import.pdf", systemImage: "doc.badge.plus")
+                                }
+                            }
+                            if onImportEmail != nil {
+                                Button {
+                                    onImportEmail?()
+                                } label: {
+                                    Label("hotel_stay.import.email", systemImage: "envelope.badge")
+                                }
+                            }
                         } label: {
-                            Label("hotel_stay.import.pdf", systemImage: "doc.badge.plus")
+                            Label("hotel_stay.import.menu", systemImage: "plus")
                         }
                         .disabled(isImporting)
                     }
@@ -84,8 +104,8 @@ struct HotelStayListView: View {
 
     private var importSection: some View {
         Section {
-            if onImportPDF != nil {
-                importButton
+            if hasImportActions {
+                importButtons
             }
             if let statusMessage {
                 statusRow(statusMessage)
@@ -94,18 +114,36 @@ struct HotelStayListView: View {
         .listRowBackground(AppTheme.card)
     }
 
-    private var importButton: some View {
-        Button {
-            onImportPDF?()
-        } label: {
-            Label(
-                isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.pdf",
-                systemImage: isImporting ? "hourglass" : "doc.badge.plus"
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private var importButtons: some View {
+        VStack(spacing: 10) {
+            if onImportPDF != nil {
+                Button {
+                    onImportPDF?()
+                } label: {
+                    Label(
+                        isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.pdf",
+                        systemImage: isImporting ? "hourglass" : "doc.badge.plus"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isImporting)
+            }
+
+            if onImportEmail != nil {
+                Button {
+                    onImportEmail?()
+                } label: {
+                    Label(
+                        isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.email",
+                        systemImage: isImporting ? "hourglass" : "envelope.badge"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isImporting)
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(isImporting)
     }
 
     private func statusRow(_ message: String) -> some View {

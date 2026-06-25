@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-254 GOAL-1845 账本 tab 多账本 UI 收口）
+更新日期：2026-06-25（ITER-255 GOAL-1821 / 1822 / 1824 酒店消费本地邮箱导入首版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-255 GOAL-1821 / 1822 / 1824 酒店消费本地邮箱导入首版
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1821 / GOAL-1822 / GOAL-1824
+- 类型：能力增强 / UI / 隐私 / 测试
+- 目标：落地酒店消费 B 阶段第一版本地邮箱手动扫描导入，让用户配置邮箱参数和本机授权码，主动扫描候选水单邮件，并选择 PDF 附件进入现有酒店水单复核入账链路。
+- 改动范围：`AutoLedgerCore` 新增邮箱设置、邮件候选、PDF 附件、MIME parser、候选过滤和 `localEmailIMAP` 草稿工厂；App 层新增 IMAP 参数持久化、Keychain 授权码存取 / 删除、PDFKit 附件文本提取、IMAP 扫描客户端和 `HotelFolioEmailImportView`；`HotelStayListView` 增加邮箱导入入口，iPad / Mac 工作台接回已有解析 / 复核链路；补齐四语本地化、离线回归、版本计划、CHANGELOG 和本日志。
+- 未改动范围：不做自动持续读取、后台任务、Worker 云端代拉邮箱、云端邮箱授权保存、自动入账、`HotelStayDraft` 跨会话队列、邮箱水单去重、拒绝候选记忆、Demo Mode、公共版本开关、Review Notes 邮箱审核说明、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION` 修改。
+- 完成内容：用户可在酒店消费页打开“扫描邮箱水单”，配置 QQ 邮箱或自定义 IMAP 参数；授权码只写入本机 Keychain；扫描必须由按钮触发；候选邮件显示主题、发件人、日期和 PDF 附件；选择附件后本地 PDFKit 提取文本，生成 `HotelStayDraft(sourceType: .localEmailIMAP, status: .textExtracted)`，随后复用现有外部模型解析、酒店水单复核 sheet 和确认入账路径。
+- 未完成内容：真实 IMAP 沙盒账号人工测试、附件级下载优化、Message-ID / 附件 hash 去重、草稿队列持久化、Demo Mode、Review Notes 和日志脱敏专项审计仍留给后续 B 阶段 goal。
+- 测试情况：先新增邮箱导入规划离线断言并运行 `bash scripts/run_offline_regression.sh`，观察到缺少新类型的 RED 编译失败；实现后执行 `bash scripts/run_offline_regression.sh`、`python3 scripts/check_localization_coverage.py`、`bash scripts/run_golden_regression.sh`、`git diff --check`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。
+- 风险与注意事项：首版 IMAP 扫描为用户触发的本地一次性读取，仍需要真实 QQ / IMAP 邮箱和虚构酒店水单 PDF 做人工验证；当前没有跨会话草稿队列和去重，重复扫描可能再次看到同一候选邮件；公共版本开放前必须补 Demo Mode 和审核说明。
+- 回滚方式：回退新增邮箱导入 Core 服务、App 层 IMAP / Keychain / PDFKit 服务、`HotelFolioEmailImportView`、酒店消费列表邮箱入口、iPad / Mac 工作台接入、本地化新增 key、离线回归新增断言和版本文档 / CHANGELOG / 本日志即可；本轮无 schema 变更。
+- 结论：酒店消费 B 阶段已具备第一版手动邮箱扫描导入闭环，但仍严格保持“用户主动触发、结果待确认、确认后才入账”，不进入自动邮箱或云端同步路线。
+- 下一步建议：后续 B 阶段优先补 `HotelStayDraft` 待确认队列持久化、邮箱候选去重和 Demo Mode，再考虑公共版本审核材料。
 
 ### ITER-254 GOAL-1845 账本 tab 多账本 UI 收口
 - 日期：2026-06-25

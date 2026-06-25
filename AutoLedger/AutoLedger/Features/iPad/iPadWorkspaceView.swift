@@ -2394,6 +2394,7 @@ private struct IPadBatchImportWorkspaceView: View {
 private struct IPadHotelStayWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var showsPDFImporter = false
+    @State private var showsEmailImporter = false
     @State private var reviewDraft: HotelStayDraft?
     @State private var statusMessage: String?
     @State private var isImporting = false
@@ -2412,6 +2413,9 @@ private struct IPadHotelStayWorkspaceView: View {
             onImportPDF: {
                 showsPDFImporter = true
             },
+            onImportEmail: {
+                showsEmailImporter = true
+            },
             onDeleteRecord: { record in
                 let didDelete = store.deleteHotelStayRecord(record)
                 statusMessage = store.lastImportSummary
@@ -2426,6 +2430,17 @@ private struct IPadHotelStayWorkspaceView: View {
             Task {
                 await importSelectedPDF(result)
             }
+        }
+        .sheet(isPresented: $showsEmailImporter) {
+            HotelFolioEmailImportView(
+                targetLedgerID: store.targetLedgerIDForNewTransactions,
+                onDraftReady: { draft in
+                    showsEmailImporter = false
+                    Task {
+                        await prepareDraftForReview(draft)
+                    }
+                }
+            )
         }
         .sheet(item: $reviewDraft) { draft in
             HotelStayReviewView(
@@ -2458,29 +2473,44 @@ private struct IPadHotelStayWorkspaceView: View {
                 return
             }
 
-            var draft = try HotelFolioManualPDFImporter().importPDF(
+            let draft = try HotelFolioManualPDFImporter().importPDF(
                 at: url,
                 targetLedgerID: store.targetLedgerIDForNewTransactions
             )
             statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
-
-            do {
-                draft = try await HotelFolioExternalParseClient().parse(draft)
-                statusMessage = String(localized: "hotel_stay.import.status.parsed")
-            } catch {
-                statusMessage = String(
-                    format: String(localized: "hotel_stay.import.status.manual_review_format"),
-                    error.localizedDescription
-                )
-            }
-
-            reviewDraft = draft
+            await prepareDraftForReview(draft, managesImportingState: false)
         } catch {
             statusMessage = String(
                 format: String(localized: "hotel_stay.import.status.failed_format"),
                 error.localizedDescription
             )
         }
+    }
+
+    @MainActor
+    private func prepareDraftForReview(_ draft: HotelStayDraft, managesImportingState: Bool = true) async {
+        if managesImportingState {
+            isImporting = true
+            statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
+        }
+        defer {
+            if managesImportingState {
+                isImporting = false
+            }
+        }
+
+        var preparedDraft = draft
+        do {
+            preparedDraft = try await HotelFolioExternalParseClient().parse(preparedDraft)
+            statusMessage = String(localized: "hotel_stay.import.status.parsed")
+        } catch {
+            statusMessage = String(
+                format: String(localized: "hotel_stay.import.status.manual_review_format"),
+                error.localizedDescription
+            )
+        }
+
+        reviewDraft = preparedDraft
     }
 }
 

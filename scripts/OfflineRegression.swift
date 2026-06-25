@@ -39,6 +39,7 @@ struct OfflineRegression {
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyHotelStayModels(reporter: reporter)
         verifyHotelFolioParsePipeline(reporter: reporter)
+        verifyHotelFolioEmailImportPlanning(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
         verifyHotelStayArchivePresentation(reporter: reporter)
@@ -354,6 +355,73 @@ struct OfflineRegression {
         reporter.check(parsedDraft?.sourceType == .manualPDF, "HotelFolioParsePipeline preserves source type")
         reporter.check(parsedDraft?.rawText == rawText, "HotelFolioParsePipeline preserves raw text")
         reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
+    }
+
+    private static func verifyHotelFolioEmailImportPlanning(reporter: RegressionReporter) {
+        let qqSettings = HotelEmailAccountSettings.qq(emailAddress: "traveler@qq.com")
+        reporter.check(qqSettings.provider == .qq, "HotelEmailAccountSettings records QQ preset provider")
+        reporter.check(qqSettings.imapHost == "imap.qq.com", "HotelEmailAccountSettings uses QQ IMAP host")
+        reporter.check(qqSettings.imapPort == 993, "HotelEmailAccountSettings uses IMAP over TLS port")
+        reporter.check(qqSettings.useTLS, "HotelEmailAccountSettings enables TLS by default")
+        reporter.check(qqSettings.searchDays == 90, "HotelEmailAccountSettings keeps a bounded scan window")
+        reporter.check(qqSettings.maxMessages == 20, "HotelEmailAccountSettings keeps a bounded message scan")
+
+        let pdfData = Data("%PDF-1.4 demo folio".utf8)
+        let rawMessage = """
+        From: Demo Bay Hotel <folio@example.com>
+        Subject: =?UTF-8?B?RGVtbyBCYXkgSG90ZWwgRm9saW8=?=
+        Date: Wed, 24 Jun 2026 09:30:00 +0800
+        Message-ID: <folio-001@example.com>
+        MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="folio-boundary"
+
+        --folio-boundary
+        Content-Type: text/plain; charset=UTF-8
+
+        Attached folio.
+        --folio-boundary
+        Content-Type: application/pdf; name="folio.pdf"
+        Content-Disposition: attachment; filename="folio.pdf"
+        Content-Transfer-Encoding: base64
+
+        \(pdfData.base64EncodedString())
+        --folio-boundary--
+        """
+
+        let parser = HotelFolioEmailMessageParser()
+        let message = try? parser.parse(rawMessage: rawMessage, uid: "42")
+        reporter.check(message?.uid == "42", "HotelFolioEmailMessageParser records IMAP uid")
+        reporter.check(message?.subject == "Demo Bay Hotel Folio", "HotelFolioEmailMessageParser decodes MIME encoded subject")
+        reporter.check(message?.from == "Demo Bay Hotel <folio@example.com>", "HotelFolioEmailMessageParser records sender")
+        reporter.check(message?.messageID == "folio-001@example.com", "HotelFolioEmailMessageParser normalizes message id")
+        reporter.check(message?.attachments.count == 1, "HotelFolioEmailMessageParser extracts one PDF attachment")
+        reporter.check(message?.attachments.first?.fileName == "folio.pdf", "HotelFolioEmailMessageParser extracts attachment filename")
+        reporter.check(message?.attachments.first?.mimeType == "application/pdf", "HotelFolioEmailMessageParser records PDF mime type")
+        reporter.check(message?.attachments.first?.data == pdfData, "HotelFolioEmailMessageParser decodes base64 attachment data")
+
+        if let message {
+            let filter = HotelFolioEmailCandidateFilter()
+            reporter.check(filter.isLikelyHotelFolio(message), "HotelFolioEmailCandidateFilter accepts hotel folio mail with PDF")
+
+            if let attachment = message.attachments.first {
+                let now = Date(timeIntervalSince1970: 1_783_065_600)
+                let factory = HotelFolioEmailDraftFactory(now: { now })
+                let draft = try? factory.makeDraft(
+                    message: message,
+                    attachment: attachment,
+                    extractedText: "Demo Bay Hotel\nTotal Amount: JPY 50000",
+                    targetLedgerID: TodaySpendingSummary.defaultLedgerID
+                )
+                reporter.check(draft?.sourceType == .localEmailIMAP, "HotelFolioEmailDraftFactory marks local email source")
+                reporter.check(draft?.targetLedgerID == TodaySpendingSummary.defaultLedgerID, "HotelFolioEmailDraftFactory keeps target ledger id")
+                reporter.check(draft?.sourceFileName == "folio.pdf", "HotelFolioEmailDraftFactory records attachment filename")
+                reporter.check(draft?.sourceEmailSubject == "Demo Bay Hotel Folio", "HotelFolioEmailDraftFactory records email subject")
+                reporter.check(draft?.sourceEmailFrom == "Demo Bay Hotel <folio@example.com>", "HotelFolioEmailDraftFactory records email sender")
+                reporter.check(draft?.rawText.contains("Total Amount") == true, "HotelFolioEmailDraftFactory stores extracted text")
+                reporter.check(draft?.status == .textExtracted, "HotelFolioEmailDraftFactory keeps draft in extracted state before model parse")
+                reporter.check(draft?.createdAt == now, "HotelFolioEmailDraftFactory records creation time")
+            }
+        }
     }
 
     private static func verifyHotelStayReviewForm(reporter: RegressionReporter) {
