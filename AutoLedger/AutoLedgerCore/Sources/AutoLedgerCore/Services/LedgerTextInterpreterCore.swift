@@ -46,7 +46,7 @@ public struct LedgerTextInterpreterCore: Sendable {
                 debugTrace: ["bill_relevant_but_missing_amount score=\(relevance.score)"])
         }
 
-        let merchantResult = extractMerchant(from: normalizedText)
+        let merchantResult = extractMerchant(from: normalizedText, localeIdentifier: input.localeIdentifier)
         let merchant = merchantResult.merchant
         let categoryResult = CategoryResolver().resolveDetailed(text: merchant.isEmpty ? normalizedText : merchant)
         let category = categoryResult.category
@@ -201,8 +201,8 @@ public struct LedgerTextInterpreterCore: Sendable {
 
     // MARK: - Merchant Extraction
 
-    private func extractMerchant(from text: String) -> MerchantResolutionResult {
-        let candidates = RuleMerchantExtractor().extractCandidates(from: text)
+    private func extractMerchant(from text: String, localeIdentifier: String?) -> MerchantResolutionResult {
+        let candidates = RuleMerchantExtractor(localeIdentifier: localeIdentifier).extractCandidates(from: text)
         return MerchantResolver().resolve(candidates: candidates, text: text)
     }
 

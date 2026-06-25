@@ -713,6 +713,24 @@ struct OfflineRegression {
         let labeledResult = resolver.resolve(candidates: labeledCandidates, text: labeledText)
         reporter.check(labeledResult.merchant == "Demo Coffee", "MerchantResolver prefers labeled merchant")
 
+        let japaneseLabeledText = """
+        領収書
+        店舗: Demo Cafe
+        合計 ¥1,080
+        注文番号: ABC-123
+        """
+        let japaneseExtractor = RuleMerchantExtractor(localeIdentifier: "ja-JP")
+        let japaneseCandidates = japaneseExtractor.extractCandidates(from: japaneseLabeledText)
+        let japaneseResult = resolver.resolve(candidates: japaneseCandidates, text: japaneseLabeledText)
+        reporter.check(
+            japaneseResult.merchant == "Demo Cafe",
+            "MerchantResolver uses Japanese merchant labels from language pack"
+        )
+        reporter.check(
+            !japaneseCandidates.contains { $0.name.localizedCaseInsensitiveContains("注文番号") },
+            "MerchantResolver excludes Japanese non-merchant identifier labels from language pack"
+        )
+
         let blacklistHeader = """
         TAX INVOICE
         SOON HUAT MACHINERY ENTERPRISE
@@ -1325,6 +1343,10 @@ struct OfflineRegression {
         reporter.check(
             abs((japaneseResult.draft?.amount ?? 0) - 1080) < 0.01,
             "LedgerTextInterpreterCore extracts Japanese 合計 ¥1,080 using language pack (got \(japaneseResult.draft?.amount ?? -1))"
+        )
+        reporter.check(
+            japaneseResult.draft?.merchant == "Demo Cafe",
+            "LedgerTextInterpreterCore extracts Japanese 店舗 merchant using language pack (got '\(japaneseResult.draft?.merchant ?? "")')"
         )
 
         // Phase 2: Merchant extraction excludes blacklisted headers

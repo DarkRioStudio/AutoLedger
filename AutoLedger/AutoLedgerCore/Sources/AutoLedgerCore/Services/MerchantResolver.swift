@@ -57,11 +57,12 @@ public struct MerchantResolutionResult: Sendable {
 public struct MerchantNormalizer: Sendable {
     public init() {}
 
-    public func normalize(_ value: String) -> String {
+    public func normalize(_ value: String, labels: [String] = []) -> String {
         var normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let labelPrefixes = labels.flatMap { ["\($0)：", "\($0):"] }
         for prefix in ["商户名称：", "商户名称:", "商户名：", "商户名:", "商户：", "商户:", "收款方：", "收款方:",
                        "店铺：", "店铺:", "门店：", "门店:", "商品说明：", "商品说明:",
-                       "merchant name:", "merchant:", "store:"] {
+                       "merchant name:", "merchant:", "store:"] + labelPrefixes {
             if normalized.lowercased().hasPrefix(prefix.lowercased()) {
                 normalized = String(normalized.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
             }
@@ -74,6 +75,7 @@ public struct MerchantNormalizer: Sendable {
 
 public struct RuleMerchantExtractor: Sendable {
     private let normalizer = MerchantNormalizer()
+    private let languagePack: LedgerRecognitionLanguagePack?
 
     private static let labels = ["商户名称", "商户名", "商户", "收款方", "店铺", "门店", "商品说明", "merchant", "merchant name", "store"]
     private static let blacklistPrefixes = [
@@ -88,15 +90,21 @@ public struct RuleMerchantExtractor: Sendable {
         "member", "cashier", "salesperson", "date", "time", "ref", "qty", "item",
         "description", "price", "amount", "discount"
     ]
+    private static let identifierKeywords = [
+        "订单号", "商户单号", "交易单号", "流水号", "券号", "编号", "单号", "id", "no.", "doc no",
+        "document no", "invoice no", "receipt#", "inv#", "ref no"
+    ]
 
     private static let shortCodePattern = try? NSRegularExpression(pattern: #"^[A-Za-z0-9]{2,8}$"#)
     private static let productCodePattern = try? NSRegularExpression(pattern: #"^[A-Za-z][A-Za-z0-9]{1,5}:\d+[A-Za-z]?$"#)
     private static let amountRegex = try? NSRegularExpression(
-        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB|RM)?(?![A-Za-z0-9./])"#,
+        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB|RM)?(?![A-Za-z0-9./])"#,
         options: [.caseInsensitive]
     )
 
-    public init() {}
+    public init(localeIdentifier: String? = nil, languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn) {
+        self.languagePack = languagePackSet.mergedPack(for: localeIdentifier)
+    }
 
     public func extractCandidates(from rawText: String) -> [MerchantCandidate] {
         let lines = rawText.replacingOccurrences(of: "\r\n", with: "\n")
@@ -120,10 +128,13 @@ public struct RuleMerchantExtractor: Sendable {
     private func labeledCandidates(from lines: [String]) -> [MerchantCandidate] {
         var candidates: [MerchantCandidate] = []
         for (index, line) in lines.enumerated() {
-            for label in Self.labels where line.localizedCaseInsensitiveContains(label) {
+            for label in merchantLabelKeywords where line.localizedCaseInsensitiveContains(label) {
                 for separator in ["：", ":"] {
                     if let range = line.range(of: separator) {
-                        let value = normalizer.normalize(String(line[range.upperBound...]))
+                        let value = normalizer.normalize(
+                            String(line[range.upperBound...]),
+                            labels: merchantLabelKeywords
+                        )
                         if isUsableMerchantLine(value) {
                             candidates.append(MerchantCandidate(
                                 name: value,
@@ -139,7 +150,7 @@ public struct RuleMerchantExtractor: Sendable {
 
                 let nextIndex = index + 1
                 if nextIndex < lines.count {
-                    let value = normalizer.normalize(lines[nextIndex])
+                    let value = normalizer.normalize(lines[nextIndex], labels: merchantLabelKeywords)
                     if isUsableMerchantLine(value) {
                         candidates.append(MerchantCandidate(
                             name: value,
@@ -158,7 +169,7 @@ public struct RuleMerchantExtractor: Sendable {
 
     private func lineCandidates(from lines: [String]) -> [MerchantCandidate] {
         lines.enumerated().compactMap { index, line in
-            let value = normalizer.normalize(line)
+            let value = normalizer.normalize(line, labels: merchantLabelKeywords)
             guard isUsableMerchantLine(value) else { return nil }
             return MerchantCandidate(
                 name: value,
@@ -193,7 +204,7 @@ public struct RuleMerchantExtractor: Sendable {
     private func distanceToLabel(from index: Int, lines: [String]) -> Int {
         var best = Int.max
         for (lineIndex, line) in lines.enumerated() {
-            guard Self.labels.contains(where: { line.localizedCaseInsensitiveContains($0) }) else { continue }
+            guard merchantLabelKeywords.contains(where: { line.localizedCaseInsensitiveContains($0) }) else { continue }
             best = min(best, abs(lineIndex - index))
         }
         return best
@@ -203,7 +214,7 @@ public struct RuleMerchantExtractor: Sendable {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowered = trimmed.lowercased()
         guard trimmed.count >= 3 else { return false }
-        guard !Self.blacklistPrefixes.contains(where: { lowered.hasPrefix($0) || lowered == $0 }) else { return false }
+        guard !blacklistPrefixes.contains(where: { lowered.hasPrefix($0.lowercased()) || lowered == $0.lowercased() }) else { return false }
         guard !lineLooksLikeCampaignOrReward(trimmed) else { return false }
         guard !lineLooksLikeRegistrationNumber(trimmed) else { return false }
         guard !lineContainsAmount(trimmed) else { return false }
@@ -268,10 +279,11 @@ public struct RuleMerchantExtractor: Sendable {
     }
 
     private func lineLooksLikeIdentifierLine(_ line: String) -> Bool {
-        let keywords = ["订单号", "商户单号", "交易单号", "流水号", "券号", "编号", "单号", "id", "no.", "doc no",
-                        "document no", "invoice no", "receipt#", "inv#", "ref no"]
         let lowered = line.lowercased()
-        return keywords.contains { lowered.hasPrefix($0) || lowered.contains($0) }
+        return identifierKeywords.contains {
+            let keyword = $0.lowercased()
+            return lowered.hasPrefix(keyword) || lowered.contains(keyword)
+        }
     }
 
     private func lineLooksLikeItemCodeLine(_ line: String) -> Bool {
@@ -315,6 +327,18 @@ public struct RuleMerchantExtractor: Sendable {
         let lowered = line.lowercased()
         return lowered.hasPrefix("no.") || lowered.contains(" jalan ") || lowered.hasPrefix("jalan ") ||
             lowered.contains(" road") || lowered.contains(" lot ") || lowered.hasPrefix("lot ")
+    }
+
+    private var merchantLabelKeywords: [String] {
+        Self.labels + (languagePack?.merchantLabels ?? [])
+    }
+
+    private var blacklistPrefixes: [String] {
+        Self.blacklistPrefixes + (languagePack?.nonMerchantKeywords ?? [])
+    }
+
+    private var identifierKeywords: [String] {
+        Self.identifierKeywords + (languagePack?.nonMerchantKeywords ?? [])
     }
 }
 

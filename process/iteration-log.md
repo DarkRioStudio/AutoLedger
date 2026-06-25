@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-246 GOAL-1857 金额提取器语言包接入）
+更新日期：2026-06-25（ITER-247 GOAL-1858 商户提取器语言包接入）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-247 GOAL-1858 商户提取器语言包接入
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1858
+- 类型：能力增强 / 识别链路 / 本地化
+- 目标：继续落地多语言账单识别语言包，将 `RuleMerchantExtractor` 从静态商户标签推进到 locale-aware 语言包标签，并优先补日文 `店舗` / 非商户字段排除路径。
+- 改动范围：`RuleMerchantExtractor` locale / language pack 注入、`MerchantNormalizer` 语言包标签前缀剥离、商户标签与非商户关键词读取语言包；`LedgerTextInterpreterCore` 将 `InterpretInput.localeIdentifier` 传给商户提取器；离线回归新增日文商户样例；版本计划、CHANGELOG 和本日志回填。
+- 未改动范围：未迁移 `CategoryResolver` / `TransactionCategory.resolve` 到语言包；未实现用户纠错上传、社区包导入 / 导出、远程语言包热更新或服务端收集通道；未修改 SQLite / CloudKit schema、UI 本地化 key、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`RuleMerchantExtractor` 新增 `localeIdentifier` 与 `languagePackSet` 初始化参数，并保持无参数调用兼容；商户标签读取 `LedgerRecognitionLanguagePack.merchantLabels`，非商户识别读取 `nonMerchantKeywords`；日文 `店舗: Demo Cafe` 可解析为商户 `Demo Cafe`，`注文番号` 不会成为商户候选；Core 主解释链路的 locale hint 已贯穿到账单相关性、金额提取和商户提取三段。
+- 未完成内容：分类关键词语言包接入、更多日文商户形态、用户本地纠错覆盖包、社区包导入 / 导出仍留给后续 goal。
+- 测试情况：先新增日文商户回归并运行 `bash scripts/run_offline_regression.sh`，观察到 `RuleMerchantExtractor(localeIdentifier:)` 尚不存在的 RED 编译失败；实现后同一回归通过。随后执行 `bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`python3 scripts/check_localization_coverage.py`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过；并行执行 iOS / Mac Catalyst build 时 iOS 曾因 DerivedData `build.db` locked 失败，串行重跑 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过。
+- 风险与注意事项：商户标签更可扩展后，错误语言包标签可能把非商户字段提升为高置信候选；本轮已把 `nonMerchantKeywords` 合并进 identifier / blacklist 过滤，但后续社区包仍需要 reviewed provenance 和回归样例约束。
+- 回滚方式：恢复 `RuleMerchantExtractor` 无语言包状态、恢复 `MerchantNormalizer.normalize(_:)` 单参数调用、恢复 `LedgerTextInterpreterCore` 对 `RuleMerchantExtractor()` 的无 locale 调用，移除新增日文商户回归，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：平台无关解析主链路已完成账单相关性、金额和商户三段语言包接入，日文小票可从 `領収書 / 合計 / 店舗` 形成第一条可回归的结构化草稿路径。
+- 下一步建议：继续迁移 `CategoryResolver` 到语言包，优先让日文 `カフェ` / `コンビニ` / `スーパー` / `電車` 等分类关键词参与当前分类推断，同时保持既有中文 / 英文分类回归不变。
 
 ### ITER-246 GOAL-1857 金额提取器语言包接入
 - 日期：2026-06-25
