@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-24（ITER-239 GOAL-1852 日文支持发布素材）
+更新日期：2026-06-25（ITER-240 GOAL-1860 跨平台 App Icon 重绘）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-240 GOAL-1860 跨平台 App Icon 重绘
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1860
+- 类型：发布资产 / 图标 / 工具
+- 目标：解决 iOS AppIcon 的细长闪电同步到 tvOS / visionOS 等平台后被压成细线的问题，保留现有钱包、金币、闪电和蓝绿背景元素，但为各平台生成专用图标资产。
+- 改动范围：新增 `tools/app-icons` 生成 / 验证 / 平台形状预览脚本与 README；替换主 App iOS AppIcon light / dark / tinted PNG；替换 Apple Watch 多尺寸 AppIcon PNG；替换 tvOS App Icon 与 App Store image stack 的 Back / Middle / Front 图层；替换 visionOS solid image stack 的 Back / Middle / Front 图层；回填版本计划、CHANGELOG 与本迭代日志。
+- 未改动范围：未修改 Top Shelf Image / Top Shelf Wide Image；未修改 Bundle ID、signing、entitlements、App Group、iCloud Container、SQLite schema、CloudKit schema、Xcode Cloud 脚本或 `MARKETING_VERSION`；未提交 ASC 线上素材。
+- 完成内容：`generate_app_icons.py` 可重跑生成平台专用 PNG；`validate_app_icons.py` 固化尺寸检查和 tvOS / visionOS 前景闪电 alpha 覆盖率门禁；`preview_app_icons.py` 可生成 iOS / Mac Catalyst 圆角矩形、Watch / visionOS 圆形、tvOS 横向矩形的完整合成预览；新图标保留钱包 / 金币 / 闪电元素，闪电改为尖角尾部和平台专用比例，避免前景闪电细线化。
+- 未完成内容：ASC / TestFlight / 真机上的最终图标显示仍需人工目检；Top Shelf 资产如需同步新视觉，可作为后续独立 GOAL。
+- 测试情况：先执行 `python3 tools/app-icons/validate_app_icons.py`，旧图标因 tvOS / visionOS 前景覆盖率不足失败；生成新资产后再次执行同一命令通过。执行 `python3 tools/app-icons/preview_app_icons.py` 生成平台形状预览，并目检 iOS / Mac Catalyst 圆角矩形、Watch / visionOS 圆形、tvOS 横向矩形版本。执行 `python3 -m py_compile tools/app-icons/generate_app_icons.py tools/app-icons/validate_app_icons.py tools/app-icons/preview_app_icons.py`、`git diff --check`、iOS / tvOS / visionOS generic build，均通过。
+- 风险与注意事项：图标是发布资产，最终效果仍受 Apple 平台蒙版、圆角、视差和 ASC 渲染影响；提交前建议在 TestFlight / ASC 页面做一次实际显示目检。
+- 回滚方式：回退 `tools/app-icons` 新增文件、恢复被替换的 AppIcon PNG，并回退版本计划 / CHANGELOG / 本日志条目即可；本轮无数据迁移。
+- 结论：GOAL-1860 已完成代码库内资产替换、可重复生成门禁和平台形状预览，可进入 Xcode Cloud / TestFlight / ASC 实际图标目检。
+- 下一步建议：在 Xcode Cloud / TestFlight / ASC 平台素材页做实际图标目检；Top Shelf 如需同视觉重绘，可另开独立 GOAL。
 
 ### ITER-239 GOAL-1852 日文支持发布素材
 - 日期：2026-06-24
