@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-253 GOAL-1820 酒店消费 B 阶段规划）
+更新日期：2026-06-25（ITER-254 GOAL-1845 账本 tab 多账本 UI 收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-254 GOAL-1845 账本 tab 多账本 UI 收口
+- 日期：2026-06-25
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1845
+- 类型：能力增强 / UI / 多账本 / 测试
+- 目标：按当前产品取向收口账本 tab 的多账本入口，用标题显示当前账本名称，并把账本选择和管理集中到右上角弹窗，减少列表区额外控件和行内冗余信息。
+- 改动范围：`LedgerStore` 新增 `currentLedgerTitle` 与 `showSelectedLedgerOnly()`；`LedgerView` 移除内容区账本范围菜单、导航标题改为当前账本名、右上角新增账本管理按钮、sheet 接入可选择模式的 `LedgerProfileManagementView`、账单行移除账本归属和备注展示；`LedgerProfileManagementView` 增加可选选择模式和完成按钮；扩展离线回归；更新 `versions/v1.6.1-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未删除 iPad / Mac 工作台中的全部账本聚合口径；未新增批量移动、账本删除、账本 Profile 备份 / CloudKit 同步 payload 或旧交易物理回填；未修改 Watch / Widget / tvOS / visionOS 展示口径；未修改 SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：账本 tab 标题显示当前账本名称，默认仍为“本地账本”；右上角账本按钮打开账本管理弹窗，弹窗中可以选择账本并继续新增、重命名、设默认、归档；账本 tab 进入时恢复当前账本模式，列表只展示当前账本数据；交易行不再额外显示账本归属和备注。
+- 未完成内容：账本删除、账本 Profile 跨设备同步、批量移动账本、订阅实体级 `ledgerID` 和桌面端单笔移动入口仍作为后续独立事项。
+- 测试情况：先新增 `currentLedgerTitle` / `showSelectedLedgerOnly()` 离线断言并运行 `bash scripts/run_offline_regression.sh`，观察到缺少对应 API 的 RED 编译失败；实现后执行 `bash scripts/run_offline_regression.sh`、`python3 scripts/check_localization_coverage.py`、`bash scripts/run_golden_regression.sh`、`git diff --check`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过；Mac Catalyst 仍有既有 MediaPipe xcframework slice warning。
+- 风险与注意事项：iPhone 账本 tab 现在会从历史保存的“全部账本”状态恢复到当前账本口径；iPad / Mac 工作台仍保留全部账本切换，因此同一个用户在不同入口可能有不同的账本范围控制方式，这是本轮按产品要求刻意收口的结果。
+- 回滚方式：回退 `LedgerStore` 新增标题 / 当前账本恢复 API、`LedgerView` 标题与 toolbar / sheet / 行展示改动、`LedgerProfileManagementView` 选择模式、离线回归新增断言以及版本计划 / CHANGELOG / 本日志条目即可；本轮无 schema 变更。
+- 结论：账本 tab 多账本入口已从“列表区范围菜单”收口为“标题 + 右上管理弹窗”，当前账本数据浏览路径更干净。
+- 下一步建议：如后续继续多账本，优先补账本 Profile 备份 / CloudKit 同步和桌面端单笔移动账本入口，而不是再往 iPhone 账本 tab 增加更多筛选控件。
 
 ### ITER-253 GOAL-1820 酒店消费 B 阶段规划
 - 日期：2026-06-25

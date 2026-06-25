@@ -40,6 +40,7 @@ struct LedgerView: View {
     @State private var isAddingTransaction = false
     @State private var isShowingVoiceLedger = false
     @State private var isShowingDeleted = false
+    @State private var isShowingLedgerProfiles = false
     @State private var searchText = ""
 
     private var filteredTransactions: [Transaction] {
@@ -82,12 +83,6 @@ struct LedgerView: View {
         }
     }
 
-    private var ledgerScopeTitle: String {
-        store.isShowingAllLedgers
-            ? String(localized: "ledger.scope.all")
-            : store.ledgerName(for: store.selectedLedgerID)
-    }
-
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
@@ -95,31 +90,6 @@ struct LedgerView: View {
                     Section {
                         // Filter controls
                         VStack(alignment: .leading, spacing: 10) {
-                            Menu {
-                                Button {
-                                    store.selectAllLedgers()
-                                } label: {
-                                    Label("ledger.scope.all", systemImage: store.isShowingAllLedgers ? "checkmark.circle.fill" : "books.vertical")
-                                }
-
-                                Divider()
-
-                                ForEach(store.activeLedgerProfiles) { profile in
-                                    Button {
-                                        store.selectLedgerProfile(profile)
-                                    } label: {
-                                        Label(
-                                            profile.name,
-                                            systemImage: !store.isShowingAllLedgers && store.selectedLedgerID == profile.id ? "checkmark.circle.fill" : (profile.iconName ?? "wallet.pass")
-                                        )
-                                    }
-                                }
-                            } label: {
-                                Label(ledgerScopeTitle, systemImage: store.isShowingAllLedgers ? "books.vertical" : "wallet.pass")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .buttonStyle(.bordered)
-
                             Picker("ledger.filter.picker", selection: $filter) {
                                 ForEach(LedgerFilter.allCases, id: \.self) { f in
                                     Text(f.titleKey).tag(f)
@@ -201,17 +171,10 @@ struct LedgerView: View {
                                             HStack(spacing: 10) {
                                                 Text(transaction.categoryTitle)
                                                 Text(transaction.sourceTitle)
-                                                Text(store.ledgerName(for: transaction.ledgerID))
                                                 Text(AppFormatters.shortDateTime(transaction.occurredAt))
                                             }
                                             .font(.caption)
                                             .foregroundStyle(AppTheme.mutedInk)
-
-                                            if !transaction.note.isEmpty {
-                                                Text(transaction.note)
-                                                    .font(.footnote)
-                                                    .foregroundStyle(AppTheme.mutedInk)
-                                            }
                                         }
 
                                         Image(systemName: "slider.horizontal.3")
@@ -263,8 +226,18 @@ struct LedgerView: View {
                 }
             }
             .searchable(text: $searchText, prompt: Text("ledger.search.prompt"))
-            .navigationTitle("tab.ledger")
+            .navigationTitle(store.currentLedgerTitle)
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        isShowingLedgerProfiles = true
+                    } label: {
+                        Image(systemName: "books.vertical")
+                            .fontWeight(.semibold)
+                    }
+                    .accessibilityLabel(Text("ledger_profiles.title"))
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         isShowingVoiceLedger = true
@@ -324,6 +297,12 @@ struct LedgerView: View {
             .sheet(isPresented: $isShowingDeleted) {
                 DeletedTransactionsView()
             }
+            .sheet(isPresented: $isShowingLedgerProfiles) {
+                NavigationStack {
+                    LedgerProfileManagementView(allowsSelection: true, showsDoneButton: true)
+                        .environmentObject(store)
+                }
+            }
             .confirmationDialog(
                 "ledger.move.title",
                 isPresented: Binding(
@@ -346,6 +325,7 @@ struct LedgerView: View {
                 }
             }
             .onAppear {
+                store.showSelectedLedgerOnly()
                 consumePendingNewTransactionIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in

@@ -2120,11 +2120,13 @@ struct OfflineRegression {
         reporter.check(ledgerStore.addTransaction(defaultTransaction), "LedgerStore saves default-ledger transaction before selection")
         reporter.check(ledgerStore.selectedLedgerID == TodaySpendingSummary.defaultLedgerID, "LedgerStore starts on default ledger")
         reporter.check(!ledgerStore.isShowingAllLedgers, "LedgerStore starts in current ledger mode")
+        reporter.check(ledgerStore.currentLedgerTitle == "本地账本", "LedgerStore exposes default ledger title for ledger tab")
         reporter.check(ledgerStore.visibleTransactions.map(\.id) == [defaultTransaction.id], "LedgerStore visible transactions start with default ledger")
 
         if let travelLedger {
             ledgerStore.selectLedgerProfile(travelLedger)
             reporter.check(ledgerStore.selectedLedgerID == travelLedger.id, "LedgerStore selects custom ledger")
+            reporter.check(ledgerStore.currentLedgerTitle == "Travel", "LedgerStore exposes selected ledger title for ledger tab")
             reporter.check(ledgerStore.visibleTransactions.isEmpty, "LedgerStore filters current ledger before travel transaction exists")
 
             let travelTransaction = Transaction(
@@ -2143,6 +2145,9 @@ struct OfflineRegression {
             ledgerStore.selectAllLedgers()
             reporter.check(ledgerStore.isShowingAllLedgers, "LedgerStore switches to all-ledgers mode")
             reporter.check(ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id, defaultTransaction.id], "LedgerStore shows all ledgers when selected")
+            ledgerStore.showSelectedLedgerOnly()
+            reporter.check(!ledgerStore.isShowingAllLedgers, "LedgerStore can restore selected-ledger-only mode")
+            reporter.check(ledgerStore.currentLedgerTitle == "Travel", "LedgerStore keeps selected ledger title after restoring current-ledger mode")
 
             reporter.check(ledgerStore.moveTransaction(defaultTransaction, toLedgerID: travelLedger.id), "LedgerStore moves single transaction to another ledger")
             let moved = try sqlStore.loadTransactions().first { $0.id == defaultTransaction.id }

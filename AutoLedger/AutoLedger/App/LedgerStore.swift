@@ -135,6 +135,10 @@ final class LedgerStore: ObservableObject {
         isShowingAllLedgers ? defaultLedgerProfile.id : selectedLedgerID
     }
 
+    var currentLedgerTitle: String {
+        currentLedgerScopeName
+    }
+
     func transactionsForCurrentLedger(_ source: [Transaction]) -> [Transaction] {
         guard !isShowingAllLedgers else { return source }
         return source.filter { $0.resolvedLedgerID() == selectedLedgerID }
@@ -170,6 +174,15 @@ final class LedgerStore: ObservableObject {
     func selectAllLedgers() {
         isShowingAllLedgers = true
         saveLedgerSelection()
+    }
+
+    func showSelectedLedgerOnly() {
+        guard isShowingAllLedgers else {
+            normalizeLedgerSelection()
+            return
+        }
+        isShowingAllLedgers = false
+        normalizeLedgerSelection()
     }
 
     func ledgerName(for ledgerID: String?) -> String {

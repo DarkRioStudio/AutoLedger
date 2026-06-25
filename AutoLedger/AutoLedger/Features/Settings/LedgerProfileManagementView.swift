@@ -2,12 +2,20 @@ import AutoLedgerCore
 import SwiftUI
 
 struct LedgerProfileManagementView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
     @State private var showAddAlert = false
     @State private var newLedgerName = ""
     @State private var newLedgerCurrency = ""
     @State private var profilePendingRename: LedgerProfile?
     @State private var renameLedgerName = ""
+    let allowsSelection: Bool
+    let showsDoneButton: Bool
+
+    init(allowsSelection: Bool = false, showsDoneButton: Bool = false) {
+        self.allowsSelection = allowsSelection
+        self.showsDoneButton = showsDoneButton
+    }
 
     private var activeProfiles: [LedgerProfile] {
         store.ledgerProfiles.filter { !$0.isArchived }
@@ -22,6 +30,11 @@ struct LedgerProfileManagementView: View {
             Section {
                 ForEach(activeProfiles) { profile in
                     ledgerRow(profile)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard allowsSelection else { return }
+                            store.selectLedgerProfile(profile)
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if profile.id != TodaySpendingSummary.defaultLedgerID {
                                 Button(role: .destructive) {
@@ -64,6 +77,14 @@ struct LedgerProfileManagementView: View {
         }
         .navigationTitle("ledger_profiles.title")
         .toolbar {
+            if showsDoneButton {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("common.done") {
+                        dismiss()
+                    }
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showAddAlert = true
@@ -111,7 +132,8 @@ struct LedgerProfileManagementView: View {
     }
 
     private func ledgerRow(_ profile: LedgerProfile) -> some View {
-        HStack(spacing: 12) {
+        let isSelected = allowsSelection && !store.isShowingAllLedgers && store.selectedLedgerID == profile.id
+        return HStack(spacing: 12) {
             Image(systemName: profile.iconName ?? "wallet.pass")
                 .foregroundStyle(color(for: profile))
                 .frame(width: 30)
@@ -140,6 +162,12 @@ struct LedgerProfileManagementView: View {
             }
 
             Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, 4)
     }
