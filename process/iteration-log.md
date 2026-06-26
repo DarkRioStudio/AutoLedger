@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-262 App Store 1.4.0 发布状态回填）
+更新日期：2026-06-26（ITER-263 文档目录归档与 README 补齐）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-263 文档目录归档与 README 补齐
+- 日期：2026-06-26
+- 所属版本：v1.6.2
+- 所属阶段：文档 / 仓库结构
+- 类型：文档 / 目录整理
+- 目标：把根目录散落的设计文档整理回 `docs/`，并为 `docs/`、`ReceiptDebugTool/`、`AutoLedgerCoreKit/`、`tools/` 补齐目录 README。
+- 改动范围：移动 6 个根目录设计文档到 `docs/`；更新历史版本计划、CHANGELOG 和迭代日志中的旧文档路径；新增 `docs/README.md`、`ReceiptDebugTool/README.md`、`AutoLedgerCoreKit/README.md`、`tools/README.md`。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：根目录现在只保留入口类 Markdown；产品设计、解析设计、备份、语音、Watch 和 ReceiptDebugTool 草案集中到 `docs/`；四个目录 README 明确目录用途、边界、常用命令、隐私要求和相关文档。
+- 测试情况：本轮为文档结构整理，执行 `git diff --check` 作为最小格式门禁，并用 `rg` 检查旧根目录设计文档路径、`docs/docs` 误替换和 README 覆盖情况。
+- 风险与注意事项：历史日志中的语义不重写，只修正文件路径；GitHub 旧根路径链接会随本次移动失效，应以后续 `docs/` 路径为准。
+- 回滚方式：将 6 个设计文档移回根目录，删除新增 README，回退路径引用、CHANGELOG 和本日志条目即可；无代码或数据迁移需要回滚。
+- 结论：文档目录结构已收口，GitHub 上 `docs`、`ReceiptDebugTool`、`AutoLedgerCoreKit` 和 `tools` 均具备入口说明。
+- 下一步建议：继续 `v1.6.2` 功能开发主线。
 
 ### ITER-262 App Store 1.4.0 发布状态回填
 - 日期：2026-06-26
@@ -4395,7 +4410,7 @@
 - 所属版本：v1.3.3
 - 所属阶段：Phase 0
 - 类型：文档 / 架构规划 / 测试规划
-- 目标：基于根目录 `LedgerTextInterpreter.md` 与 v1.3.2 工程现状，规划下一版本将解释器抽象为平台无关核心，并建立小票图片集批量 OCR、OCR 后账单相关性判断与批量解析回归。
+- 目标：基于 `docs/LedgerTextInterpreter.md` 与 v1.3.2 工程现状，规划下一版本将解释器抽象为平台无关核心，并建立小票图片集批量 OCR、OCR 后账单相关性判断与批量解析回归。
 - 改动范围：
   - `versions/v1.3.3-plan.md`：新增版本定位、目标架构、核心类型草案、批量 OCR 工具、Golden Case 设计、阶段拆分、验收标准、风险与回滚。
   - `CHANGELOG.md`、`process/iteration-log.md`：同步规划记录。
@@ -4554,7 +4569,7 @@
 - 所属版本：v1.3.1
 - 所属阶段：Phase 0
 - 类型：文档 / 治理
-- 目标：分析根目录 `autoledger_voice_siri_design.md` 与现有 AppIntent、SQLite、分类和备份恢复能力，建立 v1.3.1 版本计划。
+- 目标：分析 `docs/autoledger_voice_siri_design.md` 与现有 AppIntent、SQLite、分类和备份恢复能力，建立 v1.3.1 版本计划。
 - 改动范围：
   - `versions/v1.3.1-plan.md`：新增版本定位、承接输入、设计约束、In Scope / Out of Scope、Phase 0-5 阶段拆分、ITER-037-042 迭代拆分、验收标准、测试计划、风险与回滚。
   - `CHANGELOG.md`：新增 v1.3.1 / ITER-037 文档规划记录。
@@ -4600,7 +4615,7 @@
 - 所属版本：v1.3.0
 - 所属阶段：Phase 0
 - 类型：文档 / 治理
-- 目标：读取根目录 `autoledger_icloud_backup_design.md` 和现有工程进展，建立 v1.3.0 版本计划，将 iCloud 轻量备份设计拆成可执行迭代。
+- 目标：读取 `docs/autoledger_icloud_backup_design.md` 和现有工程进展，建立 v1.3.0 版本计划，将 iCloud 轻量备份设计拆成可执行迭代。
 - 改动范围：
   - `versions/v1.3.0-plan.md`：新增版本定位、承接输入、In Scope / Out of Scope、Phase 0-5 阶段拆分、ITER-030-036 迭代拆分、依赖清单、验收与回滚、文档同步要求。
   - `CHANGELOG.md`：新增 v1.3.0 / ITER-030 文档规划记录。
