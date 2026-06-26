@@ -19,6 +19,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml/badge.svg" alt="Xcode Build" /></a>
+  <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
   <a href="https://app.darkrio326.top/autoledger/"><img src="https://img.shields.io/badge/官网-app.darkrio326.top-orange?logo=safari&logoColor=white" alt="官网" /></a>
   <img src="https://img.shields.io/badge/platform-iOS_17+-blue?logo=apple" alt="Platform" />
   <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />

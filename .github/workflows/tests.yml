@@ -1,0 +1,79 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: Offline regression
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+
+          for candidate in \
+            /Applications/Xcode_27.0.app \
+            /Applications/Xcode-beta.app \
+            /Applications/Xcode_26.0.app \
+            /Applications/Xcode.app
+          do
+            if [ -d "$candidate" ]; then
+              sudo xcode-select -s "$candidate/Contents/Developer"
+              break
+            fi
+          done
+
+          xcodebuild -version
+          swift --version
+          python3 --version
+
+      - name: Whitespace check
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "${BASE_REF:-}" ]; then
+            git fetch origin "$BASE_REF" --depth=1
+            git diff --check "origin/$BASE_REF...HEAD"
+          elif [ -n "${BEFORE:-}" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git diff --check "$BEFORE" "$AFTER"
+          else
+            git diff-tree --check --no-commit-id --root -r "$AFTER"
+          fi
+
+      - name: Localization coverage
+        run: python3 scripts/check_localization_coverage.py
+
+      - name: Adaptive layout static gate
+        run: python3 scripts/check_adaptive_layout_rules.py
+
+      - name: Offline regression
+        run: bash scripts/run_offline_regression.sh
+
+      - name: Golden regression
+        run: bash scripts/run_golden_regression.sh

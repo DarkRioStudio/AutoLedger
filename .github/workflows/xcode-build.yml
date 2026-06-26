@@ -1,0 +1,83 @@
+name: Xcode Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: xcode-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios-build:
+    name: iOS generic build
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+
+          for candidate in \
+            /Applications/Xcode_27.0.app \
+            /Applications/Xcode-beta.app \
+            /Applications/Xcode_26.0.app \
+            /Applications/Xcode.app
+          do
+            if [ -d "$candidate" ]; then
+              sudo xcode-select -s "$candidate/Contents/Developer"
+              break
+            fi
+          done
+
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Install CocoaPods
+        run: |
+          set -euo pipefail
+          if ! command -v pod >/dev/null 2>&1; then
+            brew install cocoapods || sudo gem install cocoapods
+          fi
+          pod --version
+
+      - name: Install dependencies
+        working-directory: AutoLedger
+        run: |
+          set -euo pipefail
+          pod install --repo-update
+
+      - name: Build AutoLedger
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          xcodebuild \
+            -workspace AutoLedger/AutoLedger.xcworkspace \
+            -scheme AutoLedger \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build | tee build/logs/xcodebuild.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-build-log
+          path: build/logs/xcodebuild.log
+          if-no-files-found: ignore
+
