@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-25（ITER-255 GOAL-1821 / 1822 / 1824 酒店消费本地邮箱导入首版）
+更新日期：2026-06-26（ITER-256 GOAL-1871 酒店原 PDF 预览与默认写入账本收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-256 GOAL-1871 酒店原 PDF 预览与默认写入账本收口
+- 日期：2026-06-26
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1871
+- 类型：能力增强 / UI / 数据 / 测试
+- 目标：让酒店消费详情打开后既展示结构化数据，也展示原始酒店水单 PDF；同时把账本 tab 的账本按钮收口为跳转设置，并在多账本管理中提供独立“默认写入账本”选项，默认是“本地账本”。
+- 改动范围：`HotelStayDraft` / `HotelStayRecord` 新增原始 PDF 数据字段；手动 PDF 导入和本地邮箱 PDF 附件导入保留源 PDF；确认入账后 `HotelStayRecord` 保存 PDF 数据；SQLite `hotel_stay_records` 新增 `source_pdf_data` BLOB 列和安全迁移；酒店消费详情页新增 PDFKit 预览区；`LedgerStore` 新增默认写入账本偏好；设置页“多账本管理”支持选择默认写入账本；账本 tab 右上角按钮在主 Tab 中跳转设置并打开多账本管理；补齐四语文案、离线回归、版本计划、CHANGELOG 和本日志。
+- 未改动范围：不上传原始 PDF；不把原始 PDF 放入 CloudKit / BackupBundle / 外部模型 payload；不实现后台邮箱自动读取、Worker 云端自动同步、邮箱水单去重、跨会话待确认草稿队列或公共版本 Demo Mode；不修改 signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：酒店消费从手动 PDF / 本地邮箱附件导入后会在本机保留原 PDF，用户确认后正式酒店消费详情可展示 PDF 预览和原始识别文本；旧酒店记录没有 PDF 时显示空提示。新账单写入目标从“当前筛选账本”拆为独立默认写入账本，初始为“本地账本”，归档当前默认写入账本时自动回退本地账本。账本 tab 右上角账本按钮不再弹出本页 sheet，而是在主 Tab 中切到设置并打开“多账本管理”。
+- 未完成内容：未做真机手动打开酒店 PDF 的视觉验收；未做真实邮箱附件 PDF 重复导入去重；未把原始 PDF 纳入备份 / 同步策略，后续若需要必须重新做隐私与存储评审。
+- 测试情况：先新增 PDF 数据保留和默认写入账本离线断言，运行 `bash scripts/run_offline_regression.sh` 观察到缺少 `sourcePDFData` / 默认写入 API 的 RED 编译失败；实现后执行 `bash scripts/run_offline_regression.sh`、`python3 scripts/check_localization_coverage.py`、`bash scripts/run_golden_regression.sh`、`git diff --check`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 均通过。Mac Catalyst 仍有既有 MediaPipe xcframework slice warning。
+- 风险与注意事项：PDF BLOB 会增加本机 SQLite 体积，当前仅保存用户主动导入或主动选择的酒店水单 PDF；旧记录没有 PDF 不影响详情打开。默认写入账本与当前列表筛选解耦后，用户切换到某个账本查看时，新账单仍会写入“默认写入账本”，这是本轮新增选项的核心行为，需要在后续 UI / 文案中保持一致。
+- 回滚方式：回退 `HotelStayDraft` / `HotelStayRecord` PDF 字段、SQLite `source_pdf_data` 列读写、导入器 PDF 数据保留、详情页 PDF 预览、`LedgerStore` 默认写入账本偏好、Settings 路由 / 多账本管理 UI、本地化新增 key、离线回归新增断言以及版本计划 / CHANGELOG / 本日志即可；已迁移数据库中的 `source_pdf_data` 列可保留为空，不影响旧代码读取其他列。
+- 结论：酒店消费详情已具备原始 PDF 对照能力，多账本写入目标也从浏览筛选口径中拆出，当前默认写入为“本地账本”。
+- 下一步建议：后续优先补酒店水单 Demo Mode / 示例 PDF，以及邮箱候选去重和待确认草稿队列持久化。
 
 ### ITER-255 GOAL-1821 / 1822 / 1824 酒店消费本地邮箱导入首版
 - 日期：2026-06-25

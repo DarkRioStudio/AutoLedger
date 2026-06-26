@@ -427,6 +427,7 @@ public struct HotelFolioEmailDraftFactory: Sendable {
             sourceType: .localEmailIMAP,
             targetLedgerID: targetLedgerID,
             sourceFileName: attachment.fileName,
+            sourcePDFData: attachment.data,
             sourceEmailSubject: message.subject.nilIfEmpty,
             sourceEmailFrom: message.from.nilIfEmpty,
             rawText: trimmedText,

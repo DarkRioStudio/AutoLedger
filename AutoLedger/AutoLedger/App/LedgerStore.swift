@@ -51,6 +51,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var merchantAliases: [String: String] = [:]
     @Published private(set) var ledgerProfiles: [LedgerProfile] = []
     @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID
+    @Published private(set) var defaultWriteLedgerID = TodaySpendingSummary.defaultLedgerID
     @Published private(set) var isShowingAllLedgers = false
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
@@ -91,6 +92,7 @@ final class LedgerStore: ObservableObject {
         let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
         self.ledgerProfiles = initialLedgerProfiles
         self.selectedLedgerID = LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
+        self.defaultWriteLedgerID = LedgerStore.loadInitialDefaultWriteLedgerID(from: initialLedgerProfiles)
         self.isShowingAllLedgers = UserDefaults.standard.bool(forKey: Self.showAllLedgersKey)
         self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
@@ -123,6 +125,10 @@ final class LedgerStore: ObservableObject {
         activeLedgerProfiles.first { $0.isDefault } ?? LedgerProfile.defaultLocal()
     }
 
+    var defaultWriteLedgerProfile: LedgerProfile {
+        activeLedgerProfiles.first { $0.id == defaultWriteLedgerID } ?? LedgerProfile.defaultLocal()
+    }
+
     var visibleTransactions: [Transaction] {
         transactionsForCurrentLedger(transactions)
     }
@@ -132,7 +138,7 @@ final class LedgerStore: ObservableObject {
     }
 
     var targetLedgerIDForNewTransactions: String {
-        isShowingAllLedgers ? defaultLedgerProfile.id : selectedLedgerID
+        defaultWriteLedgerID
     }
 
     var currentLedgerTitle: String {
@@ -332,6 +338,7 @@ final class LedgerStore: ObservableObject {
                 return
             }
         }
+        normalizeDefaultWriteLedger()
         normalizeLedgerSelection()
         recordLedgerProfileConfigurationChanged()
     }
@@ -351,6 +358,13 @@ final class LedgerStore: ObservableObject {
             }
             sortLedgerProfiles()
         }
+        recordLedgerProfileConfigurationChanged()
+    }
+
+    func setDefaultWriteLedgerProfile(_ profile: LedgerProfile) {
+        guard !profile.isArchived else { return }
+        defaultWriteLedgerID = profile.id
+        saveDefaultWriteLedger()
         recordLedgerProfileConfigurationChanged()
     }
 
@@ -1809,6 +1823,19 @@ final class LedgerStore: ObservableObject {
         return activeProfiles.first { $0.isDefault }?.id ?? TodaySpendingSummary.defaultLedgerID
     }
 
+    private static func loadInitialDefaultWriteLedgerID(from profiles: [LedgerProfile]) -> String {
+        let activeProfiles = profiles.filter { !$0.isArchived }
+        let activeIDs = Set(activeProfiles.map(\.id))
+        if let saved = UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey),
+           activeIDs.contains(saved) {
+            return saved
+        }
+        if activeIDs.contains(TodaySpendingSummary.defaultLedgerID) {
+            return TodaySpendingSummary.defaultLedgerID
+        }
+        return activeProfiles.first { $0.isDefault }?.id ?? TodaySpendingSummary.defaultLedgerID
+    }
+
     private func reloadLedgerProfiles() {
         guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
             sortLedgerProfiles()
@@ -1819,6 +1846,7 @@ final class LedgerStore: ObservableObject {
             ledgerProfiles = [LedgerProfile.defaultLocal()]
         }
         sortLedgerProfiles()
+        normalizeDefaultWriteLedger()
         normalizeLedgerSelection()
     }
 
@@ -1860,9 +1888,26 @@ final class LedgerStore: ObservableObject {
         saveLedgerSelection()
     }
 
+    private func normalizeDefaultWriteLedger() {
+        let activeIDs = Set(activeLedgerProfiles.map(\.id))
+        guard !activeIDs.contains(defaultWriteLedgerID) else {
+            saveDefaultWriteLedger()
+            return
+        }
+
+        defaultWriteLedgerID = activeIDs.contains(TodaySpendingSummary.defaultLedgerID)
+            ? TodaySpendingSummary.defaultLedgerID
+            : defaultLedgerProfile.id
+        saveDefaultWriteLedger()
+    }
+
     private func saveLedgerSelection() {
         UserDefaults.standard.set(selectedLedgerID, forKey: Self.selectedLedgerIDKey)
         UserDefaults.standard.set(isShowingAllLedgers, forKey: Self.showAllLedgersKey)
+    }
+
+    private func saveDefaultWriteLedger() {
+        UserDefaults.standard.set(defaultWriteLedgerID, forKey: Self.defaultWriteLedgerIDKey)
     }
 
     private func normalizedMerchantKey(_ merchant: String) -> String {
@@ -1953,6 +1998,7 @@ extension LedgerStore {
     private static let ledgerConfigurationUpdatedAtKey = "ledgerConfigurationUpdatedAt"
     private static let allLedgersScopeID = "all-ledgers"
     private static let selectedLedgerIDKey = "selectedLedgerID"
+    private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
     private static let showAllLedgersKey = "showAllLedgers"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"

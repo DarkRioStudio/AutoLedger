@@ -33,6 +33,7 @@ private enum LedgerFilter: String, CaseIterable {
 
 struct LedgerView: View {
     @EnvironmentObject private var store: LedgerStore
+    private let onOpenLedgerSettings: (() -> Void)?
     @State private var selectedTransaction: Transaction?
     @State private var transactionPendingMove: Transaction?
     @State private var filter: LedgerFilter = .all
@@ -42,6 +43,10 @@ struct LedgerView: View {
     @State private var isShowingDeleted = false
     @State private var isShowingLedgerProfiles = false
     @State private var searchText = ""
+
+    init(onOpenLedgerSettings: (() -> Void)? = nil) {
+        self.onOpenLedgerSettings = onOpenLedgerSettings
+    }
 
     private var filteredTransactions: [Transaction] {
         let cal = Calendar.current
@@ -230,7 +235,11 @@ struct LedgerView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        isShowingLedgerProfiles = true
+                        if let onOpenLedgerSettings {
+                            onOpenLedgerSettings()
+                        } else {
+                            isShowingLedgerProfiles = true
+                        }
                     } label: {
                         Image(systemName: "books.vertical")
                             .fontWeight(.semibold)

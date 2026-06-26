@@ -39,12 +39,14 @@ struct HotelFolioManualPDFImporter {
             throw HotelFolioManualPDFImportError.unsupportedFileType
         }
 
+        let pdfData = try Data(contentsOf: url)
         let text = try extractText(from: url)
         let timestamp = now()
         return HotelStayDraft(
             sourceType: .manualPDF,
             targetLedgerID: targetLedgerID,
             sourceFileName: url.lastPathComponent,
+            sourcePDFData: pdfData,
             sourceEmailSubject: nil,
             sourceEmailFrom: nil,
             rawText: text,

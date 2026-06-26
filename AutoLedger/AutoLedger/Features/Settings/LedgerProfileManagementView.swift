@@ -28,6 +28,30 @@ struct LedgerProfileManagementView: View {
     var body: some View {
         List {
             Section {
+                Picker(
+                    "ledger_profiles.default_write.current",
+                    selection: Binding(
+                        get: { store.defaultWriteLedgerID },
+                        set: { ledgerID in
+                            guard let profile = activeProfiles.first(where: { $0.id == ledgerID }) else { return }
+                            store.setDefaultWriteLedgerProfile(profile)
+                        }
+                    )
+                ) {
+                    ForEach(activeProfiles) { profile in
+                        Text(profile.name)
+                            .tag(profile.id)
+                    }
+                }
+
+                Text("ledger_profiles.default_write.description")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+            } header: {
+                Text("ledger_profiles.default_write.section")
+            }
+
+            Section {
                 ForEach(activeProfiles) { profile in
                     ledgerRow(profile)
                         .contentShape(Rectangle())
@@ -58,6 +82,15 @@ struct LedgerProfileManagementView: View {
                                     Label("ledger_profiles.action.set_default", systemImage: "checkmark.circle.fill")
                                 }
                                 .tint(AppTheme.accent)
+                            }
+
+                            if store.defaultWriteLedgerID != profile.id {
+                                Button {
+                                    store.setDefaultWriteLedgerProfile(profile)
+                                } label: {
+                                    Label("ledger_profiles.action.set_default_write", systemImage: "square.and.pencil")
+                                }
+                                .tint(AppTheme.accentSecondary)
                             }
                         }
                 }
@@ -151,6 +184,10 @@ struct LedgerProfileManagementView: View {
 
                     if profile.isDefault {
                         statusBadge("ledger_profiles.badge.default")
+                    }
+
+                    if store.defaultWriteLedgerID == profile.id {
+                        statusBadge("ledger_profiles.badge.default_write")
                     }
 
                     if profile.isArchived {

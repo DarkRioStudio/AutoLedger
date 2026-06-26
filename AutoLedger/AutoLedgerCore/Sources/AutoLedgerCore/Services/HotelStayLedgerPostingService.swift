@@ -94,6 +94,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             paymentMethod: trimmed(payload.paymentMethod),
             sourceType: draft.sourceType,
             sourceFileName: draft.sourceFileName,
+            sourcePDFData: draft.sourcePDFData,
             confidence: payload.confidence ?? draft.confidence,
             rawText: draft.rawText,
             createdAt: postedAt,

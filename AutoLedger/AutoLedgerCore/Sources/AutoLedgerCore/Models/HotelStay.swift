@@ -112,6 +112,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
     public var sourceType: HotelFolioSourceType
     public var targetLedgerID: String?
     public var sourceFileName: String?
+    public var sourcePDFData: Data?
     public var sourceEmailSubject: String?
     public var sourceEmailFrom: String?
     public var rawText: String
@@ -126,6 +127,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         sourceType: HotelFolioSourceType,
         targetLedgerID: String? = nil,
         sourceFileName: String? = nil,
+        sourcePDFData: Data? = nil,
         sourceEmailSubject: String? = nil,
         sourceEmailFrom: String? = nil,
         rawText: String = "",
@@ -139,6 +141,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         self.sourceType = sourceType
         self.targetLedgerID = targetLedgerID
         self.sourceFileName = sourceFileName
+        self.sourcePDFData = sourcePDFData
         self.sourceEmailSubject = sourceEmailSubject
         self.sourceEmailFrom = sourceEmailFrom
         self.rawText = rawText
@@ -174,6 +177,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
     public var paymentMethod: String?
     public var sourceType: HotelFolioSourceType
     public var sourceFileName: String?
+    public var sourcePDFData: Data?
     public var confidence: Double
     public var rawText: String
     public var createdAt: Date
@@ -203,6 +207,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         paymentMethod: String? = nil,
         sourceType: HotelFolioSourceType,
         sourceFileName: String? = nil,
+        sourcePDFData: Data? = nil,
         confidence: Double = 0,
         rawText: String = "",
         createdAt: Date = Date(),
@@ -231,6 +236,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         self.paymentMethod = paymentMethod
         self.sourceType = sourceType
         self.sourceFileName = sourceFileName
+        self.sourcePDFData = sourcePDFData
         self.confidence = confidence
         self.rawText = rawText
         self.createdAt = createdAt

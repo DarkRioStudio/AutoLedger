@@ -232,10 +232,12 @@ struct OfflineRegression {
         reporter.check(abs((payload?.totalAmount ?? 0) - 50000) < 0.001, "HotelFolioParsedPayload decodes total_amount")
 
         let now = AppFormatters.parseFlexibleDate("2026-06-24 12:00") ?? Date(timeIntervalSince1970: 0)
+        let sourcePDFData = Data("%PDF-1.7 demo hotel folio".utf8)
         let draft = HotelStayDraft(
             sourceType: .manualPDF,
             targetLedgerID: TodaySpendingSummary.defaultLedgerID,
             sourceFileName: "demo-folio.pdf",
+            sourcePDFData: sourcePDFData,
             sourceEmailSubject: nil,
             sourceEmailFrom: nil,
             rawText: "Demo folio raw text",
@@ -247,6 +249,7 @@ struct OfflineRegression {
         )
         reporter.check(draft.sourceType == .manualPDF, "HotelStayDraft records manual PDF source")
         reporter.check(draft.targetLedgerID == TodaySpendingSummary.defaultLedgerID, "HotelStayDraft records target ledger id")
+        reporter.check(draft.sourcePDFData == sourcePDFData, "HotelStayDraft keeps original source PDF data")
         reporter.check(draft.status == .needsReview, "HotelStayDraft defaults to review workflow state")
         reporter.check(draft.parsedPayload?.confirmationNumber == "ABC123", "HotelStayDraft stores parsed payload")
 
@@ -273,6 +276,7 @@ struct OfflineRegression {
             paymentMethod: payload?.paymentMethod,
             sourceType: .manualPDF,
             sourceFileName: draft.sourceFileName,
+            sourcePDFData: draft.sourcePDFData,
             confidence: draft.confidence,
             rawText: draft.rawText,
             createdAt: now,
@@ -283,6 +287,7 @@ struct OfflineRegression {
         reporter.check(record.currency == "JPY", "HotelStayRecord records currency")
         reporter.check(abs(record.totalAmount - 50000) < 0.001, "HotelStayRecord records total amount")
         reporter.check(record.sourceType == .manualPDF, "HotelStayRecord records source type")
+        reporter.check(record.sourcePDFData == sourcePDFData, "HotelStayRecord can keep original source PDF data")
     }
 
     private static func verifyHotelFolioParsePipeline(reporter: RegressionReporter) {
@@ -415,6 +420,7 @@ struct OfflineRegression {
                 reporter.check(draft?.sourceType == .localEmailIMAP, "HotelFolioEmailDraftFactory marks local email source")
                 reporter.check(draft?.targetLedgerID == TodaySpendingSummary.defaultLedgerID, "HotelFolioEmailDraftFactory keeps target ledger id")
                 reporter.check(draft?.sourceFileName == "folio.pdf", "HotelFolioEmailDraftFactory records attachment filename")
+                reporter.check(draft?.sourcePDFData == pdfData, "HotelFolioEmailDraftFactory keeps source PDF data")
                 reporter.check(draft?.sourceEmailSubject == "Demo Bay Hotel Folio", "HotelFolioEmailDraftFactory records email subject")
                 reporter.check(draft?.sourceEmailFrom == "Demo Bay Hotel <folio@example.com>", "HotelFolioEmailDraftFactory records email sender")
                 reporter.check(draft?.rawText.contains("Total Amount") == true, "HotelFolioEmailDraftFactory stores extracted text")
@@ -448,10 +454,12 @@ struct OfflineRegression {
             rawTextExcerpt: "Demo folio excerpt"
         )
         let originalUpdatedAt = Date(timeIntervalSince1970: 1_783_000_000)
+        let sourcePDFData = Data("%PDF-1.7 posted hotel folio".utf8)
         let draft = HotelStayDraft(
             sourceType: .manualPDF,
             targetLedgerID: TodaySpendingSummary.defaultLedgerID,
             sourceFileName: "demo-folio.pdf",
+            sourcePDFData: sourcePDFData,
             rawText: "Demo folio raw text",
             parsedPayload: payload,
             confidence: 0.91,
@@ -478,11 +486,13 @@ struct OfflineRegression {
         reporter.check(confirmedDraft?.status == .confirmed, "HotelStayReviewForm confirms draft")
         reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes edited hotel name")
         reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Amex", "HotelStayReviewForm writes edited payment method")
+        reporter.check(confirmedDraft?.sourcePDFData == sourcePDFData, "HotelStayReviewForm preserves source PDF data")
         reporter.check(confirmedDraft?.updatedAt == confirmedAt, "HotelStayReviewForm refreshes confirmed timestamp")
 
         let rejectedAt = Date(timeIntervalSince1970: 1_783_071_600)
         let rejectedDraft = form.rejectedDraft(from: draft, updatedAt: rejectedAt)
         reporter.check(rejectedDraft.status == .rejected, "HotelStayReviewForm rejects draft")
+        reporter.check(rejectedDraft.sourcePDFData == sourcePDFData, "HotelStayReviewForm preserves source PDF data on rejection")
         reporter.check(rejectedDraft.updatedAt == rejectedAt, "HotelStayReviewForm refreshes rejected timestamp")
 
         form.hotelName = "   "
@@ -529,10 +539,12 @@ struct OfflineRegression {
             confidence: 0.91,
             rawTextExcerpt: "Demo folio excerpt"
         )
+        let sourcePDFData = Data("%PDF-1.7 posted hotel folio".utf8)
         let draft = HotelStayDraft(
             sourceType: .manualPDF,
             targetLedgerID: TodaySpendingSummary.defaultLedgerID,
             sourceFileName: "demo-folio.pdf",
+            sourcePDFData: sourcePDFData,
             rawText: "Demo folio raw text",
             parsedPayload: payload,
             confidence: 0.91,
@@ -558,6 +570,7 @@ struct OfflineRegression {
         reporter.check(result?.hotelStayRecord.hotelName == "Edited Demo Hotel", "HotelStayRecord receives confirmed hotel name")
         reporter.check(result?.hotelStayRecord.hotelBrand == "Demo Suites", "HotelStayRecord receives hotel brand")
         reporter.check(result?.hotelStayRecord.hotelGroup == "Demo Hospitality", "HotelStayRecord receives hotel group")
+        reporter.check(result?.hotelStayRecord.sourcePDFData == sourcePDFData, "HotelStayRecord keeps original PDF data after posting")
         reporter.check(abs((result?.hotelStayRecord.totalAmount ?? 0) - 50000) < 0.001, "HotelStayRecord receives total amount")
         reporter.check(result?.transaction.id == transactionID, "HotelStayLedgerPostingService uses supplied transaction id")
         reporter.check(result?.transaction.hotelStayRecordID == stayID, "Transaction links generated hotel stay record")
@@ -2082,6 +2095,7 @@ struct OfflineRegression {
     }
 
     private static func verifyLedgerProfileManagement(reporter: RegressionReporter) throws {
+        UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AutoLedgerProfileManagementRegression-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
@@ -2133,6 +2147,7 @@ struct OfflineRegression {
         let uiStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-profiles-ui.sqlite3")
         let ledgerStore = LedgerStore(transactionStore: uiStore)
         reporter.check(ledgerStore.ledgerProfiles.map(\.id) == [TodaySpendingSummary.defaultLedgerID], "LedgerStore exposes bootstrapped ledger profiles")
+        reporter.check(ledgerStore.defaultWriteLedgerID == TodaySpendingSummary.defaultLedgerID, "LedgerStore defaults new writes to local ledger")
 
         let createdLedger = ledgerStore.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY")
         reporter.check(createdLedger?.name == "Travel", "LedgerStore creates a custom ledger profile")
@@ -2150,6 +2165,19 @@ struct OfflineRegression {
                 ledgerStore.ledgerProfiles.filter(\.isDefault).map(\.id) == [createdLedger.id],
                 "LedgerStore switches default ledger profile"
             )
+            reporter.check(
+                ledgerStore.defaultWriteLedgerID == TodaySpendingSummary.defaultLedgerID,
+                "LedgerStore keeps default write ledger independent from display default"
+            )
+            ledgerStore.setDefaultWriteLedgerProfile(createdLedger)
+            reporter.check(
+                ledgerStore.defaultWriteLedgerID == createdLedger.id,
+                "LedgerStore switches default write ledger"
+            )
+            reporter.check(
+                ledgerStore.targetLedgerIDForNewTransactions == createdLedger.id,
+                "LedgerStore writes new transactions to default write ledger"
+            )
 
             ledgerStore.archiveLedgerProfile(createdLedger)
             reporter.check(
@@ -2160,10 +2188,15 @@ struct OfflineRegression {
                 ledgerStore.ledgerProfiles.filter(\.isDefault).map(\.id) == [TodaySpendingSummary.defaultLedgerID],
                 "LedgerStore restores default local ledger when archiving current default"
             )
+            reporter.check(
+                ledgerStore.defaultWriteLedgerID == TodaySpendingSummary.defaultLedgerID,
+                "LedgerStore restores local ledger when archiving default write ledger"
+            )
         }
     }
 
     private static func verifyLedgerSelectionAndTransactionMoves(reporter: RegressionReporter) throws {
+        UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
         let rootURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AutoLedgerSelectionRegression-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
@@ -2196,6 +2229,10 @@ struct OfflineRegression {
             reporter.check(ledgerStore.selectedLedgerID == travelLedger.id, "LedgerStore selects custom ledger")
             reporter.check(ledgerStore.currentLedgerTitle == "Travel", "LedgerStore exposes selected ledger title for ledger tab")
             reporter.check(ledgerStore.visibleTransactions.isEmpty, "LedgerStore filters current ledger before travel transaction exists")
+            reporter.check(
+                ledgerStore.targetLedgerIDForNewTransactions == TodaySpendingSummary.defaultLedgerID,
+                "LedgerStore keeps new writes on default write ledger after selecting another ledger"
+            )
 
             let travelTransaction = Transaction(
                 merchant: "Airport Hotel",
@@ -2205,14 +2242,31 @@ struct OfflineRegression {
                 source: .manual,
                 note: "current ledger"
             )
-            reporter.check(ledgerStore.addTransaction(travelTransaction), "LedgerStore saves transaction into selected ledger")
+            reporter.check(ledgerStore.addTransaction(travelTransaction), "LedgerStore saves transaction into default write ledger")
             let storedTravel = try sqlStore.loadTransactions().first { $0.id == travelTransaction.id }
-            reporter.check(storedTravel?.ledgerID == travelLedger.id, "LedgerStore writes selected ledger id for new transaction")
-            reporter.check(ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id], "LedgerStore filters to selected ledger transaction")
+            reporter.check(storedTravel?.ledgerID == TodaySpendingSummary.defaultLedgerID, "LedgerStore writes default write ledger id for new transaction")
+            reporter.check(ledgerStore.visibleTransactions.isEmpty, "LedgerStore keeps selected ledger empty until default write is changed")
+
+            ledgerStore.setDefaultWriteLedgerProfile(travelLedger)
+            let selectedWriteTransaction = Transaction(
+                merchant: "Airport Hotel",
+                amount: 999,
+                occurredAt: date.addingTimeInterval(120),
+                category: .other,
+                source: .manual,
+                note: "default write ledger"
+            )
+            reporter.check(ledgerStore.addTransaction(selectedWriteTransaction), "LedgerStore saves transaction after switching default write ledger")
+            let storedSelectedWrite = try sqlStore.loadTransactions().first { $0.id == selectedWriteTransaction.id }
+            reporter.check(storedSelectedWrite?.ledgerID == travelLedger.id, "LedgerStore persists configured default write ledger")
+            reporter.check(ledgerStore.visibleTransactions.map(\.id) == [selectedWriteTransaction.id], "LedgerStore filters to selected ledger transaction")
 
             ledgerStore.selectAllLedgers()
             reporter.check(ledgerStore.isShowingAllLedgers, "LedgerStore switches to all-ledgers mode")
-            reporter.check(ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id, defaultTransaction.id], "LedgerStore shows all ledgers when selected")
+            reporter.check(
+                ledgerStore.visibleTransactions.map(\.id) == [selectedWriteTransaction.id, travelTransaction.id, defaultTransaction.id],
+                "LedgerStore shows all ledgers when selected"
+            )
             ledgerStore.showSelectedLedgerOnly()
             reporter.check(!ledgerStore.isShowingAllLedgers, "LedgerStore can restore selected-ledger-only mode")
             reporter.check(ledgerStore.currentLedgerTitle == "Travel", "LedgerStore keeps selected ledger title after restoring current-ledger mode")
@@ -2223,7 +2277,7 @@ struct OfflineRegression {
 
             ledgerStore.selectLedgerProfile(travelLedger)
             reporter.check(
-                ledgerStore.visibleTransactions.map(\.id) == [travelTransaction.id, defaultTransaction.id],
+                ledgerStore.visibleTransactions.map(\.id) == [selectedWriteTransaction.id, defaultTransaction.id],
                 "LedgerStore current ledger includes moved transaction"
             )
         }
@@ -3636,6 +3690,7 @@ struct OfflineRegression {
         let hotelStayID = UUID(uuidString: "00000000-0000-0000-0000-000000001861") ?? UUID()
         let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001862") ?? UUID()
         let createdAt = AppFormatters.parseFlexibleDate("2026-06-25 10:00") ?? .now
+        let sourcePDFData = Data("%PDF-1.7 persisted hotel folio".utf8)
         let record = HotelStayRecord(
             id: hotelStayID,
             ledgerID: "travel-ledger",
@@ -3660,6 +3715,7 @@ struct OfflineRegression {
             paymentMethod: "Visa",
             sourceType: .manualPDF,
             sourceFileName: "demo-folio.pdf",
+            sourcePDFData: sourcePDFData,
             confidence: 0.91,
             rawText: "Demo Bay Hotel raw folio text",
             createdAt: createdAt,
@@ -3682,6 +3738,7 @@ struct OfflineRegression {
         let loadedRecords = try store.loadHotelStayRecords()
         let loadedTransactions = try store.loadTransactions()
         reporter.check(loadedRecords == [record], "SQLite saves hotel stay record")
+        reporter.check(loadedRecords.first?.sourcePDFData == sourcePDFData, "SQLite saves hotel stay source PDF data")
         reporter.check(loadedTransactions.contains(transaction), "SQLite saves linked hotel transaction")
         reporter.check(
             loadedTransactions.first { $0.id == transactionID }?.hotelStayRecordID == hotelStayID,

@@ -9,10 +9,12 @@ import SwiftUI
 
 private enum HomeTabIndex {
     static let ledger = 1
+    static let settings = 3
 }
 
 struct HomeView: View {
     @State private var selectedTab = 0
+    @State private var pendingSettingsNavigationTarget: SettingsNavigationTarget?
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -22,7 +24,10 @@ struct HomeView: View {
                 }
                 .tag(0)
 
-            LedgerView()
+            LedgerView {
+                selectedTab = HomeTabIndex.settings
+                pendingSettingsNavigationTarget = .ledgerProfiles
+            }
                 .tabItem {
                     Label("tab.ledger", systemImage: "list.bullet.rectangle.portrait.fill")
                 }
@@ -34,7 +39,7 @@ struct HomeView: View {
                 }
                 .tag(2)
 
-            SettingsView()
+            SettingsView(pendingNavigationTarget: $pendingSettingsNavigationTarget)
                 .tabItem {
                     Label("tab.settings", systemImage: "gearshape.fill")
                 }

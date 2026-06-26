@@ -196,6 +196,9 @@
 "hotel_stay.detail.source" = "Source";
 "hotel_stay.detail.raw_text" = "Original Recognition Text";
 "hotel_stay.detail.raw_text.empty" = "No original recognition text available.";
+"hotel_stay.detail.source_pdf" = "Original Hotel Folio PDF";
+"hotel_stay.detail.source_pdf.empty" = "No original PDF available.";
+"hotel_stay.detail.source_pdf.unsupported" = "PDF preview is not supported on this platform.";
 "hotel_stay.detail.linked_transaction" = "Linked Transaction";
 "hotel_stay.detail.linked_transaction.missing" = "No linked expense transaction was found.";
 "hotel_stay.detail.linked_transaction_id" = "Linked Transaction ID";
@@ -963,9 +966,9 @@
 "mac.ledger.duplicate.confirm_message" = "Move the older %d suspected duplicate transactions to Recently Deleted. They can be restored.";
 
 // MARK: - Ledger Profiles
-"settings.ledger_profiles.title" = "Ledger Management";
-"settings.ledger_profiles.subtitle" = "Create, rename, archive, and set the default ledger";
-"ledger_profiles.title" = "Ledger Management";
+"settings.ledger_profiles.title" = "Multi-Ledger Management";
+"settings.ledger_profiles.subtitle" = "Choose the current ledger, manage ledgers, and set the default write ledger";
+"ledger_profiles.title" = "Multi-Ledger Management";
 "ledger_profiles.active" = "Active Ledgers";
 "ledger_profiles.archived" = "Archived";
 "ledger_profiles.add" = "New Ledger";
@@ -975,7 +978,12 @@
 "ledger_profiles.currency.placeholder" = "Default currency (optional)";
 "ledger_profiles.currency.none" = "No currency";
 "ledger_profiles.badge.default" = "Default";
+"ledger_profiles.badge.default_write" = "Default Write";
 "ledger_profiles.badge.archived" = "Archived";
 "ledger_profiles.action.rename" = "Rename";
 "ledger_profiles.action.set_default" = "Set Default";
+"ledger_profiles.action.set_default_write" = "Set Default Write";
 "ledger_profiles.action.archive" = "Archive";
+"ledger_profiles.default_write.section" = "Default Write Ledger";
+"ledger_profiles.default_write.current" = "New entries write to";
+"ledger_profiles.default_write.description" = "New manual entries, receipt recognition, and confirmed hotel stays write to this ledger by default. The default is Local Ledger.";

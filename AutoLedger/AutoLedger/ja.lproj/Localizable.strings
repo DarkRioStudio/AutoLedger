@@ -196,6 +196,9 @@
 "hotel_stay.detail.source" = "取り込み元";
 "hotel_stay.detail.raw_text" = "元の認識テキスト";
 "hotel_stay.detail.raw_text.empty" = "表示できる元の認識テキストがありません。";
+"hotel_stay.detail.source_pdf" = "元のホテル明細 PDF";
+"hotel_stay.detail.source_pdf.empty" = "表示できる元の PDF がありません。";
+"hotel_stay.detail.source_pdf.unsupported" = "このプラットフォームでは PDF プレビューに対応していません。";
 "hotel_stay.detail.linked_transaction" = "リンク済み取引";
 "hotel_stay.detail.linked_transaction.missing" = "リンク済みの支出取引が見つかりません。";
 "hotel_stay.detail.linked_transaction_id" = "リンク済み取引 ID";
@@ -963,9 +966,9 @@
 "mac.ledger.duplicate.confirm_message" = "古い重複候補 %d 件を最近削除した項目へ移動します。復元できます。";
 
 // MARK: - Ledger Profiles
-"settings.ledger_profiles.title" = "台帳管理";
-"settings.ledger_profiles.subtitle" = "台帳の作成、名前変更、アーカイブ、既定設定";
-"ledger_profiles.title" = "台帳管理";
+"settings.ledger_profiles.title" = "複数台帳管理";
+"settings.ledger_profiles.subtitle" = "現在の台帳を選び、台帳を管理し、既定の書き込み先を設定";
+"ledger_profiles.title" = "複数台帳管理";
 "ledger_profiles.active" = "使用中の台帳";
 "ledger_profiles.archived" = "アーカイブ済み";
 "ledger_profiles.add" = "台帳を追加";
@@ -975,7 +978,12 @@
 "ledger_profiles.currency.placeholder" = "既定通貨（任意）";
 "ledger_profiles.currency.none" = "通貨未設定";
 "ledger_profiles.badge.default" = "既定";
+"ledger_profiles.badge.default_write" = "既定の書き込み先";
 "ledger_profiles.badge.archived" = "アーカイブ済み";
 "ledger_profiles.action.rename" = "名前変更";
 "ledger_profiles.action.set_default" = "既定に設定";
+"ledger_profiles.action.set_default_write" = "既定の書き込み先に設定";
 "ledger_profiles.action.archive" = "アーカイブ";
+"ledger_profiles.default_write.section" = "既定の書き込み先台帳";
+"ledger_profiles.default_write.current" = "新規記録の書き込み先";
+"ledger_profiles.default_write.description" = "手入力、レシート認識、確認済みホテル消費は、既定でここで選んだ台帳に書き込まれます。初期値はローカル台帳です。";

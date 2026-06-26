@@ -196,6 +196,9 @@
 "hotel_stay.detail.source" = "來源";
 "hotel_stay.detail.raw_text" = "原始識別文字";
 "hotel_stay.detail.raw_text.empty" = "沒有可顯示的原始識別文字。";
+"hotel_stay.detail.source_pdf" = "原始飯店水單 PDF";
+"hotel_stay.detail.source_pdf.empty" = "沒有可顯示的原始 PDF。";
+"hotel_stay.detail.source_pdf.unsupported" = "目前平台暫不支援 PDF 預覽。";
 "hotel_stay.detail.linked_transaction" = "關聯帳單";
 "hotel_stay.detail.linked_transaction.missing" = "沒有找到關聯的普通支出流水。";
 "hotel_stay.detail.linked_transaction_id" = "關聯流水 ID";
@@ -966,9 +969,9 @@
 "mac.ledger.duplicate.confirm_message" = "將較舊的 %d 筆疑似重複帳單移入最近刪除，可從最近刪除恢復。";
 
 // MARK: - Ledger Profiles
-"settings.ledger_profiles.title" = "帳本管理";
-"settings.ledger_profiles.subtitle" = "建立、重新命名、歸檔和設定預設帳本";
-"ledger_profiles.title" = "帳本管理";
+"settings.ledger_profiles.title" = "多帳本管理";
+"settings.ledger_profiles.subtitle" = "選擇目前帳本，管理帳本，並設定預設寫入帳本";
+"ledger_profiles.title" = "多帳本管理";
 "ledger_profiles.active" = "目前帳本";
 "ledger_profiles.archived" = "已歸檔";
 "ledger_profiles.add" = "新增帳本";
@@ -978,7 +981,12 @@
 "ledger_profiles.currency.placeholder" = "預設幣種（可選）";
 "ledger_profiles.currency.none" = "未設定幣種";
 "ledger_profiles.badge.default" = "預設";
+"ledger_profiles.badge.default_write" = "預設寫入";
 "ledger_profiles.badge.archived" = "已歸檔";
 "ledger_profiles.action.rename" = "重新命名";
 "ledger_profiles.action.set_default" = "設為預設";
+"ledger_profiles.action.set_default_write" = "設為預設寫入";
 "ledger_profiles.action.archive" = "歸檔";
+"ledger_profiles.default_write.section" = "預設寫入帳本";
+"ledger_profiles.default_write.current" = "新帳單預設寫入";
+"ledger_profiles.default_write.description" = "新增帳單、截圖識別和飯店消費確認入帳時，預設寫入此處選擇的帳本。預設為本地帳本。";

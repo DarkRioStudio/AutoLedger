@@ -1,5 +1,13 @@
 import AutoLedgerCore
+#if canImport(PDFKit)
+import PDFKit
+#endif
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 struct HotelStayListView: View {
     let records: [HotelStayRecord]
@@ -345,6 +353,7 @@ struct HotelStayDetailView: View {
             fieldSection(titleKey: "hotel_stay.detail.charges", fields: snapshot.chargeFields)
             linkedTransactionSection
             fieldSection(titleKey: "hotel_stay.detail.source", fields: snapshot.sourceFields)
+            sourcePDFSection
             rawTextSection
         }
         .scrollContentBackground(.hidden)
@@ -436,6 +445,25 @@ struct HotelStayDetailView: View {
         }
     }
 
+    private var sourcePDFSection: some View {
+        Section("hotel_stay.detail.source_pdf") {
+            if let sourcePDFData = record.sourcePDFData, !sourcePDFData.isEmpty {
+                #if canImport(PDFKit)
+                HotelStayPDFPreview(data: sourcePDFData)
+                    .frame(minHeight: 360)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .accessibilityLabel(Text("hotel_stay.detail.source_pdf"))
+                #else
+                Label("hotel_stay.detail.source_pdf.unsupported", systemImage: "doc.richtext")
+                    .foregroundStyle(AppTheme.mutedInk)
+                #endif
+            } else {
+                Label("hotel_stay.detail.source_pdf.empty", systemImage: "doc")
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+    }
+
     private var rawTextSection: some View {
         Section("hotel_stay.detail.raw_text") {
             ScrollView {
@@ -518,6 +546,42 @@ struct HotelStayDetailView: View {
         }
     }
 }
+
+#if canImport(PDFKit) && canImport(UIKit)
+private struct HotelStayPDFPreview: UIViewRepresentable {
+    let data: Data
+
+    func makeUIView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = UIColor.clear
+        return view
+    }
+
+    func updateUIView(_ view: PDFView, context: Context) {
+        view.document = PDFDocument(data: data)
+    }
+}
+#elseif canImport(PDFKit) && canImport(AppKit)
+private struct HotelStayPDFPreview: NSViewRepresentable {
+    let data: Data
+
+    func makeNSView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = NSColor.clear
+        return view
+    }
+
+    func updateNSView(_ view: PDFView, context: Context) {
+        view.document = PDFDocument(data: data)
+    }
+}
+#endif
 
 #Preview("Hotel stays") {
     HotelStayListView(

@@ -400,7 +400,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         SELECT id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
                check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
                room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
-               payment_method, source_type, source_file_name, confidence, raw_text, created_at, updated_at
+               payment_method, source_type, source_file_name, source_pdf_data, confidence, raw_text, created_at, updated_at
         FROM hotel_stay_records
         ORDER BY check_out_date DESC, created_at DESC;
         """
@@ -488,9 +488,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
             check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
             room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
-            payment_method, source_type, source_file_name, confidence, raw_text, created_at, updated_at
+            payment_method, source_type, source_file_name, source_pdf_data, confidence, raw_text, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             ledger_id = excluded.ledger_id,
             linked_transaction_id = excluded.linked_transaction_id,
@@ -514,6 +514,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             payment_method = excluded.payment_method,
             source_type = excluded.source_type,
             source_file_name = excluded.source_file_name,
+            source_pdf_data = excluded.source_pdf_data,
             confidence = excluded.confidence,
             raw_text = excluded.raw_text,
             updated_at = excluded.updated_at;
@@ -866,6 +867,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             payment_method TEXT,
             source_type TEXT NOT NULL,
             source_file_name TEXT,
+            source_pdf_data BLOB,
             confidence REAL NOT NULL DEFAULT 0,
             raw_text TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL,
@@ -875,6 +877,10 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
         guard sqlite3_exec(db, hotelStayRecordsSQL, nil, nil, nil) == SQLITE_OK else {
             throw SQLiteTransactionStoreError.executeStatement(hotelStayRecordsSQL)
+        }
+        let hotelStayColumns = Self.columnNames(db: db, table: "hotel_stay_records")
+        if !hotelStayColumns.contains("source_pdf_data") {
+            sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN source_pdf_data BLOB;", nil, nil, nil)
         }
 
         let debugSQL = """
@@ -1612,10 +1618,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         bindOptionalString(record.paymentMethod, to: statement, at: 21)
         sqlite3_bind_text(statement, 22, record.sourceType.rawValue, -1, sqliteTransient)
         bindOptionalString(record.sourceFileName, to: statement, at: 23)
-        sqlite3_bind_double(statement, 24, record.confidence)
-        sqlite3_bind_text(statement, 25, record.rawText, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 26, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 27, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
+        bindOptionalData(record.sourcePDFData, to: statement, at: 24)
+        sqlite3_bind_double(statement, 25, record.confidence)
+        sqlite3_bind_text(statement, 26, record.rawText, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 27, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 28, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
     }
 
     private static func hotelStayRecord(from statement: OpaquePointer?) -> HotelStayRecord? {
@@ -1625,9 +1632,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             let hotelNameCString = sqlite3_column_text(statement, 3),
             let currencyCString = sqlite3_column_text(statement, 13),
             let sourceTypeCString = sqlite3_column_text(statement, 21),
-            let rawTextCString = sqlite3_column_text(statement, 24),
-            let createdCString = sqlite3_column_text(statement, 25),
-            let updatedCString = sqlite3_column_text(statement, 26),
+            let rawTextCString = sqlite3_column_text(statement, 25),
+            let createdCString = sqlite3_column_text(statement, 26),
+            let updatedCString = sqlite3_column_text(statement, 27),
             let id = UUID(uuidString: String(cString: idCString)),
             let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
             let createdAt = storageFormatter.date(from: String(cString: createdCString)),
@@ -1664,7 +1671,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             paymentMethod: string(from: statement, index: 20),
             sourceType: sourceType,
             sourceFileName: string(from: statement, index: 22),
-            confidence: sqlite3_column_double(statement, 23),
+            sourcePDFData: data(from: statement, index: 23),
+            confidence: sqlite3_column_double(statement, 24),
             rawText: String(cString: rawTextCString),
             createdAt: createdAt,
             updatedAt: updatedAt
@@ -1687,6 +1695,17 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    private func bindOptionalData(_ value: Data?, to statement: OpaquePointer?, at index: Int32) {
+        guard let value, !value.isEmpty else {
+            sqlite3_bind_null(statement, index)
+            return
+        }
+
+        _ = value.withUnsafeBytes { buffer in
+            sqlite3_bind_blob(statement, index, buffer.baseAddress, Int32(value.count), sqliteTransient)
+        }
+    }
+
     private static func string(from statement: OpaquePointer?, index: Int32) -> String? {
         guard sqlite3_column_type(statement, index) != SQLITE_NULL,
               let cString = sqlite3_column_text(statement, index) else {
@@ -1694,6 +1713,18 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
         let value = String(cString: cString).trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private static func data(from statement: OpaquePointer?, index: Int32) -> Data? {
+        guard sqlite3_column_type(statement, index) != SQLITE_NULL else {
+            return nil
+        }
+        let byteCount = sqlite3_column_bytes(statement, index)
+        guard byteCount > 0,
+              let bytes = sqlite3_column_blob(statement, index) else {
+            return nil
+        }
+        return Data(bytes: bytes, count: Int(byteCount))
     }
 
     private static func uuid(from statement: OpaquePointer?, index: Int32) -> UUID? {
