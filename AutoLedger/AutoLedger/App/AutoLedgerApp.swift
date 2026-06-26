@@ -54,6 +54,7 @@ struct AutoLedgerApp: App {
 
 private struct AutoLedgerRootView: View {
     @StateObject private var store = LedgerStore()
+    @StateObject private var navigationState = AutoLedgerNavigationState()
     @Environment(\.scenePhase) private var scenePhase
     @State private var didScheduleLaunchSync = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
@@ -61,6 +62,7 @@ private struct AutoLedgerRootView: View {
     var body: some View {
         sizedRootContent
             .environmentObject(store)
+            .environmentObject(navigationState)
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
                 set: { if !$0 { store.detectedICloudBackup = nil } }

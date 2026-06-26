@@ -7,14 +7,8 @@
 
 import SwiftUI
 
-private enum HomeTabIndex {
-    static let ledger = 1
-    static let settings = 4
-}
-
 struct HomeView: View {
-    @State private var selectedTab = 0
-    @State private var pendingSettingsNavigationTarget: SettingsNavigationTarget?
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
 
     var body: some View {
         adaptiveTabs
@@ -39,50 +33,50 @@ struct HomeView: View {
     }
 
     private var tabs: some View {
-        TabView(selection: $selectedTab) {
-            InboxView(selectedTab: $selectedTab)
+        TabView(selection: $navigationState.selectedHomeTab) {
+            InboxView(selectedTab: $navigationState.selectedHomeTab)
                 .tabItem {
                     Label("tab.inbox", systemImage: "tray.full.fill")
                 }
-                .tag(0)
+                .tag(AutoLedgerHomeTab.inbox.rawValue)
 
             LedgerView {
-                selectedTab = HomeTabIndex.settings
-                pendingSettingsNavigationTarget = .ledgerProfiles
+                navigationState.openLedgerProfiles()
             }
                 .tabItem {
                     Label("tab.ledger", systemImage: "list.bullet.rectangle.portrait.fill")
                 }
-                .tag(1)
+                .tag(AutoLedgerHomeTab.ledger.rawValue)
 
             HotelStayWorkspaceView()
                 .tabItem {
                     Label("hotel_stay.list.title", systemImage: "building.2.fill")
                 }
-                .tag(2)
+                .tag(AutoLedgerHomeTab.hotelStays.rawValue)
 
             ReportView()
                 .tabItem {
                     Label("tab.report", systemImage: "chart.bar.fill")
                 }
-                .tag(3)
+                .tag(AutoLedgerHomeTab.report.rawValue)
 
-            SettingsView(pendingNavigationTarget: $pendingSettingsNavigationTarget)
+            SettingsView()
                 .tabItem {
                     Label("tab.settings", systemImage: "gearshape.fill")
                 }
-                .tag(4)
+                .tag(AutoLedgerHomeTab.settings.rawValue)
         }
     }
 
     @MainActor
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
         guard QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
-        selectedTab = HomeTabIndex.ledger
+        navigationState.openLedgerTab()
     }
 }
 
 #Preview {
     HomeView()
         .environmentObject(LedgerStore())
+        .environmentObject(AutoLedgerNavigationState())
 }

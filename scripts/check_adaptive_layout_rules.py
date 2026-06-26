@@ -16,18 +16,34 @@ FORBIDDEN_PATTERNS = [
 ]
 
 REQUIRED_SNIPPETS = {
+    APP / "App" / "AutoLedgerApp.swift": [
+        "@StateObject private var navigationState",
+        ".environmentObject(navigationState)",
+    ],
+    APP / "App" / "AutoLedgerNavigationState.swift": [
+        "final class AutoLedgerNavigationState",
+        "selectedHomeTab",
+        "settingsPath",
+        "selectedLedgerTransactionID",
+        "selectedSubscriptionID",
+        "subscriptionEditor",
+    ],
     APP / "Features" / "Inbox" / "HomeView.swift": [
         "if #available(iOS 27.0, *)",
         ".tabViewStyle(.sidebarAdaptable)",
         ".defaultTabBarPlacement(.sidebar)",
+        "$navigationState.selectedHomeTab",
+        "navigationState.openLedgerProfiles()",
     ],
     APP / "Features" / "Ledger" / "LedgerView.swift": [
         "NavigationSplitView",
-        "selectedTransactionID",
+        "navigationState.selectedLedgerTransactionID",
+        "navigationState.isPresentingNewTransaction",
     ],
     APP / "Features" / "Settings" / "SubscriptionListView.swift": [
         "NavigationSplitView",
-        "selectedSubscriptionID",
+        "navigationState.selectedSubscriptionID",
+        "navigationState.subscriptionEditor",
     ],
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "GridItem(.adaptive",
@@ -38,6 +54,7 @@ REQUIRED_SNIPPETS = {
         "LazyVGrid",
     ],
     APP / "Features" / "Settings" / "SettingsView.swift": [
+        "$navigationState.settingsPath",
         ".frame(maxWidth: 760",
     ],
 }

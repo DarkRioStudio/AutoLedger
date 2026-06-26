@@ -4,11 +4,10 @@ import SwiftUI
 
 struct SubscriptionListView: View {
     @EnvironmentObject private var store: LedgerStore
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImporting = false
-    @State private var editor: SubscriptionEditorPresentation?
-    @State private var selectedSubscriptionID: UUID?
     @State private var annualPriceOverrides: [String: Double] = [:]
     @State private var subscriptionNotes: [String: String] = [:]
     private let ocrService = OCRService()
@@ -25,7 +24,7 @@ struct SubscriptionListView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    editor = .create
+                    navigationState.subscriptionEditor = .create
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -39,7 +38,7 @@ struct SubscriptionListView: View {
                 .help(String(localized: "subscriptions.scan_history_help"))
             }
         }
-        .sheet(item: $editor) { presentation in
+        .sheet(item: $navigationState.subscriptionEditor) { presentation in
             SubscriptionEditView(
                 subscription: presentation.subscription,
                 mode: presentation.mode,
@@ -48,7 +47,7 @@ struct SubscriptionListView: View {
             ) { updated, annualPrice, note in
                 if presentation.isNew {
                     store.createSubscription(updated)
-                    selectedSubscriptionID = updated.id
+                    navigationState.selectedSubscriptionID = updated.id
                 } else {
                     store.updateSubscription(updated)
                 }
@@ -61,8 +60,9 @@ struct SubscriptionListView: View {
             loadSupplementalSubscriptionData()
         }
         .onChange(of: scopedSubscriptions.map(\.id)) { _, visibleIDs in
-            guard let selectedSubscriptionID, !visibleIDs.contains(selectedSubscriptionID) else { return }
-            self.selectedSubscriptionID = nil
+            guard let selectedSubscriptionID = navigationState.selectedSubscriptionID,
+                  !visibleIDs.contains(selectedSubscriptionID) else { return }
+            navigationState.selectedSubscriptionID = nil
         }
     }
 
@@ -73,12 +73,12 @@ struct SubscriptionListView: View {
     }
 
     private var selectedSubscription: Subscription? {
-        guard let selectedSubscriptionID else { return nil }
+        guard let selectedSubscriptionID = navigationState.selectedSubscriptionID else { return nil }
         return scopedSubscriptions.first { $0.id == selectedSubscriptionID }
     }
 
     private var subscriptionList: some View {
-        List(selection: $selectedSubscriptionID) {
+        List(selection: $navigationState.selectedSubscriptionID) {
             if let summary = store.lastImportSummary {
                 importStatusBanner(summary)
                     .listRowBackground(AppTheme.card)
@@ -163,7 +163,7 @@ struct SubscriptionListView: View {
         }
         .contextMenu {
             Button {
-                selectedSubscriptionID = sub.id
+                navigationState.selectedSubscriptionID = sub.id
             } label: {
                 Label("common.edit", systemImage: "pencil")
             }
@@ -265,7 +265,7 @@ struct SubscriptionListView: View {
                 dismissesOnSave: false
             ) { updated, annualPrice, note in
                 store.updateSubscription(updated)
-                selectedSubscriptionID = updated.id
+                navigationState.selectedSubscriptionID = updated.id
                 saveAnnualPrice(annualPrice, for: updated)
                 saveNote(note, for: updated)
                 store.requestAutomaticBackup()
@@ -452,7 +452,7 @@ struct SubscriptionListView: View {
             VStack(alignment: .trailing, spacing: 8) {
                 HStack(spacing: 6) {
                     Button {
-                        editor = .edit(sub)
+                        navigationState.subscriptionEditor = .edit(sub)
                     } label: {
                         Image(systemName: "pencil")
                             .font(.caption.weight(.bold))
@@ -536,7 +536,7 @@ struct SubscriptionListView: View {
         .opacity(sub.status.isActive ? 1 : 0.72)
         .contextMenu {
             Button {
-                editor = .edit(sub)
+                navigationState.subscriptionEditor = .edit(sub)
             } label: {
                 Label("common.edit", systemImage: "pencil")
             }
@@ -589,7 +589,7 @@ struct SubscriptionListView: View {
                 .multilineTextAlignment(.center)
 
             Button {
-                editor = .create
+                navigationState.subscriptionEditor = .create
             } label: {
                 Label("subscriptions.add", systemImage: "plus.circle.fill")
                     .fontWeight(.semibold)
@@ -723,8 +723,8 @@ struct SubscriptionListView: View {
 
     private func deleteSubscription(_ sub: Subscription) {
         store.deleteSubscription(sub)
-        if selectedSubscriptionID == sub.id {
-            selectedSubscriptionID = nil
+        if navigationState.selectedSubscriptionID == sub.id {
+            navigationState.selectedSubscriptionID = nil
         }
         annualPriceOverrides.removeValue(forKey: sub.id.uuidString)
         subscriptionNotes.removeValue(forKey: sub.id.uuidString)
@@ -750,39 +750,6 @@ struct SubscriptionListView: View {
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
         }
-    }
-}
-
-private struct SubscriptionEditorPresentation: Identifiable {
-    enum Mode {
-        case create
-        case edit
-    }
-
-    let id = UUID()
-    let mode: Mode
-    let subscription: Subscription
-
-    var isNew: Bool {
-        mode == .create
-    }
-
-    static var create: SubscriptionEditorPresentation {
-        SubscriptionEditorPresentation(
-            mode: .create,
-            subscription: Subscription(
-                merchant: "",
-                planName: "",
-                period: .monthly,
-                amount: 0,
-                lastChargedAt: .now,
-                status: .active
-            )
-        )
-    }
-
-    static func edit(_ subscription: Subscription) -> SubscriptionEditorPresentation {
-        SubscriptionEditorPresentation(mode: .edit, subscription: subscription)
     }
 }
 
@@ -975,4 +942,5 @@ private struct SubscriptionEditView: View {
         SubscriptionListView()
     }
     .environmentObject(LedgerStore())
+    .environmentObject(AutoLedgerNavigationState())
 }

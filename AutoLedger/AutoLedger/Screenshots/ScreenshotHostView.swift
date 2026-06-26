@@ -93,6 +93,7 @@ private struct ScreenshotAppPage: View {
 
     let scene: Scene
     @StateObject private var store: LedgerStore
+    @StateObject private var navigationState = AutoLedgerNavigationState()
 
     init(scene: Scene) {
         self.scene = scene
@@ -114,6 +115,7 @@ private struct ScreenshotAppPage: View {
             }
         }
         .environmentObject(store)
+        .environmentObject(navigationState)
         .preferredColorScheme(.light)
     }
 }
@@ -218,6 +220,7 @@ private struct ScreenshotOCRBillHost: View {
 private struct ScreenshotWorkspaceHost: View {
     let section: IPadWorkspaceSection
     @StateObject private var store: LedgerStore
+    @StateObject private var navigationState = AutoLedgerNavigationState()
 
     init(section: IPadWorkspaceSection) {
         self.section = section
@@ -228,6 +231,7 @@ private struct ScreenshotWorkspaceHost: View {
     var body: some View {
         IPadWorkspaceView(initialSection: section)
             .environmentObject(store)
+            .environmentObject(navigationState)
             .preferredColorScheme(.light)
     }
 }

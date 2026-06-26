@@ -3797,4 +3797,5 @@ private struct IPadPlanningWorkspaceView: View {
 #Preview {
     IPadWorkspaceView()
         .environmentObject(LedgerStore())
+        .environmentObject(AutoLedgerNavigationState())
 }

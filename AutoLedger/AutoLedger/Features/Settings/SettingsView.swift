@@ -1,28 +1,19 @@
 import AutoLedgerCore
 import SwiftUI
 
-enum SettingsNavigationTarget: Hashable {
-    case ledgerProfiles
-}
-
 struct SettingsView: View {
     @EnvironmentObject private var store: LedgerStore
-    @Binding private var pendingNavigationTarget: SettingsNavigationTarget?
-    @State private var navigationPath: [SettingsNavigationTarget] = []
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @State private var versionTapCount = 0
     @State private var showDebugUnlocked = false
     @State private var showFeedbackComposer = false
-
-    init(pendingNavigationTarget: Binding<SettingsNavigationTarget?> = .constant(nil)) {
-        _pendingNavigationTarget = pendingNavigationTarget
-    }
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if showDebugUnlocked {
@@ -255,18 +246,6 @@ struct SettingsView: View {
                     .environmentObject(store)
             }
         }
-        .onAppear {
-            consumePendingNavigationTarget()
-        }
-        .onChange(of: pendingNavigationTarget) { _, _ in
-            consumePendingNavigationTarget()
-        }
-    }
-
-    private func consumePendingNavigationTarget() {
-        guard let target = pendingNavigationTarget else { return }
-        navigationPath = [target]
-        pendingNavigationTarget = nil
     }
 
     private func settingsRow(
@@ -372,4 +351,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environmentObject(LedgerStore())
+        .environmentObject(AutoLedgerNavigationState())
 }

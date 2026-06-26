@@ -33,15 +33,10 @@ private enum LedgerFilter: String, CaseIterable {
 
 struct LedgerView: View {
     @EnvironmentObject private var store: LedgerStore
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     private let onOpenLedgerSettings: (() -> Void)?
-    @State private var selectedTransactionID: UUID?
-    @State private var transactionPendingMove: Transaction?
     @State private var filter: LedgerFilter = .all
     @State private var filterDate = Date()
-    @State private var isAddingTransaction = false
-    @State private var isShowingVoiceLedger = false
-    @State private var isShowingDeleted = false
-    @State private var isShowingLedgerProfiles = false
     @State private var searchText = ""
 
     init(onOpenLedgerSettings: (() -> Void)? = nil) {
@@ -75,7 +70,7 @@ struct LedgerView: View {
     }
 
     private var selectedTransaction: Transaction? {
-        guard let selectedTransactionID else { return nil }
+        guard let selectedTransactionID = navigationState.selectedLedgerTransactionID else { return nil }
         return store.visibleTransactions.first { $0.id == selectedTransactionID }
     }
 
@@ -100,7 +95,7 @@ struct LedgerView: View {
             transactionDetail
         }
         .navigationSplitViewStyle(.balanced)
-        .sheet(isPresented: $isAddingTransaction) {
+        .sheet(isPresented: $navigationState.isPresentingNewTransaction) {
             TransactionEditorView(
                 transaction: Transaction(
                     merchant: "",
@@ -115,13 +110,13 @@ struct LedgerView: View {
                 store.addTransaction(newTransaction)
             }
         }
-        .sheet(isPresented: $isShowingVoiceLedger) {
+        .sheet(isPresented: $navigationState.isPresentingVoiceLedger) {
             VoiceLedgerConfirmView()
         }
-        .sheet(isPresented: $isShowingDeleted) {
+        .sheet(isPresented: $navigationState.isPresentingDeletedTransactions) {
             DeletedTransactionsView()
         }
-        .sheet(isPresented: $isShowingLedgerProfiles) {
+        .sheet(isPresented: $navigationState.isPresentingLedgerProfiles) {
             NavigationStack {
                 LedgerProfileManagementView(allowsSelection: true, showsDoneButton: true)
                     .environmentObject(store)
@@ -130,22 +125,22 @@ struct LedgerView: View {
         .confirmationDialog(
             "ledger.move.title",
             isPresented: Binding(
-                get: { transactionPendingMove != nil },
-                set: { if !$0 { transactionPendingMove = nil } }
+                get: { navigationState.ledgerTransactionPendingMove != nil },
+                set: { if !$0 { navigationState.ledgerTransactionPendingMove = nil } }
             ),
             titleVisibility: .visible
         ) {
-            if let transactionPendingMove {
+            if let transactionPendingMove = navigationState.ledgerTransactionPendingMove {
                 let currentLedgerID = transactionPendingMove.resolvedLedgerID()
                 ForEach(store.activeLedgerProfiles.filter { $0.id != currentLedgerID }) { profile in
                     Button(profile.name) {
                         store.moveTransaction(transactionPendingMove, toLedgerID: profile.id)
-                        self.transactionPendingMove = nil
+                        navigationState.ledgerTransactionPendingMove = nil
                     }
                 }
             }
             Button("common.cancel", role: .cancel) {
-                transactionPendingMove = nil
+                navigationState.ledgerTransactionPendingMove = nil
             }
         }
         .onAppear {
@@ -156,14 +151,15 @@ struct LedgerView: View {
             consumePendingNewTransactionIfNeeded()
         }
         .onChange(of: store.visibleTransactions.map(\.id)) { _, visibleIDs in
-            guard let selectedTransactionID, !visibleIDs.contains(selectedTransactionID) else { return }
-            self.selectedTransactionID = nil
+            guard let selectedTransactionID = navigationState.selectedLedgerTransactionID,
+                  !visibleIDs.contains(selectedTransactionID) else { return }
+            navigationState.selectedLedgerTransactionID = nil
         }
     }
 
     private var ledgerList: some View {
         ScrollViewReader { proxy in
-            List(selection: $selectedTransactionID) {
+            List(selection: $navigationState.selectedLedgerTransactionID) {
                 filterSection
 
                 Section {
@@ -189,15 +185,15 @@ struct LedgerView: View {
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         store.deleteTransaction(transaction)
-                                        if selectedTransactionID == transaction.id {
-                                            selectedTransactionID = nil
+                                        if navigationState.selectedLedgerTransactionID == transaction.id {
+                                            navigationState.selectedLedgerTransactionID = nil
                                         }
                                     } label: {
                                         Label("common.delete", systemImage: "trash")
                                     }
 
                                     Button {
-                                        transactionPendingMove = transaction
+                                        navigationState.ledgerTransactionPendingMove = transaction
                                     } label: {
                                         Label("ledger.action.move", systemImage: "folder")
                                     }
@@ -233,7 +229,7 @@ struct LedgerView: View {
                     if let onOpenLedgerSettings {
                         onOpenLedgerSettings()
                     } else {
-                        isShowingLedgerProfiles = true
+                        navigationState.isPresentingLedgerProfiles = true
                     }
                 } label: {
                     Image(systemName: "books.vertical")
@@ -244,7 +240,7 @@ struct LedgerView: View {
 
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    isShowingVoiceLedger = true
+                    navigationState.isPresentingVoiceLedger = true
                 } label: {
                     Image(systemName: "square.and.pencil")
                         .fontWeight(.semibold)
@@ -253,7 +249,7 @@ struct LedgerView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    isAddingTransaction = true
+                    navigationState.isPresentingNewTransaction = true
                 } label: {
                     Image(systemName: "plus")
                         .fontWeight(.semibold)
@@ -263,7 +259,7 @@ struct LedgerView: View {
             if !store.deletedTransactions.isEmpty {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        isShowingDeleted = true
+                        navigationState.isPresentingDeletedTransactions = true
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -388,7 +384,7 @@ struct LedgerView: View {
     @MainActor
     private func consumePendingNewTransactionIfNeeded() {
         guard QuickLedgerNavigationState.shared.consumeCreateTransactionPending() else { return }
-        isAddingTransaction = true
+        navigationState.isPresentingNewTransaction = true
     }
 
     private func stepDate(_ date: Date, by value: Int) -> Date {
@@ -415,4 +411,5 @@ struct LedgerView: View {
 #Preview {
     LedgerView()
         .environmentObject(LedgerStore())
+        .environmentObject(AutoLedgerNavigationState())
 }
