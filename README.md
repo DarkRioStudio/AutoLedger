@@ -172,6 +172,7 @@ bash scripts/run_golden_regression.sh
 当前仓库主线状态：
 
 - `v1.6.0` 与 `v1.6.1` 已完成并继续对应 ASC / App Store `1.5.0` 大版本口径。
+- App Store `1.4.0` 已发布；内部 `v1.5.1` 是该发布线的最终收口版本，`v1.5.0` 作为实现基线并入发布。
 - `v1.6.2` 已进入开发阶段，重点是 SDK 适配阶段二、酒店邮箱导入收口、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - Device Hub Resize Mode、iPhone Mirroring 连续 resize、visionOS 真机和日文母语审校属于人工 smoke / evidence；酒店邮箱草稿队列、去重、Demo Mode、Deep link、Widget 和 App Intents 属于 `v1.6.2` 开发内容。
 
@@ -188,8 +189,8 @@ bash scripts/run_golden_regression.sh
 | v1.3.4 | **1.2.0** | ✅ 已发布 | 规则解析质量提升（合计行优先、商户黑名单、分类映射）、批量报告驱动修复 |
 | v1.3.5 | **1.2.0** | ✅ 已发布 | Worker API 可行性评估、712 样本批量回归（金额命中率 100%）、商户别名迁移 |
 | v1.4.0 | **1.3.0** | ✅ 已发布 | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强、中英繁本地化与截图管线、可选 Support Developer 内购 |
-| v1.5.0 | **1.4.0** | ✅ 基线完成 | iPad 工作台、批量导入 / 批量识别、数据清洗、基础多端数据同步、Watch 今日支出与表盘小组件、iPad / Mac 截图管线、Mac Catalyst 主线能力 |
-| v1.5.1 | **1.4.0** | ✅ 收尾完成 | 最低系统需求优化、识别链路 Core 化、外部辅助识别试点、编辑保存稳定性、iCloud 同步性能、当前平台截图与 App Preview v001；tvOS / visionOS 与多账本顺延 |
+| v1.5.0 | **1.4.0** | ✅ 已并入 1.4.0 发布 | iPad 工作台、批量导入 / 批量识别、数据清洗、基础多端数据同步、Watch 今日支出与表盘小组件、iPad / Mac 截图管线、Mac Catalyst 主线能力 |
+| v1.5.1 | **1.4.0** | ✅ 已发布 | 最低系统需求优化、识别链路 Core 化、外部辅助识别试点、编辑保存稳定性、iCloud 同步性能、当前平台截图与 App Preview v001；tvOS / visionOS 与多账本顺延 |
 | v1.6.0 | **1.5.0** | ✅ 已完成 | 订阅管理补强、AI 订阅判断、商户 / 分类 / 订阅倾向学习缓存、tvOS 只读看板、visionOS 展示版、全平台构建 / TestFlight / ASC / schema / 截图收口 |
 | v1.6.1 | **1.5.0** | ✅ 已完成 | 酒店水单识别与酒店消费归档、多账本基础能力、新一轮多语言支持、日文支持、跨平台 App Icon 重绘、iOS 27 可拉伸布局阶段一；商店不区分内部小版本 |
 | v1.6.2 | **1.5.0 默认沿用** | 🚧 开发中 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / Demo Mode、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校 |

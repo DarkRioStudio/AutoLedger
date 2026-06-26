@@ -132,11 +132,14 @@ bash scripts/run_golden_regression.sh
 現在の主な状態:
 
 - `v1.6.0` と `v1.6.1` は完了しており、ASC / App Store `1.5.0` のリリースラインに対応しています。
+- App Store `1.4.0` はリリース済みです。内部 `v1.5.1` がこのリリースラインの最終クローズアウトで、`v1.5.0` は実装ベースラインとして含まれます。
 - `v1.6.2` は開発中です。SDK adaptation phase 2、ホテルメール取り込みの強化、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビューが中心です。
 - Device Hub Resize Mode、iPhone Mirroring 連続 resize、visionOS 実機、日本語ネイティブレビューは release smoke / evidence です。ホテル下書き永続化、メール重複排除、Demo Mode、Deep link、Widget、App Intents は `v1.6.2` の開発項目です。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
+| v1.5.0 | 1.4.0 | Included in 1.4.0 release | iPad workspace, batch import / recognition, data cleanup, foundational multi-device sync, Watch daily spending and complications, iPad / Mac screenshot pipeline, Mac Catalyst workflow |
+| v1.5.1 | 1.4.0 | Released | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, App Preview v001 |
 | v1.6.0 | 1.5.0 | Completed | Subscription improvements, learning cache, tvOS / visionOS display apps, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, iOS 27 resizable-layout phase 1 |
 | v1.6.2 | 1.5.0 by default | Active development | SDK adaptation phase 2, hotel email draft queue / dedupe / Demo Mode, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review |

@@ -132,11 +132,14 @@ bash scripts/run_golden_regression.sh
 目前主線狀態：
 
 - `v1.6.0` 與 `v1.6.1` 已完成，並繼續對應 ASC / App Store `1.5.0` 大版本口徑。
+- App Store `1.4.0` 已發布；內部 `v1.5.1` 是該發布線的最終收口版本，`v1.5.0` 作為實作基線併入發布。
 - `v1.6.2` 已進入開發階段，重點是 SDK 適配階段二、酒店郵件匯入收口、Deep link / Widget / App Intents、資料可靠性和日文發布材料審校。
 - Device Hub Resize Mode、iPhone Mirroring 連續 resize、visionOS 真機和日文母語審校屬於人工 smoke / evidence；酒店郵件草稿佇列、去重、Demo Mode、Deep link、Widget 和 App Intents 屬於 `v1.6.2` 開發內容。
 
 | 內部版本 | App Store | 狀態 | 主要內容 |
 |---|---|---|---|
+| v1.5.0 | 1.4.0 | 已併入 1.4.0 發布 | iPad 工作台、批量匯入 / 識別、資料清理、基礎多端同步、Watch 今日支出與錶面小工具、iPad / Mac 截圖管線、Mac Catalyst 主線能力 |
+| v1.5.1 | 1.4.0 | 已發布 | 最低系統需求優化、識別鏈路 Core 化、外部輔助識別試點、編輯保存穩定性、iCloud 同步性能、目前平台截圖與 App Preview v001 |
 | v1.6.0 | 1.5.0 | 已完成 | 訂閱管理補強、AI 訂閱判斷、學習快取、tvOS / visionOS 展示、全平台構建 / TestFlight / ASC / schema / 截圖收口 |
 | v1.6.1 | 1.5.0 | 已完成 | 酒店水單識別、多帳本基礎能力、日文支援、跨平台 App Icon 重繪、iOS 27 可拉伸布局階段一 |
 | v1.6.2 | 1.5.0 預設沿用 | 開發中 | SDK 適配階段二、酒店郵件草稿佇列 / 去重 / Demo Mode、Deep link Router、Widget / App Intents 第一段、資料可靠性與日文發布材料審校 |

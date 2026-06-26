@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-261 README 多语言与架构整理）
+更新日期：2026-06-26（ITER-262 App Store 1.4.0 发布状态回填）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-262 App Store 1.4.0 发布状态回填
+- 日期：2026-06-26
+- 所属版本：v1.5.1 / App Store 1.4.0
+- 所属阶段：版本收口
+- 类型：文档 / 发布状态
+- 目标：把对外 App Store `1.4.0` 明确标记为已发布，并保留内部 `v1.5.0` / `v1.5.1` 的版本线关系。
+- 改动范围：更新 `README.md`、`README.en.md`、`README.zh-Hant.md`、`README.ja.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：README 路线图已说明 App Store `1.4.0` 已发布；内部 `v1.5.1` 标记为该发布线最终收口版本，内部 `v1.5.0` 标记为并入 `1.4.0` 发布的实现基线；`versions/v1.5.1-plan.md` 文档状态改为 Released，并回填发布状态结论。
+- 测试情况：本轮为文档状态更新，执行 `git diff --check` 作为最小格式门禁，并用 `rg` 检查 `1.4.0`、`已发布` / `Released` 和 `v1.5.1` 关键口径。
+- 风险与注意事项：这是发布状态回填，不代表重新修改 App Store Connect 版本号、构建号或二进制。
+- 回滚方式：回退本轮 README、`versions/v1.5.1-plan.md`、`CHANGELOG.md` 和本日志条目即可；无代码或数据迁移需要回滚。
+- 结论：App Store `1.4.0` 已在仓库文档中标记为已发布。
+- 下一步建议：继续 `v1.6.2` 开发主线。
 
 ### ITER-261 README 多语言与架构整理
 - 日期：2026-06-26

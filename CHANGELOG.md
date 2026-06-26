@@ -14,6 +14,7 @@
 - [2026-06-26 +0800] 将 `v1.6.2` 从 Draft 切入 Active 开发阶段：`versions/v1.6.2-plan.md` 明确剩余项目分为测试 / 人工证据与开发内容两类，并将 `GOAL-1900` 标记完成；新增 `versions/v1.6.2-regression-baseline.md`，记录 SDK 阶段二、酒店邮箱收口、Deep link / Widget / App Intents、数据可靠性、多语言和 release smoke 的最小回归门禁；同步更新 `README.md`、`README.en.md`、`AutoLedger/README.md` 和 `tools/appstore-screenshots/README.md`，让 GitHub 首页与工具文档反映 `v1.6.0 / v1.6.1` 完成、`v1.6.2` 开发中、iOS 17 最低系统要求、简体中文 / 繁体中文 / 英文 / 日文 UI 覆盖、账单识别语言包和日文截图输出。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
 ### 变更（版本收口）
+- [2026-06-26 +0800] 将 App Store `1.4.0` 标记为已发布：`README.md`、`README.en.md`、`README.zh-Hant.md`、`README.ja.md` 路线图明确内部 `v1.5.1` 是对外 `1.4.0` 的最终收口发布线，内部 `v1.5.0` 作为实现基线并入发布；`versions/v1.5.1-plan.md` 文档状态更新为 Released。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-26 +0800] 将 `v1.6.0` 和 `v1.6.1` 标记为已完成：`versions/v1.6.0-plan.md`、`versions/v1.6.0-regression-baseline.md` 更新为 Completed / PASS，记录 Xcode Cloud、ASC、TestFlight、CloudKit schema、截图和平台 smoke 的收口结论；`versions/v1.6.1-plan.md` 更新为 Completed，并新增收口结论与未收口项目清单，将 SDK 阶段二、酒店邮箱草稿队列 / 去重 / Demo Mode、Deep link / Widget / App Intents、日文人工审校和数据可靠性移交 `v1.6.2`。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
 ### 新增（v1.6.2）

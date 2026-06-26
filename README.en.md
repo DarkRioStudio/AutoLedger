@@ -152,14 +152,15 @@ The `main` branch is intended to remain the real AutoLedger development and rele
 Current repository status:
 
 - `v1.6.0` and `v1.6.1` are complete and continue to map to the ASC / App Store `1.5.0` release line.
+- App Store `1.4.0` has been released through the internal `v1.5.1` closeout; `v1.5.0` remains the implementation baseline included in that release.
 - `v1.6.2` is now active development. Its focus is SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, and Japanese release-material review.
 - Device Hub Resize Mode, iPhone Mirroring continuous resize, visionOS hardware, and Japanese native-speaker review are release-smoke / evidence work. Hotel draft persistence, email dedupe, Demo Mode, deep links, Widgets, and App Intents are `v1.6.2` development work.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
 | v1.4.0 | 1.3.0 | Released | Apple Watch support, accessibility improvements, App Intents, localization, screenshot pipeline updates, optional Support Developer IAP |
-| v1.5.0 | 1.4.0 | Baseline complete | iPad workspace, batch import, batch OCR / receipt cleanup, foundational multi-device data sync, Apple Watch complications, iPad / Mac screenshot pipeline, and Mac Catalyst workflow |
-| v1.5.1 | 1.4.0 | Completed | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, and App Preview v001 |
+| v1.5.0 | 1.4.0 | Included in 1.4.0 release | iPad workspace, batch import, batch OCR / receipt cleanup, foundational multi-device data sync, Apple Watch complications, iPad / Mac screenshot pipeline, and Mac Catalyst workflow |
+| v1.5.1 | 1.4.0 | Released | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, and App Preview v001 |
 | v1.6.0 | 1.5.0 | Completed | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio recognition and archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, and iOS 27 resizable-layout phase 1; the store version stays on ASC 1.5.0 for internal patch lines |
 | v1.6.2 | 1.5.0 by default | Active development | SDK adaptation phase 2, hotel email draft queue / dedupe / Demo Mode, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, and Japanese release-material review |
