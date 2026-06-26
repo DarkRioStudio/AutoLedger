@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-257 GOAL-1872 新版本 SDK 适配阶段一）
+更新日期：2026-06-26（ITER-258 GOAL-1900 v1.6.2 版本计划）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-258 GOAL-1900 v1.6.2 版本计划
+- 日期：2026-06-26
+- 所属版本：v1.6.2
+- 所属阶段：GOAL-1900
+- 类型：规划 / 文档
+- 目标：在 `v1.6.1` 后延项基础上，先规划下一条 `v1.6.2` 开发线，明确当前版本要优先承接哪些主线、哪些只作为后续路线记录。
+- 改动范围：新增 `versions/v1.6.2-plan.md`；更新 `CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：`v1.6.2` 文档已明确版本定位、P0 / P1 / Later 边界、SDK 适配阶段二、酒店水单 B 阶段收口、Deep link / Widget / App Intents 第一段、数据可靠性、多语言审校、GOAL-1900 至 GOAL-1960 队列、数据迁移边界、测试计划、发布审核材料和非目标。
+- 测试情况：本轮为文档规划，执行 `git diff --check` 作为最小格式门禁。
+- 风险与注意事项：`v1.6.2` 的 P0 / P1 边界仍需用户确认；Widget 多账本展示口径、酒店草稿持久化 schema、ASC 对外版本号和真实 iOS 27 resize smoke 需要在后续 goal 中继续细化。
+- 回滚方式：删除 `versions/v1.6.2-plan.md`，回退 `CHANGELOG.md` 和本日志中的本轮条目即可；无代码或数据迁移需要回滚。
+- 结论：`v1.6.2` 第一版版本计划已建立，可作为后续 goal 拆分和实施顺序的起点。
+- 下一步建议：先确认 `v1.6.2` P0 范围，再建立 `v1.6.2-regression-baseline.md`，随后从 `GOAL-1910 / GOAL-1911` SDK 适配阶段二开始推进。
 
 ### ITER-257 GOAL-1872 新版本 SDK 适配阶段一可拉伸布局
 - 日期：2026-06-26

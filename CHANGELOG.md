@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.6.2）
+- [2026-06-26 +0800] 新增 `versions/v1.6.2-plan.md` 第一版：承接 `v1.6.1` 后延项，规划 SDK 适配阶段二、酒店水单 B 阶段收口、Deep link / Widget / App Intents 第一段、数据可靠性、多语言日文审校和 release smoke 主线；明确 P0 / P1 / Later 边界、GOAL-1900 至 GOAL-1960 队列、测试计划、发布审核材料和非目标。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+
 ### 新增（v1.6.1）
 - [2026-06-26 +0800] 完成 `GOAL-1871` 酒店原 PDF 预览与默认写入账本收口：`HotelStayDraft` / `HotelStayRecord` 本机保留原始酒店水单 PDF 数据，手动 PDF 和本地邮箱 PDF 附件导入都会随草稿进入复核链路，确认后 SQLite `hotel_stay_records.source_pdf_data` 持久化；酒店消费详情页新增 PDFKit 原始水单预览。多账本管理新增“默认写入账本”选项，默认是“本地账本”；账本 tab 右上角账本按钮改为跳转设置页的“多账本管理”。本轮不上传原始 PDF，不实现云端 PDF 存储，不新增后台自动邮箱读取，不修改 signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-25 +0800] 完成 `GOAL-1821 / GOAL-1822 / GOAL-1824` 酒店消费 B 阶段本地邮箱手动扫描导入首版：新增 Core 层邮箱设置、MIME 邮件 / PDF 附件解析、候选过滤和 `localEmailIMAP` 草稿工厂；App 层新增邮箱 IMAP 参数配置、授权码本机 Keychain 保存 / 删除、用户主动触发 IMAP 扫描、候选邮件与 PDF 附件选择、PDFKit 本地文本提取，并复用现有酒店水单外部解析、复核 sheet 和确认入账链路。当前不做自动后台读取、Worker 云端代拉、草稿队列持久化、邮箱去重、Demo Mode、公共版本开关、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION` 修改。
