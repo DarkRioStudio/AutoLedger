@@ -61,3 +61,101 @@ enum AppTheme {
         endPoint: .bottom
     )
 }
+
+private struct AutoLedgerSurfaceBackground: View {
+    var body: some View {
+        ZStack {
+            AppTheme.screenGradient
+            Rectangle()
+                .fill(.regularMaterial)
+                .opacity(0.28)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct AutoLedgerReadableContentModifier: ViewModifier {
+    let maxWidth: CGFloat
+    let alignment: Alignment
+
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: maxWidth, alignment: alignment)
+            .frame(maxWidth: .infinity, alignment: alignment)
+    }
+}
+
+private struct AutoLedgerScreenChromeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background {
+                AutoLedgerSurfaceBackground()
+            }
+    }
+}
+
+private struct AutoLedgerListChromeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .modifier(AutoLedgerScreenChromeModifier())
+    }
+}
+
+private struct AutoLedgerFormChromeModifier: ViewModifier {
+    let maxWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .modifier(AutoLedgerReadableContentModifier(maxWidth: maxWidth, alignment: .center))
+            .modifier(AutoLedgerScreenChromeModifier())
+            .modifier(AutoLedgerNavigationBarChromeModifier())
+    }
+}
+
+private struct AutoLedgerNavigationBarChromeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .toolbarBackground(.regularMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+    }
+}
+
+extension View {
+    func autoLedgerReadableContent(maxWidth: CGFloat = 760, alignment: Alignment = .center) -> some View {
+        modifier(AutoLedgerReadableContentModifier(maxWidth: maxWidth, alignment: alignment))
+    }
+
+    func autoLedgerScreenChrome() -> some View {
+        modifier(AutoLedgerScreenChromeModifier())
+    }
+
+    func autoLedgerListChrome() -> some View {
+        modifier(AutoLedgerListChromeModifier())
+    }
+
+    func autoLedgerFormChrome(maxWidth: CGFloat = 720) -> some View {
+        modifier(AutoLedgerFormChromeModifier(maxWidth: maxWidth))
+    }
+
+    func autoLedgerNavigationBarChrome() -> some View {
+        modifier(AutoLedgerNavigationBarChromeModifier())
+    }
+
+    @ViewBuilder
+    func autoLedgerAdaptiveTabBar() -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self
+                .tabViewStyle(.sidebarAdaptable)
+                .defaultTabBarPlacement(.sidebar)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+}

@@ -128,8 +128,7 @@ struct TransactionEditorView: View {
                     }
                 }
             }
-            .frame(maxWidth: 720)
-            .frame(maxWidth: .infinity)
+            .autoLedgerFormChrome()
             .navigationTitle(isNew ? String(localized: "transaction_editor.title.new") : String(localized: "transaction_editor.title.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -418,6 +417,7 @@ private struct TransactionSubscriptionCreateView: View {
                     DatePicker("subscriptions.edit.next_charge", selection: $nextChargedAt, displayedComponents: [.date, .hourAndMinute])
                 }
             }
+            .autoLedgerFormChrome()
             .navigationTitle("transaction_subscription.create.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

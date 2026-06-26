@@ -321,6 +321,7 @@
 "common.delete" = "Delete";
 "common.done" = "Done";
 "common.edit" = "Edit";
+"common.more_actions" = "More Actions";
 "common.none" = "None";
 "common.import_status" = "Import status";
 "common.today" = "Today";

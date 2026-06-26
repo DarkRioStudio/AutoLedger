@@ -26,6 +26,7 @@ struct HotelFolioEmailImportView: View {
                 scanSection
                 resultSection
             }
+            .autoLedgerFormChrome()
             .navigationTitle("hotel_stay.email.title")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -88,32 +89,63 @@ struct HotelFolioEmailImportView: View {
                 }
             }
 
-            HStack(spacing: 12) {
-                Button {
-                    saveSettingsAndCredential()
-                } label: {
-                    Label("hotel_stay.email.save", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button(role: .destructive) {
-                    HotelEmailCredentialStore.deleteCredential(for: settings.emailAddress)
-                    credentialInput = ""
-                    refreshStoredCredentialState()
-                    statusMessage = String(localized: "hotel_stay.email.status.credential_cleared")
-                } label: {
-                    Label("hotel_stay.email.clear_credential", systemImage: "trash")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(!hasStoredCredential)
-            }
+            credentialActionButtons
         } header: {
             Text("hotel_stay.email.section.account")
         } footer: {
             Text("hotel_stay.email.account_footer")
         }
+    }
+
+    private var credentialActionButtons: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                saveCredentialButton
+                clearCredentialButton
+            }
+
+            VStack(spacing: 10) {
+                saveCredentialButton
+                clearCredentialButton
+            }
+        }
+    }
+
+    private var saveCredentialButton: some View {
+        Button {
+            saveSettingsAndCredential()
+        } label: {
+            emailActionButtonLabel("hotel_stay.email.save", systemImage: "checkmark.circle.fill")
+        }
+        .buttonStyle(.borderedProminent)
+    }
+
+    private var clearCredentialButton: some View {
+        Button(role: .destructive) {
+            HotelEmailCredentialStore.deleteCredential(for: settings.emailAddress)
+            credentialInput = ""
+            refreshStoredCredentialState()
+            statusMessage = String(localized: "hotel_stay.email.status.credential_cleared")
+        } label: {
+            emailActionButtonLabel("hotel_stay.email.clear_credential", systemImage: "trash")
+        }
+        .buttonStyle(.bordered)
+        .disabled(!hasStoredCredential)
+    }
+
+    private func emailActionButtonLabel(_ titleKey: LocalizedStringKey, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .imageScale(.medium)
+                .accessibilityHidden(true)
+            Text(titleKey)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .allowsTightening(true)
+        }
+        .font(.body.weight(.semibold))
+        .frame(maxWidth: .infinity, minHeight: 34)
+        .contentShape(Rectangle())
     }
 
     private var scanSection: some View {

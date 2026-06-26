@@ -46,6 +46,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
 }
 
 struct IPadWorkspaceView: View {
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @State private var selection: IPadWorkspaceSection
     @State private var sidebarSelection: IPadWorkspaceSection?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -127,7 +128,9 @@ struct IPadWorkspaceView: View {
                 openReviewQueue: { select(.reviewQueue) }
             )
         case .ledger:
-            IPadLedgerWorkspaceView()
+            LedgerView {
+                openLedgerProfilesFromSharedLedger()
+            }
         case .hotelStays:
             HotelStayWorkspaceView()
         case .reports:
@@ -158,6 +161,11 @@ struct IPadWorkspaceView: View {
             settingsResetID = UUID()
         }
         detailResetID = UUID()
+    }
+
+    private func openLedgerProfilesFromSharedLedger() {
+        navigationState.settingsPath = [.ledgerProfiles]
+        select(.settings)
     }
 
     #if targetEnvironment(macCatalyst)

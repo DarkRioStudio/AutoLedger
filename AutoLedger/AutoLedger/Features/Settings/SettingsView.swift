@@ -229,10 +229,10 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
-                .frame(maxWidth: 760, alignment: .leading)
-                .frame(maxWidth: .infinity)
+                .autoLedgerReadableContent(maxWidth: 760, alignment: .leading)
             }
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
+            .autoLedgerNavigationBarChrome()
             .navigationTitle("settings.title")
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {

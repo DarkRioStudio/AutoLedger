@@ -321,6 +321,7 @@
 "common.delete" = "削除";
 "common.done" = "完了";
 "common.edit" = "編集";
+"common.more_actions" = "その他の操作";
 "common.none" = "なし";
 "common.import_status" = "インポート状態";
 "common.today" = "今日";

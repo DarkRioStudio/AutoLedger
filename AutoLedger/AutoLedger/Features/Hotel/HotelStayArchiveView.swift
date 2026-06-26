@@ -54,9 +54,6 @@ struct HotelStayListView: View {
             Group {
                 if snapshot.rows.isEmpty {
                     VStack(spacing: 16) {
-                        if hasImportActions {
-                            importButtons
-                        }
                         if let statusMessage {
                             statusRow(statusMessage)
                                 .padding(.horizontal, 20)
@@ -68,20 +65,20 @@ struct HotelStayListView: View {
                         )
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(AppTheme.screenGradient.ignoresSafeArea())
+                    .autoLedgerScreenChrome()
                 } else {
                     List {
-                        if hasImportActions || statusMessage != nil {
+                        if statusMessage != nil {
                             importSection
                         }
                         summarySection
                         staySection
                     }
-                    .scrollContentBackground(.hidden)
-                    .background(AppTheme.screenGradient.ignoresSafeArea())
+                    .autoLedgerListChrome()
                 }
             }
             .navigationTitle("hotel_stay.list.title")
+            .autoLedgerNavigationBarChrome()
             .toolbar {
                 if hasImportActions {
                     ToolbarItem(placement: .primaryAction) {
@@ -112,46 +109,11 @@ struct HotelStayListView: View {
 
     private var importSection: some View {
         Section {
-            if hasImportActions {
-                importButtons
-            }
             if let statusMessage {
                 statusRow(statusMessage)
             }
         }
         .listRowBackground(AppTheme.card)
-    }
-
-    private var importButtons: some View {
-        VStack(spacing: 10) {
-            if onImportPDF != nil {
-                Button {
-                    onImportPDF?()
-                } label: {
-                    Label(
-                        isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.pdf",
-                        systemImage: isImporting ? "hourglass" : "doc.badge.plus"
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(isImporting)
-            }
-
-            if onImportEmail != nil {
-                Button {
-                    onImportEmail?()
-                } label: {
-                    Label(
-                        isImporting ? "hotel_stay.import.processing" : "hotel_stay.import.email",
-                        systemImage: isImporting ? "hourglass" : "envelope.badge"
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.bordered)
-                .disabled(isImporting)
-            }
-        }
     }
 
     private func statusRow(_ message: String) -> some View {
@@ -356,10 +318,10 @@ struct HotelStayDetailView: View {
             sourcePDFSection
             rawTextSection
         }
-        .scrollContentBackground(.hidden)
-        .background(AppTheme.screenGradient.ignoresSafeArea())
+        .autoLedgerListChrome()
         .navigationTitle("hotel_stay.detail.title")
         .navigationBarTitleDisplayMode(.inline)
+        .autoLedgerNavigationBarChrome()
         .toolbar {
             if onDeleteRecord != nil {
                 ToolbarItem(placement: .primaryAction) {

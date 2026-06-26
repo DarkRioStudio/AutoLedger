@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-263 文档目录归档与 README 补齐）
+更新日期：2026-06-26（ITER-264 SDK 阶段二主界面 polish）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-264 SDK 阶段二主界面 polish
+- 日期：2026-06-26
+- 所属版本：v1.6.2
+- 所属阶段：SDK Adaptation / Phase 2
+- 类型：能力增强 / UI polish
+- 目标：完成 `GOAL-1910 / GOAL-1911`，在阶段一可拉伸布局基础上继续收口系统导航、toolbar、Material、表单宽度、列表操作和 iOS 27 availability 包装。
+- 改动范围：新增共享 SwiftUI chrome modifier；`HomeView` 使用统一 iOS 27 Tab availability 包装；首页、统计、设置、账本、周期账单、酒店消费、交易编辑和邮箱导入配置接入 Material 背景 / 导航栏背景 / 列表或表单宽度约束；账本 toolbar 主操作常驻，语音记账、多账本、最近删除进入 overflow；账本列表新增编辑侧滑和 context menu，并在宽 iPhone / iPhone Mirroring 双栏布局下提高列表列宽；`LedgerView` 在 iPhone / iPad / Mac 账本主线复用，regular 保存后保留右侧详情，compact 保留返回语义；周期账单 toolbar 低频扫描进入 overflow；酒店消费内容区移除重复导入按钮，仅保留右上角 `+`；邮箱保存配置 / 删除授权码按钮改为显式图标并避免换行。
+- 未改动范围：未修改业务逻辑、识别链路、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：`GOAL-1910` 和 `GOAL-1911` 在 `versions/v1.6.2-plan.md` 标记为 DONE；主界面 Material / toolbar / 表单宽屏策略集中到共享 modifier；Mac / iPad 工作台账本入口改为复用通用 `LedgerView`；酒店邮箱配置按钮和酒店消费导入入口按本轮反馈调整。
+- 未完成内容：Device Hub Resize Mode、iPhone Mirroring 连续 resize、Dynamic Type、VoiceOver、深色模式和大字体截断仍属于 `GOAL-1912` 人工 / 辅助功能 smoke。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_localization_coverage.py`、`git diff --check`、主 App `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' ... build`、`bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh` 均通过。
+- 风险与注意事项：`toolbarBackground(.regularMaterial, for: .navigationBar)` 与 iOS 27 Tab modifier 依赖当前 Xcode 27 SDK；若后续 SDK beta 调整命名，应优先修共享包装点。真实连续 resize 和大字体视觉仍需人工验收。
+- 回滚方式：回退本轮 UI 文件、四语 `common.more_actions` 文案、`scripts/check_adaptive_layout_rules.py` 和版本文档 / 日志即可；无数据迁移需要回滚。
+- 结论：SDK 阶段二主界面 polish 工程侧已收口，可继续进入 `GOAL-1912` 辅助功能 smoke 或 `GOAL-1920` deep link Router。
+- 下一步建议：如果继续按最顺主线推进，优先做 `GOAL-1912` 的 Dynamic Type / VoiceOver / 深色模式 / resize evidence；如果转功能能力，则进入 `GOAL-1920`。
 
 ### ITER-263 文档目录归档与 README 补齐
 - 日期：2026-06-26

@@ -75,7 +75,8 @@ struct ReportView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 28)
             }
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
+            .autoLedgerNavigationBarChrome()
             .navigationTitle("tab.report")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

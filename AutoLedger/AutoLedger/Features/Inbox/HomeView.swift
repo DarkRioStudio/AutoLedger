@@ -23,13 +23,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private var adaptiveTabs: some View {
-        if #available(iOS 27.0, *) {
-            tabs
-                .tabViewStyle(.sidebarAdaptable)
-                .defaultTabBarPlacement(.sidebar)
-        } else {
-            tabs
-        }
+        tabs.autoLedgerAdaptiveTabBar()
     }
 
     private var tabs: some View {

@@ -21,21 +21,28 @@ struct SubscriptionListView: View {
             subscriptionDetail
         }
         .navigationSplitViewStyle(.balanced)
+        .autoLedgerNavigationBarChrome()
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     navigationState.subscriptionEditor = .create
                 } label: {
                     Image(systemName: "plus")
                 }
                 .help(String(localized: "subscriptions.add_help"))
+            }
 
-                Button {
-                    store.detectAndUpsertSubscriptions()
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        store.detectAndUpsertSubscriptions()
+                    } label: {
+                        Label("subscriptions.scan_history_help", systemImage: "arrow.triangle.2.circlepath")
+                    }
                 } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Label("common.more_actions", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
                 }
-                .help(String(localized: "subscriptions.scan_history_help"))
             }
         }
         .sheet(item: $navigationState.subscriptionEditor) { presentation in
@@ -115,8 +122,7 @@ struct SubscriptionListView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(AppTheme.screenGradient.ignoresSafeArea())
+        .autoLedgerListChrome()
         .navigationTitle("settings.subscriptions.title")
     }
 
@@ -271,14 +277,14 @@ struct SubscriptionListView: View {
                 store.requestAutomaticBackup()
             }
             .id(subscription.id)
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
         } else {
             ContentUnavailableView(
                 "subscriptions.detail.empty.title",
                 systemImage: "repeat.circle",
                 description: Text("subscriptions.detail.empty.description")
             )
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
         }
     }
 
@@ -853,8 +859,7 @@ private struct SubscriptionEditView: View {
                         .lineLimit(3...5)
                 }
         }
-            .frame(maxWidth: 720)
-            .frame(maxWidth: .infinity)
+            .autoLedgerFormChrome()
             .navigationTitle(mode == .create ? "subscriptions.add.title" : "subscriptions.edit.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

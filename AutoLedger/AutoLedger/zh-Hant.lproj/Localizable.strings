@@ -321,6 +321,7 @@
 "common.delete" = "刪除";
 "common.done" = "完成";
 "common.edit" = "編輯";
+"common.more_actions" = "更多操作";
 "common.none" = "暫無";
 "common.import_status" = "匯入結果";
 "common.today" = "今天";

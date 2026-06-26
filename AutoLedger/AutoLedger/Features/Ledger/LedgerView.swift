@@ -32,6 +32,7 @@ private enum LedgerFilter: String, CaseIterable {
 }
 
 struct LedgerView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     private let onOpenLedgerSettings: (() -> Void)?
@@ -74,6 +75,10 @@ struct LedgerView: View {
         return store.visibleTransactions.first { $0.id == selectedTransactionID }
     }
 
+    private var prefersPersistentDetail: Bool {
+        horizontalSizeClass == .regular
+    }
+
     private var filterLabel: String {
         let fmt = DateFormatter()
         fmt.locale = .current
@@ -91,10 +96,12 @@ struct LedgerView: View {
     var body: some View {
         NavigationSplitView {
             ledgerList
+                .navigationSplitViewColumnWidth(min: 360, ideal: 430, max: 520)
         } detail: {
             transactionDetail
         }
         .navigationSplitViewStyle(.balanced)
+        .autoLedgerNavigationBarChrome()
         .sheet(isPresented: $navigationState.isPresentingNewTransaction) {
             TransactionEditorView(
                 transaction: Transaction(
@@ -107,7 +114,11 @@ struct LedgerView: View {
                 ),
                 isNew: true
             ) { newTransaction, _, _ in
-                store.addTransaction(newTransaction)
+                let didSave = store.addTransaction(newTransaction)
+                if didSave, prefersPersistentDetail {
+                    navigationState.selectedLedgerTransactionID = newTransaction.id
+                }
+                return didSave
             }
         }
         .sheet(isPresented: $navigationState.isPresentingVoiceLedger) {
@@ -146,14 +157,16 @@ struct LedgerView: View {
         .onAppear {
             store.showSelectedLedgerOnly()
             consumePendingNewTransactionIfNeeded()
+            ensurePersistentDetailSelectionIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
             consumePendingNewTransactionIfNeeded()
         }
         .onChange(of: store.visibleTransactions.map(\.id)) { _, visibleIDs in
-            guard let selectedTransactionID = navigationState.selectedLedgerTransactionID,
-                  !visibleIDs.contains(selectedTransactionID) else { return }
-            navigationState.selectedLedgerTransactionID = nil
+            reconcileSelection(with: visibleIDs)
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            ensurePersistentDetailSelectionIfNeeded()
         }
     }
 
@@ -182,12 +195,17 @@ struct LedgerView: View {
                                 .accessibilityHint(Text("ledger.transaction.edit_hint"))
                                 .padding(.vertical, 6)
                                 .listRowBackground(AppTheme.card)
+                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                    Button {
+                                        navigationState.selectedLedgerTransactionID = transaction.id
+                                    } label: {
+                                        Label("common.edit", systemImage: "pencil")
+                                    }
+                                    .tint(AppTheme.accentSecondary)
+                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
-                                        store.deleteTransaction(transaction)
-                                        if navigationState.selectedLedgerTransactionID == transaction.id {
-                                            navigationState.selectedLedgerTransactionID = nil
-                                        }
+                                        deleteTransaction(transaction)
                                     } label: {
                                         Label("common.delete", systemImage: "trash")
                                     }
@@ -199,6 +217,25 @@ struct LedgerView: View {
                                     }
                                     .tint(AppTheme.accent)
                                 }
+                                .contextMenu {
+                                    Button {
+                                        navigationState.selectedLedgerTransactionID = transaction.id
+                                    } label: {
+                                        Label("common.edit", systemImage: "pencil")
+                                    }
+
+                                    Button {
+                                        navigationState.ledgerTransactionPendingMove = transaction
+                                    } label: {
+                                        Label("ledger.action.move", systemImage: "folder")
+                                    }
+
+                                    Button(role: .destructive) {
+                                        deleteTransaction(transaction)
+                                    } label: {
+                                        Label("common.delete", systemImage: "trash")
+                                    }
+                                }
                         }
                     }
                 } header: {
@@ -208,8 +245,7 @@ struct LedgerView: View {
                     Text(String(format: String(localized: "ledger.footer_format"), count))
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerListChrome()
             .refreshable {
                 await store.pullLedgerFromCloudKitIfEnabled(reason: "账本下拉刷新，正在从 iCloud 拉取数据。")
             }
@@ -224,30 +260,7 @@ struct LedgerView: View {
         .searchable(text: $searchText, prompt: Text("ledger.search.prompt"))
         .navigationTitle(store.currentLedgerTitle)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    if let onOpenLedgerSettings {
-                        onOpenLedgerSettings()
-                    } else {
-                        navigationState.isPresentingLedgerProfiles = true
-                    }
-                } label: {
-                    Image(systemName: "books.vertical")
-                        .fontWeight(.semibold)
-                }
-                .accessibilityLabel(Text("ledger_profiles.title"))
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    navigationState.isPresentingVoiceLedger = true
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .fontWeight(.semibold)
-                }
-                .accessibilityLabel(Text(String(localized: "voice_ledger_title")))
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     navigationState.isPresentingNewTransaction = true
                 } label: {
@@ -256,16 +269,43 @@ struct LedgerView: View {
                 }
                 .accessibilityLabel(Text("transaction_editor.title.new"))
             }
-            if !store.deletedTransactions.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
                     Button {
-                        navigationState.isPresentingDeletedTransactions = true
+                        navigationState.isPresentingVoiceLedger = true
                     } label: {
-                        Image(systemName: "trash")
+                        Label("voice_ledger_title", systemImage: "square.and.pencil")
                     }
-                    .accessibilityLabel(Text("deleted_transactions.title"))
+
+                    Button {
+                        presentLedgerProfiles()
+                    } label: {
+                        Label("ledger_profiles.title", systemImage: "books.vertical")
+                    }
+
+                    if !store.deletedTransactions.isEmpty {
+                        Divider()
+
+                        Button {
+                            navigationState.isPresentingDeletedTransactions = true
+                        } label: {
+                            Label("deleted_transactions.title", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Label("common.more_actions", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
                 }
             }
+        }
+    }
+
+    private func presentLedgerProfiles() {
+        if let onOpenLedgerSettings {
+            onOpenLedgerSettings()
+        } else {
+            navigationState.isPresentingLedgerProfiles = true
         }
     }
 
@@ -361,23 +401,27 @@ struct LedgerView: View {
                 transaction: transaction,
                 usesNavigationStack: false,
                 showsCancelButton: false,
-                dismissesOnSave: false
+                dismissesOnSave: !prefersPersistentDetail
             ) { updated, refreshSameMerchantCategory, saveMerchantAlias in
-                store.updateTransaction(
+                let didSave = store.updateTransaction(
                     updated,
                     refreshSameMerchantCategory: refreshSameMerchantCategory,
                     saveMerchantAlias: saveMerchantAlias
                 )
+                if didSave {
+                    navigationState.selectedLedgerTransactionID = prefersPersistentDetail ? updated.id : nil
+                }
+                return didSave
             }
             .id(transaction.id)
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
         } else {
             ContentUnavailableView(
                 "ledger.detail.empty.title",
                 systemImage: "list.bullet.rectangle.portrait",
                 description: Text("ledger.detail.empty.description")
             )
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
         }
     }
 
@@ -394,6 +438,43 @@ struct LedgerView: View {
         case .month: return cal.date(byAdding: .month, value: value, to: date) ?? date
         case .year: return cal.date(byAdding: .year, value: value, to: date) ?? date
         }
+    }
+
+    private func reconcileSelection(with visibleIDs: [UUID]) {
+        guard let selectedTransactionID = navigationState.selectedLedgerTransactionID else {
+            ensurePersistentDetailSelectionIfNeeded()
+            return
+        }
+
+        if !visibleIDs.contains(selectedTransactionID) {
+            navigationState.selectedLedgerTransactionID = prefersPersistentDetail
+                ? searchFilteredTransactions.first?.id
+                : nil
+        }
+    }
+
+    private func ensurePersistentDetailSelectionIfNeeded() {
+        guard prefersPersistentDetail,
+              navigationState.selectedLedgerTransactionID == nil else { return }
+        navigationState.selectedLedgerTransactionID = searchFilteredTransactions.first?.id
+    }
+
+    private func deleteTransaction(_ transaction: Transaction) {
+        let nextID = nextSelectionID(afterDeleting: transaction)
+        store.deleteTransaction(transaction)
+        if navigationState.selectedLedgerTransactionID == transaction.id {
+            navigationState.selectedLedgerTransactionID = prefersPersistentDetail ? nextID : nil
+        }
+    }
+
+    private func nextSelectionID(afterDeleting transaction: Transaction) -> UUID? {
+        let rows = searchFilteredTransactions
+        guard let deletedIndex = rows.firstIndex(where: { $0.id == transaction.id }) else {
+            return rows.first(where: { $0.id != transaction.id })?.id
+        }
+        let remainingIDs = rows.map(\.id).filter { $0 != transaction.id }
+        guard !remainingIDs.isEmpty else { return nil }
+        return remainingIDs[min(deletedIndex, remainingIDs.count - 1)]
     }
 
     private var isAtOrAfterToday: Bool {

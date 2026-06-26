@@ -72,7 +72,8 @@ struct InboxView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 28)
             }
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerScreenChrome()
+            .autoLedgerNavigationBarChrome()
             .navigationTitle("AutoLedger")
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
@@ -567,8 +568,8 @@ struct InboxView: View {
                     .listRowBackground(AppTheme.card)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .autoLedgerListChrome()
+            .autoLedgerNavigationBarChrome()
             .navigationTitle("inbox.merchant_rankings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
