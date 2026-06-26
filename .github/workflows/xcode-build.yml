@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   xcode-build:
-    name: Xcode build
+    name: AutoLedgerCore Xcode build
     runs-on: macos-latest
     timeout-minutes: 60
 
@@ -31,33 +31,18 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          fallback=""
           for candidate in /Applications/Xcode_27*.app /Applications/Xcode-beta.app /Applications/Xcode_26*.app /Applications/Xcode.app; do
             if [ -d "$candidate" ]; then
-              if [ -z "$fallback" ]; then
-                fallback="$candidate"
-              fi
-
               sudo xcode-select -s "$candidate/Contents/Developer"
-              if xcodebuild -showsdks | grep -q "iphoneos"; then
-                echo "Selected $candidate with iOS SDK support"
-                break
-              fi
+              echo "Selected $candidate"
+              xcodebuild -version
+              xcodebuild -showsdks
+              exit 0
             fi
           done
 
-          if ! xcodebuild -showsdks | grep -q "iphoneos"; then
-            if [ -z "$fallback" ]; then
-              echo "No Xcode installation found under /Applications" >&2
-              exit 1
-            fi
-            sudo xcode-select -s "$fallback/Contents/Developer"
-            echo "Selected $fallback; iOS SDK not installed, Mac Catalyst fallback will be used"
-          fi
-
-          xcodebuild -version
-          xcodebuild -showsdks
-          xcrun simctl list runtimes
+          echo "No Xcode installation found under /Applications" >&2
+          exit 1
 
       - name: Install CocoaPods
         run: |
@@ -73,33 +58,20 @@ jobs:
           set -euo pipefail
           pod install --repo-update
 
-      - name: Build AutoLedger
+      - name: Build AutoLedgerCore
         run: |
           set -euo pipefail
           mkdir -p build/logs
 
-          if xcodebuild -showsdks | grep -q "iphoneos" && xcodebuild -showsdks | grep -q "watchos"; then
-            echo "Building full AutoLedger scheme with iOS and watchOS SDK support"
-            xcodebuild \
-              -workspace AutoLedger/AutoLedger.xcworkspace \
-              -scheme AutoLedger \
-              -configuration Debug \
-              -destination 'generic/platform=iOS' \
-              -derivedDataPath build/DerivedData \
-              CODE_SIGNING_ALLOWED=NO \
-              COMPILER_INDEX_STORE_ENABLE=NO \
-              build
-          else
-            echo "::warning::iOS or watchOS SDK is unavailable on this GitHub runner; building AutoLedgerCore as the Xcode health check. Xcode Cloud remains the full app archive gate."
-            xcodebuild \
-              -workspace AutoLedger/AutoLedger.xcworkspace \
-              -scheme AutoLedgerCore \
-              -configuration Debug \
-              -derivedDataPath build/DerivedData \
-              CODE_SIGNING_ALLOWED=NO \
-              COMPILER_INDEX_STORE_ENABLE=NO \
-              build
-          fi 2>&1 | tee build/logs/xcodebuild.log
+          echo "Building AutoLedgerCore only. Full app archive remains covered by Xcode Cloud."
+          xcodebuild \
+            -workspace AutoLedger/AutoLedger.xcworkspace \
+            -scheme AutoLedgerCore \
+            -configuration Debug \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build 2>&1 | tee build/logs/xcodebuild.log
 
       - name: Upload build log
         if: always()
