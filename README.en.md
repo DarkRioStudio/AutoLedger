@@ -16,6 +16,9 @@ AutoLedger helps turn payment screenshots, camera receipts, clipboard text, and 
 - Apple Watch quick entry
 - Share Extension import from other apps
 - Control Center widget for quick clipboard import
+- Hotel folio archive workflow for user-selected PDFs and local email PDF attachments
+- Foundational multi-ledger support with a local ledger, ledger management, current/all-ledger views, and a default write ledger
+- Localization and recognition language packs for Simplified Chinese, Traditional Chinese, English, and Japanese
 - iCloud backup / restore support
 - Local-first personal bookkeeping workflow
 
@@ -31,13 +34,23 @@ AutoLedger is designed as a local-first personal bookkeeping app.
 
 The app includes optional local model support and StoreKit support purchases. Store metadata, signing credentials, and production account configuration are not part of this repository.
 
+## Localization And Recognition Packs
+
+AutoLedger separates UI localization from receipt/bill recognition language packs:
+
+- **App UI languages**: the main user-facing paths currently cover `zh-Hans` Simplified Chinese, `zh-Hant` Traditional Chinese, `en` English, and `ja` Japanese. Main App, Watch, Widget, Control Widget, and Share Extension key coverage is checked by `scripts/check_localization_coverage.py`.
+- **App Store screenshot languages**: the screenshot pipeline organizes iPhone, iPad, Mac, Apple Watch, Apple TV, and visionOS copy for `zh-Hans`, `zh-Hant`, `en`, and `ja`. Japanese screenshots and store metadata still require human review before submission.
+- **Recognition language packs**: `AutoLedgerCore` includes built-in `zh-Hans`, `zh-Hant`, `en`, and `ja` packs for receipt keywords, amount formats, date formats, layered amount labels, merchant labels, non-merchant exclusions, category keywords, and OCR language hints.
+- **Japanese receipt recognition**: the Japanese pack covers common fields such as `合計`, `小計`, `税込`, `店舗`, `注文番号`, `カフェ`, and `コンビニ`; OCR hints prefer `ja-JP + en-US`, and amount / merchant / category parsing is covered by offline regression.
+- **Extension model**: future packs should remain pure data, versioned, reviewable, and fallback-friendly. User correction sharing must be opt-in, redacted, revocable, and reviewed before entering a reviewed pack. This repository does not currently implement remote language-pack hot updates or automatic uploads.
+
 ## Build Requirements
 
-- Xcode 26 beta
+- Xcode 27 beta
 - Swift 6 / SwiftUI
 - CocoaPods
-- iOS 26 or later for the main app target
-- watchOS 11 or later for the Watch app target
+- iOS 17 or later for the main app target
+- watchOS 10 or later for the Watch app target
 
 Required Apple capabilities:
 
@@ -117,13 +130,20 @@ The `main` branch is intended to remain the real AutoLedger development and rele
 
 ## Roadmap
 
+Current repository status:
+
+- `v1.6.0` and `v1.6.1` are complete and continue to map to the ASC / App Store `1.5.0` release line.
+- `v1.6.2` is now active development. Its focus is SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, and Japanese release-material review.
+- Device Hub Resize Mode, iPhone Mirroring continuous resize, visionOS hardware, and Japanese native-speaker review are release-smoke / evidence work. Hotel draft persistence, email dedupe, Demo Mode, deep links, Widgets, and App Intents are `v1.6.2` development work.
+
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
 | v1.4.0 | 1.3.0 | Released | Apple Watch support, accessibility improvements, App Intents, localization, screenshot pipeline updates, optional Support Developer IAP |
 | v1.5.0 | 1.4.0 | Baseline complete | iPad workspace, batch import, batch OCR / receipt cleanup, foundational multi-device data sync, Apple Watch complications, iPad / Mac screenshot pipeline, and Mac Catalyst workflow |
-| v1.5.1 | 1.4.0 | Release candidate | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, and App Preview v001; tvOS / visionOS and multi-ledger support are deferred |
-| v1.6.0 | 1.5.0 | First iteration in progress | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, and continued Mac / cross-platform polish |
-| v1.6.1 | 1.5.0 | Internal development | Hotel folio recognition, foundational multi-ledger support, and a new localization round: macOS manual PDF import, hotel stay review and ledger posting, default-ledger migration, ledger switching, full zh-Hans / zh-Hant / en coverage, and Japanese localization; the store version stays on ASC 1.5.0 for internal patch lines |
+| v1.5.1 | 1.4.0 | Completed | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, and App Preview v001 |
+| v1.6.0 | 1.5.0 | Completed | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, full-platform build / TestFlight / ASC / schema / screenshot closeout |
+| v1.6.1 | 1.5.0 | Completed | Hotel folio recognition and archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, and iOS 27 resizable-layout phase 1; the store version stays on ASC 1.5.0 for internal patch lines |
+| v1.6.2 | 1.5.0 by default | Active development | SDK adaptation phase 2, hotel email draft queue / dedupe / Demo Mode, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, and Japanese release-material review |
 
 ## License
 

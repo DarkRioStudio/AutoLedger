@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://app.darkrio326.top/autoledger/"><img src="https://img.shields.io/badge/官网-app.darkrio326.top-orange?logo=safari&logoColor=white" alt="官网" /></a>
-  <img src="https://img.shields.io/badge/platform-iOS_26+-blue?logo=apple" alt="Platform" />
+  <img src="https://img.shields.io/badge/platform-iOS_17+-blue?logo=apple" alt="Platform" />
   <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
@@ -38,6 +38,9 @@
 | 🧠 | **分类学习** | 记住用户修正历史，同商户后续入账自动使用偏好分类 |
 | 🗑️ | **最近删除 & 手动记账** | 删除账单可跨会话恢复；账本右上角可手动录入不依赖截图的账单 |
 | 💾 | **数据备份与恢复** | JSON 手动导出/导入，iCloud Drive 单文件自动备份，重装后提示恢复 |
+| 🧾 | **酒店消费归档** | 从酒店水单 PDF 或用户主动选择的本地邮箱 PDF 附件生成待确认酒店消费记录 |
+| 📚 | **多账本** | 支持本地账本、账本管理、当前账本 / 全部账本口径和默认写入账本 |
+| 🌐 | **多语言与识别语言包** | App UI 覆盖简体中文、繁体中文、英文、日文；账单解析语言包支持多语言金额、日期、商户和分类识别 |
 | 📊 | **月度报告** | 分类统计、消费趋势、商户排名一目了然 |
 | 📤 | **Share Extension** | 在任意 App 中分享截图直接导入 |
 | 🕹️ | **控制中心 Widget** | 从控制中心直接触发剪切板记账，无需解锁进 App |
@@ -60,11 +63,21 @@ App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/apps
 
 如需刷新本地截图预览，运行 `bash tools/appstore-screenshots/scripts/export.sh`，然后打开本地生成的 `tools/appstore-screenshots/output/preview.html`。
 
+## 多语言与账单识别语言包
+
+AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
+
+- **App UI 语言**：当前主路径覆盖 `zh-Hans` 简体中文、`zh-Hant` 繁体中文、`en` 英文和 `ja` 日文；主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校验。
+- **App Store 截图语言**：截图管线已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 组织 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 场景文案；日文截图和商店元数据仍需人工审校后再提交。
+- **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
+- **日文账单识别**：日文包覆盖 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常见字段；OCR hint 使用 `ja-JP + en-US`，金额和商户 / 分类解析已经进入离线回归。
+- **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
+
 ## Tech Stack
 
 | 层级 | 技术 |
 |------|------|
-| UI | SwiftUI, iOS 26 |
+| UI | SwiftUI, iOS 17+ deployment target, Xcode 27 / iOS 27 SDK adaptive layout |
 | OCR | Apple Vision (`VNRecognizeTextRequest`) |
 | 解析 | 规则引擎 + LLM (SmartReceiptParser) |
 | LLM | Apple Foundation Models / Gemma-2 2B (MediaPipe LLM Inference) |
@@ -74,7 +87,7 @@ App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/apps
 | 依赖管理 | CocoaPods (MediaPipe), SPM (AutoLedgerCore) |
 | 快捷指令 | AppIntents / `ForegroundContinuableIntent` |
 | 分享 | Share Extension |
-| Watch | watchOS 11, WatchConnectivity |
+| Watch | watchOS 10+, WatchConnectivity |
 | Widget | WidgetKit (主屏 & 控制中心) |
 | CI | Xcode Cloud |
 
@@ -142,6 +155,12 @@ bash scripts/run_golden_regression.sh
 
 ## Roadmap
 
+当前仓库主线状态：
+
+- `v1.6.0` 与 `v1.6.1` 已完成并继续对应 ASC / App Store `1.5.0` 大版本口径。
+- `v1.6.2` 已进入开发阶段，重点是 SDK 适配阶段二、酒店邮箱导入收口、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
+- Device Hub Resize Mode、iPhone Mirroring 连续 resize、visionOS 真机和日文母语审校属于人工 smoke / evidence；酒店邮箱草稿队列、去重、Demo Mode、Deep link、Widget 和 App Intents 属于 `v1.6.2` 开发内容。
+
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
 | v0.1.0 | — | ✅ 已发布 | MVP：截图导入、OCR、规则解析、分类、账本、月报 |
@@ -157,8 +176,9 @@ bash scripts/run_golden_regression.sh
 | v1.4.0 | **1.3.0** | ✅ 已发布 | Apple Watch 端上线（语音记账、今日支出、最近账单）、辅助功能专项、App Intents 增强、中英繁本地化与截图管线、可选 Support Developer 内购 |
 | v1.5.0 | **1.4.0** | ✅ 基线完成 | iPad 工作台、批量导入 / 批量识别、数据清洗、基础多端数据同步、Watch 今日支出与表盘小组件、iPad / Mac 截图管线、Mac Catalyst 主线能力 |
 | v1.5.1 | **1.4.0** | ✅ 收尾完成 | 最低系统需求优化、识别链路 Core 化、外部辅助识别试点、编辑保存稳定性、iCloud 同步性能、当前平台截图与 App Preview v001；tvOS / visionOS 与多账本顺延 |
-| v1.6.0 | **1.5.0** | 🚧 第一版推进中 | 订阅管理补强、AI 订阅判断、商户 / 分类 / 订阅倾向学习缓存、tvOS 只读看板、visionOS 展示版、Mac 与全平台体验继续打磨 |
-| v1.6.1 | **1.5.0** | 🚧 内部开发中 | 酒店水单识别与酒店消费归档、多账本基础能力、新一轮多语言支持：macOS 手动 PDF 导入、酒店消费确认入账、默认账本迁移、账本切换、三语文案覆盖与日文支持；商店不区分内部小版本 |
+| v1.6.0 | **1.5.0** | ✅ 已完成 | 订阅管理补强、AI 订阅判断、商户 / 分类 / 订阅倾向学习缓存、tvOS 只读看板、visionOS 展示版、全平台构建 / TestFlight / ASC / schema / 截图收口 |
+| v1.6.1 | **1.5.0** | ✅ 已完成 | 酒店水单识别与酒店消费归档、多账本基础能力、新一轮多语言支持、日文支持、跨平台 App Icon 重绘、iOS 27 可拉伸布局阶段一；商店不区分内部小版本 |
+| v1.6.2 | **1.5.0 默认沿用** | 🚧 开发中 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / Demo Mode、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校 |
 
 ## License
 

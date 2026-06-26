@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-259 v1.6.0 / v1.6.1 版本收口）
+更新日期：2026-06-26（ITER-260 v1.6.2 进入开发阶段）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-260 v1.6.2 进入开发阶段
+- 日期：2026-06-26
+- 所属版本：v1.6.2
+- 所属阶段：GOAL-1900
+- 类型：规划 / 文档 / 开发启动
+- 目标：根据 `v1.6.0` / `v1.6.1` 已完成的收口结论，将 `v1.6.2` 从 Draft 切入 Active 开发阶段，并回答剩余项目中哪些是测试 / 人工证据、哪些是 `v1.6.2` 开发内容；同时更新 GitHub README，让公开页面反映真实开发进度和路线图。
+- 改动范围：更新 `versions/v1.6.2-plan.md`、新增 `versions/v1.6.2-regression-baseline.md`、更新 `README.md`、`README.en.md`、`AutoLedger/README.md`、`tools/appstore-screenshots/README.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：`v1.6.2` 文档状态改为 Active；新增“开发阶段状态”表，将 Device Hub / iPhone Mirroring evidence、visionOS 真机、日文审校归为测试 / 人工证据，将 SDK 阶段二、酒店邮箱草稿队列 / 去重 / Demo Mode、Deep link、Widget、App Intents 和可靠性归为开发内容；新增 `v1.6.2` 固定自动回归和功能专项回归基线；根 README 中英文路线图已更新为 `v1.6.0 / v1.6.1` 完成、`v1.6.2` 开发中，并补充简体中文 / 繁体中文 / 英文 / 日文 UI 覆盖、平台无关账单识别语言包、日文 OCR hint 和社区语言包扩展边界；子 README 同步 iOS 17 最低系统要求和日文截图输出。
+- 测试情况：本轮为文档启动，执行 `git diff --check` 作为最小格式门禁。
+- 风险与注意事项：`v1.6.2` 后续每个功能 goal 仍需独立回归和提交；如果先做酒店邮箱草稿队列，可能涉及新增持久化表，需要单独设计迁移和回滚。
+- 回滚方式：回退 `versions/v1.6.2-plan.md` 的状态与 GOAL-1900 修改，删除 `versions/v1.6.2-regression-baseline.md`，回退 README、`CHANGELOG.md` 和本日志条目即可；无代码或数据迁移需要回滚。
+- 结论：`v1.6.2` 已进入开发阶段，可从 `GOAL-1910 / GOAL-1911` 或 `GOAL-1930` 开始实施。
+- 下一步建议：优先执行 `GOAL-1910 / GOAL-1911` 完成 SDK 阶段二主界面 polish；若更关心酒店邮箱公共用户测试，则改从 `GOAL-1930` 开始。
 
 ### ITER-259 v1.6.0 / v1.6.1 版本收口
 - 日期：2026-06-26

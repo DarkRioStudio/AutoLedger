@@ -6,12 +6,12 @@ The same raw and store PNGs can be handed to Hyperframes or another video tool a
 
 ## Supported Output
 
-- iPhone: zh-Hans, zh-Hant, and en, default 6.5-inch App Store size `1242x2688`.
-- iPad: zh-Hans, zh-Hant, and en, default 13-inch landscape App Store size `2732x2048`.
-- Mac Catalyst: zh-Hans, zh-Hant, and en, default desktop capture size `1440x900`.
-- Apple Watch: zh-Hans, zh-Hant, and en when the Watch scheme and a usable Watch simulator pair are available.
-- Apple TV: zh-Hans, zh-Hant, and en, default 4K landscape App Store size `3840x2160`.
-- visionOS: zh-Hans, zh-Hant, and en, default landscape marketing size `3840x2160`.
+- iPhone: zh-Hans, zh-Hant, en, and ja, default 6.5-inch App Store size `1242x2688`.
+- iPad: zh-Hans, zh-Hant, en, and ja, default 13-inch landscape App Store size `2732x2048`.
+- Mac Catalyst: zh-Hans, zh-Hant, en, and ja, default desktop capture size `1440x900`.
+- Apple Watch: zh-Hans, zh-Hant, en, and ja when the Watch scheme and a usable Watch simulator pair are available.
+- Apple TV: zh-Hans, zh-Hant, en, and ja, default 4K landscape App Store size `3840x2160`.
+- visionOS: zh-Hans, zh-Hant, en, and ja, default landscape marketing size `3840x2160`.
 
 The pipeline does not upload to App Store Connect or directly create official App Preview videos. App Preview / Hyperframes production material lives in `tools/appstore-screenshots/app-preview/`.
 
@@ -133,19 +133,19 @@ Generated files are written under `tools/appstore-screenshots/output/`, which is
 ```text
 output/
   raw/
-    ios/{zh-Hans,zh-Hant,en}/
-    ipad/{zh-Hans,zh-Hant,en}/
-    mac/{zh-Hans,zh-Hant,en}/
-    watch/{zh-Hans,zh-Hant,en}/
-    tvos/{zh-Hans,zh-Hant,en}/
-    visionos/{zh-Hans,zh-Hant,en}/
+    ios/{zh-Hans,zh-Hant,en,ja}/
+    ipad/{zh-Hans,zh-Hant,en,ja}/
+    mac/{zh-Hans,zh-Hant,en,ja}/
+    watch/{zh-Hans,zh-Hant,en,ja}/
+    tvos/{zh-Hans,zh-Hant,en,ja}/
+    visionos/{zh-Hans,zh-Hant,en,ja}/
   store/
-    ios/{zh-Hans,zh-Hant,en}/
-    ipad/{zh-Hans,zh-Hant,en}/
-    mac/{zh-Hans,zh-Hant,en}/
-    watch/{zh-Hans,zh-Hant,en}/
-    tvos/{zh-Hans,zh-Hant,en}/
-    visionos/{zh-Hans,zh-Hant,en}/
+    ios/{zh-Hans,zh-Hant,en,ja}/
+    ipad/{zh-Hans,zh-Hant,en,ja}/
+    mac/{zh-Hans,zh-Hant,en,ja}/
+    watch/{zh-Hans,zh-Hant,en,ja}/
+    tvos/{zh-Hans,zh-Hant,en,ja}/
+    visionos/{zh-Hans,zh-Hant,en,ja}/
   preview.html
 ```
 
@@ -284,7 +284,7 @@ iPad defaults to `ipad_13` (`2732x2048`). The renderer keeps the workspace scree
 
 Mac defaults to `mac_desktop` (`1440x900`). The exporter launches the built Mac Catalyst app, resizes the front window with AppleScript, and captures that window rectangle from the desktop.
 
-Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, and en Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
+Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, en, and ja Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
 
 Apple TV and visionOS default to `3840x2160` in `targets.tvos` and `targets.visionos`. The renderer places the simulator capture inside a marketing canvas with title and subtitle copy.
 
