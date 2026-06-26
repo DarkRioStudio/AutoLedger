@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-260 v1.6.2 进入开发阶段）
+更新日期：2026-06-26（ITER-261 README 多语言与架构整理）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-261 README 多语言与架构整理
+- 日期：2026-06-26
+- 所属版本：v1.6.2
+- 所属阶段：文档 / README
+- 类型：文档 / 多语言 / 架构说明
+- 目标：让 GitHub README 准确反映当前开发进度、语言覆盖、账单识别语言包和真实工程结构，并补齐繁体中文与日文 README。
+- 改动范围：更新 `README.md`、`README.en.md`、`AutoLedger/README.md`、`CHANGELOG.md` 和本日志；新增 `README.zh-Hant.md`、`README.ja.md`。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：根 `README.md` 的 section 标题统一为英文；README 语言入口覆盖简体中文、繁体中文、英文、日文；繁体和日文 README 提供完整功能、语言包、架构、构建与路线图说明；工程架构树更新到当前主 App、AutoLedgerCore、Watch、Widget、Share Extension、tvOS、visionOS、截图 / 图标工具和回归脚本结构；`AutoLedger/README.md` 的标题和系统要求同步更新。
+- 测试情况：本轮为文档整理，执行 `git diff --check` 作为最小格式门禁，并用 `rg` 检查 README 语言入口、`zh-Hant` / `ja`、`Localization & Recognition Packs` 和架构树关键字段。
+- 风险与注意事项：新增繁体和日文 README 为开发文档翻译，商店 metadata 与正式截图文案仍需人工审校后再提交。
+- 回滚方式：删除 `README.zh-Hant.md`、`README.ja.md`，回退 README、`CHANGELOG.md` 和本日志条目即可；无代码或数据迁移需要回滚。
+- 结论：README 多语言与架构说明已更新，可作为 GitHub 首页当前状态说明。
+- 下一步建议：进入 `v1.6.2` 功能开发，优先从 `GOAL-1910 / GOAL-1911` 或 `GOAL-1930` 开始。
 
 ### ITER-260 v1.6.2 进入开发阶段
 - 日期：2026-06-26

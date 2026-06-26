@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.2）
+- [2026-06-26 +0800] README 多语言与架构整理：根 `README.md` 的 section 标题统一为英文，新增 `README.zh-Hant.md` 和 `README.ja.md`，并更新 `README.en.md`、`AutoLedger/README.md` 的语言入口、系统要求和路线图；工程架构树同步当前主 App、AutoLedgerCore、Watch、Widget、Share Extension、tvOS、visionOS、截图 / 图标工具与回归脚本结构。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-26 +0800] 将 `v1.6.2` 从 Draft 切入 Active 开发阶段：`versions/v1.6.2-plan.md` 明确剩余项目分为测试 / 人工证据与开发内容两类，并将 `GOAL-1900` 标记完成；新增 `versions/v1.6.2-regression-baseline.md`，记录 SDK 阶段二、酒店邮箱收口、Deep link / Widget / App Intents、数据可靠性、多语言和 release smoke 的最小回归门禁；同步更新 `README.md`、`README.en.md`、`AutoLedger/README.md` 和 `tools/appstore-screenshots/README.md`，让 GitHub 首页与工具文档反映 `v1.6.0 / v1.6.1` 完成、`v1.6.2` 开发中、iOS 17 最低系统要求、简体中文 / 繁体中文 / 英文 / 日文 UI 覆盖、账单识别语言包和日文截图输出。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
 ### 变更（版本收口）

@@ -12,7 +12,10 @@
 </p>
 
 <p align="center">
-  <a href="README.en.md">English README</a>
+  <a href="README.md">简体中文</a> ·
+  <a href="README.zh-Hant.md">繁體中文</a> ·
+  <a href="README.en.md">English</a> ·
+  <a href="README.ja.md">日本語</a>
 </p>
 
 <p align="center">
@@ -63,7 +66,7 @@ App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/apps
 
 如需刷新本地截图预览，运行 `bash tools/appstore-screenshots/scripts/export.sh`，然后打开本地生成的 `tools/appstore-screenshots/output/preview.html`。
 
-## 多语言与账单识别语言包
+## Localization & Recognition Packs
 
 AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 
@@ -98,31 +101,42 @@ AutoLedgerRio/
 ├── AutoLedger/                    # Xcode 工程
 │   ├── AutoLedger/                # 主 App 源码
 │   │   ├── App/                   # 入口 & 全局配置
-│   │   ├── Features/              # 功能模块 (Inbox, Ledger, Report, Settings)
-│   │   ├── Domain/                # 模型、枚举、业务服务
-│   │   ├── Data/                  # 持久化、DTO、Mapper
+│   │   ├── Features/              # Feedback, Hotel, Inbox, Ledger, Report, Settings, Subscription, iPad
+│   │   ├── Domain/                # App 层 Enums、Models、Services、Intents
+│   │   ├── Data/                  # DTO、Mapper、Persistence adapter
 │   │   ├── Shared/                # 通用组件、常量、扩展
-│   │   └── Assets.xcassets/       # 图标 & 资源
+│   │   ├── Screenshots/           # 截图模式 host 与 fixture UI
+│   │   ├── Resources/             # 多语言资源与配置
+│   │   └── Assets.xcassets/       # 图标与资源
 │   ├── AutoLedgerCore/            # 本地 Swift Package (纯 Foundation，跨平台)
 │   ├── AutoLedgerWatch Watch App/ # Apple Watch App 源码
 │   ├── AutoLedgerWidgets/         # 主屏 Widget Extension
+│   ├── AutoLedgerWatchWidgetsExtension/ # watchOS Widget / complication
 │   ├── ControlWidgetExtension/    # 控制中心 Widget Extension
 │   ├── ShareExtension/            # Share Extension
+│   ├── AutoLedgerTV/              # tvOS 只读看板
+│   ├── AutoLedgerVision/          # visionOS 展示版
+│   ├── Packages/RealityKitContent/# visionOS RealityKit 内容包
 │   ├── Pods/                      # CocoaPods 依赖 (gitignored)
 │   └── ci_scripts/                # Xcode Cloud CI 脚本
+├── AutoLedgerCoreKit/             # Core 相关实验 / 工具包
+├── ReceiptDebugTool/              # 小票解析调试工具
 ├── versions/                      # 版本计划 & 回归基线
 ├── process/                       # 迭代工作流文档
+├── docs/                          # 设计与专项说明文档
 ├── scripts/                       # 回归测试脚本
 ├── tests/                         # Golden 回归样例
 ├── tools/app-icons/               # App Icon 生成与验证工具
 ├── tools/appstore-screenshots/    # App Store 截图导出管线（zh-Hans / zh-Hant / en / ja）
+├── tools/receipt_ocr/             # 小票 OCR 批处理与样本工具
+├── tools/worker/                  # Worker / 远端能力实验
 └── template/                      # 文档模板
 ```
 
 ## Build
 
 ```bash
-# 环境要求：Xcode 26 beta + CocoaPods
+# 环境要求：Xcode 27 beta + CocoaPods
 sudo xcode-select -s /Applications/Xcode-beta.app/Contents/Developer
 brew install cocoapods
 

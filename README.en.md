@@ -1,6 +1,6 @@
 # AutoLedger
 
-[中文 README](README.md)
+[简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md) · [日本語](README.ja.md)
 
 AutoLedger is a fast local-first expense capture app for iPhone, iPad, and Apple Watch.
 
@@ -92,18 +92,37 @@ For multi-target signing, configure separate Bundle IDs for:
 ```text
 AutoLedgerRio/
 ├── AutoLedger/
-│   ├── AutoLedger/                 # iOS app target
-│   ├── AutoLedgerCore/             # Local Swift package, Foundation only
-│   ├── AutoLedgerWatch Watch App/  # Apple Watch app target
-│   ├── AutoLedgerWidgets/          # Widget extension
-│   ├── ControlWidgetExtension/     # Control Center widget extension
-│   ├── ShareExtension/             # Share extension
-│   └── ci_scripts/                 # Xcode Cloud setup scripts
-├── scripts/                        # Local regression scripts
-├── tests/                          # Golden regression fixtures
-├── tools/                          # Screenshot, feedback, and OCR tools
-├── process/                        # Agent iteration workflow docs
-└── versions/                       # Version plans and release notes
+│   ├── AutoLedger/                         # Main iOS / iPadOS / Mac Catalyst app target
+│   │   ├── App/                            # App entry, store, router, global wiring
+│   │   ├── Features/                       # Feedback, Hotel, Inbox, Ledger, Report, Settings, Subscription, iPad
+│   │   ├── Domain/                         # App-layer enums, models, services, and intents
+│   │   ├── Data/                           # DTOs, mappers, persistence adapters
+│   │   ├── Shared/                         # Shared components, constants, extensions
+│   │   ├── Screenshots/                    # Screenshot-mode host and fixtures
+│   │   ├── Resources/                      # Localization and app resources
+│   │   └── Assets.xcassets/                # App assets
+│   ├── AutoLedgerCore/                     # Local Swift package, Foundation only
+│   ├── AutoLedgerWatch Watch App/          # Apple Watch app target
+│   ├── AutoLedgerWidgets/                  # iOS Widget extension
+│   ├── AutoLedgerWatchWidgetsExtension/    # watchOS Widget / complication extension
+│   ├── ControlWidgetExtension/             # Control Center widget extension
+│   ├── ShareExtension/                     # Share extension
+│   ├── AutoLedgerTV/                       # tvOS read-only dashboard
+│   ├── AutoLedgerVision/                   # visionOS showcase app
+│   ├── Packages/RealityKitContent/         # RealityKit content package for visionOS
+│   ├── Pods/                               # CocoaPods dependencies, gitignored
+│   └── ci_scripts/                         # Xcode Cloud setup scripts
+├── AutoLedgerCoreKit/                      # Core-related experiments / tooling
+├── ReceiptDebugTool/                       # Receipt parser debugging tool
+├── docs/                                   # Design and topic docs
+├── process/                                # Agent iteration workflow docs
+├── scripts/                                # Local regression scripts
+├── tests/                                  # Golden regression fixtures
+├── tools/app-icons/                        # App icon generation and validation
+├── tools/appstore-screenshots/             # App Store screenshot export pipeline
+├── tools/receipt_ocr/                      # Receipt OCR batch tooling
+├── tools/worker/                           # Worker / remote capability experiments
+└── versions/                               # Version plans and release notes
 ```
 
 ## Common Commands
