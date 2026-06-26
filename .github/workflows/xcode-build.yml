@@ -73,38 +73,33 @@ jobs:
           set -euo pipefail
           pod install --repo-update
 
-      - name: Resolve build destination
-        id: build-destination
-        run: |
-          set -euo pipefail
-
-          if xcodebuild -showsdks | grep -q "iphoneos"; then
-            destination="generic/platform=iOS"
-            label="iOS generic"
-          else
-            destination="generic/platform=macOS,variant=Mac Catalyst"
-            label="Mac Catalyst generic fallback"
-          fi
-
-          echo "Using $label destination: $destination"
-          printf 'destination=%s\n' "$destination" >> "$GITHUB_OUTPUT"
-
       - name: Build AutoLedger
-        env:
-          BUILD_DESTINATION: ${{ steps.build-destination.outputs.destination }}
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          xcodebuild \
-            -workspace AutoLedger/AutoLedger.xcworkspace \
-            -scheme AutoLedger \
-            -configuration Debug \
-            -destination "$BUILD_DESTINATION" \
-            -skipUnavailableActions \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            build | tee build/logs/xcodebuild.log
+
+          if xcodebuild -showsdks | grep -q "iphoneos" && xcodebuild -showsdks | grep -q "watchos"; then
+            echo "Building full AutoLedger scheme with iOS and watchOS SDK support"
+            xcodebuild \
+              -workspace AutoLedger/AutoLedger.xcworkspace \
+              -scheme AutoLedger \
+              -configuration Debug \
+              -destination 'generic/platform=iOS' \
+              -derivedDataPath build/DerivedData \
+              CODE_SIGNING_ALLOWED=NO \
+              COMPILER_INDEX_STORE_ENABLE=NO \
+              build
+          else
+            echo "::warning::iOS or watchOS SDK is unavailable on this GitHub runner; building AutoLedgerCore as the Xcode health check. Xcode Cloud remains the full app archive gate."
+            xcodebuild \
+              -workspace AutoLedger/AutoLedger.xcworkspace \
+              -scheme AutoLedgerCore \
+              -configuration Debug \
+              -derivedDataPath build/DerivedData \
+              CODE_SIGNING_ALLOWED=NO \
+              COMPILER_INDEX_STORE_ENABLE=NO \
+              build
+          fi 2>&1 | tee build/logs/xcodebuild.log
 
       - name: Upload build log
         if: always()
