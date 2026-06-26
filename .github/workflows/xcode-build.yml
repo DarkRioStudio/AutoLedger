@@ -17,8 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  ios-build:
-    name: iOS generic build
+  xcode-build:
+    name: Xcode build
     runs-on: macos-latest
     timeout-minutes: 60
 
@@ -29,20 +29,34 @@ jobs:
       - name: Select Xcode
         run: |
           set -euo pipefail
+          shopt -s nullglob
 
-          for candidate in \
-            /Applications/Xcode_27.0.app \
-            /Applications/Xcode-beta.app \
-            /Applications/Xcode_26.0.app \
-            /Applications/Xcode.app
-          do
+          fallback=""
+          for candidate in /Applications/Xcode_27*.app /Applications/Xcode-beta.app /Applications/Xcode_26*.app /Applications/Xcode.app; do
             if [ -d "$candidate" ]; then
+              if [ -z "$fallback" ]; then
+                fallback="$candidate"
+              fi
+
               sudo xcode-select -s "$candidate/Contents/Developer"
-              break
+              if xcodebuild -showsdks | grep -q "iphoneos"; then
+                echo "Selected $candidate with iOS SDK support"
+                break
+              fi
             fi
           done
 
+          if ! xcodebuild -showsdks | grep -q "iphoneos"; then
+            if [ -z "$fallback" ]; then
+              echo "No Xcode installation found under /Applications" >&2
+              exit 1
+            fi
+            sudo xcode-select -s "$fallback/Contents/Developer"
+            echo "Selected $fallback; iOS SDK not installed, Mac Catalyst fallback will be used"
+          fi
+
           xcodebuild -version
+          xcodebuild -showsdks
           xcrun simctl list runtimes
 
       - name: Install CocoaPods
@@ -59,7 +73,25 @@ jobs:
           set -euo pipefail
           pod install --repo-update
 
+      - name: Resolve build destination
+        id: build-destination
+        run: |
+          set -euo pipefail
+
+          if xcodebuild -showsdks | grep -q "iphoneos"; then
+            destination="generic/platform=iOS"
+            label="iOS generic"
+          else
+            destination="generic/platform=macOS,variant=Mac Catalyst"
+            label="Mac Catalyst generic fallback"
+          fi
+
+          echo "Using $label destination: $destination"
+          printf 'destination=%s\n' "$destination" >> "$GITHUB_OUTPUT"
+
       - name: Build AutoLedger
+        env:
+          BUILD_DESTINATION: ${{ steps.build-destination.outputs.destination }}
         run: |
           set -euo pipefail
           mkdir -p build/logs
@@ -67,7 +99,7 @@ jobs:
             -workspace AutoLedger/AutoLedger.xcworkspace \
             -scheme AutoLedger \
             -configuration Debug \
-            -destination 'generic/platform=iOS' \
+            -destination "$BUILD_DESTINATION" \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
