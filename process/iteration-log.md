@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-258 GOAL-1900 v1.6.2 版本计划）
+更新日期：2026-06-26（ITER-259 v1.6.0 / v1.6.1 版本收口）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-259 v1.6.0 / v1.6.1 版本收口
+- 日期：2026-06-26
+- 所属版本：v1.6.0 / v1.6.1
+- 所属阶段：版本收口 / 文档
+- 类型：规划 / 文档 / 发布收口
+- 目标：根据当前 Xcode Cloud、ASC、TestFlight、schema、截图和平台 smoke 状态，将 `v1.6.0` 与 `v1.6.1` 标记为完成，并整理剩余未收口项目，供用户做最终收尾。
+- 改动范围：更新 `versions/v1.6.0-plan.md`、`versions/v1.6.0-regression-baseline.md`、`versions/v1.6.1-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、业务逻辑、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：`v1.6.0` 文档状态改为 Completed，`GOAL-1770` 改为 DONE，regression baseline 人工发布结论改为 PASS / COMPLETED；`v1.6.1` 文档状态改为 Completed，GOAL 表中阶段一和基础功能改为完成态，阶段二 / Widget / deep link / 数据可靠性等改为 handoff，并新增“收口结论与未收口项目”清单。
+- 测试情况：本轮为文档收口，执行 `git diff --check` 作为最小格式门禁。
+- 风险与注意事项：剩余尾项主要是人工 evidence 或下一版本能力，不应继续作为 `v1.6.0` / `v1.6.1` blocker；visionOS 真机因无设备仍无法验证，应在未来有设备时补 smoke。
+- 回滚方式：回退上述文档中的状态修改、收口清单和本日志 / CHANGELOG 条目即可；无代码或数据迁移需要回滚。
+- 结论：`v1.6.0` 和 `v1.6.1` 已完成文档收口；后续收尾集中进入 `v1.6.2`。
+- 下一步建议：优先做 `v1.6.2` 的 release smoke baseline、酒店邮箱 Demo Mode / 去重 / 草稿队列，以及 iOS 27 连续 resize evidence。
 
 ### ITER-258 GOAL-1900 v1.6.2 版本计划
 - 日期：2026-06-26

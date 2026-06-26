@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（版本收口）
+- [2026-06-26 +0800] 将 `v1.6.0` 和 `v1.6.1` 标记为已完成：`versions/v1.6.0-plan.md`、`versions/v1.6.0-regression-baseline.md` 更新为 Completed / PASS，记录 Xcode Cloud、ASC、TestFlight、CloudKit schema、截图和平台 smoke 的收口结论；`versions/v1.6.1-plan.md` 更新为 Completed，并新增收口结论与未收口项目清单，将 SDK 阶段二、酒店邮箱草稿队列 / 去重 / Demo Mode、Deep link / Widget / App Intents、日文人工审校和数据可靠性移交 `v1.6.2`。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+
 ### 新增（v1.6.2）
 - [2026-06-26 +0800] 新增 `versions/v1.6.2-plan.md` 第一版：承接 `v1.6.1` 后延项，规划 SDK 适配阶段二、酒店水单 B 阶段收口、Deep link / Widget / App Intents 第一段、数据可靠性、多语言日文审校和 release smoke 主线；明确 P0 / P1 / Later 边界、GOAL-1900 至 GOAL-1960 队列、测试计划、发布审核材料和非目标。本轮只更新文档，不修改 Swift 代码、数据模型、schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
