@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-256 GOAL-1871 酒店原 PDF 预览与默认写入账本收口）
+更新日期：2026-06-26（ITER-257 GOAL-1872 新版本 SDK 适配阶段一）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-257 GOAL-1872 新版本 SDK 适配阶段一可拉伸布局
+- 日期：2026-06-26
+- 所属版本：v1.6.1
+- 所属阶段：GOAL-1872
+- 类型：UI / 适配 / 测试 / 治理
+- 目标：在保持 iOS Deployment Target 17.0、现有业务逻辑和数据模型不变的前提下，用 Xcode 27 / iOS 27 SDK 推进新版本 SDK 适配主线阶段一，让主 App 先具备按当前容器尺寸连续适配的可拉伸布局。
+- 改动范围：iOS / iPadOS 根视图统一到 `HomeView`；iOS 27 根 `TabView` 增加 `.sidebarAdaptable` 与 `.defaultTabBarPlacement(.sidebar)` 可用性包装；账本页和周期账单页改为共享选择状态的 `NavigationSplitView`；首页和统计页摘要区改为 adaptive `LazyVGrid`；设置页、交易编辑表单和周期账单编辑表单限制最大宽度；新增四语空详情文案；新增 `scripts/check_adaptive_layout_rules.py` 并纳入离线回归；更新版本计划、CHANGELOG 和本日志。
+- 未改动范围：未修改记账解析、酒店消费、订阅、多账本、同步、备份或持久化业务逻辑；未修改 `Transaction` / `Subscription` 等数据模型；未修改 SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本或 `MARKETING_VERSION`；未改 Watch / Widget / tvOS / visionOS 现有 UI。
+- 完成内容：主 App 不再按 iPhone / iPad idiom 分出两套 iOS 根视图；iOS 27 及以上可在空间足够时进入 sidebar tab 行为，iOS 17-26 继续使用原底部 Tab Bar；账本和周期账单在窄屏折叠、宽屏双栏时共享同一选择状态；首页和统计页可随容器宽度从单列扩展到多列；设置和编辑表单在宽屏下保持合理可读宽度；静态门禁覆盖禁用的 idiom / screen / 方向布局分支。
+- 未完成内容：统一 Router / NavigationState 尚未完成，当前 Tab、选中账单、选中周期账单、导航路径和 sheet 状态仍需在阶段一后续收口；Xcode 27 Device Hub Resize Mode 的连续拖拽、macOS 27 iPhone Mirroring 的拉伸状态保持和真实设备视觉验收仍需作为 release smoke 人工执行并保存截图或视频；当前 CLI 只完成 iOS 27 iPhone / iPad 模拟器安装启动截图冒烟。阶段二新版界面交互、阶段三 Widget / deep link、阶段四可靠性工程均已写入版本计划，但顺序后延。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_localization_coverage.py`、`bash scripts/run_offline_regression.sh`、`bash scripts/run_golden_regression.sh`、`git diff --check` 均通过；确认 `xcodebuild -version` 为 Xcode 27.0 / 27A5194q；执行主 App iOS generic build、iPad (A16) iOS 27 simulator build 和 Mac Catalyst generic build 均通过；在 iOS 27 iPhone 17 / iPad (A16) 模拟器安装启动并截图确认主界面可见、自适应 tab / grid 入口可用。
+- 风险与注意事项：iOS 27 专属 Tab API 目前通过 availability 包装隔离，后续若 Apple 在 SDK beta 中调整 API 名称，需要优先修正包装点；Device Hub / iPhone Mirroring 的连续尺寸变化还需要人工 smoke 来确认文本截断、split view 选择状态和 sidebar 切换体验。
+- 回滚方式：回退 `HomeView` Tab availability 包装、`AutoLedgerApp` 根视图调整、`LedgerView` / `SubscriptionListView` split view 改造、编辑表单嵌入参数、首页 / 统计 adaptive grid、设置宽度约束、本地化新增 key、`check_adaptive_layout_rules.py` 和离线回归接入，以及版本计划 / CHANGELOG / 本日志即可；无 schema 或数据迁移需要回滚。
+- 结论：新版本 SDK 适配阶段一已落地第一版可拉伸布局，主 App 仍保持 iOS 17 最低系统要求和 iOS 17-26 兼容 fallback；阶段二、三、四不阻塞当前阶段一。
+- 下一步建议：优先补统一 Router / NavigationState，再在 release smoke 中补 Device Hub Resize Mode、iPad 宽屏和 macOS 27 iPhone Mirroring 的连续拖拽视频 / 截图，并针对发现的文本截断或状态保持问题单独开后续 UI polish goal。
 
 ### ITER-256 GOAL-1871 酒店原 PDF 预览与默认写入账本收口
 - 日期：2026-06-26

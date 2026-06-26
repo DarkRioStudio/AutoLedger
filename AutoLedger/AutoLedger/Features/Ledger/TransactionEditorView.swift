@@ -7,6 +7,10 @@ struct TransactionEditorView: View {
     let onSave: (Transaction, Bool, Bool) -> Bool
     /// `true` 表示新增模式，导航栏标题显示"新增账单"；`false` 为编辑模式
     var isNew: Bool = false
+    var usesNavigationStack = true
+    var showsCancelButton = true
+    var dismissesOnSave = true
+    var onCancel: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
@@ -31,9 +35,21 @@ struct TransactionEditorView: View {
         case note
     }
 
-    init(transaction: Transaction, isNew: Bool = false, onSave: @escaping (Transaction, Bool, Bool) -> Bool) {
+    init(
+        transaction: Transaction,
+        isNew: Bool = false,
+        usesNavigationStack: Bool = true,
+        showsCancelButton: Bool = true,
+        dismissesOnSave: Bool = true,
+        onCancel: (() -> Void)? = nil,
+        onSave: @escaping (Transaction, Bool, Bool) -> Bool
+    ) {
         self.transaction = transaction
         self.isNew = isNew
+        self.usesNavigationStack = usesNavigationStack
+        self.showsCancelButton = showsCancelButton
+        self.dismissesOnSave = dismissesOnSave
+        self.onCancel = onCancel
         self.onSave = onSave
         _merchant = State(initialValue: transaction.merchant)
         _amountText = State(initialValue: isNew ? "" : String(format: "%.2f", transaction.amount))
@@ -44,8 +60,17 @@ struct TransactionEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
+        if usesNavigationStack {
+            NavigationStack {
+                editorContent
+            }
+        } else {
+            editorContent
+        }
+    }
+
+    private var editorContent: some View {
+        Form {
                 Section("transaction_editor.section.basic") {
                     CompositionSafeTextField(
                         placeholder: String(localized: "transaction_editor.merchant"),
@@ -103,12 +128,20 @@ struct TransactionEditorView: View {
                     }
                 }
             }
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
             .navigationTitle(isNew ? String(localized: "transaction_editor.title.new") : String(localized: "transaction_editor.title.edit"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") {
-                        dismiss()
+                if showsCancelButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("common.cancel") {
+                            if let onCancel {
+                                onCancel()
+                            } else {
+                                dismiss()
+                            }
+                        }
                     }
                 }
 
@@ -176,7 +209,6 @@ struct TransactionEditorView: View {
             } message: {
                 Text(subscriptionCreatedMessage ?? "")
             }
-        }
     }
 
     private var parsedAmount: Double {
@@ -247,7 +279,11 @@ struct TransactionEditorView: View {
         if didSave {
             pendingSave = nil
             pendingRefreshSameMerchantCategory = false
-            dismiss()
+            if dismissesOnSave {
+                dismiss()
+            } else {
+                isSaving = false
+            }
         } else {
             isSaving = false
             saveErrorMessage = String(localized: "transaction_editor.save_failed.message")

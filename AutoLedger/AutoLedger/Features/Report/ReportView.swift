@@ -14,6 +14,9 @@ struct ReportView: View {
     @State private var selectedMonth: Date = .now
     @State private var selectedTrendLabel: String?
     private let insightService = MonthlyInsightService()
+    private let summaryColumns = [
+        GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)
+    ]
 
     private var isCurrentMonth: Bool {
         AppFormatters.calendar.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
@@ -148,7 +151,7 @@ struct ReportView: View {
                     .minimumScaleFactor(0.62)
             }
 
-            HStack(spacing: 12) {
+            LazyVGrid(columns: summaryColumns, alignment: .leading, spacing: 12) {
                 summaryPill(titleKey: "report.summary.transactions", value: transactionCountText(snapshot.transactionCount))
                 summaryPill(titleKey: "report.summary.top1", value: snapshot.topMerchant)
                 summaryPill(

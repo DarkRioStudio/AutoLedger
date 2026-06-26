@@ -477,6 +477,8 @@
 "ledger.footer_format" = "%d 件。任意の取引をタップして金額、カテゴリ、メモを修正できます。";
 "ledger.search.prompt" = "取引を検索";
 "ledger.search.no_results" = "一致する取引はありません";
+"ledger.detail.empty.title" = "取引を選択";
+"ledger.detail.empty.description" = "一覧から取引を選ぶと、ここで詳細を確認して編集できます。";
 "ledger.scope.all" = "すべての台帳";
 "ledger.action.move" = "台帳を移動";
 "ledger.move.title" = "台帳へ移動";
@@ -566,6 +568,8 @@
 "subscriptions.annual_savings_short_format" = "年払いに切り替えて年間 %@ 節約";
 "subscriptions.empty.title" = "サブスクリプションはまだありません";
 "subscriptions.empty.description" = "サブスクリプションを手動追加するか、更新メールのスクリーンショットをインポートするか、右上のスキャンボタンで履歴から定期支払いを検出します。";
+"subscriptions.detail.empty.title" = "定期支払いを選択";
+"subscriptions.detail.empty.description" = "一覧からサブスクリプションを選ぶと、ここで詳細を確認して編集できます。";
 "subscriptions.upload_renewal_screenshot" = "更新メールのスクリーンショットをアップロード";
 "subscriptions.renewal_screenshot_note" = "サブスクリプション更新メールのスクリーンショット";
 "subscriptions.edit.section.subscription" = "サブスクリプション";

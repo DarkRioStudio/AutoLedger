@@ -136,11 +136,7 @@ private struct AutoLedgerRootView: View {
         #if targetEnvironment(macCatalyst)
         IPadWorkspaceView()
         #else
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            IPadWorkspaceView()
-        } else {
-            HomeView()
-        }
+        HomeView()
         #endif
     }
 
@@ -148,7 +144,7 @@ private struct AutoLedgerRootView: View {
     private var sizedRootContent: some View {
         #if targetEnvironment(macCatalyst)
         rootContent
-            .frame(minWidth: 1320, idealWidth: 1440, minHeight: 760, idealHeight: 900)
+            .frame(minWidth: 640, minHeight: 520)
         #else
         rootContent
         #endif

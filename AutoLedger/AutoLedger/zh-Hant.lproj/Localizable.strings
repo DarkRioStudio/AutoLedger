@@ -480,6 +480,8 @@
 "ledger.footer_format" = "共 %d 筆，點按任一帳單可修正金額、分類和備註。";
 "ledger.search.prompt" = "搜尋帳單";
 "ledger.search.no_results" = "沒有找到符合的帳單";
+"ledger.detail.empty.title" = "選擇一筆帳單";
+"ledger.detail.empty.description" = "在左側列表選擇帳單後，可在這裡查看並編輯明細。";
 "ledger.scope.all" = "全部帳本";
 "ledger.action.move" = "移動帳本";
 "ledger.move.title" = "移動到帳本";
@@ -569,6 +571,8 @@
 "subscriptions.annual_savings_short_format" = "切換年付可省 %@/年";
 "subscriptions.empty.title" = "暫無訂閱記錄";
 "subscriptions.empty.description" = "可以手動新增訂閱，匯入續期郵件截圖，或點擊右上角掃描歷史帳單自動識別週期性訂閱。";
+"subscriptions.detail.empty.title" = "選擇一個週期帳單";
+"subscriptions.detail.empty.description" = "在左側列表選擇訂閱後，可在這裡查看並編輯明細。";
 "subscriptions.upload_renewal_screenshot" = "上傳續期郵件截圖";
 "subscriptions.renewal_screenshot_note" = "訂閱續期郵件截圖";
 "subscriptions.edit.section.subscription" = "訂閱";

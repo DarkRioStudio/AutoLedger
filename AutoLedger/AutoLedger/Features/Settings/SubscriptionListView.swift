@@ -8,6 +8,7 @@ struct SubscriptionListView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImporting = false
     @State private var editor: SubscriptionEditorPresentation?
+    @State private var selectedSubscriptionID: UUID?
     @State private var annualPriceOverrides: [String: Double] = [:]
     @State private var subscriptionNotes: [String: String] = [:]
     private let ocrService = OCRService()
@@ -15,24 +16,12 @@ struct SubscriptionListView: View {
     private let subscriptionNotesKey = "subscriptionNotes"
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                if let summary = store.lastImportSummary {
-                    importStatusBanner(summary)
-                }
-
-                if scopedSubscriptions.isEmpty {
-                    emptyState
-                } else {
-                    upcomingSection
-                    allSubscriptionsSection
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 20)
+        NavigationSplitView {
+            subscriptionList
+        } detail: {
+            subscriptionDetail
         }
-        .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("settings.subscriptions.title")
+        .navigationSplitViewStyle(.balanced)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
@@ -59,6 +48,7 @@ struct SubscriptionListView: View {
             ) { updated, annualPrice, note in
                 if presentation.isNew {
                     store.createSubscription(updated)
+                    selectedSubscriptionID = updated.id
                 } else {
                     store.updateSubscription(updated)
                 }
@@ -70,12 +60,226 @@ struct SubscriptionListView: View {
         .onAppear {
             loadSupplementalSubscriptionData()
         }
+        .onChange(of: scopedSubscriptions.map(\.id)) { _, visibleIDs in
+            guard let selectedSubscriptionID, !visibleIDs.contains(selectedSubscriptionID) else { return }
+            self.selectedSubscriptionID = nil
+        }
     }
 
     // MARK: - Upcoming
 
     private var scopedSubscriptions: [Subscription] {
         store.visibleSubscriptions
+    }
+
+    private var selectedSubscription: Subscription? {
+        guard let selectedSubscriptionID else { return nil }
+        return scopedSubscriptions.first { $0.id == selectedSubscriptionID }
+    }
+
+    private var subscriptionList: some View {
+        List(selection: $selectedSubscriptionID) {
+            if let summary = store.lastImportSummary {
+                importStatusBanner(summary)
+                    .listRowBackground(AppTheme.card)
+            }
+
+            if scopedSubscriptions.isEmpty {
+                emptyState
+                    .listRowBackground(AppTheme.card)
+            } else {
+                let upcoming = upcomingSubscriptions
+                if !upcoming.isEmpty {
+                    Section("subscriptions.upcoming") {
+                        ForEach(upcoming) { sub in
+                            subscriptionNavigationRow(sub, highlight: true)
+                        }
+                    }
+                }
+
+                Section {
+                    ForEach(scopedSubscriptions) { sub in
+                        subscriptionNavigationRow(sub, highlight: false)
+                    }
+
+                    annualSummaryCard
+                        .listRowBackground(AppTheme.card)
+                } header: {
+                    HStack {
+                        Text("subscriptions.all")
+                        Spacer()
+                        Text(String(format: String(localized: "subscriptions.count_format"), scopedSubscriptions.count))
+                    }
+                } footer: {
+                    Text(String(format: String(localized: "subscriptions.monthly_estimate_format"), AppFormatters.currency(monthlyEstimate)))
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(AppTheme.screenGradient.ignoresSafeArea())
+        .navigationTitle("settings.subscriptions.title")
+    }
+
+    private var monthlyEstimate: Double {
+        activeSubscriptions.reduce(0.0) { sum, sub in
+            switch sub.period {
+            case .weekly:  return sum + sub.amount * 4.33
+            case .monthly: return sum + sub.amount
+            case .yearly:  return sum + sub.amount / 12.0
+            }
+        }
+    }
+
+    private func subscriptionNavigationRow(_ sub: Subscription, highlight: Bool) -> some View {
+        NavigationLink(value: sub.id) {
+            subscriptionListRow(sub, highlight: highlight)
+        }
+        .tag(sub.id)
+        .listRowBackground(AppTheme.card)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                deleteSubscription(sub)
+            } label: {
+                Label("common.delete", systemImage: "trash")
+            }
+
+            if sub.status != .canceled {
+                Button(role: .destructive) {
+                    updateSubscriptionStatus(sub, .canceled)
+                } label: {
+                    Label("subscriptions.cancel_subscription", systemImage: "xmark.circle")
+                }
+                .tint(.orange)
+            }
+
+            let toggleTitle: LocalizedStringKey = sub.status == .active ? "subscriptions.pause" : "subscriptions.resume"
+            let toggleIcon = sub.status == .active ? "pause.circle" : "play.circle"
+            Button {
+                updateSubscriptionStatus(sub, sub.status == .active ? .paused : .active)
+            } label: {
+                Label(toggleTitle, systemImage: toggleIcon)
+            }
+            .tint(AppTheme.accent)
+        }
+        .contextMenu {
+            Button {
+                selectedSubscriptionID = sub.id
+            } label: {
+                Label("common.edit", systemImage: "pencil")
+            }
+
+            if sub.status == .active {
+                Button {
+                    updateSubscriptionStatus(sub, .paused)
+                } label: {
+                    Label("subscriptions.pause", systemImage: "pause.circle")
+                }
+            } else {
+                Button {
+                    updateSubscriptionStatus(sub, .active)
+                } label: {
+                    Label("subscriptions.resume", systemImage: "play.circle")
+                }
+            }
+
+            if sub.status != .canceled {
+                Button(role: .destructive) {
+                    updateSubscriptionStatus(sub, .canceled)
+                } label: {
+                    Label("subscriptions.cancel_subscription", systemImage: "xmark.circle")
+                }
+            }
+
+            Button(role: .destructive) {
+                deleteSubscription(sub)
+            } label: {
+                Label("common.delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func subscriptionListRow(_ sub: Subscription, highlight: Bool) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "repeat.circle.fill")
+                .font(.title2)
+                .foregroundStyle(highlight ? AppTheme.accentSecondary : AppTheme.accent)
+                .frame(width: 40, height: 40)
+                .background((highlight ? AppTheme.accentSecondary : AppTheme.accent).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(sub.merchant)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+
+                if !sub.planName.isEmpty {
+                    Text(sub.planName)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                HStack(spacing: 8) {
+                    Text(sub.period.title)
+                    Text("·")
+                    Text(String(format: String(localized: "subscriptions.next_charge_format"), AppFormatters.shortDateTime(sub.nextChargedAt)))
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(AppFormatters.currency(sub.amount))
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Text(sub.status.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(statusTint(for: sub.status))
+
+                if highlight {
+                    Text(daysUntil(sub.nextChargedAt))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(AppTheme.accentSecondary))
+                }
+            }
+        }
+        .opacity(sub.status.isActive ? 1 : 0.72)
+    }
+
+    @ViewBuilder
+    private var subscriptionDetail: some View {
+        if let subscription = selectedSubscription {
+            SubscriptionEditView(
+                subscription: subscription,
+                mode: .edit,
+                annualPrice: annualPriceOverrides[subscription.id.uuidString],
+                note: subscriptionNotes[subscription.id.uuidString] ?? "",
+                usesNavigationStack: false,
+                showsCancelButton: false,
+                dismissesOnSave: false
+            ) { updated, annualPrice, note in
+                store.updateSubscription(updated)
+                selectedSubscriptionID = updated.id
+                saveAnnualPrice(annualPrice, for: updated)
+                saveNote(note, for: updated)
+                store.requestAutomaticBackup()
+            }
+            .id(subscription.id)
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+        } else {
+            ContentUnavailableView(
+                "subscriptions.detail.empty.title",
+                systemImage: "repeat.circle",
+                description: Text("subscriptions.detail.empty.description")
+            )
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+        }
     }
 
     private var upcomingSubscriptions: [Subscription] {
@@ -519,6 +723,9 @@ struct SubscriptionListView: View {
 
     private func deleteSubscription(_ sub: Subscription) {
         store.deleteSubscription(sub)
+        if selectedSubscriptionID == sub.id {
+            selectedSubscriptionID = nil
+        }
         annualPriceOverrides.removeValue(forKey: sub.id.uuidString)
         subscriptionNotes.removeValue(forKey: sub.id.uuidString)
         UserDefaults.standard.set(annualPriceOverrides, forKey: annualPriceKey)
@@ -585,6 +792,10 @@ private struct SubscriptionEditView: View {
     let subscription: Subscription
     let mode: SubscriptionEditorPresentation.Mode
     let onSave: (Subscription, Double?, String) -> Void
+    let usesNavigationStack: Bool
+    let showsCancelButton: Bool
+    let dismissesOnSave: Bool
+    let onCancel: (() -> Void)?
 
     @State private var merchant: String
     @State private var planName: String
@@ -601,11 +812,19 @@ private struct SubscriptionEditView: View {
         mode: SubscriptionEditorPresentation.Mode,
         annualPrice: Double?,
         note: String,
+        usesNavigationStack: Bool = true,
+        showsCancelButton: Bool = true,
+        dismissesOnSave: Bool = true,
+        onCancel: (() -> Void)? = nil,
         onSave: @escaping (Subscription, Double?, String) -> Void
     ) {
         self.subscription = subscription
         self.mode = mode
         self.onSave = onSave
+        self.usesNavigationStack = usesNavigationStack
+        self.showsCancelButton = showsCancelButton
+        self.dismissesOnSave = dismissesOnSave
+        self.onCancel = onCancel
         _merchant = State(initialValue: subscription.merchant)
         _planName = State(initialValue: subscription.planName)
         _period = State(initialValue: subscription.period)
@@ -618,8 +837,17 @@ private struct SubscriptionEditView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
+        if usesNavigationStack {
+            NavigationStack {
+                editContent
+            }
+        } else {
+            editContent
+        }
+    }
+
+    private var editContent: some View {
+        Form {
                 Section("subscriptions.edit.section.subscription") {
                     TextField("transaction_editor.merchant", text: $merchant)
                     TextField("subscriptions.edit.plan_name", text: $planName)
@@ -657,12 +885,22 @@ private struct SubscriptionEditView: View {
                     TextField("subscriptions.edit.note_optional", text: $note, axis: .vertical)
                         .lineLimit(3...5)
                 }
-            }
+        }
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
             .navigationTitle(mode == .create ? "subscriptions.add.title" : "subscriptions.edit.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                if showsCancelButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("common.cancel") {
+                            if let onCancel {
+                                onCancel()
+                            } else {
+                                dismiss()
+                            }
+                        }
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") { save() }
@@ -675,7 +913,6 @@ private struct SubscriptionEditView: View {
             .onChange(of: lastChargedAt) { _, newValue in
                 nextChargedAt = period.nextDate(from: newValue)
             }
-        }
     }
 
     private var amount: Double? {
@@ -714,7 +951,9 @@ private struct SubscriptionEditView: View {
             createdAt: subscription.createdAt
         )
         onSave(updated, annualPrice, note)
-        dismiss()
+        if dismissesOnSave {
+            dismiss()
+        }
     }
 
     nonisolated private static func decimalValue(from text: String) -> Double? {

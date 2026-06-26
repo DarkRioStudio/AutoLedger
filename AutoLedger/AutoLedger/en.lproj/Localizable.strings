@@ -477,6 +477,8 @@
 "ledger.footer_format" = "%d entries. Tap any transaction to correct amount, category, or note.";
 "ledger.search.prompt" = "Search transactions";
 "ledger.search.no_results" = "No matching transactions";
+"ledger.detail.empty.title" = "Select a transaction";
+"ledger.detail.empty.description" = "Choose a transaction from the list to view and edit its details here.";
 "ledger.scope.all" = "All Ledgers";
 "ledger.action.move" = "Move Ledger";
 "ledger.move.title" = "Move to Ledger";
@@ -566,6 +568,8 @@
 "subscriptions.annual_savings_short_format" = "Switch to annual and save %@/year";
 "subscriptions.empty.title" = "No Subscriptions Yet";
 "subscriptions.empty.description" = "Add a subscription manually, import a renewal email screenshot, or tap the top-right scan button to detect recurring subscriptions from history.";
+"subscriptions.detail.empty.title" = "Select a recurring bill";
+"subscriptions.detail.empty.description" = "Choose a subscription from the list to view and edit its details here.";
 "subscriptions.upload_renewal_screenshot" = "Upload Renewal Email Screenshot";
 "subscriptions.renewal_screenshot_note" = "Subscription renewal email screenshot";
 "subscriptions.edit.section.subscription" = "Subscription";

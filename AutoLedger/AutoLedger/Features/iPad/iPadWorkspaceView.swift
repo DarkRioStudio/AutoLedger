@@ -129,7 +129,7 @@ struct IPadWorkspaceView: View {
         case .ledger:
             IPadLedgerWorkspaceView()
         case .hotelStays:
-            IPadHotelStayWorkspaceView()
+            HotelStayWorkspaceView()
         case .reports:
             IPadReportWorkspaceView()
         case .reviewQueue:
@@ -2391,7 +2391,7 @@ private struct IPadBatchImportWorkspaceView: View {
 
 }
 
-private struct IPadHotelStayWorkspaceView: View {
+struct HotelStayWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
     @State private var showsPDFImporter = false
     @State private var showsEmailImporter = false

@@ -17,6 +17,9 @@ struct InboxView: View {
     @State private var isQuickSetupExpanded = false
 
     private let ocrService = OCRService()
+    private let heroMetricColumns = [
+        GridItem(.adaptive(minimum: 180), spacing: 12, alignment: .top)
+    ]
 
     private var hasShortcutEntries: Bool {
         let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
@@ -89,7 +92,7 @@ struct InboxView: View {
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
 
-            HStack(spacing: 12) {
+            LazyVGrid(columns: heroMetricColumns, alignment: .leading, spacing: 12) {
                 MetricCard(
                     title: localized("inbox.hero.monthly_expense.title", fallback: "This Month"),
                     value: AppFormatters.currency(store.monthlySnapshot.totalExpense),

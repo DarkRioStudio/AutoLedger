@@ -238,6 +238,8 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
+                .frame(maxWidth: 760, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("settings.title")
