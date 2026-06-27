@@ -129,6 +129,9 @@
 "hotel_stay.draft.error.persistence_failed_format" = "酒店水單草稿保存失敗：%@";
 "hotel_stay.draft.delete.success" = "已刪除酒店水單草稿。";
 "hotel_stay.draft.delete.error_format" = "酒店水單草稿刪除失敗：%@";
+"hotel_stay.draft.duplicate.pending" = "這份酒店水單已在待確認佇列。";
+"hotel_stay.draft.duplicate.rejected" = "這份酒店水單此前已拒絕，本次不會重複匯入。";
+"hotel_stay.draft.duplicate.posted" = "這份酒店水單已經入帳，本次不會重複匯入。";
 "hotel_stay.import.pdf" = "匯入酒店水單 PDF";
 "hotel_stay.import.email" = "掃描郵箱水單";
 "hotel_stay.import.menu" = "匯入酒店水單";

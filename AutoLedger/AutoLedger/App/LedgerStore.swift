@@ -29,6 +29,12 @@ private struct DataCleaningUndoSnapshot {
     let deletedCount: Int
 }
 
+private enum HotelStayDraftDuplicateState {
+    case pending
+    case rejected
+    case posted
+}
+
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
     static var watchSyncHandler: (() -> Void)?
@@ -805,6 +811,11 @@ final class LedgerStore: ObservableObject {
 
     @discardableResult
     func saveHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
+        if let duplicateState = duplicateHotelStayDraftState(for: draft) {
+            lastImportSummary = duplicateHotelStayDraftMessage(for: duplicateState)
+            return false
+        }
+
         do {
             if let sqlStore = transactionStore as? SQLiteTransactionStore {
                 try sqlStore.save(hotelStayDraft: draft)
@@ -1738,6 +1749,103 @@ final class LedgerStore: ObservableObject {
                 return lhs.createdAt > rhs.createdAt
             }
             return lhs.updatedAt > rhs.updatedAt
+        }
+    }
+
+    private func duplicateHotelStayDraftState(for draft: HotelStayDraft) -> HotelStayDraftDuplicateState? {
+        for existingDraft in hotelStayDrafts where existingDraft.id != draft.id {
+            guard hotelStayDraftFingerprintMatches(draft, existingDraft) else { continue }
+            switch existingDraft.status {
+            case .rejected:
+                return .rejected
+            case .confirmed, .postedToLedger:
+                return .posted
+            case .imported, .textExtracted, .parsed, .needsReview:
+                return .pending
+            }
+        }
+
+        if hotelStayRecords.contains(where: { hotelStayRecordFingerprintMatches(record: $0, draft: draft) }) {
+            return .posted
+        }
+        return nil
+    }
+
+    private func hotelStayDraftFingerprintMatches(_ lhs: HotelStayDraft, _ rhs: HotelStayDraft) -> Bool {
+        if let lhsHash = lhs.sourceEmailAttachmentHash?.nilIfEmptyForLedgerStore,
+           let rhsHash = rhs.sourceEmailAttachmentHash?.nilIfEmptyForLedgerStore,
+           lhsHash == rhsHash {
+            return true
+        }
+
+        if let lhsMessageHash = lhs.sourceEmailMessageIDHash?.nilIfEmptyForLedgerStore,
+           let rhsMessageHash = rhs.sourceEmailMessageIDHash?.nilIfEmptyForLedgerStore,
+           lhsMessageHash == rhsMessageHash {
+            let lhsFileName = normalizedHotelDraftFileName(lhs.sourceFileName)
+            let rhsFileName = normalizedHotelDraftFileName(rhs.sourceFileName)
+            if lhsFileName == nil || rhsFileName == nil || lhsFileName == rhsFileName {
+                return true
+            }
+        }
+
+        if let lhsData = lhs.sourcePDFData,
+           let rhsData = rhs.sourcePDFData,
+           !lhsData.isEmpty,
+           lhsData == rhsData {
+            return true
+        }
+        return false
+    }
+
+    private func hotelStayRecordFingerprintMatches(record: HotelStayRecord, draft: HotelStayDraft) -> Bool {
+        if let attachmentHash = draft.sourceEmailAttachmentHash?.nilIfEmptyForLedgerStore,
+           let recordData = record.sourcePDFData,
+           HotelFolioEmailFingerprint.attachmentHash(recordData) == attachmentHash {
+            return true
+        }
+
+        if let draftData = draft.sourcePDFData,
+           let recordData = record.sourcePDFData,
+           !draftData.isEmpty,
+           draftData == recordData {
+            return true
+        }
+
+        let draftFileName = normalizedHotelDraftFileName(draft.sourceFileName)
+        let recordFileName = normalizedHotelDraftFileName(record.sourceFileName)
+        if let draftFileName,
+           draftFileName == recordFileName,
+           !draft.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           draft.rawText == record.rawText {
+            return true
+        }
+        return false
+    }
+
+    private func normalizedHotelDraftFileName(_ value: String?) -> String? {
+        value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .nilIfEmptyForLedgerStore
+    }
+
+    private func duplicateHotelStayDraftMessage(for state: HotelStayDraftDuplicateState) -> String {
+        switch state {
+        case .pending:
+            return localizedMessage(
+                "hotel_stay.draft.duplicate.pending",
+                fallback: "这份酒店水单已在待确认队列。"
+            )
+        case .rejected:
+            return localizedMessage(
+                "hotel_stay.draft.duplicate.rejected",
+                fallback: "这份酒店水单此前已拒绝，本次不会重复导入。"
+            )
+        case .posted:
+            return localizedMessage(
+                "hotel_stay.draft.duplicate.posted",
+                fallback: "这份酒店水单已经入账，本次不会重复导入。"
+            )
         }
     }
 
@@ -2838,6 +2946,12 @@ extension LedgerStore {
             categoryCorrections = Dictionary(uniqueKeysWithValues: bundle.categoryCorrections.map { ($0.merchant, $0.category) })
             merchantAliases = bundle.merchantAliases
         }
+    }
+}
+
+private extension String {
+    var nilIfEmptyForLedgerStore: String? {
+        isEmpty ? nil : self
     }
 }
 

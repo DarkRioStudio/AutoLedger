@@ -40,6 +40,7 @@ struct OfflineRegression {
         verifyHotelStayModels(reporter: reporter)
         verifyHotelFolioParsePipeline(reporter: reporter)
         verifyHotelFolioEmailImportPlanning(reporter: reporter)
+        try verifyHotelFolioEmailDeduplication(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
         verifyHotelStayArchivePresentation(reporter: reporter)
@@ -424,11 +425,104 @@ struct OfflineRegression {
                 reporter.check(draft?.sourcePDFData == pdfData, "HotelFolioEmailDraftFactory keeps source PDF data")
                 reporter.check(draft?.sourceEmailSubject == "Demo Bay Hotel Folio", "HotelFolioEmailDraftFactory records email subject")
                 reporter.check(draft?.sourceEmailFrom == "Demo Bay Hotel <folio@example.com>", "HotelFolioEmailDraftFactory records email sender")
+                reporter.check(draft?.sourceEmailUID == "42", "HotelFolioEmailDraftFactory records email uid")
+                reporter.check(draft?.sourceEmailDateText == "Wed, 24 Jun 2026 09:30:00 +0800", "HotelFolioEmailDraftFactory records email date")
+                reporter.check(draft?.sourceEmailMessageIDHash?.isEmpty == false, "HotelFolioEmailDraftFactory hashes message id")
+                reporter.check(draft?.sourceEmailMessageIDHash != message.messageID, "HotelFolioEmailDraftFactory does not store raw message id as hash")
+                reporter.check(draft?.sourceEmailAttachmentHash?.isEmpty == false, "HotelFolioEmailDraftFactory hashes attachment data")
                 reporter.check(draft?.rawText.contains("Total Amount") == true, "HotelFolioEmailDraftFactory stores extracted text")
                 reporter.check(draft?.status == .textExtracted, "HotelFolioEmailDraftFactory keeps draft in extracted state before model parse")
                 reporter.check(draft?.createdAt == now, "HotelFolioEmailDraftFactory records creation time")
             }
         }
+    }
+
+    private static func verifyHotelFolioEmailDeduplication(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerHotelEmailDedupe-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let pdfData = Data("%PDF-1.7 duplicate hotel folio".utf8)
+        let message = HotelFolioEmailMessage(
+            uid: "101",
+            messageID: "folio-duplicate@example.com",
+            subject: "Demo Bay Hotel Folio",
+            from: "Demo Bay Hotel <folio@example.com>",
+            dateText: "Fri, 26 Jun 2026 10:00:00 +0800",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "101-1-folio.pdf",
+                    fileName: "folio.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        guard let attachment = message.attachments.first else {
+            reporter.check(false, "Hotel email dedupe test has attachment fixture")
+            return
+        }
+
+        let factory = HotelFolioEmailDraftFactory(now: { AppFormatters.parseFlexibleDate("2026-06-26 10:05") ?? .now })
+        let firstDraft = try factory.makeDraft(
+            message: message,
+            attachment: attachment,
+            extractedText: "Demo Bay Hotel\nTotal Amount: JPY 50000",
+            targetLedgerID: "travel-ledger"
+        )
+        let duplicateDraft = try factory.makeDraft(
+            message: message,
+            attachment: attachment,
+            extractedText: "Demo Bay Hotel\nTotal Amount: JPY 50000",
+            targetLedgerID: "travel-ledger"
+        )
+
+        reporter.check(firstDraft.id != duplicateDraft.id, "Hotel email draft factory creates distinct draft ids")
+        reporter.check(
+            firstDraft.sourceEmailMessageIDHash == duplicateDraft.sourceEmailMessageIDHash,
+            "Hotel email draft message id hash is stable"
+        )
+        reporter.check(
+            firstDraft.sourceEmailAttachmentHash == duplicateDraft.sourceEmailAttachmentHash,
+            "Hotel email draft attachment hash is stable"
+        )
+
+        let pendingStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "pending.sqlite3")
+        let pendingLedger = LedgerStore(transactionStore: pendingStore)
+        reporter.check(pendingLedger.saveHotelStayDraft(firstDraft), "LedgerStore saves first hotel email draft")
+        reporter.check(!pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore rejects duplicate pending hotel email draft")
+        reporter.check(pendingLedger.hotelStayDrafts.count == 1, "LedgerStore keeps one pending hotel email draft after duplicate")
+
+        reporter.check(pendingLedger.rejectHotelStayDraft(firstDraft), "LedgerStore can reject hotel email draft")
+        reporter.check(!pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore rejects duplicate of rejected hotel email draft")
+        reporter.check(
+            pendingLedger.pruneStaleHotelStayDrafts(updatedBefore: .distantFuture, statuses: [.rejected]) == 1,
+            "LedgerStore can clear rejected hotel email draft for retry"
+        )
+        reporter.check(pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore allows retry after rejected draft cleanup")
+
+        let postedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "posted.sqlite3")
+        let postedLedger = LedgerStore(transactionStore: postedStore)
+        var confirmedDraft = firstDraft
+        confirmedDraft.status = .confirmed
+        confirmedDraft.parsedPayload = HotelFolioParsedPayload(
+            hotelName: "Demo Bay Hotel",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            currency: "JPY",
+            totalAmount: 50000,
+            confidence: 0.91
+        )
+        confirmedDraft.confidence = 0.91
+        reporter.check(postedLedger.saveHotelStayDraft(firstDraft), "LedgerStore saves hotel email draft before posting")
+        reporter.check(postedLedger.postConfirmedHotelStayDraft(confirmedDraft), "LedgerStore posts hotel email draft")
+        reporter.check(!postedLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore rejects duplicate of posted hotel email folio")
+        reporter.check(postedLedger.hotelStayRecords.count == 1, "LedgerStore keeps one posted hotel stay after duplicate")
     }
 
     private static func verifyHotelStayReviewForm(reporter: RegressionReporter) {

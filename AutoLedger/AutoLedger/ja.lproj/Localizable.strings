@@ -129,6 +129,9 @@
 "hotel_stay.draft.error.persistence_failed_format" = "ホテル明細の下書きを保存できませんでした：%@";
 "hotel_stay.draft.delete.success" = "ホテル明細の下書きを削除しました。";
 "hotel_stay.draft.delete.error_format" = "ホテル明細の下書きを削除できませんでした：%@";
+"hotel_stay.draft.duplicate.pending" = "このホテル明細はすでに確認待ちです。";
+"hotel_stay.draft.duplicate.rejected" = "このホテル明細は以前却下されたため、再取り込みしません。";
+"hotel_stay.draft.duplicate.posted" = "このホテル明細はすでに記帳済みのため、再取り込みしません。";
 "hotel_stay.import.pdf" = "ホテル明細 PDF を取り込む";
 "hotel_stay.import.email" = "メールの明細をスキャン";
 "hotel_stay.import.menu" = "ホテル明細を取り込む";

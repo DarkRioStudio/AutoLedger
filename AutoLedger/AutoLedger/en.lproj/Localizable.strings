@@ -129,6 +129,9 @@
 "hotel_stay.draft.error.persistence_failed_format" = "Failed to save hotel folio draft: %@";
 "hotel_stay.draft.delete.success" = "Hotel folio draft deleted.";
 "hotel_stay.draft.delete.error_format" = "Failed to delete hotel folio draft: %@";
+"hotel_stay.draft.duplicate.pending" = "This hotel folio is already waiting for review.";
+"hotel_stay.draft.duplicate.rejected" = "This hotel folio was rejected before and will not be imported again.";
+"hotel_stay.draft.duplicate.posted" = "This hotel folio has already been posted and will not be imported again.";
 "hotel_stay.import.pdf" = "Import Hotel Folio PDF";
 "hotel_stay.import.email" = "Scan Email Folios";
 "hotel_stay.import.menu" = "Import Hotel Folio";

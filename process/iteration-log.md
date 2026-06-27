@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-267 酒店待确认草稿队列持久化）
+更新日期：2026-06-27（ITER-268 酒店邮箱水单去重与重试基础）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-268 酒店邮箱水单去重与重试基础
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Email B
+- 类型：能力增强 / 数据持久化 / 回归
+- 目标：完成 `GOAL-1931`，让本地邮箱导入的酒店水单具备稳定去重指纹，并避免 pending、rejected、posted 三类重复水单反复进入待确认队列。
+- 改动范围：`HotelStayDraft` 新增本地邮箱 UID、邮件日期、Message-ID hash 和附件 hash 字段；`HotelFolioEmailDraftFactory` 生成稳定指纹；`SQLiteTransactionStore` 扩展 `hotel_stay_drafts` 表、读写和兼容补列；`LedgerStore.saveHotelStayDraft` 增加重复检测，覆盖同一附件 hash、同一 Message-ID hash、同一原始 PDF 数据和已入账酒店记录；四语本地化、离线回归、`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1931` 状态。
+- 未改动范围：未实现 Demo Mode、Review Notes、公共版本开关、日志脱敏审计、后台邮箱扫描、Worker 云端自动化或自动正式入账；未修改 CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：本地邮箱草稿会保存来源 UID、邮件日期、脱敏后的 Message-ID hash 和附件 hash；重复 pending 草稿会被拦截，rejected 草稿在未清理前不会重复打扰，清理 rejected stale draft 后可重新导入，已经确认入账的同一水单不会再次生成待确认草稿；缺授权码、IMAP 错误、连接失败、附件不支持和 PDFKit 空文本继续走现有可恢复错误态。
+- 未完成内容：`GOAL-1932` 的虚构邮箱 / 虚构 PDF Demo Mode、审核操作说明、日志脱敏检查和公共版本开关仍待后续 goal；`GOAL-1960` release smoke 暂不执行。
+- 测试情况：先执行 `bash scripts/run_offline_regression.sh` 观察到新增红测因缺少邮箱 UID / 日期 / hash 字段编译失败；实现后重新执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_golden_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1931 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：本轮新增的是本地 SQLite 可选列，旧库通过 `ALTER TABLE ... ADD COLUMN` 补列兼容；Message-ID 和附件仅保存稳定 hash，不保存原始 Message-ID；若用户确实需要重新导入已拒绝水单，需要先清理 rejected stale draft；已入账的同一 PDF 会被拦截，避免重复酒店记录和重复普通支出流水。
+- 回滚方式：回退 `HotelStayDraft` 新字段、邮箱草稿工厂指纹、SQLite 补列和读写、`LedgerStore` 重复检测、四语 duplicate 文案、离线回归和版本文档 / 日志即可；本地已补的 SQLite 可选列可被旧代码忽略。
+- 结论：`GOAL-1931` 已完成工程闭环，酒店邮箱公共用户链路具备待确认队列后的去重、拒绝防打扰和重试基础。
+- 下一步建议：继续 `GOAL-1932`，补 Demo Mode、审核材料、日志脱敏检查和公共版本开关；继续排除 `GOAL-1960`，等待 release smoke 节点再处理。
 
 ### ITER-267 酒店待确认草稿队列持久化
 - 日期：2026-06-27

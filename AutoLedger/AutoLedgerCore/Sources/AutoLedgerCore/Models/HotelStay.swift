@@ -115,6 +115,10 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
     public var sourcePDFData: Data?
     public var sourceEmailSubject: String?
     public var sourceEmailFrom: String?
+    public var sourceEmailUID: String?
+    public var sourceEmailMessageIDHash: String?
+    public var sourceEmailAttachmentHash: String?
+    public var sourceEmailDateText: String?
     public var rawText: String
     public var parsedPayload: HotelFolioParsedPayload?
     public var confidence: Double
@@ -130,6 +134,10 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         sourcePDFData: Data? = nil,
         sourceEmailSubject: String? = nil,
         sourceEmailFrom: String? = nil,
+        sourceEmailUID: String? = nil,
+        sourceEmailMessageIDHash: String? = nil,
+        sourceEmailAttachmentHash: String? = nil,
+        sourceEmailDateText: String? = nil,
         rawText: String = "",
         parsedPayload: HotelFolioParsedPayload? = nil,
         confidence: Double = 0,
@@ -144,6 +152,10 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         self.sourcePDFData = sourcePDFData
         self.sourceEmailSubject = sourceEmailSubject
         self.sourceEmailFrom = sourceEmailFrom
+        self.sourceEmailUID = sourceEmailUID
+        self.sourceEmailMessageIDHash = sourceEmailMessageIDHash
+        self.sourceEmailAttachmentHash = sourceEmailAttachmentHash
+        self.sourceEmailDateText = sourceEmailDateText
         self.rawText = rawText
         self.parsedPayload = parsedPayload
         self.confidence = confidence

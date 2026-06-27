@@ -404,6 +404,33 @@ public struct HotelFolioEmailCandidateFilter: Sendable {
     }
 }
 
+public enum HotelFolioEmailFingerprint: Sendable {
+    public static func messageIDHash(_ messageID: String?) -> String? {
+        guard let normalized = messageID?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+            .lowercased()
+            .nilIfEmpty else {
+            return nil
+        }
+        return stableHashHex(Data(normalized.utf8))
+    }
+
+    public static func attachmentHash(_ data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        return stableHashHex(data)
+    }
+
+    private static func stableHashHex(_ data: Data) -> String {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in data {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return String(format: "%016llx", CUnsignedLongLong(hash))
+    }
+}
+
 public struct HotelFolioEmailDraftFactory: Sendable {
     private let now: @Sendable () -> Date
 
@@ -430,6 +457,10 @@ public struct HotelFolioEmailDraftFactory: Sendable {
             sourcePDFData: attachment.data,
             sourceEmailSubject: message.subject.nilIfEmpty,
             sourceEmailFrom: message.from.nilIfEmpty,
+            sourceEmailUID: message.uid.nilIfEmpty,
+            sourceEmailMessageIDHash: HotelFolioEmailFingerprint.messageIDHash(message.messageID),
+            sourceEmailAttachmentHash: HotelFolioEmailFingerprint.attachmentHash(attachment.data),
+            sourceEmailDateText: message.dateText?.nilIfEmpty,
             rawText: trimmedText,
             confidence: 0,
             status: .textExtracted,
