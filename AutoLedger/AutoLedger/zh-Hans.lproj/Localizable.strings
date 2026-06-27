@@ -190,6 +190,8 @@
 "hotel_stay.status.posted" = "已关联流水";
 "hotel_stay.status.missing_transaction" = "未关联流水";
 "hotel_stay.detail.title" = "酒店消费详情";
+"hotel_stay.detail.empty.title" = "选择一笔酒店消费";
+"hotel_stay.detail.empty.description" = "从列表中选择酒店水单，或通过深层链接打开指定记录。";
 "hotel_stay.detail.identity" = "酒店";
 "hotel_stay.detail.stay" = "入住";
 "hotel_stay.detail.charges" = "费用";

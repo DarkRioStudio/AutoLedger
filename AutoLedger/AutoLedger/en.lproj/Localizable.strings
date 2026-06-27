@@ -190,6 +190,8 @@
 "hotel_stay.status.posted" = "Linked";
 "hotel_stay.status.missing_transaction" = "Not Linked";
 "hotel_stay.detail.title" = "Hotel Stay Detail";
+"hotel_stay.detail.empty.title" = "Select a Hotel Stay";
+"hotel_stay.detail.empty.description" = "Choose a hotel folio from the list or open a specific record with a deep link.";
 "hotel_stay.detail.identity" = "Hotel";
 "hotel_stay.detail.stay" = "Stay";
 "hotel_stay.detail.charges" = "Charges";

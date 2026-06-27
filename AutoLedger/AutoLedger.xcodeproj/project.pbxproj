@@ -152,6 +152,7 @@
 				Features/Report/README.md,
 				Features/Settings/README.md,
 				Features/Subscription/README.md,
+				Info.plist,
 				Resources/README.md,
 				Shared/Components/README.md,
 				Shared/Constants/README.md,
@@ -1114,6 +1115,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedger/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=iphoneos*]" = AutoLedger;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -1178,6 +1180,7 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AutoLedger/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "";
 				"INFOPLIST_KEY_CFBundleDisplayName[sdk=iphoneos*]" = AutoLedger;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;

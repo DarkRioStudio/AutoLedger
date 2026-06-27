@@ -80,10 +80,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
-                    NavigationLink {
-                        SubscriptionListView()
-                            .environmentObject(store)
-                    } label: {
+                    NavigationLink(value: SettingsNavigationTarget.subscriptions) {
                         settingsRow(
                             icon: "repeat.circle.fill",
                             iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
@@ -238,6 +235,9 @@ struct SettingsView: View {
                 switch target {
                 case .ledgerProfiles:
                     LedgerProfileManagementView()
+                        .environmentObject(store)
+                case .subscriptions:
+                    SubscriptionListView()
                         .environmentObject(store)
                 }
             }

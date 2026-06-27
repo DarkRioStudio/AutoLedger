@@ -101,6 +101,9 @@ struct IPadWorkspaceView: View {
             }
             select(newValue)
         }
+        .onChange(of: navigationState.selectedHomeTab) { _, newValue in
+            routeSharedHomeTab(newValue)
+        }
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.quickLedgerOpenLedgerEvent)) { _ in
             consumeQuickLedgerPendingNavigationIfNeeded()
         }
@@ -166,6 +169,22 @@ struct IPadWorkspaceView: View {
     private func openLedgerProfilesFromSharedLedger() {
         navigationState.settingsPath = [.ledgerProfiles]
         select(.settings)
+    }
+
+    private func routeSharedHomeTab(_ rawValue: Int) {
+        guard let tab = AutoLedgerHomeTab(rawValue: rawValue) else { return }
+        switch tab {
+        case .inbox:
+            select(.capture)
+        case .ledger:
+            select(.ledger)
+        case .hotelStays:
+            select(.hotelStays)
+        case .report:
+            select(.reports)
+        case .settings:
+            select(.settings)
+        }
     }
 
     #if targetEnvironment(macCatalyst)
@@ -2401,6 +2420,7 @@ private struct IPadBatchImportWorkspaceView: View {
 
 struct HotelStayWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @State private var showsPDFImporter = false
     @State private var showsEmailImporter = false
     @State private var reviewDraft: HotelStayDraft?
@@ -2418,6 +2438,7 @@ struct HotelStayWorkspaceView: View {
             ledgerID: ledgerID,
             isImporting: isImporting,
             statusMessage: statusMessage,
+            selectedRecordID: $navigationState.selectedHotelStayRecordID,
             onImportPDF: {
                 showsPDFImporter = true
             },

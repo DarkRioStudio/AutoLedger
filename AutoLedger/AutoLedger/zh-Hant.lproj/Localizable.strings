@@ -190,6 +190,8 @@
 "hotel_stay.status.posted" = "已關聯流水";
 "hotel_stay.status.missing_transaction" = "未關聯流水";
 "hotel_stay.detail.title" = "酒店消費詳情";
+"hotel_stay.detail.empty.title" = "選擇一筆酒店消費";
+"hotel_stay.detail.empty.description" = "從列表中選擇酒店水單，或透過深層連結開啟指定記錄。";
 "hotel_stay.detail.identity" = "酒店";
 "hotel_stay.detail.stay" = "入住";
 "hotel_stay.detail.charges" = "費用";

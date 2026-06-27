@@ -10,6 +10,7 @@ import AppKit
 #endif
 
 struct HotelStayListView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let records: [HotelStayRecord]
     let transactions: [Transaction]
     let ledgerID: String?
@@ -18,6 +19,7 @@ struct HotelStayListView: View {
     let onImportPDF: (() -> Void)?
     let onImportEmail: (() -> Void)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
+    @Binding private var selectedRecordID: UUID?
 
     private let presenter = HotelStayArchivePresenter()
 
@@ -27,6 +29,7 @@ struct HotelStayListView: View {
         ledgerID: String? = nil,
         isImporting: Bool = false,
         statusMessage: String? = nil,
+        selectedRecordID: Binding<UUID?> = .constant(nil),
         onImportPDF: (() -> Void)? = nil,
         onImportEmail: (() -> Void)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
@@ -39,6 +42,7 @@ struct HotelStayListView: View {
         self.onImportPDF = onImportPDF
         self.onImportEmail = onImportEmail
         self.onDeleteRecord = onDeleteRecord
+        self._selectedRecordID = selectedRecordID
     }
 
     private var hasImportActions: Bool {
@@ -49,62 +53,106 @@ struct HotelStayListView: View {
         presenter.makeListSnapshot(records: records, ledgerID: ledgerID)
     }
 
+    private var selectedRecord: HotelStayRecord? {
+        guard let selectedRecordID else { return nil }
+        return records.first { $0.id == selectedRecordID }
+    }
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if snapshot.rows.isEmpty {
-                    VStack(spacing: 16) {
-                        if let statusMessage {
-                            statusRow(statusMessage)
-                                .padding(.horizontal, 20)
+        NavigationSplitView {
+            listColumn
+                .navigationTitle("hotel_stay.list.title")
+                .navigationSplitViewColumnWidth(min: 340, ideal: 420, max: 520)
+                .toolbar {
+                    if hasImportActions {
+                        ToolbarItem(placement: .primaryAction) {
+                            importMenu
                         }
-                        ContentUnavailableView(
-                            "hotel_stay.list.empty.title",
-                            systemImage: "bed.double",
-                            description: Text("hotel_stay.list.empty.description")
-                        )
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .autoLedgerScreenChrome()
-                } else {
-                    List {
-                        if statusMessage != nil {
-                            importSection
-                        }
-                        summarySection
-                        staySection
-                    }
-                    .autoLedgerListChrome()
-                }
-            }
-            .navigationTitle("hotel_stay.list.title")
-            .autoLedgerNavigationBarChrome()
-            .toolbar {
-                if hasImportActions {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            if onImportPDF != nil {
-                                Button {
-                                    onImportPDF?()
-                                } label: {
-                                    Label("hotel_stay.import.pdf", systemImage: "doc.badge.plus")
-                                }
-                            }
-                            if onImportEmail != nil {
-                                Button {
-                                    onImportEmail?()
-                                } label: {
-                                    Label("hotel_stay.import.email", systemImage: "envelope.badge")
-                                }
-                            }
-                        } label: {
-                            Label("hotel_stay.import.menu", systemImage: "plus")
-                        }
-                        .disabled(isImporting)
                     }
                 }
-            }
+        } detail: {
+            detailColumn
         }
+        .navigationSplitViewStyle(.balanced)
+        .autoLedgerNavigationBarChrome()
+        .onAppear {
+            reconcileSelection()
+        }
+        .onChange(of: snapshot.rows.map(\.id)) { _, _ in
+            reconcileSelection()
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            reconcileSelection()
+        }
+    }
+
+    @ViewBuilder
+    private var listColumn: some View {
+        if snapshot.rows.isEmpty {
+            VStack(spacing: 16) {
+                if let statusMessage {
+                    statusRow(statusMessage)
+                        .padding(.horizontal, 20)
+                }
+                ContentUnavailableView(
+                    "hotel_stay.list.empty.title",
+                    systemImage: "bed.double",
+                    description: Text("hotel_stay.list.empty.description")
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .autoLedgerScreenChrome()
+        } else {
+            List(selection: $selectedRecordID) {
+                if statusMessage != nil {
+                    importSection
+                }
+                summarySection
+                staySection
+            }
+            .autoLedgerListChrome()
+        }
+    }
+
+    @ViewBuilder
+    private var detailColumn: some View {
+        if let record = selectedRecord {
+            HotelStayDetailView(
+                record: record,
+                transactions: transactions,
+                ledgerID: ledgerID,
+                onDeleteRecord: onDeleteRecord
+            )
+        } else {
+            ContentUnavailableView(
+                "hotel_stay.detail.empty.title",
+                systemImage: "bed.double",
+                description: Text("hotel_stay.detail.empty.description")
+            )
+            .autoLedgerScreenChrome()
+        }
+    }
+
+    private var importMenu: some View {
+        Menu {
+            if onImportPDF != nil {
+                Button {
+                    onImportPDF?()
+                } label: {
+                    Label("hotel_stay.import.pdf", systemImage: "doc.badge.plus")
+                }
+            }
+            if onImportEmail != nil {
+                Button {
+                    onImportEmail?()
+                } label: {
+                    Label("hotel_stay.import.email", systemImage: "envelope.badge")
+                }
+            }
+        } label: {
+            Label("hotel_stay.import.menu", systemImage: "plus")
+        }
+        .disabled(isImporting)
     }
 
     private var importSection: some View {
@@ -156,14 +204,7 @@ struct HotelStayListView: View {
         Section {
             ForEach(snapshot.rows) { row in
                 if let record = records.first(where: { $0.id == row.id }) {
-                    NavigationLink {
-                        HotelStayDetailView(
-                            record: record,
-                            transactions: transactions,
-                            ledgerID: ledgerID,
-                            onDeleteRecord: onDeleteRecord
-                        )
-                    } label: {
+                    NavigationLink(value: row.id) {
                         HotelStayRowView(row: row)
                     }
                     .listRowBackground(AppTheme.card)
@@ -188,6 +229,20 @@ struct HotelStayListView: View {
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func reconcileSelection() {
+        let rowIDs = snapshot.rows.map(\.id)
+        guard !rowIDs.isEmpty else {
+            selectedRecordID = nil
+            return
+        }
+
+        if let selectedRecordID, rowIDs.contains(selectedRecordID) {
+            return
+        }
+
+        selectedRecordID = horizontalSizeClass == .regular ? rowIDs.first : nil
     }
 }
 

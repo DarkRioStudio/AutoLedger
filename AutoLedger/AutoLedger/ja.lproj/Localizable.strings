@@ -190,6 +190,8 @@
 "hotel_stay.status.posted" = "取引にリンク済み";
 "hotel_stay.status.missing_transaction" = "取引未リンク";
 "hotel_stay.detail.title" = "ホテル滞在詳細";
+"hotel_stay.detail.empty.title" = "ホテル滞在を選択";
+"hotel_stay.detail.empty.description" = "一覧からホテル明細を選択するか、ディープリンクで指定の記録を開きます。";
 "hotel_stay.detail.identity" = "ホテル";
 "hotel_stay.detail.stay" = "滞在";
 "hotel_stay.detail.charges" = "料金";

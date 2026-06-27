@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-265 辅助功能与大字体 smoke）
+更新日期：2026-06-27（ITER-266 Deep link Router 基线）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-266 Deep link Router 基线
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Deep Link
+- 类型：能力增强 / 导航 / 治理
+- 目标：完成 `GOAL-1920`，为 Widget 和 App Intents 第一段提供稳定的 `autoledger://` 路由基线。
+- 改动范围：`AutoLedgerNavigationState` 新增集中 deep link destination / parser / router；`AutoLedgerApp` 根级 `.onOpenURL` 改为委托导航状态；主 App target 注册 `autoledger` URL scheme；酒店消费列表改为共享选择状态的 `NavigationSplitView` 并支持指定酒店详情；设置页订阅列表改为可路由 destination；Mac Catalyst 工作台响应共享 tab 状态；新增 `scripts/check_deep_link_smoke.py` 并接入离线回归；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1920` 状态。
+- 未改动范围：未实现 Widget、App Intents、Shortcuts 参数入口或自然语言问答；未新增自动入账、自动删除或后台同步行为；未修改业务数据模型、SQLite / CloudKit schema、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：`autoledger://ledger`、`autoledger://ledger/today`、`autoledger://transaction/{id}`、`autoledger://hotel-stay/{id}`、`autoledger://subscriptions`、`autoledger://settings/ledger-profiles` 和 `autoledger://scan` 均具备统一解析和状态落点；交易 / 酒店深链会尝试切换到记录所在账本；无效 ID 保留恢复性空状态；`GOAL-1920` 在版本计划中标记为 DONE。
+- 未完成内容：带真实记录 ID 的 `xcrun simctl openurl` 端到端截图 / 录屏仍作为 release smoke 人工 evidence；Widget 和 App Intents 使用这些路由的入口留给 `GOAL-1921 / GOAL-1922`。
+- 测试情况：执行 `python3 scripts/check_deep_link_smoke.py`、`python3 scripts/check_localization_coverage.py`、`python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_accessibility_smoke.py`、`git diff --check`、主 App `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' ... build`、生成 App 包 `Info.plist` 检查、`bash scripts/run_offline_regression.sh` 和 `bash scripts/run_golden_regression.sh` 均通过。
+- 风险与注意事项：URL scheme 属于主 App generated Info.plist build setting，后续若拆分独立 Info.plist 需要同步迁移；静态 smoke 只能防止路由代码和注册项丢失，不能替代真实安装后的 `simctl openurl`。
+- 回滚方式：回退 deep link parser / router、URL scheme build setting、酒店列表选择态改造、设置订阅 destination、Mac 工作台 tab 同步、`scripts/check_deep_link_smoke.py` 和版本文档 / 日志即可；无数据迁移需要回滚。
+- 结论：`GOAL-1920` 的 deep link Router 工程基线已收口，可供后续 Widget / App Intents 复用。
+- 下一步建议：验证通过后进入 `GOAL-1930` 酒店邮箱待确认草稿队列持久化。
 
 ### ITER-265 辅助功能与大字体 smoke
 - 日期：2026-06-27

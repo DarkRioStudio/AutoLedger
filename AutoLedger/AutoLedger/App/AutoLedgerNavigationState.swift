@@ -5,6 +5,65 @@ import SwiftUI
 
 enum SettingsNavigationTarget: Hashable {
     case ledgerProfiles
+    case subscriptions
+}
+
+enum AutoLedgerDeepLinkDestination: Equatable {
+    case ledger
+    case ledgerToday
+    case transaction(UUID)
+    case hotelStay(UUID)
+    case subscriptions
+    case ledgerProfiles
+    case scan
+}
+
+enum AutoLedgerDeepLinkParser {
+    static let scheme = "autoledger"
+
+    static func parse(_ url: URL) -> AutoLedgerDeepLinkDestination? {
+        guard url.scheme?.lowercased() == scheme else { return nil }
+
+        let parts = destinationParts(from: url)
+        guard let first = parts.first else { return .scan }
+
+        switch first {
+        case "ledger":
+            if parts.dropFirst().first == "today" {
+                return .ledgerToday
+            }
+            return .ledger
+        case "transaction":
+            guard let id = uuid(from: parts.dropFirst().first) else { return nil }
+            return .transaction(id)
+        case "hotel-stay", "hotelstay":
+            guard let id = uuid(from: parts.dropFirst().first) else { return nil }
+            return .hotelStay(id)
+        case "subscriptions", "subscription":
+            return .subscriptions
+        case "settings":
+            guard parts.dropFirst().first == "ledger-profiles" else { return nil }
+            return .ledgerProfiles
+        case "scan", "inbox":
+            return .scan
+        default:
+            return nil
+        }
+    }
+
+    private static func destinationParts(from url: URL) -> [String] {
+        let host = url.host(percentEncoded: false)
+        let pathParts = url.pathComponents.filter { $0 != "/" }
+        return ([host].compactMap { $0 } + pathParts)
+            .compactMap { $0.removingPercentEncoding }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+    }
+
+    private static func uuid(from value: String?) -> UUID? {
+        guard let value else { return nil }
+        return UUID(uuidString: value)
+    }
 }
 
 struct SubscriptionEditorPresentation: Identifiable {
@@ -52,6 +111,8 @@ final class AutoLedgerNavigationState: ObservableObject {
     @Published var isPresentingDeletedTransactions = false
     @Published var isPresentingLedgerProfiles = false
 
+    @Published var selectedHotelStayRecordID: UUID?
+
     @Published var selectedSubscriptionID: UUID?
     @Published var subscriptionEditor: SubscriptionEditorPresentation?
 
@@ -62,6 +123,51 @@ final class AutoLedgerNavigationState: ObservableObject {
     func openLedgerProfiles() {
         selectedHomeTab = AutoLedgerHomeTab.settings.rawValue
         settingsPath = [.ledgerProfiles]
+    }
+
+    @discardableResult
+    func openDeepLink(_ url: URL, store: LedgerStore) -> Bool {
+        guard let destination = AutoLedgerDeepLinkParser.parse(url) else { return false }
+        open(destination, store: store)
+        return true
+    }
+
+    func open(_ destination: AutoLedgerDeepLinkDestination, store: LedgerStore) {
+        switch destination {
+        case .ledger, .ledgerToday:
+            openLedgerTab()
+        case .transaction(let id):
+            selectLedgerForTransaction(id, store: store)
+            selectedHomeTab = AutoLedgerHomeTab.ledger.rawValue
+            selectedLedgerTransactionID = id
+        case .hotelStay(let id):
+            selectLedgerForHotelStay(id, store: store)
+            selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
+            selectedHotelStayRecordID = id
+        case .subscriptions:
+            selectedHomeTab = AutoLedgerHomeTab.settings.rawValue
+            settingsPath = [.subscriptions]
+        case .ledgerProfiles:
+            openLedgerProfiles()
+        case .scan:
+            selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
+        }
+    }
+
+    private func selectLedgerForTransaction(_ id: UUID, store: LedgerStore) {
+        guard let transaction = store.transactions.first(where: { $0.id == id }),
+              let profile = store.activeLedgerProfiles.first(where: { $0.id == transaction.resolvedLedgerID() }) else {
+            return
+        }
+        store.selectLedgerProfile(profile)
+    }
+
+    private func selectLedgerForHotelStay(_ id: UUID, store: LedgerStore) {
+        guard let record = store.hotelStayRecords.first(where: { $0.id == id }),
+              let profile = store.activeLedgerProfiles.first(where: { $0.id == record.ledgerID }) else {
+            return
+        }
+        store.selectLedgerProfile(profile)
     }
 }
 
