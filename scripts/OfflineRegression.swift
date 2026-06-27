@@ -4561,8 +4561,27 @@ struct OfflineRegression {
             bundle.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "BackupBundle preserves hotel stay transaction link"
         )
+        let activeBackupTransaction = bundle.transactions.first { $0.id == active.id }
+        let deletedBackupTransaction = bundle.transactions.first { $0.id == deleted.id }
+        reporter.check(
+            activeBackupTransaction?.syncMetadata?.transactionID == active.id,
+            "BackupBundle preserves active transaction sync metadata"
+        )
+        reporter.check(
+            activeBackupTransaction?.syncMetadata?.deletedAt == nil,
+            "BackupBundle keeps active sync tombstone empty"
+        )
+        reporter.check(
+            deletedBackupTransaction?.deletedAt != nil,
+            "BackupBundle preserves deleted transaction tombstone"
+        )
+        reporter.check(
+            deletedBackupTransaction?.syncMetadata?.deletedAt != nil,
+            "BackupBundle preserves deleted sync tombstone"
+        )
         reporter.check(bundle.customCategories == ["咖啡"], "BackupBundle includes custom categories")
         reporter.check(bundle.subscriptionMetadata.annualPriceOverrides[subscription.id.uuidString] == 168.0, "BackupBundle includes subscription annual price metadata")
+        reporter.check(bundle.subscriptionMetadata.notes[subscription.id.uuidString] == "年度价备注", "BackupBundle includes subscription notes metadata")
 
         let restoreStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "restore.sqlite3")
         let restoreLedger = LedgerStore(transactionStore: restoreStore)
@@ -4577,7 +4596,25 @@ struct OfflineRegression {
             restoreLedger.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "Backup restore keeps hotel stay transaction link"
         )
+        let restoredActiveMetadata = try restoreStore.loadTransactionSyncMetadata(transactionID: active.id)
+        reporter.check(
+            restoredActiveMetadata?.syncRevision == activeBackupTransaction?.syncMetadata?.syncRevision,
+            "Backup restore keeps active sync revision"
+        )
+        reporter.check(
+            restoredActiveMetadata?.deletedAt == nil,
+            "Backup restore keeps active sync tombstone empty"
+        )
         reporter.check(restoreLedger.deletedTransactions.contains(deleted.assigningLedgerIDIfMissing()), "Backup restore keeps deleted transaction")
+        let restoredDeletedMetadata = try restoreStore.loadTransactionSyncMetadata(transactionID: deleted.id)
+        reporter.check(
+            restoredDeletedMetadata?.deletedAt != nil,
+            "Backup restore keeps deleted sync tombstone"
+        )
+        reporter.check(
+            restoredDeletedMetadata?.idempotencyKey == deletedBackupTransaction?.syncMetadata?.idempotencyKey,
+            "Backup restore keeps sync idempotency key"
+        )
         let restoredSubscription = restoreLedger.subscriptions.first { $0.id == subscription.id }
         reporter.check(
             restoredSubscription?.merchant == subscription.merchant &&
@@ -4591,6 +4628,8 @@ struct OfflineRegression {
         reporter.check(restoreLedger.customSources == ["测试来源"], "Backup restore keeps custom sources")
         reporter.check(restoreLedger.merchantAliases["原始商户"] == "别名商户", "Backup restore keeps merchant aliases")
         reporter.check(restoreLedger.categoryCorrections["备份回归咖啡"] == .dining, "Backup restore keeps category corrections")
+        let restoredSubscriptionNotes = UserDefaults.standard.dictionary(forKey: "subscriptionNotes") as? [String: String]
+        reporter.check(restoredSubscriptionNotes?[subscription.id.uuidString] == "年度价备注", "Backup restore keeps subscription notes metadata")
     }
 
     private static func sameMinute(_ lhs: Date, _ rhs: Date) -> Bool {

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-271 Widget 第一段）
+更新日期：2026-06-27（ITER-272 CSV / JSON 与备份恢复 smoke）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-272 CSV / JSON 与备份恢复 smoke
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Reliability
+- 类型：测试 / 治理
+- 目标：完成 `GOAL-1940`，把 CSV / JSON 与备份恢复可靠性覆盖固化为可重复执行的回归门禁。
+- 改动范围：`scripts/OfflineRegression.swift` 的 `verifyBackupRoundTrip` 增加 active / deleted 交易 sync metadata、删除 tombstone、idempotency key 和订阅 notes metadata 的导出 / 恢复断言；新增 `scripts/check_reliability_smoke.py`，静态检查 CSV、结构化 JSON、BackupBundle、SQLite restore、LedgerStore 备份入口、sync metadata 和 tombstone 覆盖面；`scripts/run_offline_regression.sh` 纳入 reliability smoke；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1940` 状态。
+- 未改动范围：未修改 BackupBundle schema、CSV 字段、结构化 JSON schema、SQLite / CloudKit schema、导入导出 UI、iCloud / CloudKit 同步行为、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：备份恢复回归现在明确验证多账本 `ledgerID`、酒店消费 `hotelStayRecordID`、active 交易 sync metadata、deleted 交易 tombstone / sync tombstone、恢复后的 sync revision / idempotency key、订阅、订阅 notes metadata、自定义分类 / 来源、商户别名和分类修正；静态 reliability smoke 防止后续误删这些覆盖点。
+- 未完成内容：真实 UI 菜单触发 CSV 导出 / JSON 恢复、文件选择器人工回归、CloudKit 真机同步后备份恢复和 release smoke evidence 仍留给后续发布节点；本轮没有新增新的备份格式能力。
+- 测试情况：执行 `python3 scripts/check_reliability_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `git diff --check` 通过。
+- 风险与注意事项：这是测试覆盖增强，不改变用户可见导入导出行为；`BackupBundle` 当前仍是 schema v1，新增断言依赖既有 SQLite `loadBackupTransactions()` 对 sync metadata 的导出能力。
+- 回滚方式：回退 `verifyBackupRoundTrip` 新断言、`scripts/check_reliability_smoke.py`、离线回归入口和版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1940` 已完成工程闭环，CSV / JSON 与备份恢复关键可靠性覆盖进入默认离线回归。
+- 下一步建议：继续 `GOAL-1941` 长列表性能与加载检查，随后推进 `GOAL-1950` 日文审校与多语言 golden cases；继续排除 `GOAL-1960`。
 
 ### ITER-271 Widget 第一段
 - 日期：2026-06-27
