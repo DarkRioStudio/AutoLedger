@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-268 酒店邮箱水单去重与重试基础）
+更新日期：2026-06-27（ITER-269 酒店邮箱 Demo Mode 与审核材料）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-269 酒店邮箱 Demo Mode 与审核材料
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Email B
+- 类型：能力增强 / 隐私治理 / 文档
+- 目标：完成 `GOAL-1932`，让酒店邮箱导入主线具备不依赖真实邮箱的 Demo Mode、审核说明和静态隐私门禁。
+- 改动范围：`HotelFolioEmailDemoFixture` 新增虚构酒店水单邮件、PDF 附件和文本 fixture；`HotelFolioEmailImportService` 新增 `HotelFolioEmailDemoMode`，在本机生成虚构 PDF 并提供集中开关；`HotelFolioEmailImportView` 新增 Demo section，加载虚构候选邮件并复用既有附件选择和复核链路；四语本地化新增 Demo 文案；新增 `scripts/check_hotel_email_demo_privacy.py` 并纳入离线回归；新增 `versions/v1.6.2-hotel-email-review-notes.md`；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1932` 状态。
+- 未改动范围：未实现后台邮箱扫描、Worker 云端自动化、云端邮箱授权保存、自动正式入账、真实邮箱测试账号、CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：审核员可在“酒店消费 -> 右上角 + -> 邮箱水单导入 -> Demo Mode -> 加载示例水单”进入虚构候选邮件，选择 `autoledger-demo-hotel-folio.pdf` 后打开酒店水单复核页；Demo 使用 `example.test` 保留域名、`Demo Bay Hotel`、`DEMO-2026-0618` 和遮蔽卡号，不连接 IMAP、不读取 Keychain；审核说明草稿提供 ASC / TestFlight 可用操作步骤和隐私边界。
+- 未完成内容：真实 IMAP 沙盒账号人工测试、真实审核截图 / 录屏和 `GOAL-1960` release smoke 仍待后续节点；Worker 云端自动化继续不作为公共主链路。
+- 测试情况：先执行 `bash scripts/run_offline_regression.sh` 观察到新增红测因缺少 `HotelFolioEmailDemoFixture` 编译失败；实现后首次回归发现隐私脚本误把正常 Swift 参数名 `password: credential` 识别为泄露，已收窄为只扫描 Demo fixture / Review Notes；重新执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1932 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：Demo Mode 默认通过 `HotelFolioEmailDemoMode.isAvailable` 保留在公共版本，目的是审核和无邮箱演示；Demo 仍会生成本地草稿和可确认入账的示例记录，测试后可按普通酒店记录删除；真实 IMAP 扫描仍需要用户主动点击并提供本机 Keychain 授权码。
+- 回滚方式：回退 Demo fixture、Demo PDF 生成、邮箱导入页 Demo section、四语 Demo 文案、静态隐私脚本、审核说明文档和版本文档 / 日志即可；无新增持久化 schema 或 CloudKit schema 需要回滚。
+- 结论：`GOAL-1932` 已完成工程闭环，酒店邮箱 B 阶段公共用户测试主线具备草稿队列、去重、拒绝 / 重试基础、Demo Mode 和审核说明。
+- 下一步建议：继续 `GOAL-1921 / GOAL-1922`，推进基础 App Intents 与 Widget 第一段；继续排除 `GOAL-1960`，等待 release smoke 节点再处理。
 
 ### ITER-268 酒店邮箱水单去重与重试基础
 - 日期：2026-06-27

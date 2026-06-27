@@ -165,6 +165,9 @@
 "hotel_stay.email.clear_credential" = "删除授权码";
 "hotel_stay.email.section.account" = "邮箱配置";
 "hotel_stay.email.account_footer" = "授权码只保存在本机 Keychain；扫描只会在点击按钮后执行。";
+"hotel_stay.email.section.demo" = "Demo Mode";
+"hotel_stay.email.demo_load" = "加载示例水单";
+"hotel_stay.email.demo_footer" = "使用虚构邮箱和虚构 PDF，不连接真实邮箱，也不读取授权码。";
 "hotel_stay.email.section.scan" = "手动扫描";
 "hotel_stay.email.scan" = "扫描邮箱水单";
 "hotel_stay.email.scanning" = "正在扫描";
@@ -176,6 +179,7 @@
 "hotel_stay.email.status.scanning" = "正在连接邮箱并读取候选水单邮件。";
 "hotel_stay.email.status.no_results" = "未找到带 PDF 附件的酒店水单候选邮件。";
 "hotel_stay.email.status.results_format" = "找到 %d 封候选水单邮件，请选择 PDF 附件导入。";
+"hotel_stay.email.status.demo_loaded" = "已加载示例酒店水单，请选择 PDF 附件继续复核。";
 "hotel_stay.email.error.invalid_settings" = "邮箱配置不完整";
 "hotel_stay.email.error.missing_credential" = "缺少本机邮箱授权码";
 "hotel_stay.email.error.keychain_status_format" = "Keychain 返回错误 %d";

@@ -23,6 +23,7 @@ struct HotelFolioEmailImportView: View {
         NavigationStack {
             Form {
                 accountSection
+                demoSection
                 scanSection
                 resultSection
             }
@@ -179,6 +180,26 @@ struct HotelFolioEmailImportView: View {
         }
     }
 
+    @ViewBuilder
+    private var demoSection: some View {
+        if HotelFolioEmailDemoMode.isAvailable {
+            Section {
+                Button {
+                    loadDemoMode()
+                } label: {
+                    Label("hotel_stay.email.demo_load", systemImage: "play.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isScanning || importingAttachmentID != nil)
+            } header: {
+                Text("hotel_stay.email.section.demo")
+            } footer: {
+                Text("hotel_stay.email.demo_footer")
+            }
+        }
+    }
+
     private var resultSection: some View {
         Section {
             if candidates.isEmpty {
@@ -291,17 +312,31 @@ struct HotelFolioEmailImportView: View {
         }
     }
 
+    private func loadDemoMode() {
+        candidates = [HotelFolioEmailDemoMode.makeMessage()]
+        statusMessage = String(localized: "hotel_stay.email.status.demo_loaded")
+    }
+
     private func importAttachment(_ attachment: HotelFolioEmailAttachment, from message: HotelFolioEmailMessage) async {
         guard importingAttachmentID == nil else { return }
         importingAttachmentID = attachment.id
         defer { importingAttachmentID = nil }
 
         do {
-            let draft = try HotelFolioEmailAttachmentImporter().makeDraft(
-                message: message,
-                attachment: attachment,
-                targetLedgerID: targetLedgerID
-            )
+            let draft: HotelStayDraft
+            if HotelFolioEmailDemoMode.isDemoMessage(message) {
+                draft = try HotelFolioEmailDemoMode.makeDraft(
+                    message: message,
+                    attachment: attachment,
+                    targetLedgerID: targetLedgerID
+                )
+            } else {
+                draft = try HotelFolioEmailAttachmentImporter().makeDraft(
+                    message: message,
+                    attachment: attachment,
+                    targetLedgerID: targetLedgerID
+                )
+            }
             onDraftReady(draft)
             dismiss()
         } catch {

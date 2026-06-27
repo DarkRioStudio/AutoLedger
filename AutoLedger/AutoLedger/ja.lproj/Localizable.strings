@@ -165,6 +165,9 @@
 "hotel_stay.email.clear_credential" = "認証コードを削除";
 "hotel_stay.email.section.account" = "メール設定";
 "hotel_stay.email.account_footer" = "認証コードはローカル Keychain のみに保存されます。スキャンはボタンを押した時だけ実行されます。";
+"hotel_stay.email.section.demo" = "Demo Mode";
+"hotel_stay.email.demo_load" = "デモ明細を読み込む";
+"hotel_stay.email.demo_footer" = "架空のメールボックスと PDF を使用します。実際のメールには接続せず、認証コードも読み取りません。";
 "hotel_stay.email.section.scan" = "手動スキャン";
 "hotel_stay.email.scan" = "メールの明細をスキャン";
 "hotel_stay.email.scanning" = "スキャン中";
@@ -176,6 +179,7 @@
 "hotel_stay.email.status.scanning" = "メールに接続し、候補のホテル明細メールを読み取っています。";
 "hotel_stay.email.status.no_results" = "PDF 添付付きのホテル明細候補メールは見つかりませんでした。";
 "hotel_stay.email.status.results_format" = "候補メールが %d 件見つかりました。PDF 添付を選んで取り込んでください。";
+"hotel_stay.email.status.demo_loaded" = "デモのホテル明細を読み込みました。PDF 添付を選んで確認を続けてください。";
 "hotel_stay.email.error.invalid_settings" = "メール設定が不足しています";
 "hotel_stay.email.error.missing_credential" = "ローカルのメール認証コードがありません";
 "hotel_stay.email.error.keychain_status_format" = "Keychain エラー %d";

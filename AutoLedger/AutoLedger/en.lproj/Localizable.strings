@@ -165,6 +165,9 @@
 "hotel_stay.email.clear_credential" = "Delete Credential";
 "hotel_stay.email.section.account" = "Email Settings";
 "hotel_stay.email.account_footer" = "The authorization code stays in local Keychain; scanning only runs after you tap the button.";
+"hotel_stay.email.section.demo" = "Demo Mode";
+"hotel_stay.email.demo_load" = "Load Demo Folio";
+"hotel_stay.email.demo_footer" = "Uses a fictional mailbox and PDF. It does not connect to real email or read credentials.";
 "hotel_stay.email.section.scan" = "Manual Scan";
 "hotel_stay.email.scan" = "Scan Email Folios";
 "hotel_stay.email.scanning" = "Scanning";
@@ -176,6 +179,7 @@
 "hotel_stay.email.status.scanning" = "Connecting to email and reading candidate folio messages.";
 "hotel_stay.email.status.no_results" = "No hotel folio candidate emails with PDF attachments were found.";
 "hotel_stay.email.status.results_format" = "Found %d candidate folio emails. Choose a PDF attachment to import.";
+"hotel_stay.email.status.demo_loaded" = "Demo hotel folio loaded. Choose the PDF attachment to continue review.";
 "hotel_stay.email.error.invalid_settings" = "Email settings are incomplete";
 "hotel_stay.email.error.missing_credential" = "Local email credential is missing";
 "hotel_stay.email.error.keychain_status_format" = "Keychain returned error %d";

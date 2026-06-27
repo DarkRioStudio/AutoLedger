@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 python3 "$ROOT/scripts/check_adaptive_layout_rules.py"
 python3 "$ROOT/scripts/check_accessibility_smoke.py"
 python3 "$ROOT/scripts/check_deep_link_smoke.py"
+python3 "$ROOT/scripts/check_hotel_email_demo_privacy.py"
 
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT

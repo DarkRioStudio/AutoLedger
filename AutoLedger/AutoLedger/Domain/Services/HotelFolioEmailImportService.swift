@@ -3,6 +3,9 @@ import Foundation
 import Network
 import PDFKit
 import Security
+#if canImport(UIKit)
+import UIKit
+#endif
 
 enum HotelEmailAccountSettingsStore {
     private static let storageKey = "hotelFolioEmailAccountSettings.v1"
@@ -169,6 +172,68 @@ struct HotelFolioEmailAttachmentImporter: Sendable {
             throw HotelFolioEmailImportError.emptyPDFText
         }
         return text
+    }
+}
+
+enum HotelFolioEmailDemoMode {
+    static var isAvailable: Bool { true }
+
+    static func makeMessage() -> HotelFolioEmailMessage {
+        HotelFolioEmailDemoFixture.message(pdfData: makePDFData())
+    }
+
+    static func isDemoMessage(_ message: HotelFolioEmailMessage) -> Bool {
+        message.uid == HotelFolioEmailDemoFixture.uid
+            && message.messageID == HotelFolioEmailDemoFixture.messageID
+    }
+
+    static func makeDraft(
+        message: HotelFolioEmailMessage,
+        attachment: HotelFolioEmailAttachment,
+        targetLedgerID: String?
+    ) throws -> HotelStayDraft {
+        guard isDemoMessage(message),
+              attachment.fileName == HotelFolioEmailDemoFixture.attachmentFileName else {
+            throw HotelFolioEmailImportError.unsupportedAttachment
+        }
+        return try HotelFolioEmailDraftFactory().makeDraft(
+            message: message,
+            attachment: attachment,
+            extractedText: HotelFolioEmailDemoFixture.extractedText,
+            targetLedgerID: targetLedgerID
+        )
+    }
+
+    nonisolated private static func makePDFData() -> Data {
+        #if canImport(UIKit)
+        let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
+        return renderer.pdfData { context in
+            context.beginPage()
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 20),
+                .foregroundColor: UIColor.label
+            ]
+            NSAttributedString(
+                string: "AutoLedger Demo Hotel Folio",
+                attributes: titleAttributes
+            ).draw(in: CGRect(x: 72, y: 64, width: 468, height: 32))
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.lineSpacing = 4
+            let bodyAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor.label,
+                .paragraphStyle: paragraph
+            ]
+            NSAttributedString(
+                string: HotelFolioEmailDemoFixture.extractedText,
+                attributes: bodyAttributes
+            ).draw(in: CGRect(x: 72, y: 112, width: 468, height: 560))
+        }
+        #else
+        return Data(HotelFolioEmailDemoFixture.extractedText.utf8)
+        #endif
     }
 }
 

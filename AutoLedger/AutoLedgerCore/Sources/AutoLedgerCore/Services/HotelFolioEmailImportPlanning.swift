@@ -404,6 +404,55 @@ public struct HotelFolioEmailCandidateFilter: Sendable {
     }
 }
 
+public enum HotelFolioEmailDemoFixture: Sendable {
+    public static let uid = "demo-hotel-folio-001"
+    public static let messageID = "autoledger-demo-hotel-folio@example.test"
+    public static let subject = "AutoLedger Demo Hotel Folio"
+    public static let sender = "Demo Bay Hotel <folio@example.test>"
+    public static let dateText = "Sat, 27 Jun 2026 10:30:00 +0800"
+    public static let attachmentFileName = "autoledger-demo-hotel-folio.pdf"
+
+    public static let extractedText = """
+    Demo Bay Hotel
+    1 Demo Harbor Road, Demo City, JP
+    Guest: Demo Traveler
+    Guest Email: demo@example.test
+    Confirmation No: DEMO-2026-0618
+    Check In: 2026-06-18
+    Check Out: 2026-06-20
+    Nights: 2
+    Room Type: Demo King Room
+    Room Charge: JPY 42000
+    Tax: JPY 4000
+    Service Charge: JPY 2000
+    Food & Beverage: JPY 1500
+    Other Charges: JPY 500
+    Total Amount: JPY 50000
+    Payment Method: Demo Card **** 4242
+    """
+
+    public static func message(pdfData: Data) -> HotelFolioEmailMessage {
+        HotelFolioEmailMessage(
+            uid: uid,
+            messageID: messageID,
+            subject: subject,
+            from: sender,
+            dateText: dateText,
+            attachments: [attachment(pdfData: pdfData)]
+        )
+    }
+
+    public static func attachment(pdfData: Data) -> HotelFolioEmailAttachment {
+        HotelFolioEmailAttachment(
+            id: "\(uid)-1-\(attachmentFileName)",
+            fileName: attachmentFileName,
+            mimeType: "application/pdf",
+            size: pdfData.count,
+            data: pdfData
+        )
+    }
+}
+
 public enum HotelFolioEmailFingerprint: Sendable {
     public static func messageIDHash(_ messageID: String?) -> String? {
         guard let normalized = messageID?

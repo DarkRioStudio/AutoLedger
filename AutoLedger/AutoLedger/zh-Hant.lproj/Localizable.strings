@@ -165,6 +165,9 @@
 "hotel_stay.email.clear_credential" = "刪除授權碼";
 "hotel_stay.email.section.account" = "郵箱配置";
 "hotel_stay.email.account_footer" = "授權碼只保存在本機 Keychain；掃描只會在點擊按鈕後執行。";
+"hotel_stay.email.section.demo" = "Demo Mode";
+"hotel_stay.email.demo_load" = "載入示例水單";
+"hotel_stay.email.demo_footer" = "使用虛構郵箱和虛構 PDF，不連接真實郵箱，也不讀取授權碼。";
 "hotel_stay.email.section.scan" = "手動掃描";
 "hotel_stay.email.scan" = "掃描郵箱水單";
 "hotel_stay.email.scanning" = "正在掃描";
@@ -176,6 +179,7 @@
 "hotel_stay.email.status.scanning" = "正在連接郵箱並讀取候選水單郵件。";
 "hotel_stay.email.status.no_results" = "未找到帶 PDF 附件的酒店水單候選郵件。";
 "hotel_stay.email.status.results_format" = "找到 %d 封候選水單郵件，請選擇 PDF 附件匯入。";
+"hotel_stay.email.status.demo_loaded" = "已載入示例酒店水單，請選擇 PDF 附件繼續複核。";
 "hotel_stay.email.error.invalid_settings" = "郵箱配置不完整";
 "hotel_stay.email.error.missing_credential" = "缺少本機郵箱授權碼";
 "hotel_stay.email.error.keychain_status_format" = "Keychain 返回錯誤 %d";
