@@ -15,9 +15,7 @@ struct ReportView: View {
     @State private var selectedTrendLabel: String?
     private let insightService = MonthlyInsightService()
     private let summaryColumns = [
-        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
-        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
-        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top)
+        GridItem(.adaptive(minimum: 88), spacing: 12, alignment: .top)
     ]
 
     private var isCurrentMonth: Bool {

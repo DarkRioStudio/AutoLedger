@@ -836,6 +836,8 @@ final class LedgerStore: ObservableObject {
             "hotel_stay.draft.saved",
             fallback: "酒店水单草稿已保存，等待确认。"
         )
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         return true
     }
 
@@ -865,6 +867,8 @@ final class LedgerStore: ObservableObject {
             "hotel_stay.import.status.rejected",
             fallback: "已拒绝本次酒店水单识别结果。"
         )
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         return true
     }
 
@@ -886,10 +890,13 @@ final class LedgerStore: ObservableObject {
         }
 
         hotelStayDrafts.removeAll { $0.id == draft.id }
+        recordHotelStayDraftTombstone(draft.id)
         lastImportSummary = localizedMessage(
             "hotel_stay.draft.delete.success",
             fallback: "已删除酒店水单草稿。"
         )
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
         return true
     }
 
@@ -913,6 +920,11 @@ final class LedgerStore: ObservableObject {
         )
         if !removedIDs.isEmpty {
             hotelStayDrafts.removeAll { removedIDs.contains($0.id) }
+            for id in removedIDs {
+                recordHotelStayDraftTombstone(id)
+            }
+            requestAutomaticBackup()
+            scheduleCloudKitPushAfterLocalLedgerChange()
         }
         return max(removedCount, removedIDs.count)
     }
@@ -956,6 +968,7 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.deleteHotelStayDraft(id: draft.id)
         }
+        recordHotelStayDraftTombstone(draft.id)
         hotelStayDrafts.removeAll { $0.id == draft.id }
         transactions.insert(result.transaction, at: 0)
         sortTransactions()
@@ -1002,6 +1015,7 @@ final class LedgerStore: ObservableObject {
         }
 
         hotelStayRecords.removeAll { $0.id == record.id }
+        recordHotelStayRecordTombstone(record.id)
         if !linkedTransactions.isEmpty {
             let linkedIDs = Set(linkedTransactions.map(\.id))
             transactions.removeAll { linkedIDs.contains($0.id) }
@@ -2243,6 +2257,8 @@ extension LedgerStore {
     private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
     private static let showAllLedgersKey = "showAllLedgers"
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let hotelStayRecordTombstonesKey = "hotelStayRecordCloudTombstones"
+    private static let hotelStayDraftTombstonesKey = "hotelStayDraftCloudTombstones"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
     private static var appGroupDefaults: UserDefaults? {
@@ -2253,6 +2269,8 @@ extension LedgerStore {
         transactions.isEmpty &&
         deletedTransactions.isEmpty &&
         subscriptions.isEmpty &&
+        hotelStayRecords.isEmpty &&
+        hotelStayDrafts.isEmpty &&
         categoryCorrections.isEmpty &&
         customCategories.isEmpty &&
         customSources.isEmpty &&
@@ -2285,11 +2303,17 @@ extension LedgerStore {
 
     func makeBackupBundle() throws -> BackupBundle {
         let backupTransactions: [BackupTransaction]
+        let backupHotelStayRecords: [HotelStayRecord]
+        let backupHotelStayDrafts: [HotelStayDraft]
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             backupTransactions = try sqlStore.loadBackupTransactions()
+            backupHotelStayRecords = try sqlStore.loadHotelStayRecords()
+            backupHotelStayDrafts = try sqlStore.loadHotelStayDrafts()
         } else {
             backupTransactions = transactions.map { BackupTransaction(transaction: $0) } +
                 deletedTransactions.map { BackupTransaction(transaction: $0, deletedAt: .now) }
+            backupHotelStayRecords = hotelStayRecords
+            backupHotelStayDrafts = hotelStayDrafts
         }
 
         let annualPrices = UserDefaults.standard.dictionary(forKey: Self.annualPriceKey) as? [String: Double] ?? [:]
@@ -2304,7 +2328,9 @@ extension LedgerStore {
             categoryCorrectionCount: corrections.count,
             customCategoryCount: customCategories.count,
             customSourceCount: customSources.count,
-            merchantAliasCount: merchantAliases.count
+            merchantAliasCount: merchantAliases.count,
+            hotelStayRecordCount: backupHotelStayRecords.count,
+            hotelStayDraftCount: backupHotelStayDrafts.count
         )
 
         return BackupBundle(
@@ -2321,6 +2347,8 @@ extension LedgerStore {
             summary: summary,
             transactions: backupTransactions,
             subscriptions: subscriptions,
+            hotelStayRecords: backupHotelStayRecords,
+            hotelStayDrafts: backupHotelStayDrafts,
             categoryCorrections: corrections,
             customCategories: customCategories,
             customSources: customSources,
@@ -2395,6 +2423,7 @@ extension LedgerStore {
             reloadWidgets()
             lastImportSummary = "已从备份恢复：\(summaryText(for: bundle))"
             requestAutomaticBackup()
+            scheduleCloudKitPushAfterLocalLedgerChange()
         } catch {
             try? applyBackupBundle(safetyBundle)
             customCategories = safetyBundle.customCategories
@@ -2468,13 +2497,14 @@ extension LedgerStore {
                 forceFull: forceFull
             )
             let pullResult = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
+            let hotelResult = try await pullRemoteHotelStayArchive(sqlStore: sqlStore, adapter: adapter)
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
             refreshFromStore()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
+            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条账单、\(pushResult.hotelSavedCount) 条酒店数据，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条账单，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)；酒店新增/更新 \(hotelResult.upserted)，删除 \(hotelResult.deleted)，保留本地 \(hotelResult.keptLocal)；配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -2509,12 +2539,13 @@ extension LedgerStore {
             }
 
             let result = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
+            let hotelResult = try await pullRemoteHotelStayArchive(sqlStore: sqlStore, adapter: adapter)
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
             refreshFromStore()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)，配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
+            updateLedgerCloudSyncStatus("iCloud 拉取完成：拉取 \(result.remoteCount) 条账单，新增 \(result.inserted)，更新 \(result.updated)，删除 \(result.deleted)，保留本地 \(result.keptLocal)，冲突 \(result.conflicts)；酒店新增/更新 \(hotelResult.upserted)，删除 \(hotelResult.deleted)，保留本地 \(hotelResult.keptLocal)；配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 拉取失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -2571,7 +2602,7 @@ extension LedgerStore {
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
-            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条，配置\(result.configurationSaved ? "已推送" : "无需推送")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
+            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条账单、\(result.hotelSavedCount) 条酒店数据，配置\(result.configurationSaved ? "已推送" : "无需推送")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
             return true
         } catch {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
@@ -2593,7 +2624,7 @@ extension LedgerStore {
         sqlStore: SQLiteTransactionStore,
         adapter: LedgerCloudKitSyncAdapter,
         forceFull: Bool
-    ) async throws -> (pushMode: String, savedCount: Int, configurationSaved: Bool) {
+    ) async throws -> (pushMode: String, savedCount: Int, hotelSavedCount: Int, configurationSaved: Bool) {
         if forceFull {
             clearCloudKitPushCheckpoint()
         }
@@ -2604,6 +2635,15 @@ extension LedgerStore {
         let pushMode = lastPushAt == nil ? "全量" : "增量"
         updateLedgerCloudSyncStatus("正在\(pushMode)推送 \(batch.upserts.count) 条账单和 \(batch.tombstones.count) 条删除记录...")
         let pushResult = try await adapter.push(batch: batch)
+        let hotelPushPayloads = try makeHotelStayArchivePushPayloads(
+            sqlStore: sqlStore,
+            changedAfter: lastPushAt
+        )
+        updateLedgerCloudSyncStatus("正在\(pushMode)推送 \(hotelPushPayloads.records.count + hotelPushPayloads.drafts.count) 条酒店消费数据...")
+        let hotelPushResult = try await adapter.pushHotelStayArchive(
+            records: hotelPushPayloads.records,
+            drafts: hotelPushPayloads.drafts
+        )
 
         let shouldPushConfiguration = forceFull || lastPushAt == nil || ledgerConfigurationUpdatedAt > lastPushAt!
         var configurationSaved = false
@@ -2617,7 +2657,61 @@ extension LedgerStore {
         return (
             pushMode: pushMode,
             savedCount: pushResult.savedRecordNames.count,
+            hotelSavedCount: hotelPushResult.savedRecordNames.count,
             configurationSaved: configurationSaved
+        )
+    }
+
+    private func makeHotelStayArchivePushPayloads(
+        sqlStore: SQLiteTransactionStore,
+        changedAfter: Date?
+    ) throws -> (records: [LedgerHotelStayRecordSyncPayload], drafts: [LedgerHotelStayDraftSyncPayload]) {
+        let recordTombstones = loadHotelStayRecordTombstones()
+        let draftTombstones = loadHotelStayDraftTombstones()
+
+        let records = try sqlStore.loadHotelStayRecords()
+            .filter { record in
+                guard let changedAfter else { return true }
+                return record.updatedAt >= changedAfter
+            }
+            .map { LedgerHotelStayRecordSyncPayload(record: $0, deviceID: localSyncDeviceID) }
+
+        let drafts = try sqlStore.loadHotelStayDrafts()
+            .filter { draft in
+                guard let changedAfter else { return true }
+                return draft.updatedAt >= changedAfter
+            }
+            .map { LedgerHotelStayDraftSyncPayload(draft: $0, deviceID: localSyncDeviceID) }
+
+        let recordDeletes = recordTombstones
+            .filter { _, deletedAt in
+                guard let changedAfter else { return true }
+                return deletedAt >= changedAfter
+            }
+            .map { id, deletedAt in
+                LedgerHotelStayRecordSyncPayload.tombstone(
+                    id: id,
+                    deletedAt: deletedAt,
+                    deviceID: localSyncDeviceID
+                )
+            }
+
+        let draftDeletes = draftTombstones
+            .filter { _, deletedAt in
+                guard let changedAfter else { return true }
+                return deletedAt >= changedAfter
+            }
+            .map { id, deletedAt in
+                LedgerHotelStayDraftSyncPayload.tombstone(
+                    id: id,
+                    deletedAt: deletedAt,
+                    deviceID: localSyncDeviceID
+                )
+            }
+
+        return (
+            records: (records + recordDeletes).sorted { $0.updatedAt < $1.updatedAt },
+            drafts: (drafts + draftDeletes).sorted { $0.updatedAt < $1.updatedAt }
         )
     }
 
@@ -2652,6 +2746,88 @@ extension LedgerStore {
             deleted: summary.deleted,
             keptLocal: summary.keptLocal,
             conflicts: summary.conflicts
+        )
+    }
+
+    private func pullRemoteHotelStayArchive(
+        sqlStore: SQLiteTransactionStore,
+        adapter: LedgerCloudKitSyncAdapter
+    ) async throws -> (remoteCount: Int, upserted: Int, deleted: Int, keptLocal: Int) {
+        updateLedgerCloudSyncStatus("正在拉取远端酒店消费...")
+        let remoteRecords = try await adapter.fetchAllHotelStayRecords()
+        let remoteDrafts = try await adapter.fetchAllHotelStayDrafts()
+
+        let localRecordsByID = Dictionary(uniqueKeysWithValues: (try sqlStore.loadHotelStayRecords()).map { ($0.id, $0) })
+        let localDraftsByID = Dictionary(uniqueKeysWithValues: (try sqlStore.loadHotelStayDrafts()).map { ($0.id, $0) })
+        var recordTombstones = loadHotelStayRecordTombstones()
+        var draftTombstones = loadHotelStayDraftTombstones()
+
+        var upserted = 0
+        var deleted = 0
+        var keptLocal = 0
+
+        for remote in remoteRecords.sorted(by: { $0.updatedAt < $1.updatedAt }) {
+            if let deletedAt = remote.deletedAt {
+                recordTombstones[remote.hotelStayID] = max(recordTombstones[remote.hotelStayID] ?? .distantPast, deletedAt)
+                if localRecordsByID[remote.hotelStayID] != nil {
+                    try sqlStore.deleteHotelStayRecordForSync(id: remote.hotelStayID)
+                    deleted += 1
+                }
+                continue
+            }
+
+            guard let record = remote.hotelStayRecord else { continue }
+            if let localDeletedAt = recordTombstones[record.id],
+               localDeletedAt >= remote.updatedAt {
+                keptLocal += 1
+                continue
+            }
+            if let local = localRecordsByID[record.id],
+               local.updatedAt > remote.updatedAt {
+                keptLocal += 1
+                continue
+            }
+
+            try sqlStore.save(hotelStayRecord: record)
+            recordTombstones.removeValue(forKey: record.id)
+            upserted += 1
+        }
+
+        for remote in remoteDrafts.sorted(by: { $0.updatedAt < $1.updatedAt }) {
+            if let deletedAt = remote.deletedAt {
+                draftTombstones[remote.draftID] = max(draftTombstones[remote.draftID] ?? .distantPast, deletedAt)
+                if localDraftsByID[remote.draftID] != nil {
+                    try sqlStore.deleteHotelStayDraft(id: remote.draftID)
+                    deleted += 1
+                }
+                continue
+            }
+
+            guard let draft = remote.hotelStayDraft else { continue }
+            if let localDeletedAt = draftTombstones[draft.id],
+               localDeletedAt >= remote.updatedAt {
+                keptLocal += 1
+                continue
+            }
+            if let local = localDraftsByID[draft.id],
+               local.updatedAt > remote.updatedAt {
+                keptLocal += 1
+                continue
+            }
+
+            try sqlStore.save(hotelStayDraft: draft)
+            draftTombstones.removeValue(forKey: draft.id)
+            upserted += 1
+        }
+
+        saveHotelStayTombstones(recordTombstones, key: Self.hotelStayRecordTombstonesKey)
+        saveHotelStayTombstones(draftTombstones, key: Self.hotelStayDraftTombstonesKey)
+        await Task.yield()
+        return (
+            remoteCount: remoteRecords.count + remoteDrafts.count,
+            upserted: upserted,
+            deleted: deleted,
+            keptLocal: keptLocal
         )
     }
 
@@ -2789,6 +2965,41 @@ extension LedgerStore {
         UserDefaults.standard.set(Date(), forKey: Self.ledgerConfigurationUpdatedAtKey)
     }
 
+    private func recordHotelStayRecordTombstone(_ id: UUID, deletedAt: Date = .now) {
+        var tombstones = loadHotelStayRecordTombstones()
+        tombstones[id] = max(tombstones[id] ?? .distantPast, deletedAt)
+        saveHotelStayTombstones(tombstones, key: Self.hotelStayRecordTombstonesKey)
+    }
+
+    private func recordHotelStayDraftTombstone(_ id: UUID, deletedAt: Date = .now) {
+        var tombstones = loadHotelStayDraftTombstones()
+        tombstones[id] = max(tombstones[id] ?? .distantPast, deletedAt)
+        saveHotelStayTombstones(tombstones, key: Self.hotelStayDraftTombstonesKey)
+    }
+
+    private func loadHotelStayRecordTombstones() -> [UUID: Date] {
+        loadHotelStayTombstones(key: Self.hotelStayRecordTombstonesKey)
+    }
+
+    private func loadHotelStayDraftTombstones() -> [UUID: Date] {
+        loadHotelStayTombstones(key: Self.hotelStayDraftTombstonesKey)
+    }
+
+    private func loadHotelStayTombstones(key: String) -> [UUID: Date] {
+        let raw = UserDefaults.standard.dictionary(forKey: key) as? [String: TimeInterval] ?? [:]
+        return Dictionary(uniqueKeysWithValues: raw.compactMap { idString, timestamp in
+            guard let id = UUID(uuidString: idString) else { return nil }
+            return (id, Date(timeIntervalSince1970: timestamp))
+        })
+    }
+
+    private func saveHotelStayTombstones(_ tombstones: [UUID: Date], key: String) {
+        let raw = Dictionary(uniqueKeysWithValues: tombstones.map { id, date in
+            (id.uuidString, date.timeIntervalSince1970)
+        })
+        UserDefaults.standard.set(raw, forKey: key)
+    }
+
     private var localSyncDeviceID: String {
         if let existing = UserDefaults.standard.string(forKey: Self.syncDeviceIDKey),
            !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -2910,7 +3121,7 @@ extension LedgerStore {
     }
 
     func summaryText(for bundle: BackupBundle) -> String {
-        "\(bundle.summary.transactionCount) 笔账单，\(bundle.summary.deletedTransactionCount) 笔最近删除，\(bundle.summary.subscriptionCount) 个订阅，\(bundle.summary.merchantAliasCount) 个商户别名"
+        "\(bundle.summary.transactionCount) 笔账单，\(bundle.summary.deletedTransactionCount) 笔最近删除，\(bundle.summary.subscriptionCount) 个订阅，\(bundle.summary.hotelStayRecordCount) 条酒店消费，\(bundle.summary.hotelStayDraftCount) 个酒店待确认，\(bundle.summary.merchantAliasCount) 个商户别名"
     }
 
     private func saveRestoredUserDefaults(from bundle: BackupBundle) {
@@ -2938,12 +3149,16 @@ extension LedgerStore {
                 transactions: bundle.transactions,
                 subscriptions: bundle.subscriptions,
                 categoryCorrections: bundle.categoryCorrections,
-                merchantAliases: bundle.merchantAliases
+                merchantAliases: bundle.merchantAliases,
+                hotelStayRecords: bundle.hotelStayRecords,
+                hotelStayDrafts: bundle.hotelStayDrafts
             )
         } else {
             transactions = bundle.transactions.filter { $0.deletedAt == nil }.map(\.transaction)
             deletedTransactions = bundle.transactions.filter { $0.deletedAt != nil }.map(\.transaction)
             subscriptions = bundle.subscriptions
+            hotelStayRecords = bundle.hotelStayRecords
+            hotelStayDrafts = bundle.hotelStayDrafts
             categoryCorrections = Dictionary(uniqueKeysWithValues: bundle.categoryCorrections.map { ($0.merchant, $0.category) })
             merchantAliases = bundle.merchantAliases
         }

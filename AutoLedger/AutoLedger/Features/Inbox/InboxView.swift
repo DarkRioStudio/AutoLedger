@@ -18,8 +18,7 @@ struct InboxView: View {
 
     private let ocrService = OCRService()
     private let heroMetricColumns = [
-        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
-        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top)
+        GridItem(.adaptive(minimum: 128), spacing: 12, alignment: .top)
     ]
 
     private var hasShortcutEntries: Bool {

@@ -2768,6 +2768,72 @@ struct OfflineRegression {
             CloudLedgerSyncSchema.recordName(for: activeID) == "transaction-00000000-0000-0000-0000-000000001565",
             "CloudLedgerSyncSchema derives deterministic transaction record name"
         )
+        reporter.check(
+            CloudLedgerSyncSchema.RecordType.hotelStayRecord == "LedgerHotelStayRecord",
+            "CloudLedgerSyncSchema keeps hotel stay record type stable"
+        )
+        reporter.check(
+            CloudLedgerSyncSchema.RecordType.hotelStayDraft == "LedgerHotelStayDraft",
+            "CloudLedgerSyncSchema keeps hotel stay draft type stable"
+        )
+        reporter.check(
+            CloudLedgerSyncSchema.hotelStayRecordName(for: hotelStayRecordID) == "hotel-stay-00000000-0000-0000-0000-000000001568",
+            "CloudLedgerSyncSchema derives deterministic hotel stay record name"
+        )
+
+        let hotelPDFData = Data("%PDF-1.7 sync planner hotel".utf8)
+        let hotelRecord = HotelStayRecord(
+            id: hotelStayRecordID,
+            ledgerID: ledgerID,
+            linkedTransactionID: activeID,
+            hotelName: "Sync Hotel",
+            currency: "CNY",
+            totalAmount: 888,
+            sourceType: .manualPDF,
+            sourcePDFData: hotelPDFData,
+            rawText: "Sync Hotel folio",
+            updatedAt: Date(timeIntervalSince1970: 1_780_011_000)
+        )
+        let hotelPayload = LedgerHotelStayRecordSyncPayload(record: hotelRecord, deviceID: "local-device")
+        let hotelDraftID = UUID(uuidString: "00000000-0000-0000-0000-000000001569") ?? UUID()
+        let hotelDraft = HotelStayDraft(
+            id: hotelDraftID,
+            sourceType: .localEmailIMAP,
+            targetLedgerID: ledgerID,
+            sourcePDFData: hotelPDFData,
+            rawText: "Pending sync hotel folio",
+            status: .needsReview,
+            updatedAt: Date(timeIntervalSince1970: 1_780_012_000)
+        )
+        let draftPayload = LedgerHotelStayDraftSyncPayload(draft: hotelDraft, deviceID: "local-device")
+        let hotelEncoder = JSONEncoder()
+        hotelEncoder.dateEncodingStrategy = .iso8601
+        let hotelDecoder = JSONDecoder()
+        hotelDecoder.dateDecodingStrategy = .iso8601
+        let hotelPayloadData = try? hotelEncoder.encode(hotelPayload)
+        let draftPayloadData = try? hotelEncoder.encode(draftPayload)
+        let restoredHotelPayload = try? hotelDecoder.decode(
+            LedgerHotelStayRecordSyncPayload.self,
+            from: hotelPayloadData ?? Data()
+        )
+        let restoredDraftPayload = try? hotelDecoder.decode(
+            LedgerHotelStayDraftSyncPayload.self,
+            from: draftPayloadData ?? Data()
+        )
+        reporter.check(
+            restoredHotelPayload?.hotelStayRecord?.sourcePDFData == hotelPDFData,
+            "LedgerHotelStayRecordSyncPayload preserves hotel PDF data"
+        )
+        reporter.check(
+            restoredDraftPayload?.hotelStayDraft?.targetLedgerID == ledgerID,
+            "LedgerHotelStayDraftSyncPayload preserves target ledger id"
+        )
+        let hotelTombstone = LedgerHotelStayRecordSyncPayload.tombstone(
+            id: hotelStayRecordID,
+            deletedAt: Date(timeIntervalSince1970: 1_780_099_000),
+            deviceID: "local-device"
+        )
+        reporter.check(hotelTombstone.isTombstone, "LedgerHotelStayRecordSyncPayload marks tombstone")
 
         let batch = LedgerSyncPlanner.makePushBatch(
             from: [deletedRecord, activeRecord, expiredRecord],
@@ -4549,6 +4615,67 @@ struct OfflineRegression {
         )
         sourceLedger.addTransaction(active)
         sourceLedger.addTransaction(deleted)
+        let hotelPDFData = Data("%PDF-1.7 hotel stay regression".utf8)
+        let hotelRecord = HotelStayRecord(
+            id: hotelStayRecordID,
+            ledgerID: ledgerID,
+            linkedTransactionID: active.id,
+            hotelName: "Backup Hotel",
+            hotelGroup: "Regression Group",
+            hotelBrand: "Regression Brand",
+            city: "Guangzhou",
+            country: "CN",
+            checkInDate: "2026-04-22",
+            checkOutDate: "2026-04-24",
+            nights: 2,
+            roomType: "King",
+            confirmationNumber: "BK-1819",
+            currency: "CNY",
+            roomCharge: 800,
+            taxAmount: 48,
+            serviceCharge: 80,
+            foodBeverageAmount: 120,
+            otherAmount: 0,
+            totalAmount: 1048,
+            paymentMethod: "WeChat Pay",
+            sourceType: .manualPDF,
+            sourceFileName: "backup-hotel.pdf",
+            sourcePDFData: hotelPDFData,
+            confidence: 0.91,
+            rawText: "Backup Hotel raw folio",
+            createdAt: AppFormatters.parseFlexibleDate("2026-04-24 10:00") ?? .now,
+            updatedAt: AppFormatters.parseFlexibleDate("2026-04-24 10:05") ?? .now
+        )
+        let hotelDraft = HotelStayDraft(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001820") ?? UUID(),
+            sourceType: .localEmailIMAP,
+            targetLedgerID: ledgerID,
+            sourceFileName: "pending-hotel.pdf",
+            sourcePDFData: hotelPDFData,
+            sourceEmailSubject: "Hotel folio",
+            sourceEmailFrom: "hotel@example.com",
+            sourceEmailUID: "42",
+            sourceEmailMessageIDHash: "message-hash",
+            sourceEmailAttachmentHash: "attachment-hash",
+            sourceEmailDateText: "2026-04-24",
+            rawText: "Pending Backup Hotel raw folio",
+            parsedPayload: HotelFolioParsedPayload(
+                hotelName: "Pending Backup Hotel",
+                city: "Tokyo",
+                checkInDate: "2026-04-23",
+                checkOutDate: "2026-04-24",
+                nights: 1,
+                currency: "JPY",
+                totalAmount: 12000,
+                confidence: 0.82
+            ),
+            confidence: 0.82,
+            status: .needsReview,
+            createdAt: AppFormatters.parseFlexibleDate("2026-04-24 11:00") ?? .now,
+            updatedAt: AppFormatters.parseFlexibleDate("2026-04-24 11:05") ?? .now
+        )
+        try sourceStore.save(hotelStayRecord: hotelRecord)
+        try sourceStore.save(hotelStayDraft: hotelDraft)
         sourceLedger.deleteTransaction(deleted)
         sourceLedger.customCategories = ["咖啡"]
         sourceLedger.customSources = ["测试来源"]
@@ -4572,6 +4699,8 @@ struct OfflineRegression {
         let bundle = try sourceLedger.makeBackupBundle()
         reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
         reporter.check(bundle.summary.deletedTransactionCount == 1, "BackupBundle summary counts deleted transactions")
+        reporter.check(bundle.summary.hotelStayRecordCount == 1, "BackupBundle summary counts hotel stay records")
+        reporter.check(bundle.summary.hotelStayDraftCount == 1, "BackupBundle summary counts hotel stay drafts")
         reporter.check(
             bundle.transactions.first { $0.id == active.id }?.ledgerID == ledgerID,
             "BackupBundle preserves transaction ledger id"
@@ -4597,6 +4726,14 @@ struct OfflineRegression {
         reporter.check(
             deletedBackupTransaction?.syncMetadata?.deletedAt != nil,
             "BackupBundle preserves deleted sync tombstone"
+        )
+        reporter.check(
+            bundle.hotelStayRecords.first { $0.id == hotelRecord.id }?.sourcePDFData == hotelPDFData,
+            "BackupBundle preserves hotel stay record pdf data"
+        )
+        reporter.check(
+            bundle.hotelStayDrafts.first { $0.id == hotelDraft.id }?.parsedPayload?.hotelName == "Pending Backup Hotel",
+            "BackupBundle preserves hotel stay draft parsed payload"
         )
         reporter.check(bundle.customCategories == ["咖啡"], "BackupBundle includes custom categories")
         reporter.check(bundle.subscriptionMetadata.annualPriceOverrides[subscription.id.uuidString] == 168.0, "BackupBundle includes subscription annual price metadata")
@@ -4633,6 +4770,21 @@ struct OfflineRegression {
         reporter.check(
             restoredDeletedMetadata?.idempotencyKey == deletedBackupTransaction?.syncMetadata?.idempotencyKey,
             "Backup restore keeps sync idempotency key"
+        )
+        let restoredHotelRecord = restoreLedger.hotelStayRecords.first { $0.id == hotelRecord.id }
+        reporter.check(
+            restoredHotelRecord?.linkedTransactionID == active.id &&
+                restoredHotelRecord?.ledgerID == ledgerID &&
+                restoredHotelRecord?.sourcePDFData == hotelPDFData,
+            "Backup restore keeps hotel stay record"
+        )
+        let restoredHotelDraft = restoreLedger.hotelStayDrafts.first { $0.id == hotelDraft.id }
+        reporter.check(
+            restoredHotelDraft?.status == .needsReview &&
+                restoredHotelDraft?.targetLedgerID == ledgerID &&
+                restoredHotelDraft?.parsedPayload?.hotelName == "Pending Backup Hotel" &&
+                restoredHotelDraft?.sourcePDFData == hotelPDFData,
+            "Backup restore keeps hotel stay draft"
         )
         let restoredSubscription = restoreLedger.subscriptions.first { $0.id == subscription.id }
         reporter.check(

@@ -282,10 +282,14 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         transactions backupTransactions: [BackupTransaction],
         subscriptions: [Subscription],
         categoryCorrections: [BackupCategoryCorrection],
-        merchantAliases: [String: String] = [:]
+        merchantAliases: [String: String] = [:],
+        hotelStayRecords: [HotelStayRecord] = [],
+        hotelStayDrafts: [HotelStayDraft] = []
     ) throws {
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
+            try execute("DELETE FROM hotel_stay_drafts;")
+            try execute("DELETE FROM hotel_stay_records;")
             try execute("DELETE FROM transactions;")
             try execute("DELETE FROM subscriptions;")
             try execute("DELETE FROM category_corrections;")
@@ -293,6 +297,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
             for transaction in backupTransactions {
                 try insertBackupTransaction(transaction)
+            }
+            for record in hotelStayRecords {
+                try upsertHotelStayRecord(record)
+            }
+            for draft in hotelStayDrafts {
+                try save(hotelStayDraft: draft)
             }
             for subscription in subscriptions {
                 try saveSubscription(subscription)
@@ -449,6 +459,10 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             try? execute("ROLLBACK;")
             throw error
         }
+    }
+
+    public func deleteHotelStayRecordForSync(id: UUID) throws {
+        try deleteHotelStayRecordOnly(id: id)
     }
 
     private func loadLinkedTransactionIDForHotelStayRecord(id: UUID) throws -> UUID? {

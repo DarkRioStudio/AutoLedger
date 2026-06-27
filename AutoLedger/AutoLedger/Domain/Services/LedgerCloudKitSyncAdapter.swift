@@ -288,6 +288,102 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
+    func pushHotelStayArchive(
+        records: [LedgerHotelStayRecordSyncPayload],
+        drafts: [LedgerHotelStayDraftSyncPayload]
+    ) async throws -> LedgerCloudKitPushResult {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let mappedRecords = try records.map(Self.mapHotelStayRecord) + drafts.map(Self.mapHotelStayDraft)
+        let dryRunResult = LedgerCloudKitDryRunResult(
+            mode: mode,
+            upsertCount: records.filter { !$0.isTombstone }.count + drafts.filter { !$0.isTombstone }.count,
+            tombstoneCount: records.filter { $0.isTombstone }.count + drafts.filter { $0.isTombstone }.count,
+            expiredTombstoneCount: 0,
+            mappedRecords: mappedRecords
+        )
+
+        guard !mappedRecords.isEmpty else {
+            return LedgerCloudKitPushResult(
+                savedRecordNames: [],
+                deletedRecordNames: [],
+                upsertCount: 0,
+                tombstoneCount: 0,
+                expiredTombstoneCount: 0
+            )
+        }
+
+        var savedRecordNames: [String] = []
+        for chunk in mappedRecords.chunked(into: Self.operationRecordLimit) {
+            do {
+                let partial = try await modifyRecords(
+                    recordsToSave: chunk.map { makeCKRecord(from: $0) },
+                    recordIDsToDelete: [],
+                    dryRunResult: dryRunResult
+                )
+                savedRecordNames.append(contentsOf: partial.savedRecordNames)
+            } catch {
+                let firstRecord = chunk[0]
+                throw LedgerCloudKitSyncError.recordSaveRejected(
+                    recordName: firstRecord.recordName,
+                    fieldSummary: Self.fieldSummary(for: makeCKRecord(from: firstRecord)),
+                    probeSummary: "hotel-stay-archive-save",
+                    message: Self.describe(error)
+                )
+            }
+        }
+
+        return LedgerCloudKitPushResult(
+            savedRecordNames: savedRecordNames.sorted(),
+            deletedRecordNames: [],
+            upsertCount: dryRunResult.upsertCount,
+            tombstoneCount: dryRunResult.tombstoneCount,
+            expiredTombstoneCount: 0
+        )
+    }
+
+    func fetchAllHotelStayRecords() async throws -> [LedgerHotelStayRecordSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchHotelStayRecordPayloads(cursor: nil, accumulated: [])
+    }
+
+    func fetchAllHotelStayDrafts() async throws -> [LedgerHotelStayDraftSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchHotelStayDraftPayloads(cursor: nil, accumulated: [])
+    }
+
     func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
         guard mode == .live else {
             throw LedgerCloudKitSyncError.liveModeRequired
@@ -586,6 +682,100 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
+    private func fetchHotelStayRecordPayloads(
+        cursor: CKQueryOperation.Cursor?,
+        accumulated: [LedgerHotelStayRecordSyncPayload]
+    ) async throws -> [LedgerHotelStayRecordSyncPayload] {
+        try await withCheckedThrowingContinuation { continuation in
+            let operation: CKQueryOperation
+            if let cursor {
+                operation = CKQueryOperation(cursor: cursor)
+            } else {
+                let query = CKQuery(
+                    recordType: CloudLedgerSyncSchema.RecordType.hotelStayRecord,
+                    predicate: NSPredicate(value: true)
+                )
+                operation = CKQueryOperation(query: query)
+            }
+
+            var records = accumulated
+            operation.resultsLimit = Self.operationRecordLimit
+            operation.recordFetchedBlock = { record in
+                if let payload = Self.mapHotelStayRecordPayload(from: record) {
+                    records.append(payload)
+                }
+            }
+            operation.queryCompletionBlock = { cursor, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                if let cursor {
+                    Task {
+                        do {
+                            let next = try await fetchHotelStayRecordPayloads(cursor: cursor, accumulated: records)
+                            continuation.resume(returning: next)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                } else {
+                    continuation.resume(returning: records)
+                }
+            }
+
+            database.add(operation)
+        }
+    }
+
+    private func fetchHotelStayDraftPayloads(
+        cursor: CKQueryOperation.Cursor?,
+        accumulated: [LedgerHotelStayDraftSyncPayload]
+    ) async throws -> [LedgerHotelStayDraftSyncPayload] {
+        try await withCheckedThrowingContinuation { continuation in
+            let operation: CKQueryOperation
+            if let cursor {
+                operation = CKQueryOperation(cursor: cursor)
+            } else {
+                let query = CKQuery(
+                    recordType: CloudLedgerSyncSchema.RecordType.hotelStayDraft,
+                    predicate: NSPredicate(value: true)
+                )
+                operation = CKQueryOperation(query: query)
+            }
+
+            var records = accumulated
+            operation.resultsLimit = Self.operationRecordLimit
+            operation.recordFetchedBlock = { record in
+                if let payload = Self.mapHotelStayDraftPayload(from: record) {
+                    records.append(payload)
+                }
+            }
+            operation.queryCompletionBlock = { cursor, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                if let cursor {
+                    Task {
+                        do {
+                            let next = try await fetchHotelStayDraftPayloads(cursor: cursor, accumulated: records)
+                            continuation.resume(returning: next)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                } else {
+                    continuation.resume(returning: records)
+                }
+            }
+
+            database.add(operation)
+        }
+    }
+
     private static func mapRecord(_ payload: LedgerTransactionSyncPayload) -> LedgerCloudKitMappedRecord {
         var fields: [String: LedgerCloudKitFieldValue] = [
             CloudLedgerSyncSchema.Field.transactionID: .string(payload.transactionID.uuidString),
@@ -662,6 +852,62 @@ struct LedgerCloudKitSyncAdapter {
                 CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
                 CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
             ]
+        )
+    }
+
+    private static func mapHotelStayRecord(_ payload: LedgerHotelStayRecordSyncPayload) throws -> LedgerCloudKitMappedRecord {
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        guard let json = String(data: encoded, encoding: .utf8) else {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: "payloadJSON=encodingFailed",
+                probeSummary: "hotel-stay-record-encode",
+                message: "Hotel stay record payload could not be encoded as UTF-8."
+            )
+        }
+
+        var fields: [String: LedgerCloudKitFieldValue] = [
+            CloudLedgerSyncSchema.Field.hotelStayID: .string(payload.hotelStayID.uuidString),
+            CloudLedgerSyncSchema.Field.updatedAt: .date(payload.updatedAt),
+            CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
+            CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
+        ]
+        if let deletedAt = payload.deletedAt {
+            fields[CloudLedgerSyncSchema.Field.deletedAt] = .date(deletedAt)
+        }
+
+        return LedgerCloudKitMappedRecord(
+            recordType: CloudLedgerSyncSchema.RecordType.hotelStayRecord,
+            recordName: payload.recordName,
+            fields: fields
+        )
+    }
+
+    private static func mapHotelStayDraft(_ payload: LedgerHotelStayDraftSyncPayload) throws -> LedgerCloudKitMappedRecord {
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        guard let json = String(data: encoded, encoding: .utf8) else {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: "payloadJSON=encodingFailed",
+                probeSummary: "hotel-stay-draft-encode",
+                message: "Hotel stay draft payload could not be encoded as UTF-8."
+            )
+        }
+
+        var fields: [String: LedgerCloudKitFieldValue] = [
+            CloudLedgerSyncSchema.Field.hotelStayDraftID: .string(payload.draftID.uuidString),
+            CloudLedgerSyncSchema.Field.updatedAt: .date(payload.updatedAt),
+            CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
+            CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
+        ]
+        if let deletedAt = payload.deletedAt {
+            fields[CloudLedgerSyncSchema.Field.deletedAt] = .date(deletedAt)
+        }
+
+        return LedgerCloudKitMappedRecord(
+            recordType: CloudLedgerSyncSchema.RecordType.hotelStayDraft,
+            recordName: payload.recordName,
+            fields: fields
         )
     }
 
@@ -760,6 +1006,54 @@ struct LedgerCloudKitSyncAdapter {
                 merchantAliases: payload.merchantAliases,
                 subscriptionMetadata: payload.subscriptionMetadata,
                 appSettings: payload.appSettings
+            )
+        }
+
+        return payload
+    }
+
+    private static func mapHotelStayRecordPayload(from record: CKRecord) -> LedgerHotelStayRecordSyncPayload? {
+        guard
+            let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
+            let data = json.data(using: .utf8),
+            var payload = try? JSONDecoder.ledgerSyncDecoder.decode(LedgerHotelStayRecordSyncPayload.self, from: data)
+        else {
+            return nil
+        }
+
+        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
+           updatedAt != payload.updatedAt {
+            payload = LedgerHotelStayRecordSyncPayload(
+                recordName: record.recordID.recordName,
+                hotelStayID: payload.hotelStayID,
+                hotelStayRecord: payload.hotelStayRecord,
+                updatedAt: updatedAt,
+                deviceID: payload.deviceID,
+                deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
+            )
+        }
+
+        return payload
+    }
+
+    private static func mapHotelStayDraftPayload(from record: CKRecord) -> LedgerHotelStayDraftSyncPayload? {
+        guard
+            let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
+            let data = json.data(using: .utf8),
+            var payload = try? JSONDecoder.ledgerSyncDecoder.decode(LedgerHotelStayDraftSyncPayload.self, from: data)
+        else {
+            return nil
+        }
+
+        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
+           updatedAt != payload.updatedAt {
+            payload = LedgerHotelStayDraftSyncPayload(
+                recordName: record.recordID.recordName,
+                draftID: payload.draftID,
+                hotelStayDraft: payload.hotelStayDraft,
+                updatedAt: updatedAt,
+                deviceID: payload.deviceID,
+                deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
             )
         }
 

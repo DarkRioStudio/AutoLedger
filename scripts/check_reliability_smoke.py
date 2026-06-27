@@ -22,6 +22,10 @@ REQUIRED_OFFLINE_SNIPPETS = [
     "private static func verifyBackupRoundTrip",
     "BackupBundle preserves transaction ledger id",
     "BackupBundle preserves hotel stay transaction link",
+    "BackupBundle summary counts hotel stay records",
+    "BackupBundle summary counts hotel stay drafts",
+    "BackupBundle preserves hotel stay record pdf data",
+    "BackupBundle preserves hotel stay draft parsed payload",
     "BackupBundle preserves active transaction sync metadata",
     "BackupBundle preserves deleted transaction tombstone",
     "BackupBundle preserves deleted sync tombstone",
@@ -30,6 +34,8 @@ REQUIRED_OFFLINE_SNIPPETS = [
     "Backup restore keeps active transaction",
     "Backup restore keeps transaction ledger id",
     "Backup restore keeps hotel stay transaction link",
+    "Backup restore keeps hotel stay record",
+    "Backup restore keeps hotel stay draft",
     "Backup restore keeps deleted transaction",
     "Backup restore keeps active sync revision",
     "Backup restore keeps deleted sync tombstone",
@@ -49,6 +55,8 @@ REQUIRED_BACKUP_SNIPPETS = [
     "public let syncMetadata: TransactionSyncMetadata?",
     "public let subscriptionMetadata: BackupSubscriptionMetadata",
     "public let appSettings: BackupAppSettings",
+    "public let hotelStayRecords: [HotelStayRecord]",
+    "public let hotelStayDrafts: [HotelStayDraft]",
 ]
 
 REQUIRED_SQLITE_SNIPPETS = [

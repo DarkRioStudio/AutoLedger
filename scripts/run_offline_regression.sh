@@ -211,7 +211,22 @@ struct LedgerCloudKitSyncAdapter {
         LedgerCloudKitPushResult(savedRecordNames: [])
     }
 
+    func pushHotelStayArchive(
+        records: [LedgerHotelStayRecordSyncPayload],
+        drafts: [LedgerHotelStayDraftSyncPayload]
+    ) async throws -> LedgerCloudKitPushResult {
+        LedgerCloudKitPushResult(savedRecordNames: [])
+    }
+
     func fetchAllTransactionRecords() async throws -> [LedgerTransactionSyncPayload] {
+        []
+    }
+
+    func fetchAllHotelStayRecords() async throws -> [LedgerHotelStayRecordSyncPayload] {
+        []
+    }
+
+    func fetchAllHotelStayDrafts() async throws -> [LedgerHotelStayDraftSyncPayload] {
         []
     }
 

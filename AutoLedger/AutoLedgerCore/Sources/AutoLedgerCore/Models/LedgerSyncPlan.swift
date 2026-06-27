@@ -5,10 +5,14 @@ public enum CloudLedgerSyncSchema {
         public static let transaction = "LedgerTransaction"
         public static let configuration = "LedgerConfiguration"
         public static let dashboardSnapshot = "LedgerDashboardSnapshot"
+        public static let hotelStayRecord = "LedgerHotelStayRecord"
+        public static let hotelStayDraft = "LedgerHotelStayDraft"
     }
 
     public enum Field {
         public static let transactionID = "transactionID"
+        public static let hotelStayID = "hotelStayID"
+        public static let hotelStayDraftID = "hotelStayDraftID"
         public static let merchant = "merchant"
         public static let amount = "amount"
         public static let occurredAt = "occurredAt"
@@ -28,6 +32,14 @@ public enum CloudLedgerSyncSchema {
 
     public static func recordName(for transactionID: UUID) -> String {
         "transaction-\(transactionID.uuidString.lowercased())"
+    }
+
+    public static func hotelStayRecordName(for hotelStayID: UUID) -> String {
+        "hotel-stay-\(hotelStayID.uuidString.lowercased())"
+    }
+
+    public static func hotelStayDraftRecordName(for draftID: UUID) -> String {
+        "hotel-stay-draft-\(draftID.uuidString.lowercased())"
     }
 
     public static func configurationRecordName() -> String {
@@ -180,6 +192,116 @@ public extension LedgerConfigurationSyncPayload {
             !merchantAliases.isEmpty ||
             !subscriptionMetadata.annualPriceOverrides.isEmpty ||
             !subscriptionMetadata.notes.isEmpty
+    }
+}
+
+public struct LedgerHotelStayRecordSyncPayload: Codable, Equatable, Sendable {
+    public let recordName: String
+    public let hotelStayID: UUID
+    public let hotelStayRecord: HotelStayRecord?
+    public let updatedAt: Date
+    public let deviceID: String
+    public let deletedAt: Date?
+
+    public init(
+        recordName: String,
+        hotelStayID: UUID,
+        hotelStayRecord: HotelStayRecord?,
+        updatedAt: Date,
+        deviceID: String,
+        deletedAt: Date? = nil
+    ) {
+        self.recordName = recordName
+        self.hotelStayID = hotelStayID
+        self.hotelStayRecord = hotelStayRecord
+        self.updatedAt = updatedAt
+        self.deviceID = deviceID
+        self.deletedAt = deletedAt
+    }
+
+    public init(record: HotelStayRecord, deviceID: String) {
+        self.init(
+            recordName: CloudLedgerSyncSchema.hotelStayRecordName(for: record.id),
+            hotelStayID: record.id,
+            hotelStayRecord: record,
+            updatedAt: record.updatedAt,
+            deviceID: deviceID,
+            deletedAt: nil
+        )
+    }
+
+    public static func tombstone(
+        id: UUID,
+        deletedAt: Date,
+        deviceID: String
+    ) -> LedgerHotelStayRecordSyncPayload {
+        LedgerHotelStayRecordSyncPayload(
+            recordName: CloudLedgerSyncSchema.hotelStayRecordName(for: id),
+            hotelStayID: id,
+            hotelStayRecord: nil,
+            updatedAt: deletedAt,
+            deviceID: deviceID,
+            deletedAt: deletedAt
+        )
+    }
+
+    public var isTombstone: Bool {
+        deletedAt != nil
+    }
+}
+
+public struct LedgerHotelStayDraftSyncPayload: Codable, Equatable, Sendable {
+    public let recordName: String
+    public let draftID: UUID
+    public let hotelStayDraft: HotelStayDraft?
+    public let updatedAt: Date
+    public let deviceID: String
+    public let deletedAt: Date?
+
+    public init(
+        recordName: String,
+        draftID: UUID,
+        hotelStayDraft: HotelStayDraft?,
+        updatedAt: Date,
+        deviceID: String,
+        deletedAt: Date? = nil
+    ) {
+        self.recordName = recordName
+        self.draftID = draftID
+        self.hotelStayDraft = hotelStayDraft
+        self.updatedAt = updatedAt
+        self.deviceID = deviceID
+        self.deletedAt = deletedAt
+    }
+
+    public init(draft: HotelStayDraft, deviceID: String) {
+        self.init(
+            recordName: CloudLedgerSyncSchema.hotelStayDraftRecordName(for: draft.id),
+            draftID: draft.id,
+            hotelStayDraft: draft,
+            updatedAt: draft.updatedAt,
+            deviceID: deviceID,
+            deletedAt: nil
+        )
+    }
+
+    public static func tombstone(
+        id: UUID,
+        deletedAt: Date,
+        deviceID: String
+    ) -> LedgerHotelStayDraftSyncPayload {
+        LedgerHotelStayDraftSyncPayload(
+            recordName: CloudLedgerSyncSchema.hotelStayDraftRecordName(for: id),
+            draftID: id,
+            hotelStayDraft: nil,
+            updatedAt: deletedAt,
+            deviceID: deviceID,
+            deletedAt: deletedAt
+        )
+    }
+
+    public var isTombstone: Bool {
+        deletedAt != nil
     }
 }
 
