@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-26（ITER-264 SDK 阶段二主界面 polish）
+更新日期：2026-06-27（ITER-265 辅助功能与大字体 smoke）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-265 辅助功能与大字体 smoke
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：SDK Adaptation / Phase 2
+- 类型：测试 / 治理 / 辅助功能
+- 目标：完成 `GOAL-1912` 工程侧 smoke，固化 Dynamic Type、VoiceOver、Reduce Motion、深色 / Material 和宽屏文本截断的最小自动门禁。
+- 改动范围：新增 `scripts/check_accessibility_smoke.py`；离线回归入口 `scripts/run_offline_regression.sh` 纳入该门禁；`LedgerView` 搜索结果滚动在 Reduce Motion 开启时不再使用动画；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1912` 状态。
+- 未改动范围：未修改业务逻辑、识别链路、数据模型、SQLite / CloudKit schema、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：辅助功能 smoke 脚本检查生产视图不锁 Dynamic Type、主路径 VoiceOver 文案 key、Reduce Motion 入口、列表 / 表单自适应包装、酒店 PDF 可访问标签和关键大字号收缩策略；`GOAL-1912` 在版本计划中标记为 DONE。
+- 未完成内容：Xcode 27 Device Hub Resize Mode、macOS 27 iPhone Mirroring 连续拖拽截图或视频、真机 VoiceOver rotor 顺序、大字体极限字号和深色模式视觉目检仍属于 release smoke 人工 evidence。
+- 测试情况：执行 `python3 scripts/check_accessibility_smoke.py`、`python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_localization_coverage.py`、`git diff --check`、主 App iOS generic build、`bash scripts/run_offline_regression.sh` 和 `bash scripts/run_golden_regression.sh` 均通过。
+- 风险与注意事项：静态 smoke 只能防止工程约束回归，不能替代真实可调整尺寸窗口和辅助功能开关下的视觉 / 读屏体验；发布前仍需补人工 evidence。
+- 回滚方式：回退 `scripts/check_accessibility_smoke.py`、`scripts/run_offline_regression.sh`、`LedgerView` Reduce Motion 修正和版本文档 / 日志即可；无数据迁移需要回滚。
+- 结论：`GOAL-1912` 的工程侧 smoke 已收口，SDK 阶段二剩余 resize / 辅助功能人工 evidence 归入 release smoke。
+- 下一步建议：进入 `GOAL-1920` Deep link Router 基线，为 Widget 和 App Intents 铺路。
 
 ### ITER-264 SDK 阶段二主界面 polish
 - 日期：2026-06-26

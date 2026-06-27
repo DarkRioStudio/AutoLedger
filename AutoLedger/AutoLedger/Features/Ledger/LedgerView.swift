@@ -33,6 +33,7 @@ private enum LedgerFilter: String, CaseIterable {
 
 struct LedgerView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     private let onOpenLedgerSettings: (() -> Void)?
@@ -251,8 +252,12 @@ struct LedgerView: View {
             }
             .onChange(of: searchText) { _, _ in
                 if let first = searchFilteredTransactions.first {
-                    withAnimation {
+                    if reduceMotion {
                         proxy.scrollTo(first.id, anchor: .top)
+                    } else {
+                        withAnimation {
+                            proxy.scrollTo(first.id, anchor: .top)
+                        }
                     }
                 }
             }
