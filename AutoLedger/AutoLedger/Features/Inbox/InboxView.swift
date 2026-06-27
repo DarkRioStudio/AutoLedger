@@ -18,7 +18,8 @@ struct InboxView: View {
 
     private let ocrService = OCRService()
     private let heroMetricColumns = [
-        GridItem(.adaptive(minimum: 180), spacing: 12, alignment: .top)
+        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
+        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top)
     ]
 
     private var hasShortcutEntries: Bool {
@@ -34,6 +35,8 @@ struct InboxView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    pageTitle
+
                     hero
 
                     if !upcomingSubscriptions.isEmpty {
@@ -73,9 +76,8 @@ struct InboxView: View {
                 .padding(.bottom, 28)
             }
             .autoLedgerScreenChrome()
-            .autoLedgerNavigationBarChrome()
             .navigationTitle("tab.inbox")
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }
@@ -86,6 +88,13 @@ struct InboxView: View {
                 await importPickedPhoto(selectedPhoto)
             }
         }
+    }
+
+    private var pageTitle: some View {
+        Text("tab.inbox")
+            .font(.largeTitle.weight(.bold))
+            .foregroundStyle(AppTheme.ink)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private var hero: some View {

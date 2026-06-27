@@ -15,7 +15,9 @@ struct ReportView: View {
     @State private var selectedTrendLabel: String?
     private let insightService = MonthlyInsightService()
     private let summaryColumns = [
-        GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)
+        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
+        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top),
+        GridItem(.flexible(minimum: 0), spacing: 12, alignment: .top)
     ]
 
     private var isCurrentMonth: Bool {
@@ -40,6 +42,8 @@ struct ReportView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    pageTitle
+
                     summaryCard(snapshot)
 
                     if !anomalyAlerts.isEmpty {
@@ -77,7 +81,8 @@ struct ReportView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerNavigationBarChrome()
-            .navigationTitle("tab.report")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
@@ -97,6 +102,13 @@ struct ReportView: View {
                 }
             }
         }
+    }
+
+    private var pageTitle: some View {
+        Text("tab.report")
+            .font(.largeTitle.weight(.bold))
+            .foregroundStyle(AppTheme.ink)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func anomalySection(_ alerts: [AnomalyAlert]) -> some View {

@@ -377,16 +377,25 @@ struct LedgerView: View {
                         .layoutPriority(2)
                 }
 
-                HStack(spacing: 8) {
-                    Text(transaction.categoryTitle)
-                    Text(transaction.sourceTitle)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(transaction.categoryTitle)
+                        Text(transaction.sourceTitle)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
+
+                    Spacer(minLength: 8)
+
                     Text(AppFormatters.shortDateTime(transaction.occurredAt))
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(2)
+                        .frame(minWidth: 58, alignment: .trailing)
+                        .layoutPriority(1)
                 }
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .allowsTightening(true)
             }
         }
     }
