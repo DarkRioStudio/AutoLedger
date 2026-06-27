@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-274 日文审校与多语言 golden cases）
+更新日期：2026-06-27（ITER-275 Widget 预算占位移除）
 
 ## 记录规则
 
@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-275 Widget 预算占位移除
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Widget / Deep Link
+- 类型：Bugfix / 治理
+- 目标：移除 iPhone / iOS Widget 中尚未实现的预算剩余占位，避免 App 没有预算功能但 Widget 暗示存在预算设置。
+- 改动范围：`AutoLedgerWidgets.swift` 删除 `budgetRemaining`、`monthlyBudgetAmount` 和预算文案，`MonthlyReportWidget` 的第一张小指标改为真实可用的 Top 分类；`scripts/check_widget_smoke.py` 增加预算占位 forbidden snippets；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、`versions/v1.6.2-ja-release-review-checklist.md`、CHANGELOG 和本日志同步 Widget 当前展示口径。
+- 未改动范围：未新增预算模型、预算设置 UI、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：Widget 不再读取 App Group `monthlyBudgetAmount`，不再显示“预算剩余 / 未设置 / Budget Left / 予算残高”；本月概览继续展示默认写入账本、本月支出、Top 分类、最近账单、即将续费和 quick-add 链接。
+- 未完成内容：真实设备 Widget 添加 / 刷新 / deep link 点击截图、iOS 27 大尺寸 Widget 目检和 release smoke evidence 仍留给后续发布前人工验证。
+- 测试情况：执行 `python3 scripts/check_widget_smoke.py` 通过；执行 `python3 scripts/check_l10n_release_smoke.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-widget-budget-removal CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：Widget 的即将续费仍按全局订阅展示，因为订阅模型尚无 `ledgerID`；Top 分类来自当前默认写入账本的月度交易聚合，若本月无有效分类会显示 fallback。
+- 回滚方式：回退 `AutoLedgerWidgets.swift`、`scripts/check_widget_smoke.py` 和相关版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：Widget 当前展示能力与 App 已实现功能保持一致，不再出现未实现预算功能的 UI 暗示。
+- 下一步建议：继续 release smoke 中的真机 Widget 截图、deep link 点击和 iOS 27 大尺寸 Widget 目检。
+
 ### ITER-274 日文审校与多语言 golden cases
 - 日期：2026-06-27
 - 所属版本：v1.6.2
@@ -52,7 +68,7 @@
 - 目标：完成 `GOAL-1950`，把日文 Widget / App Intents 文案、多语言识别 golden cases 和发布前日文审校清单固化为可回归工程闭环。
 - 改动范围：`AutoLedgerWidgets.swift` 的 Widget 文案从中英二分扩展为中 / 日 / 英 fallback；`AutoLedgerShortcuts` 现有 10 个推荐短语补齐日文表达；golden regression runner 支持 `localeIdentifier`；`tests/golden/ledger_text_interpreter/cases.jsonl` 新增日文小票金额 / 商户 / 餐饮分类 cases；新增 `scripts/check_l10n_release_smoke.py` 并纳入离线回归；新增 `versions/v1.6.2-ja-release-review-checklist.md`；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1950` 状态。
 - 未改动范围：未新增远程语言包热更新、社区语言包上传后台、用户纠错共享入口、Widget 写库能力、自动入账、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
-- 完成内容：Widget 日文环境会显示今日支出、月报、本地账本、默认写入账本、预算、最近账单、即将续费、快速记一笔、分类、来源、待确认和 stale snapshot 等核心文案；Shortcuts 的推荐短语保留 10 个上限并补齐日文；日文小票可通过 `ja-JP` locale hint 进入对应识别语言包；日文发布审校清单覆盖术语表、App Intents、Widget、识别语言包、截图 / ASC / TestFlight、Review Notes 和 Demo Mode。
+- 完成内容：Widget 日文环境会显示今日支出、月报、本地账本、默认写入账本、Top 分类、最近账单、即将续费、快速记一笔、分类、来源、待确认和 stale snapshot 等核心文案；Shortcuts 的推荐短语保留 10 个上限并补齐日文；日文小票可通过 `ja-JP` locale hint 进入对应识别语言包；日文发布审校清单覆盖术语表、App Intents、Widget、识别语言包、截图 / ASC / TestFlight、Review Notes 和 Demo Mode。
 - 未完成内容：日文母语人工审校、日文截图最终目检、ASC metadata / TestFlight notes 最终提交文案、Xcode 27 Device Hub Resize Mode 和 iPhone Mirroring 录屏证据仍留给 `GOAL-1960` release smoke；本轮不宣称远程语言包分发或社区共享流程已经实现。
 - 测试情况：执行 `python3 scripts/check_l10n_release_smoke.py` 通过；执行 `bash scripts/run_golden_regression.sh` 通过，当前 38 个 golden cases 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1950 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，AppIntents metadata / SSU training 已接受日文推荐短语。
 - 风险与注意事项：Widget 文案仍使用轻量 locale fallback，不等同于完整 `.strings` 本地化；日文术语已经有工程清单但仍需人工审校；新增 golden cases 覆盖典型日文小票，不代表所有日本零售 / 餐饮 / 发票格式已经覆盖。
@@ -97,13 +113,13 @@
 - 所属版本：v1.6.2
 - 所属阶段：Widget / Deep Link
 - 类型：能力增强 / 系统入口 / 治理
-- 目标：完成 `GOAL-1922`，补齐本月支出、预算剩余、最近账单、即将续费和快速记一笔入口，并明确 Widget 的多账本展示口径。
-- 改动范围：`AutoLedgerWidgets.swift` 扩展 Widget metrics、默认写入账本 scope、只读交易过滤、最近账单、即将续费订阅和预算占位；`MonthlyReportWidget` 展示本月概览并支持 medium / large family，`DailyExpenseWidget` 保留今日支出入口；`AutoLedgerNavigationState` 新增 `autoledger://quick-add` deep link；`LedgerStore` 将默认写入账本 ID 同步到 App Group defaults；新增 `scripts/check_widget_smoke.py` 并纳入离线回归；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1922` 状态。
+- 目标：完成 `GOAL-1922`，补齐本月支出、Top 分类、最近账单、即将续费和快速记一笔入口，并明确 Widget 的多账本展示口径。
+- 改动范围：`AutoLedgerWidgets.swift` 扩展 Widget metrics、默认写入账本 scope、只读交易过滤、Top 分类、最近账单和即将续费订阅；`MonthlyReportWidget` 展示本月概览并支持 medium / large family，`DailyExpenseWidget` 保留今日支出入口；`AutoLedgerNavigationState` 新增 `autoledger://quick-add` deep link；`LedgerStore` 将默认写入账本 ID 同步到 App Group defaults；新增 `scripts/check_widget_smoke.py` 并纳入离线回归；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1922` 状态。
 - 未改动范围：未新增正式预算数据模型或预算设置 UI；未让 Widget 直接新增、编辑或删除账单；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
-- 完成内容：Widget 默认按“默认写入账本”过滤 `transactions.ledger_id`，默认本地账本会兼容旧数据 `ledger_id IS NULL`；本月概览显示账本口径、本月支出、预算剩余占位、最近账单、未来 14 天内的即将续费订阅和 quick-add 链接；`autoledger://quick-add` 会打开账本 tab 并拉起新增账单 sheet；Widget SQLite 访问保持 `SQLITE_OPEN_READONLY`，静态 smoke 防止写库语句进入扩展。
-- 未完成内容：真实设备 Widget 添加 / 刷新 / deep link 点击截图、预算正式模型、Widget 日文人工审校和 iOS 27 大尺寸 Widget 视觉证据仍留给后续 `GOAL-1950` / release smoke；订阅模型当前没有 ledgerID，Widget 的即将续费仍按全局订阅展示。
-- 测试情况：先执行 `python3 scripts/check_widget_smoke.py` 观察到红测，缺少默认写入账本口径、预算、最近账单、即将续费、quick-add route 和 App Group 配置同步；实现后执行 `python3 scripts/check_widget_smoke.py`、`python3 scripts/check_deep_link_smoke.py`、`git diff --check` 均通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1922 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
-- 风险与注意事项：预算剩余当前是占位展示，只有未来写入 App Group `monthlyBudgetAmount` 后才会显示真实余额；Widget 的订阅数据暂不按账本过滤，因为订阅模型尚无 `ledgerID`；`autoledger://quick-add` 需要真实安装后用 Widget / `simctl openurl` 做人工 evidence。
+- 完成内容：Widget 默认按“默认写入账本”过滤 `transactions.ledger_id`，默认本地账本会兼容旧数据 `ledger_id IS NULL`；本月概览显示账本口径、本月支出、Top 分类、最近账单、未来 14 天内的即将续费订阅和 quick-add 链接；`autoledger://quick-add` 会打开账本 tab 并拉起新增账单 sheet；Widget SQLite 访问保持 `SQLITE_OPEN_READONLY`，静态 smoke 防止写库语句进入扩展。
+- 未完成内容：真实设备 Widget 添加 / 刷新 / deep link 点击截图、Widget 日文人工审校和 iOS 27 大尺寸 Widget 视觉证据仍留给后续 `GOAL-1950` / release smoke；预算正式模型不在本版本范围；订阅模型当前没有 ledgerID，Widget 的即将续费仍按全局订阅展示。
+- 测试情况：先执行 `python3 scripts/check_widget_smoke.py` 观察到红测，缺少默认写入账本口径、Top 分类、最近账单、即将续费、quick-add route 和 App Group 配置同步；实现后执行 `python3 scripts/check_widget_smoke.py`、`python3 scripts/check_deep_link_smoke.py`、`git diff --check` 均通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1922 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：Widget 的订阅数据暂不按账本过滤，因为订阅模型尚无 `ledgerID`；`autoledger://quick-add` 需要真实安装后用 Widget / `simctl openurl` 做人工 evidence。
 - 回滚方式：回退 Widget metrics / UI / SQL 过滤、quick-add deep link、默认写入账本 App Group 同步、`scripts/check_widget_smoke.py`、离线回归入口和版本文档 / 日志即可；无 schema 迁移需要回滚。
 - 结论：`GOAL-1922` 已完成工程闭环，Widget 第一段具备默认账本口径、只读数据展示和快速入口。
 - 下一步建议：继续 `GOAL-1940 / GOAL-1941 / GOAL-1950`，推进可靠性与多语言收口；继续排除 `GOAL-1960`。
@@ -122,7 +138,7 @@
 - 风险与注意事项：AppIntent handoff 使用本地 `UserDefaults` / App Group 双写，若后续调整 App Group identifier 需同步更新；酒店待确认 intent 当前可被 metadata 导出但不是推荐 shortcut，后续若要放入 Shortcuts 推荐列表，需要替换低频旧 shortcut 或合并导航入口；收据扫描第一段只落到主 App 导入入口，不直接启动后台识别或自动入账。
 - 回滚方式：回退 `AutoLedgerNavigationIntents.swift`、`AutoLedgerApp` handoff 消费、`AutoLedgerShortcuts` 新推荐短语、四语本地化 key、`scripts/check_app_intents_smoke.py`、离线回归入口和版本文档 / 日志即可；无数据迁移或 schema 变更需要回滚。
 - 结论：`GOAL-1921` 已完成工程闭环，Deep link / App Intents 主线具备可编译、可回归的系统入口基线。
-- 下一步建议：继续 `GOAL-1922` Widget 第一段，围绕本月支出、预算剩余、最近账单、即将续费和快速记一笔入口做最小可测闭环；继续排除 `GOAL-1960`。
+- 下一步建议：继续 `GOAL-1922` Widget 第一段，围绕本月支出、Top 分类、最近账单、即将续费和快速记一笔入口做最小可测闭环；继续排除 `GOAL-1960`。
 
 ### ITER-269 酒店邮箱 Demo Mode 与审核材料
 - 日期：2026-06-27

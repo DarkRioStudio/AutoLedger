@@ -16,8 +16,6 @@ private enum WidgetCopy {
     static var updatedPrefix: String { localized(zh: "更新于", ja: "更新", en: "Updated") }
     static var thisMonthLabel: String { localized(zh: "本月", ja: "今月", en: "This Month") }
     static var ledgerScopeFormat: String { localized(zh: "默认写入账本：%@", ja: "既定の記録先：%@", en: "Default ledger: %@") }
-    static var budgetRemainingTitle: String { localized(zh: "预算剩余", ja: "予算残高", en: "Budget Left") }
-    static var budgetNotSet: String { localized(zh: "未设置", ja: "未設定", en: "Not Set") }
     static var recentTransactionsTitle: String { localized(zh: "最近账单", ja: "最近の記録", en: "Recent") }
     static var noRecentTransactionTitle: String { localized(zh: "暂无账单", ja: "記録なし", en: "No Recent Entries") }
     static var upcomingSubscriptionsTitle: String { localized(zh: "即将续费", ja: "まもなく更新", en: "Upcoming") }
@@ -62,7 +60,6 @@ private struct WidgetLedgerMetrics {
     let latestMerchant: String?
     let monthTotal: Double
     let monthCount: Int
-    let budgetRemaining: Double?
     let recentTransactions: [WidgetTransaction]
     let upcomingSubscriptions: [WidgetSubscription]
     let topMerchant: String?
@@ -77,7 +74,6 @@ private struct WidgetLedgerMetrics {
         latestMerchant: nil,
         monthTotal: 0,
         monthCount: 0,
-        budgetRemaining: nil,
         recentTransactions: [],
         upcomingSubscriptions: [],
         topMerchant: nil,
@@ -103,7 +99,6 @@ private enum WidgetLedgerStore {
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
     private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
-    private static let monthlyBudgetAmountKey = "monthlyBudgetAmount"
 
     static func loadMetrics(referenceDate: Date = .now) -> WidgetLedgerMetrics {
         let metadata = loadSnapshotMetadata(referenceDate: referenceDate)
@@ -116,7 +111,6 @@ private enum WidgetLedgerStore {
                 latestMerchant: nil,
                 monthTotal: 0,
                 monthCount: 0,
-                budgetRemaining: nil,
                 recentTransactions: [],
                 upcomingSubscriptions: [],
                 topMerchant: nil,
@@ -136,7 +130,6 @@ private enum WidgetLedgerStore {
                 latestMerchant: nil,
                 monthTotal: 0,
                 monthCount: 0,
-                budgetRemaining: nil,
                 recentTransactions: [],
                 upcomingSubscriptions: [],
                 topMerchant: nil,
@@ -165,7 +158,6 @@ private enum WidgetLedgerStore {
         let monthTotal = monthTransactions.reduce(0) { $0 + $1.amount }
         let topMerchant = groupedTopName(from: monthTransactions, keyPath: \.merchant)
         let topCategory = groupedTopName(from: monthTransactions, keyPath: \.category).map(categoryTitle)
-        let budgetRemaining = loadMonthlyBudgetAmount().map { max($0 - monthTotal, 0) }
 
         return WidgetLedgerMetrics(
             ledgerScope: ledgerScope,
@@ -174,7 +166,6 @@ private enum WidgetLedgerStore {
             latestMerchant: todayTransactions.first.map(displayName(for:)),
             monthTotal: monthTotal,
             monthCount: monthTransactions.count,
-            budgetRemaining: budgetRemaining,
             recentTransactions: recentTransactions,
             upcomingSubscriptions: upcomingSubscriptions,
             topMerchant: topMerchant,
@@ -213,15 +204,6 @@ private enum WidgetLedgerStore {
         }
 
         return WidgetLedgerScope(id: String(cString: idCString), name: String(cString: nameCString))
-    }
-
-    private static func loadMonthlyBudgetAmount() -> Double? {
-        guard let defaults = UserDefaults(suiteName: appGroupIdentifier),
-              defaults.object(forKey: monthlyBudgetAmountKey) != nil else {
-            return nil
-        }
-        let value = defaults.double(forKey: monthlyBudgetAmountKey)
-        return value > 0 ? value : nil
     }
 
     private static func loadSnapshotMetadata(referenceDate: Date) -> (updatedAt: Date, isStale: Bool) {
@@ -482,7 +464,6 @@ private struct DailyExpenseProvider: TimelineProvider {
                 latestMerchant: "Example Supermarket",
                 monthTotal: 1250.8,
                 monthCount: 26,
-                budgetRemaining: nil,
                 recentTransactions: [
                     WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
                 ],
@@ -519,7 +500,6 @@ private struct MonthlyReportProvider: TimelineProvider {
                 latestMerchant: "Example Supermarket",
                 monthTotal: 1250.8,
                 monthCount: 26,
-                budgetRemaining: nil,
                 recentTransactions: [
                     WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
                 ],
@@ -851,9 +831,9 @@ private struct MonthlyReportWidgetView: View {
 
                         HStack(spacing: cardSpacing) {
                             compactMetric(
-                                title: WidgetCopy.budgetRemainingTitle,
-                                value: budgetSummaryValue,
-                                icon: "target",
+                                title: WidgetCopy.topCategoryTitle,
+                                value: topCategorySummary,
+                                icon: "tag.fill",
                                 accent: Color(red: 0.17, green: 0.44, blue: 0.77),
                                 compact: compact
                             )
@@ -889,8 +869,8 @@ private struct MonthlyReportWidgetView: View {
         }
     }
 
-    private var budgetSummaryValue: String {
-        entry.metrics.budgetRemaining.map(currency) ?? WidgetCopy.budgetNotSet
+    private var topCategorySummary: String {
+        entry.metrics.topCategory ?? WidgetCopy.fallbackCategory
     }
 
     private var recentTransactionSummary: String {
@@ -1039,7 +1019,6 @@ struct MonthlyReportWidget: Widget {
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
-            budgetRemaining: nil,
             recentTransactions: [
                 WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
             ],
@@ -1066,7 +1045,6 @@ struct MonthlyReportWidget: Widget {
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
-            budgetRemaining: nil,
             recentTransactions: [
                 WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
             ],
@@ -1093,7 +1071,6 @@ struct MonthlyReportWidget: Widget {
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
-            budgetRemaining: nil,
             recentTransactions: [
                 WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
             ],

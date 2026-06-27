@@ -16,7 +16,7 @@ LEDGER_STORE_FILE = ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift"
 REQUIRED_WIDGET_SNIPPETS = [
     "defaultWriteLedgerIDKey",
     "WidgetLedgerScope",
-    "budgetRemaining",
+    "topCategory",
     "recentTransactions",
     "upcomingSubscriptions",
     "quickAddURL",
@@ -26,7 +26,16 @@ REQUIRED_WIDGET_SNIPPETS = [
     "ledger_id IS NULL OR ledger_id = ?",
     "WidgetSubscription",
     "Link(destination: WidgetDeepLink.quickAddURL",
-    "WidgetCopy.budgetNotSet",
+]
+
+FORBIDDEN_WIDGET_SNIPPETS = [
+    "budgetRemaining",
+    "monthlyBudgetAmount",
+    "budgetRemainingTitle",
+    "budgetNotSet",
+    "预算剩余",
+    "予算残高",
+    "Budget Left",
 ]
 
 REQUIRED_NAVIGATION_SNIPPETS = [
@@ -53,6 +62,9 @@ def main() -> int:
     for snippet in REQUIRED_WIDGET_SNIPPETS:
         if snippet not in widget_source:
             failures.append(f"{WIDGET_FILE.relative_to(ROOT)} missing widget snippet: {snippet}")
+    for snippet in FORBIDDEN_WIDGET_SNIPPETS:
+        if snippet in widget_source:
+            failures.append(f"{WIDGET_FILE.relative_to(ROOT)} still contains unsupported budget snippet: {snippet}")
 
     if "sqlite3_open_v2" not in widget_source or "SQLITE_OPEN_READONLY" not in widget_source:
         failures.append("Widget must open SQLite in read-only mode")
