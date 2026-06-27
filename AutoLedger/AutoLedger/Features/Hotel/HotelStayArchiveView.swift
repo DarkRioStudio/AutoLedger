@@ -12,12 +12,14 @@ import AppKit
 struct HotelStayListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let records: [HotelStayRecord]
+    let drafts: [HotelStayDraft]
     let transactions: [Transaction]
     let ledgerID: String?
     let isImporting: Bool
     let statusMessage: String?
     let onImportPDF: (() -> Void)?
     let onImportEmail: (() -> Void)?
+    let onReviewDraft: ((HotelStayDraft) -> Void)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
     @Binding private var selectedRecordID: UUID?
 
@@ -25,6 +27,7 @@ struct HotelStayListView: View {
 
     init(
         records: [HotelStayRecord],
+        drafts: [HotelStayDraft] = [],
         transactions: [Transaction] = [],
         ledgerID: String? = nil,
         isImporting: Bool = false,
@@ -32,15 +35,18 @@ struct HotelStayListView: View {
         selectedRecordID: Binding<UUID?> = .constant(nil),
         onImportPDF: (() -> Void)? = nil,
         onImportEmail: (() -> Void)? = nil,
+        onReviewDraft: ((HotelStayDraft) -> Void)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.records = records
+        self.drafts = drafts
         self.transactions = transactions
         self.ledgerID = ledgerID
         self.isImporting = isImporting
         self.statusMessage = statusMessage
         self.onImportPDF = onImportPDF
         self.onImportEmail = onImportEmail
+        self.onReviewDraft = onReviewDraft
         self.onDeleteRecord = onDeleteRecord
         self._selectedRecordID = selectedRecordID
     }
@@ -51,6 +57,30 @@ struct HotelStayListView: View {
 
     private var snapshot: HotelStayListSnapshot {
         presenter.makeListSnapshot(records: records, ledgerID: ledgerID)
+    }
+
+    private var pendingDrafts: [HotelStayDraft] {
+        drafts
+            .filter { draft in
+                switch draft.status {
+                case .imported, .textExtracted, .parsed, .needsReview:
+                    break
+                case .confirmed, .rejected, .postedToLedger:
+                    return false
+                }
+                guard let ledgerID else { return true }
+                return (draft.targetLedgerID ?? TodaySpendingSummary.defaultLedgerID) == ledgerID
+            }
+            .sorted { lhs, rhs in
+                if lhs.updatedAt == rhs.updatedAt {
+                    return lhs.createdAt > rhs.createdAt
+                }
+                return lhs.updatedAt > rhs.updatedAt
+            }
+    }
+
+    private var hasListContent: Bool {
+        !snapshot.rows.isEmpty || !pendingDrafts.isEmpty
     }
 
     private var selectedRecord: HotelStayRecord? {
@@ -88,7 +118,7 @@ struct HotelStayListView: View {
 
     @ViewBuilder
     private var listColumn: some View {
-        if snapshot.rows.isEmpty {
+        if !hasListContent {
             VStack(spacing: 16) {
                 if let statusMessage {
                     statusRow(statusMessage)
@@ -107,8 +137,13 @@ struct HotelStayListView: View {
                 if statusMessage != nil {
                     importSection
                 }
-                summarySection
-                staySection
+                if !pendingDrafts.isEmpty {
+                    pendingDraftSection
+                }
+                if !snapshot.rows.isEmpty {
+                    summarySection
+                    staySection
+                }
             }
             .autoLedgerListChrome()
         }
@@ -214,6 +249,24 @@ struct HotelStayListView: View {
             Text("hotel_stay.list.section.records")
         } footer: {
             Text(String(format: String(localized: "hotel_stay.list.footer_format"), snapshot.rows.count))
+        }
+    }
+
+    private var pendingDraftSection: some View {
+        Section {
+            ForEach(pendingDrafts) { draft in
+                Button {
+                    onReviewDraft?(draft)
+                } label: {
+                    HotelStayDraftRowView(draft: draft)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(AppTheme.card)
+            }
+        } header: {
+            Text("hotel_stay.list.section.pending_drafts")
+        } footer: {
+            Text(String(format: String(localized: "hotel_stay.list.pending_drafts.footer_format"), pendingDrafts.count))
         }
     }
 
@@ -331,6 +384,113 @@ private struct HotelStayRowView: View {
             return "checkmark.circle.fill"
         case .missingTransaction:
             return "exclamationmark.circle"
+        }
+    }
+}
+
+private struct HotelStayDraftRowView: View {
+    let draft: HotelStayDraft
+
+    private var payload: HotelFolioParsedPayload? {
+        draft.parsedPayload
+    }
+
+    private var title: String {
+        payload?.hotelName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? draft.sourceFileName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? draft.sourceEmailSubject?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? String(localized: "hotel_stay.draft.unknown_hotel")
+    }
+
+    private var amountText: String {
+        guard let totalAmount = payload?.totalAmount else {
+            return String(localized: "hotel_stay.draft.amount_pending")
+        }
+        let currency = payload?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "CNY"
+        return String(format: "%@ %.2f", currency, totalAmount)
+    }
+
+    private var locationText: String? {
+        [payload?.city, payload?.country]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+            .joined(separator: " / ")
+            .nilIfEmpty
+    }
+
+    private var dateText: String? {
+        let checkIn = payload?.checkInDate?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let checkOut = payload?.checkOutDate?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        if let checkIn, let checkOut {
+            return "\(checkIn) - \(checkOut)"
+        }
+        return checkOut ?? checkIn
+    }
+
+    private var sourceDetailText: String? {
+        draft.sourceEmailSubject?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? draft.sourceFileName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.headline)
+                .foregroundStyle(.orange)
+                .frame(width: 34, height: 34)
+                .background(Color.orange.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                        .lineLimit(2)
+
+                    Spacer()
+
+                    Text(amountText)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if let locationText {
+                        Text(locationText)
+                    }
+                    if let dateText {
+                        Text(dateText)
+                    }
+                    if let sourceDetailText {
+                        Text(sourceDetailText)
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 8) {
+                        Label(sourceTitleKey(for: draft.sourceType), systemImage: "tray.and.arrow.down")
+                        Label("hotel_stay.draft.status.needs_review", systemImage: "exclamationmark.circle")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func sourceTitleKey(for sourceType: HotelFolioSourceType) -> LocalizedStringKey {
+        switch sourceType {
+        case .manualPDF:
+            return "hotel_stay.source.manual_pdf"
+        case .localEmailIMAP:
+            return "hotel_stay.source.local_email_imap"
+        case .cloudWorker:
+            return "hotel_stay.source.cloud_worker"
+        case .shareExtension:
+            return "hotel_stay.source.share_extension"
         }
     }
 }
@@ -599,6 +759,12 @@ private struct HotelStayPDFPreview: NSViewRepresentable {
     }
 }
 #endif
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
 
 #Preview("Hotel stays") {
     HotelStayListView(

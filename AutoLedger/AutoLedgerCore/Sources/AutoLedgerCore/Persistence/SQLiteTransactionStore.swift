@@ -533,6 +533,114 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    // MARK: - Hotel Stay Drafts
+
+    public func loadHotelStayDrafts() throws -> [HotelStayDraft] {
+        let sql = """
+        SELECT id, source_type, target_ledger_id, source_file_name, source_pdf_data,
+               source_email_subject, source_email_from, raw_text, parsed_payload_json,
+               confidence, status, created_at, updated_at
+        FROM hotel_stay_drafts
+        ORDER BY updated_at DESC, created_at DESC;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        var drafts: [HotelStayDraft] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let draft = Self.hotelStayDraft(from: statement) else { continue }
+            drafts.append(draft)
+        }
+        return drafts
+    }
+
+    public func save(hotelStayDraft draft: HotelStayDraft) throws {
+        let sql = """
+        INSERT INTO hotel_stay_drafts (
+            id, source_type, target_ledger_id, source_file_name, source_pdf_data,
+            source_email_subject, source_email_from, raw_text, parsed_payload_json,
+            confidence, status, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            source_type = excluded.source_type,
+            target_ledger_id = excluded.target_ledger_id,
+            source_file_name = excluded.source_file_name,
+            source_pdf_data = excluded.source_pdf_data,
+            source_email_subject = excluded.source_email_subject,
+            source_email_from = excluded.source_email_from,
+            raw_text = excluded.raw_text,
+            parsed_payload_json = excluded.parsed_payload_json,
+            confidence = excluded.confidence,
+            status = excluded.status,
+            updated_at = excluded.updated_at;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        bind(hotelStayDraft: draft, to: statement)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    public func deleteHotelStayDraft(id: UUID) throws {
+        let sql = "DELETE FROM hotel_stay_drafts WHERE id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+        sqlite3_bind_text(statement, 1, id.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
+    @discardableResult
+    public func deleteHotelStayDrafts(
+        statuses: Set<HotelStayDraftStatus>,
+        updatedBefore cutoffDate: Date
+    ) throws -> Int {
+        guard !statuses.isEmpty else { return 0 }
+        let orderedStatuses = statuses.map(\.rawValue).sorted()
+        let placeholders = Array(repeating: "?", count: orderedStatuses.count).joined(separator: ", ")
+        let sql = "DELETE FROM hotel_stay_drafts WHERE status IN (\(placeholders)) AND updated_at < ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        for (offset, status) in orderedStatuses.enumerated() {
+            sqlite3_bind_text(statement, Int32(offset + 1), status, -1, sqliteTransient)
+        }
+        sqlite3_bind_text(
+            statement,
+            Int32(orderedStatuses.count + 1),
+            Self.storageFormatter.string(from: cutoffDate),
+            -1,
+            sqliteTransient
+        )
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+        return Int(sqlite3_changes(db))
+    }
+
     // MARK: - Ledger Profiles
 
     public func loadLedgerProfiles(includeArchived: Bool = true) throws -> [LedgerProfile] {
@@ -881,6 +989,28 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let hotelStayColumns = Self.columnNames(db: db, table: "hotel_stay_records")
         if !hotelStayColumns.contains("source_pdf_data") {
             sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN source_pdf_data BLOB;", nil, nil, nil)
+        }
+
+        let hotelStayDraftsSQL = """
+        CREATE TABLE IF NOT EXISTS hotel_stay_drafts (
+            id TEXT PRIMARY KEY,
+            source_type TEXT NOT NULL,
+            target_ledger_id TEXT,
+            source_file_name TEXT,
+            source_pdf_data BLOB,
+            source_email_subject TEXT,
+            source_email_from TEXT,
+            raw_text TEXT NOT NULL DEFAULT '',
+            parsed_payload_json TEXT,
+            confidence REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """
+
+        guard sqlite3_exec(db, hotelStayDraftsSQL, nil, nil, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.executeStatement(hotelStayDraftsSQL)
         }
 
         let debugSQL = """
@@ -1674,6 +1804,70 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sourcePDFData: data(from: statement, index: 23),
             confidence: sqlite3_column_double(statement, 24),
             rawText: String(cString: rawTextCString),
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    private func bind(hotelStayDraft draft: HotelStayDraft, to statement: OpaquePointer?) {
+        sqlite3_bind_text(statement, 1, draft.id.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, draft.sourceType.rawValue, -1, sqliteTransient)
+        bindOptionalString(draft.targetLedgerID, to: statement, at: 3)
+        bindOptionalString(draft.sourceFileName, to: statement, at: 4)
+        bindOptionalData(draft.sourcePDFData, to: statement, at: 5)
+        bindOptionalString(draft.sourceEmailSubject, to: statement, at: 6)
+        bindOptionalString(draft.sourceEmailFrom, to: statement, at: 7)
+        sqlite3_bind_text(statement, 8, draft.rawText, -1, sqliteTransient)
+        if let parsedPayload = draft.parsedPayload,
+           let data = try? JSONEncoder().encode(parsedPayload),
+           let json = String(data: data, encoding: .utf8) {
+            sqlite3_bind_text(statement, 9, json, -1, sqliteTransient)
+        } else {
+            sqlite3_bind_null(statement, 9)
+        }
+        sqlite3_bind_double(statement, 10, draft.confidence)
+        sqlite3_bind_text(statement, 11, draft.status.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 12, Self.storageFormatter.string(from: draft.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 13, Self.storageFormatter.string(from: draft.updatedAt), -1, sqliteTransient)
+    }
+
+    private static func hotelStayDraft(from statement: OpaquePointer?) -> HotelStayDraft? {
+        guard
+            let idCString = sqlite3_column_text(statement, 0),
+            let sourceTypeCString = sqlite3_column_text(statement, 1),
+            let rawTextCString = sqlite3_column_text(statement, 7),
+            let statusCString = sqlite3_column_text(statement, 10),
+            let createdCString = sqlite3_column_text(statement, 11),
+            let updatedCString = sqlite3_column_text(statement, 12),
+            let id = UUID(uuidString: String(cString: idCString)),
+            let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
+            let status = HotelStayDraftStatus(rawValue: String(cString: statusCString)),
+            let createdAt = storageFormatter.date(from: String(cString: createdCString)),
+            let updatedAt = storageFormatter.date(from: String(cString: updatedCString))
+        else {
+            return nil
+        }
+
+        let parsedPayload: HotelFolioParsedPayload? = {
+            guard let json = string(from: statement, index: 8),
+                  let data = json.data(using: .utf8) else {
+                return nil
+            }
+            return try? JSONDecoder().decode(HotelFolioParsedPayload.self, from: data)
+        }()
+
+        return HotelStayDraft(
+            id: id,
+            sourceType: sourceType,
+            targetLedgerID: string(from: statement, index: 2),
+            sourceFileName: string(from: statement, index: 3),
+            sourcePDFData: data(from: statement, index: 4),
+            sourceEmailSubject: string(from: statement, index: 5),
+            sourceEmailFrom: string(from: statement, index: 6),
+            rawText: String(cString: rawTextCString),
+            parsedPayload: parsedPayload,
+            confidence: sqlite3_column_double(statement, 9),
+            status: status,
             createdAt: createdAt,
             updatedAt: updatedAt
         )

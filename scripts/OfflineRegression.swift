@@ -77,6 +77,7 @@ struct OfflineRegression {
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try verifyHotelStaySQLitePersistence(reporter: reporter)
+        try verifyHotelStayDraftPersistence(reporter: reporter)
         try verifyLedgerStoreHotelStayPosting(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyLedgerCSVCodec(reporter: reporter)
@@ -3843,6 +3844,75 @@ struct OfflineRegression {
         let reopenedLedgerStore = LedgerStore(transactionStore: reopenedStore)
         reporter.check(reopenedLedgerStore.hotelStayRecords.isEmpty, "LedgerStore reloads deleted hotel stays from SQLite")
         reporter.check(reopenedLedgerStore.transactions.isEmpty, "LedgerStore reloads linked hotel transaction soft delete")
+    }
+
+    private static func verifyHotelStayDraftPersistence(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerHotelStayDrafts-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let createdAt = AppFormatters.parseFlexibleDate("2026-06-26 09:30") ?? .now
+        let updatedAt = AppFormatters.parseFlexibleDate("2026-06-26 09:35") ?? createdAt
+        let sourcePDFData = Data("%PDF-1.7 hotel draft folio".utf8)
+        let draft = HotelStayDraft(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001871") ?? UUID(),
+            sourceType: .localEmailIMAP,
+            targetLedgerID: "travel-ledger",
+            sourceFileName: "email-folio.pdf",
+            sourcePDFData: sourcePDFData,
+            sourceEmailSubject: "Your Demo Bay Hotel folio",
+            sourceEmailFrom: "folio@examplehotel.test",
+            rawText: "Demo Bay Hotel\nCheck-out: 2026-06-22\nTotal: JPY 50000",
+            parsedPayload: HotelFolioParsedPayload(
+                hotelName: "Demo Bay Hotel",
+                brand: "Demo Suites",
+                group: "Demo Hospitality",
+                city: "Tokyo",
+                country: "Japan",
+                checkInDate: "2026-06-20",
+                checkOutDate: "2026-06-22",
+                nights: 2,
+                roomType: "King Bay View",
+                confirmationNumber: "ABC123",
+                currency: "JPY",
+                roomCharge: 40000,
+                tax: 4000,
+                serviceCharge: 3000,
+                foodBeverage: 2500,
+                otherCharges: 500,
+                totalAmount: 50000,
+                paymentMethod: "Visa",
+                confidence: 0.91,
+                rawTextExcerpt: "Demo folio excerpt"
+            ),
+            confidence: 0.91,
+            status: .needsReview,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+
+        let sqlStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-drafts.sqlite3")
+        let ledgerStore = LedgerStore(transactionStore: sqlStore)
+        reporter.check(ledgerStore.saveHotelStayDraft(draft), "LedgerStore saves hotel stay draft")
+        reporter.check(ledgerStore.hotelStayDrafts == [draft], "LedgerStore publishes hotel stay draft")
+        let savedDrafts = try sqlStore.loadHotelStayDrafts()
+        reporter.check(savedDrafts == [draft], "SQLite saves hotel stay draft")
+
+        let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-drafts.sqlite3")
+        let reopenedLedgerStore = LedgerStore(transactionStore: reopenedStore)
+        reporter.check(reopenedLedgerStore.hotelStayDrafts == [draft], "LedgerStore reloads hotel stay drafts from SQLite")
+        reporter.check(reopenedLedgerStore.hotelStayDrafts.first?.sourcePDFData == sourcePDFData, "LedgerStore keeps draft source PDF data")
+
+        var confirmedDraft = draft
+        confirmedDraft.status = .confirmed
+        confirmedDraft.updatedAt = AppFormatters.parseFlexibleDate("2026-06-26 09:45") ?? updatedAt
+        reporter.check(reopenedLedgerStore.postConfirmedHotelStayDraft(confirmedDraft), "LedgerStore posts persisted hotel stay draft")
+        reporter.check(reopenedLedgerStore.hotelStayDrafts.isEmpty, "LedgerStore removes posted draft from pending queue")
+        let draftsAfterPost = try reopenedStore.loadHotelStayDrafts()
+        reporter.check(draftsAfterPost.isEmpty, "SQLite removes posted hotel stay draft")
     }
 
     private static func verifyLedgerImportFlow(using reporter: RegressionReporter) async throws {

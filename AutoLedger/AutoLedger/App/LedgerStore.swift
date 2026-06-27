@@ -41,6 +41,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
     @Published private(set) var hotelStayRecords: [HotelStayRecord] = []
+    @Published private(set) var hotelStayDrafts: [HotelStayDraft] = []
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
     @Published var lastImportSummary: String?
@@ -86,6 +87,7 @@ final class LedgerStore: ObservableObject {
         self.categoryCorrections = LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
+        self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
@@ -568,6 +570,7 @@ final class LedgerStore: ObservableObject {
             categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
             merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
             hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())     ?? hotelStayRecords
+            hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())      ?? hotelStayDrafts
         }
         loadShareExtensionResult()
     }
@@ -801,6 +804,109 @@ final class LedgerStore: ObservableObject {
     }
 
     @discardableResult
+    func saveHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
+        do {
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                try sqlStore.save(hotelStayDraft: draft)
+            }
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.draft.error.persistence_failed_format",
+                    fallback: "酒店水单草稿保存失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        upsertHotelStayDraftInMemory(draft)
+        lastImportSummary = localizedMessage(
+            "hotel_stay.draft.saved",
+            fallback: "酒店水单草稿已保存，等待确认。"
+        )
+        return true
+    }
+
+    @discardableResult
+    func rejectHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
+        var rejectedDraft = draft
+        rejectedDraft.status = .rejected
+        rejectedDraft.updatedAt = .now
+
+        do {
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                try sqlStore.save(hotelStayDraft: rejectedDraft)
+            }
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.draft.error.persistence_failed_format",
+                    fallback: "酒店水单草稿保存失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        upsertHotelStayDraftInMemory(rejectedDraft)
+        lastImportSummary = localizedMessage(
+            "hotel_stay.import.status.rejected",
+            fallback: "已拒绝本次酒店水单识别结果。"
+        )
+        return true
+    }
+
+    @discardableResult
+    func deleteHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
+        do {
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                try sqlStore.deleteHotelStayDraft(id: draft.id)
+            }
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.draft.delete.error_format",
+                    fallback: "酒店水单草稿删除失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        hotelStayDrafts.removeAll { $0.id == draft.id }
+        lastImportSummary = localizedMessage(
+            "hotel_stay.draft.delete.success",
+            fallback: "已删除酒店水单草稿。"
+        )
+        return true
+    }
+
+    @discardableResult
+    func pruneStaleHotelStayDrafts(
+        updatedBefore cutoffDate: Date,
+        statuses: Set<HotelStayDraftStatus> = [.rejected, .postedToLedger]
+    ) -> Int {
+        var removedCount = 0
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            removedCount = (try? sqlStore.deleteHotelStayDrafts(
+                statuses: statuses,
+                updatedBefore: cutoffDate
+            )) ?? 0
+        }
+
+        let removedIDs = Set(
+            hotelStayDrafts
+                .filter { statuses.contains($0.status) && $0.updatedAt < cutoffDate }
+                .map(\.id)
+        )
+        if !removedIDs.isEmpty {
+            hotelStayDrafts.removeAll { removedIDs.contains($0.id) }
+        }
+        return max(removedCount, removedIDs.count)
+    }
+
+    @discardableResult
     func postConfirmedHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
         let postingService = HotelStayLedgerPostingService()
         let result: HotelStayLedgerPostingResult
@@ -836,6 +942,10 @@ final class LedgerStore: ObservableObject {
 
         hotelStayRecords.insert(result.hotelStayRecord, at: 0)
         sortHotelStayRecords()
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            try? sqlStore.deleteHotelStayDraft(id: draft.id)
+        }
+        hotelStayDrafts.removeAll { $0.id == draft.id }
         transactions.insert(result.transaction, at: 0)
         sortTransactions()
         lastImportSummary = String(
@@ -1613,6 +1723,24 @@ final class LedgerStore: ObservableObject {
         }
     }
 
+    private func upsertHotelStayDraftInMemory(_ draft: HotelStayDraft) {
+        if let index = hotelStayDrafts.firstIndex(where: { $0.id == draft.id }) {
+            hotelStayDrafts[index] = draft
+        } else {
+            hotelStayDrafts.insert(draft, at: 0)
+        }
+        sortHotelStayDrafts()
+    }
+
+    private func sortHotelStayDrafts() {
+        hotelStayDrafts.sort { lhs, rhs in
+            if lhs.updatedAt == rhs.updatedAt {
+                return lhs.createdAt > rhs.createdAt
+            }
+            return lhs.updatedAt > rhs.updatedAt
+        }
+    }
+
     private func localizedMessage(_ key: String, fallback: String) -> String {
         let value = NSLocalizedString(key, comment: "")
         return value == key ? fallback : value
@@ -1671,6 +1799,11 @@ final class LedgerStore: ObservableObject {
     private static func loadInitialHotelStayRecords(using store: TransactionStore?) -> [HotelStayRecord] {
         guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
         return (try? sqlStore.loadHotelStayRecords()) ?? []
+    }
+
+    private static func loadInitialHotelStayDrafts(using store: TransactionStore?) -> [HotelStayDraft] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
+        return (try? sqlStore.loadHotelStayDrafts()) ?? []
     }
 
     // MARK: - Subscriptions

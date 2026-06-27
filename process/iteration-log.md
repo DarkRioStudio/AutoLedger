@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-266 Deep link Router 基线）
+更新日期：2026-06-27（ITER-267 酒店待确认草稿队列持久化）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-267 酒店待确认草稿队列持久化
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Email B
+- 类型：能力增强 / 数据持久化 / UI 集成
+- 目标：完成 `GOAL-1930`，让酒店水单手动 PDF / 本地邮箱导入产生的 `HotelStayDraft` 可跨 App 会话保留，并在酒店消费列表中区分待确认草稿和正式记录。
+- 改动范围：`SQLiteTransactionStore` 新增 `hotel_stay_drafts` 表与 `load/save/delete/prune` API；`LedgerStore` 新增 `hotelStayDrafts` 状态、启动 / 刷新加载、保存 / 拒绝 / 删除 / stale 清理方法，并在确认入账成功后移除对应草稿；`HotelStayWorkspaceView` 在导入解析后保存草稿并支持从列表重新打开复核 sheet；`HotelStayListView` 新增待确认草稿 section 和草稿行；四语本地化、离线回归、`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1930` 状态。
+- 未改动范围：未实现 Message-ID hash / 附件 hash 去重、拒绝候选后不重复打扰、失败重试策略、Demo Mode、Review Notes、后台邮箱扫描、Worker 云端自动化或自动正式入账；未修改 CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：待确认酒店草稿会完整保留 source type、目标账本、来源文件、原始 PDF、邮件主题 / 发件人、原始文本、结构化 payload、置信度、状态和时间戳；酒店消费列表会展示待确认草稿分区，点击草稿重新进入 `HotelStayReviewView`；确认入账后生成正式 `HotelStayRecord + Transaction` 并清理对应草稿；新增离线回归覆盖 SQLite 跨会话保存、PDF 数据保留、`LedgerStore` 重启加载和确认后删除草稿。
+- 未完成内容：`GOAL-1931 / GOAL-1932` 的邮箱去重、拒绝 / 重试闭环、授权失效细化状态、Demo Mode 和审核材料仍待后续 goal。
+- 测试情况：先执行 `bash scripts/run_offline_regression.sh` 观察到新红测因缺少 `saveHotelStayDraft`、`hotelStayDrafts`、`loadHotelStayDrafts` API 编译失败；实现后重新执行 `bash scripts/run_offline_regression.sh` 通过；执行主 App `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1930 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：`hotel_stay_drafts` 为新增本地 SQLite 表，旧库通过 `CREATE TABLE IF NOT EXISTS` 兼容迁移；当前草稿队列仅本机持久化，不进入 CloudKit / Widget 快照 / 备份导出；拒绝状态已经可保存但“拒绝后去重不再打扰”留给 `GOAL-1931`。
+- 回滚方式：回退 `SQLiteTransactionStore` 草稿表和 API、`LedgerStore` 草稿状态与方法、酒店列表草稿 section、工作台保存 / 复核接线、四语文案、离线回归和版本文档 / 日志即可；若本地已生成 `hotel_stay_drafts` 表，旧版本忽略该表即可。
+- 结论：`GOAL-1930` 已完成工程闭环，酒店邮箱公共用户链路具备跨会话待确认队列基础。
+- 下一步建议：继续 `GOAL-1931`，补邮箱 Message-ID / 附件 hash 去重、拒绝记录和失败重试。
 
 ### ITER-266 Deep link Router 基线
 - 日期：2026-06-27

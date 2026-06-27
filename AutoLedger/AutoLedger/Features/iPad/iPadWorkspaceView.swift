@@ -2434,6 +2434,7 @@ struct HotelStayWorkspaceView: View {
     var body: some View {
         HotelStayListView(
             records: store.hotelStayRecords,
+            drafts: store.hotelStayDrafts,
             transactions: store.visibleTransactions,
             ledgerID: ledgerID,
             isImporting: isImporting,
@@ -2444,6 +2445,9 @@ struct HotelStayWorkspaceView: View {
             },
             onImportEmail: {
                 showsEmailImporter = true
+            },
+            onReviewDraft: { draft in
+                reviewDraft = draft
             },
             onDeleteRecord: { record in
                 let didDelete = store.deleteHotelStayRecord(record)
@@ -2481,8 +2485,12 @@ struct HotelStayWorkspaceView: View {
                         statusMessage = store.lastImportSummary
                     }
                 },
-                onReject: { _ in
-                    statusMessage = String(localized: "hotel_stay.import.status.rejected")
+                onReject: { rejectedDraft in
+                    if store.rejectHotelStayDraft(rejectedDraft) {
+                        statusMessage = String(localized: "hotel_stay.import.status.rejected")
+                    } else {
+                        statusMessage = store.lastImportSummary
+                    }
                 }
             )
         }
@@ -2539,7 +2547,11 @@ struct HotelStayWorkspaceView: View {
             )
         }
 
-        reviewDraft = preparedDraft
+        if store.saveHotelStayDraft(preparedDraft) {
+            reviewDraft = preparedDraft
+        } else {
+            statusMessage = store.lastImportSummary
+        }
     }
 }
 
