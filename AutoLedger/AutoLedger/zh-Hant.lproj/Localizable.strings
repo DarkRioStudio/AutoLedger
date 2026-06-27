@@ -907,6 +907,31 @@
 "open_quick_add.parameter_summary" = "開啟快速記帳";
 "open_quick_add.launched" = "已開啟 AutoLedger 快速記帳";
 
+// MARK: - Navigation App Intents
+"ledger_profile.entity.type" = "帳本";
+"open_monthly_report.intent.title" = "打開本月統計";
+"open_monthly_report.intent.description" = "打開 AutoLedger 並進入本月統計頁面";
+"open_monthly_report.intent.short_title" = "本月統計";
+"open_monthly_report.parameter_summary" = "打開本月統計";
+"open_monthly_report.launched" = "已打開本月統計";
+"open_ledger.intent.title" = "打開帳本";
+"open_ledger.intent.description" = "打開 AutoLedger 並切換到指定帳本";
+"open_ledger.intent.short_title" = "打開帳本";
+"open_ledger.parameter_summary" = "打開指定帳本";
+"open_ledger.ledger.title" = "帳本";
+"open_ledger.ledger.description" = "要打開的帳本";
+"open_ledger.launched_format" = "已打開帳本：%@";
+"start_receipt_scan.intent.title" = "啟動收據掃描";
+"start_receipt_scan.intent.description" = "打開 AutoLedger 並進入截圖或收據匯入入口";
+"start_receipt_scan.intent.short_title" = "收據掃描";
+"start_receipt_scan.parameter_summary" = "啟動收據掃描";
+"start_receipt_scan.launched" = "已打開收據掃描入口";
+"open_hotel_review_queue.intent.title" = "打開酒店待確認";
+"open_hotel_review_queue.intent.description" = "打開 AutoLedger 並進入酒店水單待確認列表";
+"open_hotel_review_queue.intent.short_title" = "酒店待確認";
+"open_hotel_review_queue.parameter_summary" = "打開酒店待確認";
+"open_hotel_review_queue.launched" = "已打開酒店待確認列表";
+
 // MARK: - Globalized service messages
 "common.unknown_error" = "未知錯誤";
 "common.unknown_state" = "未知狀態";

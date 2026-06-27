@@ -904,6 +904,31 @@
 "open_quick_add.parameter_summary" = "Open quick add";
 "open_quick_add.launched" = "AutoLedger opened for quick add";
 
+// MARK: - Navigation App Intents
+"ledger_profile.entity.type" = "Ledger";
+"open_monthly_report.intent.title" = "Open Monthly Report";
+"open_monthly_report.intent.description" = "Open AutoLedger to this month's report";
+"open_monthly_report.intent.short_title" = "Monthly Report";
+"open_monthly_report.parameter_summary" = "Open monthly report";
+"open_monthly_report.launched" = "Monthly report opened";
+"open_ledger.intent.title" = "Open Ledger";
+"open_ledger.intent.description" = "Open AutoLedger and switch to a selected ledger";
+"open_ledger.intent.short_title" = "Open Ledger";
+"open_ledger.parameter_summary" = "Open selected ledger";
+"open_ledger.ledger.title" = "Ledger";
+"open_ledger.ledger.description" = "The ledger to open";
+"open_ledger.launched_format" = "Opened ledger: %@";
+"start_receipt_scan.intent.title" = "Start Receipt Scan";
+"start_receipt_scan.intent.description" = "Open AutoLedger to the screenshot or receipt import entry";
+"start_receipt_scan.intent.short_title" = "Receipt Scan";
+"start_receipt_scan.parameter_summary" = "Start receipt scan";
+"start_receipt_scan.launched" = "Receipt scan entry opened";
+"open_hotel_review_queue.intent.title" = "Open Hotel Review Queue";
+"open_hotel_review_queue.intent.description" = "Open AutoLedger to pending hotel folio reviews";
+"open_hotel_review_queue.intent.short_title" = "Hotel Reviews";
+"open_hotel_review_queue.parameter_summary" = "Open hotel review queue";
+"open_hotel_review_queue.launched" = "Hotel review queue opened";
+
 // MARK: - Globalized service messages
 "common.unknown_error" = "Unknown error";
 "common.unknown_state" = "Unknown state";

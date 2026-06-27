@@ -339,5 +339,34 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             shortTitle: "open_quick_add.intent.short_title",
             systemImageName: "bolt.fill"
         )
+        AppShortcut(
+            intent: OpenMonthlyReportIntent(),
+            phrases: [
+                "打开 \(.applicationName) 本月统计",
+                "\(.applicationName) 月报",
+                "Open monthly report in \(.applicationName)"
+            ],
+            shortTitle: "open_monthly_report.intent.short_title",
+            systemImageName: "chart.pie.fill"
+        )
+        AppShortcut(
+            intent: OpenLedgerProfileIntent(),
+            phrases: [
+                "打开 \(.applicationName) 的 \(\.$ledger)",
+                "Open \(\.$ledger) in \(.applicationName)"
+            ],
+            shortTitle: "open_ledger.intent.short_title",
+            systemImageName: "wallet.pass.fill"
+        )
+        AppShortcut(
+            intent: StartReceiptScanIntent(),
+            phrases: [
+                "打开 \(.applicationName) 扫描账单",
+                "\(.applicationName) 收据扫描",
+                "Start receipt scan in \(.applicationName)"
+            ],
+            shortTitle: "start_receipt_scan.intent.short_title",
+            systemImageName: "doc.viewfinder"
+        )
     }
 }

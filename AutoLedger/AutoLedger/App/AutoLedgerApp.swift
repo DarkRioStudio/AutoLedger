@@ -117,6 +117,7 @@ private struct AutoLedgerRootView: View {
                     if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
                         store.attemptClipboardImport()
                     }
+                    consumeAppIntentNavigationHandoffIfNeeded()
                     consumeClipboardImportIntentHandoffIfNeeded()
                     // 订阅提醒通知调度
                     if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
@@ -128,6 +129,7 @@ private struct AutoLedgerRootView: View {
                 }
             }
             .onAppear {
+                consumeAppIntentNavigationHandoffIfNeeded()
                 consumeStructuredJSONHandoffIfNeeded()
                 consumeClipboardImportIntentHandoffIfNeeded()
             }
@@ -182,6 +184,25 @@ private struct AutoLedgerRootView: View {
     private func consumeClipboardImportIntentHandoffIfNeeded() {
         guard ClipboardImportIntentHandoff.consumePendingRequest() else { return }
         store.attemptClipboardImport(force: true)
+    }
+
+    @MainActor
+    private func consumeAppIntentNavigationHandoffIfNeeded() {
+        guard let request = AutoLedgerIntentNavigationHandoff.consume() else { return }
+        switch request.destination {
+        case .monthlyReport:
+            navigationState.selectedHomeTab = AutoLedgerHomeTab.report.rawValue
+        case .ledger:
+            if let ledgerID = request.ledgerID,
+               let profile = store.activeLedgerProfiles.first(where: { $0.id == ledgerID }) {
+                store.selectLedgerProfile(profile)
+            }
+            navigationState.selectedHomeTab = AutoLedgerHomeTab.ledger.rawValue
+        case .receiptScan:
+            navigationState.selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
+        case .hotelReviewQueue:
+            navigationState.selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
+        }
     }
 
 }

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-269 酒店邮箱 Demo Mode 与审核材料）
+更新日期：2026-06-27（ITER-270 App Intents 第一段）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-270 App Intents 第一段
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：App Intents / Deep Link
+- 类型：能力增强 / 系统入口 / 治理
+- 目标：完成 `GOAL-1921`，在既有快捷记账 intents 之外补齐打开本月统计、打开某一账本、启动收据扫描和酒店待确认入口，并复用 `GOAL-1920` 的统一导航状态。
+- 改动范围：新增 `AutoLedgerNavigationIntents.swift`，包含 `LedgerProfileEntity`、`LedgerProfileEntityQuery`、导航 destination / request / handoff、`OpenMonthlyReportIntent`、`OpenLedgerProfileIntent`、`StartReceiptScanIntent` 和 `OpenHotelReviewQueueIntent`；`AutoLedgerApp` 在启动和回到 active 时消费 handoff 并切换 tab / 账本；`AutoLedgerShortcuts` 新增本月统计、指定账本和收据扫描推荐短语；四语本地化新增导航 intent 文案；新增 `scripts/check_app_intents_smoke.py` 并纳入离线回归；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1921` 状态。
+- 未改动范围：未实现 Widget、Widget 深层数据展示、自然语言账本问答、自动入账、酒店待确认推荐短语、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：系统 intent 可把用户带回月报、指定账本、收据导入入口或酒店消费待确认上下文；账本参数从本地 SQLite active profiles 提供候选，默认优先本地默认账本；主 App 使用统一 `AutoLedgerNavigationState` 切 tab，指定账本会先切换当前账本；新增静态 smoke 固化 intent 存在、主 App handoff 消费、本地化 key、`AddTransactionIntent` 不强制打开 App，以及 AppShortcut 推荐短语总数不超过 10 个。
+- 未完成内容：`GOAL-1922` Widget 第一段仍待后续；酒店待确认入口暂不注册为 AppShortcut 推荐短语，因为真实构建验证到系统 metadata export 最多允许 10 个 AppShortcut；真机 Shortcuts / Spotlight 端到端触发仍保留为 release smoke evidence。
+- 测试情况：先执行 `bash scripts/run_offline_regression.sh` 观察到新增红测因缺少 `AutoLedgerNavigationIntents.swift`、handoff 接线和本地化 key 失败；实现后执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；首次主 App iOS generic build 失败于 `ExtractAppIntentsMetadata`，报错 `Found 11 App Shortcuts, but each app may have at most 10`，已移除酒店待确认推荐短语并在 smoke 中增加上限检查；重新执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1921 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：AppIntent handoff 使用本地 `UserDefaults` / App Group 双写，若后续调整 App Group identifier 需同步更新；酒店待确认 intent 当前可被 metadata 导出但不是推荐 shortcut，后续若要放入 Shortcuts 推荐列表，需要替换低频旧 shortcut 或合并导航入口；收据扫描第一段只落到主 App 导入入口，不直接启动后台识别或自动入账。
+- 回滚方式：回退 `AutoLedgerNavigationIntents.swift`、`AutoLedgerApp` handoff 消费、`AutoLedgerShortcuts` 新推荐短语、四语本地化 key、`scripts/check_app_intents_smoke.py`、离线回归入口和版本文档 / 日志即可；无数据迁移或 schema 变更需要回滚。
+- 结论：`GOAL-1921` 已完成工程闭环，Deep link / App Intents 主线具备可编译、可回归的系统入口基线。
+- 下一步建议：继续 `GOAL-1922` Widget 第一段，围绕本月支出、预算剩余、最近账单、即将续费和快速记一笔入口做最小可测闭环；继续排除 `GOAL-1960`。
 
 ### ITER-269 酒店邮箱 Demo Mode 与审核材料
 - 日期：2026-06-27

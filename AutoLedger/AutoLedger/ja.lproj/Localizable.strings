@@ -904,6 +904,31 @@
 "open_quick_add.parameter_summary" = "クイック追加を開く";
 "open_quick_add.launched" = "クイック追加用に AutoLedger を開きました";
 
+// MARK: - Navigation App Intents
+"ledger_profile.entity.type" = "台帳";
+"open_monthly_report.intent.title" = "今月の統計を開く";
+"open_monthly_report.intent.description" = "AutoLedger を開き、今月の統計画面へ移動します";
+"open_monthly_report.intent.short_title" = "今月の統計";
+"open_monthly_report.parameter_summary" = "今月の統計を開く";
+"open_monthly_report.launched" = "今月の統計を開きました";
+"open_ledger.intent.title" = "台帳を開く";
+"open_ledger.intent.description" = "AutoLedger を開き、選択した台帳へ切り替えます";
+"open_ledger.intent.short_title" = "台帳を開く";
+"open_ledger.parameter_summary" = "指定した台帳を開く";
+"open_ledger.ledger.title" = "台帳";
+"open_ledger.ledger.description" = "開く台帳";
+"open_ledger.launched_format" = "台帳を開きました：%@";
+"start_receipt_scan.intent.title" = "レシートスキャンを開始";
+"start_receipt_scan.intent.description" = "AutoLedger を開き、スクリーンショットまたはレシートの取り込み入口へ移動します";
+"start_receipt_scan.intent.short_title" = "レシートスキャン";
+"start_receipt_scan.parameter_summary" = "レシートスキャンを開始";
+"start_receipt_scan.launched" = "レシートスキャン入口を開きました";
+"open_hotel_review_queue.intent.title" = "ホテル確認待ちを開く";
+"open_hotel_review_queue.intent.description" = "AutoLedger を開き、ホテル明細の確認待ち一覧へ移動します";
+"open_hotel_review_queue.intent.short_title" = "ホテル確認待ち";
+"open_hotel_review_queue.parameter_summary" = "ホテル確認待ちを開く";
+"open_hotel_review_queue.launched" = "ホテル確認待ち一覧を開きました";
+
 // MARK: - Globalized service messages
 "common.unknown_error" = "不明なエラー";
 "common.unknown_state" = "不明な状態";
