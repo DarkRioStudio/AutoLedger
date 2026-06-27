@@ -10,6 +10,7 @@ python3 "$ROOT/scripts/check_hotel_email_demo_privacy.py"
 python3 "$ROOT/scripts/check_app_intents_smoke.py"
 python3 "$ROOT/scripts/check_widget_smoke.py"
 python3 "$ROOT/scripts/check_reliability_smoke.py"
+python3 "$ROOT/scripts/check_long_list_performance_smoke.py"
 
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT

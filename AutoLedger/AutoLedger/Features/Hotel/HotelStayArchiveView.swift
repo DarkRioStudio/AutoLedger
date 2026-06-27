@@ -83,9 +83,13 @@ struct HotelStayListView: View {
         !snapshot.rows.isEmpty || !pendingDrafts.isEmpty
     }
 
+    private var recordByID: [UUID: HotelStayRecord] {
+        Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
+    }
+
     private var selectedRecord: HotelStayRecord? {
         guard let selectedRecordID else { return nil }
-        return records.first { $0.id == selectedRecordID }
+        return recordByID[selectedRecordID]
     }
 
     var body: some View {
@@ -237,8 +241,9 @@ struct HotelStayListView: View {
 
     private var staySection: some View {
         Section {
+            let recordsByID = recordByID
             ForEach(snapshot.rows) { row in
-                if let record = records.first(where: { $0.id == row.id }) {
+                if let record = recordsByID[row.id] {
                     NavigationLink(value: row.id) {
                         HotelStayRowView(row: row)
                     }

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-272 CSV / JSON 与备份恢复 smoke）
+更新日期：2026-06-27（ITER-273 长列表性能与加载检查）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-273 长列表性能与加载检查
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Reliability
+- 类型：性能 / 测试 / 治理
+- 目标：完成 `GOAL-1941`，覆盖账本列表、数据清洗预览、酒店消费列表、订阅列表和最近删除列表的滚动与加载 smoke。
+- 改动范围：`HotelStayArchiveView` 新增 `recordByID` 字典索引，正式酒店记录列表按 `recordsByID[row.id]` 查找；新增 `scripts/check_long_list_performance_smoke.py`，静态检查账本列表、最近删除、酒店消费、订阅列表和 iPad 数据清洗预览的 `List` / `LazyVStack` 容器、选择状态 reconcile、refreshable、批量删除快照和酒店列表索引；`scripts/run_offline_regression.sh` 纳入长列表 smoke；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1941` 状态。
+- 未改动范围：未引入分页 schema、数据库查询分页、异步增量加载、CloudKit 行为变更、业务逻辑改动、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：酒店消费长列表避免在 `ForEach(snapshot.rows)` 中对 `records` 做逐行线性搜索；长列表 smoke 将账本列表、最近删除、酒店消费列表、订阅列表和数据清洗预览的懒加载 / 系统列表容器选择纳入默认离线回归。
+- 未完成内容：真实设备滚动 FPS、Instruments traces、海量 SQLite 数据分页和发布前人工录屏证据仍留给 release smoke 或后续性能专项；本轮没有改变任何列表的数据源大小和加载策略。
+- 测试情况：执行 `python3 scripts/check_long_list_performance_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1941 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：`recordByID` 每次视图重算会按当前记录数组构建字典，换来列表渲染时 O(1) 查找；如果未来酒店记录规模继续增长，可再把 snapshot 和索引提升到 presenter 或 store 层缓存。
+- 回滚方式：回退 `HotelStayArchiveView` 的 `recordByID` 索引、`scripts/check_long_list_performance_smoke.py`、离线回归入口和版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1941` 已完成工程闭环，长列表关键界面的容器与加载检查进入默认离线回归。
+- 下一步建议：继续 `GOAL-1950` 日文审校与多语言 golden cases；继续排除 `GOAL-1960`。
 
 ### ITER-272 CSV / JSON 与备份恢复 smoke
 - 日期：2026-06-27
