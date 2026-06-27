@@ -6,6 +6,7 @@ struct GoldenCase: Decodable {
     let sampleTitle: String?
     let rawText: String?
     let sourceType: LedgerInputSourceType?
+    let localeIdentifier: String?
     let receiptSource: ReceiptSource?
     let sourceHint: LedgerSourceHint?
     let expected: Expected
@@ -109,6 +110,7 @@ struct GoldenRegression {
                 InterpretInput(
                     rawText: sample.rawText,
                     sourceType: testCase.sourceType ?? .ocr,
+                    localeIdentifier: testCase.localeIdentifier,
                     hints: LedgerInterpretHints(sourceHint: testCase.sourceHint ?? .unknown)
                 )
             )
@@ -124,6 +126,7 @@ struct GoldenRegression {
             InterpretInput(
                 rawText: rawText,
                 sourceType: sourceType,
+                localeIdentifier: testCase.localeIdentifier,
                 hints: LedgerInterpretHints(sourceHint: testCase.sourceHint ?? .unknown)
             )
         )

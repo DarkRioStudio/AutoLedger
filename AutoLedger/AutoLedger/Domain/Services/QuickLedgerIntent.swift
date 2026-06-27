@@ -272,7 +272,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
                 "用 \(.applicationName) 记账",
                 "\(.applicationName) 快速记账",
                 "Log with \(.applicationName)",
-                "Quick ledger with \(.applicationName)"
+                "Quick ledger with \(.applicationName)",
+                "\(.applicationName) で記録"
             ],
             shortTitle: "quick_ledger.intent.short_title",
             systemImageName: "doc.text.viewfinder"
@@ -283,7 +284,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
                 "用 \(.applicationName) 从剪切板记账",
                 "\(.applicationName) 剪切板记账",
                 "Import from clipboard with \(.applicationName)",
-                "Clipboard ledger with \(.applicationName)"
+                "Clipboard ledger with \(.applicationName)",
+                "\(.applicationName) でクリップボードから記録"
             ],
             shortTitle: "quick_ledger.clipboard.short_title",
             systemImageName: "doc.on.clipboard"
@@ -294,7 +296,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
                 "用 \(.applicationName) 语音记账",
                 "用 \(.applicationName) 语音记一笔",
                 "\(.applicationName) 语音记账",
-                "Voice ledger with \(.applicationName)"
+                "Voice ledger with \(.applicationName)",
+                "\(.applicationName) で音声記録"
             ],
             shortTitle: "voice_ledger.intent.short_title",
             systemImageName: "waveform"
@@ -304,7 +307,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "用 \(.applicationName) 手动记账",
                 "\(.applicationName) 新增账单",
-                "Add transaction with \(.applicationName)"
+                "Add transaction with \(.applicationName)",
+                "\(.applicationName) で手動記録"
             ],
             shortTitle: "add_transaction.intent.short_title",
             systemImageName: "plus.circle.fill"
@@ -314,7 +318,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "用 \(.applicationName) 解析账单",
                 "\(.applicationName) 识别账单文字",
-                "Parse ledger text with \(.applicationName)"
+                "Parse ledger text with \(.applicationName)",
+                "\(.applicationName) でレシート文字を解析"
             ],
             shortTitle: "parse_ledger.intent.short_title",
             systemImageName: "text.viewfinder"
@@ -324,7 +329,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "用 \(.applicationName) 导入 JSON 账单",
                 "\(.applicationName) JSON 记账",
-                "Import ledger JSON with \(.applicationName)"
+                "Import ledger JSON with \(.applicationName)",
+                "\(.applicationName) で JSON 台帳を取り込む"
             ],
             shortTitle: "import_ledger_json.intent.short_title",
             systemImageName: "curlybraces"
@@ -334,7 +340,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "打开 \(.applicationName) 快速记账",
                 "\(.applicationName) 快速记账",
-                "Open quick add in \(.applicationName)"
+                "Open quick add in \(.applicationName)",
+                "\(.applicationName) でクイック追加を開く"
             ],
             shortTitle: "open_quick_add.intent.short_title",
             systemImageName: "bolt.fill"
@@ -344,7 +351,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "打开 \(.applicationName) 本月统计",
                 "\(.applicationName) 月报",
-                "Open monthly report in \(.applicationName)"
+                "Open monthly report in \(.applicationName)",
+                "\(.applicationName) で今月の統計を開く"
             ],
             shortTitle: "open_monthly_report.intent.short_title",
             systemImageName: "chart.pie.fill"
@@ -353,7 +361,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             intent: OpenLedgerProfileIntent(),
             phrases: [
                 "打开 \(.applicationName) 的 \(\.$ledger)",
-                "Open \(\.$ledger) in \(.applicationName)"
+                "Open \(\.$ledger) in \(.applicationName)",
+                "\(.applicationName) で \(\.$ledger) を開く"
             ],
             shortTitle: "open_ledger.intent.short_title",
             systemImageName: "wallet.pass.fill"
@@ -363,7 +372,8 @@ struct AutoLedgerShortcuts: AppShortcutsProvider {
             phrases: [
                 "打开 \(.applicationName) 扫描账单",
                 "\(.applicationName) 收据扫描",
-                "Start receipt scan in \(.applicationName)"
+                "Start receipt scan in \(.applicationName)",
+                "\(.applicationName) でレシートスキャンを開始"
             ],
             shortTitle: "start_receipt_scan.intent.short_title",
             systemImageName: "doc.viewfinder"

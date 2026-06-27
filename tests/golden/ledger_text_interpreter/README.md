@@ -8,6 +8,7 @@ Each line in `cases.jsonl` is one case:
 - `sampleTitle`: optional title from `SampleReceiptProvider`. When present, the runner reads the sample's `rawText` and `source`.
 - `rawText`: OCR, voice, or manual text.
 - `sourceType`: `ocr`, `voice`, `siri`, `clipboard`, `manual`, `share`, or `subscriptionEmail`.
+- `localeIdentifier`: optional locale hint such as `ja-JP` to force a specific recognition language pack.
 - `receiptSource`: optional `ReceiptSource` for `receiptParser` cases without `sampleTitle`.
 - `sourceHint`: optional parser hint: `receipt`, `payment`, `sentence`, `subscription`, `unknown`.
 - `expected`: field-level expectations.

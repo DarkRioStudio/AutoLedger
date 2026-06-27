@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-273 长列表性能与加载检查）
+更新日期：2026-06-27（ITER-274 日文审校与多语言 golden cases）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-274 日文审校与多语言 golden cases
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：L10N / Recognition
+- 类型：本地化 / 测试 / 治理
+- 目标：完成 `GOAL-1950`，把日文 Widget / App Intents 文案、多语言识别 golden cases 和发布前日文审校清单固化为可回归工程闭环。
+- 改动范围：`AutoLedgerWidgets.swift` 的 Widget 文案从中英二分扩展为中 / 日 / 英 fallback；`AutoLedgerShortcuts` 现有 10 个推荐短语补齐日文表达；golden regression runner 支持 `localeIdentifier`；`tests/golden/ledger_text_interpreter/cases.jsonl` 新增日文小票金额 / 商户 / 餐饮分类 cases；新增 `scripts/check_l10n_release_smoke.py` 并纳入离线回归；新增 `versions/v1.6.2-ja-release-review-checklist.md`；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1950` 状态。
+- 未改动范围：未新增远程语言包热更新、社区语言包上传后台、用户纠错共享入口、Widget 写库能力、自动入账、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：Widget 日文环境会显示今日支出、月报、本地账本、默认写入账本、预算、最近账单、即将续费、快速记一笔、分类、来源、待确认和 stale snapshot 等核心文案；Shortcuts 的推荐短语保留 10 个上限并补齐日文；日文小票可通过 `ja-JP` locale hint 进入对应识别语言包；日文发布审校清单覆盖术语表、App Intents、Widget、识别语言包、截图 / ASC / TestFlight、Review Notes 和 Demo Mode。
+- 未完成内容：日文母语人工审校、日文截图最终目检、ASC metadata / TestFlight notes 最终提交文案、Xcode 27 Device Hub Resize Mode 和 iPhone Mirroring 录屏证据仍留给 `GOAL-1960` release smoke；本轮不宣称远程语言包分发或社区共享流程已经实现。
+- 测试情况：执行 `python3 scripts/check_l10n_release_smoke.py` 通过；执行 `bash scripts/run_golden_regression.sh` 通过，当前 38 个 golden cases 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1950 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，AppIntents metadata / SSU training 已接受日文推荐短语。
+- 风险与注意事项：Widget 文案仍使用轻量 locale fallback，不等同于完整 `.strings` 本地化；日文术语已经有工程清单但仍需人工审校；新增 golden cases 覆盖典型日文小票，不代表所有日本零售 / 餐饮 / 发票格式已经覆盖。
+- 回滚方式：回退 Widget 文案 fallback、Shortcuts 日文短语、golden runner locale hint、日文 golden cases、`scripts/check_l10n_release_smoke.py`、离线回归入口、日文审校清单和版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1950` 已完成工程闭环；除按用户要求排除的 `GOAL-1960` release smoke 外，`v1.6.2` 开发型 GOAL 已收口。
+- 下一步建议：等待用户确认后再进入 `GOAL-1960`，集中补发布前人工证据、真机 / 可拉伸布局 smoke、Widget / App Intents 真机验证、日文截图 / ASC 文案和平台素材最终目检。
 
 ### ITER-273 长列表性能与加载检查
 - 日期：2026-06-27

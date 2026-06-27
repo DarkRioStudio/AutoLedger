@@ -4,37 +4,47 @@ import SwiftUI
 import WidgetKit
 
 private enum WidgetCopy {
-    static var todayExpenseTitle: String { isChinese ? "今日支出" : "Today's Spend" }
-    static var monthReportTitle: String { isChinese ? "当月月报" : "Monthly Report" }
-    static var topMerchantTitle: String { isChinese ? "Top 商户" : "Top Merchant" }
-    static var topCategoryTitle: String { isChinese ? "Top 分类" : "Top Category" }
-    static var latestExpenseTitle: String { isChinese ? "最近一笔" : "Latest" }
-    static var noExpenseTitle: String { isChinese ? "今天还没记账" : "No expenses today" }
-    static var noExpenseDetail: String { isChinese ? "打开 App 记录今天的第一笔支出" : "Open the app to log your first expense" }
-    static var noMonthDataTitle: String { isChinese ? "本月还没有账单" : "No entries this month" }
-    static var noMonthDataDetail: String { isChinese ? "开始记录后，这里会显示月度摘要" : "Your monthly summary will appear here" }
-    static var updatedPrefix: String { isChinese ? "更新于" : "Updated" }
-    static var thisMonthLabel: String { isChinese ? "本月" : "This Month" }
-    static var ledgerScopeFormat: String { isChinese ? "默认写入账本：%@" : "Default ledger: %@" }
-    static var budgetRemainingTitle: String { isChinese ? "预算剩余" : "Budget Left" }
-    static var budgetNotSet: String { isChinese ? "未设置" : "Not Set" }
-    static var recentTransactionsTitle: String { isChinese ? "最近账单" : "Recent" }
-    static var noRecentTransactionTitle: String { isChinese ? "暂无账单" : "No Recent Entries" }
-    static var upcomingSubscriptionsTitle: String { isChinese ? "即将续费" : "Upcoming" }
-    static var noUpcomingSubscriptionTitle: String { isChinese ? "暂无续费" : "No Upcoming Bills" }
-    static var quickAddTitle: String { isChinese ? "快速记一笔" : "Quick Add" }
-    static var monthSummaryCountFormat: String { isChinese ? "%d 笔记录" : "%d entries" }
-    static var todaySummaryCountFormat: String { isChinese ? "今日共 %d 笔" : "%d today" }
-    static var todayCountCompactFormat: String { isChinese ? "%d 笔" : "%d items" }
-    static var watchAccessoryInlineFormat: String { isChinese ? "今日支出 %@" : "Today %@" }
-    static var watchAccessoryCountFormat: String { isChinese ? "%d 笔" : "%d entries" }
-    static var fallbackMerchant: String { isChinese ? "暂无" : "None" }
-    static var fallbackCategory: String { isChinese ? "暂无" : "None" }
-    static var staleSnapshotShort: String { isChinese ? "较旧" : "Stale" }
-    static var staleSnapshotUpdatedPrefix: String { isChinese ? "较旧" : "Stale" }
+    static var todayExpenseTitle: String { localized(zh: "今日支出", ja: "今日の支出", en: "Today's Spend") }
+    static var monthReportTitle: String { localized(zh: "当月月报", ja: "今月のレポート", en: "Monthly Report") }
+    static var topMerchantTitle: String { localized(zh: "Top 商户", ja: "上位店舗", en: "Top Merchant") }
+    static var topCategoryTitle: String { localized(zh: "Top 分类", ja: "上位カテゴリ", en: "Top Category") }
+    static var latestExpenseTitle: String { localized(zh: "最近一笔", ja: "直近", en: "Latest") }
+    static var noExpenseTitle: String { localized(zh: "今天还没记账", ja: "今日はまだ記録がありません", en: "No expenses today") }
+    static var noExpenseDetail: String { localized(zh: "打开 App 记录今天的第一笔支出", ja: "App を開いて今日の支出を記録", en: "Open the app to log your first expense") }
+    static var noMonthDataTitle: String { localized(zh: "本月还没有账单", ja: "今月の記録はまだありません", en: "No entries this month") }
+    static var noMonthDataDetail: String { localized(zh: "开始记录后，这里会显示月度摘要", ja: "記録を始めると月次サマリーが表示されます", en: "Your monthly summary will appear here") }
+    static var updatedPrefix: String { localized(zh: "更新于", ja: "更新", en: "Updated") }
+    static var thisMonthLabel: String { localized(zh: "本月", ja: "今月", en: "This Month") }
+    static var ledgerScopeFormat: String { localized(zh: "默认写入账本：%@", ja: "既定の記録先：%@", en: "Default ledger: %@") }
+    static var budgetRemainingTitle: String { localized(zh: "预算剩余", ja: "予算残高", en: "Budget Left") }
+    static var budgetNotSet: String { localized(zh: "未设置", ja: "未設定", en: "Not Set") }
+    static var recentTransactionsTitle: String { localized(zh: "最近账单", ja: "最近の記録", en: "Recent") }
+    static var noRecentTransactionTitle: String { localized(zh: "暂无账单", ja: "記録なし", en: "No Recent Entries") }
+    static var upcomingSubscriptionsTitle: String { localized(zh: "即将续费", ja: "まもなく更新", en: "Upcoming") }
+    static var noUpcomingSubscriptionTitle: String { localized(zh: "暂无续费", ja: "更新予定なし", en: "No Upcoming Bills") }
+    static var quickAddTitle: String { localized(zh: "快速记一笔", ja: "すばやく記録", en: "Quick Add") }
+    static var monthSummaryCountFormat: String { localized(zh: "%d 笔记录", ja: "%d 件の記録", en: "%d entries") }
+    static var todaySummaryCountFormat: String { localized(zh: "今日共 %d 笔", ja: "今日 %d 件", en: "%d today") }
+    static var todayCountCompactFormat: String { localized(zh: "%d 笔", ja: "%d 件", en: "%d items") }
+    static var watchAccessoryInlineFormat: String { localized(zh: "今日支出 %@", ja: "今日 %@", en: "Today %@") }
+    static var watchAccessoryCountFormat: String { localized(zh: "%d 笔", ja: "%d 件", en: "%d entries") }
+    static var fallbackMerchant: String { localized(zh: "暂无", ja: "なし", en: "None") }
+    static var fallbackCategory: String { localized(zh: "暂无", ja: "なし", en: "None") }
+    static var staleSnapshotShort: String { localized(zh: "较旧", ja: "古い", en: "Stale") }
+    static var staleSnapshotUpdatedPrefix: String { localized(zh: "较旧", ja: "古い", en: "Stale") }
+
+    static func localized(zh: String, ja: String, en: String) -> String {
+        if isChinese { return zh }
+        if isJapanese { return ja }
+        return en
+    }
 
     fileprivate static var isChinese: Bool {
         Locale.preferredLanguages.first?.lowercased().hasPrefix("zh") == true
+    }
+
+    fileprivate static var isJapanese: Bool {
+        Locale.preferredLanguages.first?.lowercased().hasPrefix("ja") == true
     }
 }
 
@@ -82,7 +92,7 @@ private struct WidgetLedgerScope {
     let name: String
 
     static let defaultLedgerID = "default-local-ledger"
-    static let defaultLocal = WidgetLedgerScope(id: defaultLedgerID, name: WidgetCopy.isChinese ? "本地账本" : "Local Ledger")
+    static let defaultLocal = WidgetLedgerScope(id: defaultLedgerID, name: WidgetCopy.localized(zh: "本地账本", ja: "ローカル台帳", en: "Local Ledger"))
 }
 
 private enum WidgetLedgerStore {
@@ -379,28 +389,28 @@ private enum WidgetLedgerStore {
 
     private static func categoryTitle(_ rawValue: String) -> String {
         switch rawValue {
-        case "groceries": return WidgetCopy.isChinese ? "日用杂货" : "Groceries"
-        case "dining": return WidgetCopy.isChinese ? "餐饮" : "Dining"
-        case "transport": return WidgetCopy.isChinese ? "出行" : "Transport"
-        case "shopping": return WidgetCopy.isChinese ? "购物" : "Shopping"
-        case "digital": return WidgetCopy.isChinese ? "数字服务" : "Digital"
-        case "utilities": return WidgetCopy.isChinese ? "生活缴费" : "Utilities"
-        case "entertainment": return WidgetCopy.isChinese ? "娱乐" : "Entertainment"
-        case "other": return WidgetCopy.isChinese ? "其他" : "Other"
+        case "groceries": return WidgetCopy.localized(zh: "日用杂货", ja: "日用品", en: "Groceries")
+        case "dining": return WidgetCopy.localized(zh: "餐饮", ja: "飲食", en: "Dining")
+        case "transport": return WidgetCopy.localized(zh: "出行", ja: "交通", en: "Transport")
+        case "shopping": return WidgetCopy.localized(zh: "购物", ja: "買い物", en: "Shopping")
+        case "digital": return WidgetCopy.localized(zh: "数字服务", ja: "デジタル", en: "Digital")
+        case "utilities": return WidgetCopy.localized(zh: "生活缴费", ja: "公共料金", en: "Utilities")
+        case "entertainment": return WidgetCopy.localized(zh: "娱乐", ja: "エンタメ", en: "Entertainment")
+        case "other": return WidgetCopy.localized(zh: "其他", ja: "その他", en: "Other")
         default: return rawValue
         }
     }
 
     private static func sourceTitle(_ rawValue: String) -> String {
         switch rawValue {
-        case "wechat": return WidgetCopy.isChinese ? "微信支付" : "WeChat Pay"
-        case "alipay": return WidgetCopy.isChinese ? "支付宝" : "Alipay"
-        case "unionPay": return WidgetCopy.isChinese ? "云闪付" : "UnionPay"
+        case "wechat": return WidgetCopy.localized(zh: "微信支付", ja: "WeChat Pay", en: "WeChat Pay")
+        case "alipay": return WidgetCopy.localized(zh: "支付宝", ja: "Alipay", en: "Alipay")
+        case "unionPay": return WidgetCopy.localized(zh: "云闪付", ja: "UnionPay", en: "UnionPay")
         case "appStore": return "App Store"
-        case "manual": return WidgetCopy.isChinese ? "手动记录" : "Manual"
-        case "shortcut": return WidgetCopy.isChinese ? "快捷指令" : "Shortcuts"
-        case "clipboard": return WidgetCopy.isChinese ? "剪贴板" : "Clipboard"
-        case "camera": return WidgetCopy.isChinese ? "拍照识别" : "Camera"
+        case "manual": return WidgetCopy.localized(zh: "手动记录", ja: "手動記録", en: "Manual")
+        case "shortcut": return WidgetCopy.localized(zh: "快捷指令", ja: "ショートカット", en: "Shortcuts")
+        case "clipboard": return WidgetCopy.localized(zh: "剪贴板", ja: "クリップボード", en: "Clipboard")
+        case "camera": return WidgetCopy.localized(zh: "拍照识别", ja: "カメラ認識", en: "Camera")
         default: return rawValue
         }
     }
@@ -421,7 +431,7 @@ private enum WidgetLedgerStore {
             return source
         }
 
-        return WidgetCopy.isChinese ? "待确认" : "Needs Review"
+        return WidgetCopy.localized(zh: "待确认", ja: "確認待ち", en: "Needs Review")
     }
 
     nonisolated(unsafe) private static let storageFormatter: ISO8601DateFormatter = {
