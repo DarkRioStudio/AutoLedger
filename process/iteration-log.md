@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-270 App Intents 第一段）
+更新日期：2026-06-27（ITER-271 Widget 第一段）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-271 Widget 第一段
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Widget / Deep Link
+- 类型：能力增强 / 系统入口 / 治理
+- 目标：完成 `GOAL-1922`，补齐本月支出、预算剩余、最近账单、即将续费和快速记一笔入口，并明确 Widget 的多账本展示口径。
+- 改动范围：`AutoLedgerWidgets.swift` 扩展 Widget metrics、默认写入账本 scope、只读交易过滤、最近账单、即将续费订阅和预算占位；`MonthlyReportWidget` 展示本月概览并支持 medium / large family，`DailyExpenseWidget` 保留今日支出入口；`AutoLedgerNavigationState` 新增 `autoledger://quick-add` deep link；`LedgerStore` 将默认写入账本 ID 同步到 App Group defaults；新增 `scripts/check_widget_smoke.py` 并纳入离线回归；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1922` 状态。
+- 未改动范围：未新增正式预算数据模型或预算设置 UI；未让 Widget 直接新增、编辑或删除账单；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声；本轮按用户要求不推进 `GOAL-1960`。
+- 完成内容：Widget 默认按“默认写入账本”过滤 `transactions.ledger_id`，默认本地账本会兼容旧数据 `ledger_id IS NULL`；本月概览显示账本口径、本月支出、预算剩余占位、最近账单、未来 14 天内的即将续费订阅和 quick-add 链接；`autoledger://quick-add` 会打开账本 tab 并拉起新增账单 sheet；Widget SQLite 访问保持 `SQLITE_OPEN_READONLY`，静态 smoke 防止写库语句进入扩展。
+- 未完成内容：真实设备 Widget 添加 / 刷新 / deep link 点击截图、预算正式模型、Widget 日文人工审校和 iOS 27 大尺寸 Widget 视觉证据仍留给后续 `GOAL-1950` / release smoke；订阅模型当前没有 ledgerID，Widget 的即将续费仍按全局订阅展示。
+- 测试情况：先执行 `python3 scripts/check_widget_smoke.py` 观察到红测，缺少默认写入账本口径、预算、最近账单、即将续费、quick-add route 和 App Group 配置同步；实现后执行 `python3 scripts/check_widget_smoke.py`、`python3 scripts/check_deep_link_smoke.py`、`git diff --check` 均通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-GOAL1922 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过。
+- 风险与注意事项：预算剩余当前是占位展示，只有未来写入 App Group `monthlyBudgetAmount` 后才会显示真实余额；Widget 的订阅数据暂不按账本过滤，因为订阅模型尚无 `ledgerID`；`autoledger://quick-add` 需要真实安装后用 Widget / `simctl openurl` 做人工 evidence。
+- 回滚方式：回退 Widget metrics / UI / SQL 过滤、quick-add deep link、默认写入账本 App Group 同步、`scripts/check_widget_smoke.py`、离线回归入口和版本文档 / 日志即可；无 schema 迁移需要回滚。
+- 结论：`GOAL-1922` 已完成工程闭环，Widget 第一段具备默认账本口径、只读数据展示和快速入口。
+- 下一步建议：继续 `GOAL-1940 / GOAL-1941 / GOAL-1950`，推进可靠性与多语言收口；继续排除 `GOAL-1960`。
 
 ### ITER-270 App Intents 第一段
 - 日期：2026-06-27

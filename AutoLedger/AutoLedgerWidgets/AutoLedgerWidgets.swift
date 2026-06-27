@@ -15,6 +15,14 @@ private enum WidgetCopy {
     static var noMonthDataDetail: String { isChinese ? "开始记录后，这里会显示月度摘要" : "Your monthly summary will appear here" }
     static var updatedPrefix: String { isChinese ? "更新于" : "Updated" }
     static var thisMonthLabel: String { isChinese ? "本月" : "This Month" }
+    static var ledgerScopeFormat: String { isChinese ? "默认写入账本：%@" : "Default ledger: %@" }
+    static var budgetRemainingTitle: String { isChinese ? "预算剩余" : "Budget Left" }
+    static var budgetNotSet: String { isChinese ? "未设置" : "Not Set" }
+    static var recentTransactionsTitle: String { isChinese ? "最近账单" : "Recent" }
+    static var noRecentTransactionTitle: String { isChinese ? "暂无账单" : "No Recent Entries" }
+    static var upcomingSubscriptionsTitle: String { isChinese ? "即将续费" : "Upcoming" }
+    static var noUpcomingSubscriptionTitle: String { isChinese ? "暂无续费" : "No Upcoming Bills" }
+    static var quickAddTitle: String { isChinese ? "快速记一笔" : "Quick Add" }
     static var monthSummaryCountFormat: String { isChinese ? "%d 笔记录" : "%d entries" }
     static var todaySummaryCountFormat: String { isChinese ? "今日共 %d 笔" : "%d today" }
     static var todayCountCompactFormat: String { isChinese ? "%d 笔" : "%d items" }
@@ -32,30 +40,49 @@ private enum WidgetCopy {
 
 private enum WidgetDeepLink {
     static let todayLedgerURL = URL(string: "autoledger://ledger/today")
+    static let ledgerURL = URL(string: "autoledger://ledger")!
+    static let quickAddURL = URL(string: "autoledger://quick-add")!
+    static let subscriptionsURL = URL(string: "autoledger://subscriptions")!
 }
 
 private struct WidgetLedgerMetrics {
+    let ledgerScope: WidgetLedgerScope
     let todayTotal: Double
     let todayCount: Int
     let latestMerchant: String?
     let monthTotal: Double
     let monthCount: Int
+    let budgetRemaining: Double?
+    let recentTransactions: [WidgetTransaction]
+    let upcomingSubscriptions: [WidgetSubscription]
     let topMerchant: String?
     let topCategory: String?
     let updatedAt: Date
     let isSnapshotStale: Bool
 
     static let empty = WidgetLedgerMetrics(
+        ledgerScope: .defaultLocal,
         todayTotal: 0,
         todayCount: 0,
         latestMerchant: nil,
         monthTotal: 0,
         monthCount: 0,
+        budgetRemaining: nil,
+        recentTransactions: [],
+        upcomingSubscriptions: [],
         topMerchant: nil,
         topCategory: nil,
         updatedAt: .now,
         isSnapshotStale: false
     )
+}
+
+private struct WidgetLedgerScope {
+    let id: String
+    let name: String
+
+    static let defaultLedgerID = "default-local-ledger"
+    static let defaultLocal = WidgetLedgerScope(id: defaultLedgerID, name: WidgetCopy.isChinese ? "本地账本" : "Local Ledger")
 }
 
 private enum WidgetLedgerStore {
@@ -65,17 +92,23 @@ private enum WidgetLedgerStore {
     private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
+    private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
+    private static let monthlyBudgetAmountKey = "monthlyBudgetAmount"
 
     static func loadMetrics(referenceDate: Date = .now) -> WidgetLedgerMetrics {
         let metadata = loadSnapshotMetadata(referenceDate: referenceDate)
         guard let dbURL = databaseURL(),
               FileManager.default.fileExists(atPath: dbURL.path) else {
             return WidgetLedgerMetrics(
+                ledgerScope: .defaultLocal,
                 todayTotal: 0,
                 todayCount: 0,
                 latestMerchant: nil,
                 monthTotal: 0,
                 monthCount: 0,
+                budgetRemaining: nil,
+                recentTransactions: [],
+                upcomingSubscriptions: [],
                 topMerchant: nil,
                 topCategory: nil,
                 updatedAt: metadata.updatedAt,
@@ -87,11 +120,15 @@ private enum WidgetLedgerStore {
         guard sqlite3_open_v2(dbURL.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
             sqlite3_close(db)
             return WidgetLedgerMetrics(
+                ledgerScope: .defaultLocal,
                 todayTotal: 0,
                 todayCount: 0,
                 latestMerchant: nil,
                 monthTotal: 0,
                 monthCount: 0,
+                budgetRemaining: nil,
+                recentTransactions: [],
+                upcomingSubscriptions: [],
                 topMerchant: nil,
                 topCategory: nil,
                 updatedAt: metadata.updatedAt,
@@ -108,25 +145,73 @@ private enum WidgetLedgerStore {
         let monthStart = monthInterval?.start ?? todayStart
         let monthEnd = monthInterval?.end ?? tomorrowStart
 
-        let todayTransactions = loadTransactions(db: db, from: todayStart, to: tomorrowStart, positiveOnly: true)
-        let monthTransactions = loadTransactions(db: db, from: monthStart, to: monthEnd)
+        let ledgerScope = loadLedgerScope(db: db)
+        let todayTransactions = loadTransactions(db: db, from: todayStart, to: tomorrowStart, ledgerID: ledgerScope.id, positiveOnly: true)
+        let monthTransactions = loadTransactions(db: db, from: monthStart, to: monthEnd, ledgerID: ledgerScope.id)
+        let recentTransactions = loadRecentTransactions(db: db, referenceDate: referenceDate, ledgerID: ledgerScope.id)
+        let upcomingSubscriptions = loadUpcomingSubscriptions(db: db, referenceDate: referenceDate)
 
         let todayTotal = todayTransactions.reduce(0) { $0 + $1.amount }
         let monthTotal = monthTransactions.reduce(0) { $0 + $1.amount }
         let topMerchant = groupedTopName(from: monthTransactions, keyPath: \.merchant)
         let topCategory = groupedTopName(from: monthTransactions, keyPath: \.category).map(categoryTitle)
+        let budgetRemaining = loadMonthlyBudgetAmount().map { max($0 - monthTotal, 0) }
 
         return WidgetLedgerMetrics(
+            ledgerScope: ledgerScope,
             todayTotal: todayTotal,
             todayCount: todayTransactions.count,
             latestMerchant: todayTransactions.first.map(displayName(for:)),
             monthTotal: monthTotal,
             monthCount: monthTransactions.count,
+            budgetRemaining: budgetRemaining,
+            recentTransactions: recentTransactions,
+            upcomingSubscriptions: upcomingSubscriptions,
             topMerchant: topMerchant,
             topCategory: topCategory,
             updatedAt: metadata.updatedAt,
             isSnapshotStale: metadata.isStale
         )
+    }
+
+    private static func loadLedgerScope(db: OpaquePointer?) -> WidgetLedgerScope {
+        let requestedLedgerID = UserDefaults(suiteName: appGroupIdentifier)?
+            .string(forKey: defaultWriteLedgerIDKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackID = requestedLedgerID?.isEmpty == false ? requestedLedgerID! : WidgetLedgerScope.defaultLedgerID
+        let sql = """
+        SELECT id, name
+        FROM ledger_profiles
+        WHERE id = ?
+          AND archived_at IS NULL
+        LIMIT 1;
+        """
+
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            return WidgetLedgerScope(id: fallbackID, name: WidgetLedgerScope.defaultLocal.name)
+        }
+
+        sqlite3_bind_text(statement, 1, fallbackID, -1, sqliteTransient)
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              let idCString = sqlite3_column_text(statement, 0),
+              let nameCString = sqlite3_column_text(statement, 1) else {
+            return fallbackID == WidgetLedgerScope.defaultLedgerID
+                ? .defaultLocal
+                : WidgetLedgerScope(id: fallbackID, name: WidgetLedgerScope.defaultLocal.name)
+        }
+
+        return WidgetLedgerScope(id: String(cString: idCString), name: String(cString: nameCString))
+    }
+
+    private static func loadMonthlyBudgetAmount() -> Double? {
+        guard let defaults = UserDefaults(suiteName: appGroupIdentifier),
+              defaults.object(forKey: monthlyBudgetAmountKey) != nil else {
+            return nil
+        }
+        let value = defaults.double(forKey: monthlyBudgetAmountKey)
+        return value > 0 ? value : nil
     }
 
     private static func loadSnapshotMetadata(referenceDate: Date) -> (updatedAt: Date, isStale: Bool) {
@@ -153,8 +238,13 @@ private enum WidgetLedgerStore {
         db: OpaquePointer?,
         from start: Date,
         to end: Date,
+        ledgerID: String,
         positiveOnly: Bool = false
     ) -> [WidgetTransaction] {
+        let defaultLedgerID = WidgetLedgerScope.defaultLedgerID
+        let ledgerFilter = ledgerID == defaultLedgerID
+            ? "AND (ledger_id IS NULL OR ledger_id = ?)"
+            : "AND ledger_id = ?"
         let sql = """
         SELECT merchant, amount, category, source, occurred_at
         FROM transactions
@@ -162,6 +252,7 @@ private enum WidgetLedgerStore {
           \(positiveOnly ? "AND amount > 0" : "")
           AND occurred_at >= ?
           AND occurred_at < ?
+          \(ledgerFilter)
         ORDER BY occurred_at DESC, created_at DESC;
         """
 
@@ -173,6 +264,7 @@ private enum WidgetLedgerStore {
 
         sqlite3_bind_text(statement, 1, storageDateTime(start), -1, sqliteTransient)
         sqlite3_bind_text(statement, 2, storageDateTime(end), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, ledgerID, -1, sqliteTransient)
 
         var items: [WidgetTransaction] = []
         while sqlite3_step(statement) == SQLITE_ROW {
@@ -198,6 +290,57 @@ private enum WidgetLedgerStore {
                     category: category,
                     source: source,
                     occurredAt: occurredAt
+                )
+            )
+        }
+
+        return items
+    }
+
+    private static func loadRecentTransactions(db: OpaquePointer?, referenceDate: Date, ledgerID: String) -> [WidgetTransaction] {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.date(from: DateComponents(year: 2000, month: 1, day: 1)) ?? referenceDate.addingTimeInterval(-365 * 86_400)
+        let end = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate.addingTimeInterval(86_400)
+        return Array(loadTransactions(db: db, from: start, to: end, ledgerID: ledgerID, positiveOnly: true).prefix(3))
+    }
+
+    private static func loadUpcomingSubscriptions(db: OpaquePointer?, referenceDate: Date) -> [WidgetSubscription] {
+        let end = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 14, to: referenceDate) ?? referenceDate.addingTimeInterval(14 * 86_400)
+        let sql = """
+        SELECT merchant, plan_name, amount, next_charged_at
+        FROM subscriptions
+        WHERE status = 'active'
+          AND next_charged_at >= ?
+          AND next_charged_at < ?
+        ORDER BY next_charged_at ASC
+        LIMIT 2;
+        """
+
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            return []
+        }
+
+        sqlite3_bind_text(statement, 1, storageDateTime(referenceDate), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, storageDateTime(end), -1, sqliteTransient)
+
+        var items: [WidgetSubscription] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard
+                let merchantCString = sqlite3_column_text(statement, 0),
+                let planCString = sqlite3_column_text(statement, 1),
+                let nextCString = sqlite3_column_text(statement, 3)
+            else {
+                continue
+            }
+
+            items.append(
+                WidgetSubscription(
+                    merchant: String(cString: merchantCString),
+                    planName: String(cString: planCString),
+                    amount: sqlite3_column_double(statement, 2),
+                    nextChargedAt: parseStorageDate(String(cString: nextCString)) ?? referenceDate
                 )
             )
         }
@@ -296,6 +439,18 @@ private struct WidgetTransaction {
     let occurredAt: Date
 }
 
+private struct WidgetSubscription {
+    let merchant: String
+    let planName: String
+    let amount: Double
+    let nextChargedAt: Date
+
+    var displayName: String {
+        let trimmedPlan = planName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedPlan.isEmpty ? merchant : "\(merchant) \(trimmedPlan)"
+    }
+}
+
 private struct DailyExpenseEntry: TimelineEntry {
     let date: Date
     let metrics: WidgetLedgerMetrics
@@ -311,11 +466,19 @@ private struct DailyExpenseProvider: TimelineProvider {
         DailyExpenseEntry(
             date: .now,
             metrics: WidgetLedgerMetrics(
+                ledgerScope: .defaultLocal,
                 todayTotal: 68.5,
                 todayCount: 3,
                 latestMerchant: "Example Supermarket",
                 monthTotal: 1250.8,
                 monthCount: 26,
+                budgetRemaining: nil,
+                recentTransactions: [
+                    WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
+                ],
+                upcomingSubscriptions: [
+                    WidgetSubscription(merchant: "iCloud+", planName: "2 TB", amount: 68, nextChargedAt: .now.addingTimeInterval(86_400 * 3))
+                ],
                 topMerchant: "Example Supermarket",
                 topCategory: "日用杂货",
                 updatedAt: .now,
@@ -340,11 +503,19 @@ private struct MonthlyReportProvider: TimelineProvider {
         MonthlyReportEntry(
             date: .now,
             metrics: WidgetLedgerMetrics(
+                ledgerScope: .defaultLocal,
                 todayTotal: 68.5,
                 todayCount: 3,
                 latestMerchant: "Example Supermarket",
                 monthTotal: 1250.8,
                 monthCount: 26,
+                budgetRemaining: nil,
+                recentTransactions: [
+                    WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
+                ],
+                upcomingSubscriptions: [
+                    WidgetSubscription(merchant: "iCloud+", planName: "2 TB", amount: 68, nextChargedAt: .now.addingTimeInterval(86_400 * 3))
+                ],
                 topMerchant: "Example Supermarket",
                 topCategory: "日用杂货",
                 updatedAt: .now,
@@ -610,17 +781,27 @@ private struct MonthlyReportWidgetView: View {
 
                         Spacer(minLength: 6)
 
-                        Text(shortUpdateTime(entry.metrics.updatedAt, isStale: entry.metrics.isSnapshotStale))
-                            .font(.system(size: compact ? 10 : 11, weight: .medium))
-                            .foregroundStyle(Color.black.opacity(0.48))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                        VStack(alignment: .trailing, spacing: 5) {
+                            Link(destination: WidgetDeepLink.quickAddURL) {
+                                Label(WidgetCopy.quickAddTitle, systemImage: "plus.circle.fill")
+                                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.74)
+                            }
+                            .foregroundStyle(Color(red: 0.10, green: 0.45, blue: 0.36))
                             .padding(.horizontal, compact ? 7 : 8)
                             .padding(.vertical, compact ? 4 : 5)
                             .background(
                                 Capsule(style: .continuous)
-                                    .fill(.white.opacity(0.72))
+                                    .fill(Color(red: 0.87, green: 0.97, blue: 0.91).opacity(0.95))
                             )
+
+                            Text(shortUpdateTime(entry.metrics.updatedAt, isStale: entry.metrics.isSnapshotStale))
+                                .font(.system(size: compact ? 9 : 10, weight: .medium))
+                                .foregroundStyle(Color.black.opacity(0.48))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
                     }
 
                     if entry.metrics.monthCount == 0 {
@@ -649,23 +830,35 @@ private struct MonthlyReportWidgetView: View {
                                     .font(.system(size: compact ? 13 : 14, weight: .medium))
                                     .foregroundStyle(Color.black.opacity(0.52))
                                     .lineLimit(1)
+                                Text(String(format: WidgetCopy.ledgerScopeFormat, entry.metrics.ledgerScope.name))
+                                    .font(.system(size: compact ? 10 : 11, weight: .medium))
+                                    .foregroundStyle(Color.black.opacity(0.48))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.74)
                             }
                             Spacer(minLength: 0)
                         }
 
                         HStack(spacing: cardSpacing) {
-                            summaryBlock(
-                                title: WidgetCopy.topMerchantTitle,
-                                value: entry.metrics.topMerchant ?? WidgetCopy.fallbackMerchant,
-                                icon: "building.2.crop.circle",
+                            compactMetric(
+                                title: WidgetCopy.budgetRemainingTitle,
+                                value: budgetSummaryValue,
+                                icon: "target",
                                 accent: Color(red: 0.17, green: 0.44, blue: 0.77),
                                 compact: compact
                             )
-                            summaryBlock(
-                                title: WidgetCopy.topCategoryTitle,
-                                value: entry.metrics.topCategory ?? WidgetCopy.fallbackCategory,
-                                icon: "square.grid.2x2.fill",
+                            compactMetric(
+                                title: WidgetCopy.recentTransactionsTitle,
+                                value: recentTransactionSummary,
+                                icon: "list.bullet.rectangle.portrait",
                                 accent: Color(red: 0.10, green: 0.58, blue: 0.50),
+                                compact: compact
+                            )
+                            compactMetric(
+                                title: WidgetCopy.upcomingSubscriptionsTitle,
+                                value: upcomingSubscriptionSummary,
+                                icon: "calendar.badge.clock",
+                                accent: Color(red: 0.66, green: 0.35, blue: 0.12),
                                 compact: compact
                             )
                         }
@@ -684,6 +877,56 @@ private struct MonthlyReportWidgetView: View {
                 endPoint: .bottomTrailing
             )
         }
+    }
+
+    private var budgetSummaryValue: String {
+        entry.metrics.budgetRemaining.map(currency) ?? WidgetCopy.budgetNotSet
+    }
+
+    private var recentTransactionSummary: String {
+        guard let transaction = entry.metrics.recentTransactions.first else {
+            return WidgetCopy.noRecentTransactionTitle
+        }
+        let merchant = transaction.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        return merchant.isEmpty ? currency(transaction.amount) : merchant
+    }
+
+    private var upcomingSubscriptionSummary: String {
+        guard let subscription = entry.metrics.upcomingSubscriptions.first else {
+            return WidgetCopy.noUpcomingSubscriptionTitle
+        }
+        return "\(subscription.displayName) \(shortDate(subscription.nextChargedAt))"
+    }
+
+    private func compactMetric(title: String, value: String, icon: String, accent: Color, compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 4 : 5) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: compact ? 9 : 10, weight: .semibold))
+                    .foregroundStyle(accent)
+                Text(title)
+                    .font(.system(size: compact ? 9 : 10, weight: .semibold))
+                    .foregroundStyle(Color.black.opacity(0.48))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            Text(value)
+                .font(.system(size: compact ? 12 : 13, weight: .semibold))
+                .foregroundStyle(Color.black.opacity(0.86))
+                .lineLimit(1)
+                .minimumScaleFactor(0.68)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, compact ? 7 : 9)
+        .padding(.vertical, compact ? 7 : 8)
+        .background(
+            RoundedRectangle(cornerRadius: compact ? 11 : 13, style: .continuous)
+                .fill(.white.opacity(0.78))
+                .overlay(
+                    RoundedRectangle(cornerRadius: compact ? 11 : 13, style: .continuous)
+                        .stroke(.white.opacity(0.55), lineWidth: 1)
+                )
+        )
     }
 
     private func summaryBlock(title: String, value: String, icon: String, accent: Color, compact: Bool) -> some View {
@@ -728,6 +971,13 @@ private struct MonthlyReportWidgetView: View {
         return "\(prefix) \(formatter.string(from: date))"
     }
 
+    private func shortDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "M/d"
+        return formatter.string(from: date)
+    }
+
     private func currency(_ value: Double) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -762,7 +1012,7 @@ struct MonthlyReportWidget: Widget {
         }
         .configurationDisplayName(WidgetCopy.monthReportTitle)
         .description(WidgetCopy.monthReportTitle)
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -773,11 +1023,19 @@ struct MonthlyReportWidget: Widget {
     DailyExpenseEntry(
         date: .now,
         metrics: WidgetLedgerMetrics(
+            ledgerScope: .defaultLocal,
             todayTotal: 68.5,
             todayCount: 3,
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
+            budgetRemaining: nil,
+            recentTransactions: [
+                WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
+            ],
+            upcomingSubscriptions: [
+                WidgetSubscription(merchant: "iCloud+", planName: "2 TB", amount: 68, nextChargedAt: .now.addingTimeInterval(86_400 * 3))
+            ],
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
             updatedAt: .now,
@@ -792,11 +1050,19 @@ struct MonthlyReportWidget: Widget {
     DailyExpenseEntry(
         date: .now,
         metrics: WidgetLedgerMetrics(
+            ledgerScope: .defaultLocal,
             todayTotal: 68.5,
             todayCount: 3,
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
+            budgetRemaining: nil,
+            recentTransactions: [
+                WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
+            ],
+            upcomingSubscriptions: [
+                WidgetSubscription(merchant: "iCloud+", planName: "2 TB", amount: 68, nextChargedAt: .now.addingTimeInterval(86_400 * 3))
+            ],
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
             updatedAt: .now,
@@ -811,11 +1077,19 @@ struct MonthlyReportWidget: Widget {
     MonthlyReportEntry(
         date: .now,
         metrics: WidgetLedgerMetrics(
+            ledgerScope: .defaultLocal,
             todayTotal: 68.5,
             todayCount: 3,
             latestMerchant: "Example Supermarket",
             monthTotal: 1250.8,
             monthCount: 26,
+            budgetRemaining: nil,
+            recentTransactions: [
+                WidgetTransaction(merchant: "Example Supermarket", amount: 68.5, category: "groceries", source: "manual", occurredAt: .now)
+            ],
+            upcomingSubscriptions: [
+                WidgetSubscription(merchant: "iCloud+", planName: "2 TB", amount: 68, nextChargedAt: .now.addingTimeInterval(86_400 * 3))
+            ],
             topMerchant: "Example Supermarket",
             topCategory: "日用杂货",
             updatedAt: .now,

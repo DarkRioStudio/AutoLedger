@@ -2149,6 +2149,7 @@ final class LedgerStore: ObservableObject {
 
     private func saveDefaultWriteLedger() {
         UserDefaults.standard.set(defaultWriteLedgerID, forKey: Self.defaultWriteLedgerIDKey)
+        Self.appGroupDefaults?.set(defaultWriteLedgerID, forKey: Self.defaultWriteLedgerIDKey)
     }
 
     private func normalizedMerchantKey(_ merchant: String) -> String {

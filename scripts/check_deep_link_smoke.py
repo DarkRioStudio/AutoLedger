@@ -38,6 +38,8 @@ REQUIRED_SNIPPETS = {
         "case subscriptions",
         "case ledgerProfiles",
         "case scan",
+        "case quickAdd",
+        'case "quick-add", "quickadd", "add"',
         "@Published var selectedHotelStayRecordID",
         "func openDeepLink(_ url: URL, store: LedgerStore) -> Bool",
         "selectLedgerForTransaction",

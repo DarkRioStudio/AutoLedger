@@ -16,6 +16,7 @@ enum AutoLedgerDeepLinkDestination: Equatable {
     case subscriptions
     case ledgerProfiles
     case scan
+    case quickAdd
 }
 
 enum AutoLedgerDeepLinkParser {
@@ -46,6 +47,8 @@ enum AutoLedgerDeepLinkParser {
             return .ledgerProfiles
         case "scan", "inbox":
             return .scan
+        case "quick-add", "quickadd", "add":
+            return .quickAdd
         default:
             return nil
         }
@@ -151,6 +154,9 @@ final class AutoLedgerNavigationState: ObservableObject {
             openLedgerProfiles()
         case .scan:
             selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
+        case .quickAdd:
+            selectedHomeTab = AutoLedgerHomeTab.ledger.rawValue
+            isPresentingNewTransaction = true
         }
     }
 
