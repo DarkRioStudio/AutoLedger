@@ -374,6 +374,25 @@ struct OfflineRegression {
         reporter.check(qqSettings.searchDays == 90, "HotelEmailAccountSettings keeps a bounded scan window")
         reporter.check(qqSettings.maxMessages == 20, "HotelEmailAccountSettings keeps a bounded message scan")
 
+        let commonPresets: [(HotelEmailAccountSettings.Provider, String)] = [
+            (.qq, "imap.qq.com"),
+            (.netease163, "imap.163.com"),
+            (.netease126, "imap.126.com"),
+            (.gmail, "imap.gmail.com"),
+            (.outlook, "outlook.office365.com"),
+            (.icloud, "imap.mail.me.com"),
+            (.yahoo, "imap.mail.yahoo.com")
+        ]
+        for (provider, host) in commonPresets {
+            let settings = HotelEmailAccountSettings.preset(provider: provider, emailAddress: "traveler@example.com")
+            reporter.check(settings.provider == provider, "HotelEmailAccountSettings records \(provider.rawValue) preset provider")
+            reporter.check(settings.imapHost == host, "HotelEmailAccountSettings uses \(provider.rawValue) IMAP host")
+            reporter.check(settings.imapPort == 993, "HotelEmailAccountSettings uses \(provider.rawValue) IMAP TLS port")
+            reporter.check(settings.useTLS, "HotelEmailAccountSettings enables TLS for \(provider.rawValue)")
+        }
+        let customSettings = HotelEmailAccountSettings.preset(provider: .custom, emailAddress: "traveler@example.com")
+        reporter.check(customSettings.imapHost.isEmpty, "HotelEmailAccountSettings keeps custom IMAP host empty")
+
         let pdfData = Data("%PDF-1.4 demo folio".utf8)
         let rawMessage = """
         From: Demo Bay Hotel <folio@example.com>

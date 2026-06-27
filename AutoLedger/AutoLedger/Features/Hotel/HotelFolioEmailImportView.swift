@@ -48,8 +48,9 @@ struct HotelFolioEmailImportView: View {
     private var accountSection: some View {
         Section {
             Picker("hotel_stay.email.provider", selection: $settings.provider) {
-                Text("hotel_stay.email.provider.qq").tag(HotelEmailAccountSettings.Provider.qq)
-                Text("hotel_stay.email.provider.custom").tag(HotelEmailAccountSettings.Provider.custom)
+                ForEach(HotelEmailAccountSettings.Provider.allCases) { provider in
+                    Text(LocalizedStringKey(provider.localizedTitleKey)).tag(provider)
+                }
             }
             TextField("hotel_stay.email.address", text: $settings.emailAddress)
                 .textInputAutocapitalization(.never)
@@ -254,12 +255,12 @@ struct HotelFolioEmailImportView: View {
     }
 
     private func applyProviderDefaults(_ provider: HotelEmailAccountSettings.Provider) {
-        guard provider == .qq else { return }
-        let qq = HotelEmailAccountSettings.qq(emailAddress: settings.emailAddress)
-        settings.imapHost = qq.imapHost
-        settings.imapPort = qq.imapPort
-        settings.useTLS = qq.useTLS
-        portText = String(qq.imapPort)
+        guard provider != .custom else { return }
+        let preset = HotelEmailAccountSettings.preset(provider: provider, emailAddress: settings.emailAddress)
+        settings.imapHost = preset.imapHost
+        settings.imapPort = preset.imapPort
+        settings.useTLS = preset.useTLS
+        portText = String(preset.imapPort)
     }
 
     private func saveSettingsAndCredential() {
@@ -367,5 +368,11 @@ struct HotelFolioEmailImportView: View {
 
     private func refreshStoredCredentialState() {
         hasStoredCredential = HotelEmailCredentialStore.hasStoredCredential(for: settings.emailAddress)
+    }
+}
+
+private extension HotelEmailAccountSettings.Provider {
+    var localizedTitleKey: String {
+        "hotel_stay.email.provider.\(rawValue)"
     }
 }

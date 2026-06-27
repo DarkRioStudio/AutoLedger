@@ -152,6 +152,12 @@
 "hotel_stay.email.title" = "メール明細の取り込み";
 "hotel_stay.email.provider" = "メール種類";
 "hotel_stay.email.provider.qq" = "QQ メール";
+"hotel_stay.email.provider.netease163" = "NetEase 163 メール";
+"hotel_stay.email.provider.netease126" = "NetEase 126 メール";
+"hotel_stay.email.provider.gmail" = "Gmail";
+"hotel_stay.email.provider.outlook" = "Outlook / Hotmail";
+"hotel_stay.email.provider.icloud" = "iCloud Mail";
+"hotel_stay.email.provider.yahoo" = "Yahoo Mail";
 "hotel_stay.email.provider.custom" = "カスタム IMAP";
 "hotel_stay.email.address" = "メールアドレス";
 "hotel_stay.email.host" = "IMAP サーバー";

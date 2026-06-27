@@ -3,6 +3,12 @@ import Foundation
 public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
     public enum Provider: String, Codable, CaseIterable, Identifiable, Sendable {
         case qq
+        case netease163
+        case netease126
+        case gmail
+        case outlook
+        case icloud
+        case yahoo
         case custom
 
         public var id: String { rawValue }
@@ -35,15 +41,31 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
     }
 
     public static func qq(emailAddress: String = "") -> HotelEmailAccountSettings {
-        HotelEmailAccountSettings(
-            emailAddress: emailAddress,
-            provider: .qq,
-            imapHost: "imap.qq.com",
-            imapPort: 993,
-            useTLS: true,
-            searchDays: 90,
-            maxMessages: 20
-        )
+        preset(provider: .qq, emailAddress: emailAddress)
+    }
+
+    public static func netease163(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .netease163, emailAddress: emailAddress)
+    }
+
+    public static func netease126(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .netease126, emailAddress: emailAddress)
+    }
+
+    public static func gmail(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .gmail, emailAddress: emailAddress)
+    }
+
+    public static func outlook(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .outlook, emailAddress: emailAddress)
+    }
+
+    public static func icloud(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .icloud, emailAddress: emailAddress)
+    }
+
+    public static func yahoo(emailAddress: String = "") -> HotelEmailAccountSettings {
+        preset(provider: .yahoo, emailAddress: emailAddress)
     }
 
     public static func custom(emailAddress: String = "") -> HotelEmailAccountSettings {
@@ -51,6 +73,38 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
             emailAddress: emailAddress,
             provider: .custom,
             imapHost: "",
+            imapPort: 993,
+            useTLS: true,
+            searchDays: 90,
+            maxMessages: 20
+        )
+    }
+
+    public static func preset(provider: Provider, emailAddress: String = "") -> HotelEmailAccountSettings {
+        let host: String
+        switch provider {
+        case .qq:
+            host = "imap.qq.com"
+        case .netease163:
+            host = "imap.163.com"
+        case .netease126:
+            host = "imap.126.com"
+        case .gmail:
+            host = "imap.gmail.com"
+        case .outlook:
+            host = "outlook.office365.com"
+        case .icloud:
+            host = "imap.mail.me.com"
+        case .yahoo:
+            host = "imap.mail.yahoo.com"
+        case .custom:
+            return custom(emailAddress: emailAddress)
+        }
+
+        return HotelEmailAccountSettings(
+            emailAddress: emailAddress,
+            provider: provider,
+            imapHost: host,
             imapPort: 993,
             useTLS: true,
             searchDays: 90,

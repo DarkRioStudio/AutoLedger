@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-275 Widget 预算占位移除）
+更新日期：2026-06-27（ITER-276 酒店邮箱常用 provider 默认设置）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-276 酒店邮箱常用 provider 默认设置
+- 日期：2026-06-27
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Email B
+- 类型：能力增强 / 本地化 / 治理
+- 目标：降低酒店邮箱 B 阶段手动 IMAP 配置成本，为常见邮箱提供默认连接参数，同时保留自定义邮箱入口。
+- 改动范围：`HotelEmailAccountSettings.Provider` 从 QQ / 自定义扩展为 QQ、网易 163、网易 126、Gmail、Outlook / Hotmail、iCloud Mail、Yahoo Mail 和自定义；新增统一 `preset(provider:emailAddress:)` 默认参数工厂；邮箱导入配置页 provider Picker 改为遍历 `allCases` 并使用四语本地化名称；离线回归补齐常用 provider host、993 端口、TLS 和自定义空 host 断言；`versions/v1.6.2-plan.md`、`versions/v1.6.2-regression-baseline.md`、CHANGELOG 和本日志同步 `GOAL-1933` 状态。
+- 未改动范围：未新增邮箱后台自动扫描、Worker 云端代拉、云端邮箱授权保存、Keychain 授权码保存逻辑、邮箱正文上传、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：用户选择常用邮箱 provider 时会自动填充对应 IMAP host、端口 993 和 TLS，并保留已输入邮箱地址；自定义 provider 仍保持手动填写，避免误覆盖私有邮箱服务器配置；四语新增 provider 名称，选择器不会因为新增 provider 漏文案。
+- 未完成内容：真实 Gmail / Outlook / iCloud / Yahoo / 网易账号登录 smoke、不同 provider 的授权码引导说明和公共用户帮助文档仍留给后续人工测试或产品说明；本轮没有引入 OAuth 或自动探测 MX / IMAP 能力。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `python3 scripts/check_hotel_email_demo_privacy.py` 通过；执行 `python3 scripts/check_l10n_release_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-email-presets CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift / API deprecated warning。
+- 风险与注意事项：常用 provider host 是默认建议值，不保证覆盖所有企业邮箱、自定义域名或地区性账号策略；部分 provider 可能要求应用专用密码、IMAP 开关或额外安全设置，后续应在 UI 文案或帮助文档补充。
+- 回滚方式：回退 `HotelFolioEmailImportPlanning.swift` provider / preset 扩展、邮箱导入页 provider Picker、本地化 provider key、离线回归新增断言和版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1933` 已完成工程闭环，酒店邮箱导入的手动配置门槛下降，同时仍保持用户主动扫描、本机 Keychain 授权和待确认入账边界。
+- 下一步建议：后续 release smoke 中使用测试邮箱分别验证至少 QQ / 网易 / Gmail 或 Outlook 的真实登录提示和失败态展示。
 
 ### ITER-275 Widget 预算占位移除
 - 日期：2026-06-27

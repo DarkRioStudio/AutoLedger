@@ -152,6 +152,12 @@
 "hotel_stay.email.title" = "Email Folio Import";
 "hotel_stay.email.provider" = "Email Provider";
 "hotel_stay.email.provider.qq" = "QQ Mail";
+"hotel_stay.email.provider.netease163" = "NetEase 163 Mail";
+"hotel_stay.email.provider.netease126" = "NetEase 126 Mail";
+"hotel_stay.email.provider.gmail" = "Gmail";
+"hotel_stay.email.provider.outlook" = "Outlook / Hotmail";
+"hotel_stay.email.provider.icloud" = "iCloud Mail";
+"hotel_stay.email.provider.yahoo" = "Yahoo Mail";
 "hotel_stay.email.provider.custom" = "Custom IMAP";
 "hotel_stay.email.address" = "Email Address";
 "hotel_stay.email.host" = "IMAP Server";

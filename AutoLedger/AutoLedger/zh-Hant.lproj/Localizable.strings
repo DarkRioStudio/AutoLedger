@@ -152,6 +152,12 @@
 "hotel_stay.email.title" = "郵箱水單匯入";
 "hotel_stay.email.provider" = "郵箱類型";
 "hotel_stay.email.provider.qq" = "QQ 郵箱";
+"hotel_stay.email.provider.netease163" = "網易 163 郵箱";
+"hotel_stay.email.provider.netease126" = "網易 126 郵箱";
+"hotel_stay.email.provider.gmail" = "Gmail";
+"hotel_stay.email.provider.outlook" = "Outlook / Hotmail";
+"hotel_stay.email.provider.icloud" = "iCloud Mail";
+"hotel_stay.email.provider.yahoo" = "Yahoo Mail";
 "hotel_stay.email.provider.custom" = "自訂 IMAP";
 "hotel_stay.email.address" = "郵箱地址";
 "hotel_stay.email.host" = "IMAP 伺服器";
