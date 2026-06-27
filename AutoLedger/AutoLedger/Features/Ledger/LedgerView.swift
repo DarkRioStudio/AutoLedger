@@ -196,14 +196,6 @@ struct LedgerView: View {
                                 .accessibilityHint(Text("ledger.transaction.edit_hint"))
                                 .padding(.vertical, 6)
                                 .listRowBackground(AppTheme.card)
-                                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                    Button {
-                                        navigationState.selectedLedgerTransactionID = transaction.id
-                                    } label: {
-                                        Label("common.edit", systemImage: "pencil")
-                                    }
-                                    .tint(AppTheme.accentSecondary)
-                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         deleteTransaction(transaction)
@@ -219,12 +211,6 @@ struct LedgerView: View {
                                     .tint(AppTheme.accent)
                                 }
                                 .contextMenu {
-                                    Button {
-                                        navigationState.selectedLedgerTransactionID = transaction.id
-                                    } label: {
-                                        Label("common.edit", systemImage: "pencil")
-                                    }
-
                                     Button {
                                         navigationState.ledgerTransactionPendingMove = transaction
                                     } label: {
@@ -361,41 +347,47 @@ struct LedgerView: View {
     }
 
     private func transactionRow(_ transaction: Transaction) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: transaction.categoryEnum.iconName)
                 .font(.headline)
                 .foregroundStyle(transaction.categoryEnum.tint)
-                .frame(width: 34, height: 34)
+                .frame(width: 32, height: 32)
                 .background(transaction.categoryEnum.tint.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(transaction.merchant)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     Text(AppFormatters.currency(transaction.amount))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
+                        .allowsTightening(true)
+                        .layoutPriority(2)
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     Text(transaction.categoryTitle)
                     Text(transaction.sourceTitle)
                     Text(AppFormatters.shortDateTime(transaction.occurredAt))
                 }
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .allowsTightening(true)
             }
-
-            Image(systemName: "slider.horizontal.3")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppTheme.mutedInk)
-                .accessibilityHidden(true)
         }
     }
 

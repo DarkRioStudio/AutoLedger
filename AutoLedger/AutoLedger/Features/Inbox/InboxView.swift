@@ -74,7 +74,8 @@ struct InboxView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerNavigationBarChrome()
-            .navigationTitle("AutoLedger")
+            .navigationTitle("tab.inbox")
+            .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }
