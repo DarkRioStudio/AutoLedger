@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-282 CloudKit 同步清单与按 ID 拉取）
+更新日期：2026-06-28（ITER-283 宽屏列表选中态增强）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-283 宽屏列表选中态增强
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：SDK UI Polish / Adaptive Layout
+- 类型：Bugfix / UI
+- 目标：修复宽屏 split view 后列表中已选中和未选中数据行视觉区别不明显的问题。
+- 改动范围：新增统一 `autoLedgerSelectableRowBackground`，在选中时显示 tint 背景、accent 描边和左侧色条；账本列表、酒店消费列表、订阅列表和 iPad / Mac 紧凑账单列表接入该背景，避免自定义卡片背景盖住系统默认 selection highlight。
+- 未改动范围：未修改账单、酒店消费、订阅的数据模型或业务逻辑，未改 SQLite / CloudKit schema、同步、酒店识别、邮箱导入、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：宽屏双栏里当前选中行会比普通卡片行更明确，列表切换选择时能保留既有卡片风格，同时给出足够明显的 selection 状态。
+- 未完成内容：本轮未做真机 / 模拟器截图目检；最终视觉仍建议在 iPhone Mirroring 宽窗口、iPad 和 Mac Catalyst 下人工看一遍。
+- 测试情况：执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：这是数据列表的选中态增强，sidebar 本身的系统选择样式未纳入本轮；如果后续有更多 `List(selection:)` 使用自绘背景，应继续接入统一 helper。
+- 回滚方式：回退 `AppTheme.swift` 中的 selectable row background helper，以及账本、酒店消费、订阅和 iPad 工作台列表的调用即可；无数据迁移或 schema 回滚。
+- 结论：宽屏主数据列表的选中 / 未选中状态已统一增强，可继续随 SDK 阶段二界面 polish 做真机目检。
+- 下一步建议：在 iPhone Mirroring 从窄拉宽、iPad 横屏和 Mac Catalyst 宽窗口下检查账本、酒店消费和订阅列表的选中态。
 
 ### ITER-282 CloudKit 同步清单与按 ID 拉取
 - 日期：2026-06-28

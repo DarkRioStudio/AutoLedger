@@ -140,6 +140,29 @@ private struct AutoLedgerListChromeModifier: ViewModifier {
     }
 }
 
+private struct AutoLedgerSelectableRowBackground: View {
+    let isSelected: Bool
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.card)
+
+            if isSelected {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(AppTheme.accent.opacity(0.55), lineWidth: 1)
+
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(AppTheme.accent)
+                    .frame(width: 4)
+                    .padding(.vertical, 8)
+                    .padding(.leading, 1)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 private struct AutoLedgerFormChromeModifier: ViewModifier {
     let maxWidth: CGFloat
 
@@ -207,6 +230,10 @@ extension View {
 
     func autoLedgerListChrome() -> some View {
         modifier(AutoLedgerListChromeModifier())
+    }
+
+    func autoLedgerSelectableRowBackground(_ isSelected: Bool) -> some View {
+        listRowBackground(AutoLedgerSelectableRowBackground(isSelected: isSelected))
     }
 
     func autoLedgerFormChrome(maxWidth: CGFloat = 720) -> some View {

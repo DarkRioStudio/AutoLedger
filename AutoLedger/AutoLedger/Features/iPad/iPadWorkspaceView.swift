@@ -3260,7 +3260,7 @@ private struct IPadLedgerWorkspaceView: View {
                         IPadTransactionCompactRow(transaction: transaction)
                     }
                     .buttonStyle(.plain)
-                    .listRowBackground(selectedTransactionID == transaction.id ? AppTheme.accent.opacity(0.10) : AppTheme.card)
+                    .autoLedgerSelectableRowBackground(selectedTransactionID == transaction.id)
                 }
             } header: {
                 Text(String(format: String(localized: "ledger.footer_format"), transactions.count))

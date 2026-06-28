@@ -141,7 +141,7 @@ struct SubscriptionListView: View {
             subscriptionListRow(sub, highlight: highlight)
         }
         .tag(sub.id)
-        .listRowBackground(AppTheme.card)
+        .autoLedgerSelectableRowBackground(navigationState.selectedSubscriptionID == sub.id)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 deleteSubscription(sub)

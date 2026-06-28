@@ -265,7 +265,7 @@ struct HotelStayListView: View {
                     NavigationLink(value: row.id) {
                         HotelStayRowView(row: row)
                     }
-                    .listRowBackground(AppTheme.card)
+                    .autoLedgerSelectableRowBackground(selectedRecordID == row.id)
                 }
             }
         } header: {

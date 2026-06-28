@@ -195,7 +195,9 @@ struct LedgerView: View {
                                 .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
                                 .accessibilityHint(Text("ledger.transaction.edit_hint"))
                                 .padding(.vertical, 6)
-                                .listRowBackground(AppTheme.card)
+                                .autoLedgerSelectableRowBackground(
+                                    navigationState.selectedLedgerTransactionID == transaction.id
+                                )
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         deleteTransaction(transaction)
