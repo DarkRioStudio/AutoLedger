@@ -7,6 +7,7 @@ extension TransactionCategory {
         case .groceries:     return Color(red: 0.19, green: 0.51, blue: 0.34)
         case .dining:        return Color(red: 0.80, green: 0.35, blue: 0.18)
         case .transport:     return Color(red: 0.08, green: 0.39, blue: 0.64)
+        case .hotel:         return Color(red: 0.20, green: 0.50, blue: 0.42)
         case .shopping:      return Color(red: 0.72, green: 0.29, blue: 0.30)
         case .digital:       return Color(red: 0.33, green: 0.35, blue: 0.78)
         case .utilities:     return Color(red: 0.68, green: 0.52, blue: 0.13)

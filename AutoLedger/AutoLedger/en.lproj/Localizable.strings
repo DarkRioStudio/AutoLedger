@@ -375,6 +375,7 @@
 "category.groceries.title" = "Groceries";
 "category.dining.title" = "Dining";
 "category.transport.title" = "Transport";
+"category.hotel.title" = "Hotel";
 "category.shopping.title" = "Shopping";
 "category.digital.title" = "Digital";
 "category.utilities.title" = "Utilities";

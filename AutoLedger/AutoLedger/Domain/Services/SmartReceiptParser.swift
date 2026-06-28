@@ -453,6 +453,8 @@ struct SmartReceiptParser: Sendable {
         case "expense":   return .other
         case "dining":    return .dining
         case "transport": return .transport
+        case "hotel", "lodging", "accommodation":
+            return .hotel
         case "income", "refund", "transfer", "repayment", "topup":
             return .other
         default:          return .other

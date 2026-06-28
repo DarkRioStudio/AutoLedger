@@ -177,7 +177,7 @@ public struct SubscriptionDetector: Sendable {
 
     private func isDigitalServiceCandidate(_ transaction: Transaction) -> Bool {
         switch transaction.categoryEnum {
-        case .dining, .transport, .groceries:
+        case .dining, .transport, .groceries, .hotel:
             return false
         case .digital:
             return true

@@ -4,6 +4,7 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
     case groceries
     case dining
     case transport
+    case hotel
     case shopping
     case digital
     case utilities
@@ -17,6 +18,7 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
         case .groceries:     return NSLocalizedString("category.groceries.title", comment: "")
         case .dining:        return NSLocalizedString("category.dining.title", comment: "")
         case .transport:     return NSLocalizedString("category.transport.title", comment: "")
+        case .hotel:         return NSLocalizedString("category.hotel.title", comment: "")
         case .shopping:      return NSLocalizedString("category.shopping.title", comment: "")
         case .digital:       return NSLocalizedString("category.digital.title", comment: "")
         case .utilities:     return NSLocalizedString("category.utilities.title", comment: "")
@@ -30,12 +32,72 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
         case .groceries:     return "basket.fill"
         case .dining:        return "fork.knife"
         case .transport:     return "car.fill"
+        case .hotel:         return "building.2.fill"
         case .shopping:      return "bag.fill"
         case .digital:       return "sparkles.tv.fill"
         case .utilities:     return "bolt.fill"
         case .entertainment: return "ticket.fill"
         case .other:         return "square.grid.2x2.fill"
         }
+    }
+
+    public static func normalizedBuiltInCategory(from label: String) -> TransactionCategory? {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let exact = TransactionCategory(rawValue: trimmed) {
+            return exact
+        }
+
+        let lowered = trimmed.lowercased()
+        let aliases: [String: TransactionCategory] = [
+            "food": .dining,
+            "meal": .dining,
+            "restaurant": .dining,
+            "餐饮": .dining,
+            "餐飲": .dining,
+            "吃饭": .dining,
+            "吃飯": .dining,
+            "交通": .transport,
+            "出行": .transport,
+            "transportation": .transport,
+            "transit": .transport,
+            "hotel": .hotel,
+            "hotels": .hotel,
+            "lodging": .hotel,
+            "accommodation": .hotel,
+            "accommodations": .hotel,
+            "酒店": .hotel,
+            "酒店住宿": .hotel,
+            "住宿": .hotel,
+            "宾馆": .hotel,
+            "賓館": .hotel,
+            "飯店": .hotel,
+            "旅馆": .hotel,
+            "旅館": .hotel,
+            "ホテル": .hotel,
+            "宿泊": .hotel,
+            "宿泊費": .hotel,
+            "shopping": .shopping,
+            "购物": .shopping,
+            "購物": .shopping,
+            "grocery": .groceries,
+            "groceries": .groceries,
+            "超市": .groceries,
+            "digital": .digital,
+            "subscription": .digital,
+            "订阅": .digital,
+            "訂閱": .digital,
+            "utility": .utilities,
+            "utilities": .utilities,
+            "水电": .utilities,
+            "水電": .utilities,
+            "entertainment": .entertainment,
+            "娱乐": .entertainment,
+            "娛樂": .entertainment
+        ]
+
+        return aliases[lowered]
     }
 
     public static func infer(from text: String, corrections: [String: TransactionCategory] = [:]) -> TransactionCategory {
@@ -70,6 +132,13 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
             || lowered.contains("打车") || lowered.contains("出租车") || lowered.contains("公交")
             || lowered.contains("停车") || lowered.contains("停车费") {
             return .transport
+        }
+        if lowered.contains("酒店") || lowered.contains("酒店住宿") || lowered.contains("宾馆")
+            || lowered.contains("賓館") || lowered.contains("飯店") || lowered.contains("旅馆")
+            || lowered.contains("旅館") || lowered.contains("住宿") || lowered.contains("hotel")
+            || lowered.contains("lodging") || lowered.contains("accommodation")
+            || lowered.contains("ホテル") || lowered.contains("宿泊") {
+            return .hotel
         }
         if lowered.contains("电费") || lowered.contains("水费") || lowered.contains("燃气") {
             return .utilities

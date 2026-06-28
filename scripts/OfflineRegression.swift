@@ -866,7 +866,7 @@ struct OfflineRegression {
         reporter.check(result?.transaction.ledgerID == TodaySpendingSummary.defaultLedgerID, "Hotel transaction keeps target ledger id")
         reporter.check(result?.transaction.merchant == "Edited Demo Hotel", "Hotel transaction uses hotel name as merchant")
         reporter.check(abs((result?.transaction.amount ?? 0) - 50000) < 0.001, "Hotel transaction uses folio total amount")
-        reporter.check(result?.transaction.category == "酒店住宿", "Hotel transaction uses accommodation category label")
+        reporter.check(result?.transaction.category == TransactionCategory.hotel.rawValue, "Hotel transaction uses built-in hotel category")
         reporter.check(result?.transaction.source == ReceiptSource.manual.rawValue, "Hotel transaction uses manual source")
         reporter.check(
             result?.transaction.occurredAt == AppFormatters.parseFlexibleDate("2026-06-22"),
@@ -953,7 +953,7 @@ struct OfflineRegression {
             merchant: "Demo Bay Hotel",
             amount: 50000,
             occurredAt: AppFormatters.parseFlexibleDate("2026-06-22") ?? .now,
-            categoryLabel: "酒店住宿",
+            categoryLabel: TransactionCategory.hotel.rawValue,
             sourceLabel: ReceiptSource.manual.rawValue,
             note: "入住：2026-06-20；退房：2026-06-22",
             hotelStayRecordID: tokyoStayID
@@ -4106,6 +4106,15 @@ struct OfflineRegression {
         let reopenedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "hotel-stays.sqlite3")
         let reopenedRecords = try reopenedStore.loadHotelStayRecords()
         reporter.check(reopenedRecords == [record], "SQLite hotel stay records survive store reopen")
+        let migratedLedgerStore = LedgerStore(transactionStore: reopenedStore)
+        reporter.check(
+            migratedLedgerStore.transactions.first { $0.id == transactionID }?.category == TransactionCategory.hotel.rawValue,
+            "LedgerStore normalizes legacy hotel linked transaction into built-in hotel category"
+        )
+        reporter.check(
+            (try? reopenedStore.loadTransactions().first { $0.id == transactionID }?.category) == TransactionCategory.hotel.rawValue,
+            "LedgerStore persists normalized hotel linked transaction category"
+        )
 
         try reopenedStore.deleteHotelStayRecord(id: hotelStayID)
         let recordsAfterDelete = try reopenedStore.loadHotelStayRecords()
@@ -4170,6 +4179,10 @@ struct OfflineRegression {
         reporter.check(
             ledgerStore.transactions.first?.hotelStayRecordID == ledgerStore.hotelStayRecords.first?.id,
             "LedgerStore links hotel transaction to posted stay"
+        )
+        reporter.check(
+            ledgerStore.transactions.first?.category == TransactionCategory.hotel.rawValue,
+            "LedgerStore posts linked hotel transaction into built-in hotel category"
         )
 
         guard let postedRecord = ledgerStore.hotelStayRecords.first,
@@ -4852,6 +4865,10 @@ struct OfflineRegression {
             bundle.transactions.first { $0.id == active.id }?.hotelStayRecordID == hotelStayRecordID,
             "BackupBundle preserves hotel stay transaction link"
         )
+        reporter.check(
+            bundle.transactions.first { $0.id == active.id }?.category == TransactionCategory.hotel.rawValue,
+            "BackupBundle normalizes hotel linked transaction category"
+        )
         let activeBackupTransaction = bundle.transactions.first { $0.id == active.id }
         let deletedBackupTransaction = bundle.transactions.first { $0.id == deleted.id }
         reporter.check(
@@ -4886,7 +4903,18 @@ struct OfflineRegression {
         let restoreLedger = LedgerStore(transactionStore: restoreStore)
         try restoreLedger.restoreBackup(bundle)
 
-        reporter.check(restoreLedger.transactions.contains(active), "Backup restore keeps active transaction")
+        let expectedRestoredActive = Transaction(
+            id: active.id,
+            merchant: active.merchant,
+            amount: active.amount,
+            occurredAt: active.occurredAt,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: active.source,
+            note: active.note,
+            ledgerID: active.ledgerID,
+            hotelStayRecordID: hotelStayRecordID
+        )
+        reporter.check(restoreLedger.transactions.contains(expectedRestoredActive), "Backup restore keeps active transaction")
         reporter.check(
             restoreLedger.transactions.first { $0.id == active.id }?.ledgerID == ledgerID,
             "Backup restore keeps transaction ledger id"

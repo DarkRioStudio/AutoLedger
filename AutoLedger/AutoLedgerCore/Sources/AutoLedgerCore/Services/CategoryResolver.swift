@@ -27,7 +27,7 @@ public struct CategoryResolver: Sendable {
         (["7-eleven", "seven eleven", "7 eleven", "family mart", "罗森", "便利店"], .groceries),
         (["mcdonald", "gerbang alaf restaurants", "golden arches"], .dining),
         (["kfc", "burger king", "pizza hut", "starbucks", "subway"], .dining),
-        (["sheraton", "marriott", "hilton", "hyatt", "hotel"], .entertainment),
+        (["sheraton", "marriott", "hilton", "hyatt", "ihg", "accor", "hotel", "酒店", "住宿", "ホテル"], .hotel),
         (["滴滴", "didi", "grab", "gojek", "uber"], .transport),
         (["shell", "petronas", "caltex", "esso", "汽油", "加油站"], .transport),
         (["apple services", "apple.com", "app store", "spotify", "netflix"], .digital),

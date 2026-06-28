@@ -13,6 +13,7 @@ enum CategoryAppEnum: String, AppEnum {
     case groceries
     case dining
     case transport
+    case hotel
     case shopping
     case digital
     case utilities
@@ -28,6 +29,8 @@ enum CategoryAppEnum: String, AppEnum {
                                               image: .init(systemName: "fork.knife")),
         .transport:     DisplayRepresentation(title: "category.transport.title",
                                               image: .init(systemName: "car.fill")),
+        .hotel:         DisplayRepresentation(title: "category.hotel.title",
+                                              image: .init(systemName: "building.2.fill")),
         .shopping:      DisplayRepresentation(title: "category.shopping.title",
                                               image: .init(systemName: "bag.fill")),
         .digital:       DisplayRepresentation(title: "category.digital.title",

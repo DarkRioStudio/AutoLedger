@@ -95,7 +95,12 @@ final class LedgerStore: ObservableObject {
         self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
         self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
-        self.customCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+        let storedCustomCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+        let normalizedCustomCategories = Self.normalizedCustomCategories(storedCustomCategories)
+        self.customCategories = normalizedCustomCategories
+        if normalizedCustomCategories != storedCustomCategories {
+            UserDefaults.standard.set(normalizedCustomCategories, forKey: "customCategories")
+        }
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
         let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
         self.ledgerProfiles = initialLedgerProfiles
@@ -105,6 +110,7 @@ final class LedgerStore: ObservableObject {
         self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
         seedLegacyLedgerConfigurationTimestampIfNeeded()
+        normalizeHotelLinkedTransactionCategories(persist: true)
         LedgerStore.shared = self
     }
 
@@ -223,6 +229,7 @@ final class LedgerStore: ObservableObject {
     }
 
     func saveCustomCategories() {
+        customCategories = Self.normalizedCustomCategories(customCategories)
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
         Self.watchSyncHandler?()
         markLedgerConfigurationChanged()
@@ -587,6 +594,10 @@ final class LedgerStore: ObservableObject {
             merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
             hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())     ?? hotelStayRecords
             hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())      ?? hotelStayDrafts
+        }
+        if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
+            reloadWidgets()
+            scheduleCloudKitPushAfterLocalLedgerChange()
         }
         loadShareExtensionResult()
     }
@@ -1097,9 +1108,10 @@ final class LedgerStore: ObservableObject {
         }
 
         let original = transactions[index]
-        let resolvedTransaction = transaction.ledgerID == nil
+        let ledgerAssignedTransaction = transaction.ledgerID == nil
             ? transaction.assigningLedgerIDIfMissing(original.resolvedLedgerID())
             : transaction
+        let resolvedTransaction = assigningHotelCategoryIfNeeded(ledgerAssignedTransaction)
         let categoryChanged = original.category != resolvedTransaction.category
         let beforeMetadata = (transactionStore as? SQLiteTransactionStore)
             .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: resolvedTransaction.id) }
@@ -1749,6 +1761,55 @@ final class LedgerStore: ObservableObject {
         }
     }
 
+    @discardableResult
+    private func normalizeHotelLinkedTransactionCategories(persist: Bool) -> Int {
+        var updatedTransactions: [Transaction] = []
+        for index in transactions.indices {
+            let transaction = transactions[index]
+            let normalized = assigningHotelCategoryIfNeeded(transaction)
+            guard normalized != transaction else { continue }
+            transactions[index] = normalized
+            updatedTransactions.append(normalized)
+        }
+
+        guard !updatedTransactions.isEmpty else { return 0 }
+        sortTransactions()
+
+        if persist {
+            for transaction in updatedTransactions {
+                try? transactionStore?.update(transaction: transaction)
+            }
+        }
+        return updatedTransactions.count
+    }
+
+    private func assigningHotelCategoryIfNeeded(_ transaction: Transaction) -> Transaction {
+        guard let linkedHotelStayRecordID = linkedHotelStayRecordID(for: transaction),
+              transaction.category != TransactionCategory.hotel.rawValue ||
+              transaction.hotelStayRecordID != linkedHotelStayRecordID else {
+            return transaction
+        }
+
+        return Transaction(
+            id: transaction.id,
+            merchant: transaction.merchant,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: transaction.source,
+            note: transaction.note,
+            ledgerID: transaction.resolvedLedgerID(),
+            hotelStayRecordID: linkedHotelStayRecordID
+        )
+    }
+
+    private func linkedHotelStayRecordID(for transaction: Transaction) -> UUID? {
+        if let hotelStayRecordID = transaction.hotelStayRecordID {
+            return hotelStayRecordID
+        }
+        return hotelStayRecords.first { $0.linkedTransactionID == transaction.id }?.id
+    }
+
     private func sortHotelStayRecords() {
         hotelStayRecords.sort { lhs, rhs in
             let lhsDate = lhs.checkOutDate ?? ""
@@ -2318,19 +2379,23 @@ extension LedgerStore {
     }
 
     func makeBackupBundle() throws -> BackupBundle {
-        let backupTransactions: [BackupTransaction]
+        let rawBackupTransactions: [BackupTransaction]
         let backupHotelStayRecords: [HotelStayRecord]
         let backupHotelStayDrafts: [HotelStayDraft]
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
-            backupTransactions = try sqlStore.loadBackupTransactions()
+            rawBackupTransactions = try sqlStore.loadBackupTransactions()
             backupHotelStayRecords = try sqlStore.loadHotelStayRecords()
             backupHotelStayDrafts = try sqlStore.loadHotelStayDrafts()
         } else {
-            backupTransactions = transactions.map { BackupTransaction(transaction: $0) } +
+            rawBackupTransactions = transactions.map { BackupTransaction(transaction: $0) } +
                 deletedTransactions.map { BackupTransaction(transaction: $0, deletedAt: .now) }
             backupHotelStayRecords = hotelStayRecords
             backupHotelStayDrafts = hotelStayDrafts
         }
+        let backupTransactions = Self.normalizedHotelLinkedBackupTransactions(
+            rawBackupTransactions,
+            hotelStayRecords: backupHotelStayRecords
+        )
 
         let annualPrices = UserDefaults.standard.dictionary(forKey: Self.annualPriceKey) as? [String: Double] ?? [:]
         let subscriptionNotes = UserDefaults.standard.dictionary(forKey: Self.subscriptionNotesKey) as? [String: String] ?? [:]
@@ -2430,7 +2495,7 @@ extension LedgerStore {
 
         do {
             try applyBackupBundle(bundle)
-            customCategories = bundle.customCategories
+            customCategories = Self.normalizedCustomCategories(bundle.customCategories)
             customSources = bundle.customSources
             merchantAliases = bundle.merchantAliases
             saveRestoredUserDefaults(from: bundle)
@@ -2442,7 +2507,7 @@ extension LedgerStore {
             scheduleCloudKitPushAfterLocalLedgerChange()
         } catch {
             try? applyBackupBundle(safetyBundle)
-            customCategories = safetyBundle.customCategories
+            customCategories = Self.normalizedCustomCategories(safetyBundle.customCategories)
             customSources = safetyBundle.customSources
             merchantAliases = safetyBundle.merchantAliases
             saveRestoredUserDefaults(from: safetyBundle)
@@ -2899,7 +2964,7 @@ extension LedgerStore {
 
         subscriptions = merged.subscriptions.sorted { $0.nextChargedAt < $1.nextChargedAt }
         categoryCorrections = Dictionary(uniqueKeysWithValues: merged.categoryCorrections.map { ($0.merchant, $0.category) })
-        customCategories = merged.customCategories
+        customCategories = Self.normalizedCustomCategories(merged.customCategories)
         customSources = merged.customSources
         merchantAliases = merged.merchantAliases
 
@@ -3160,9 +3225,13 @@ extension LedgerStore {
     }
 
     private func applyBackupBundle(_ bundle: BackupBundle) throws {
+        let normalizedTransactions = Self.normalizedHotelLinkedBackupTransactions(
+            bundle.transactions,
+            hotelStayRecords: bundle.hotelStayRecords
+        )
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try sqlStore.replaceForRestore(
-                transactions: bundle.transactions,
+                transactions: normalizedTransactions,
                 subscriptions: bundle.subscriptions,
                 categoryCorrections: bundle.categoryCorrections,
                 merchantAliases: bundle.merchantAliases,
@@ -3170,8 +3239,8 @@ extension LedgerStore {
                 hotelStayDrafts: bundle.hotelStayDrafts
             )
         } else {
-            transactions = bundle.transactions.filter { $0.deletedAt == nil }.map(\.transaction)
-            deletedTransactions = bundle.transactions.filter { $0.deletedAt != nil }.map(\.transaction)
+            transactions = normalizedTransactions.filter { $0.deletedAt == nil }.map(\.transaction)
+            deletedTransactions = normalizedTransactions.filter { $0.deletedAt != nil }.map(\.transaction)
             subscriptions = bundle.subscriptions
             hotelStayRecords = bundle.hotelStayRecords
             hotelStayDrafts = bundle.hotelStayDrafts
@@ -3188,6 +3257,65 @@ private extension String {
 }
 
 private extension LedgerStore {
+    static func normalizedCustomCategories(_ categories: [String]) -> [String] {
+        var seen: Set<String> = []
+        return categories.compactMap { rawCategory in
+            let trimmed = rawCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  !isBuiltInCategoryDuplicate(trimmed) else {
+                return nil
+            }
+            let key = trimmed.lowercased()
+            guard seen.insert(key).inserted else { return nil }
+            return trimmed
+        }
+    }
+
+    static func isBuiltInCategoryDuplicate(_ category: String) -> Bool {
+        let trimmed = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if TransactionCategory.allCases.contains(where: { builtIn in
+            builtIn.rawValue == trimmed || builtIn.title == trimmed
+        }) {
+            return true
+        }
+        return TransactionCategory.normalizedBuiltInCategory(from: trimmed) == .hotel
+    }
+
+    static func normalizedHotelLinkedBackupTransactions(
+        _ transactions: [BackupTransaction],
+        hotelStayRecords: [HotelStayRecord]
+    ) -> [BackupTransaction] {
+        let linkedRecordIDsByTransactionID = hotelStayRecords.reduce(into: [UUID: UUID]()) { partial, record in
+            guard let linkedTransactionID = record.linkedTransactionID,
+                  partial[linkedTransactionID] == nil else { return }
+            partial[linkedTransactionID] = record.id
+        }
+
+        return transactions.map { backup in
+            let linkedHotelStayRecordID = backup.hotelStayRecordID ?? linkedRecordIDsByTransactionID[backup.id]
+            guard let linkedHotelStayRecordID,
+                  backup.category != TransactionCategory.hotel.rawValue ||
+                  backup.hotelStayRecordID != linkedHotelStayRecordID else {
+                return backup
+            }
+
+            return BackupTransaction(
+                id: backup.id,
+                merchant: backup.merchant,
+                amount: backup.amount,
+                occurredAt: backup.occurredAt,
+                category: TransactionCategory.hotel.rawValue,
+                source: backup.source,
+                note: backup.note,
+                ledgerID: backup.ledgerID,
+                hotelStayRecordID: linkedHotelStayRecordID,
+                deletedAt: backup.deletedAt,
+                syncMetadata: backup.syncMetadata
+            )
+        }
+    }
+
     static func loadInitialTransactions(using transactionStore: TransactionStore?) -> [Transaction] {
         do {
             return try transactionStore?.bootstrapIfNeeded(with: seedTransactions) ?? seedTransactions

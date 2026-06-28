@@ -355,7 +355,7 @@ public struct ExternalReceiptAssistSuggestionMapper: Sendable {
             return nil
         }
 
-        if let category = TransactionCategory(rawValue: hint) {
+        if let category = TransactionCategory.normalizedBuiltInCategory(from: hint) {
             return category
         }
 

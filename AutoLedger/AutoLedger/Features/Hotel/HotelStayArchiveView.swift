@@ -846,7 +846,7 @@ private enum HotelStayPreviewData {
             merchant: "Demo Bay Hotel",
             amount: 50000,
             occurredAt: AppFormatters.parseFlexibleDate("2026-06-22") ?? .now,
-            categoryLabel: "酒店住宿",
+            categoryLabel: TransactionCategory.hotel.rawValue,
             sourceLabel: ReceiptSource.manual.rawValue,
             note: "入住：2026-06-20；退房：2026-06-22",
             hotelStayRecordID: stayID

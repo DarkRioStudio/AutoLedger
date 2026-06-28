@@ -193,42 +193,7 @@ public struct StructuredLedgerJSONParser: Sendable {
             return TransactionCategory.infer(from: merchant).rawValue
         }
 
-        if let exact = TransactionCategory(rawValue: trimmed) {
-            return exact.rawValue
-        }
-
-        let lowered = trimmed.lowercased()
-        let aliases: [String: TransactionCategory] = [
-            "food": .dining,
-            "meal": .dining,
-            "restaurant": .dining,
-            "餐饮": .dining,
-            "餐飲": .dining,
-            "吃饭": .dining,
-            "吃飯": .dining,
-            "交通": .transport,
-            "出行": .transport,
-            "transportation": .transport,
-            "shopping": .shopping,
-            "购物": .shopping,
-            "購物": .shopping,
-            "grocery": .groceries,
-            "groceries": .groceries,
-            "超市": .groceries,
-            "digital": .digital,
-            "subscription": .digital,
-            "订阅": .digital,
-            "訂閱": .digital,
-            "utility": .utilities,
-            "utilities": .utilities,
-            "水电": .utilities,
-            "水電": .utilities,
-            "entertainment": .entertainment,
-            "娱乐": .entertainment,
-            "娛樂": .entertainment
-        ]
-
-        if let category = aliases[lowered] {
+        if let category = TransactionCategory.normalizedBuiltInCategory(from: trimmed) {
             return category.rawValue
         }
         return trimmed
