@@ -189,7 +189,9 @@
 "hotel_stay.email.status.connecting" = "IMAP サーバーに接続しています。";
 "hotel_stay.email.status.authenticating" = "メールにログインしています。";
 "hotel_stay.email.status.selecting_mailbox" = "受信箱を開いています。";
-"hotel_stay.email.status.searching" = "最近のメールを検索しています。";
+"hotel_stay.email.status.keyword_searching" = "ホテル明細のキーワードを検索しています。";
+"hotel_stay.email.status.keyword_search_completed_format" = "%d 件のキーワード候補メールが見つかりました。";
+"hotel_stay.email.status.searching" = "最近のメールをフォールバックとして確認しています。";
 "hotel_stay.email.status.found_messages_format" = "%d 件の確認対象メールが見つかりました。読み取り中です。";
 "hotel_stay.email.status.fetching_format" = "%d / %d 件目のメールを読み取り中。";
 "hotel_stay.email.status.candidate_found_format" = "候補明細を検出：%@";

@@ -438,6 +438,10 @@ struct HotelFolioEmailImportView: View {
             return String(localized: "hotel_stay.email.status.authenticating")
         case .selectingMailbox:
             return String(localized: "hotel_stay.email.status.selecting_mailbox")
+        case .keywordSearching:
+            return String(localized: "hotel_stay.email.status.keyword_searching")
+        case .keywordSearchCompleted(let count):
+            return String(format: String(localized: "hotel_stay.email.status.keyword_search_completed_format"), count)
         case .searching:
             return String(localized: "hotel_stay.email.status.searching")
         case .foundMessages(let count):

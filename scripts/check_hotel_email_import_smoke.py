@@ -30,6 +30,8 @@ REQUIRED_SERVICE_SNIPPETS = [
     "HotelFolioEmailScanPhase",
     "operationTimeoutSeconds",
     "withIMAPTimeout(operation:",
+    "keywordSearching",
+    "keywordSearchCompleted",
     "HotelFolioIMAPResponseScanner",
     "isTaggedResponseComplete",
     "literalLength(in:",
@@ -40,6 +42,10 @@ REQUIRED_SERVICE_SNIPPETS = [
     # Keep this exact pattern guarded because QQ/other IMAP providers vary.
     r'#"(?:~)?\{(\d+)\+?\}\r?\n"#',
     "hotel_stay.email.error.invalid_response_format",
+    "searchHotelCandidateUIDs(since:",
+    "candidateSearchCriteria",
+    "mergeCandidateUIDs(",
+    "UID SEARCH SINCE",
     ".candidateAccepted(subject:",
     ".completed(candidates.count)",
 ]

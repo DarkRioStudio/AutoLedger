@@ -189,7 +189,9 @@
 "hotel_stay.email.status.connecting" = "正在连接 IMAP 服务器。";
 "hotel_stay.email.status.authenticating" = "正在登录邮箱。";
 "hotel_stay.email.status.selecting_mailbox" = "正在打开收件箱。";
-"hotel_stay.email.status.searching" = "正在搜索最近邮件。";
+"hotel_stay.email.status.keyword_searching" = "正在按酒店水单关键词搜索。";
+"hotel_stay.email.status.keyword_search_completed_format" = "找到 %d 封关键词候选邮件。";
+"hotel_stay.email.status.searching" = "正在检查最近邮件作为兜底。";
 "hotel_stay.email.status.found_messages_format" = "找到 %d 封待检查邮件，正在读取。";
 "hotel_stay.email.status.fetching_format" = "正在读取第 %d / %d 封邮件。";
 "hotel_stay.email.status.candidate_found_format" = "命中候选水单：%@";

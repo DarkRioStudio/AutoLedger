@@ -77,6 +77,8 @@ enum HotelFolioEmailScanPhase: Sendable {
     case connecting
     case authenticating
     case selectingMailbox
+    case keywordSearching
+    case keywordSearchCompleted(Int)
     case searching
     case foundMessages(Int)
     case fetching(index: Int, total: Int)
@@ -273,19 +275,40 @@ struct HotelFolioIMAPClient: Sendable {
         let sinceDate = Calendar.current.date(byAdding: .day, value: -settings.searchDays, to: Date()) ?? Date()
         onProgress(
             HotelFolioEmailScanProgress(
-                phase: .searching,
-                debugSummary: "邮箱水单扫描：搜索最近 \(settings.searchDays) 天邮件"
+                phase: .keywordSearching,
+                debugSummary: "邮箱水单扫描：按酒店水单关键词搜索最近 \(settings.searchDays) 天邮件"
             )
         )
-        let uids = try await withIMAPTimeout(operation: "search") {
+        let candidateUIDs = try await withIMAPTimeout(operation: "search hotel candidates") {
+            try await session.searchHotelCandidateUIDs(since: sinceDate, limit: settings.maxMessages)
+        }
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .keywordSearchCompleted(candidateUIDs.count),
+                debugSummary: "邮箱水单扫描：关键词候选 UID=\(candidateUIDs.count)"
+            )
+        )
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .searching,
+                debugSummary: "邮箱水单扫描：读取最近邮件作为兜底"
+            )
+        )
+        let fallbackLimit = candidateUIDs.isEmpty ? settings.maxMessages : min(settings.maxMessages, 20)
+        let fallbackUIDs = try await withIMAPTimeout(operation: "search recent fallback") {
             try await session.searchUIDs(since: sinceDate)
         }
-            .suffix(settings.maxMessages)
+            .suffix(fallbackLimit)
             .reversed()
+        let uids = mergeCandidateUIDs(
+            candidateUIDs: candidateUIDs,
+            fallbackUIDs: Array(fallbackUIDs),
+            limit: settings.maxMessages
+        )
         onProgress(
             HotelFolioEmailScanProgress(
                 phase: .foundMessages(uids.count),
-                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封待检查邮件，最多读取 \(settings.maxMessages) 封"
+                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封待检查邮件 · keyword=\(candidateUIDs.count) · fallback=\(fallbackUIDs.count) · 最多读取 \(settings.maxMessages) 封"
             )
         )
 
@@ -336,6 +359,17 @@ struct HotelFolioIMAPClient: Sendable {
             )
         )
         return candidates
+    }
+
+    private func mergeCandidateUIDs(candidateUIDs: [String], fallbackUIDs: [String], limit: Int) -> [String] {
+        var merged: [String] = []
+        var seen: Set<String> = []
+        for uid in candidateUIDs + fallbackUIDs {
+            guard merged.count < limit else { break }
+            guard seen.insert(uid).inserted else { continue }
+            merged.append(uid)
+        }
+        return merged
     }
 
     private func withIMAPTimeout<T: Sendable>(
@@ -519,6 +553,17 @@ private extension Data {
     }
 }
 
+private extension String {
+    nonisolated var isASCIIOnly: Bool {
+        unicodeScalars.allSatisfy(\.isASCII)
+    }
+}
+
+private struct HotelFolioIMAPSearchCriterion: Sendable {
+    let fragment: String
+    let requiresUTF8: Bool
+}
+
 private actor HotelFolioIMAPSession {
     private let host: String
     private let port: Int
@@ -576,10 +621,53 @@ private actor HotelFolioIMAPSession {
     }
 
     func searchUIDs(since date: Date) async throws -> [String] {
+        try await searchUIDs(since: date, criterion: nil)
+    }
+
+    func searchHotelCandidateUIDs(since date: Date, limit: Int) async throws -> [String] {
+        var merged: [String] = []
+        var seen: Set<String> = []
+        for criterion in candidateSearchCriteria {
+            guard merged.count < limit else { break }
+            do {
+                let uids = try await searchUIDs(
+                    since: date,
+                    criterion: criterion.fragment,
+                    usesUTF8: criterion.requiresUTF8
+                )
+                    .reversed()
+                for uid in uids {
+                    guard merged.count < limit else { break }
+                    guard seen.insert(uid).inserted else { continue }
+                    merged.append(uid)
+                }
+            } catch {
+                continue
+            }
+        }
+        return merged
+    }
+
+    private func searchUIDs(
+        since date: Date,
+        criterion: String?,
+        usesUTF8: Bool = false
+    ) async throws -> [String] {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "dd-MMM-yyyy"
-        let response = try await execute("UID SEARCH SINCE \(formatter.string(from: date))")
+        let criterionText = criterion.map { " \($0)" } ?? ""
+        let command: String
+        if usesUTF8 {
+            command = "UID SEARCH CHARSET UTF-8 SINCE \(formatter.string(from: date))\(criterionText)"
+        } else {
+            command = "UID SEARCH SINCE \(formatter.string(from: date))\(criterionText)"
+        }
+        let response = try await execute(command)
+        return parseSearchUIDs(from: response)
+    }
+
+    private func parseSearchUIDs(from response: String) -> [String] {
         let searchLines = response
             .split(separator: "\n")
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -590,6 +678,23 @@ private actor HotelFolioIMAPSession {
             .split(separator: " ")
             .dropFirst()
             .map(String.init)
+    }
+
+    private var candidateSearchCriteria: [HotelFolioIMAPSearchCriterion] {
+        let highSignalKeywords = [
+            "Folio",
+            "Hotel",
+            "Marriott",
+            "账单",
+            "電子賬單",
+            "电子账单"
+        ]
+        return highSignalKeywords.flatMap { keyword in
+            [
+                HotelFolioIMAPSearchCriterion(fragment: "SUBJECT \(quote(keyword))", requiresUTF8: !keyword.isASCIIOnly),
+                HotelFolioIMAPSearchCriterion(fragment: "TEXT \(quote(keyword))", requiresUTF8: !keyword.isASCIIOnly)
+            ]
+        }
     }
 
     func fetchRFC822(uid: String) async throws -> String {

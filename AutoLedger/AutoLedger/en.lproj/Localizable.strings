@@ -189,7 +189,9 @@
 "hotel_stay.email.status.connecting" = "Connecting to the IMAP server.";
 "hotel_stay.email.status.authenticating" = "Signing in to email.";
 "hotel_stay.email.status.selecting_mailbox" = "Opening Inbox.";
-"hotel_stay.email.status.searching" = "Searching recent messages.";
+"hotel_stay.email.status.keyword_searching" = "Searching hotel folio keywords.";
+"hotel_stay.email.status.keyword_search_completed_format" = "Found %d keyword candidate messages.";
+"hotel_stay.email.status.searching" = "Checking recent messages as fallback.";
 "hotel_stay.email.status.found_messages_format" = "Found %d messages to inspect. Reading them now.";
 "hotel_stay.email.status.fetching_format" = "Reading message %d / %d.";
 "hotel_stay.email.status.candidate_found_format" = "Candidate folio found: %@";
