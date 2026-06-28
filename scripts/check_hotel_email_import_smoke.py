@@ -30,7 +30,10 @@ REQUIRED_SERVICE_SNIPPETS = [
     "HotelFolioEmailScanPhase",
     "operationTimeoutSeconds",
     "withIMAPTimeout(operation:",
-    "text.hasPrefix(\"\\(tag) \")",
+    "HotelFolioIMAPResponseScanner",
+    "isTaggedResponseComplete",
+    "literalLength(in:",
+    "taggedCompletionLine(in:",
     ".candidateAccepted(subject:",
     ".completed(candidates.count)",
 ]

@@ -408,6 +408,86 @@ private final class HotelFolioIMAPDataContinuation: @unchecked Sendable {
     }
 }
 
+private enum HotelFolioIMAPResponseScanner {
+    nonisolated static func isTaggedResponseComplete(_ data: Data, tag: String) -> Bool {
+        let bytes = Array(data)
+        let tagBytes = Array(tag.utf8)
+        var index = 0
+
+        while index < bytes.count {
+            guard let lineEnd = lineEnd(in: bytes, from: index) else {
+                return false
+            }
+
+            let line = Array(bytes[index..<lineEnd.contentEnd])
+            if lineStartsWithTag(line, tagBytes: tagBytes) {
+                return true
+            }
+
+            index = lineEnd.nextIndex
+            if let length = literalLength(in: line) {
+                let literalEnd = index + length
+                guard literalEnd <= bytes.count else {
+                    return false
+                }
+                index = literalEnd
+            }
+        }
+
+        return false
+    }
+
+    nonisolated static func taggedCompletionLine(in response: String, tag: String) -> String? {
+        response
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .last { line in
+                line.hasPrefix("\(tag) ") || line.hasPrefix("\(tag)\t")
+            }
+    }
+
+    nonisolated private static func lineStartsWithTag(_ line: [UInt8], tagBytes: [UInt8]) -> Bool {
+        guard line.count > tagBytes.count else { return false }
+        guard line.prefix(tagBytes.count).elementsEqual(tagBytes) else { return false }
+        let separator = line[tagBytes.count]
+        return separator == UInt8(ascii: " ") || separator == UInt8(ascii: "\t")
+    }
+
+    nonisolated private static func literalLength(in line: [UInt8]) -> Int? {
+        guard let openBraceIndex = line.lastIndex(of: UInt8(ascii: "{")),
+              line.last == UInt8(ascii: "}") else {
+            return nil
+        }
+
+        let payload = line[line.index(after: openBraceIndex)..<line.index(before: line.endIndex)]
+        let digits = payload.last == UInt8(ascii: "+") ? payload.dropLast() : payload[...]
+        guard !digits.isEmpty,
+              digits.allSatisfy({ $0 >= UInt8(ascii: "0") && $0 <= UInt8(ascii: "9") }) else {
+            return nil
+        }
+
+        return Int(String(decoding: digits, as: UTF8.self))
+    }
+
+    nonisolated private static func lineEnd(in bytes: [UInt8], from start: Int) -> (contentEnd: Int, nextIndex: Int)? {
+        var index = start
+        while index < bytes.count {
+            if bytes[index] == UInt8(ascii: "\n") {
+                let contentEnd = index > start && bytes[index - 1] == UInt8(ascii: "\r") ? index - 1 : index
+                return (contentEnd, index + 1)
+            }
+            index += 1
+        }
+        return nil
+    }
+}
+
+private extension Data {
+    nonisolated var containsLineBreak: Bool {
+        contains(UInt8(ascii: "\n"))
+    }
+}
+
 private actor HotelFolioIMAPSession {
     private let host: String
     private let port: Int
@@ -469,10 +549,10 @@ private actor HotelFolioIMAPSession {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "dd-MMM-yyyy"
         let response = try await execute("UID SEARCH SINCE \(formatter.string(from: date))")
-        guard let searchLine = response
+        let searchLines = response
             .split(separator: "\n")
-            .map(String.init)
-            .first(where: { $0.uppercased().hasPrefix("* SEARCH") }) else {
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard let searchLine = searchLines.first(where: { $0.uppercased().hasPrefix("* SEARCH") }) else {
             return []
         }
         return searchLine
@@ -503,10 +583,7 @@ private actor HotelFolioIMAPSession {
         let tag = String(format: "A%04d", tagIndex)
         try await send("\(tag) \(command)\r\n")
         let response = try await readResponse(tag: tag)
-        guard let finalLine = response
-            .split(separator: "\n")
-            .map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) })
-            .last(where: { $0.hasPrefix(tag) }) else {
+        guard let finalLine = HotelFolioIMAPResponseScanner.taggedCompletionLine(in: response, tag: tag) else {
             throw HotelFolioEmailImportError.invalidIMAPResponse
         }
         guard finalLine.uppercased().contains(" OK") else {
@@ -536,27 +613,24 @@ private actor HotelFolioIMAPSession {
     }
 
     private func readGreeting() async throws -> String {
-        try await readUntil { text in
-            text.contains("\r\n") || text.contains("\n")
+        try await readUntil { data in
+            data.containsLineBreak
         }
     }
 
     private func readResponse(tag: String) async throws -> String {
-        try await readUntil { text in
-            text.hasPrefix("\(tag) ") ||
-            text.contains("\r\n\(tag) ") ||
-            text.contains("\n\(tag) ")
+        try await readUntil { data in
+            HotelFolioIMAPResponseScanner.isTaggedResponseComplete(data, tag: tag)
         }
     }
 
-    private func readUntil(_ isComplete: @escaping @Sendable (String) -> Bool) async throws -> String {
+    private func readUntil(_ isComplete: @escaping @Sendable (Data) -> Bool) async throws -> String {
         var buffer = Data()
         while true {
             let chunk = try await receiveChunk()
             buffer.append(chunk)
-            let text = String(decoding: buffer, as: UTF8.self)
-            if isComplete(text) {
-                return text
+            if isComplete(buffer) {
+                return String(decoding: buffer, as: UTF8.self)
             }
         }
     }
