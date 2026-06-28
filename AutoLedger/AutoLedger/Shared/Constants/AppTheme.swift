@@ -74,6 +74,18 @@ private struct AutoLedgerSurfaceBackground: View {
     }
 }
 
+private enum AutoLedgerTitleScrollCoordinateSpace {
+    static let name = "AutoLedgerTitleScrollCoordinateSpace"
+}
+
+private struct AutoLedgerPageTitleOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = .greatestFiniteMagnitude
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = min(value, nextValue())
+    }
+}
+
 struct AutoLedgerPageTitle: View {
     let title: LocalizedStringKey
 
@@ -89,6 +101,14 @@ struct AutoLedgerPageTitle: View {
             .minimumScaleFactor(0.76)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: AutoLedgerPageTitleOffsetPreferenceKey.self,
+                        value: proxy.frame(in: .named(AutoLedgerTitleScrollCoordinateSpace.name)).minY
+                    )
+                }
+            }
     }
 }
 
@@ -151,16 +171,26 @@ private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
 
 private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
     let title: LocalizedStringKey
+    @State private var showsToolbarTitle = false
 
     func body(content: Content) -> some View {
         content
+            .coordinateSpace(name: AutoLedgerTitleScrollCoordinateSpace.name)
+            .onPreferenceChange(AutoLedgerPageTitleOffsetPreferenceKey.self) { minY in
+                guard minY.isFinite else { return }
+                showsToolbarTitle = minY < -12
+            }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Color.clear
-                        .frame(width: 1, height: 1)
-                        .accessibilityHidden(true)
+                    Text(title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                        .lineLimit(1)
+                        .opacity(showsToolbarTitle ? 1 : 0)
+                        .accessibilityHidden(!showsToolbarTitle)
+                        .animation(.easeInOut(duration: 0.16), value: showsToolbarTitle)
                 }
             }
     }
