@@ -45,6 +45,8 @@ REQUIRED_SNIPPETS = {
         "autoLedgerListChrome",
         "autoLedgerNavigationBarChrome",
         "autoLedgerSolidNavigationBarChrome",
+        "autoLedgerContentTitleNavigation",
+        "AutoLedgerPageTitle",
         ".regularMaterial",
     ],
     APP / "Features" / "Ledger" / "LedgerView.swift": [
@@ -78,22 +80,22 @@ REQUIRED_SNIPPETS = {
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "GridItem(.adaptive",
         "LazyVGrid",
-        ".navigationTitle(\"tab.inbox\")",
-        ".navigationBarTitleDisplayMode(.large)",
+        "AutoLedgerPageTitle(\"tab.inbox\")",
+        ".autoLedgerContentTitleNavigation(\"tab.inbox\")",
         "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "GridItem(.adaptive",
         "LazyVGrid",
-        ".navigationTitle(\"tab.report\")",
-        ".navigationBarTitleDisplayMode(.large)",
+        "AutoLedgerPageTitle(\"tab.report\")",
+        ".autoLedgerContentTitleNavigation(\"tab.report\")",
         "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Settings" / "SettingsView.swift": [
         "$navigationState.settingsPath",
         "autoLedgerReadableContent(maxWidth: 760",
-        ".navigationTitle(\"settings.title\")",
-        ".navigationBarTitleDisplayMode(.large)",
+        "AutoLedgerPageTitle(\"settings.title\")",
+        ".autoLedgerContentTitleNavigation(\"settings.title\")",
         "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Hotel" / "HotelFolioEmailImportView.swift": [

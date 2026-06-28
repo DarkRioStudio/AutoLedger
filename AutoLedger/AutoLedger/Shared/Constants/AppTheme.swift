@@ -74,6 +74,24 @@ private struct AutoLedgerSurfaceBackground: View {
     }
 }
 
+struct AutoLedgerPageTitle: View {
+    let title: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.largeTitle.weight(.bold))
+            .foregroundStyle(AppTheme.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.76)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
 private struct AutoLedgerReadableContentModifier: ViewModifier {
     let maxWidth: CGFloat
     let alignment: Alignment
@@ -131,6 +149,23 @@ private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
     }
 }
 
+private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
+    let title: LocalizedStringKey
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .accessibilityHidden(true)
+                }
+            }
+    }
+}
+
 extension View {
     func autoLedgerReadableContent(maxWidth: CGFloat = 760, alignment: Alignment = .center) -> some View {
         modifier(AutoLedgerReadableContentModifier(maxWidth: maxWidth, alignment: alignment))
@@ -154,6 +189,10 @@ extension View {
 
     func autoLedgerSolidNavigationBarChrome() -> some View {
         modifier(AutoLedgerSolidNavigationBarChromeModifier())
+    }
+
+    func autoLedgerContentTitleNavigation(_ title: LocalizedStringKey) -> some View {
+        modifier(AutoLedgerContentTitleNavigationModifier(title: title))
     }
 
     @ViewBuilder

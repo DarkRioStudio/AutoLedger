@@ -40,6 +40,8 @@ struct ReportView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    AutoLedgerPageTitle("tab.report")
+
                     summaryCard(snapshot)
 
                     if !anomalyAlerts.isEmpty {
@@ -77,8 +79,7 @@ struct ReportView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .navigationTitle("tab.report")
-            .navigationBarTitleDisplayMode(.large)
+            .autoLedgerContentTitleNavigation("tab.report")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {

@@ -34,6 +34,8 @@ struct InboxView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    AutoLedgerPageTitle("tab.inbox")
+
                     hero
 
                     if !upcomingSubscriptions.isEmpty {
@@ -74,8 +76,7 @@ struct InboxView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .navigationTitle("tab.inbox")
-            .navigationBarTitleDisplayMode(.large)
+            .autoLedgerContentTitleNavigation("tab.inbox")
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }

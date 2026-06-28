@@ -16,6 +16,8 @@ struct SettingsView: View {
         NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    AutoLedgerPageTitle("settings.title")
+
                     settingsSection(title: "settings.section.ledger_sync") {
                         NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
                             settingsRow(
@@ -242,8 +244,7 @@ struct SettingsView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .navigationTitle("settings.title")
-            .navigationBarTitleDisplayMode(.large)
+            .autoLedgerContentTitleNavigation("settings.title")
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
                 case .ledgerProfiles:
