@@ -869,8 +869,8 @@ struct OfflineRegression {
         reporter.check(result?.transaction.category == TransactionCategory.hotel.rawValue, "Hotel transaction uses built-in hotel category")
         reporter.check(result?.transaction.source == ReceiptSource.manual.rawValue, "Hotel transaction uses manual source")
         reporter.check(
-            result?.transaction.occurredAt == AppFormatters.parseFlexibleDate("2026-06-22"),
-            "Hotel transaction uses checkout date"
+            result?.transaction.occurredAt == AppFormatters.parseFlexibleDate("2026-06-22 16:00"),
+            "Hotel transaction uses checkout date at 16:00"
         )
         reporter.check(result?.transaction.note.contains("2026-06-20") == true, "Hotel transaction note includes check-in date")
         reporter.check(result?.transaction.note.contains("2026-06-22") == true, "Hotel transaction note includes check-out date")
@@ -4190,23 +4190,75 @@ struct OfflineRegression {
             reporter.check(false, "LedgerStore exposes posted hotel stay and transaction before delete")
             return
         }
-        reporter.check(ledgerStore.deleteHotelStayRecord(postedRecord), "LedgerStore deletes posted hotel stay record")
+
+        var editedRecord = postedRecord
+        editedRecord.hotelName = "Edited Demo Bay Hotel"
+        editedRecord.checkOutDate = "2026-06-23"
+        editedRecord.totalAmount = 888
+        editedRecord.localizedData = HotelStayLocalizedData(
+            hotelName: "本地化酒店",
+            currency: "CNY",
+            totalAmount: 888
+        )
+        let editedOccurredAt = AppFormatters.parseFlexibleDate("2026-06-23 16:00") ?? linkedTransaction.occurredAt
+        let editedTransaction = Transaction(
+            id: linkedTransaction.id,
+            merchant: "本地化酒店",
+            amount: 888,
+            occurredAt: editedOccurredAt,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: linkedTransaction.source,
+            note: "Edited hotel note",
+            ledgerID: linkedTransaction.resolvedLedgerID(),
+            hotelStayRecordID: editedRecord.id
+        )
+        reporter.check(
+            ledgerStore.updateHotelStayRecord(editedRecord, linkedTransaction: editedTransaction),
+            "LedgerStore updates posted hotel stay record"
+        )
+        reporter.check(
+            ledgerStore.hotelStayRecords.first?.localizedData?.hotelName == "本地化酒店",
+            "LedgerStore keeps edited localized hotel name in memory"
+        )
+        reporter.check(
+            ledgerStore.transactions.first?.merchant == "本地化酒店",
+            "LedgerStore keeps edited linked transaction merchant in memory"
+        )
+        reporter.check(
+            ledgerStore.transactions.first?.occurredAt == editedOccurredAt,
+            "LedgerStore keeps edited linked transaction date in memory"
+        )
+        reporter.check(
+            (try? sqlStore.loadHotelStayRecords().first?.localizedData?.hotelName) == "本地化酒店",
+            "LedgerStore persists edited hotel stay record"
+        )
+        reporter.check(
+            (try? sqlStore.loadTransactions().first { $0.id == linkedTransaction.id }?.merchant) == "本地化酒店",
+            "LedgerStore persists edited linked hotel transaction"
+        )
+
+        guard let currentPostedRecord = ledgerStore.hotelStayRecords.first,
+              let currentLinkedTransaction = ledgerStore.transactions.first else {
+            reporter.check(false, "LedgerStore exposes edited hotel stay and transaction before delete")
+            return
+        }
+        reporter.check(ledgerStore.deleteHotelStayRecord(currentPostedRecord), "LedgerStore deletes posted hotel stay record")
         reporter.check(ledgerStore.hotelStayRecords.isEmpty, "LedgerStore removes deleted hotel stay from memory")
         reporter.check(
-            !ledgerStore.transactions.contains { $0.id == linkedTransaction.id },
+            !ledgerStore.transactions.contains { $0.id == currentLinkedTransaction.id },
             "LedgerStore removes linked hotel transaction from active memory"
         )
         reporter.check(
-            ledgerStore.deletedTransactions.contains { $0.id == linkedTransaction.id && $0.hotelStayRecordID == postedRecord.id },
+            ledgerStore.deletedTransactions.contains { $0.id == currentLinkedTransaction.id && $0.hotelStayRecordID == currentPostedRecord.id },
             "LedgerStore keeps linked hotel transaction in deleted memory"
         )
         reporter.check((try? sqlStore.loadHotelStayRecords())?.isEmpty == true, "LedgerStore persists deleted hotel stay")
         reporter.check(
-            (try? sqlStore.loadTransactions())?.contains { $0.id == linkedTransaction.id } == false,
+            (try? sqlStore.loadTransactions())?.contains { $0.id == currentLinkedTransaction.id } == false,
             "LedgerStore persists linked hotel transaction soft delete"
         )
         reporter.check(
-            (try? sqlStore.loadDeletedTransactions())?.contains { $0.id == linkedTransaction.id && $0.hotelStayRecordID == postedRecord.id } == true,
+            (try? sqlStore.loadDeletedTransactions())?.contains { $0.id == currentLinkedTransaction.id && $0.hotelStayRecordID == currentPostedRecord.id } == true,
             "LedgerStore persists linked hotel transaction tombstone"
         )
 

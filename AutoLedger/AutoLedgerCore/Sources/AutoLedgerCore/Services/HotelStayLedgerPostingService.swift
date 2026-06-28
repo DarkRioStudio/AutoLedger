@@ -129,13 +129,21 @@ public struct HotelStayLedgerPostingService: Sendable {
     private func transactionDate(from payload: HotelFolioParsedPayload) -> Date? {
         if let checkOutDate = trimmed(payload.checkOutDate),
            let date = AppFormatters.parseFlexibleDate(checkOutDate) {
-            return date
+            return ledgerPostingDate(on: date)
         }
         if let checkInDate = trimmed(payload.checkInDate),
            let date = AppFormatters.parseFlexibleDate(checkInDate) {
-            return date
+            return ledgerPostingDate(on: date)
         }
         return nil
+    }
+
+    private func ledgerPostingDate(on date: Date) -> Date {
+        var components = AppFormatters.calendar.dateComponents([.year, .month, .day], from: date)
+        components.hour = 16
+        components.minute = 0
+        components.second = 0
+        return AppFormatters.calendar.date(from: components) ?? date
     }
 
     private func transactionNote(

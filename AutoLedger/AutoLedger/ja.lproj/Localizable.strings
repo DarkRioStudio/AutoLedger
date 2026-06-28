@@ -232,6 +232,9 @@
 "hotel_stay.detail.transaction_date" = "日付";
 "hotel_stay.detail.transaction_category" = "カテゴリ";
 "hotel_stay.detail.transaction_note" = "メモ";
+"hotel_stay.detail.save.failed" = "ホテル利用記録を保存できませんでした。";
+"hotel_stay.detail.save.success_format" = "ホテル利用記録を保存しました：%@。";
+"hotel_stay.detail.save.error_format" = "ホテル利用記録を保存できませんでした：%@";
 "mac.data_exchange.csv.title" = "CSV インポート / エクスポート";
 "mac.data_exchange.csv.subtitle" = "正式な取引をエクスポートするか、CSV 行をレビュー用の候補キューにインポートします。";
 "mac.data_exchange.json.title" = "JSON バックアップ";
@@ -342,6 +345,7 @@
 "common.close" = "閉じる";
 "common.cancel" = "キャンセル";
 "common.save" = "保存";
+"common.saved" = "保存しました";
 "common.add" = "追加";
 "common.delete" = "削除";
 "common.done" = "完了";

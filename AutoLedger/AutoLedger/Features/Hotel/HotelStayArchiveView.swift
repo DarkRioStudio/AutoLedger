@@ -20,6 +20,7 @@ struct HotelStayListView: View {
     let onImportPDF: (() -> Void)?
     let onImportEmail: (() -> Void)?
     let onReviewDraft: ((HotelStayDraft) -> Void)?
+    let onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
     @Binding private var selectedRecordID: UUID?
 
@@ -36,6 +37,7 @@ struct HotelStayListView: View {
         onImportPDF: (() -> Void)? = nil,
         onImportEmail: (() -> Void)? = nil,
         onReviewDraft: ((HotelStayDraft) -> Void)? = nil,
+        onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.records = records
@@ -47,6 +49,7 @@ struct HotelStayListView: View {
         self.onImportPDF = onImportPDF
         self.onImportEmail = onImportEmail
         self.onReviewDraft = onReviewDraft
+        self.onUpdateRecord = onUpdateRecord
         self.onDeleteRecord = onDeleteRecord
         self._selectedRecordID = selectedRecordID
     }
@@ -160,6 +163,7 @@ struct HotelStayListView: View {
                 record: record,
                 transactions: transactions,
                 ledgerID: ledgerID,
+                onUpdateRecord: onUpdateRecord,
                 onDeleteRecord: onDeleteRecord
             )
         } else {
@@ -521,11 +525,14 @@ private struct HotelStayDraftRowView: View {
 
 struct HotelStayDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var form: HotelStayRecordEditForm
+    @State private var saveMessage: String?
     @State private var showsDeleteConfirmation = false
 
     let record: HotelStayRecord
     let transactions: [Transaction]
     let ledgerID: String?
+    let onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
@@ -535,25 +542,33 @@ struct HotelStayDetailView: View {
         record: HotelStayRecord,
         transactions: [Transaction] = [],
         ledgerID: String? = nil,
+        onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.record = record
         self.transactions = transactions
         self.ledgerID = ledgerID
+        self.onUpdateRecord = onUpdateRecord
         self.onDeleteRecord = onDeleteRecord
+        let linkedTransaction = Self.linkedTransaction(for: record, transactions: transactions, ledgerID: ledgerID)
+        self._form = State(initialValue: HotelStayRecordEditForm(record: record, linkedTransaction: linkedTransaction))
     }
 
     private var snapshot: HotelStayDetailSnapshot {
         presenter.makeDetailSnapshot(record: record, transactions: transactions, ledgerID: ledgerID)
     }
 
+    private var linkedTransaction: Transaction? {
+        Self.linkedTransaction(for: record, transactions: transactions, ledgerID: ledgerID)
+    }
+
     var body: some View {
         List {
             detailHeader
-            fieldSection(titleKey: "hotel_stay.detail.identity", fields: snapshot.identityFields)
-            fieldSection(titleKey: "hotel_stay.detail.stay", fields: snapshot.stayFields)
-            fieldSection(titleKey: "hotel_stay.detail.charges", fields: snapshot.chargeFields)
-            linkedTransactionSection
+            identityEditorSection
+            stayEditorSection
+            chargeEditorSection
+            linkedTransactionEditorSection
             fieldSection(titleKey: "hotel_stay.detail.source", fields: snapshot.sourceFields)
             sourcePDFSection
             rawTextSection
@@ -563,15 +578,33 @@ struct HotelStayDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .autoLedgerNavigationBarChrome()
         .toolbar {
-            if onDeleteRecord != nil {
+            if onUpdateRecord != nil {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(role: .destructive) {
-                        showsDeleteConfirmation = true
+                    Button {
+                        saveEdits()
                     } label: {
-                        Label("hotel_stay.delete.button", systemImage: "trash")
+                        Label("common.save", systemImage: "checkmark")
+                    }
+                    .disabled(!form.isValid)
+                }
+            }
+            if onDeleteRecord != nil {
+                ToolbarItem(placement: .secondaryAction) {
+                    Menu {
+                        Button(role: .destructive) {
+                            showsDeleteConfirmation = true
+                        } label: {
+                            Label("hotel_stay.delete.button", systemImage: "trash")
+                        }
+                    } label: {
+                        Label("common.more_actions", systemImage: "ellipsis.circle")
                     }
                 }
             }
+        }
+        .onChange(of: record) { _, newRecord in
+            form = HotelStayRecordEditForm(record: newRecord, linkedTransaction: linkedTransaction)
+            saveMessage = nil
         }
         .confirmationDialog(
             "hotel_stay.delete.confirm.title",
@@ -592,17 +625,17 @@ struct HotelStayDetailView: View {
     private var detailHeader: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text(snapshot.row.hotelName)
+                Text(form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? snapshot.row.hotelName)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
                 HStack(spacing: 8) {
-                    if !snapshot.row.locationText.isEmpty {
-                        Label(snapshot.row.locationText, systemImage: "mappin.and.ellipse")
+                    if let locationText = form.locationText {
+                        Label(locationText, systemImage: "mappin.and.ellipse")
                     }
-                    if !snapshot.row.nightsText.isEmpty {
+                    if let nightsText = form.nightsText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
                         Label(
-                            String(format: String(localized: "hotel_stay.list.nights_format"), snapshot.row.nightsText),
+                            String(format: String(localized: "hotel_stay.list.nights_format"), nightsText),
                             systemImage: "moon"
                         )
                     }
@@ -610,12 +643,56 @@ struct HotelStayDetailView: View {
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
 
-                Text(snapshot.row.totalAmountText)
+                Text(form.displayTotalAmountText(using: presenter))
                     .font(.title2.weight(.bold))
                     .foregroundStyle(AppTheme.accent)
+
+                if let saveMessage {
+                    Text(saveMessage)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
             }
             .padding(.vertical, 6)
             .listRowBackground(AppTheme.card)
+        }
+    }
+
+    private var identityEditorSection: some View {
+        Section("hotel_stay.detail.identity") {
+            editableTextField("hotel_stay.review.hotel_name", text: $form.hotelName)
+            editableTextField("hotel_stay.review.brand", text: $form.hotelBrand)
+            editableTextField("hotel_stay.review.group", text: $form.hotelGroup)
+            editableTextField("hotel_stay.review.city", text: $form.city)
+            editableTextField("hotel_stay.review.country", text: $form.country)
+        }
+    }
+
+    private var stayEditorSection: some View {
+        Section("hotel_stay.detail.stay") {
+            editableTextField("hotel_stay.review.check_in", text: $form.checkInDate)
+            editableTextField("hotel_stay.review.check_out", text: $form.checkOutDate)
+            editableTextField("hotel_stay.review.nights", text: $form.nightsText)
+            editableTextField("hotel_stay.review.room_type", text: $form.roomType)
+            editableTextField("hotel_stay.review.confirmation", text: $form.confirmationNumber)
+        }
+    }
+
+    private var chargeEditorSection: some View {
+        Section("hotel_stay.detail.charges") {
+            editableTextField("hotel_stay.review.currency", text: $form.currency)
+            editableTextField("hotel_stay.review.room_charge", text: $form.roomChargeText)
+            editableTextField("hotel_stay.review.tax", text: $form.taxAmountText)
+            editableTextField("hotel_stay.review.service_charge", text: $form.serviceChargeText)
+            editableTextField("hotel_stay.review.food_beverage", text: $form.foodBeverageAmountText)
+            editableTextField("hotel_stay.review.other_charges", text: $form.otherAmountText)
+            editableTextField("hotel_stay.review.total", text: $form.totalAmountText)
+            editableTextField("hotel_stay.review.payment_method", text: $form.paymentMethod)
+            if !form.isValid {
+                Text("hotel_stay.review.validation.required")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 
@@ -630,16 +707,18 @@ struct HotelStayDetailView: View {
         }
     }
 
-    private var linkedTransactionSection: some View {
+    private var linkedTransactionEditorSection: some View {
         Section("hotel_stay.detail.linked_transaction") {
-            if let transaction = snapshot.linkedTransaction {
-                LabeledContent("hotel_stay.detail.transaction_merchant", value: transaction.merchant)
-                LabeledContent("hotel_stay.detail.transaction_amount", value: AppFormatters.currency(transaction.amount))
-                LabeledContent("hotel_stay.detail.transaction_date", value: AppFormatters.shortDateTime(transaction.occurredAt))
-                LabeledContent("hotel_stay.detail.transaction_category", value: transaction.categoryTitle)
-                if !transaction.note.isEmpty {
-                    LabeledContent("hotel_stay.detail.transaction_note", value: transaction.note)
-                }
+            if linkedTransaction != nil {
+                editableTextField("hotel_stay.detail.transaction_merchant", text: $form.transactionMerchant)
+                editableTextField("hotel_stay.detail.transaction_amount", text: $form.transactionAmountText)
+                DatePicker(
+                    "hotel_stay.detail.transaction_date",
+                    selection: $form.transactionOccurredAt,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                LabeledContent("hotel_stay.detail.transaction_category", value: TransactionCategory.hotel.title)
+                editableTextField("hotel_stay.detail.transaction_note", text: $form.transactionNote)
             } else {
                 Label("hotel_stay.detail.linked_transaction.missing", systemImage: "exclamationmark.circle")
                     .foregroundStyle(.orange)
@@ -755,6 +834,233 @@ struct HotelStayDetailView: View {
             return "hotel_stay.detail.linked_transaction_id"
         }
     }
+
+    private func editableTextField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>
+    ) -> some View {
+        LabeledContent(titleKey) {
+            TextField(titleKey, text: text, axis: .vertical)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func saveEdits() {
+        guard let onUpdateRecord else { return }
+        guard form.isValid else {
+            saveMessage = String(localized: "hotel_stay.review.validation.required")
+            return
+        }
+
+        let updatedRecord = form.updatedRecord(from: record)
+        let updatedTransaction = form.updatedTransaction(from: linkedTransaction, record: updatedRecord)
+        if onUpdateRecord(updatedRecord, updatedTransaction) {
+            saveMessage = String(localized: "common.saved")
+            form = HotelStayRecordEditForm(record: updatedRecord, linkedTransaction: updatedTransaction)
+        } else {
+            saveMessage = String(localized: "hotel_stay.detail.save.failed")
+        }
+    }
+
+    private static func linkedTransaction(
+        for record: HotelStayRecord,
+        transactions: [Transaction],
+        ledgerID: String?
+    ) -> Transaction? {
+        let scopedTransactions: [Transaction]
+        if let ledgerID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !ledgerID.isEmpty {
+            scopedTransactions = transactions.filter { $0.resolvedLedgerID() == ledgerID }
+        } else {
+            scopedTransactions = transactions
+        }
+        return scopedTransactions.first { transaction in
+            transaction.id == record.linkedTransactionID ||
+            transaction.hotelStayRecordID == record.id
+        }
+    }
+}
+
+private struct HotelStayRecordEditForm: Equatable {
+    var hotelName: String
+    var hotelGroup: String
+    var hotelBrand: String
+    var city: String
+    var country: String
+    var checkInDate: String
+    var checkOutDate: String
+    var nightsText: String
+    var roomType: String
+    var confirmationNumber: String
+    var currency: String
+    var roomChargeText: String
+    var taxAmountText: String
+    var serviceChargeText: String
+    var foodBeverageAmountText: String
+    var otherAmountText: String
+    var totalAmountText: String
+    var paymentMethod: String
+    var transactionMerchant: String
+    var transactionAmountText: String
+    var transactionOccurredAt: Date
+    var transactionNote: String
+
+    private let existingLocalizedData: HotelStayLocalizedData?
+
+    init(record: HotelStayRecord, linkedTransaction: Transaction?) {
+        existingLocalizedData = record.localizedData
+        hotelName = Self.displayString(record.localizedData?.hotelName, fallback: record.hotelName)
+        hotelGroup = Self.displayString(record.localizedData?.group, fallback: record.hotelGroup)
+        hotelBrand = Self.displayString(record.localizedData?.brand, fallback: record.hotelBrand)
+        city = Self.displayString(record.localizedData?.city, fallback: record.city)
+        country = Self.displayString(record.localizedData?.country, fallback: record.country)
+        checkInDate = record.checkInDate ?? ""
+        checkOutDate = record.checkOutDate ?? ""
+        nightsText = record.nights.map(String.init) ?? ""
+        roomType = Self.displayString(record.localizedData?.roomType, fallback: record.roomType)
+        confirmationNumber = record.confirmationNumber ?? ""
+        currency = Self.displayString(record.localizedData?.currency, fallback: record.currency)
+        roomChargeText = Self.amountText(record.localizedData?.roomCharge ?? record.roomCharge)
+        taxAmountText = Self.amountText(record.localizedData?.taxAmount ?? record.taxAmount)
+        serviceChargeText = Self.amountText(record.localizedData?.serviceCharge ?? record.serviceCharge)
+        foodBeverageAmountText = Self.amountText(record.localizedData?.foodBeverageAmount ?? record.foodBeverageAmount)
+        otherAmountText = Self.amountText(record.localizedData?.otherAmount ?? record.otherAmount)
+        totalAmountText = Self.amountText(record.localizedData?.totalAmount ?? record.totalAmount)
+        paymentMethod = Self.displayString(record.localizedData?.paymentMethod, fallback: record.paymentMethod)
+        transactionMerchant = linkedTransaction?.merchant ?? Self.displayString(record.localizedData?.hotelName, fallback: record.hotelName)
+        transactionAmountText = Self.amountText(linkedTransaction?.amount ?? record.localizedData?.totalAmount ?? record.totalAmount)
+        transactionOccurredAt = linkedTransaction?.occurredAt ?? Self.defaultTransactionDate(checkOutDate: record.checkOutDate, fallback: record.updatedAt)
+        transactionNote = linkedTransaction?.note ?? ""
+    }
+
+    var isValid: Bool {
+        !hotelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        parsedAmount(totalAmountText) > 0 &&
+        parsedAmount(transactionAmountText) > 0
+    }
+
+    var locationText: String? {
+        [city, country]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+            .nilIfEmpty
+    }
+
+    func displayTotalAmountText(using presenter: HotelStayArchivePresenter) -> String {
+        presenter.localizedAmountText(parsedAmount(totalAmountText), currency: currency)
+    }
+
+    func updatedRecord(from record: HotelStayRecord) -> HotelStayRecord {
+        var updated = record
+        updated.hotelName = trimmedRequired(hotelName, fallback: record.hotelName)
+        updated.checkInDate = trimmedOptional(checkInDate)
+        updated.checkOutDate = trimmedOptional(checkOutDate)
+        updated.nights = Int(nightsText.trimmingCharacters(in: .whitespacesAndNewlines))
+        updated.confirmationNumber = trimmedOptional(confirmationNumber)
+        updated.currency = trimmedRequired(currency, fallback: record.currency)
+        updated.roomCharge = parsedAmount(roomChargeText)
+        updated.taxAmount = parsedAmount(taxAmountText)
+        updated.serviceCharge = parsedAmount(serviceChargeText)
+        updated.foodBeverageAmount = parsedAmount(foodBeverageAmountText)
+        updated.otherAmount = parsedAmount(otherAmountText)
+        updated.totalAmount = parsedAmount(totalAmountText)
+        updated.hotelGroup = trimmedOptional(hotelGroup)
+        updated.hotelBrand = trimmedOptional(hotelBrand)
+        updated.city = trimmedOptional(city)
+        updated.country = trimmedOptional(country)
+        updated.roomType = trimmedOptional(roomType)
+        updated.paymentMethod = trimmedOptional(paymentMethod)
+        updated.localizedData = HotelStayLocalizedData(
+            hotelName: trimmedOptional(hotelName),
+            brand: trimmedOptional(hotelBrand),
+            group: trimmedOptional(hotelGroup),
+            city: trimmedOptional(city),
+            country: trimmedOptional(country),
+            roomType: trimmedOptional(roomType),
+            currency: trimmedOptional(currency),
+            roomCharge: parsedAmount(roomChargeText),
+            taxAmount: parsedAmount(taxAmountText),
+            serviceCharge: parsedAmount(serviceChargeText),
+            foodBeverageAmount: parsedAmount(foodBeverageAmountText),
+            otherAmount: parsedAmount(otherAmountText),
+            totalAmount: parsedAmount(totalAmountText),
+            paymentMethod: trimmedOptional(paymentMethod),
+            exchangeRate: existingLocalizedData?.exchangeRate,
+            exchangeRateDate: existingLocalizedData?.exchangeRateDate,
+            exchangeRateProvider: existingLocalizedData?.exchangeRateProvider,
+            targetLocaleIdentifier: existingLocalizedData?.targetLocaleIdentifier,
+            generatedAt: Date()
+        )
+        return updated
+    }
+
+    func updatedTransaction(from transaction: Transaction?, record: HotelStayRecord) -> Transaction? {
+        guard let transaction else { return nil }
+        return Transaction(
+            id: transaction.id,
+            merchant: trimmedRequired(transactionMerchant, fallback: record.localizedData?.hotelName ?? record.hotelName),
+            amount: parsedAmount(transactionAmountText),
+            occurredAt: transactionOccurredAt,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: transaction.source,
+            note: transactionNote,
+            ledgerID: transaction.resolvedLedgerID(defaultLedgerID: record.ledgerID),
+            hotelStayRecordID: record.id
+        )
+    }
+
+    private static func defaultTransactionDate(checkOutDate: String?, fallback: Date) -> Date {
+        let baseDate = checkOutDate.flatMap(AppFormatters.parseFlexibleDate) ?? fallback
+        var components = AppFormatters.calendar.dateComponents([.year, .month, .day], from: baseDate)
+        components.hour = 16
+        components.minute = 0
+        components.second = 0
+        return AppFormatters.calendar.date(from: components) ?? fallback
+    }
+
+    private static func displayString(_ localized: String?, fallback: String?) -> String {
+        trimmedOptional(localized) ?? trimmedOptional(fallback) ?? ""
+    }
+
+    private static func amountText(_ value: Double) -> String {
+        let rounded = value.rounded()
+        if abs(value - rounded) < 0.000_001 {
+            return String(Int(rounded))
+        }
+        var text = String(format: "%.2f", value)
+        while text.last == "0" {
+            text.removeLast()
+        }
+        if text.last == "." {
+            text.removeLast()
+        }
+        return text
+    }
+
+    private func parsedAmount(_ value: String) -> Double {
+        let cleaned = value
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "¥", with: "")
+            .replacingOccurrences(of: "￥", with: "")
+            .replacingOccurrences(of: "$", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(cleaned) ?? 0
+    }
+
+    private func trimmedRequired(_ value: String, fallback: String) -> String {
+        trimmedOptional(value) ?? fallback
+    }
+
+    private func trimmedOptional(_ value: String) -> String? {
+        Self.trimmedOptional(value)
+    }
+
+    private static func trimmedOptional(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 #if canImport(PDFKit) && canImport(UIKit)
@@ -845,7 +1151,7 @@ private enum HotelStayPreviewData {
             id: transactionID,
             merchant: "Demo Bay Hotel",
             amount: 50000,
-            occurredAt: AppFormatters.parseFlexibleDate("2026-06-22") ?? .now,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-06-22 16:00") ?? .now,
             categoryLabel: TransactionCategory.hotel.rawValue,
             sourceLabel: ReceiptSource.manual.rawValue,
             note: "入住：2026-06-20；退房：2026-06-22",

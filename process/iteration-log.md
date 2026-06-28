@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-27（ITER-276 酒店邮箱常用 provider 默认设置）
+更新日期：2026-06-28（ITER-277 酒店水单分享唤醒与详情编辑）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-277 酒店水单分享唤醒与详情编辑
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Share Extension
+- 类型：能力增强 / Bugfix / 数据
+- 目标：修正分享 PDF 给 App 后不会主动唤醒并定位到酒店消费复核的问题，同时让正式酒店消费记录可再次编辑，关联普通账单默认时间为退房日期 16:00 且可编辑。
+- 改动范围：Share Extension 在酒店水单 PDF 处理完成后写入待复核 handoff，并调用 `extensionContext.open` 打开 `autoledger://hotel-stays/review?draftID=...`，失败时使用 responder chain fallback；`HotelStayDetailView` 从只读详情改为可编辑表单，右上角对勾保存酒店字段、费用字段和关联普通账单；`LedgerStore` 新增正式酒店记录更新 API，落盘到 SQLite 后刷新内存状态、Widget、自动备份和 CloudKit 待推送；`HotelStayLedgerPostingService` 将酒店关联普通账单默认时间改为退房日 16:00；四语补齐保存提示；`versions/v1.6.2-plan.md`、CHANGELOG 和本日志同步 `GOAL-1934` 状态。
+- 未改动范围：未修改 SQLite / CloudKit schema、邮箱后台自动扫描、Worker 云端自动化、酒店解析 schema、Keychain 授权码保存逻辑、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：用户从系统分享面板分享酒店水单 PDF 后，Share Extension 保存草稿并主动唤醒主 App；主 App 消费 handoff 后切到酒店消费 tab 并打开对应待确认草稿。已确认的酒店消费详情可编辑酒店名称、本地化展示字段、入住退房信息、费用拆分、支付方式、关联账单商户、金额、日期、分类和备注；保存后关联账单固定归入内置酒店分类。
+- 未完成内容：真实设备从 Mail / Files / Safari 分享 PDF 到 App 的端到端人工截图或录屏仍留给 release smoke；本轮没有新增批量编辑、酒店记录历史版本、云端 Worker 分享链路或自动正式入账。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，新增断言覆盖退房日 16:00 和酒店记录编辑持久化；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：Share Extension 主动打开宿主 App 依赖系统允许 extension 打开自定义 URL；已提供 `extensionContext.open` 和 responder chain fallback，但真实设备上仍需要从多个来源 App 验证。酒店详情编辑会同步更新关联普通账单，用户若手动改账单日期，会以用户编辑值为准。
+- 回滚方式：回退 Share Extension 唤醒逻辑、`HotelStayDetailView` 编辑表单、`LedgerStore.updateHotelStayRecord`、`HotelStayLedgerPostingService` 默认时间调整、离线回归新增断言和版本文档 / 日志即可；无 schema 迁移回滚。
+- 结论：`GOAL-1934` 已完成工程闭环，酒店水单分享入口可以唤醒复核，正式酒店消费也恢复为可编辑可保存状态。
+- 下一步建议：在真机 release smoke 中覆盖 Files / Mail 分享酒店 PDF、App 冷启动唤醒、待确认 sheet 打开、保存后酒店详情和账本普通流水同步更新。
 
 ### ITER-276 酒店邮箱常用 provider 默认设置
 - 日期：2026-06-27

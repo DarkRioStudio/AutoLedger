@@ -2449,6 +2449,11 @@ struct HotelStayWorkspaceView: View {
             onReviewDraft: { draft in
                 reviewDraft = draft
             },
+            onUpdateRecord: { record, linkedTransaction in
+                let didUpdate = store.updateHotelStayRecord(record, linkedTransaction: linkedTransaction)
+                statusMessage = store.lastImportSummary
+                return didUpdate
+            },
             onDeleteRecord: { record in
                 let didDelete = store.deleteHotelStayRecord(record)
                 statusMessage = store.lastImportSummary

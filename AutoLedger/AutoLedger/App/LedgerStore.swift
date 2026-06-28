@@ -1060,6 +1060,76 @@ final class LedgerStore: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func updateHotelStayRecord(
+        _ record: HotelStayRecord,
+        linkedTransaction: Transaction?
+    ) -> Bool {
+        var updatedRecord = record
+        updatedRecord.updatedAt = Date()
+
+        let normalizedTransaction = linkedTransaction.map {
+            hotelLinkedTransaction($0, recordID: updatedRecord.id, ledgerID: updatedRecord.ledgerID)
+        }
+        if let normalizedTransaction {
+            updatedRecord.linkedTransactionID = normalizedTransaction.id
+        }
+
+        do {
+            if let sqlStore = transactionStore as? SQLiteTransactionStore {
+                if let normalizedTransaction {
+                    if transactions.contains(where: { $0.id == normalizedTransaction.id }) {
+                        try sqlStore.update(transaction: normalizedTransaction)
+                    } else {
+                        try sqlStore.save(transaction: normalizedTransaction)
+                    }
+                }
+                try sqlStore.save(hotelStayRecord: updatedRecord)
+            } else if let transactionStore {
+                if let normalizedTransaction {
+                    try transactionStore.update(transaction: normalizedTransaction)
+                }
+            }
+        } catch {
+            lastImportSummary = String(
+                format: localizedMessage(
+                    "hotel_stay.detail.save.error_format",
+                    fallback: "酒店消费保存失败：%@"
+                ),
+                error.localizedDescription
+            )
+            return false
+        }
+
+        if let index = hotelStayRecords.firstIndex(where: { $0.id == updatedRecord.id }) {
+            hotelStayRecords[index] = updatedRecord
+        } else {
+            hotelStayRecords.insert(updatedRecord, at: 0)
+        }
+        sortHotelStayRecords()
+
+        if let normalizedTransaction {
+            if let index = transactions.firstIndex(where: { $0.id == normalizedTransaction.id }) {
+                transactions[index] = normalizedTransaction
+            } else {
+                transactions.insert(normalizedTransaction, at: 0)
+            }
+            sortTransactions()
+        }
+
+        lastImportSummary = String(
+            format: localizedMessage(
+                "hotel_stay.detail.save.success_format",
+                fallback: "已保存酒店消费：%@。"
+            ),
+            updatedRecord.localizedData?.hotelName ?? updatedRecord.hotelName
+        )
+        reloadWidgets()
+        requestAutomaticBackup()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        return true
+    }
+
     /// 从 App Group UserDefaults 读取 Share Extension 最近一次导入的 OCR 文本和解析结果
     private func loadShareExtensionResult() {
         guard let defaults = UserDefaults(suiteName: "group.top.darkrio326.AutoLedger") else { return }
@@ -1800,6 +1870,24 @@ final class LedgerStore: ObservableObject {
             note: transaction.note,
             ledgerID: transaction.resolvedLedgerID(),
             hotelStayRecordID: linkedHotelStayRecordID
+        )
+    }
+
+    private func hotelLinkedTransaction(
+        _ transaction: Transaction,
+        recordID: UUID,
+        ledgerID: String
+    ) -> Transaction {
+        Transaction(
+            id: transaction.id,
+            merchant: transaction.merchant,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: transaction.source,
+            note: transaction.note,
+            ledgerID: transaction.resolvedLedgerID(defaultLedgerID: ledgerID),
+            hotelStayRecordID: recordID
         )
     }
 

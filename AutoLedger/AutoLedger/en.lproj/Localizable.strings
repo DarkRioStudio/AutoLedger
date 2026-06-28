@@ -232,6 +232,9 @@
 "hotel_stay.detail.transaction_date" = "Date";
 "hotel_stay.detail.transaction_category" = "Category";
 "hotel_stay.detail.transaction_note" = "Note";
+"hotel_stay.detail.save.failed" = "Failed to save hotel stay.";
+"hotel_stay.detail.save.success_format" = "Saved hotel stay: %@.";
+"hotel_stay.detail.save.error_format" = "Failed to save hotel stay: %@";
 "mac.data_exchange.csv.title" = "CSV Import / Export";
 "mac.data_exchange.csv.subtitle" = "Export official transactions, or import CSV rows into the candidate queue for review.";
 "mac.data_exchange.json.title" = "JSON Backup";
@@ -342,6 +345,7 @@
 "common.close" = "Close";
 "common.cancel" = "Cancel";
 "common.save" = "Save";
+"common.saved" = "Saved";
 "common.add" = "Add";
 "common.delete" = "Delete";
 "common.done" = "Done";

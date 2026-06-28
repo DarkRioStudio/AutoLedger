@@ -232,6 +232,9 @@
 "hotel_stay.detail.transaction_date" = "日期";
 "hotel_stay.detail.transaction_category" = "分类";
 "hotel_stay.detail.transaction_note" = "备注";
+"hotel_stay.detail.save.failed" = "酒店消费保存失败。";
+"hotel_stay.detail.save.success_format" = "已保存酒店消费：%@。";
+"hotel_stay.detail.save.error_format" = "酒店消费保存失败：%@";
 "mac.data_exchange.csv.title" = "CSV 导入导出";
 "mac.data_exchange.csv.subtitle" = "导出正式账单，或把 CSV 行导入候选队列后再复核。";
 "mac.data_exchange.json.title" = "JSON 备份";
@@ -342,6 +345,7 @@
 "common.close" = "关闭";
 "common.cancel" = "取消";
 "common.save" = "保存";
+"common.saved" = "已保存";
 "common.add" = "添加";
 "common.delete" = "删除";
 "common.done" = "完成";
