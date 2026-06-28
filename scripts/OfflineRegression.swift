@@ -2427,6 +2427,28 @@ struct OfflineRegression {
         reporter.check(activeOnly.map(\.id) == [TodaySpendingSummary.defaultLedgerID], "SQLite ledger profile store hides archived ledgers from active listing")
         reporter.check(withArchived.first { $0.id == travelLedger.id }?.archivedAt == archivedAt, "SQLite ledger profile store persists archive timestamp")
 
+        let syncedLedger = LedgerProfile(
+            id: "synced-ledger",
+            name: "Synced Wallet",
+            iconName: "building.columns",
+            colorName: "indigo",
+            currency: "USD",
+            sortOrder: 20,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+        try store.replaceConfigurationForSync(
+            subscriptions: [],
+            categoryCorrections: [],
+            merchantAliases: [:],
+            ledgerProfiles: [LedgerProfile.defaultLocal(createdAt: createdAt), syncedLedger]
+        )
+        let withSyncedLedger = try store.loadLedgerProfiles(includeArchived: true)
+        reporter.check(
+            withSyncedLedger.contains { $0.id == syncedLedger.id && $0.name == syncedLedger.name },
+            "SQLite configuration sync stores ledger profiles"
+        )
+
         let uiStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-profiles-ui.sqlite3")
         let ledgerStore = LedgerStore(transactionStore: uiStore)
         reporter.check(ledgerStore.ledgerProfiles.map(\.id) == [TodaySpendingSummary.defaultLedgerID], "LedgerStore exposes bootstrapped ledger profiles")
@@ -3067,6 +3089,20 @@ struct OfflineRegression {
             customCategories: ["咖啡", "通勤"],
             customSources: ["快捷指令"],
             merchantAliases: ["Demo Cafe": "Demo Coffee"],
+            ledgerProfiles: [
+                LedgerProfile.defaultLocal(createdAt: Date(timeIntervalSince1970: 1_780_000_000)),
+                LedgerProfile(
+                    id: "local-wallet",
+                    name: "Local Wallet",
+                    iconName: "wallet.pass",
+                    colorName: "green",
+                    currency: "CNY",
+                    sortOrder: 10,
+                    createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+                    updatedAt: Date(timeIntervalSince1970: 1_780_000_000)
+                )
+            ],
+            defaultWriteLedgerID: "local-wallet",
             subscriptionMetadata: BackupSubscriptionMetadata(notes: ["sample": "local"]),
             appSettings: appSettings
         )
@@ -3078,6 +3114,8 @@ struct OfflineRegression {
             customCategories: [],
             customSources: [],
             merchantAliases: [:],
+            ledgerProfiles: [],
+            defaultWriteLedgerID: nil,
             subscriptionMetadata: BackupSubscriptionMetadata(),
             appSettings: appSettings
         )
@@ -3097,6 +3135,19 @@ struct OfflineRegression {
             customCategories: ["餐饮"],
             customSources: ["相册"],
             merchantAliases: ["Example Shop": "Example Market"],
+            ledgerProfiles: [
+                LedgerProfile(
+                    id: "remote-wallet",
+                    name: "Remote Wallet",
+                    iconName: "airplane",
+                    colorName: "teal",
+                    currency: "JPY",
+                    sortOrder: 20,
+                    createdAt: Date(timeIntervalSince1970: 1_780_020_000),
+                    updatedAt: Date(timeIntervalSince1970: 1_780_020_000)
+                )
+            ],
+            defaultWriteLedgerID: "remote-wallet",
             subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: ["remote": 88]),
             appSettings: appSettings
         )
@@ -3114,6 +3165,48 @@ struct OfflineRegression {
             merged.merchantAliases["Demo Cafe"] == "Demo Coffee" &&
                 merged.merchantAliases["Example Shop"] == "Example Market",
             "LedgerConfigurationSyncPolicy merges merchant aliases"
+        )
+        reporter.check(
+            Set(merged.ledgerProfiles.map(\.id)) == Set([TodaySpendingSummary.defaultLedgerID, "local-wallet", "remote-wallet"]),
+            "LedgerConfigurationSyncPolicy merges ledger profiles"
+        )
+        reporter.check(
+            merged.defaultWriteLedgerID == "remote-wallet",
+            "LedgerConfigurationSyncPolicy syncs default write ledger"
+        )
+
+        let legacyConfigurationData = Data("""
+        {
+          "recordName": "ledger-configuration-default",
+          "updatedAt": "2026-06-20T00:00:00Z",
+          "deviceID": "legacy",
+          "subscriptions": [],
+          "categoryCorrections": [],
+          "customCategories": [],
+          "customSources": [],
+          "merchantAliases": {},
+          "subscriptionMetadata": {
+            "annualPriceOverrides": {},
+            "notes": {}
+          },
+          "appSettings": {
+            "subscriptionReminderEnabled": false,
+            "monthlyAnomalyThresholdPercent": 0,
+            "llmEnhancementEnabled": false,
+            "autoClipboardImportEnabled": false,
+            "iCloudBackupEnabled": false
+          }
+        }
+        """.utf8)
+        let legacyDecoder = JSONDecoder()
+        legacyDecoder.dateDecodingStrategy = .iso8601
+        let legacyConfiguration = try? legacyDecoder.decode(
+            LedgerConfigurationSyncPayload.self,
+            from: legacyConfigurationData
+        )
+        reporter.check(
+            legacyConfiguration?.ledgerProfiles == [] && legacyConfiguration?.defaultWriteLedgerID == nil,
+            "LedgerConfigurationSyncPayload decodes legacy payload without ledger profiles"
         )
     }
 
@@ -4820,6 +4913,7 @@ struct OfflineRegression {
             .appendingPathComponent("AutoLedgerBackupRegression-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         defer {
+            UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
             try? FileManager.default.removeItem(at: rootURL)
         }
 
@@ -4828,11 +4922,24 @@ struct OfflineRegression {
         UserDefaults.standard.removeObject(forKey: "merchantAliases")
         UserDefaults.standard.removeObject(forKey: "subscriptionAnnualPriceOverrides")
         UserDefaults.standard.removeObject(forKey: "subscriptionNotes")
+        UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
 
         let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
         let sourceLedger = LedgerStore(transactionStore: sourceStore)
         let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001819") ?? UUID()
         let ledgerID = "travel-ledger"
+        let travelLedger = LedgerProfile(
+            id: ledgerID,
+            name: "Travel Ledger",
+            iconName: "airplane",
+            colorName: "teal",
+            currency: "JPY",
+            sortOrder: 10,
+            createdAt: AppFormatters.parseFlexibleDate("2026-04-20 08:00") ?? .now,
+            updatedAt: AppFormatters.parseFlexibleDate("2026-04-20 08:00") ?? .now
+        )
+        try sourceStore.saveLedgerProfile(travelLedger)
+        sourceLedger.refreshFromStore()
         let active = Transaction(
             merchant: "备份回归咖啡",
             amount: 21.00,
@@ -4915,6 +5022,7 @@ struct OfflineRegression {
         try sourceStore.save(hotelStayRecord: hotelRecord)
         try sourceStore.save(hotelStayDraft: hotelDraft)
         sourceLedger.deleteTransaction(deleted)
+        sourceLedger.setDefaultWriteLedgerProfile(travelLedger)
         sourceLedger.customCategories = ["咖啡"]
         sourceLedger.customSources = ["测试来源"]
         sourceLedger.setMerchantAlias(original: "原始商户", alias: "别名商户")
@@ -4939,6 +5047,12 @@ struct OfflineRegression {
         reporter.check(bundle.summary.deletedTransactionCount == 1, "BackupBundle summary counts deleted transactions")
         reporter.check(bundle.summary.hotelStayRecordCount == 1, "BackupBundle summary counts hotel stay records")
         reporter.check(bundle.summary.hotelStayDraftCount == 1, "BackupBundle summary counts hotel stay drafts")
+        reporter.check(bundle.summary.ledgerProfileCount == 2, "BackupBundle summary counts ledger profiles")
+        reporter.check(
+            bundle.ledgerProfiles.contains { $0.id == ledgerID && $0.name == "Travel Ledger" },
+            "BackupBundle preserves ledger profiles"
+        )
+        reporter.check(bundle.defaultWriteLedgerID == ledgerID, "BackupBundle preserves default write ledger")
         reporter.check(
             bundle.transactions.first { $0.id == active.id }?.ledgerID == ledgerID,
             "BackupBundle preserves transaction ledger id"
@@ -5052,6 +5166,11 @@ struct OfflineRegression {
         reporter.check(restoreLedger.customSources == ["测试来源"], "Backup restore keeps custom sources")
         reporter.check(restoreLedger.merchantAliases["原始商户"] == "别名商户", "Backup restore keeps merchant aliases")
         reporter.check(restoreLedger.categoryCorrections["备份回归咖啡"] == .dining, "Backup restore keeps category corrections")
+        reporter.check(
+            restoreLedger.ledgerProfiles.contains { $0.id == ledgerID && $0.name == "Travel Ledger" },
+            "Backup restore keeps ledger profiles"
+        )
+        reporter.check(restoreLedger.defaultWriteLedgerID == ledgerID, "Backup restore keeps default write ledger")
         let restoredSubscriptionNotes = UserDefaults.standard.dictionary(forKey: "subscriptionNotes") as? [String: String]
         reporter.check(restoredSubscriptionNotes?[subscription.id.uuidString] == "年度价备注", "Backup restore keeps subscription notes metadata")
     }

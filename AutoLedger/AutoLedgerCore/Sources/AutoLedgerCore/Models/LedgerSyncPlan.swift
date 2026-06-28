@@ -60,6 +60,8 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
     public let customCategories: [String]
     public let customSources: [String]
     public let merchantAliases: [String: String]
+    public let ledgerProfiles: [LedgerProfile]
+    public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
     public let appSettings: BackupAppSettings
 
@@ -72,6 +74,8 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         customCategories: [String],
         customSources: [String],
         merchantAliases: [String: String],
+        ledgerProfiles: [LedgerProfile] = [],
+        defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
         appSettings: BackupAppSettings
     ) {
@@ -83,8 +87,41 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         self.customCategories = customCategories
         self.customSources = customSources
         self.merchantAliases = merchantAliases
+        self.ledgerProfiles = ledgerProfiles
+        self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
         self.appSettings = appSettings
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case recordName
+        case updatedAt
+        case deviceID
+        case subscriptions
+        case categoryCorrections
+        case customCategories
+        case customSources
+        case merchantAliases
+        case ledgerProfiles
+        case defaultWriteLedgerID
+        case subscriptionMetadata
+        case appSettings
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        recordName = try container.decode(String.self, forKey: .recordName)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        deviceID = try container.decode(String.self, forKey: .deviceID)
+        subscriptions = try container.decode([Subscription].self, forKey: .subscriptions)
+        categoryCorrections = try container.decode([BackupCategoryCorrection].self, forKey: .categoryCorrections)
+        customCategories = try container.decode([String].self, forKey: .customCategories)
+        customSources = try container.decode([String].self, forKey: .customSources)
+        merchantAliases = try container.decode([String: String].self, forKey: .merchantAliases)
+        ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
+        defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
+        subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
+        appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
 }
 
@@ -101,7 +138,14 @@ public enum LedgerConfigurationSyncPolicy {
         remote: LedgerConfigurationSyncPayload,
         updatedAt: Date? = nil
     ) -> LedgerConfigurationSyncPayload {
-        LedgerConfigurationSyncPayload(
+        let ledgerProfiles = mergeLedgerProfiles(local.ledgerProfiles, remote.ledgerProfiles)
+        let defaultWriteLedgerID = resolvedDefaultWriteLedgerID(
+            preferred: remote.defaultWriteLedgerID,
+            fallback: local.defaultWriteLedgerID,
+            profiles: ledgerProfiles
+        )
+
+        return LedgerConfigurationSyncPayload(
             recordName: remote.recordName,
             updatedAt: updatedAt ?? remote.updatedAt,
             deviceID: remote.deviceID,
@@ -110,6 +154,8 @@ public enum LedgerConfigurationSyncPolicy {
             customCategories: mergeStrings(local.customCategories, remote.customCategories),
             customSources: mergeStrings(local.customSources, remote.customSources),
             merchantAliases: mergeDictionaries(local.merchantAliases, remote.merchantAliases),
+            ledgerProfiles: ledgerProfiles,
+            defaultWriteLedgerID: defaultWriteLedgerID,
             subscriptionMetadata: BackupSubscriptionMetadata(
                 annualPriceOverrides: mergeDictionaries(
                     local.subscriptionMetadata.annualPriceOverrides,
@@ -130,7 +176,104 @@ public enum LedgerConfigurationSyncPolicy {
             lhs.customCategories != rhs.customCategories ||
             lhs.customSources != rhs.customSources ||
             lhs.merchantAliases != rhs.merchantAliases ||
+            lhs.ledgerProfiles != rhs.ledgerProfiles ||
+            lhs.defaultWriteLedgerID != rhs.defaultWriteLedgerID ||
             lhs.subscriptionMetadata != rhs.subscriptionMetadata
+    }
+
+    private static func mergeLedgerProfiles(
+        _ local: [LedgerProfile],
+        _ remote: [LedgerProfile]
+    ) -> [LedgerProfile] {
+        var merged: [String: LedgerProfile] = [:]
+        for profile in local + remote {
+            let id = profile.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty else { continue }
+
+            if let existing = merged[id], existing.updatedAt > profile.updatedAt {
+                continue
+            }
+            merged[id] = profile
+        }
+
+        if merged.isEmpty {
+            merged[TodaySpendingSummary.defaultLedgerID] = LedgerProfile.defaultLocal(
+                createdAt: Date(timeIntervalSince1970: 0)
+            )
+        }
+
+        if merged.values.allSatisfy(\.isArchived) {
+            let createdAt = merged.values.map(\.createdAt).min() ?? Date(timeIntervalSince1970: 0)
+            merged[TodaySpendingSummary.defaultLedgerID] = LedgerProfile.defaultLocal(createdAt: createdAt)
+        }
+
+        let defaultCandidates = merged.values.filter { $0.isDefault && !$0.isArchived }
+        let selectedDefaultID: String? = {
+            if let newestDefault = defaultCandidates.max(by: { $0.updatedAt < $1.updatedAt }) {
+                return newestDefault.id
+            }
+            if merged[TodaySpendingSummary.defaultLedgerID]?.isArchived == false {
+                return TodaySpendingSummary.defaultLedgerID
+            }
+            return merged.values
+                .filter { !$0.isArchived }
+                .sorted(by: compareLedgerProfiles)
+                .first?
+                .id
+        }()
+
+        return merged.values
+            .map { profile in
+                ledgerProfile(
+                    profile,
+                    isDefault: selectedDefaultID == profile.id && !profile.isArchived
+                )
+            }
+            .sorted(by: compareLedgerProfiles)
+    }
+
+    private static func resolvedDefaultWriteLedgerID(
+        preferred: String?,
+        fallback: String?,
+        profiles: [LedgerProfile]
+    ) -> String? {
+        let activeIDs = Set(profiles.filter { !$0.isArchived }.map(\.id))
+        for candidate in [preferred, fallback] {
+            let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if activeIDs.contains(trimmed) {
+                return trimmed
+            }
+        }
+        if activeIDs.contains(TodaySpendingSummary.defaultLedgerID) {
+            return TodaySpendingSummary.defaultLedgerID
+        }
+        return profiles.first { $0.isDefault && !$0.isArchived }?.id ??
+            profiles.first { !$0.isArchived }?.id
+    }
+
+    private static func compareLedgerProfiles(_ lhs: LedgerProfile, _ rhs: LedgerProfile) -> Bool {
+        if lhs.sortOrder == rhs.sortOrder {
+            if lhs.createdAt == rhs.createdAt {
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.sortOrder < rhs.sortOrder
+    }
+
+    private static func ledgerProfile(_ profile: LedgerProfile, isDefault: Bool) -> LedgerProfile {
+        LedgerProfile(
+            id: profile.id,
+            name: profile.name,
+            iconName: profile.iconName,
+            colorName: profile.colorName,
+            currency: profile.currency,
+            isDefault: isDefault,
+            sortOrder: profile.sortOrder,
+            archivedAt: profile.archivedAt,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt
+        )
     }
 
     private static func mergeSubscriptions(
@@ -190,6 +333,17 @@ public extension LedgerConfigurationSyncPayload {
             !customCategories.isEmpty ||
             !customSources.isEmpty ||
             !merchantAliases.isEmpty ||
+            ledgerProfiles.contains { profile in
+                profile.id != TodaySpendingSummary.defaultLedgerID ||
+                    profile.name != TodaySpendingSummary.defaultLedgerName ||
+                    profile.iconName != "wallet.pass" ||
+                    profile.colorName != "accent" ||
+                    profile.currency != nil ||
+                    !profile.isDefault ||
+                    profile.sortOrder != 0 ||
+                    profile.archivedAt != nil
+            } ||
+            (defaultWriteLedgerID != nil && defaultWriteLedgerID != TodaySpendingSummary.defaultLedgerID) ||
             !subscriptionMetadata.annualPriceOverrides.isEmpty ||
             !subscriptionMetadata.notes.isEmpty
     }

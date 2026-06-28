@@ -283,6 +283,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         subscriptions: [Subscription],
         categoryCorrections: [BackupCategoryCorrection],
         merchantAliases: [String: String] = [:],
+        ledgerProfiles: [LedgerProfile] = [],
         hotelStayRecords: [HotelStayRecord] = [],
         hotelStayDrafts: [HotelStayDraft] = []
     ) throws {
@@ -294,10 +295,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             try execute("DELETE FROM subscriptions;")
             try execute("DELETE FROM category_corrections;")
             try execute("DELETE FROM merchant_aliases;")
+            try execute("DELETE FROM ledger_profiles;")
 
             for transaction in backupTransactions {
                 try insertBackupTransaction(transaction)
             }
+            try upsertLedgerProfilesForImport(ledgerProfiles)
             for record in hotelStayRecords {
                 try upsertHotelStayRecord(record)
             }
@@ -324,7 +327,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func replaceConfigurationForSync(
         subscriptions: [Subscription],
         categoryCorrections: [BackupCategoryCorrection],
-        merchantAliases: [String: String]
+        merchantAliases: [String: String],
+        ledgerProfiles: [LedgerProfile] = []
     ) throws {
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
@@ -341,6 +345,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             for (original, alias) in merchantAliases {
                 try saveMerchantAlias(original: original, alias: alias)
             }
+            try upsertLedgerProfilesForImport(ledgerProfiles)
 
             try execute("COMMIT;")
         } catch {
@@ -783,6 +788,77 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             throw error
         }
         try ensureDefaultLedgerProfileIsSelected(updatedAt: updatedAt)
+    }
+
+    private func upsertLedgerProfilesForImport(_ profiles: [LedgerProfile]) throws {
+        guard !profiles.isEmpty else { return }
+
+        let normalizedProfiles = Self.normalizedLedgerProfilesForImport(profiles)
+        if normalizedProfiles.contains(where: \.isDefault) {
+            try execute("UPDATE ledger_profiles SET is_default = 0;")
+        }
+        for profile in normalizedProfiles {
+            try upsertLedgerProfile(profile)
+        }
+    }
+
+    private static func normalizedLedgerProfilesForImport(_ profiles: [LedgerProfile]) -> [LedgerProfile] {
+        var merged: [String: LedgerProfile] = [:]
+        for profile in profiles {
+            let id = profile.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !id.isEmpty else { continue }
+            if let existing = merged[id], existing.updatedAt > profile.updatedAt {
+                continue
+            }
+            merged[id] = profile
+        }
+
+        if merged.isEmpty || merged.values.allSatisfy(\.isArchived) {
+            let createdAt = merged.values.map(\.createdAt).min() ?? Date(timeIntervalSince1970: 0)
+            merged[TodaySpendingSummary.defaultLedgerID] = LedgerProfile.defaultLocal(createdAt: createdAt)
+        }
+
+        let defaultCandidates = merged.values.filter { $0.isDefault && !$0.isArchived }
+        let selectedDefaultID: String? = {
+            if let newestDefault = defaultCandidates.max(by: { $0.updatedAt < $1.updatedAt }) {
+                return newestDefault.id
+            }
+            if merged[TodaySpendingSummary.defaultLedgerID]?.isArchived == false {
+                return TodaySpendingSummary.defaultLedgerID
+            }
+            return merged.values
+                .filter { !$0.isArchived }
+                .sorted(by: compareLedgerProfiles)
+                .first?
+                .id
+        }()
+
+        return merged.values
+            .map { profile in
+                LedgerProfile(
+                    id: profile.id,
+                    name: profile.name,
+                    iconName: profile.iconName,
+                    colorName: profile.colorName,
+                    currency: profile.currency,
+                    isDefault: selectedDefaultID == profile.id && !profile.isArchived,
+                    sortOrder: profile.sortOrder,
+                    archivedAt: profile.archivedAt,
+                    createdAt: profile.createdAt,
+                    updatedAt: profile.updatedAt
+                )
+            }
+            .sorted(by: compareLedgerProfiles)
+    }
+
+    private static func compareLedgerProfiles(_ lhs: LedgerProfile, _ rhs: LedgerProfile) -> Bool {
+        if lhs.sortOrder == rhs.sortOrder {
+            if lhs.createdAt == rhs.createdAt {
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.sortOrder < rhs.sortOrder
     }
 
     private func ensureDefaultLedgerProfileIfNeeded() throws {

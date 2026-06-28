@@ -15,6 +15,8 @@ public struct BackupBundle: Codable, Equatable, Sendable {
     public let customCategories: [String]
     public let customSources: [String]
     public let merchantAliases: [String: String]
+    public let ledgerProfiles: [LedgerProfile]
+    public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
     public let appSettings: BackupAppSettings
 
@@ -33,6 +35,8 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         customCategories: [String],
         customSources: [String],
         merchantAliases: [String: String],
+        ledgerProfiles: [LedgerProfile] = [],
+        defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
         appSettings: BackupAppSettings
     ) {
@@ -50,6 +54,8 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         self.customCategories = customCategories
         self.customSources = customSources
         self.merchantAliases = merchantAliases
+        self.ledgerProfiles = ledgerProfiles
+        self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
         self.appSettings = appSettings
     }
@@ -69,6 +75,8 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         case customCategories
         case customSources
         case merchantAliases
+        case ledgerProfiles
+        case defaultWriteLedgerID
         case subscriptionMetadata
         case appSettings
     }
@@ -89,6 +97,8 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         customCategories = try container.decode([String].self, forKey: .customCategories)
         customSources = try container.decode([String].self, forKey: .customSources)
         merchantAliases = try container.decode([String: String].self, forKey: .merchantAliases)
+        ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
+        defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
@@ -128,6 +138,7 @@ public struct BackupSummary: Codable, Equatable, Sendable {
     public let merchantAliasCount: Int
     public let hotelStayRecordCount: Int
     public let hotelStayDraftCount: Int
+    public let ledgerProfileCount: Int
 
     public init(
         transactionCount: Int,
@@ -138,7 +149,8 @@ public struct BackupSummary: Codable, Equatable, Sendable {
         customSourceCount: Int,
         merchantAliasCount: Int,
         hotelStayRecordCount: Int = 0,
-        hotelStayDraftCount: Int = 0
+        hotelStayDraftCount: Int = 0,
+        ledgerProfileCount: Int = 0
     ) {
         self.transactionCount = transactionCount
         self.deletedTransactionCount = deletedTransactionCount
@@ -149,6 +161,7 @@ public struct BackupSummary: Codable, Equatable, Sendable {
         self.merchantAliasCount = merchantAliasCount
         self.hotelStayRecordCount = hotelStayRecordCount
         self.hotelStayDraftCount = hotelStayDraftCount
+        self.ledgerProfileCount = ledgerProfileCount
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -161,6 +174,7 @@ public struct BackupSummary: Codable, Equatable, Sendable {
         case merchantAliasCount
         case hotelStayRecordCount
         case hotelStayDraftCount
+        case ledgerProfileCount
     }
 
     public init(from decoder: Decoder) throws {
@@ -174,6 +188,7 @@ public struct BackupSummary: Codable, Equatable, Sendable {
         merchantAliasCount = try container.decode(Int.self, forKey: .merchantAliasCount)
         hotelStayRecordCount = try container.decodeIfPresent(Int.self, forKey: .hotelStayRecordCount) ?? 0
         hotelStayDraftCount = try container.decodeIfPresent(Int.self, forKey: .hotelStayDraftCount) ?? 0
+        ledgerProfileCount = try container.decodeIfPresent(Int.self, forKey: .ledgerProfileCount) ?? 0
     }
 }
 
@@ -294,6 +309,7 @@ public enum BackupValidationError: LocalizedError, Equatable, Sendable {
     case duplicateSubscriptionId(UUID)
     case duplicateHotelStayRecordId(UUID)
     case duplicateHotelStayDraftId(UUID)
+    case duplicateLedgerProfileId(String)
     case emptyBundle
 
     public var errorDescription: String? {
@@ -308,6 +324,8 @@ public enum BackupValidationError: LocalizedError, Equatable, Sendable {
             return "备份中存在重复酒店消费 ID：\(id.uuidString)。"
         case let .duplicateHotelStayDraftId(id):
             return "备份中存在重复酒店水单草稿 ID：\(id.uuidString)。"
+        case let .duplicateLedgerProfileId(id):
+            return "备份中存在重复账本 ID：\(id)。"
         case .emptyBundle:
             return "备份文件中没有可恢复的数据。"
         }
@@ -348,6 +366,13 @@ public enum BackupValidator {
             }
         }
 
+        var ledgerProfileIds = Set<String>()
+        for profile in bundle.ledgerProfiles {
+            guard ledgerProfileIds.insert(profile.id).inserted else {
+                throw BackupValidationError.duplicateLedgerProfileId(profile.id)
+            }
+        }
+
         if bundle.transactions.isEmpty &&
             bundle.subscriptions.isEmpty &&
             bundle.hotelStayRecords.isEmpty &&
@@ -355,7 +380,8 @@ public enum BackupValidator {
             bundle.categoryCorrections.isEmpty &&
             bundle.customCategories.isEmpty &&
             bundle.customSources.isEmpty &&
-            bundle.merchantAliases.isEmpty {
+            bundle.merchantAliases.isEmpty &&
+            bundle.ledgerProfiles.isEmpty {
             throw BackupValidationError.emptyBundle
         }
     }

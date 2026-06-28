@@ -594,6 +594,13 @@ final class LedgerStore: ObservableObject {
             merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
             hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())     ?? hotelStayRecords
             hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())      ?? hotelStayDrafts
+            ledgerProfiles      = (try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? ledgerProfiles
+            if ledgerProfiles.isEmpty {
+                ledgerProfiles = [LedgerProfile.defaultLocal()]
+            }
+            sortLedgerProfiles()
+            normalizeDefaultWriteLedger()
+            normalizeLedgerSelection()
         }
         if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
             reloadWidgets()
@@ -2244,16 +2251,25 @@ final class LedgerStore: ObservableObject {
     }
 
     private static func loadInitialDefaultWriteLedgerID(from profiles: [LedgerProfile]) -> String {
+        resolvedDefaultWriteLedgerID(
+            UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey),
+            from: profiles
+        )
+    }
+
+    private static func resolvedDefaultWriteLedgerID(_ candidate: String?, from profiles: [LedgerProfile]) -> String {
         let activeProfiles = profiles.filter { !$0.isArchived }
         let activeIDs = Set(activeProfiles.map(\.id))
-        if let saved = UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey),
-           activeIDs.contains(saved) {
-            return saved
+        let trimmedCandidate = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if activeIDs.contains(trimmedCandidate) {
+            return trimmedCandidate
         }
         if activeIDs.contains(TodaySpendingSummary.defaultLedgerID) {
             return TodaySpendingSummary.defaultLedgerID
         }
-        return activeProfiles.first { $0.isDefault }?.id ?? TodaySpendingSummary.defaultLedgerID
+        return activeProfiles.first { $0.isDefault }?.id ??
+            activeProfiles.first?.id ??
+            TodaySpendingSummary.defaultLedgerID
     }
 
     private func reloadLedgerProfiles() {
@@ -2309,15 +2325,7 @@ final class LedgerStore: ObservableObject {
     }
 
     private func normalizeDefaultWriteLedger() {
-        let activeIDs = Set(activeLedgerProfiles.map(\.id))
-        guard !activeIDs.contains(defaultWriteLedgerID) else {
-            saveDefaultWriteLedger()
-            return
-        }
-
-        defaultWriteLedgerID = activeIDs.contains(TodaySpendingSummary.defaultLedgerID)
-            ? TodaySpendingSummary.defaultLedgerID
-            : defaultLedgerProfile.id
+        defaultWriteLedgerID = Self.resolvedDefaultWriteLedgerID(defaultWriteLedgerID, from: ledgerProfiles)
         saveDefaultWriteLedger()
     }
 
@@ -2499,7 +2507,8 @@ extension LedgerStore {
             customSourceCount: customSources.count,
             merchantAliasCount: merchantAliases.count,
             hotelStayRecordCount: backupHotelStayRecords.count,
-            hotelStayDraftCount: backupHotelStayDrafts.count
+            hotelStayDraftCount: backupHotelStayDrafts.count,
+            ledgerProfileCount: ledgerProfiles.count
         )
 
         return BackupBundle(
@@ -2522,6 +2531,8 @@ extension LedgerStore {
             customCategories: customCategories,
             customSources: customSources,
             merchantAliases: merchantAliases,
+            ledgerProfiles: ledgerProfiles,
+            defaultWriteLedgerID: defaultWriteLedgerID,
             subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: annualPrices, notes: subscriptionNotes),
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
@@ -3047,7 +3058,8 @@ extension LedgerStore {
         try sqlStore.replaceConfigurationForSync(
             subscriptions: merged.subscriptions,
             categoryCorrections: merged.categoryCorrections,
-            merchantAliases: merged.merchantAliases
+            merchantAliases: merged.merchantAliases,
+            ledgerProfiles: merged.ledgerProfiles
         )
 
         subscriptions = merged.subscriptions.sorted { $0.nextChargedAt < $1.nextChargedAt }
@@ -3055,6 +3067,10 @@ extension LedgerStore {
         customCategories = Self.normalizedCustomCategories(merged.customCategories)
         customSources = merged.customSources
         merchantAliases = merged.merchantAliases
+        reloadLedgerProfiles()
+        defaultWriteLedgerID = Self.resolvedDefaultWriteLedgerID(merged.defaultWriteLedgerID, from: ledgerProfiles)
+        saveDefaultWriteLedger()
+        normalizeLedgerSelection()
 
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
         UserDefaults.standard.set(customSources, forKey: "customSources")
@@ -3096,6 +3112,16 @@ extension LedgerStore {
             customCategories: customCategories,
             customSources: customSources,
             merchantAliases: merchantAliases,
+            ledgerProfiles: ledgerProfiles.sorted {
+                if $0.sortOrder == $1.sortOrder {
+                    if $0.createdAt == $1.createdAt {
+                        return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                    }
+                    return $0.createdAt < $1.createdAt
+                }
+                return $0.sortOrder < $1.sortOrder
+            },
+            defaultWriteLedgerID: defaultWriteLedgerID,
             subscriptionMetadata: BackupSubscriptionMetadata(
                 annualPriceOverrides: annualPrices,
                 notes: subscriptionNotes
@@ -3290,7 +3316,7 @@ extension LedgerStore {
     }
 
     func summaryText(for bundle: BackupBundle) -> String {
-        "\(bundle.summary.transactionCount) 笔账单，\(bundle.summary.deletedTransactionCount) 笔最近删除，\(bundle.summary.subscriptionCount) 个订阅，\(bundle.summary.hotelStayRecordCount) 条酒店消费，\(bundle.summary.hotelStayDraftCount) 个酒店待确认，\(bundle.summary.merchantAliasCount) 个商户别名"
+        "\(bundle.summary.transactionCount) 笔账单，\(bundle.summary.deletedTransactionCount) 笔最近删除，\(bundle.summary.subscriptionCount) 个订阅，\(bundle.summary.hotelStayRecordCount) 条酒店消费，\(bundle.summary.hotelStayDraftCount) 个酒店待确认，\(bundle.summary.ledgerProfileCount) 个账本，\(bundle.summary.merchantAliasCount) 个商户别名"
     }
 
     private func saveRestoredUserDefaults(from bundle: BackupBundle) {
@@ -3304,6 +3330,9 @@ extension LedgerStore {
         UserDefaults.standard.set(bundle.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
         UserDefaults.standard.set(bundle.appSettings.autoClipboardImportEnabled, forKey: "autoClipboardImport")
         UserDefaults.standard.set(bundle.appSettings.iCloudBackupEnabled, forKey: Self.iCloudBackupEnabledKey)
+        let restoredLedgerProfiles = bundle.ledgerProfiles.isEmpty ? ledgerProfiles : bundle.ledgerProfiles
+        defaultWriteLedgerID = Self.resolvedDefaultWriteLedgerID(bundle.defaultWriteLedgerID, from: restoredLedgerProfiles)
+        saveDefaultWriteLedger()
     }
 
     private func recordBackupSuccess(_ bundle: BackupBundle) {
@@ -3323,6 +3352,7 @@ extension LedgerStore {
                 subscriptions: bundle.subscriptions,
                 categoryCorrections: bundle.categoryCorrections,
                 merchantAliases: bundle.merchantAliases,
+                ledgerProfiles: bundle.ledgerProfiles,
                 hotelStayRecords: bundle.hotelStayRecords,
                 hotelStayDrafts: bundle.hotelStayDrafts
             )
@@ -3334,6 +3364,9 @@ extension LedgerStore {
             hotelStayDrafts = bundle.hotelStayDrafts
             categoryCorrections = Dictionary(uniqueKeysWithValues: bundle.categoryCorrections.map { ($0.merchant, $0.category) })
             merchantAliases = bundle.merchantAliases
+            ledgerProfiles = bundle.ledgerProfiles.isEmpty ? [LedgerProfile.defaultLocal()] : bundle.ledgerProfiles
+            normalizeDefaultWriteLedger()
+            normalizeLedgerSelection()
         }
     }
 }
