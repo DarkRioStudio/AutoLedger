@@ -18,213 +18,225 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     pageTitle
 
-                    if showDebugUnlocked {
+                    settingsSection(title: "settings.section.ledger_sync") {
+                        NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
+                            settingsRow(
+                                icon: "books.vertical.fill",
+                                iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
+                                title: "settings.ledger_profiles.title",
+                                subtitle: "settings.ledger_profiles.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         NavigationLink {
-                            DebugView()
+                            DataManagementView()
                                 .environmentObject(store)
                         } label: {
                             settingsRow(
-                                icon: "ladybug.fill",
-                                iconColor: AppTheme.accent,
-                                title: "settings.debug.title",
-                                subtitle: "settings.debug.subtitle"
+                                icon: "externaldrive.fill.badge.icloud",
+                                iconColor: Color(red: 0.16, green: 0.45, blue: 0.73),
+                                title: "settings.data_management.title",
+                                subtitle: "settings.data_management.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
                     }
 
-                    NavigationLink {
-                        SourceManagementView()
-                            .environmentObject(store)
-                    } label: {
-                        settingsRow(
-                            icon: "arrow.triangle.branch",
-                            iconColor: Color(red: 0.07, green: 0.47, blue: 0.87),
-                            title: "settings.sources.title",
-                            subtitle: "settings.sources.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    settingsSection(title: "settings.section.recognition") {
+                        NavigationLink {
+                            AIModelSettingsView()
+                        } label: {
+                            settingsRow(
+                                icon: "cpu.fill",
+                                iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
+                                title: "settings.ai_model.title",
+                                subtitle: "settings.ai_model.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
 
-                    NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
-                        settingsRow(
-                            icon: "books.vertical.fill",
-                            iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
-                            title: "settings.ledger_profiles.title",
-                            subtitle: "settings.ledger_profiles.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
+                        NavigationLink {
+                            ExternalReceiptAssistSettingsView()
+                        } label: {
+                            settingsRow(
+                                icon: "sparkles.rectangle.stack.fill",
+                                iconColor: Color(red: 0.35, green: 0.38, blue: 0.82),
+                                title: "settings.external_assist.title",
+                                subtitle: "settings.external_assist.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
 
-                    NavigationLink {
-                        CategoryManagementView()
-                            .environmentObject(store)
-                    } label: {
-                        settingsRow(
-                            icon: "square.grid.2x2.fill",
-                            iconColor: AppTheme.accentSecondary,
-                            title: "settings.categories.title",
-                            subtitle: "settings.categories.subtitle"
+                        toggleCard(
+                            icon: "doc.on.clipboard",
+                            iconColor: .orange,
+                            title: "settings.clipboard_auto_import.title",
+                            subtitle: "settings.clipboard_auto_import.subtitle",
+                            key: "autoClipboardImport"
                         )
-                    }
-                    .buttonStyle(.plain)
 
-                    NavigationLink {
-                        MerchantAliasView()
-                            .environmentObject(store)
-                    } label: {
-                        settingsRow(
-                            icon: "person.text.rectangle.fill",
-                            iconColor: Color(red: 0.33, green: 0.59, blue: 0.41),
-                            title: "settings.aliases.title",
-                            subtitle: "settings.aliases.subtitle"
-                        )
+                        NavigationLink {
+                            AnalysisSettingsView()
+                        } label: {
+                            settingsRow(
+                                icon: "chart.line.uptrend.xyaxis",
+                                iconColor: Color(red: 0.20, green: 0.51, blue: 0.70),
+                                title: "settings.analysis.title",
+                                subtitle: "settings.analysis.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
-                    NavigationLink(value: SettingsNavigationTarget.subscriptions) {
-                        settingsRow(
-                            icon: "repeat.circle.fill",
+                    settingsSection(title: "settings.section.rules") {
+                        NavigationLink {
+                            CategoryManagementView()
+                                .environmentObject(store)
+                        } label: {
+                            settingsRow(
+                                icon: "square.grid.2x2.fill",
+                                iconColor: AppTheme.accentSecondary,
+                                title: "settings.categories.title",
+                                subtitle: "settings.categories.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink {
+                            SourceManagementView()
+                                .environmentObject(store)
+                        } label: {
+                            settingsRow(
+                                icon: "arrow.triangle.branch",
+                                iconColor: Color(red: 0.07, green: 0.47, blue: 0.87),
+                                title: "settings.sources.title",
+                                subtitle: "settings.sources.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink {
+                            MerchantAliasView()
+                                .environmentObject(store)
+                        } label: {
+                            settingsRow(
+                                icon: "person.text.rectangle.fill",
+                                iconColor: Color(red: 0.33, green: 0.59, blue: 0.41),
+                                title: "settings.aliases.title",
+                                subtitle: "settings.aliases.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink {
+                            CategoryLearningView()
+                                .environmentObject(store)
+                        } label: {
+                            settingsRow(
+                                icon: "brain.head.profile",
+                                iconColor: Color(red: 0.55, green: 0.36, blue: 0.69),
+                                title: "settings.category_learning.title",
+                                subtitle: "settings.category_learning.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    settingsSection(title: "settings.section.recurring") {
+                        NavigationLink(value: SettingsNavigationTarget.subscriptions) {
+                            settingsRow(
+                                icon: "repeat.circle.fill",
+                                iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
+                                title: "settings.subscriptions.title",
+                                subtitle: "settings.subscriptions.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        toggleCard(
+                            icon: "bell.badge.fill",
                             iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
-                            title: "settings.subscriptions.title",
-                            subtitle: "settings.subscriptions.subtitle"
+                            title: "settings.subscription_reminder.title",
+                            subtitle: "settings.subscription_reminder.subtitle",
+                            key: "subscriptionReminder"
                         )
                     }
-                    .buttonStyle(.plain)
 
-                    NavigationLink {
-                        DataManagementView()
-                            .environmentObject(store)
-                    } label: {
-                        settingsRow(
-                            icon: "externaldrive.fill.badge.icloud",
-                            iconColor: Color(red: 0.16, green: 0.45, blue: 0.73),
-                            title: "settings.data_management.title",
-                            subtitle: "settings.data_management.subtitle"
+                    settingsSection(title: "settings.section.support") {
+                        Button {
+                            showFeedbackComposer = true
+                        } label: {
+                            settingsRow(
+                                icon: "envelope.fill",
+                                iconColor: Color(red: 0.20, green: 0.56, blue: 0.82),
+                                title: "settings.feedback.title",
+                                subtitle: "settings.feedback.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink {
+                            SupportAutoLedgerView()
+                        } label: {
+                            settingsRow(
+                                icon: "heart.circle.fill",
+                                iconColor: AppTheme.accentSecondary,
+                                title: "settings.support.title",
+                                subtitle: "settings.support.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("settings.version.title")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.ink)
+                            Text("v\(appVersion) — \(String(localized: "settings.version.body"))")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.mutedInk)
+                        }
+                        .padding(18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .fill(AppTheme.card)
+                        )
+                        .onTapGesture {
+                            versionTapCount += 1
+                            if versionTapCount >= 5 && !showDebugUnlocked {
+                                showDebugUnlocked = true
+                                versionTapCount = 0
+                            }
+                        }
+
+                        infoCard(
+                            title: "settings.privacy.title",
+                            body: "settings.privacy.body"
+                        )
+
+                        infoCard(
+                            title: "settings.release_status.title",
+                            body: "settings.release_status.body"
                         )
                     }
-                    .buttonStyle(.plain)
 
-                    toggleCard(
-                        icon: "bell.badge.fill",
-                        iconColor: Color(red: 0.80, green: 0.47, blue: 0.16),
-                        title: "settings.subscription_reminder.title",
-                        subtitle: "settings.subscription_reminder.subtitle",
-                        key: "subscriptionReminder"
-                    )
-
-                    NavigationLink {
-                        CategoryLearningView()
-                            .environmentObject(store)
-                    } label: {
-                        settingsRow(
-                            icon: "brain.head.profile",
-                            iconColor: Color(red: 0.55, green: 0.36, blue: 0.69),
-                            title: "settings.category_learning.title",
-                            subtitle: "settings.category_learning.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        AIModelSettingsView()
-                    } label: {
-                        settingsRow(
-                            icon: "cpu.fill",
-                            iconColor: Color(red: 0.17, green: 0.47, blue: 0.34),
-                            title: "settings.ai_model.title",
-                            subtitle: "settings.ai_model.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        ExternalReceiptAssistSettingsView()
-                    } label: {
-                        settingsRow(
-                            icon: "sparkles.rectangle.stack.fill",
-                            iconColor: Color(red: 0.35, green: 0.38, blue: 0.82),
-                            title: "settings.external_assist.title",
-                            subtitle: "settings.external_assist.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        AnalysisSettingsView()
-                    } label: {
-                        settingsRow(
-                            icon: "chart.line.uptrend.xyaxis",
-                            iconColor: Color(red: 0.20, green: 0.51, blue: 0.70),
-                            title: "settings.analysis.title",
-                            subtitle: "settings.analysis.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    toggleCard(
-                        icon: "doc.on.clipboard",
-                        iconColor: .orange,
-                        title: "settings.clipboard_auto_import.title",
-                        subtitle: "settings.clipboard_auto_import.subtitle",
-                        key: "autoClipboardImport"
-                    )
-
-                    Button {
-                        showFeedbackComposer = true
-                    } label: {
-                        settingsRow(
-                            icon: "envelope.fill",
-                            iconColor: Color(red: 0.20, green: 0.56, blue: 0.82),
-                            title: "settings.feedback.title",
-                            subtitle: "settings.feedback.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink {
-                        SupportAutoLedgerView()
-                    } label: {
-                        settingsRow(
-                            icon: "heart.circle.fill",
-                            iconColor: AppTheme.accentSecondary,
-                            title: "settings.support.title",
-                            subtitle: "settings.support.subtitle"
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("settings.version.title")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.ink)
-                        Text("v\(appVersion) — \(String(localized: "settings.version.body"))")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.mutedInk)
-                    }
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(AppTheme.card)
-                    )
-                    .onTapGesture {
-                        versionTapCount += 1
-                        if versionTapCount >= 5 && !showDebugUnlocked {
-                            showDebugUnlocked = true
-                            versionTapCount = 0
+                    if showDebugUnlocked {
+                        settingsSection(title: "settings.section.developer") {
+                            NavigationLink {
+                                DebugView()
+                                    .environmentObject(store)
+                            } label: {
+                                settingsRow(
+                                    icon: "ladybug.fill",
+                                    iconColor: AppTheme.accent,
+                                    title: "settings.debug.title",
+                                    subtitle: "settings.debug.subtitle"
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-
-                    infoCard(
-                        title: "settings.privacy.title",
-                        body: "settings.privacy.body"
-                    )
-
-                    infoCard(
-                        title: "settings.release_status.title",
-                        body: "settings.release_status.body"
-                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
@@ -256,6 +268,24 @@ struct SettingsView: View {
             .font(.largeTitle.weight(.bold))
             .foregroundStyle(AppTheme.ink)
             .accessibilityAddTraits(.isHeader)
+    }
+
+    private func settingsSection<Content: View>(
+        title: LocalizedStringKey,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(AppTheme.mutedInk)
+                .padding(.horizontal, 2)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+        }
     }
 
     private func settingsRow(

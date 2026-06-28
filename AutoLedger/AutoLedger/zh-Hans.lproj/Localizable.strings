@@ -664,6 +664,12 @@
 "category_management.alert.placeholder" = "分类名称";
 
 "settings.title" = "设置";
+"settings.section.ledger_sync" = "账本与同步";
+"settings.section.recognition" = "记账与识别";
+"settings.section.rules" = "规则与归类";
+"settings.section.recurring" = "周期账单";
+"settings.section.support" = "支持与关于";
+"settings.section.developer" = "开发者";
 "settings.debug.title" = "调试与回归";
 "settings.debug.subtitle" = "查看 OCR 原文、解析结果、导入状态和最近账单";
 "settings.sources.title" = "来源管理";
@@ -685,7 +691,7 @@
 "settings.analysis.title" = "消费分析";
 "settings.analysis.subtitle" = "调整月报异常消费检测阈值";
 "settings.data_management.title" = "数据管理";
-"settings.data_management.subtitle" = "导出 JSON、从备份恢复，并管理 iCloud 自动备份";
+"settings.data_management.subtitle" = "导入导出 JSON，并管理 iCloud 同步";
 "settings.clipboard_auto_import.title" = "回到前台自动读取剪切板";
 "settings.clipboard_auto_import.subtitle" = "开启后，每次回到 App 时自动检测剪切板中的支付截图并导入记账。";
 "settings.feedback.title" = "问题反馈";

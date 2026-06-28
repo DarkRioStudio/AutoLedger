@@ -664,6 +664,12 @@
 "category_management.alert.placeholder" = "Category name";
 
 "settings.title" = "Settings";
+"settings.section.ledger_sync" = "Ledger & Sync";
+"settings.section.recognition" = "Capture & Recognition";
+"settings.section.rules" = "Rules & Classification";
+"settings.section.recurring" = "Recurring Bills";
+"settings.section.support" = "Support & About";
+"settings.section.developer" = "Developer";
 "settings.debug.title" = "Debug & Regression";
 "settings.debug.subtitle" = "View OCR text, parsed results, import status, and recent transactions";
 "settings.sources.title" = "Sources";
@@ -685,7 +691,7 @@
 "settings.analysis.title" = "Spending Analysis";
 "settings.analysis.subtitle" = "Adjust the monthly abnormal spending detection threshold";
 "settings.data_management.title" = "Data Management";
-"settings.data_management.subtitle" = "Export JSON, restore from backup, and manage iCloud auto backup";
+"settings.data_management.subtitle" = "Import and export JSON, and manage iCloud sync";
 "settings.clipboard_auto_import.title" = "Auto-read Clipboard on Foreground";
 "settings.clipboard_auto_import.subtitle" = "When enabled, AutoLedger checks the clipboard for payment screenshots each time the app returns to the foreground.";
 "settings.feedback.title" = "Feedback";

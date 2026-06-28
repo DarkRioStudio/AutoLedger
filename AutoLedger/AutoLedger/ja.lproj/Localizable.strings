@@ -664,6 +664,12 @@
 "category_management.alert.placeholder" = "カテゴリ名";
 
 "settings.title" = "設定";
+"settings.section.ledger_sync" = "台帳と同期";
+"settings.section.recognition" = "記録と認識";
+"settings.section.rules" = "ルールと分類";
+"settings.section.recurring" = "定期支払い";
+"settings.section.support" = "サポートと情報";
+"settings.section.developer" = "開発者";
 "settings.debug.title" = "デバッグと回帰";
 "settings.debug.subtitle" = "OCR テキスト、解析結果、インポート状態、最近の取引を表示";
 "settings.sources.title" = "ソース";
@@ -685,7 +691,7 @@
 "settings.analysis.title" = "支出分析";
 "settings.analysis.subtitle" = "月次異常支出検出のしきい値を調整";
 "settings.data_management.title" = "データ管理";
-"settings.data_management.subtitle" = "JSON のエクスポート、バックアップからの復元、iCloud 自動バックアップの管理";
+"settings.data_management.subtitle" = "JSON のインポート/エクスポートと iCloud 同期を管理";
 "settings.clipboard_auto_import.title" = "前面復帰時にクリップボードを自動読み取り";
 "settings.clipboard_auto_import.subtitle" = "有効にすると、アプリが前面に戻るたびに AutoLedger がクリップボード内の支払いスクリーンショットを確認します。";
 "settings.feedback.title" = "フィードバック";

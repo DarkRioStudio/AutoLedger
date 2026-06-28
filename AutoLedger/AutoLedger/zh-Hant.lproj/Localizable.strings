@@ -667,6 +667,12 @@
 "category_management.alert.placeholder" = "分類名稱";
 
 "settings.title" = "設定";
+"settings.section.ledger_sync" = "帳本與同步";
+"settings.section.recognition" = "記帳與識別";
+"settings.section.rules" = "規則與歸類";
+"settings.section.recurring" = "週期帳單";
+"settings.section.support" = "支持與關於";
+"settings.section.developer" = "開發者";
 "settings.debug.title" = "除錯與回歸";
 "settings.debug.subtitle" = "查看 OCR 原文、解析結果、匯入狀態和最近帳單";
 "settings.sources.title" = "來源管理";
@@ -688,7 +694,7 @@
 "settings.analysis.title" = "消費分析";
 "settings.analysis.subtitle" = "調整月報異常消費偵測門檻";
 "settings.data_management.title" = "資料管理";
-"settings.data_management.subtitle" = "匯出 JSON、從備份恢復，並管理 iCloud 自動備份";
+"settings.data_management.subtitle" = "匯入匯出 JSON，並管理 iCloud 同步";
 "settings.clipboard_auto_import.title" = "回到前台自動讀取剪貼板";
 "settings.clipboard_auto_import.subtitle" = "開啟後，每次回到 App 時自動偵測剪貼板中的支付截圖並匯入記帳。";
 "settings.feedback.title" = "問題回報";
