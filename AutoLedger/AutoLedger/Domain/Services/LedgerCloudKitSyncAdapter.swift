@@ -57,6 +57,7 @@ enum LedgerCloudKitFieldValue: Equatable {
     case double(Double)
     case int(Int)
     case date(Date)
+    case assetData(Data, filename: String)
 }
 
 struct LedgerCloudKitMappedRecord: Equatable {
@@ -143,7 +144,7 @@ struct LedgerCloudKitSyncAdapter {
         }
 
         let dryRunResult = makeDryRunResult(for: batch)
-        let recordsToSave = dryRunResult.mappedRecords.map(makeCKRecord)
+        let recordsToSave = try dryRunResult.mappedRecords.map(makeCKRecord)
         let recordIDsToDelete = batch.expiredTombstoneIDs.map {
             CKRecord.ID(recordName: CloudLedgerSyncSchema.recordName(for: $0))
         }
@@ -247,15 +248,16 @@ struct LedgerCloudKitSyncAdapter {
         )
 
         do {
+            let record = try makeCKRecord(from: mappedRecord)
             return try await modifyRecords(
-                recordsToSave: [makeCKRecord(from: mappedRecord)],
+                recordsToSave: [record],
                 recordIDsToDelete: [],
                 dryRunResult: dryRunResult
             )
         } catch {
             throw LedgerCloudKitSyncError.recordSaveRejected(
                 recordName: payload.recordName,
-                fieldSummary: Self.fieldSummary(for: makeCKRecord(from: mappedRecord)),
+                fieldSummary: Self.fieldSummary(for: mappedRecord),
                 probeSummary: "configuration-save",
                 message: Self.describe(error)
             )
@@ -326,8 +328,9 @@ struct LedgerCloudKitSyncAdapter {
         var savedRecordNames: [String] = []
         for chunk in mappedRecords.chunked(into: Self.operationRecordLimit) {
             do {
+                let recordsToSave = try chunk.map { try makeCKRecord(from: $0) }
                 let partial = try await modifyRecords(
-                    recordsToSave: chunk.map { makeCKRecord(from: $0) },
+                    recordsToSave: recordsToSave,
                     recordIDsToDelete: [],
                     dryRunResult: dryRunResult
                 )
@@ -336,7 +339,7 @@ struct LedgerCloudKitSyncAdapter {
                 let firstRecord = chunk[0]
                 throw LedgerCloudKitSyncError.recordSaveRejected(
                     recordName: firstRecord.recordName,
-                    fieldSummary: Self.fieldSummary(for: makeCKRecord(from: firstRecord)),
+                    fieldSummary: Self.fieldSummary(for: firstRecord),
                     probeSummary: "hotel-stay-archive-save",
                     message: Self.describe(error)
                 )
@@ -407,22 +410,23 @@ struct LedgerCloudKitSyncAdapter {
         )
 
         do {
+            let record = try makeCKRecord(from: mappedRecord)
             return try await modifyRecords(
-                recordsToSave: [makeCKRecord(from: mappedRecord)],
+                recordsToSave: [record],
                 recordIDsToDelete: [],
                 dryRunResult: dryRunResult
             )
         } catch {
             throw LedgerCloudKitSyncError.recordSaveRejected(
                 recordName: payload.recordName,
-                fieldSummary: Self.fieldSummary(for: makeCKRecord(from: mappedRecord)),
+                fieldSummary: Self.fieldSummary(for: mappedRecord),
                 probeSummary: "dashboard-snapshot-save",
                 message: Self.describe(error)
             )
         }
     }
 
-    func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) -> CKRecord {
+    func makeCKRecord(from mappedRecord: LedgerCloudKitMappedRecord) throws -> CKRecord {
         let recordID = CKRecord.ID(recordName: mappedRecord.recordName)
         let record = CKRecord(recordType: mappedRecord.recordType, recordID: recordID)
 
@@ -436,6 +440,9 @@ struct LedgerCloudKitSyncAdapter {
                 record[key] = NSNumber(value: int)
             case let .date(date):
                 record[key] = date as NSDate
+            case let .assetData(data, filename):
+                let fileURL = try Self.writeTemporaryAssetFile(data: data, filename: filename)
+                record[key] = CKAsset(fileURL: fileURL)
             }
         }
 
@@ -515,12 +522,51 @@ struct LedgerCloudKitSyncAdapter {
             if value is NSDate {
                 return "\(key)=Date"
             }
+            if let asset = value as? CKAsset {
+                let byteCount = asset.fileURL.flatMap { (try? Data(contentsOf: $0))?.count }
+                return "\(key)=CKAsset(\(byteCount ?? 0))"
+            }
             if let value {
                 return "\(key)=\(String(describing: type(of: value)))"
             } else {
                 return "\(key)=nil"
             }
         }.joined(separator: ", ")
+    }
+
+    private static func fieldSummary(for mappedRecord: LedgerCloudKitMappedRecord) -> String {
+        mappedRecord.fields.keys.sorted().map { key in
+            guard let value = mappedRecord.fields[key] else {
+                return "\(key)=nil"
+            }
+            switch value {
+            case let .string(string):
+                return "\(key)=String(\(string.count))"
+            case .double:
+                return "\(key)=Double"
+            case .int:
+                return "\(key)=Int"
+            case .date:
+                return "\(key)=Date"
+            case let .assetData(data, _):
+                return "\(key)=CKAsset(\(data.count))"
+            }
+        }.joined(separator: ", ")
+    }
+
+    private static func writeTemporaryAssetFile(data: Data, filename: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerCloudKitAssets", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let sanitizedFilename = filename
+            .components(separatedBy: CharacterSet(charactersIn: "/:\\?%*|\"<>"))
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedFilename = sanitizedFilename.isEmpty ? "hotel-folio.pdf" : sanitizedFilename
+        let fileURL = directory.appendingPathComponent("\(UUID().uuidString)-\(resolvedFilename)")
+        try data.write(to: fileURL, options: [.atomic])
+        return fileURL
     }
 
     nonisolated private static func ckErrorName(_ code: CKError.Code) -> String {
@@ -780,7 +826,17 @@ struct LedgerCloudKitSyncAdapter {
     }
 
     private static func mapHotelStayRecord(_ payload: LedgerHotelStayRecordSyncPayload) throws -> LedgerCloudKitMappedRecord {
-        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        let payloadWithoutPDF = LedgerHotelStayRecordSyncPayload(
+            recordName: payload.recordName,
+            hotelStayID: payload.hotelStayID,
+            hotelStayRecord: payload.hotelStayRecord.map {
+                hotelStayRecord($0, sourcePDFData: nil)
+            },
+            updatedAt: payload.updatedAt,
+            deviceID: payload.deviceID,
+            deletedAt: payload.deletedAt
+        )
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payloadWithoutPDF)
         guard let json = String(data: encoded, encoding: .utf8) else {
             throw LedgerCloudKitSyncError.recordSaveRejected(
                 recordName: payload.recordName,
@@ -799,6 +855,13 @@ struct LedgerCloudKitSyncAdapter {
         if let deletedAt = payload.deletedAt {
             fields[CloudLedgerSyncSchema.Field.deletedAt] = .date(deletedAt)
         }
+        if let sourcePDFData = payload.hotelStayRecord?.sourcePDFData,
+           !sourcePDFData.isEmpty {
+            fields[CloudLedgerSyncSchema.Field.sourcePDFAsset] = .assetData(
+                sourcePDFData,
+                filename: payload.hotelStayRecord?.sourceFileName ?? "\(payload.hotelStayID.uuidString).pdf"
+            )
+        }
 
         return LedgerCloudKitMappedRecord(
             recordType: CloudLedgerSyncSchema.RecordType.hotelStayRecord,
@@ -808,7 +871,17 @@ struct LedgerCloudKitSyncAdapter {
     }
 
     private static func mapHotelStayDraft(_ payload: LedgerHotelStayDraftSyncPayload) throws -> LedgerCloudKitMappedRecord {
-        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        let payloadWithoutPDF = LedgerHotelStayDraftSyncPayload(
+            recordName: payload.recordName,
+            draftID: payload.draftID,
+            hotelStayDraft: payload.hotelStayDraft.map {
+                hotelStayDraft($0, sourcePDFData: nil)
+            },
+            updatedAt: payload.updatedAt,
+            deviceID: payload.deviceID,
+            deletedAt: payload.deletedAt
+        )
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payloadWithoutPDF)
         guard let json = String(data: encoded, encoding: .utf8) else {
             throw LedgerCloudKitSyncError.recordSaveRejected(
                 recordName: payload.recordName,
@@ -826,6 +899,13 @@ struct LedgerCloudKitSyncAdapter {
         ]
         if let deletedAt = payload.deletedAt {
             fields[CloudLedgerSyncSchema.Field.deletedAt] = .date(deletedAt)
+        }
+        if let sourcePDFData = payload.hotelStayDraft?.sourcePDFData,
+           !sourcePDFData.isEmpty {
+            fields[CloudLedgerSyncSchema.Field.sourcePDFAsset] = .assetData(
+                sourcePDFData,
+                filename: payload.hotelStayDraft?.sourceFileName ?? "\(payload.draftID.uuidString).pdf"
+            )
         }
 
         return LedgerCloudKitMappedRecord(
@@ -908,6 +988,71 @@ struct LedgerCloudKitSyncAdapter {
         )
     }
 
+    private static func assetData(from record: CKRecord, key: String) -> Data? {
+        guard let asset = record[key] as? CKAsset,
+              let fileURL = asset.fileURL else {
+            return nil
+        }
+        return try? Data(contentsOf: fileURL)
+    }
+
+    private static func hotelStayRecord(_ record: HotelStayRecord, sourcePDFData: Data?) -> HotelStayRecord {
+        HotelStayRecord(
+            id: record.id,
+            ledgerID: record.ledgerID,
+            linkedTransactionID: record.linkedTransactionID,
+            hotelName: record.hotelName,
+            hotelGroup: record.hotelGroup,
+            hotelBrand: record.hotelBrand,
+            city: record.city,
+            country: record.country,
+            checkInDate: record.checkInDate,
+            checkOutDate: record.checkOutDate,
+            nights: record.nights,
+            roomType: record.roomType,
+            confirmationNumber: record.confirmationNumber,
+            currency: record.currency,
+            roomCharge: record.roomCharge,
+            taxAmount: record.taxAmount,
+            serviceCharge: record.serviceCharge,
+            foodBeverageAmount: record.foodBeverageAmount,
+            otherAmount: record.otherAmount,
+            totalAmount: record.totalAmount,
+            paymentMethod: record.paymentMethod,
+            sourceType: record.sourceType,
+            sourceFileName: record.sourceFileName,
+            sourcePDFData: sourcePDFData,
+            localizedData: record.localizedData,
+            confidence: record.confidence,
+            rawText: record.rawText,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt
+        )
+    }
+
+    private static func hotelStayDraft(_ draft: HotelStayDraft, sourcePDFData: Data?) -> HotelStayDraft {
+        HotelStayDraft(
+            id: draft.id,
+            sourceType: draft.sourceType,
+            targetLedgerID: draft.targetLedgerID,
+            sourceFileName: draft.sourceFileName,
+            sourcePDFData: sourcePDFData,
+            sourceEmailSubject: draft.sourceEmailSubject,
+            sourceEmailFrom: draft.sourceEmailFrom,
+            sourceEmailUID: draft.sourceEmailUID,
+            sourceEmailMessageIDHash: draft.sourceEmailMessageIDHash,
+            sourceEmailAttachmentHash: draft.sourceEmailAttachmentHash,
+            sourceEmailDateText: draft.sourceEmailDateText,
+            rawText: draft.rawText,
+            parsedPayload: draft.parsedPayload,
+            localizedData: draft.localizedData,
+            confidence: draft.confidence,
+            status: draft.status,
+            createdAt: draft.createdAt,
+            updatedAt: draft.updatedAt
+        )
+    }
+
     private static func mapConfigurationPayload(from record: CKRecord) -> LedgerConfigurationSyncPayload? {
         guard
             let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
@@ -928,6 +1073,8 @@ struct LedgerCloudKitSyncAdapter {
                 customCategories: payload.customCategories,
                 customSources: payload.customSources,
                 merchantAliases: payload.merchantAliases,
+                ledgerProfiles: payload.ledgerProfiles,
+                defaultWriteLedgerID: payload.defaultWriteLedgerID,
                 subscriptionMetadata: payload.subscriptionMetadata,
                 appSettings: payload.appSettings
             )
@@ -945,19 +1092,23 @@ struct LedgerCloudKitSyncAdapter {
             return nil
         }
 
-        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
-           updatedAt != payload.updatedAt {
-            payload = LedgerHotelStayRecordSyncPayload(
-                recordName: record.recordID.recordName,
-                hotelStayID: payload.hotelStayID,
-                hotelStayRecord: payload.hotelStayRecord,
-                updatedAt: updatedAt,
-                deviceID: payload.deviceID,
-                deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
-            )
-        }
-
-        return payload
+        let assetData = assetData(from: record, key: CloudLedgerSyncSchema.Field.sourcePDFAsset)
+        let hotelStayRecord: HotelStayRecord? = {
+            guard let hotelStayRecord = payload.hotelStayRecord,
+                  let assetData else {
+                return payload.hotelStayRecord
+            }
+            return Self.hotelStayRecord(hotelStayRecord, sourcePDFData: assetData)
+        }()
+        let updatedAt = (record[CloudLedgerSyncSchema.Field.updatedAt] as? Date) ?? payload.updatedAt
+        return LedgerHotelStayRecordSyncPayload(
+            recordName: record.recordID.recordName,
+            hotelStayID: payload.hotelStayID,
+            hotelStayRecord: hotelStayRecord,
+            updatedAt: updatedAt,
+            deviceID: payload.deviceID,
+            deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
+        )
     }
 
     private static func mapHotelStayDraftPayload(from record: CKRecord) -> LedgerHotelStayDraftSyncPayload? {
@@ -969,19 +1120,23 @@ struct LedgerCloudKitSyncAdapter {
             return nil
         }
 
-        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
-           updatedAt != payload.updatedAt {
-            payload = LedgerHotelStayDraftSyncPayload(
-                recordName: record.recordID.recordName,
-                draftID: payload.draftID,
-                hotelStayDraft: payload.hotelStayDraft,
-                updatedAt: updatedAt,
-                deviceID: payload.deviceID,
-                deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
-            )
-        }
-
-        return payload
+        let assetData = assetData(from: record, key: CloudLedgerSyncSchema.Field.sourcePDFAsset)
+        let hotelStayDraft: HotelStayDraft? = {
+            guard let hotelStayDraft = payload.hotelStayDraft,
+                  let assetData else {
+                return payload.hotelStayDraft
+            }
+            return Self.hotelStayDraft(hotelStayDraft, sourcePDFData: assetData)
+        }()
+        let updatedAt = (record[CloudLedgerSyncSchema.Field.updatedAt] as? Date) ?? payload.updatedAt
+        return LedgerHotelStayDraftSyncPayload(
+            recordName: record.recordID.recordName,
+            draftID: payload.draftID,
+            hotelStayDraft: hotelStayDraft,
+            updatedAt: updatedAt,
+            deviceID: payload.deviceID,
+            deletedAt: record[CloudLedgerSyncSchema.Field.deletedAt] as? Date ?? payload.deletedAt
+        )
     }
 }
 

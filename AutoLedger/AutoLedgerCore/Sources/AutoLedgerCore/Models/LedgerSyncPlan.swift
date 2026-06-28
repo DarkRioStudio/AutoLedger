@@ -28,6 +28,7 @@ public enum CloudLedgerSyncSchema {
         public static let deletedAt = "deletedAt"
         public static let conflictState = "conflictState"
         public static let payloadJSON = "payloadJSON"
+        public static let sourcePDFAsset = "sourcePDFAsset"
     }
 
     public static func recordName(for transactionID: UUID) -> String {
