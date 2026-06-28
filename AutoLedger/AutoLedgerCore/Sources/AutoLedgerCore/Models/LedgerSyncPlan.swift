@@ -47,8 +47,54 @@ public enum CloudLedgerSyncSchema {
         "ledger-configuration-default"
     }
 
+    public static func syncManifestRecordName() -> String {
+        "ledger-sync-manifest-default"
+    }
+
     public static func dashboardSnapshotRecordName() -> String {
         "ledger-dashboard-snapshot-default"
+    }
+}
+
+public struct LedgerCloudSyncManifest: Codable, Equatable, Sendable {
+    public let recordName: String
+    public let updatedAt: Date
+    public let deviceID: String
+    public let transactionRecordNames: [String]
+    public let hotelStayRecordNames: [String]
+    public let hotelStayDraftRecordNames: [String]
+
+    public init(
+        recordName: String = CloudLedgerSyncSchema.syncManifestRecordName(),
+        updatedAt: Date,
+        deviceID: String,
+        transactionRecordNames: [String],
+        hotelStayRecordNames: [String],
+        hotelStayDraftRecordNames: [String]
+    ) {
+        self.recordName = recordName
+        self.updatedAt = updatedAt
+        self.deviceID = deviceID
+        self.transactionRecordNames = Self.normalizedRecordNames(transactionRecordNames)
+        self.hotelStayRecordNames = Self.normalizedRecordNames(hotelStayRecordNames)
+        self.hotelStayDraftRecordNames = Self.normalizedRecordNames(hotelStayDraftRecordNames)
+    }
+
+    public func merged(with remote: LedgerCloudSyncManifest?) -> LedgerCloudSyncManifest {
+        guard let remote else { return self }
+        return LedgerCloudSyncManifest(
+            recordName: recordName,
+            updatedAt: updatedAt >= remote.updatedAt ? updatedAt : remote.updatedAt,
+            deviceID: deviceID,
+            transactionRecordNames: transactionRecordNames + remote.transactionRecordNames,
+            hotelStayRecordNames: hotelStayRecordNames + remote.hotelStayRecordNames,
+            hotelStayDraftRecordNames: hotelStayDraftRecordNames + remote.hotelStayDraftRecordNames
+        )
+    }
+
+    private static func normalizedRecordNames(_ names: [String]) -> [String] {
+        Array(Set(names.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
+            .sorted()
     }
 }
 

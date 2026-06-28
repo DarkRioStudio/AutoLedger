@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-281 酒店消费 iCloud PDF asset 降级同步）
+更新日期：2026-06-28（ITER-282 CloudKit 同步清单与按 ID 拉取）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-282 CloudKit 同步清单与按 ID 拉取
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Data Reliability / iCloud Sync
+- 类型：Bugfix / 数据同步 / 真机回归
+- 目标：修复 iPhone / iPad 两端强制同步均显示成功但数据仍不一致，以及开发环境真机提示 `recordName is not marked queryable` 的问题。
+- 改动范围：`LedgerCloudKitSyncAdapter` 的远端拉取从 `CKFetchRecordZoneChangesOperation` / `CKQueryOperation` 切换为“同步清单 + 按 ID 拉取”：推送时在既有 `LedgerConfiguration` record type 下保存固定 `ledger-sync-manifest-default` 清单，记录 `LedgerTransaction`、`LedgerHotelStayRecord` 和 `LedgerHotelStayDraft` 的 CloudKit record name；拉取时先用固定 record ID 读取清单，再通过 `CKFetchRecordsOperation(recordIDs:)` 分批拉取具体记录。`LedgerStore` 的强制同步、启动拉取和增量推送都会更新 / 使用该清单；若同步入口瞬态未持有 `SQLiteTransactionStore`，会重新打开默认 SQLite 账本并刷新内存状态，不再以“iCloud 同步需要 SQLite 账本”作为终态失败。`scripts/check_cloudkit_sync_smoke.py` 改为禁止 query / default zone changes，并要求 manifest + fetch-by-ID 和 SQLite 自愈入口。
+- 未改动范围：未新增 CloudKit record type / 字段名，未依赖 `recordName` queryable，未修改 `Transaction`、`HotelStayRecord`、`HotelStayDraft` 数据模型，未改 SQLite schema、邮箱导入、酒店解析、PDF asset fallback、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：强制同步的 pull 阶段不再调用 default zone `getChanges`，也不再按 record type 做 query；普通账单、酒店正式记录和酒店草稿都会从同步清单里的已知 record IDs 拉取，避开 Development Schema / Production Schema 中 `recordName` queryable 配置差异导致的失败。推送会先合并远端已有清单，避免单端增量推送直接覆盖另一端已知记录列表。真机回填确认 iPhone 记录的酒店消费已可在 iPad 展示；重开 App 后同步也可恢复，代码侧同步补上现场重新打开 SQLite 的自愈路径。
+- 未完成内容：这是 default zone 下的可靠全量索引方案，不是 server change token 增量；历史云端已有记录如果从未被新 build 写入同步清单，另一台新设备无法自动发现，需要先在数据完整的一端安装新 build 并强制同步一次生成清单。
+- 测试情况：先更新 `scripts/check_cloudkit_sync_smoke.py`，观察到 query / zone changes 实现会触发 RED；实现同步清单与 fetch-by-ID 后 `python3 scripts/check_cloudkit_sync_smoke.py` 通过；补充同步清单去重 / 合并离线断言与 SQLite 自愈静态门禁后，执行 `python3 scripts/check_cloudkit_sync_smoke.py`、`bash scripts/run_offline_regression.sh`、`git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：首次使用该版本时，需要先让数据完整的一端完成一次强制同步，使 `ledger-sync-manifest-default` 写入 CloudKit；之后另一端强制同步才能按清单拉取全部账单 / 酒店数据。若某次同步日志出现“重新打开默认本地账本”，说明当次 LedgerStore 未持有 SQLite 实例但已自愈；仍应继续观察是否有重复出现。若未来迁移 custom zone，可重新引入 server change token 增量拉取。
+- 回滚方式：回退 `LedgerCloudKitSyncAdapter` 的同步清单 / fetch-by-ID 拉取、`LedgerStore` 的清单推拉接入、`LedgerSyncPlan` 的 `LedgerCloudSyncManifest`、`scripts/check_cloudkit_sync_smoke.py`、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：当前 default zone 同步路径应使用固定同步清单和按 ID 拉取，避免同时踩中 default zone 不支持 `getChanges` 与 `recordName` 未标记 queryable 两类 CloudKit 限制。
 
 ### ITER-281 酒店消费 iCloud PDF asset 降级同步
 - 日期：2026-06-28

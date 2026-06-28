@@ -9,21 +9,33 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = ROOT / "AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift"
+STORE = ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift"
 RUNNER = ROOT / "scripts/run_offline_regression.sh"
 
 
 REQUIRED_SNIPPETS = [
-    "CKFetchRecordZoneChangesOperation",
-    "CKRecordZone.default().zoneID",
-    "fetchDefaultZonePayloads(",
-    "isRecoverableZoneChangePartialFailure(",
-    "CKError.Code.partialFailure",
-    "continuation.resume(returning: records)",
+    "LedgerCloudSyncManifest",
+    "syncManifestRecordName()",
+    "fetchSyncManifest()",
+    "pushSyncManifest(",
+    "CKFetchRecordsOperation(recordIDs:",
+    "fetchRecordsByID(",
+    "transactionRecordNames",
+    "hotelStayRecordNames",
+    "hotelStayDraftRecordNames",
+]
+
+REQUIRED_STORE_SNIPPETS = [
+    "sqliteStoreForCloudSync()",
+    "当前同步状态未持有 SQLite 实例，正在重新打开默认本地账本。",
 ]
 
 FORBIDDEN_SNIPPETS = [
+    "CKFetchRecordZoneChangesOperation",
+    "CKRecordZone.default().zoneID",
     "CKQueryOperation(query:",
     "CKQuery(",
+    "NSPredicate(value: true)",
 ]
 
 
@@ -37,6 +49,7 @@ def main() -> int:
     failures: list[str] = []
     try:
         adapter = read(ADAPTER)
+        store = read(STORE)
         runner = read(RUNNER)
     except FileNotFoundError as exc:
         print(f"missing required file: {exc}")
@@ -46,9 +59,16 @@ def main() -> int:
         if snippet not in adapter:
             failures.append(f"missing CloudKit change-feed snippet: {snippet}")
 
+    for snippet in REQUIRED_STORE_SNIPPETS:
+        if snippet not in store:
+            failures.append(f"missing LedgerStore CloudKit SQLite recovery snippet: {snippet}")
+
     for snippet in FORBIDDEN_SNIPPETS:
         if snippet in adapter:
             failures.append(f"CloudKit sync adapter still uses query-based pull snippet: {snippet}")
+
+    if "iCloud 同步需要 SQLite 账本。" in store:
+        failures.append("LedgerStore still exposes SQLite store absence as a terminal iCloud sync status")
 
     if "check_cloudkit_sync_smoke.py" not in runner:
         failures.append("offline regression does not run CloudKit sync smoke")

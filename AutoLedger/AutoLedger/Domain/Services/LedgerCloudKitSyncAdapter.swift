@@ -223,7 +223,27 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchDefaultZonePayloads(mapRecord: Self.mapPayload)
+        let manifest = try await fetchSyncManifest()
+        return try await fetchAllTransactionRecords(recordNames: manifest?.transactionRecordNames ?? [])
+    }
+
+    func fetchAllTransactionRecords(recordNames: [String]) async throws -> [LedgerTransactionSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchRecordsByID(
+            recordNames: recordNames,
+            mapRecord: Self.mapPayload
+        )
     }
 
     func pushConfiguration(_ payload: LedgerConfigurationSyncPayload) async throws -> LedgerCloudKitPushResult {
@@ -282,6 +302,71 @@ struct LedgerCloudKitSyncAdapter {
         do {
             let record = try await database.record(for: recordID)
             return Self.mapConfigurationPayload(from: record)
+        } catch {
+            if let ckError = error as? CKError,
+               ckError.code == .unknownItem {
+                return nil
+            }
+            throw error
+        }
+    }
+
+    func pushSyncManifest(_ payload: LedgerCloudSyncManifest) async throws -> LedgerCloudKitPushResult {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let mappedRecord = try Self.mapSyncManifestRecord(payload)
+        let dryRunResult = LedgerCloudKitDryRunResult(
+            mode: mode,
+            upsertCount: 1,
+            tombstoneCount: 0,
+            expiredTombstoneCount: 0,
+            mappedRecords: [mappedRecord]
+        )
+
+        do {
+            let record = try makeCKRecord(from: mappedRecord)
+            return try await modifyRecords(
+                recordsToSave: [record],
+                recordIDsToDelete: [],
+                dryRunResult: dryRunResult
+            )
+        } catch {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: Self.fieldSummary(for: mappedRecord),
+                probeSummary: "sync-manifest-save",
+                message: Self.describe(error)
+            )
+        }
+    }
+
+    func fetchSyncManifest() async throws -> LedgerCloudSyncManifest? {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        let recordID = CKRecord.ID(recordName: CloudLedgerSyncSchema.syncManifestRecordName())
+        do {
+            let record = try await database.record(for: recordID)
+            return Self.mapSyncManifestPayload(from: record)
         } catch {
             if let ckError = error as? CKError,
                ckError.code == .unknownItem {
@@ -402,7 +487,27 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchDefaultZonePayloads(mapRecord: Self.mapHotelStayRecordPayload)
+        let manifest = try await fetchSyncManifest()
+        return try await fetchAllHotelStayRecords(recordNames: manifest?.hotelStayRecordNames ?? [])
+    }
+
+    func fetchAllHotelStayRecords(recordNames: [String]) async throws -> [LedgerHotelStayRecordSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchRecordsByID(
+            recordNames: recordNames,
+            mapRecord: Self.mapHotelStayRecordPayload
+        )
     }
 
     func fetchAllHotelStayDrafts() async throws -> [LedgerHotelStayDraftSyncPayload] {
@@ -418,7 +523,27 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchDefaultZonePayloads(mapRecord: Self.mapHotelStayDraftPayload)
+        let manifest = try await fetchSyncManifest()
+        return try await fetchAllHotelStayDrafts(recordNames: manifest?.hotelStayDraftRecordNames ?? [])
+    }
+
+    func fetchAllHotelStayDrafts(recordNames: [String]) async throws -> [LedgerHotelStayDraftSyncPayload] {
+        guard mode == .live else {
+            throw LedgerCloudKitSyncError.liveModeRequired
+        }
+        guard allowsLiveCloudKitWrites else {
+            throw LedgerCloudKitSyncError.liveModeRequiresManualValidation
+        }
+
+        let accountCheck = await checkAccountStatus()
+        guard accountCheck.canUsePrivateDatabase else {
+            throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
+        }
+
+        return try await fetchRecordsByID(
+            recordNames: recordNames,
+            mapRecord: Self.mapHotelStayDraftPayload
+        )
     }
 
     func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
@@ -532,16 +657,6 @@ struct LedgerCloudKitSyncAdapter {
             ? "; +\(partialErrors.count - samples.count) more"
             : ""
         return "partial[\(partialErrors.count)]: \(samples.joined(separator: "; "))\(suffix)"
-    }
-
-    nonisolated private static func isRecoverableZoneChangePartialFailure(_ error: Error) -> Bool {
-        let nsError = error as NSError
-        guard nsError.domain == CKError.errorDomain,
-              CKError.Code(rawValue: nsError.code) == CKError.Code.partialFailure else {
-            return false
-        }
-
-        return true
     }
 
     private static func fieldSummary(for record: CKRecord) -> String {
@@ -813,45 +928,72 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
-    private func fetchDefaultZonePayloads<Payload>(
+    private func fetchRecordsByID<Payload>(
+        recordNames: [String],
+        mapRecord: @escaping (CKRecord) -> Payload?
+    ) async throws -> [Payload] {
+        let recordIDs = Array(Set(recordNames.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
+            .sorted()
+            .map { CKRecord.ID(recordName: $0) }
+
+        guard !recordIDs.isEmpty else { return [] }
+
+        var payloads: [Payload] = []
+        for chunk in recordIDs.chunked(into: Self.operationRecordLimit) {
+            let chunkPayloads = try await fetchRecordIDChunk(chunk, mapRecord: mapRecord)
+            payloads.append(contentsOf: chunkPayloads)
+        }
+        return payloads
+    }
+
+    private func fetchRecordIDChunk<Payload>(
+        _ recordIDs: [CKRecord.ID],
         mapRecord: @escaping (CKRecord) -> Payload?
     ) async throws -> [Payload] {
         try await withCheckedThrowingContinuation { continuation in
-            let zoneID = CKRecordZone.default().zoneID
-            let configuration = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
-            configuration.resultsLimit = Self.operationRecordLimit
+            let operation = CKFetchRecordsOperation(recordIDs: recordIDs)
+            operation.fetchRecordsCompletionBlock = { recordMap, error in
+                let records = (recordMap ?? [:])
+                    .sorted { $0.key.recordName < $1.key.recordName }
+                    .compactMap { mapRecord($0.value) }
 
-            let operation = CKFetchRecordZoneChangesOperation(
-                recordZoneIDs: [zoneID],
-                configurationsByRecordZoneID: [zoneID: configuration]
-            )
-            operation.fetchAllChanges = true
-
-            var records: [Payload] = []
-            var zoneError: Error?
-            operation.recordChangedBlock = { record in
-                if let payload = mapRecord(record) {
-                    records.append(payload)
-                }
-            }
-            operation.recordZoneFetchCompletionBlock = { _, _, _, _, error in
                 if let error {
-                    zoneError = error
-                }
-            }
-            operation.fetchRecordZoneChangesCompletionBlock = { error in
-                if let error = error ?? zoneError {
-                    if Self.isRecoverableZoneChangePartialFailure(error) {
+                    if Self.isRecoverableFetchRecordsError(error) {
                         continuation.resume(returning: records)
                     } else {
                         continuation.resume(throwing: error)
                     }
-                } else {
-                    continuation.resume(returning: records)
+                    return
                 }
+
+                continuation.resume(returning: records)
             }
 
             database.add(operation)
+        }
+    }
+
+    nonisolated private static func isRecoverableFetchRecordsError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == CKError.errorDomain,
+              let code = CKError.Code(rawValue: nsError.code) else {
+            return false
+        }
+
+        if code == .unknownItem {
+            return true
+        }
+
+        guard code == .partialFailure,
+              let partialErrors = nsError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
+              !partialErrors.isEmpty else {
+            return false
+        }
+
+        return partialErrors.values.allSatisfy { error in
+            let nsError = error as NSError
+            return nsError.domain == CKError.errorDomain &&
+                CKError.Code(rawValue: nsError.code) == .unknownItem
         }
     }
 
@@ -898,6 +1040,28 @@ struct LedgerCloudKitSyncAdapter {
                 fieldSummary: "payloadJSON=encodingFailed",
                 probeSummary: "configuration-encode",
                 message: "Configuration payload could not be encoded as UTF-8."
+            )
+        }
+
+        return LedgerCloudKitMappedRecord(
+            recordType: CloudLedgerSyncSchema.RecordType.configuration,
+            recordName: payload.recordName,
+            fields: [
+                CloudLedgerSyncSchema.Field.updatedAt: .date(payload.updatedAt),
+                CloudLedgerSyncSchema.Field.deviceID: .string(payload.deviceID),
+                CloudLedgerSyncSchema.Field.payloadJSON: .string(json)
+            ]
+        )
+    }
+
+    private static func mapSyncManifestRecord(_ payload: LedgerCloudSyncManifest) throws -> LedgerCloudKitMappedRecord {
+        let encoded = try JSONEncoder.ledgerSyncEncoder.encode(payload)
+        guard let json = String(data: encoded, encoding: .utf8) else {
+            throw LedgerCloudKitSyncError.recordSaveRejected(
+                recordName: payload.recordName,
+                fieldSummary: "payloadJSON=encodingFailed",
+                probeSummary: "sync-manifest-encode",
+                message: "Sync manifest payload could not be encoded as UTF-8."
             )
         }
 
@@ -1186,6 +1350,30 @@ struct LedgerCloudKitSyncAdapter {
                 defaultWriteLedgerID: payload.defaultWriteLedgerID,
                 subscriptionMetadata: payload.subscriptionMetadata,
                 appSettings: payload.appSettings
+            )
+        }
+
+        return payload
+    }
+
+    private static func mapSyncManifestPayload(from record: CKRecord) -> LedgerCloudSyncManifest? {
+        guard
+            let json = record[CloudLedgerSyncSchema.Field.payloadJSON] as? String,
+            let data = json.data(using: .utf8),
+            var payload = try? JSONDecoder.ledgerSyncDecoder.decode(LedgerCloudSyncManifest.self, from: data)
+        else {
+            return nil
+        }
+
+        if let updatedAt = record[CloudLedgerSyncSchema.Field.updatedAt] as? Date,
+           updatedAt != payload.updatedAt {
+            payload = LedgerCloudSyncManifest(
+                recordName: record.recordID.recordName,
+                updatedAt: updatedAt,
+                deviceID: payload.deviceID,
+                transactionRecordNames: payload.transactionRecordNames,
+                hotelStayRecordNames: payload.hotelStayRecordNames,
+                hotelStayDraftRecordNames: payload.hotelStayDraftRecordNames
             )
         }
 

@@ -2952,6 +2952,56 @@ struct OfflineRegression {
             CloudLedgerSyncSchema.hotelStayRecordName(for: hotelStayRecordID) == "hotel-stay-00000000-0000-0000-0000-000000001568",
             "CloudLedgerSyncSchema derives deterministic hotel stay record name"
         )
+        reporter.check(
+            CloudLedgerSyncSchema.syncManifestRecordName() == "ledger-sync-manifest-default",
+            "CloudLedgerSyncSchema keeps sync manifest record name stable"
+        )
+
+        let localManifest = LedgerCloudSyncManifest(
+            updatedAt: Date(timeIntervalSince1970: 1_780_100_000),
+            deviceID: "iphone",
+            transactionRecordNames: [
+                CloudLedgerSyncSchema.recordName(for: activeID),
+                CloudLedgerSyncSchema.recordName(for: activeID)
+            ],
+            hotelStayRecordNames: [
+                CloudLedgerSyncSchema.hotelStayRecordName(for: hotelStayRecordID)
+            ],
+            hotelStayDraftRecordNames: []
+        )
+        let remoteManifest = LedgerCloudSyncManifest(
+            updatedAt: Date(timeIntervalSince1970: 1_780_090_000),
+            deviceID: "ipad",
+            transactionRecordNames: [
+                CloudLedgerSyncSchema.recordName(for: deletedID)
+            ],
+            hotelStayRecordNames: [
+                CloudLedgerSyncSchema.hotelStayRecordName(for: hotelStayRecordID)
+            ],
+            hotelStayDraftRecordNames: [
+                CloudLedgerSyncSchema.hotelStayDraftRecordName(for: UUID(uuidString: "00000000-0000-0000-0000-000000001569") ?? UUID())
+            ]
+        )
+        let mergedManifest = localManifest.merged(with: remoteManifest)
+        reporter.check(
+            mergedManifest.transactionRecordNames == [
+                CloudLedgerSyncSchema.recordName(for: activeID),
+                CloudLedgerSyncSchema.recordName(for: deletedID)
+            ],
+            "LedgerCloudSyncManifest merges and deduplicates transaction record names"
+        )
+        reporter.check(
+            mergedManifest.hotelStayRecordNames == [
+                CloudLedgerSyncSchema.hotelStayRecordName(for: hotelStayRecordID)
+            ],
+            "LedgerCloudSyncManifest deduplicates hotel record names"
+        )
+        reporter.check(
+            mergedManifest.hotelStayDraftRecordNames == [
+                CloudLedgerSyncSchema.hotelStayDraftRecordName(for: UUID(uuidString: "00000000-0000-0000-0000-000000001569") ?? UUID())
+            ],
+            "LedgerCloudSyncManifest preserves remote hotel draft record names"
+        )
 
         let hotelPDFData = Data("%PDF-1.7 sync planner hotel".utf8)
         let hotelRecord = HotelStayRecord(

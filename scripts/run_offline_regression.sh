@@ -210,6 +210,10 @@ struct LedgerCloudKitSyncAdapter {
         LedgerCloudKitPushResult(savedRecordNames: [])
     }
 
+    func pushSyncManifest(_ payload: LedgerCloudSyncManifest) async throws -> LedgerCloudKitPushResult {
+        LedgerCloudKitPushResult(savedRecordNames: [])
+    }
+
     func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
         LedgerCloudKitPushResult(savedRecordNames: [])
     }
@@ -225,7 +229,15 @@ struct LedgerCloudKitSyncAdapter {
         []
     }
 
+    func fetchAllTransactionRecords(recordNames: [String]) async throws -> [LedgerTransactionSyncPayload] {
+        []
+    }
+
     func fetchAllHotelStayRecords() async throws -> [LedgerHotelStayRecordSyncPayload] {
+        []
+    }
+
+    func fetchAllHotelStayRecords(recordNames: [String]) async throws -> [LedgerHotelStayRecordSyncPayload] {
         []
     }
 
@@ -233,7 +245,15 @@ struct LedgerCloudKitSyncAdapter {
         []
     }
 
+    func fetchAllHotelStayDrafts(recordNames: [String]) async throws -> [LedgerHotelStayDraftSyncPayload] {
+        []
+    }
+
     func fetchConfigurationRecord() async throws -> LedgerConfigurationSyncPayload? {
+        nil
+    }
+
+    func fetchSyncManifest() async throws -> LedgerCloudSyncManifest? {
         nil
     }
 }

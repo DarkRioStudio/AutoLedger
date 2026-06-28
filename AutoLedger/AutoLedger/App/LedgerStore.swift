@@ -587,26 +587,31 @@ final class LedgerStore: ObservableObject {
             // 静默失败，保留内存中的数据
         }
         if let sqlStore = store as? SQLiteTransactionStore {
-            deletedTransactions = (try? sqlStore.loadDeletedTransactions())  ?? deletedTransactions
-            debugRecords        = (try? sqlStore.loadDebugEvents())          ?? debugRecords
-            subscriptions       = (try? sqlStore.loadSubscriptions())        ?? subscriptions
-            categoryCorrections = (try? sqlStore.loadCategoryCorrections())  ?? categoryCorrections
-            merchantAliases     = (try? sqlStore.loadMerchantAliases())      ?? merchantAliases
-            hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())     ?? hotelStayRecords
-            hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())      ?? hotelStayDrafts
-            ledgerProfiles      = (try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? ledgerProfiles
-            if ledgerProfiles.isEmpty {
-                ledgerProfiles = [LedgerProfile.defaultLocal()]
-            }
-            sortLedgerProfiles()
-            normalizeDefaultWriteLedger()
-            normalizeLedgerSelection()
+            refreshFromSQLiteStore(sqlStore)
         }
         if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
             reloadWidgets()
             scheduleCloudKitPushAfterLocalLedgerChange()
         }
         loadShareExtensionResult()
+    }
+
+    private func refreshFromSQLiteStore(_ sqlStore: SQLiteTransactionStore) {
+        transactions        = (try? sqlStore.loadTransactions())             ?? transactions
+        deletedTransactions = (try? sqlStore.loadDeletedTransactions())      ?? deletedTransactions
+        debugRecords        = (try? sqlStore.loadDebugEvents())              ?? debugRecords
+        subscriptions       = (try? sqlStore.loadSubscriptions())            ?? subscriptions
+        categoryCorrections = (try? sqlStore.loadCategoryCorrections())      ?? categoryCorrections
+        merchantAliases     = (try? sqlStore.loadMerchantAliases())          ?? merchantAliases
+        hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())         ?? hotelStayRecords
+        hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())          ?? hotelStayDrafts
+        ledgerProfiles      = (try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? ledgerProfiles
+        if ledgerProfiles.isEmpty {
+            ledgerProfiles = [LedgerProfile.defaultLocal()]
+        }
+        sortLedgerProfiles()
+        normalizeDefaultWriteLedger()
+        normalizeLedgerSelection()
     }
 
     private func reloadWidgets() {
@@ -2658,10 +2663,7 @@ extension LedgerStore {
         defer { isLedgerCloudSyncRunning = false }
 
         do {
-            guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
-                updateLedgerCloudSyncStatus("iCloud 同步需要 SQLite 账本。")
-                return
-            }
+            let sqlStore = try sqliteStoreForCloudSync()
 
             let adapter = LedgerCloudKitSyncAdapter(mode: .live, allowsLiveCloudKitWrites: true)
             updateLedgerCloudSyncStatus("1/4 正在检查 iCloud 账号状态...")
@@ -2676,15 +2678,24 @@ extension LedgerStore {
                 adapter: adapter,
                 forceFull: forceFull
             )
-            let pullResult = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
-            let hotelResult = try await pullRemoteHotelStayArchive(sqlStore: sqlStore, adapter: adapter)
+            let syncManifest = try await adapter.fetchSyncManifest()
+            let pullResult = try await pullRemoteLedgerChanges(
+                sqlStore: sqlStore,
+                adapter: adapter,
+                manifest: syncManifest
+            )
+            let hotelResult = try await pullRemoteHotelStayArchive(
+                sqlStore: sqlStore,
+                adapter: adapter,
+                manifest: syncManifest
+            )
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
             refreshFromStore()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
-            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条账单、\(pushResult.hotelSavedCount) 条酒店数据，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条账单，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)；酒店新增/更新 \(hotelResult.upserted)，删除 \(hotelResult.deleted)，保留本地 \(hotelResult.keptLocal)；配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
+            updateLedgerCloudSyncStatus("iCloud 同步完成：\(pushResult.pushMode)推送 \(pushResult.savedCount) 条账单、\(pushResult.hotelSavedCount) 条酒店数据，清单\(pushResult.manifestSaved ? "已更新" : "无更新")，配置\(pushResult.configurationSaved ? "已推送" : "无需推送")；拉取 \(pullResult.remoteCount) 条账单，新增 \(pullResult.inserted)，更新 \(pullResult.updated)，删除 \(pullResult.deleted)，保留本地 \(pullResult.keptLocal)，冲突 \(pullResult.conflicts)；酒店新增/更新 \(hotelResult.upserted)，删除 \(hotelResult.deleted)，保留本地 \(hotelResult.keptLocal)；配置\(configurationResult.applied ? "已更新" : "无更新")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
         } catch {
             updateLedgerCloudSyncStatus("iCloud 同步失败：\(LedgerCloudKitSyncAdapter.describe(error))")
         }
@@ -2705,10 +2716,7 @@ extension LedgerStore {
         defer { isLedgerCloudSyncRunning = false }
 
         do {
-            guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
-                updateLedgerCloudSyncStatus("iCloud 同步需要 SQLite 账本。")
-                return
-            }
+            let sqlStore = try sqliteStoreForCloudSync()
 
             let adapter = LedgerCloudKitSyncAdapter(mode: .live, allowsLiveCloudKitWrites: true)
             updateLedgerCloudSyncStatus("1/3 正在检查 iCloud 账号状态...")
@@ -2718,8 +2726,17 @@ extension LedgerStore {
                 return
             }
 
-            let result = try await pullRemoteLedgerChanges(sqlStore: sqlStore, adapter: adapter)
-            let hotelResult = try await pullRemoteHotelStayArchive(sqlStore: sqlStore, adapter: adapter)
+            let syncManifest = try await adapter.fetchSyncManifest()
+            let result = try await pullRemoteLedgerChanges(
+                sqlStore: sqlStore,
+                adapter: adapter,
+                manifest: syncManifest
+            )
+            let hotelResult = try await pullRemoteHotelStayArchive(
+                sqlStore: sqlStore,
+                adapter: adapter,
+                manifest: syncManifest
+            )
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
             refreshFromStore()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
@@ -2766,10 +2783,7 @@ extension LedgerStore {
         defer { isLedgerCloudSyncRunning = false }
 
         do {
-            guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
-                updateLedgerCloudSyncStatus("iCloud 同步需要 SQLite 账本。")
-                return false
-            }
+            let sqlStore = try sqliteStoreForCloudSync()
 
             let adapter = LedgerCloudKitSyncAdapter(mode: .live, allowsLiveCloudKitWrites: true)
             updateLedgerCloudSyncStatus("1/2 正在检查 iCloud 账号状态...")
@@ -2782,12 +2796,23 @@ extension LedgerStore {
             let result = try await pushLocalLedgerChanges(sqlStore: sqlStore, adapter: adapter, forceFull: false)
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
-            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条账单、\(result.hotelSavedCount) 条酒店数据，配置\(result.configurationSaved ? "已推送" : "无需推送")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
+            updateLedgerCloudSyncStatus("iCloud 推送完成：\(result.pushMode)推送 \(result.savedCount) 条账单、\(result.hotelSavedCount) 条酒店数据，清单\(result.manifestSaved ? "已更新" : "无更新")，配置\(result.configurationSaved ? "已推送" : "无需推送")；大屏快照\(dashboardSnapshotSaved ? "已发布" : "未发布")。")
             return true
         } catch {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
             return false
         }
+    }
+
+    private func sqliteStoreForCloudSync() throws -> SQLiteTransactionStore {
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            return sqlStore
+        }
+
+        appendLedgerCloudSyncLog("当前同步状态未持有 SQLite 实例，正在重新打开默认本地账本。")
+        let sqlStore = try SQLiteTransactionStore()
+        refreshFromSQLiteStore(sqlStore)
+        return sqlStore
     }
 
     private func scheduleCloudKitPushAfterLocalLedgerChange() {
@@ -2804,7 +2829,7 @@ extension LedgerStore {
         sqlStore: SQLiteTransactionStore,
         adapter: LedgerCloudKitSyncAdapter,
         forceFull: Bool
-    ) async throws -> (pushMode: String, savedCount: Int, hotelSavedCount: Int, configurationSaved: Bool) {
+    ) async throws -> (pushMode: String, savedCount: Int, hotelSavedCount: Int, manifestSaved: Bool, configurationSaved: Bool) {
         if forceFull {
             clearCloudKitPushCheckpoint()
         }
@@ -2829,6 +2854,12 @@ extension LedgerStore {
                 "酒店 PDF 附件暂未被 CloudKit 接收，已先同步结构化酒店数据；下次同步会继续重试 \(hotelPushResult.assetFallbackRecordNames.count) 个 PDF。"
             )
         }
+        let manifestSaved = try await pushSyncManifest(
+            sqlStore: sqlStore,
+            adapter: adapter,
+            localRecords: localRecords,
+            generatedAt: batch.generatedAt
+        )
 
         let shouldPushConfiguration = forceFull || lastPushAt == nil || ledgerConfigurationUpdatedAt > lastPushAt!
         var configurationSaved = false
@@ -2847,8 +2878,38 @@ extension LedgerStore {
             pushMode: pushMode,
             savedCount: pushResult.savedRecordNames.count,
             hotelSavedCount: hotelPushResult.savedRecordNames.count,
+            manifestSaved: manifestSaved,
             configurationSaved: configurationSaved
         )
+    }
+
+    private func pushSyncManifest(
+        sqlStore: SQLiteTransactionStore,
+        adapter: LedgerCloudKitSyncAdapter,
+        localRecords: [TransactionSyncRecord],
+        generatedAt: Date
+    ) async throws -> Bool {
+        let allTransactionBatch = LedgerSyncPlanner.makePushBatch(
+            from: localRecords,
+            changedAfter: nil,
+            referenceDate: generatedAt
+        )
+        let allHotelPushPayloads = try makeHotelStayArchivePushPayloads(
+            sqlStore: sqlStore,
+            changedAfter: nil
+        )
+        let localManifest = LedgerCloudSyncManifest(
+            updatedAt: generatedAt,
+            deviceID: localSyncDeviceID,
+            transactionRecordNames: (allTransactionBatch.upserts + allTransactionBatch.tombstones).map(\.recordName),
+            hotelStayRecordNames: allHotelPushPayloads.records.map(\.recordName),
+            hotelStayDraftRecordNames: allHotelPushPayloads.drafts.map(\.recordName)
+        )
+        let remoteManifest = try await adapter.fetchSyncManifest()
+        let mergedManifest = localManifest.merged(with: remoteManifest)
+        updateLedgerCloudSyncStatus("正在更新 iCloud 同步清单：账单 \(mergedManifest.transactionRecordNames.count)，酒店 \(mergedManifest.hotelStayRecordNames.count)，草稿 \(mergedManifest.hotelStayDraftRecordNames.count)...")
+        let result = try await adapter.pushSyncManifest(mergedManifest)
+        return !result.savedRecordNames.isEmpty
     }
 
     private func makeHotelStayArchivePushPayloads(
@@ -2906,10 +2967,17 @@ extension LedgerStore {
 
     private func pullRemoteLedgerChanges(
         sqlStore: SQLiteTransactionStore,
-        adapter: LedgerCloudKitSyncAdapter
+        adapter: LedgerCloudKitSyncAdapter,
+        manifest: LedgerCloudSyncManifest?
     ) async throws -> (remoteCount: Int, inserted: Int, updated: Int, deleted: Int, keptLocal: Int, conflicts: Int) {
         updateLedgerCloudSyncStatus("正在拉取远端账单...")
-        let remotePayloads = try await adapter.fetchAllTransactionRecords()
+        let recordNames = manifest?.transactionRecordNames ?? []
+        if recordNames.isEmpty {
+            appendLedgerCloudSyncLog("远端同步清单中没有账单记录。")
+        } else {
+            appendLedgerCloudSyncLog("远端同步清单账单记录：\(recordNames.count) 条。")
+        }
+        let remotePayloads = try await adapter.fetchAllTransactionRecords(recordNames: recordNames)
 
         updateLedgerCloudSyncStatus("拉取完成，正在写入本地账本...")
         let protectedIDs = protectedRecentlyEditedTransactionIDs()
@@ -2940,11 +3008,15 @@ extension LedgerStore {
 
     private func pullRemoteHotelStayArchive(
         sqlStore: SQLiteTransactionStore,
-        adapter: LedgerCloudKitSyncAdapter
+        adapter: LedgerCloudKitSyncAdapter,
+        manifest: LedgerCloudSyncManifest?
     ) async throws -> (remoteCount: Int, upserted: Int, deleted: Int, keptLocal: Int) {
         updateLedgerCloudSyncStatus("正在拉取远端酒店消费...")
-        let remoteRecords = try await adapter.fetchAllHotelStayRecords()
-        let remoteDrafts = try await adapter.fetchAllHotelStayDrafts()
+        let hotelRecordNames = manifest?.hotelStayRecordNames ?? []
+        let hotelDraftNames = manifest?.hotelStayDraftRecordNames ?? []
+        appendLedgerCloudSyncLog("远端同步清单酒店记录：\(hotelRecordNames.count) 条，草稿：\(hotelDraftNames.count) 条。")
+        let remoteRecords = try await adapter.fetchAllHotelStayRecords(recordNames: hotelRecordNames)
+        let remoteDrafts = try await adapter.fetchAllHotelStayDrafts(recordNames: hotelDraftNames)
 
         let localRecordsByID = Dictionary(uniqueKeysWithValues: (try sqlStore.loadHotelStayRecords()).map { ($0.id, $0) })
         let localDraftsByID = Dictionary(uniqueKeysWithValues: (try sqlStore.loadHotelStayDrafts()).map { ($0.id, $0) })
