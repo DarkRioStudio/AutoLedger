@@ -267,7 +267,7 @@ public struct HotelStayArchivePresenter: Sendable {
 
     private func filtered(records: [HotelStayRecord], ledgerID: String?) -> [HotelStayRecord] {
         guard let targetLedgerID = trimmed(ledgerID) else { return records }
-        return records.filter { trimmed($0.ledgerID) == targetLedgerID }
+        return records.filter { $0.resolvedLedgerID() == targetLedgerID }
     }
 
     private func filtered(transactions: [Transaction], ledgerID: String?) -> [Transaction] {

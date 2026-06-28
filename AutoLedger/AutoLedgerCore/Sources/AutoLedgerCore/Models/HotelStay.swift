@@ -289,6 +289,38 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
     public var createdAt: Date
     public var updatedAt: Date
 
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case ledgerID
+        case linkedTransactionID
+        case hotelName
+        case hotelGroup
+        case hotelBrand
+        case city
+        case country
+        case checkInDate
+        case checkOutDate
+        case nights
+        case roomType
+        case confirmationNumber
+        case currency
+        case roomCharge
+        case taxAmount
+        case serviceCharge
+        case foodBeverageAmount
+        case otherAmount
+        case totalAmount
+        case paymentMethod
+        case sourceType
+        case sourceFileName
+        case sourcePDFData
+        case localizedData
+        case confidence
+        case rawText
+        case createdAt
+        case updatedAt
+    }
+
     public init(
         id: UUID = UUID(),
         ledgerID: String,
@@ -321,7 +353,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         updatedAt: Date = Date()
     ) {
         self.id = id
-        self.ledgerID = ledgerID
+        self.ledgerID = Self.normalizedLedgerID(ledgerID)
         self.linkedTransactionID = linkedTransactionID
         self.hotelName = hotelName
         self.hotelGroup = hotelGroup
@@ -349,5 +381,53 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         self.rawText = rawText
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let createdAt = try container.decode(Date.self, forKey: .createdAt)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            ledgerID: try container.decodeIfPresent(String.self, forKey: .ledgerID) ?? TodaySpendingSummary.defaultLedgerID,
+            linkedTransactionID: try container.decodeIfPresent(UUID.self, forKey: .linkedTransactionID),
+            hotelName: try container.decode(String.self, forKey: .hotelName),
+            hotelGroup: try container.decodeIfPresent(String.self, forKey: .hotelGroup),
+            hotelBrand: try container.decodeIfPresent(String.self, forKey: .hotelBrand),
+            city: try container.decodeIfPresent(String.self, forKey: .city),
+            country: try container.decodeIfPresent(String.self, forKey: .country),
+            checkInDate: try container.decodeIfPresent(String.self, forKey: .checkInDate),
+            checkOutDate: try container.decodeIfPresent(String.self, forKey: .checkOutDate),
+            nights: try container.decodeIfPresent(Int.self, forKey: .nights),
+            roomType: try container.decodeIfPresent(String.self, forKey: .roomType),
+            confirmationNumber: try container.decodeIfPresent(String.self, forKey: .confirmationNumber),
+            currency: try container.decode(String.self, forKey: .currency),
+            roomCharge: try container.decodeIfPresent(Double.self, forKey: .roomCharge) ?? 0,
+            taxAmount: try container.decodeIfPresent(Double.self, forKey: .taxAmount) ?? 0,
+            serviceCharge: try container.decodeIfPresent(Double.self, forKey: .serviceCharge) ?? 0,
+            foodBeverageAmount: try container.decodeIfPresent(Double.self, forKey: .foodBeverageAmount) ?? 0,
+            otherAmount: try container.decodeIfPresent(Double.self, forKey: .otherAmount) ?? 0,
+            totalAmount: try container.decode(Double.self, forKey: .totalAmount),
+            paymentMethod: try container.decodeIfPresent(String.self, forKey: .paymentMethod),
+            sourceType: try container.decode(HotelFolioSourceType.self, forKey: .sourceType),
+            sourceFileName: try container.decodeIfPresent(String.self, forKey: .sourceFileName),
+            sourcePDFData: try container.decodeIfPresent(Data.self, forKey: .sourcePDFData),
+            localizedData: try container.decodeIfPresent(HotelStayLocalizedData.self, forKey: .localizedData),
+            confidence: try container.decodeIfPresent(Double.self, forKey: .confidence) ?? 0,
+            rawText: try container.decodeIfPresent(String.self, forKey: .rawText) ?? "",
+            createdAt: createdAt,
+            updatedAt: try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
+        )
+    }
+
+    public func resolvedLedgerID(defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID) -> String {
+        Self.normalizedLedgerID(ledgerID, defaultLedgerID: defaultLedgerID)
+    }
+
+    private static func normalizedLedgerID(
+        _ ledgerID: String,
+        defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID
+    ) -> String {
+        let trimmed = ledgerID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultLedgerID : trimmed
     }
 }

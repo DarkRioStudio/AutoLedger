@@ -2672,11 +2672,27 @@ struct OfflineRegression {
             sourceType: .manualPDF,
             updatedAt: referenceDate
         )
+        let legacyDefaultStay = HotelStayRecord(
+            ledgerID: "",
+            hotelName: "Legacy Default Hotel",
+            currency: "CNY",
+            totalAmount: 260,
+            sourceType: .manualPDF,
+            updatedAt: referenceDate
+        )
         let scopedHotelSnapshot = HotelStayArchivePresenter().makeListSnapshot(
-            records: [defaultStay, travelStay],
+            records: [defaultStay, travelStay, legacyDefaultStay],
             ledgerID: travelLedger.id
         )
         reporter.check(scopedHotelSnapshot.rows.map(\.hotelName) == ["Travel Hotel"], "HotelStayArchivePresenter filters records by ledger id")
+        let defaultHotelSnapshot = HotelStayArchivePresenter().makeListSnapshot(
+            records: [defaultStay, travelStay, legacyDefaultStay],
+            ledgerID: TodaySpendingSummary.defaultLedgerID
+        )
+        reporter.check(
+            defaultHotelSnapshot.rows.map(\.hotelName) == ["Legacy Default Hotel", "Default Hotel"],
+            "HotelStayArchivePresenter treats blank hotel ledger id as local ledger"
+        )
 
         ledgerStore.selectLedgerProfile(travelLedger)
         let travelSnapshot = ledgerStore.monthlySnapshot(for: referenceDate)
@@ -2953,6 +2969,29 @@ struct OfflineRegression {
         let restoredDraftPayload = try? hotelDecoder.decode(
             LedgerHotelStayDraftSyncPayload.self,
             from: draftPayloadData ?? Data()
+        )
+        let legacyHotelRecordData = Data("""
+        {
+          "id": "00000000-0000-0000-0000-000000001570",
+          "hotelName": "Legacy Sync Hotel",
+          "currency": "CNY",
+          "roomCharge": 0,
+          "taxAmount": 0,
+          "serviceCharge": 0,
+          "foodBeverageAmount": 0,
+          "otherAmount": 0,
+          "totalAmount": 128,
+          "sourceType": "manualPDF",
+          "confidence": 0.9,
+          "rawText": "Legacy folio",
+          "createdAt": "2026-06-20T00:00:00Z",
+          "updatedAt": "2026-06-20T01:00:00Z"
+        }
+        """.utf8)
+        let legacyHotelRecord = try? hotelDecoder.decode(HotelStayRecord.self, from: legacyHotelRecordData)
+        reporter.check(
+            legacyHotelRecord?.ledgerID == TodaySpendingSummary.defaultLedgerID,
+            "HotelStayRecord decodes missing ledger id as local ledger"
         )
         reporter.check(
             restoredHotelPayload?.hotelStayRecord?.sourcePDFData == hotelPDFData,
