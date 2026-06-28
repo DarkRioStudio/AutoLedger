@@ -410,7 +410,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         SELECT id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
                check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
                room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
-               payment_method, source_type, source_file_name, source_pdf_data, confidence, raw_text, created_at, updated_at
+               payment_method, source_type, source_file_name, source_pdf_data, localized_data_json,
+               confidence, raw_text, created_at, updated_at
         FROM hotel_stay_records
         ORDER BY check_out_date DESC, created_at DESC;
         """
@@ -502,9 +503,10 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
             check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
             room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
-            payment_method, source_type, source_file_name, source_pdf_data, confidence, raw_text, created_at, updated_at
+            payment_method, source_type, source_file_name, source_pdf_data, localized_data_json,
+            confidence, raw_text, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             ledger_id = excluded.ledger_id,
             linked_transaction_id = excluded.linked_transaction_id,
@@ -529,6 +531,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             source_type = excluded.source_type,
             source_file_name = excluded.source_file_name,
             source_pdf_data = excluded.source_pdf_data,
+            localized_data_json = excluded.localized_data_json,
             confidence = excluded.confidence,
             raw_text = excluded.raw_text,
             updated_at = excluded.updated_at;
@@ -554,7 +557,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         SELECT id, source_type, target_ledger_id, source_file_name, source_pdf_data,
                source_email_subject, source_email_from, source_email_uid, source_email_message_id_hash,
                source_email_attachment_hash, source_email_date_text, raw_text, parsed_payload_json,
-               confidence, status, created_at, updated_at
+               localized_data_json, confidence, status, created_at, updated_at
         FROM hotel_stay_drafts
         ORDER BY updated_at DESC, created_at DESC;
         """
@@ -579,9 +582,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             id, source_type, target_ledger_id, source_file_name, source_pdf_data,
             source_email_subject, source_email_from, source_email_uid, source_email_message_id_hash,
             source_email_attachment_hash, source_email_date_text, raw_text, parsed_payload_json,
-            confidence, status, created_at, updated_at
+            localized_data_json, confidence, status, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             source_type = excluded.source_type,
             target_ledger_id = excluded.target_ledger_id,
@@ -595,6 +598,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             source_email_date_text = excluded.source_email_date_text,
             raw_text = excluded.raw_text,
             parsed_payload_json = excluded.parsed_payload_json,
+            localized_data_json = excluded.localized_data_json,
             confidence = excluded.confidence,
             status = excluded.status,
             updated_at = excluded.updated_at;
@@ -996,6 +1000,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             source_type TEXT NOT NULL,
             source_file_name TEXT,
             source_pdf_data BLOB,
+            localized_data_json TEXT,
             confidence REAL NOT NULL DEFAULT 0,
             raw_text TEXT NOT NULL DEFAULT '',
             created_at TEXT NOT NULL,
@@ -1009,6 +1014,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let hotelStayColumns = Self.columnNames(db: db, table: "hotel_stay_records")
         if !hotelStayColumns.contains("source_pdf_data") {
             sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN source_pdf_data BLOB;", nil, nil, nil)
+        }
+        if !hotelStayColumns.contains("localized_data_json") {
+            sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN localized_data_json TEXT;", nil, nil, nil)
         }
 
         let hotelStayDraftsSQL = """
@@ -1026,6 +1034,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             source_email_date_text TEXT,
             raw_text TEXT NOT NULL DEFAULT '',
             parsed_payload_json TEXT,
+            localized_data_json TEXT,
             confidence REAL NOT NULL DEFAULT 0,
             status TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -1041,7 +1050,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             ("source_email_uid", "TEXT"),
             ("source_email_message_id_hash", "TEXT"),
             ("source_email_attachment_hash", "TEXT"),
-            ("source_email_date_text", "TEXT")
+            ("source_email_date_text", "TEXT"),
+            ("localized_data_json", "TEXT")
         ] where !hotelStayDraftColumns.contains(name) {
             sqlite3_exec(db, "ALTER TABLE hotel_stay_drafts ADD COLUMN \(name) \(type);", nil, nil, nil)
         }
@@ -1782,10 +1792,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 22, record.sourceType.rawValue, -1, sqliteTransient)
         bindOptionalString(record.sourceFileName, to: statement, at: 23)
         bindOptionalData(record.sourcePDFData, to: statement, at: 24)
-        sqlite3_bind_double(statement, 25, record.confidence)
-        sqlite3_bind_text(statement, 26, record.rawText, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 27, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 28, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
+        bindOptionalLocalizedData(record.localizedData, to: statement, at: 25)
+        sqlite3_bind_double(statement, 26, record.confidence)
+        sqlite3_bind_text(statement, 27, record.rawText, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 28, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 29, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
     }
 
     private static func hotelStayRecord(from statement: OpaquePointer?) -> HotelStayRecord? {
@@ -1795,9 +1806,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             let hotelNameCString = sqlite3_column_text(statement, 3),
             let currencyCString = sqlite3_column_text(statement, 13),
             let sourceTypeCString = sqlite3_column_text(statement, 21),
-            let rawTextCString = sqlite3_column_text(statement, 25),
-            let createdCString = sqlite3_column_text(statement, 26),
-            let updatedCString = sqlite3_column_text(statement, 27),
+            let rawTextCString = sqlite3_column_text(statement, 26),
+            let createdCString = sqlite3_column_text(statement, 27),
+            let updatedCString = sqlite3_column_text(statement, 28),
             let id = UUID(uuidString: String(cString: idCString)),
             let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
             let createdAt = storageFormatter.date(from: String(cString: createdCString)),
@@ -1835,7 +1846,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sourceType: sourceType,
             sourceFileName: string(from: statement, index: 22),
             sourcePDFData: data(from: statement, index: 23),
-            confidence: sqlite3_column_double(statement, 24),
+            localizedData: localizedData(from: statement, index: 24),
+            confidence: sqlite3_column_double(statement, 25),
             rawText: String(cString: rawTextCString),
             createdAt: createdAt,
             updatedAt: updatedAt
@@ -1862,10 +1874,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         } else {
             sqlite3_bind_null(statement, 13)
         }
-        sqlite3_bind_double(statement, 14, draft.confidence)
-        sqlite3_bind_text(statement, 15, draft.status.rawValue, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 16, Self.storageFormatter.string(from: draft.createdAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 17, Self.storageFormatter.string(from: draft.updatedAt), -1, sqliteTransient)
+        bindOptionalLocalizedData(draft.localizedData, to: statement, at: 14)
+        sqlite3_bind_double(statement, 15, draft.confidence)
+        sqlite3_bind_text(statement, 16, draft.status.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 17, Self.storageFormatter.string(from: draft.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 18, Self.storageFormatter.string(from: draft.updatedAt), -1, sqliteTransient)
     }
 
     private static func hotelStayDraft(from statement: OpaquePointer?) -> HotelStayDraft? {
@@ -1873,9 +1886,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             let idCString = sqlite3_column_text(statement, 0),
             let sourceTypeCString = sqlite3_column_text(statement, 1),
             let rawTextCString = sqlite3_column_text(statement, 11),
-            let statusCString = sqlite3_column_text(statement, 14),
-            let createdCString = sqlite3_column_text(statement, 15),
-            let updatedCString = sqlite3_column_text(statement, 16),
+            let statusCString = sqlite3_column_text(statement, 15),
+            let createdCString = sqlite3_column_text(statement, 16),
+            let updatedCString = sqlite3_column_text(statement, 17),
             let id = UUID(uuidString: String(cString: idCString)),
             let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
             let status = HotelStayDraftStatus(rawValue: String(cString: statusCString)),
@@ -1907,7 +1920,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sourceEmailDateText: string(from: statement, index: 10),
             rawText: String(cString: rawTextCString),
             parsedPayload: parsedPayload,
-            confidence: sqlite3_column_double(statement, 13),
+            localizedData: localizedData(from: statement, index: 13),
+            confidence: sqlite3_column_double(statement, 14),
             status: status,
             createdAt: createdAt,
             updatedAt: updatedAt
@@ -1941,6 +1955,21 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    private func bindOptionalLocalizedData(
+        _ value: HotelStayLocalizedData?,
+        to statement: OpaquePointer?,
+        at index: Int32
+    ) {
+        guard let value,
+              let data = try? JSONEncoder().encode(value),
+              let json = String(data: data, encoding: .utf8),
+              !json.isEmpty else {
+            sqlite3_bind_null(statement, index)
+            return
+        }
+        sqlite3_bind_text(statement, index, json, -1, sqliteTransient)
+    }
+
     private static func string(from statement: OpaquePointer?, index: Int32) -> String? {
         guard sqlite3_column_type(statement, index) != SQLITE_NULL,
               let cString = sqlite3_column_text(statement, index) else {
@@ -1960,6 +1989,14 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             return nil
         }
         return Data(bytes: bytes, count: Int(byteCount))
+    }
+
+    private static func localizedData(from statement: OpaquePointer?, index: Int32) -> HotelStayLocalizedData? {
+        guard let json = string(from: statement, index: index),
+              let data = json.data(using: .utf8) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(HotelStayLocalizedData.self, from: data)
     }
 
     private static func uuid(from statement: OpaquePointer?, index: Int32) -> UUID? {

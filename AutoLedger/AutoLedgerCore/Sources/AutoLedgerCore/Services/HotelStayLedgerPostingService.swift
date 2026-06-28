@@ -95,6 +95,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             sourceType: draft.sourceType,
             sourceFileName: draft.sourceFileName,
             sourcePDFData: draft.sourcePDFData,
+            localizedData: draft.localizedData ?? payload.localizedData,
             confidence: payload.confidence ?? draft.confidence,
             rawText: draft.rawText,
             createdAt: postedAt,

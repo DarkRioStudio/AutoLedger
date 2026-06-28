@@ -36,9 +36,11 @@ public struct HotelStayReviewForm: Equatable, Sendable {
     public var sourceEmailFrom: String?
     public var confidence: Double
     public var rawText: String
+    public var localizedData: HotelStayLocalizedData?
 
     public init(draft: HotelStayDraft) {
         let payload = draft.parsedPayload
+        localizedData = draft.localizedData ?? payload?.localizedData
         hotelName = payload?.hotelName ?? ""
         hotelGroup = payload?.group ?? ""
         hotelBrand = payload?.brand ?? ""
@@ -83,6 +85,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         let payload = try parsedPayload()
         var updated = draft
         updated.parsedPayload = payload
+        updated.localizedData = localizedData ?? draft.localizedData ?? draft.parsedPayload?.localizedData
         updated.confidence = payload.confidence ?? confidence
         updated.status = .confirmed
         updated.updatedAt = updatedAt
@@ -124,7 +127,8 @@ public struct HotelStayReviewForm: Equatable, Sendable {
             totalAmount: totalAmount,
             paymentMethod: trimmedOptional(paymentMethod),
             confidence: min(max(confidence, 0), 1),
-            rawTextExcerpt: String(rawText.prefix(240))
+            rawTextExcerpt: String(rawText.prefix(240)),
+            localizedData: localizedData
         )
     }
 

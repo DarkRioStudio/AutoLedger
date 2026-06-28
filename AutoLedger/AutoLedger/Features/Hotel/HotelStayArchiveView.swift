@@ -406,28 +406,36 @@ private struct HotelStayRowView: View {
 
 private struct HotelStayDraftRowView: View {
     let draft: HotelStayDraft
+    private let presenter = HotelStayArchivePresenter()
 
     private var payload: HotelFolioParsedPayload? {
         draft.parsedPayload
     }
 
     private var title: String {
-        payload?.hotelName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        draft.localizedData?.hotelName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? payload?.hotelName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             ?? draft.sourceFileName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             ?? draft.sourceEmailSubject?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             ?? String(localized: "hotel_stay.draft.unknown_hotel")
     }
 
     private var amountText: String {
-        guard let totalAmount = payload?.totalAmount else {
+        let totalAmount = draft.localizedData?.totalAmount ?? payload?.totalAmount
+        guard let totalAmount else {
             return String(localized: "hotel_stay.draft.amount_pending")
         }
-        let currency = payload?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "CNY"
-        return String(format: "%@ %.2f", currency, totalAmount)
+        let currency = draft.localizedData?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? payload?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            ?? "CNY"
+        return presenter.localizedAmountText(totalAmount, currency: currency)
     }
 
     private var locationText: String? {
-        [payload?.city, payload?.country]
+        [
+            draft.localizedData?.city ?? payload?.city,
+            draft.localizedData?.country ?? payload?.country
+        ]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
             .joined(separator: " / ")
             .nilIfEmpty
@@ -584,7 +592,7 @@ struct HotelStayDetailView: View {
     private var detailHeader: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text(record.hotelName)
+                Text(snapshot.row.hotelName)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 

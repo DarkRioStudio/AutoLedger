@@ -17,6 +17,88 @@ public enum HotelStayDraftStatus: String, Codable, CaseIterable, Sendable {
     case postedToLedger
 }
 
+public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
+    public var hotelName: String?
+    public var brand: String?
+    public var group: String?
+    public var city: String?
+    public var country: String?
+    public var roomType: String?
+    public var currency: String?
+    public var roomCharge: Double?
+    public var taxAmount: Double?
+    public var serviceCharge: Double?
+    public var foodBeverageAmount: Double?
+    public var otherAmount: Double?
+    public var totalAmount: Double?
+    public var exchangeRate: Double?
+    public var exchangeRateDate: String?
+    public var exchangeRateProvider: String?
+    public var targetLocaleIdentifier: String?
+    public var generatedAt: Date?
+
+    public init(
+        hotelName: String? = nil,
+        brand: String? = nil,
+        group: String? = nil,
+        city: String? = nil,
+        country: String? = nil,
+        roomType: String? = nil,
+        currency: String? = nil,
+        roomCharge: Double? = nil,
+        taxAmount: Double? = nil,
+        serviceCharge: Double? = nil,
+        foodBeverageAmount: Double? = nil,
+        otherAmount: Double? = nil,
+        totalAmount: Double? = nil,
+        exchangeRate: Double? = nil,
+        exchangeRateDate: String? = nil,
+        exchangeRateProvider: String? = nil,
+        targetLocaleIdentifier: String? = nil,
+        generatedAt: Date? = nil
+    ) {
+        self.hotelName = hotelName
+        self.brand = brand
+        self.group = group
+        self.city = city
+        self.country = country
+        self.roomType = roomType
+        self.currency = currency
+        self.roomCharge = roomCharge
+        self.taxAmount = taxAmount
+        self.serviceCharge = serviceCharge
+        self.foodBeverageAmount = foodBeverageAmount
+        self.otherAmount = otherAmount
+        self.totalAmount = totalAmount
+        self.exchangeRate = exchangeRate
+        self.exchangeRateDate = exchangeRateDate
+        self.exchangeRateProvider = exchangeRateProvider
+        self.targetLocaleIdentifier = targetLocaleIdentifier
+        self.generatedAt = generatedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case hotelName = "hotel_name"
+        case brand
+        case group
+        case city
+        case country
+        case roomType = "room_type"
+        case currency
+        case roomCharge = "room_charge"
+        case taxAmount = "tax"
+        case serviceCharge = "service_charge"
+        case foodBeverageAmount = "food_beverage"
+        case otherAmount = "other_charges"
+        case totalAmount = "total_amount"
+        case exchangeRate = "exchange_rate"
+        case exchangeRateDate = "exchange_rate_date"
+        case exchangeRateProvider = "exchange_rate_provider"
+        case targetLocaleIdentifier = "target_locale"
+        case generatedAt = "generated_at"
+    }
+}
+
 public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
     public var hotelName: String?
     public var brand: String?
@@ -38,6 +120,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
     public var paymentMethod: String?
     public var confidence: Double?
     public var rawTextExcerpt: String?
+    public var localizedData: HotelStayLocalizedData?
 
     public init(
         hotelName: String? = nil,
@@ -59,7 +142,8 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         totalAmount: Double? = nil,
         paymentMethod: String? = nil,
         confidence: Double? = nil,
-        rawTextExcerpt: String? = nil
+        rawTextExcerpt: String? = nil,
+        localizedData: HotelStayLocalizedData? = nil
     ) {
         self.hotelName = hotelName
         self.brand = brand
@@ -81,6 +165,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         self.paymentMethod = paymentMethod
         self.confidence = confidence
         self.rawTextExcerpt = rawTextExcerpt
+        self.localizedData = localizedData
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -104,6 +189,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         case paymentMethod = "payment_method"
         case confidence
         case rawTextExcerpt = "raw_text_excerpt"
+        case localizedData = "localized"
     }
 }
 
@@ -121,6 +207,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
     public var sourceEmailDateText: String?
     public var rawText: String
     public var parsedPayload: HotelFolioParsedPayload?
+    public var localizedData: HotelStayLocalizedData?
     public var confidence: Double
     public var status: HotelStayDraftStatus
     public var createdAt: Date
@@ -140,6 +227,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         sourceEmailDateText: String? = nil,
         rawText: String = "",
         parsedPayload: HotelFolioParsedPayload? = nil,
+        localizedData: HotelStayLocalizedData? = nil,
         confidence: Double = 0,
         status: HotelStayDraftStatus = .imported,
         createdAt: Date = Date(),
@@ -158,6 +246,7 @@ public struct HotelStayDraft: Identifiable, Codable, Equatable, Sendable {
         self.sourceEmailDateText = sourceEmailDateText
         self.rawText = rawText
         self.parsedPayload = parsedPayload
+        self.localizedData = localizedData
         self.confidence = confidence
         self.status = status
         self.createdAt = createdAt
@@ -190,6 +279,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
     public var sourceType: HotelFolioSourceType
     public var sourceFileName: String?
     public var sourcePDFData: Data?
+    public var localizedData: HotelStayLocalizedData?
     public var confidence: Double
     public var rawText: String
     public var createdAt: Date
@@ -220,6 +310,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         sourceType: HotelFolioSourceType,
         sourceFileName: String? = nil,
         sourcePDFData: Data? = nil,
+        localizedData: HotelStayLocalizedData? = nil,
         confidence: Double = 0,
         rawText: String = "",
         createdAt: Date = Date(),
@@ -249,6 +340,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         self.sourceType = sourceType
         self.sourceFileName = sourceFileName
         self.sourcePDFData = sourcePDFData
+        self.localizedData = localizedData
         self.confidence = confidence
         self.rawText = rawText
         self.createdAt = createdAt

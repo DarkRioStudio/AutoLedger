@@ -131,6 +131,16 @@ public struct HotelStayDetailSnapshot: Equatable, Sendable {
 }
 
 public struct HotelStayArchivePresenter: Sendable {
+    private struct DisplayCharge: Sendable {
+        var currency: String
+        var roomCharge: Double
+        var taxAmount: Double
+        var serviceCharge: Double
+        var foodBeverageAmount: Double
+        var otherAmount: Double
+        var totalAmount: Double
+    }
+
     public init() {}
 
     public func localizedAmountText(_ amount: Double, currency: String) -> String {
@@ -144,8 +154,9 @@ public struct HotelStayArchivePresenter: Sendable {
         }
         let rows = sorted.map(makeRow)
         let totalNights = records.reduce(0) { $0 + ($1.nights ?? 0) }
-        let totalAmount = records.reduce(0) { $0 + $1.totalAmount }
-        let currencies = Set(records.compactMap { normalizedCurrencyCode($0.currency) })
+        let displayCharges = records.map { displayCharge(for: $0) }
+        let totalAmount = displayCharges.reduce(0) { $0 + $1.totalAmount }
+        let currencies = Set(displayCharges.compactMap { normalizedCurrencyCode($0.currency) })
         let hasMixedCurrencies = currencies.count > 1
         let averageNightlyRate = totalNights > 0 && !hasMixedCurrencies ? totalAmount / Double(totalNights) : nil
         return HotelStayListSnapshot(
@@ -181,14 +192,21 @@ public struct HotelStayArchivePresenter: Sendable {
     }
 
     private func makeRow(record: HotelStayRecord) -> HotelStayListRow {
-        HotelStayListRow(
+        let displayCharge = displayCharge(for: record)
+        return HotelStayListRow(
             id: record.id,
-            hotelName: record.hotelName,
+            hotelName: displayString(record.localizedData?.hotelName, fallback: record.hotelName) ?? record.hotelName,
             dateRangeText: dateRangeText(for: record),
-            locationText: joined([record.city, record.country], separator: ", "),
-            brandGroupText: joined([record.hotelBrand, record.hotelGroup], separator: " / "),
+            locationText: joined([
+                displayString(record.localizedData?.city, fallback: record.city),
+                displayString(record.localizedData?.country, fallback: record.country)
+            ], separator: ", "),
+            brandGroupText: joined([
+                displayString(record.localizedData?.brand, fallback: record.hotelBrand),
+                displayString(record.localizedData?.group, fallback: record.hotelGroup)
+            ], separator: " / "),
             nightsText: record.nights.map(String.init) ?? "",
-            totalAmountText: amountText(record.totalAmount, currency: record.currency),
+            totalAmountText: amountText(displayCharge.totalAmount, currency: displayCharge.currency),
             sourceType: record.sourceType,
             linkStatus: record.linkedTransactionID == nil ? .missingTransaction : .postedToLedger,
             linkedTransactionID: record.linkedTransactionID
@@ -197,11 +215,11 @@ public struct HotelStayArchivePresenter: Sendable {
 
     private func identityFields(for record: HotelStayRecord) -> [HotelStayDetailField] {
         compactFields([
-            (.hotelName, record.hotelName),
-            (.hotelBrand, record.hotelBrand),
-            (.hotelGroup, record.hotelGroup),
-            (.city, record.city),
-            (.country, record.country)
+            (.hotelName, displayString(record.localizedData?.hotelName, fallback: record.hotelName)),
+            (.hotelBrand, displayString(record.localizedData?.brand, fallback: record.hotelBrand)),
+            (.hotelGroup, displayString(record.localizedData?.group, fallback: record.hotelGroup)),
+            (.city, displayString(record.localizedData?.city, fallback: record.city)),
+            (.country, displayString(record.localizedData?.country, fallback: record.country))
         ])
     }
 
@@ -210,20 +228,21 @@ public struct HotelStayArchivePresenter: Sendable {
             (.checkInDate, record.checkInDate),
             (.checkOutDate, record.checkOutDate),
             (.nights, record.nights.map(String.init)),
-            (.roomType, record.roomType),
+            (.roomType, displayString(record.localizedData?.roomType, fallback: record.roomType)),
             (.confirmationNumber, record.confirmationNumber)
         ])
     }
 
     private func chargeFields(for record: HotelStayRecord) -> [HotelStayDetailField] {
-        [
-            HotelStayDetailField(key: .currency, value: record.currency),
-            HotelStayDetailField(key: .roomCharge, value: amountText(record.roomCharge, currency: record.currency)),
-            HotelStayDetailField(key: .taxAmount, value: amountText(record.taxAmount, currency: record.currency)),
-            HotelStayDetailField(key: .serviceCharge, value: amountText(record.serviceCharge, currency: record.currency)),
-            HotelStayDetailField(key: .foodBeverageAmount, value: amountText(record.foodBeverageAmount, currency: record.currency)),
-            HotelStayDetailField(key: .otherAmount, value: amountText(record.otherAmount, currency: record.currency)),
-            HotelStayDetailField(key: .totalAmount, value: amountText(record.totalAmount, currency: record.currency))
+        let displayCharge = displayCharge(for: record)
+        return [
+            HotelStayDetailField(key: .currency, value: displayCharge.currency),
+            HotelStayDetailField(key: .roomCharge, value: amountText(displayCharge.roomCharge, currency: displayCharge.currency)),
+            HotelStayDetailField(key: .taxAmount, value: amountText(displayCharge.taxAmount, currency: displayCharge.currency)),
+            HotelStayDetailField(key: .serviceCharge, value: amountText(displayCharge.serviceCharge, currency: displayCharge.currency)),
+            HotelStayDetailField(key: .foodBeverageAmount, value: amountText(displayCharge.foodBeverageAmount, currency: displayCharge.currency)),
+            HotelStayDetailField(key: .otherAmount, value: amountText(displayCharge.otherAmount, currency: displayCharge.currency)),
+            HotelStayDetailField(key: .totalAmount, value: amountText(displayCharge.totalAmount, currency: displayCharge.currency))
         ] + compactFields([
             (.paymentMethod, record.paymentMethod)
         ])
@@ -261,6 +280,24 @@ public struct HotelStayArchivePresenter: Sendable {
             guard let value = trimmed(value) else { return nil }
             return HotelStayDetailField(key: key, value: value)
         }
+    }
+
+    private func displayCharge(for record: HotelStayRecord) -> DisplayCharge {
+        let localized = record.localizedData
+        let currency = trimmed(localized?.currency) ?? record.currency
+        return DisplayCharge(
+            currency: currency,
+            roomCharge: localized?.roomCharge ?? record.roomCharge,
+            taxAmount: localized?.taxAmount ?? record.taxAmount,
+            serviceCharge: localized?.serviceCharge ?? record.serviceCharge,
+            foodBeverageAmount: localized?.foodBeverageAmount ?? record.foodBeverageAmount,
+            otherAmount: localized?.otherAmount ?? record.otherAmount,
+            totalAmount: localized?.totalAmount ?? record.totalAmount
+        )
+    }
+
+    private func displayString(_ localizedValue: String?, fallback: String?) -> String? {
+        trimmed(localizedValue) ?? trimmed(fallback)
     }
 
     private func sortDate(for record: HotelStayRecord) -> Date {
