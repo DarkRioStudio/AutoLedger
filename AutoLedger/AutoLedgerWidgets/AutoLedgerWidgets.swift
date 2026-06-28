@@ -15,7 +15,6 @@ private enum WidgetCopy {
     static var noMonthDataDetail: String { localized(zh: "开始记录后，这里会显示月度摘要", ja: "記録を始めると月次サマリーが表示されます", en: "Your monthly summary will appear here") }
     static var updatedPrefix: String { localized(zh: "更新于", ja: "更新", en: "Updated") }
     static var thisMonthLabel: String { localized(zh: "本月", ja: "今月", en: "This Month") }
-    static var ledgerScopeFormat: String { localized(zh: "默认写入账本：%@", ja: "既定の記録先：%@", en: "Default ledger: %@") }
     static var recentTransactionsTitle: String { localized(zh: "最近账单", ja: "最近の記録", en: "Recent") }
     static var noRecentTransactionTitle: String { localized(zh: "暂无账单", ja: "記録なし", en: "No Recent Entries") }
     static var upcomingSubscriptionsTitle: String { localized(zh: "即将续费", ja: "まもなく更新", en: "Upcoming") }
@@ -743,6 +742,7 @@ private struct MonthlyReportWidgetView: View {
             let bottomPadding = compact ? 12.0 : 14.0
             let amountSize = compact ? 28.0 : 33.0
             let cardSpacing = compact ? 8.0 : 10.0
+            let contentSpacing = compact ? 9.0 : 11.0
 
             ZStack {
                 LinearGradient(
@@ -759,7 +759,7 @@ private struct MonthlyReportWidgetView: View {
                         .offset(x: compact ? 28 : 36, y: compact ? -38 : -48)
                 }
 
-                VStack(alignment: .leading, spacing: compact ? 10 : 12) {
+                VStack(alignment: .leading, spacing: contentSpacing) {
                     HStack(alignment: .top, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(WidgetCopy.monthReportTitle)
@@ -808,7 +808,7 @@ private struct MonthlyReportWidgetView: View {
                         Spacer()
                     } else {
                         HStack(alignment: .bottom, spacing: 12) {
-                            VStack(alignment: .leading, spacing: compact ? 6 : 7) {
+                            VStack(alignment: .leading, spacing: compact ? 5 : 6) {
                                 Text(currency(entry.metrics.monthTotal))
                                     .font(.system(size: amountSize, weight: .bold, design: .rounded))
                                     .monospacedDigit()
@@ -820,11 +820,6 @@ private struct MonthlyReportWidgetView: View {
                                     .font(.system(size: compact ? 13 : 14, weight: .medium))
                                     .foregroundStyle(Color.black.opacity(0.52))
                                     .lineLimit(1)
-                                Text(String(format: WidgetCopy.ledgerScopeFormat, entry.metrics.ledgerScope.name))
-                                    .font(.system(size: compact ? 10 : 11, weight: .medium))
-                                    .foregroundStyle(Color.black.opacity(0.48))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.74)
                             }
                             Spacer(minLength: 0)
                         }
