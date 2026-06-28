@@ -436,45 +436,45 @@ private final class HotelFolioIMAPDataContinuation: @unchecked Sendable {
 
 private enum HotelFolioIMAPResponseScanner {
     nonisolated static func isTaggedResponseComplete(_ data: Data, tag: String) -> Bool {
+        taggedCompletionLine(in: data, tag: tag) != nil
+    }
+
+    nonisolated static func taggedCompletionLine(in data: Data, tag: String) -> String? {
         let bytes = Array(data)
         let tagBytes = Array(tag.utf8)
         var index = 0
+        var completionLine: [UInt8]?
 
         while index < bytes.count {
             guard let lineEnd = lineEnd(in: bytes, from: index) else {
-                return false
+                return completionLine.map { String(decoding: $0, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) }
             }
 
             let line = Array(bytes[index..<lineEnd.contentEnd])
             if lineStartsWithTag(line, tagBytes: tagBytes) {
-                return true
+                completionLine = line
             }
 
             index = lineEnd.nextIndex
             if let length = literalLength(in: line) {
                 let literalEnd = index + length
                 guard literalEnd <= bytes.count else {
-                    return false
+                    return nil
                 }
                 index = literalEnd
             }
         }
 
-        return false
-    }
-
-    nonisolated static func taggedCompletionLine(in response: String, tag: String) -> String? {
-        response
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .last { line in
-                line.hasPrefix("\(tag) ") || line.hasPrefix("\(tag)\t")
-            }
+        return completionLine.map { String(decoding: $0, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
     nonisolated static func safeSummary(of response: String, tag: String? = nil) -> String {
-        let lines = response.split(separator: "\n", omittingEmptySubsequences: false)
-        let tagged = tag.map { taggedCompletionLine(in: response, tag: $0) != nil }
+        safeSummary(of: Data(response.utf8), tag: tag)
+    }
+
+    nonisolated static func safeSummary(of data: Data, tag: String? = nil) -> String {
+        let response = String(decoding: data, as: UTF8.self)
+        let tagged = tag.map { taggedCompletionLine(in: data, tag: $0) != nil }
         let uppercased = response.uppercased()
         let flags: [String] = [
             "search=\(uppercased.contains("* SEARCH") ? "yes" : "no")",
@@ -483,8 +483,8 @@ private enum HotelFolioIMAPResponseScanner {
         ]
         let taggedText = tagged.map { "tagged=\($0 ? "yes" : "no")" } ?? "tagged=unknown"
         let summaryItems = [
-            "bytes=\(response.utf8.count)",
-            "lines=\(lines.count)",
+            "bytes=\(data.count)",
+            "lines=\(lineCount(in: Array(data)))",
             "literals=\(literalMarkerCount(in: response))",
             taggedText
         ] + flags
@@ -525,20 +525,45 @@ private enum HotelFolioIMAPResponseScanner {
     nonisolated private static func lineEnd(in bytes: [UInt8], from start: Int) -> (contentEnd: Int, nextIndex: Int)? {
         var index = start
         while index < bytes.count {
+            if bytes[index] == UInt8(ascii: "\r") {
+                let nextIndex = index + 1
+                if nextIndex < bytes.count && bytes[nextIndex] == UInt8(ascii: "\n") {
+                    return (index, nextIndex + 1)
+                }
+                return (index, nextIndex)
+            }
             if bytes[index] == UInt8(ascii: "\n") {
-                let contentEnd = index > start && bytes[index - 1] == UInt8(ascii: "\r") ? index - 1 : index
-                return (contentEnd, index + 1)
+                return (index, index + 1)
             }
             index += 1
         }
         return nil
     }
+
+    nonisolated private static func lineCount(in bytes: [UInt8]) -> Int {
+        guard !bytes.isEmpty else { return 0 }
+        var count = 0
+        var index = 0
+        while index < bytes.count {
+            guard let lineEnd = lineEnd(in: bytes, from: index) else {
+                return count + 1
+            }
+            count += 1
+            index = lineEnd.nextIndex
+        }
+        return count
+    }
 }
 
 private extension Data {
     nonisolated var containsLineBreak: Bool {
-        contains(UInt8(ascii: "\n"))
+        contains(UInt8(ascii: "\n")) || contains(UInt8(ascii: "\r"))
     }
+}
+
+private struct HotelFolioIMAPTaggedResponse: Sendable {
+    let text: String
+    let finalLine: String
 }
 
 private actor HotelFolioIMAPSession {
@@ -643,16 +668,10 @@ private actor HotelFolioIMAPSession {
         let tag = String(format: "A%04d", tagIndex)
         try await send("\(tag) \(command)\r\n")
         let response = try await readResponse(tag: tag)
-        guard let finalLine = HotelFolioIMAPResponseScanner.taggedCompletionLine(in: response, tag: tag) else {
-            throw HotelFolioEmailImportError.invalidIMAPResponse(
-                operation: commandDebugName(for: command),
-                responseSummary: HotelFolioIMAPResponseScanner.safeSummary(of: response, tag: tag)
-            )
+        guard response.finalLine.uppercased().contains(" OK") else {
+            throw HotelFolioEmailImportError.imapStatus(response.finalLine)
         }
-        guard finalLine.uppercased().contains(" OK") else {
-            throw HotelFolioEmailImportError.imapStatus(finalLine)
-        }
-        return response
+        return response.text
     }
 
     private func send(_ string: String) async throws {
@@ -681,19 +700,34 @@ private actor HotelFolioIMAPSession {
         }
     }
 
-    private func readResponse(tag: String) async throws -> String {
-        try await readUntil { data in
+    private func readResponse(tag: String) async throws -> HotelFolioIMAPTaggedResponse {
+        let data = try await readUntilData { data in
             HotelFolioIMAPResponseScanner.isTaggedResponseComplete(data, tag: tag)
         }
+        guard let finalLine = HotelFolioIMAPResponseScanner.taggedCompletionLine(in: data, tag: tag) else {
+            throw HotelFolioEmailImportError.invalidIMAPResponse(
+                operation: "imap response",
+                responseSummary: HotelFolioIMAPResponseScanner.safeSummary(of: data, tag: tag)
+            )
+        }
+        return HotelFolioIMAPTaggedResponse(
+            text: String(decoding: data, as: UTF8.self),
+            finalLine: finalLine
+        )
     }
 
     private func readUntil(_ isComplete: @escaping @Sendable (Data) -> Bool) async throws -> String {
+        let data = try await readUntilData(isComplete)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func readUntilData(_ isComplete: @escaping @Sendable (Data) -> Bool) async throws -> Data {
         var buffer = Data()
         while true {
             let chunk = try await receiveChunk()
             buffer.append(chunk)
             if isComplete(buffer) {
-                return String(decoding: buffer, as: UTF8.self)
+                return buffer
             }
         }
     }

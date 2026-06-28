@@ -31,9 +31,10 @@ REQUIRED_SERVICE_SNIPPETS = [
     "operationTimeoutSeconds",
     "withIMAPTimeout(operation:",
     "HotelFolioIMAPResponseScanner",
+    "HotelFolioIMAPTaggedResponse",
     "isTaggedResponseComplete",
     "literalLength(in:",
-    "taggedCompletionLine(in:",
+    "taggedCompletionLine(in data: Data",
     "safeSummary(of:",
     # RFC 7888/IMAP servers may return synchronizing, non-synchronizing,
     # or literal8 markers. Fetch extraction must understand those markers.
@@ -44,6 +45,7 @@ REQUIRED_SERVICE_SNIPPETS = [
     "pdfAttachmentMessage(",
     "candidates.count >= settings.maxMessages",
     "扫描时间窗内全部邮件",
+    "readResponse(tag: String) async throws -> HotelFolioIMAPTaggedResponse",
     ".candidateAccepted(subject:",
     ".completed(candidates.count)",
 ]
