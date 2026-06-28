@@ -687,7 +687,7 @@
 "settings.subscription_reminder.subtitle" = "開啟後，在預測扣費前 1 天傳送本機通知。";
 "settings.category_learning.title" = "分類學習";
 "settings.category_learning.subtitle" = "查看已學習的商家→分類偏好，支援刪除";
-"settings.ai_model.title" = "AI 模型";
+"settings.ai_model.title" = "本機模型識別";
 "settings.ai_model.subtitle" = "選擇端側大模型，管理 Gemma 模型下載";
 "settings.external_assist.title" = "外部輔助識別";
 "settings.external_assist.subtitle" = "可選開啟脫敏雲端輔助，改善疑難商戶識別";

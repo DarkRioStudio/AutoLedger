@@ -684,7 +684,7 @@
 "settings.subscription_reminder.subtitle" = "有効にすると、予測請求日の 1 日前に AutoLedger がローカル通知を送ります。";
 "settings.category_learning.title" = "カテゴリ学習";
 "settings.category_learning.subtitle" = "学習済みの加盟店カテゴリ設定を表示・削除";
-"settings.ai_model.title" = "AI モデル";
+"settings.ai_model.title" = "ローカルモデル認識";
 "settings.ai_model.subtitle" = "オンデバイスモデルを選択し、Gemma ダウンロードを管理";
 "settings.external_assist.title" = "外部アシスト";
 "settings.external_assist.subtitle" = "難しい加盟店認識向けの任意の匿名化クラウド支援";

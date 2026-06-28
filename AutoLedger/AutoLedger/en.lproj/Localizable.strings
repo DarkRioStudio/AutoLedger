@@ -684,7 +684,7 @@
 "settings.subscription_reminder.subtitle" = "When enabled, AutoLedger sends a local notification 1 day before a predicted charge.";
 "settings.category_learning.title" = "Category Learning";
 "settings.category_learning.subtitle" = "View learned merchant-to-category preferences and delete them";
-"settings.ai_model.title" = "AI Models";
+"settings.ai_model.title" = "Local Model Recognition";
 "settings.ai_model.subtitle" = "Choose an on-device model and manage Gemma downloads";
 "settings.external_assist.title" = "External Assist";
 "settings.external_assist.subtitle" = "Optional redacted cloud help for difficult merchant recognition";

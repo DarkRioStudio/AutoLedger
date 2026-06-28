@@ -684,7 +684,7 @@
 "settings.subscription_reminder.subtitle" = "开启后，在预测扣费前 1 天发送本地通知。";
 "settings.category_learning.title" = "分类学习";
 "settings.category_learning.subtitle" = "查看已学习的商户→分类偏好，支持删除";
-"settings.ai_model.title" = "AI 模型";
+"settings.ai_model.title" = "本地模型识别";
 "settings.ai_model.subtitle" = "选择端侧大模型，管理 Gemma 模型下载";
 "settings.external_assist.title" = "外部辅助识别";
 "settings.external_assist.subtitle" = "可选开启脱敏云端辅助，改善疑难商户识别";
