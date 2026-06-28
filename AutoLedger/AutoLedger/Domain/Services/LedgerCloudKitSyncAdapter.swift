@@ -442,7 +442,7 @@ struct LedgerCloudKitSyncAdapter {
         return record
     }
 
-    static func describe(_ error: Error) -> String {
+    nonisolated static func describe(_ error: Error) -> String {
         if let syncError = error as? LedgerCloudKitSyncError,
            let description = syncError.errorDescription {
             return description
@@ -468,16 +468,39 @@ struct LedgerCloudKitSyncAdapter {
            serverDescription != nsError.localizedDescription {
             parts.append(serverDescription)
         }
-        if let partialErrors = nsError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
-           let first = partialErrors.first {
-            let key = String(describing: first.key)
-            parts.append("partial[\(key)]: \(describe(first.value))")
+        if let partialSummary = Self.partialErrorSummary(from: nsError) {
+            parts.append(partialSummary)
         }
         if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
             parts.append("underlying: \(describe(underlying))")
         }
 
         return parts.joined(separator: " | ")
+    }
+
+    nonisolated private static func partialErrorSummary(from error: NSError) -> String? {
+        guard let partialErrors = error.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
+              !partialErrors.isEmpty else {
+            return nil
+        }
+
+        let samples = partialErrors.prefix(3).map { key, value in
+            "\(String(describing: key)): \(describe(value))"
+        }
+        let suffix = partialErrors.count > samples.count
+            ? "; +\(partialErrors.count - samples.count) more"
+            : ""
+        return "partial[\(partialErrors.count)]: \(samples.joined(separator: "; "))\(suffix)"
+    }
+
+    nonisolated private static func isRecoverableZoneChangePartialFailure(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == CKError.errorDomain,
+              CKError.Code(rawValue: nsError.code) == CKError.Code.partialFailure else {
+            return false
+        }
+
+        return true
     }
 
     private static func fieldSummary(for record: CKRecord) -> String {
@@ -500,7 +523,7 @@ struct LedgerCloudKitSyncAdapter {
         }.joined(separator: ", ")
     }
 
-    private static func ckErrorName(_ code: CKError.Code) -> String {
+    nonisolated private static func ckErrorName(_ code: CKError.Code) -> String {
         switch code {
         case .internalError: return "internalError"
         case .partialFailure: return "partialFailure"
@@ -663,7 +686,11 @@ struct LedgerCloudKitSyncAdapter {
             }
             operation.fetchRecordZoneChangesCompletionBlock = { error in
                 if let error = error ?? zoneError {
-                    continuation.resume(throwing: error)
+                    if Self.isRecoverableZoneChangePartialFailure(error) {
+                        continuation.resume(returning: records)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
                     continuation.resume(returning: records)
                 }

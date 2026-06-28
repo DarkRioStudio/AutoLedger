@@ -16,6 +16,9 @@ REQUIRED_SNIPPETS = [
     "CKFetchRecordZoneChangesOperation",
     "CKRecordZone.default().zoneID",
     "fetchDefaultZonePayloads(",
+    "isRecoverableZoneChangePartialFailure(",
+    "CKError.Code.partialFailure",
+    "continuation.resume(returning: records)",
 ]
 
 FORBIDDEN_SNIPPETS = [
