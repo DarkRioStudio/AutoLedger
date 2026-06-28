@@ -37,7 +37,7 @@ enum HotelFolioEmailImportError: Error, Sendable {
     case operationTimeout(String)
     case imapStatus(String)
     case connectionClosed
-    case invalidIMAPResponse
+    case invalidIMAPResponse(operation: String, responseSummary: String)
     case unsupportedAttachment
     case emptyPDFText
 }
@@ -59,8 +59,12 @@ extension HotelFolioEmailImportError: LocalizedError {
             return String(format: String(localized: "hotel_stay.email.error.imap_status_format"), message)
         case .connectionClosed:
             return String(localized: "hotel_stay.email.error.connection_closed")
-        case .invalidIMAPResponse:
-            return String(localized: "hotel_stay.email.error.invalid_response")
+        case .invalidIMAPResponse(let operation, let responseSummary):
+            return String(
+                format: String(localized: "hotel_stay.email.error.invalid_response_format"),
+                operation,
+                responseSummary
+            )
         case .unsupportedAttachment:
             return String(localized: "hotel_stay.email.error.unsupported_attachment")
         case .emptyPDFText:
@@ -446,6 +450,25 @@ private enum HotelFolioIMAPResponseScanner {
             }
     }
 
+    nonisolated static func safeSummary(of response: String, tag: String? = nil) -> String {
+        let lines = response.split(separator: "\n", omittingEmptySubsequences: false)
+        let tagged = tag.map { taggedCompletionLine(in: response, tag: $0) != nil }
+        let uppercased = response.uppercased()
+        let flags: [String] = [
+            "search=\(uppercased.contains("* SEARCH") ? "yes" : "no")",
+            "fetch=\(uppercased.contains(" FETCH ") ? "yes" : "no")",
+            "bye=\(uppercased.contains("* BYE") ? "yes" : "no")"
+        ]
+        let taggedText = tagged.map { "tagged=\($0 ? "yes" : "no")" } ?? "tagged=unknown"
+        let summaryItems = [
+            "bytes=\(response.utf8.count)",
+            "lines=\(lines.count)",
+            "literals=\(literalMarkerCount(in: response))",
+            taggedText
+        ] + flags
+        return summaryItems.joined(separator: ", ")
+    }
+
     nonisolated private static func lineStartsWithTag(_ line: [UInt8], tagBytes: [UInt8]) -> Bool {
         guard line.count > tagBytes.count else { return false }
         guard line.prefix(tagBytes.count).elementsEqual(tagBytes) else { return false }
@@ -467,6 +490,14 @@ private enum HotelFolioIMAPResponseScanner {
         }
 
         return Int(String(decoding: digits, as: UTF8.self))
+    }
+
+    nonisolated private static func literalMarkerCount(in response: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: #"(?:~)?\{\d+\+?\}"#) else {
+            return 0
+        }
+        let range = NSRange(response.startIndex..<response.endIndex, in: response)
+        return regex.numberOfMatches(in: response, range: range)
     }
 
     nonisolated private static func lineEnd(in bytes: [UInt8], from start: Int) -> (contentEnd: Int, nextIndex: Int)? {
@@ -564,7 +595,10 @@ private actor HotelFolioIMAPSession {
     func fetchRFC822(uid: String) async throws -> String {
         let response = try await execute("UID FETCH \(uid) (RFC822)")
         guard let rawMessage = extractFirstLiteral(from: response) else {
-            throw HotelFolioEmailImportError.invalidIMAPResponse
+            throw HotelFolioEmailImportError.invalidIMAPResponse(
+                operation: "fetch message",
+                responseSummary: HotelFolioIMAPResponseScanner.safeSummary(of: response)
+            )
         }
         return rawMessage
     }
@@ -584,7 +618,10 @@ private actor HotelFolioIMAPSession {
         try await send("\(tag) \(command)\r\n")
         let response = try await readResponse(tag: tag)
         guard let finalLine = HotelFolioIMAPResponseScanner.taggedCompletionLine(in: response, tag: tag) else {
-            throw HotelFolioEmailImportError.invalidIMAPResponse
+            throw HotelFolioEmailImportError.invalidIMAPResponse(
+                operation: commandDebugName(for: command),
+                responseSummary: HotelFolioIMAPResponseScanner.safeSummary(of: response, tag: tag)
+            )
         }
         guard finalLine.uppercased().contains(" OK") else {
             throw HotelFolioEmailImportError.imapStatus(finalLine)
@@ -660,7 +697,7 @@ private actor HotelFolioIMAPSession {
     }
 
     private func extractFirstLiteral(from response: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: #"\{(\d+)\}\r?\n"#) else {
+        guard let regex = try? NSRegularExpression(pattern: #"(?:~)?\{(\d+)\+?\}\r?\n"#) else {
             return nil
         }
         let range = NSRange(response.startIndex..<response.endIndex, in: response)
@@ -677,5 +714,25 @@ private actor HotelFolioIMAPSession {
 
     private func quote(_ value: String) -> String {
         "\"\(value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\""
+    }
+
+    private func commandDebugName(for command: String) -> String {
+        let uppercased = command.uppercased()
+        if uppercased.hasPrefix("LOGIN ") {
+            return "login"
+        }
+        if uppercased.hasPrefix("SELECT ") {
+            return "select mailbox"
+        }
+        if uppercased.hasPrefix("UID SEARCH ") {
+            return "search messages"
+        }
+        if uppercased.hasPrefix("UID FETCH ") {
+            return "fetch message"
+        }
+        if uppercased.hasPrefix("LOGOUT") {
+            return "logout"
+        }
+        return command.split(separator: " ").first.map(String.init) ?? "imap command"
     }
 }

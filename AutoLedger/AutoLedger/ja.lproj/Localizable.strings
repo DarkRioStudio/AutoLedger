@@ -210,6 +210,7 @@
 "hotel_stay.email.error.imap_status_format" = "IMAP エラー：%@";
 "hotel_stay.email.error.connection_closed" = "メール接続が閉じられました";
 "hotel_stay.email.error.invalid_response" = "メール応答を解析できません";
+"hotel_stay.email.error.invalid_response_format" = "メール応答を解析できません：%@（%@）";
 "hotel_stay.email.error.unsupported_attachment" = "PDF 添付のみ対応しています";
 "hotel_stay.email.error.empty_pdf_text" = "PDF からテキストを抽出できませんでした";
 "hotel_stay.post.success_format" = "ホテル滞在を保存しました：%@ %@ %.2f。";

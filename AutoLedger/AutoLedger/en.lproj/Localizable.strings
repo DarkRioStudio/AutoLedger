@@ -210,6 +210,7 @@
 "hotel_stay.email.error.imap_status_format" = "IMAP returned error: %@";
 "hotel_stay.email.error.connection_closed" = "Email connection closed";
 "hotel_stay.email.error.invalid_response" = "Email response could not be parsed";
+"hotel_stay.email.error.invalid_response_format" = "Email response could not be parsed: %@ (%@)";
 "hotel_stay.email.error.unsupported_attachment" = "Only PDF attachments are supported";
 "hotel_stay.email.error.empty_pdf_text" = "No text was extracted from this PDF";
 "hotel_stay.post.success_format" = "Archived hotel stay: %@ %@ %.2f.";

@@ -34,6 +34,12 @@ REQUIRED_SERVICE_SNIPPETS = [
     "isTaggedResponseComplete",
     "literalLength(in:",
     "taggedCompletionLine(in:",
+    "safeSummary(of:",
+    # RFC 7888/IMAP servers may return synchronizing, non-synchronizing,
+    # or literal8 markers. Fetch extraction must understand those markers.
+    # Keep this exact pattern guarded because QQ/other IMAP providers vary.
+    r'#"(?:~)?\{(\d+)\+?\}\r?\n"#',
+    "hotel_stay.email.error.invalid_response_format",
     ".candidateAccepted(subject:",
     ".completed(candidates.count)",
 ]
