@@ -543,7 +543,9 @@ private actor HotelFolioIMAPSession {
 
     private func readResponse(tag: String) async throws -> String {
         try await readUntil { text in
-            text.contains("\r\n\(tag) ") || text.contains("\n\(tag) ")
+            text.hasPrefix("\(tag) ") ||
+            text.contains("\r\n\(tag) ") ||
+            text.contains("\n\(tag) ")
         }
     }
 
