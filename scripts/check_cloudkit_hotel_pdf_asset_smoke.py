@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = ROOT / "AutoLedger/AutoLedger/Domain/Services/LedgerCloudKitSyncAdapter.swift"
+LEDGER_STORE = ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift"
 SCHEMA = ROOT / "AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/LedgerSyncPlan.swift"
 RUNNER = ROOT / "scripts/run_offline_regression.sh"
 
@@ -19,6 +20,14 @@ REQUIRED_ADAPTER_SNIPPETS = [
     "sourcePDFData: nil",
     "assetData(from:",
     "sourcePDFData: assetData",
+    "retryHotelStayArchiveChunkWithoutPDFAssets",
+    "removingHotelPDFAssets",
+    "shouldRetryHotelStayArchiveWithoutPDFAssets",
+]
+
+REQUIRED_LEDGER_STORE_SNIPPETS = [
+    "mergeHotelStayRecordPreservingLocalPDF",
+    "mergeHotelStayDraftPreservingLocalPDF",
 ]
 
 REQUIRED_SCHEMA_SNIPPETS = [
@@ -56,6 +65,7 @@ def main() -> int:
     failures: list[str] = []
     try:
         adapter = read(ADAPTER)
+        ledger_store = read(LEDGER_STORE)
         schema = read(SCHEMA)
         runner = read(RUNNER)
     except FileNotFoundError as exc:
@@ -65,6 +75,10 @@ def main() -> int:
     for snippet in REQUIRED_ADAPTER_SNIPPETS:
         if snippet not in adapter:
             failures.append(f"missing hotel PDF asset adapter snippet: {snippet}")
+
+    for snippet in REQUIRED_LEDGER_STORE_SNIPPETS:
+        if snippet not in ledger_store:
+            failures.append(f"missing hotel PDF pull merge snippet: {snippet}")
 
     for snippet in REQUIRED_SCHEMA_SNIPPETS:
         if snippet not in schema:

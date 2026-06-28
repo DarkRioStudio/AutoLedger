@@ -80,6 +80,7 @@ struct LedgerCloudKitPushResult: Equatable {
     let upsertCount: Int
     let tombstoneCount: Int
     let expiredTombstoneCount: Int
+    var assetFallbackRecordNames: [String] = []
 }
 
 @MainActor
@@ -326,9 +327,22 @@ struct LedgerCloudKitSyncAdapter {
         }
 
         var savedRecordNames: [String] = []
+        var assetFallbackRecordNames: [String] = []
         for chunk in mappedRecords.chunked(into: Self.operationRecordLimit) {
+            let recordsToSave: [CKRecord]
             do {
-                let recordsToSave = try chunk.map { try makeCKRecord(from: $0) }
+                recordsToSave = try chunk.map { try makeCKRecord(from: $0) }
+            } catch {
+                let firstRecord = chunk[0]
+                throw LedgerCloudKitSyncError.recordSaveRejected(
+                    recordName: firstRecord.recordName,
+                    fieldSummary: Self.fieldSummary(for: firstRecord),
+                    probeSummary: "hotel-stay-archive-record-build",
+                    message: Self.describe(error)
+                )
+            }
+
+            do {
                 let partial = try await modifyRecords(
                     recordsToSave: recordsToSave,
                     recordIDsToDelete: [],
@@ -337,10 +351,29 @@ struct LedgerCloudKitSyncAdapter {
                 savedRecordNames.append(contentsOf: partial.savedRecordNames)
             } catch {
                 let firstRecord = chunk[0]
+                let probeSummary = await diagnoseMinimalSave(for: recordsToSave[0], dryRunResult: dryRunResult)
+                if Self.shouldRetryHotelStayArchiveWithoutPDFAssets(error, mappedRecords: chunk) {
+                    do {
+                        let fallback = try await retryHotelStayArchiveChunkWithoutPDFAssets(
+                            chunk,
+                            dryRunResult: dryRunResult
+                        )
+                        savedRecordNames.append(contentsOf: fallback.savedRecordNames)
+                        assetFallbackRecordNames.append(contentsOf: fallback.assetFallbackRecordNames)
+                        continue
+                    } catch {
+                        throw LedgerCloudKitSyncError.recordSaveRejected(
+                            recordName: firstRecord.recordName,
+                            fieldSummary: Self.fieldSummary(for: firstRecord),
+                            probeSummary: "\(probeSummary); asset-fallback failed",
+                            message: Self.describe(error)
+                        )
+                    }
+                }
                 throw LedgerCloudKitSyncError.recordSaveRejected(
                     recordName: firstRecord.recordName,
                     fieldSummary: Self.fieldSummary(for: firstRecord),
-                    probeSummary: "hotel-stay-archive-save",
+                    probeSummary: probeSummary,
                     message: Self.describe(error)
                 )
             }
@@ -351,7 +384,8 @@ struct LedgerCloudKitSyncAdapter {
             deletedRecordNames: [],
             upsertCount: dryRunResult.upsertCount,
             tombstoneCount: dryRunResult.tombstoneCount,
-            expiredTombstoneCount: 0
+            expiredTombstoneCount: 0,
+            assetFallbackRecordNames: assetFallbackRecordNames.sorted()
         )
     }
 
@@ -701,6 +735,81 @@ struct LedgerCloudKitSyncAdapter {
             return "minimal-save succeeded and probe deleted"
         } catch {
             return "minimal-save succeeded but probe delete failed (\(Self.describe(error)))"
+        }
+    }
+
+    private func retryHotelStayArchiveChunkWithoutPDFAssets(
+        _ chunk: [LedgerCloudKitMappedRecord],
+        dryRunResult: LedgerCloudKitDryRunResult
+    ) async throws -> LedgerCloudKitPushResult {
+        let strippedRecords = chunk.map(Self.removingHotelPDFAssets)
+        let recordsToSave = try strippedRecords.map { try makeCKRecord(from: $0) }
+        let result = try await modifyRecords(
+            recordsToSave: recordsToSave,
+            recordIDsToDelete: [],
+            dryRunResult: dryRunResult
+        )
+
+        return LedgerCloudKitPushResult(
+            savedRecordNames: result.savedRecordNames,
+            deletedRecordNames: result.deletedRecordNames,
+            upsertCount: result.upsertCount,
+            tombstoneCount: result.tombstoneCount,
+            expiredTombstoneCount: result.expiredTombstoneCount,
+            assetFallbackRecordNames: chunk
+                .filter { $0.fields[CloudLedgerSyncSchema.Field.sourcePDFAsset] != nil }
+                .map(\.recordName)
+                .sorted()
+        )
+    }
+
+    private static func removingHotelPDFAssets(from mappedRecord: LedgerCloudKitMappedRecord) -> LedgerCloudKitMappedRecord {
+        var fields = mappedRecord.fields
+        fields.removeValue(forKey: CloudLedgerSyncSchema.Field.sourcePDFAsset)
+        return LedgerCloudKitMappedRecord(
+            recordType: mappedRecord.recordType,
+            recordName: mappedRecord.recordName,
+            fields: fields
+        )
+    }
+
+    nonisolated private static func shouldRetryHotelStayArchiveWithoutPDFAssets(
+        _ error: Error,
+        mappedRecords: [LedgerCloudKitMappedRecord]
+    ) -> Bool {
+        guard mappedRecords.contains(where: {
+            $0.fields[CloudLedgerSyncSchema.Field.sourcePDFAsset] != nil
+        }) else {
+            return false
+        }
+
+        return isCloudKitRecordSchemaOrAssetRejection(error)
+    }
+
+    nonisolated private static func isCloudKitRecordSchemaOrAssetRejection(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == CKError.errorDomain,
+              let code = CKError.Code(rawValue: nsError.code) else {
+            return false
+        }
+
+        switch code {
+        case .invalidArguments,
+             .serverRejectedRequest,
+             .constraintViolation,
+             .limitExceeded,
+             .quotaExceeded,
+             .assetFileNotFound,
+             .assetFileModified:
+            return true
+        case .partialFailure:
+            guard let partialErrors = nsError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
+                  !partialErrors.isEmpty else {
+                return true
+            }
+            return partialErrors.values.contains { isCloudKitRecordSchemaOrAssetRejection($0) }
+        default:
+            return false
         }
     }
 

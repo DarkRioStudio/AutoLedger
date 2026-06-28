@@ -2824,6 +2824,11 @@ extension LedgerStore {
             records: hotelPushPayloads.records,
             drafts: hotelPushPayloads.drafts
         )
+        if !hotelPushResult.assetFallbackRecordNames.isEmpty {
+            updateLedgerCloudSyncStatus(
+                "酒店 PDF 附件暂未被 CloudKit 接收，已先同步结构化酒店数据；下次同步会继续重试 \(hotelPushResult.assetFallbackRecordNames.count) 个 PDF。"
+            )
+        }
 
         let shouldPushConfiguration = forceFull || lastPushAt == nil || ledgerConfigurationUpdatedAt > lastPushAt!
         var configurationSaved = false
@@ -2833,7 +2838,11 @@ extension LedgerStore {
             configurationSaved = !configurationResult.savedRecordNames.isEmpty
         }
 
-        recordCloudKitPushCheckpoint(batch.generatedAt)
+        if hotelPushResult.assetFallbackRecordNames.isEmpty {
+            recordCloudKitPushCheckpoint(batch.generatedAt)
+        } else {
+            clearCloudKitPushCheckpoint()
+        }
         return (
             pushMode: pushMode,
             savedCount: pushResult.savedRecordNames.count,
@@ -2968,7 +2977,11 @@ extension LedgerStore {
                 continue
             }
 
-            try sqlStore.save(hotelStayRecord: record)
+            let mergedRecord = mergeHotelStayRecordPreservingLocalPDF(
+                remote: record,
+                local: localRecordsByID[record.id]
+            )
+            try sqlStore.save(hotelStayRecord: mergedRecord)
             recordTombstones.removeValue(forKey: record.id)
             upserted += 1
         }
@@ -2995,7 +3008,11 @@ extension LedgerStore {
                 continue
             }
 
-            try sqlStore.save(hotelStayDraft: draft)
+            let mergedDraft = mergeHotelStayDraftPreservingLocalPDF(
+                remote: draft,
+                local: localDraftsByID[draft.id]
+            )
+            try sqlStore.save(hotelStayDraft: mergedDraft)
             draftTombstones.removeValue(forKey: draft.id)
             upserted += 1
         }
@@ -3009,6 +3026,36 @@ extension LedgerStore {
             deleted: deleted,
             keptLocal: keptLocal
         )
+    }
+
+    private func mergeHotelStayRecordPreservingLocalPDF(
+        remote record: HotelStayRecord,
+        local: HotelStayRecord?
+    ) -> HotelStayRecord {
+        guard (record.sourcePDFData?.isEmpty ?? true),
+              let localPDFData = local?.sourcePDFData,
+              !localPDFData.isEmpty else {
+            return record
+        }
+
+        var merged = record
+        merged.sourcePDFData = localPDFData
+        return merged
+    }
+
+    private func mergeHotelStayDraftPreservingLocalPDF(
+        remote draft: HotelStayDraft,
+        local: HotelStayDraft?
+    ) -> HotelStayDraft {
+        guard (draft.sourcePDFData?.isEmpty ?? true),
+              let localPDFData = local?.sourcePDFData,
+              !localPDFData.isEmpty else {
+            return draft
+        }
+
+        var merged = draft
+        merged.sourcePDFData = localPDFData
+        return merged
     }
 
     private func publishDashboardSnapshot(adapter: LedgerCloudKitSyncAdapter) async -> Bool {

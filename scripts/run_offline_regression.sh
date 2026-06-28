@@ -187,6 +187,7 @@ struct LedgerCloudKitAccountCheck {
 
 struct LedgerCloudKitPushResult {
     let savedRecordNames: [String]
+    var assetFallbackRecordNames: [String] = []
 }
 
 struct LedgerCloudKitSyncAdapter {

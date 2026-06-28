@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-280 酒店邮箱真实扫描与标题体系修复）
+更新日期：2026-06-28（ITER-281 酒店消费 iCloud PDF asset 降级同步）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-281 酒店消费 iCloud PDF asset 降级同步
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Data Reliability / iCloud Sync
+- 类型：Bugfix / 数据同步 / 测试
+- 目标：修复 TestFlight 中 iPhone 与 iPad 酒店消费数据不同步，强制刷新时在酒店消费全量推送阶段出现 `CloudKit rejected record save hotel-stay-*` 的问题。
+- 改动范围：`LedgerCloudKitSyncAdapter.pushHotelStayArchive` 在保存酒店记录 / 草稿失败时补充最小保存诊断，并在错误属于 CloudKit schema / asset / quota / limit / partial failure 且记录包含 `sourcePDFAsset` 时，自动移除 PDF asset 字段重试同一批酒店结构化数据；`LedgerCloudKitPushResult` 新增 `assetFallbackRecordNames` 标记本次降级的记录。`LedgerStore` 在发生 asset fallback 时提示用户“结构化酒店数据已先同步、PDF 后续继续重试”，并清空 push checkpoint，避免把 PDF 同步误标记为完成；远端拉取酒店记录 / 草稿时新增 merge helper，远端无 PDF 不覆盖本机已有 PDF。
+- 未改动范围：未取消酒店 PDF 同步目标，未修改 `HotelStayRecord` / `HotelStayDraft` 数据模型，未改 SQLite schema、CloudKit record type 名称、邮箱授权、酒店解析管线、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：CloudKit 生产环境即使暂时拒绝某条酒店 PDF asset，也不会阻塞 iPhone / iPad / Mac 同步酒店结构化记录；日志会保留具体 `CKError` 描述、字段摘要和 minimal-save probe，便于继续判断是否是 schema 字段类型、生产传播、单条 asset 或账号配额问题。本机已有酒店 PDF 在下一次拉取无 PDF 云端记录时会被保留。
+- 未完成内容：真实 CloudKit 生产环境是否已完全接受 `sourcePDFAsset` 仍需要 TestFlight 真机确认；若日志继续显示 asset fallback，需要检查 Production schema 中 `LedgerHotelStayRecord.sourcePDFAsset` 与 `LedgerHotelStayDraft.sourcePDFAsset` 是否均为 Asset 类型并已部署。
+- 测试情况：先更新 `scripts/check_cloudkit_hotel_pdf_asset_smoke.py`，观察到缺少 fallback / PDF 保留 helper 的 RED 失败；实现后执行 `python3 scripts/check_cloudkit_hotel_pdf_asset_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：asset fallback 是兼容降级，不是最终 PDF 同步成功信号；如果 CloudKit 仍拒绝 PDF，结构化数据会先同步，但原始 PDF 仍需等 schema / 字段类型 / 配额问题解除后通过后续全量推送补上。
+- 回滚方式：回退 `LedgerCloudKitSyncAdapter` 的酒店归档 fallback、`LedgerStore` 的 asset fallback 日志和 PDF 保留 merge、`scripts/check_cloudkit_hotel_pdf_asset_smoke.py`、`scripts/run_offline_regression.sh`、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：酒店消费 iCloud 同步不再被 PDF asset 单点阻断，iPhone / iPad 可以先完成结构化酒店数据对齐，PDF asset 继续按后续同步重试。
 
 ### ITER-280 酒店邮箱真实扫描与标题体系修复
 - 日期：2026-06-28
