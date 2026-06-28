@@ -528,6 +528,8 @@
 "ledger.detail.empty.title" = "选择一笔账单";
 "ledger.detail.empty.description" = "在左侧列表选择账单后，可在这里查看并编辑明细。";
 "ledger.scope.all" = "全部账本";
+"ledger.action.copy" = "复制账单";
+"ledger.action.copy.success_format" = "已复制账单：%@ %@。";
 "ledger.action.move" = "移动账本";
 "ledger.move.title" = "移动到账本";
 "ledger.move.error.unavailable_target" = "移动账单失败：目标账本不可用。";

@@ -531,6 +531,8 @@
 "ledger.detail.empty.title" = "選擇一筆帳單";
 "ledger.detail.empty.description" = "在左側列表選擇帳單後，可在這裡查看並編輯明細。";
 "ledger.scope.all" = "全部帳本";
+"ledger.action.copy" = "複製帳單";
+"ledger.action.copy.success_format" = "已複製帳單：%@ %@。";
 "ledger.action.move" = "移動帳本";
 "ledger.move.title" = "移動到帳本";
 "ledger.move.error.unavailable_target" = "移動帳單失敗：目標帳本不可用。";

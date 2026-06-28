@@ -2585,6 +2585,26 @@ struct OfflineRegression {
                 ledgerStore.visibleTransactions.map(\.id) == [selectedWriteTransaction.id, defaultTransaction.id],
                 "LedgerStore current ledger includes moved transaction"
             )
+
+            let hotelLinkedTransaction = Transaction(
+                merchant: "Linked Hotel",
+                amount: 1200,
+                occurredAt: date.addingTimeInterval(180),
+                category: .hotel,
+                source: .manual,
+                note: "linked hotel source",
+                ledgerID: travelLedger.id,
+                hotelStayRecordID: UUID(uuidString: "00000000-0000-0000-0000-000000001842") ?? UUID()
+            )
+            reporter.check(ledgerStore.addTransaction(hotelLinkedTransaction), "LedgerStore saves hotel-linked source transaction before duplicate")
+            if let duplicated = ledgerStore.duplicateTransaction(hotelLinkedTransaction) {
+                let storedDuplicate = try sqlStore.loadTransactions().first { $0.id == duplicated.id }
+                reporter.check(storedDuplicate?.id != hotelLinkedTransaction.id, "LedgerStore duplicated transaction receives a new id")
+                reporter.check(storedDuplicate?.ledgerID == travelLedger.id, "LedgerStore duplicated transaction preserves source ledger id")
+                reporter.check(storedDuplicate?.hotelStayRecordID == nil, "LedgerStore duplicated transaction does not copy hotel stay link")
+            } else {
+                reporter.check(false, "LedgerStore duplicates transaction")
+            }
         }
     }
 

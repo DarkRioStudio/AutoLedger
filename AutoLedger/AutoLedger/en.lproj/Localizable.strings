@@ -528,6 +528,8 @@
 "ledger.detail.empty.title" = "Select a transaction";
 "ledger.detail.empty.description" = "Choose a transaction from the list to view and edit its details here.";
 "ledger.scope.all" = "All Ledgers";
+"ledger.action.copy" = "Duplicate Transaction";
+"ledger.action.copy.success_format" = "Duplicated transaction: %@ %@.";
 "ledger.action.move" = "Move Ledger";
 "ledger.move.title" = "Move to Ledger";
 "ledger.move.error.unavailable_target" = "Could not move the transaction: the target ledger is unavailable.";

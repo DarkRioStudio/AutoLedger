@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-283 宽屏列表选中态增强）
+更新日期：2026-06-29（ITER-284 账本与酒店列表操作模型统一）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-284 账本与酒店列表操作模型统一
+- 日期：2026-06-29
+- 所属版本：v1.6.2
+- 所属阶段：SDK UI Polish / Adaptive Layout
+- 类型：能力增强 / UI / Bugfix
+- 目标：让账本账单数据列表和酒店消费数据列表采用一致的“滑动、长按、详情右上角菜单”操作模型，并把账本详情保存按钮从文字改成对勾。
+- 改动范围：`TransactionEditorView` 新增已有账单的右上角操作菜单，保存按钮改为 icon-only 对勾；`LedgerView` 列表新增复制账单，左侧滑动复制、右侧滑动删除，长按菜单与详情菜单共享复制 / 移动 / 删除；`LedgerStore` 新增 `duplicateTransaction`，复制时保留账本归属、不继承酒店关联 ID，并复用正式新增账单保存路径。`HotelStayListView` 补齐酒店记录行的滑动 / 长按删除入口并复用详情删除确认；旧 iPad / Mac 工作台的紧凑账单列表同步接入复制 / 删除入口；四语补齐复制账单文案。
+- 未改动范围：未修改 `Transaction` / `HotelStayRecord` 数据模型结构，未改 SQLite / CloudKit schema、酒店识别、邮箱导入、同步 schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：账本列表、账本详情和 iPad / Mac 紧凑账单列表的核心操作入口对齐；酒店消费列表不再只能进详情删除，列表行也能通过滑动或长按进入删除确认；`···` 点击即为系统菜单，不再引入额外展开层。
+- 未完成内容：未做真机手势目检；复制账单当前是立即生成一笔同内容账单并选中新账单，不会先弹出二次确认。
+- 测试情况：执行 `git diff --check`、`python3 scripts/check_localization_coverage.py`、`python3 scripts/check_adaptive_layout_rules.py`、`bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：复制账单会复用原账单日期、金额、商户、分类、来源和备注，适合复制后再编辑；如果用户希望复制时默认改为当前时间，可在后续单独调整。酒店删除仍需要确认，避免误触删除关联普通流水。
+- 回滚方式：回退 `LedgerStore.duplicateTransaction`、`TransactionEditorView` 菜单回调、`LedgerView` / `HotelStayArchiveView` / `iPadWorkspaceView` 的滑动与 context menu、四语复制文案、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：账本账单和酒店消费的主要列表操作模型已统一，宽屏双栏和移动端列表都能通过同类入口完成常用操作。
+- 下一步建议：在 TestFlight 真机上检查账本列表左 / 右滑、长按菜单、详情 `···`，以及酒店消费列表滑动 / 长按删除确认。
 
 ### ITER-283 宽屏列表选中态增强
 - 日期：2026-06-28

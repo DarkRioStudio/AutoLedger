@@ -11,6 +11,9 @@ struct TransactionEditorView: View {
     var showsCancelButton = true
     var dismissesOnSave = true
     var onCancel: (() -> Void)?
+    var onDuplicate: ((Transaction) -> Void)?
+    var onMove: ((Transaction) -> Void)?
+    var onDelete: ((Transaction) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
@@ -42,6 +45,9 @@ struct TransactionEditorView: View {
         showsCancelButton: Bool = true,
         dismissesOnSave: Bool = true,
         onCancel: (() -> Void)? = nil,
+        onDuplicate: ((Transaction) -> Void)? = nil,
+        onMove: ((Transaction) -> Void)? = nil,
+        onDelete: ((Transaction) -> Void)? = nil,
         onSave: @escaping (Transaction, Bool, Bool) -> Bool
     ) {
         self.transaction = transaction
@@ -50,6 +56,9 @@ struct TransactionEditorView: View {
         self.showsCancelButton = showsCancelButton
         self.dismissesOnSave = dismissesOnSave
         self.onCancel = onCancel
+        self.onDuplicate = onDuplicate
+        self.onMove = onMove
+        self.onDelete = onDelete
         self.onSave = onSave
         _merchant = State(initialValue: transaction.merchant)
         _amountText = State(initialValue: isNew ? "" : String(format: "%.2f", transaction.amount))
@@ -145,10 +154,20 @@ struct TransactionEditorView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save") {
+                    Button {
                         prepareSave()
+                    } label: {
+                        Label("common.save", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
+                    .accessibilityLabel(Text("common.save"))
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                if showsTransactionActionMenu {
+                    ToolbarItem(placement: .secondaryAction) {
+                        transactionActionMenu
+                    }
                 }
             }
             .alert("transaction_editor.category_refresh.title", isPresented: $showCategoryRefreshPrompt, presenting: pendingSave) { updated in
@@ -208,6 +227,47 @@ struct TransactionEditorView: View {
             } message: {
                 Text(subscriptionCreatedMessage ?? "")
             }
+    }
+
+    private var showsTransactionActionMenu: Bool {
+        !isNew && (onDuplicate != nil || onMove != nil || onDelete != nil)
+    }
+
+    private var transactionActionMenu: some View {
+        Menu {
+            if let onDuplicate {
+                Button {
+                    onDuplicate(transaction)
+                } label: {
+                    Label("ledger.action.copy", systemImage: "doc.on.doc")
+                }
+            }
+
+            if let onMove {
+                Button {
+                    onMove(transaction)
+                } label: {
+                    Label("ledger.action.move", systemImage: "folder")
+                }
+            }
+
+            if let onDelete {
+                if onDuplicate != nil || onMove != nil {
+                    Divider()
+                }
+
+                Button(role: .destructive) {
+                    onDelete(transaction)
+                    dismiss()
+                } label: {
+                    Label("common.delete", systemImage: "trash")
+                }
+            }
+        } label: {
+            Label("common.more_actions", systemImage: "ellipsis.circle")
+                .labelStyle(.iconOnly)
+        }
+        .accessibilityLabel(Text("common.more_actions"))
     }
 
     private var parsedAmount: Double {

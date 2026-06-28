@@ -23,6 +23,7 @@ struct HotelStayListView: View {
     let onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
     @Binding private var selectedRecordID: UUID?
+    @State private var pendingDeleteRecord: HotelStayRecord?
 
     private let presenter = HotelStayArchivePresenter()
 
@@ -120,6 +121,25 @@ struct HotelStayListView: View {
         }
         .onChange(of: horizontalSizeClass) { _, _ in
             reconcileSelection()
+        }
+        .confirmationDialog(
+            "hotel_stay.delete.confirm.title",
+            isPresented: Binding(
+                get: { pendingDeleteRecord != nil },
+                set: { if !$0 { pendingDeleteRecord = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let pendingDeleteRecord {
+                Button("hotel_stay.delete.confirm.action", role: .destructive) {
+                    deleteRecord(pendingDeleteRecord)
+                }
+            }
+            Button("common.cancel", role: .cancel) {
+                pendingDeleteRecord = nil
+            }
+        } message: {
+            Text("hotel_stay.delete.confirm.message")
         }
     }
 
@@ -261,11 +281,23 @@ struct HotelStayListView: View {
         Section {
             let recordsByID = recordByID
             ForEach(snapshot.rows) { row in
-                if recordsByID[row.id] != nil {
+                if let record = recordsByID[row.id] {
                     NavigationLink(value: row.id) {
                         HotelStayRowView(row: row)
                     }
                     .autoLedgerSelectableRowBackground(selectedRecordID == row.id)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if onDeleteRecord != nil {
+                            Button(role: .destructive) {
+                                pendingDeleteRecord = record
+                            } label: {
+                                Label("hotel_stay.delete.button", systemImage: "trash")
+                            }
+                        }
+                    }
+                    .contextMenu {
+                        hotelRecordActionItems(for: record)
+                    }
                 }
             }
         } header: {
@@ -290,6 +322,17 @@ struct HotelStayListView: View {
             Text("hotel_stay.list.section.pending_drafts")
         } footer: {
             Text(String(format: String(localized: "hotel_stay.list.pending_drafts.footer_format"), pendingDrafts.count))
+        }
+    }
+
+    @ViewBuilder
+    private func hotelRecordActionItems(for record: HotelStayRecord) -> some View {
+        if onDeleteRecord != nil {
+            Button(role: .destructive) {
+                pendingDeleteRecord = record
+            } label: {
+                Label("hotel_stay.delete.button", systemImage: "trash")
+            }
         }
     }
 
@@ -319,6 +362,25 @@ struct HotelStayListView: View {
         }
 
         selectedRecordID = horizontalSizeClass == .regular ? rowIDs.first : nil
+    }
+
+    private func deleteRecord(_ record: HotelStayRecord) {
+        let nextID = nextSelectionID(afterDeleting: record)
+        if onDeleteRecord?(record) == true,
+           selectedRecordID == record.id {
+            selectedRecordID = horizontalSizeClass == .regular ? nextID : nil
+        }
+        pendingDeleteRecord = nil
+    }
+
+    private func nextSelectionID(afterDeleting record: HotelStayRecord) -> UUID? {
+        let rowIDs = snapshot.rows.map(\.id).filter { $0 != record.id }
+        guard !rowIDs.isEmpty else { return nil }
+        let originalRows = snapshot.rows.map(\.id)
+        guard let deletedIndex = originalRows.firstIndex(of: record.id) else {
+            return rowIDs.first
+        }
+        return rowIDs[min(deletedIndex, rowIDs.count - 1)]
     }
 }
 

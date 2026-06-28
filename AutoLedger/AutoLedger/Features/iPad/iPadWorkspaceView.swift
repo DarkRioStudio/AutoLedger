@@ -3157,7 +3157,15 @@ private struct IPadLedgerWorkspaceView: View {
                 consumePendingNewTransactionIfNeeded()
             }
             .sheet(item: $editingTransaction) { transaction in
-                TransactionEditorView(transaction: transaction) { updated, refreshSameMerchantCategory, saveMerchantAlias in
+                TransactionEditorView(
+                    transaction: transaction,
+                    onDuplicate: { transaction in
+                        duplicateTransaction(transaction)
+                    },
+                    onDelete: { transaction in
+                        deleteTransaction(transaction)
+                    }
+                ) { updated, refreshSameMerchantCategory, saveMerchantAlias in
                     let didSave = store.updateTransaction(
                         updated,
                         refreshSameMerchantCategory: refreshSameMerchantCategory,
@@ -3261,6 +3269,42 @@ private struct IPadLedgerWorkspaceView: View {
                     }
                     .buttonStyle(.plain)
                     .autoLedgerSelectableRowBackground(selectedTransactionID == transaction.id)
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        Button {
+                            duplicateTransaction(transaction)
+                        } label: {
+                            Label("ledger.action.copy", systemImage: "doc.on.doc")
+                        }
+                        .tint(AppTheme.accent)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            deleteTransaction(transaction)
+                        } label: {
+                            Label("common.delete", systemImage: "trash")
+                        }
+                    }
+                    .contextMenu {
+                        Button {
+                            duplicateTransaction(transaction)
+                        } label: {
+                            Label("ledger.action.copy", systemImage: "doc.on.doc")
+                        }
+
+                        Button {
+                            editingTransaction = transaction
+                        } label: {
+                            Label("common.edit", systemImage: "square.and.pencil")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            deleteTransaction(transaction)
+                        } label: {
+                            Label("common.delete", systemImage: "trash")
+                        }
+                    }
                 }
             } header: {
                 Text(String(format: String(localized: "ledger.footer_format"), transactions.count))
@@ -3277,14 +3321,23 @@ private struct IPadLedgerWorkspaceView: View {
         IPadTransactionInspector(
             transaction: selectedTransaction,
             edit: { transaction in editingTransaction = transaction },
-            delete: { transaction in
-                store.deleteTransaction(transaction)
-                selectedTransactionIDs.remove(transaction.id)
-                if selectedTransactionID == transaction.id {
-                    selectedTransactionID = filteredTransactions.first(where: { $0.id != transaction.id })?.id
-                }
-            }
+            duplicate: duplicateTransaction,
+            delete: deleteTransaction
         )
+    }
+
+    private func duplicateTransaction(_ transaction: Transaction) {
+        guard let duplicated = store.duplicateTransaction(transaction) else { return }
+        selectedTransactionID = duplicated.id
+        selectedTransactionIDs = [duplicated.id]
+    }
+
+    private func deleteTransaction(_ transaction: Transaction) {
+        store.deleteTransaction(transaction)
+        selectedTransactionIDs.remove(transaction.id)
+        if selectedTransactionID == transaction.id {
+            selectedTransactionID = filteredTransactions.first(where: { $0.id != transaction.id })?.id
+        }
     }
 
     private var ledgerScopeMenu: some View {
@@ -3749,6 +3802,7 @@ private struct IPadTransactionCompactRow: View {
 private struct IPadTransactionInspector: View {
     let transaction: Transaction?
     let edit: (Transaction) -> Void
+    let duplicate: (Transaction) -> Void
     let delete: (Transaction) -> Void
 
     var body: some View {
@@ -3799,6 +3853,13 @@ private struct IPadTransactionInspector: View {
                         }
 
                         HStack(spacing: 12) {
+                            Button {
+                                duplicate(transaction)
+                            } label: {
+                                Label("ledger.action.copy", systemImage: "doc.on.doc")
+                            }
+                            .buttonStyle(.bordered)
+
                             Button {
                                 edit(transaction)
                             } label: {

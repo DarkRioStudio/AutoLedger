@@ -198,32 +198,23 @@ struct LedgerView: View {
                                 .autoLedgerSelectableRowBackground(
                                     navigationState.selectedLedgerTransactionID == transaction.id
                                 )
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        duplicateTransaction(transaction)
+                                    } label: {
+                                        Label("ledger.action.copy", systemImage: "doc.on.doc")
+                                    }
+                                    .tint(AppTheme.accent)
+                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                     Button(role: .destructive) {
                                         deleteTransaction(transaction)
                                     } label: {
                                         Label("common.delete", systemImage: "trash")
                                     }
-
-                                    Button {
-                                        navigationState.ledgerTransactionPendingMove = transaction
-                                    } label: {
-                                        Label("ledger.action.move", systemImage: "folder")
-                                    }
-                                    .tint(AppTheme.accent)
                                 }
                                 .contextMenu {
-                                    Button {
-                                        navigationState.ledgerTransactionPendingMove = transaction
-                                    } label: {
-                                        Label("ledger.action.move", systemImage: "folder")
-                                    }
-
-                                    Button(role: .destructive) {
-                                        deleteTransaction(transaction)
-                                    } label: {
-                                        Label("common.delete", systemImage: "trash")
-                                    }
+                                    transactionActionItems(for: transaction)
                                 }
                         }
                     }
@@ -410,7 +401,16 @@ struct LedgerView: View {
                 transaction: transaction,
                 usesNavigationStack: false,
                 showsCancelButton: false,
-                dismissesOnSave: !prefersPersistentDetail
+                dismissesOnSave: !prefersPersistentDetail,
+                onDuplicate: { transaction in
+                    duplicateTransaction(transaction)
+                },
+                onMove: { transaction in
+                    navigationState.ledgerTransactionPendingMove = transaction
+                },
+                onDelete: { transaction in
+                    deleteTransaction(transaction)
+                }
             ) { updated, refreshSameMerchantCategory, saveMerchantAlias in
                 let didSave = store.updateTransaction(
                     updated,
@@ -431,6 +431,29 @@ struct LedgerView: View {
                 description: Text("ledger.detail.empty.description")
             )
             .autoLedgerScreenChrome()
+        }
+    }
+
+    @ViewBuilder
+    private func transactionActionItems(for transaction: Transaction) -> some View {
+        Button {
+            duplicateTransaction(transaction)
+        } label: {
+            Label("ledger.action.copy", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            navigationState.ledgerTransactionPendingMove = transaction
+        } label: {
+            Label("ledger.action.move", systemImage: "folder")
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            deleteTransaction(transaction)
+        } label: {
+            Label("common.delete", systemImage: "trash")
         }
     }
 
@@ -474,6 +497,11 @@ struct LedgerView: View {
         if navigationState.selectedLedgerTransactionID == transaction.id {
             navigationState.selectedLedgerTransactionID = prefersPersistentDetail ? nextID : nil
         }
+    }
+
+    private func duplicateTransaction(_ transaction: Transaction) {
+        guard let duplicated = store.duplicateTransaction(transaction) else { return }
+        navigationState.selectedLedgerTransactionID = duplicated.id
     }
 
     private func nextSelectionID(afterDeleting transaction: Transaction) -> UUID? {

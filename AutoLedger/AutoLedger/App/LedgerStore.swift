@@ -765,6 +765,30 @@ final class LedgerStore: ObservableObject {
     }
 
     @discardableResult
+    func duplicateTransaction(_ transaction: Transaction) -> Transaction? {
+        let duplicated = Transaction(
+            merchant: transaction.merchant,
+            amount: transaction.amount,
+            occurredAt: transaction.occurredAt,
+            categoryLabel: transaction.category,
+            sourceLabel: transaction.source,
+            note: transaction.note,
+            ledgerID: transaction.resolvedLedgerID(),
+            hotelStayRecordID: nil
+        )
+        guard addTransaction(duplicated) else { return nil }
+        lastImportSummary = String(
+            format: localizedMessage(
+                "ledger.action.copy.success_format",
+                fallback: "已复制账单：%@ %@。"
+            ),
+            duplicated.merchant,
+            AppFormatters.currency(duplicated.amount)
+        )
+        return duplicated
+    }
+
+    @discardableResult
     func moveTransaction(_ transaction: Transaction, toLedgerID ledgerID: String) -> Bool {
         let trimmedLedgerID = ledgerID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedLedgerID.isEmpty,
