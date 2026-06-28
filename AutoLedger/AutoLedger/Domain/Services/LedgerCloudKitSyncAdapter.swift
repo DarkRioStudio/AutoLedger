@@ -221,7 +221,7 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchTransactionRecords(cursor: nil, accumulated: [])
+        return try await fetchDefaultZonePayloads(mapRecord: Self.mapPayload)
     }
 
     func pushConfiguration(_ payload: LedgerConfigurationSyncPayload) async throws -> LedgerCloudKitPushResult {
@@ -365,7 +365,7 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchHotelStayRecordPayloads(cursor: nil, accumulated: [])
+        return try await fetchDefaultZonePayloads(mapRecord: Self.mapHotelStayRecordPayload)
     }
 
     func fetchAllHotelStayDrafts() async throws -> [LedgerHotelStayDraftSyncPayload] {
@@ -381,7 +381,7 @@ struct LedgerCloudKitSyncAdapter {
             throw LedgerCloudKitSyncError.accountUnavailable(accountCheck.state)
         }
 
-        return try await fetchHotelStayDraftPayloads(cursor: nil, accumulated: [])
+        return try await fetchDefaultZonePayloads(mapRecord: Self.mapHotelStayDraftPayload)
     }
 
     func pushDashboardSnapshot(_ payload: LedgerDashboardCloudSnapshot) async throws -> LedgerCloudKitPushResult {
@@ -635,138 +635,35 @@ struct LedgerCloudKitSyncAdapter {
         }
     }
 
-    private func fetchTransactionRecords(
-        cursor: CKQueryOperation.Cursor?,
-        accumulated: [LedgerTransactionSyncPayload]
-    ) async throws -> [LedgerTransactionSyncPayload] {
+    private func fetchDefaultZonePayloads<Payload>(
+        mapRecord: @escaping (CKRecord) -> Payload?
+    ) async throws -> [Payload] {
         try await withCheckedThrowingContinuation { continuation in
-            let operation: CKQueryOperation
-            if let cursor {
-                operation = CKQueryOperation(cursor: cursor)
-            } else {
-                let query = CKQuery(
-                    recordType: CloudLedgerSyncSchema.RecordType.transaction,
-                    predicate: NSPredicate(value: true)
-                )
-                operation = CKQueryOperation(query: query)
-            }
+            let zoneID = CKRecordZone.default().zoneID
+            let configuration = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+            configuration.resultsLimit = Self.operationRecordLimit
 
-            var records = accumulated
-            operation.resultsLimit = Self.operationRecordLimit
-            operation.recordFetchedBlock = { record in
-                if let payload = Self.mapPayload(from: record) {
+            let operation = CKFetchRecordZoneChangesOperation(
+                recordZoneIDs: [zoneID],
+                configurationsByRecordZoneID: [zoneID: configuration]
+            )
+            operation.fetchAllChanges = true
+
+            var records: [Payload] = []
+            var zoneError: Error?
+            operation.recordChangedBlock = { record in
+                if let payload = mapRecord(record) {
                     records.append(payload)
                 }
             }
-            operation.queryCompletionBlock = { cursor, error in
+            operation.recordZoneFetchCompletionBlock = { _, _, _, _, error in
                 if let error {
+                    zoneError = error
+                }
+            }
+            operation.fetchRecordZoneChangesCompletionBlock = { error in
+                if let error = error ?? zoneError {
                     continuation.resume(throwing: error)
-                    return
-                }
-
-                if let cursor {
-                    Task {
-                        do {
-                            let next = try await fetchTransactionRecords(cursor: cursor, accumulated: records)
-                            continuation.resume(returning: next)
-                        } catch {
-                            continuation.resume(throwing: error)
-                        }
-                    }
-                } else {
-                    continuation.resume(returning: records)
-                }
-            }
-
-            database.add(operation)
-        }
-    }
-
-    private func fetchHotelStayRecordPayloads(
-        cursor: CKQueryOperation.Cursor?,
-        accumulated: [LedgerHotelStayRecordSyncPayload]
-    ) async throws -> [LedgerHotelStayRecordSyncPayload] {
-        try await withCheckedThrowingContinuation { continuation in
-            let operation: CKQueryOperation
-            if let cursor {
-                operation = CKQueryOperation(cursor: cursor)
-            } else {
-                let query = CKQuery(
-                    recordType: CloudLedgerSyncSchema.RecordType.hotelStayRecord,
-                    predicate: NSPredicate(value: true)
-                )
-                operation = CKQueryOperation(query: query)
-            }
-
-            var records = accumulated
-            operation.resultsLimit = Self.operationRecordLimit
-            operation.recordFetchedBlock = { record in
-                if let payload = Self.mapHotelStayRecordPayload(from: record) {
-                    records.append(payload)
-                }
-            }
-            operation.queryCompletionBlock = { cursor, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                if let cursor {
-                    Task {
-                        do {
-                            let next = try await fetchHotelStayRecordPayloads(cursor: cursor, accumulated: records)
-                            continuation.resume(returning: next)
-                        } catch {
-                            continuation.resume(throwing: error)
-                        }
-                    }
-                } else {
-                    continuation.resume(returning: records)
-                }
-            }
-
-            database.add(operation)
-        }
-    }
-
-    private func fetchHotelStayDraftPayloads(
-        cursor: CKQueryOperation.Cursor?,
-        accumulated: [LedgerHotelStayDraftSyncPayload]
-    ) async throws -> [LedgerHotelStayDraftSyncPayload] {
-        try await withCheckedThrowingContinuation { continuation in
-            let operation: CKQueryOperation
-            if let cursor {
-                operation = CKQueryOperation(cursor: cursor)
-            } else {
-                let query = CKQuery(
-                    recordType: CloudLedgerSyncSchema.RecordType.hotelStayDraft,
-                    predicate: NSPredicate(value: true)
-                )
-                operation = CKQueryOperation(query: query)
-            }
-
-            var records = accumulated
-            operation.resultsLimit = Self.operationRecordLimit
-            operation.recordFetchedBlock = { record in
-                if let payload = Self.mapHotelStayDraftPayload(from: record) {
-                    records.append(payload)
-                }
-            }
-            operation.queryCompletionBlock = { cursor, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                if let cursor {
-                    Task {
-                        do {
-                            let next = try await fetchHotelStayDraftPayloads(cursor: cursor, accumulated: records)
-                            continuation.resume(returning: next)
-                        } catch {
-                            continuation.resume(throwing: error)
-                        }
-                    }
                 } else {
                     continuation.resume(returning: records)
                 }
