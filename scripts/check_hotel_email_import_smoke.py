@@ -30,8 +30,6 @@ REQUIRED_SERVICE_SNIPPETS = [
     "HotelFolioEmailScanPhase",
     "operationTimeoutSeconds",
     "withIMAPTimeout(operation:",
-    "keywordSearching",
-    "keywordSearchCompleted",
     "HotelFolioIMAPResponseScanner",
     "isTaggedResponseComplete",
     "literalLength(in:",
@@ -42,12 +40,20 @@ REQUIRED_SERVICE_SNIPPETS = [
     # Keep this exact pattern guarded because QQ/other IMAP providers vary.
     r'#"(?:~)?\{(\d+)\+?\}\r?\n"#',
     "hotel_stay.email.error.invalid_response_format",
+    "UID SEARCH SINCE",
+    "pdfAttachmentMessage(",
+    "candidates.count >= settings.maxMessages",
+    "扫描时间窗内全部邮件",
+    ".candidateAccepted(subject:",
+    ".completed(candidates.count)",
+]
+
+FORBIDDEN_SERVICE_SNIPPETS = [
     "searchHotelCandidateUIDs(since:",
     "candidateSearchCriteria",
     "mergeCandidateUIDs(",
-    "UID SEARCH SINCE",
-    ".candidateAccepted(subject:",
-    ".completed(candidates.count)",
+    "keywordSearching",
+    "keywordSearchCompleted",
 ]
 
 FORBIDDEN_SNIPPETS = [
@@ -90,6 +96,10 @@ def main() -> int:
     for snippet in REQUIRED_SERVICE_SNIPPETS:
         if snippet not in service:
             failures.append(f"missing hotel email scan reliability snippet: {snippet}")
+
+    for snippet in FORBIDDEN_SERVICE_SNIPPETS:
+        if snippet in service:
+            failures.append(f"keyword-scoped hotel email scan snippet still present: {snippet}")
 
     if "check_hotel_email_import_smoke.py" not in runner:
         failures.append("offline regression does not run hotel email import smoke")
