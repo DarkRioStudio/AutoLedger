@@ -53,6 +53,14 @@ struct AutoLedgerApp: App {
 }
 
 private struct AutoLedgerRootView: View {
+    private struct HotelFolioDraftReviewRequest: Codable {
+        let draftID: UUID
+        let createdAt: Date
+    }
+
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
+    private static let hotelFolioDraftReviewKey = "share_pendingHotelFolioDraftReview.v1"
+
     @StateObject private var store = LedgerStore()
     @StateObject private var navigationState = AutoLedgerNavigationState()
     @Environment(\.scenePhase) private var scenePhase
@@ -101,6 +109,7 @@ private struct AutoLedgerRootView: View {
             }
             .onOpenURL { url in
                 _ = navigationState.openDeepLink(url, store: store)
+                consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
@@ -117,6 +126,7 @@ private struct AutoLedgerRootView: View {
                     if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
                         store.attemptClipboardImport()
                     }
+                    consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
                     consumeAppIntentNavigationHandoffIfNeeded()
                     consumeClipboardImportIntentHandoffIfNeeded()
                     // 订阅提醒通知调度
@@ -131,6 +141,7 @@ private struct AutoLedgerRootView: View {
             .onAppear {
                 consumeAppIntentNavigationHandoffIfNeeded()
                 consumeStructuredJSONHandoffIfNeeded()
+                consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
                 consumeClipboardImportIntentHandoffIfNeeded()
             }
     }
@@ -187,6 +198,19 @@ private struct AutoLedgerRootView: View {
     }
 
     @MainActor
+    private func consumeSharedHotelFolioDraftReviewHandoffIfNeeded() {
+        guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier),
+              let data = defaults.data(forKey: Self.hotelFolioDraftReviewKey),
+              let request = try? JSONDecoder().decode(HotelFolioDraftReviewRequest.self, from: data) else {
+            return
+        }
+
+        defaults.removeObject(forKey: Self.hotelFolioDraftReviewKey)
+        store.refreshFromStore()
+        navigationState.openHotelReviewQueue(draftID: request.draftID)
+    }
+
+    @MainActor
     private func consumeAppIntentNavigationHandoffIfNeeded() {
         guard let request = AutoLedgerIntentNavigationHandoff.consume() else { return }
         switch request.destination {
@@ -201,7 +225,7 @@ private struct AutoLedgerRootView: View {
         case .receiptScan:
             navigationState.selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
         case .hotelReviewQueue:
-            navigationState.selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
+            navigationState.openHotelReviewQueue()
         }
     }
 

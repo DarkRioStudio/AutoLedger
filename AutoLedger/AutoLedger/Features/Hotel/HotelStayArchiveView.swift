@@ -231,12 +231,23 @@ struct HotelStayListView: View {
                 )
                 summaryMetric(
                     titleKey: "hotel_stay.list.summary.average",
-                    value: snapshot.averageNightlyRate.map { String(format: "%.0f", $0) } ?? "-"
+                    value: averageNightlyRateText
                 )
             }
             .padding(.vertical, 4)
             .listRowBackground(AppTheme.card)
         }
+    }
+
+    private var averageNightlyRateText: String {
+        if snapshot.hasMixedCurrencies {
+            return String(localized: "hotel_stay.list.summary.average_mixed_currency")
+        }
+        guard let averageNightlyRate = snapshot.averageNightlyRate,
+              let currency = snapshot.averageNightlyRateCurrency else {
+            return "-"
+        }
+        return presenter.localizedAmountText(averageNightlyRate, currency: currency)
     }
 
     private var staySection: some View {
@@ -510,6 +521,7 @@ struct HotelStayDetailView: View {
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
+    private let rawTextLocalizer = HotelFolioRawTextLocalizer()
 
     init(
         record: HotelStayRecord,
@@ -649,13 +661,21 @@ struct HotelStayDetailView: View {
     private var rawTextSection: some View {
         Section("hotel_stay.detail.raw_text") {
             ScrollView {
-                Text(snapshot.rawText.isEmpty ? String(localized: "hotel_stay.detail.raw_text.empty") : snapshot.rawText)
+                Text(localizedRawText)
                     .font(.footnote.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
             .frame(minHeight: 120)
         }
+    }
+
+    private var localizedRawText: String {
+        let rawText = snapshot.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawText.isEmpty else {
+            return String(localized: "hotel_stay.detail.raw_text.empty")
+        }
+        return rawTextLocalizer.localizedText(rawText)
     }
 
     private func displayValue(for field: HotelStayDetailField) -> String {

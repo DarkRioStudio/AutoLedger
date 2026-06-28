@@ -10,6 +10,7 @@ struct HotelStayReviewView: View {
 
     @State private var form: HotelStayReviewForm
     @State private var validationMessageKey: String?
+    private let rawTextLocalizer = HotelFolioRawTextLocalizer()
 
     init(
         draft: HotelStayDraft,
@@ -142,13 +143,21 @@ struct HotelStayReviewView: View {
     private var rawTextSection: some View {
         Section("hotel_stay.review.raw_text") {
             ScrollView {
-                Text(form.rawText.isEmpty ? String(localized: "hotel_stay.review.raw_text.empty") : form.rawText)
+                Text(localizedRawText)
                     .font(.footnote.monospaced())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
             .frame(minHeight: 120)
         }
+    }
+
+    private var localizedRawText: String {
+        let rawText = form.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawText.isEmpty else {
+            return String(localized: "hotel_stay.review.raw_text.empty")
+        }
+        return rawTextLocalizer.localizedText(rawText)
     }
 
     private func confirmDraft() {

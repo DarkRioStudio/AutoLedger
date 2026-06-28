@@ -1,4 +1,5 @@
 "share.status.recognizing" = "正在識別…";
+"share.error.no_supported_item" = "未找到可識別的圖片或 PDF";
 "share.error.no_image" = "未找到圖片";
 "share.error.read_image_failed" = "讀取圖片失敗";
 "share.error.ocr_failed_format" = "OCR 失敗：%@";
@@ -11,3 +12,9 @@
 "share.error.persistence_failed" = "入帳失敗，請開啟 App 確認";
 "share.debug.parse_failed" = "Share Extension 解析失敗";
 "share.debug.persistence_failed_format" = "入帳失敗：%@";
+"share.hotel_folio.status.extracting" = "正在讀取酒店水單 PDF…";
+"share.hotel_folio.saved" = "已接收酒店水單，正在開啟 AutoLedger 複核。";
+"share.hotel_folio.error_format" = "酒店水單匯入失敗：%@";
+"share.hotel_folio.error.read_failed" = "讀取 PDF 失敗";
+"share.hotel_folio.error.cannot_open_pdf" = "無法開啟 PDF 檔案";
+"share.hotel_folio.error.empty_text" = "PDF 中未擷取到可識別文字";

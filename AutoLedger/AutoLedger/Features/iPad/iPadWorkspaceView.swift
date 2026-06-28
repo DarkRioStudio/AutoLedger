@@ -2494,6 +2494,15 @@ struct HotelStayWorkspaceView: View {
                 }
             )
         }
+        .onAppear {
+            consumePendingDraftReviewIfNeeded()
+        }
+        .onChange(of: navigationState.pendingHotelStayDraftReviewID) { _, _ in
+            consumePendingDraftReviewIfNeeded()
+        }
+        .onChange(of: store.hotelStayDrafts.map(\.id)) { _, _ in
+            consumePendingDraftReviewIfNeeded()
+        }
     }
 
     @MainActor
@@ -2551,6 +2560,26 @@ struct HotelStayWorkspaceView: View {
             reviewDraft = preparedDraft
         } else {
             statusMessage = store.lastImportSummary
+        }
+    }
+
+    @MainActor
+    private func consumePendingDraftReviewIfNeeded() {
+        guard !isImporting,
+              reviewDraft == nil,
+              let draftID = navigationState.pendingHotelStayDraftReviewID,
+              let draft = store.hotelStayDrafts.first(where: { $0.id == draftID }) else {
+            return
+        }
+
+        navigationState.pendingHotelStayDraftReviewID = nil
+        if draft.status == .needsReview || draft.parsedPayload != nil {
+            reviewDraft = draft
+            return
+        }
+
+        Task {
+            await prepareDraftForReview(draft)
         }
     }
 }

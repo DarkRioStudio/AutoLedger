@@ -117,6 +117,7 @@
 "hotel_stay.list.summary.count" = "記錄";
 "hotel_stay.list.summary.nights" = "晚數";
 "hotel_stay.list.summary.average" = "平均每晚";
+"hotel_stay.list.summary.average_mixed_currency" = "多幣種";
 "hotel_stay.list.section.pending_drafts" = "待確認酒店水單";
 "hotel_stay.list.pending_drafts.footer_format" = "共 %d 筆待確認酒店水單。";
 "hotel_stay.list.section.records" = "酒店消費記錄";

@@ -117,6 +117,7 @@
 "hotel_stay.list.summary.count" = "Records";
 "hotel_stay.list.summary.nights" = "Nights";
 "hotel_stay.list.summary.average" = "Avg / Night";
+"hotel_stay.list.summary.average_mixed_currency" = "Multi-currency";
 "hotel_stay.list.section.pending_drafts" = "Pending Hotel Folios";
 "hotel_stay.list.pending_drafts.footer_format" = "%d hotel folios waiting for review.";
 "hotel_stay.list.section.records" = "Hotel Stay Records";

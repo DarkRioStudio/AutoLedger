@@ -82,17 +82,23 @@ public struct HotelStayListSnapshot: Equatable, Sendable {
     public var totalNights: Int
     public var totalAmount: Double
     public var averageNightlyRate: Double?
+    public var averageNightlyRateCurrency: String?
+    public var hasMixedCurrencies: Bool
 
     public init(
         rows: [HotelStayListRow],
         totalNights: Int,
         totalAmount: Double,
-        averageNightlyRate: Double?
+        averageNightlyRate: Double?,
+        averageNightlyRateCurrency: String? = nil,
+        hasMixedCurrencies: Bool = false
     ) {
         self.rows = rows
         self.totalNights = totalNights
         self.totalAmount = totalAmount
         self.averageNightlyRate = averageNightlyRate
+        self.averageNightlyRateCurrency = averageNightlyRateCurrency
+        self.hasMixedCurrencies = hasMixedCurrencies
     }
 }
 
@@ -127,6 +133,10 @@ public struct HotelStayDetailSnapshot: Equatable, Sendable {
 public struct HotelStayArchivePresenter: Sendable {
     public init() {}
 
+    public func localizedAmountText(_ amount: Double, currency: String) -> String {
+        amountText(amount, currency: currency)
+    }
+
     public func makeListSnapshot(records: [HotelStayRecord], ledgerID: String? = nil) -> HotelStayListSnapshot {
         let records = filtered(records: records, ledgerID: ledgerID)
         let sorted = records.sorted { lhs, rhs in
@@ -135,12 +145,16 @@ public struct HotelStayArchivePresenter: Sendable {
         let rows = sorted.map(makeRow)
         let totalNights = records.reduce(0) { $0 + ($1.nights ?? 0) }
         let totalAmount = records.reduce(0) { $0 + $1.totalAmount }
-        let averageNightlyRate = totalNights > 0 ? totalAmount / Double(totalNights) : nil
+        let currencies = Set(records.compactMap { normalizedCurrencyCode($0.currency) })
+        let hasMixedCurrencies = currencies.count > 1
+        let averageNightlyRate = totalNights > 0 && !hasMixedCurrencies ? totalAmount / Double(totalNights) : nil
         return HotelStayListSnapshot(
             rows: rows,
             totalNights: totalNights,
             totalAmount: totalAmount,
-            averageNightlyRate: averageNightlyRate
+            averageNightlyRate: averageNightlyRate,
+            averageNightlyRateCurrency: currencies.count == 1 ? currencies.first : nil,
+            hasMixedCurrencies: hasMixedCurrencies
         )
     }
 
@@ -275,22 +289,69 @@ public struct HotelStayArchivePresenter: Sendable {
     }
 
     private func amountText(_ amount: Double, currency: String) -> String {
-        let trimmedCurrency = trimmed(currency) ?? ""
-        let rounded = amount.rounded()
-        let amountString: String
-        if abs(amount - rounded) < 0.000_001 {
-            amountString = String(Int(rounded))
-        } else {
-            var formatted = String(format: "%.2f", amount)
-            while formatted.last == "0" {
-                formatted.removeLast()
-            }
-            if formatted.last == "." {
-                formatted.removeLast()
-            }
-            amountString = formatted
+        let currencyCode = normalizedCurrencyCode(currency)
+        guard let currencyCode else {
+            return decimalAmountText(amount)
         }
-        return trimmedCurrency.isEmpty ? amountString : "\(trimmedCurrency) \(amountString)"
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = currencyCode
+        formatter.locale = Locale.current
+        formatter.maximumFractionDigits = currencyMinorDigits(currencyCode)
+        formatter.minimumFractionDigits = amountHasFraction(amount) ? min(2, formatter.maximumFractionDigits) : 0
+        formatter.usesGroupingSeparator = true
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(currencyCode) \(decimalAmountText(amount))"
+    }
+
+    private func decimalAmountText(_ amount: Double) -> String {
+        let rounded = amount.rounded()
+        if abs(amount - rounded) < 0.000_001 {
+            return String(Int(rounded))
+        }
+
+        var formatted = String(format: "%.2f", amount)
+        while formatted.last == "0" {
+            formatted.removeLast()
+        }
+        if formatted.last == "." {
+            formatted.removeLast()
+        }
+        return formatted
+    }
+
+    private func amountHasFraction(_ amount: Double) -> Bool {
+        abs(amount - amount.rounded()) >= 0.000_001
+    }
+
+    private func currencyMinorDigits(_ currencyCode: String) -> Int {
+        switch currencyCode.uppercased() {
+        case "BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF":
+            return 0
+        default:
+            return 2
+        }
+    }
+
+    private func normalizedCurrencyCode(_ value: String?) -> String? {
+        guard let trimmedCurrency = trimmed(value) else { return nil }
+        let uppercased = trimmedCurrency.uppercased()
+        switch uppercased {
+        case "￥", "¥", "RMB", "CN¥", "CN￥":
+            return "CNY"
+        case "$", "US$":
+            return "USD"
+        case "€":
+            return "EUR"
+        case "£":
+            return "GBP"
+        default:
+            guard uppercased.count == 3,
+                  uppercased.allSatisfy({ $0.isLetter }) else {
+                return trimmedCurrency
+            }
+            return uppercased
+        }
     }
 
     private func joined(_ values: [String?], separator: String) -> String {

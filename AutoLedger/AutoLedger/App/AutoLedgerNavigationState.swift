@@ -13,6 +13,7 @@ enum AutoLedgerDeepLinkDestination: Equatable {
     case ledgerToday
     case transaction(UUID)
     case hotelStay(UUID)
+    case hotelReviewQueue(UUID?)
     case subscriptions
     case ledgerProfiles
     case scan
@@ -40,6 +41,8 @@ enum AutoLedgerDeepLinkParser {
         case "hotel-stay", "hotelstay":
             guard let id = uuid(from: parts.dropFirst().first) else { return nil }
             return .hotelStay(id)
+        case "hotel-stays", "hotelstays", "hotel-review", "hotelreview":
+            return .hotelReviewQueue(uuid(from: queryItems(from: url)["draftID"]))
         case "subscriptions", "subscription":
             return .subscriptions
         case "settings":
@@ -66,6 +69,19 @@ enum AutoLedgerDeepLinkParser {
     private static func uuid(from value: String?) -> UUID? {
         guard let value else { return nil }
         return UUID(uuidString: value)
+    }
+
+    private static func queryItems(from url: URL) -> [String: String] {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return [:]
+        }
+        return Dictionary(
+            uniqueKeysWithValues: components.queryItems?
+                .compactMap { item -> (String, String)? in
+                    guard let value = item.value else { return nil }
+                    return (item.name, value)
+                } ?? []
+        )
     }
 }
 
@@ -115,6 +131,7 @@ final class AutoLedgerNavigationState: ObservableObject {
     @Published var isPresentingLedgerProfiles = false
 
     @Published var selectedHotelStayRecordID: UUID?
+    @Published var pendingHotelStayDraftReviewID: UUID?
 
     @Published var selectedSubscriptionID: UUID?
     @Published var subscriptionEditor: SubscriptionEditorPresentation?
@@ -126,6 +143,13 @@ final class AutoLedgerNavigationState: ObservableObject {
     func openLedgerProfiles() {
         selectedHomeTab = AutoLedgerHomeTab.settings.rawValue
         settingsPath = [.ledgerProfiles]
+    }
+
+    func openHotelReviewQueue(draftID: UUID? = nil) {
+        selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
+        if let draftID {
+            pendingHotelStayDraftReviewID = draftID
+        }
     }
 
     @discardableResult
@@ -147,6 +171,8 @@ final class AutoLedgerNavigationState: ObservableObject {
             selectLedgerForHotelStay(id, store: store)
             selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
             selectedHotelStayRecordID = id
+        case .hotelReviewQueue(let draftID):
+            openHotelReviewQueue(draftID: draftID)
         case .subscriptions:
             selectedHomeTab = AutoLedgerHomeTab.settings.rawValue
             settingsPath = [.subscriptions]

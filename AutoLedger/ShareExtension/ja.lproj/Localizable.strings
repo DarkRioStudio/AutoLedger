@@ -1,4 +1,5 @@
 "share.status.recognizing" = "認識中...";
+"share.error.no_supported_item" = "認識できる画像または PDF が見つかりません";
 "share.error.no_image" = "画像が見つかりません";
 "share.error.read_image_failed" = "画像を読み取れませんでした";
 "share.error.ocr_failed_format" = "OCR に失敗しました: %@";
@@ -11,3 +12,9 @@
 "share.error.persistence_failed" = "保存に失敗しました。AutoLedger を開いて確認してください。";
 "share.debug.parse_failed" = "共有拡張機能の解析に失敗しました";
 "share.debug.persistence_failed_format" = "保存に失敗しました: %@";
+"share.hotel_folio.status.extracting" = "ホテル明細 PDF を読み取っています...";
+"share.hotel_folio.saved" = "ホテル明細を受け取りました。確認のため AutoLedger を開きます。";
+"share.hotel_folio.error_format" = "ホテル明細の取り込みに失敗しました: %@";
+"share.hotel_folio.error.read_failed" = "PDF を読み取れませんでした";
+"share.hotel_folio.error.cannot_open_pdf" = "PDF ファイルを開けませんでした";
+"share.hotel_folio.error.empty_text" = "PDF から認識可能なテキストを抽出できませんでした";

@@ -117,6 +117,7 @@
 "hotel_stay.list.summary.count" = "記録";
 "hotel_stay.list.summary.nights" = "泊数";
 "hotel_stay.list.summary.average" = "平均 / 泊";
+"hotel_stay.list.summary.average_mixed_currency" = "複数通貨";
 "hotel_stay.list.section.pending_drafts" = "確認待ちのホテル明細";
 "hotel_stay.list.pending_drafts.footer_format" = "確認待ちのホテル明細 %d 件。";
 "hotel_stay.list.section.records" = "ホテル滞在記録";

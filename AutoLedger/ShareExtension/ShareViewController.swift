@@ -1,11 +1,46 @@
 import AutoLedgerCore
+import PDFKit
 import UIKit
 import UniformTypeIdentifiers
 
 class ShareViewController: UIViewController {
+    private enum HotelFolioPDFShareError: LocalizedError {
+        case readFailed
+        case cannotOpenPDF
+        case emptyText
+
+        var errorDescription: String? {
+            switch self {
+            case .readFailed:
+                return String(localized: "share.hotel_folio.error.read_failed")
+            case .cannotOpenPDF:
+                return String(localized: "share.hotel_folio.error.cannot_open_pdf")
+            case .emptyText:
+                return String(localized: "share.hotel_folio.error.empty_text")
+            }
+        }
+    }
+
+    private enum NavigationDestination: String, Codable {
+        case hotelReviewQueue
+    }
+
+    private struct NavigationRequest: Codable {
+        let destination: NavigationDestination
+        let ledgerID: String?
+        let createdAt: Date
+    }
+
+    private struct HotelFolioDraftReviewRequest: Codable {
+        let draftID: UUID
+        let createdAt: Date
+    }
 
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let pendingLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
+    private static let hotelFolioDraftReviewKey = "share_pendingHotelFolioDraftReview.v1"
+    private static let navigationHandoffKey = "autoLedgerIntentNavigationPendingRequest.v1"
 
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     private let statusLabel = UILabel()
@@ -46,17 +81,31 @@ class ShareViewController: UIViewController {
 
         activityIndicator.startAnimating()
 
-        processSharedImage()
+        processSharedItem()
     }
 
-    private func processSharedImage() {
+    private func processSharedItem() {
         guard let item = extensionContext?.inputItems.first as? NSExtensionItem,
-              let provider = item.attachments?.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) })
+              let attachments = item.attachments
         else {
-            finish(message: String(localized: "share.error.no_image"))
+            finish(message: String(localized: "share.error.no_supported_item"))
             return
         }
 
+        if let pdfProvider = attachments.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) }) {
+            processSharedHotelFolioPDF(provider: pdfProvider)
+            return
+        }
+
+        guard let provider = attachments.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }) else {
+            finish(message: String(localized: "share.error.no_supported_item"))
+            return
+        }
+
+        processSharedImage(provider: provider)
+    }
+
+    private func processSharedImage(provider: NSItemProvider) {
         // 尝试从 sourceApplication 获取来源 App
         let sourceApp = (extensionContext?.inputItems.first as? NSExtensionItem)?
             .userInfo?["NSExtensionItemSourceApplicationKey"] as? String
@@ -168,6 +217,173 @@ class ShareViewController: UIViewController {
         }
     }
 
+    private func processSharedHotelFolioPDF(provider: NSItemProvider) {
+        DispatchQueue.main.async {
+            self.statusLabel.text = String(localized: "share.hotel_folio.status.extracting")
+        }
+
+        provider.loadFileRepresentation(forTypeIdentifier: UTType.pdf.identifier) { [weak self] url, _ in
+            guard let self else { return }
+
+            do {
+                let pdfData: Data
+                if let url {
+                    pdfData = try Data(contentsOf: url)
+                } else {
+                    pdfData = try self.loadPDFDataFallback(from: provider)
+                }
+
+                let rawText = try self.extractHotelFolioText(from: pdfData)
+                let draft = self.makeHotelStayDraft(
+                    pdfData: pdfData,
+                    rawText: rawText,
+                    suggestedFileName: provider.suggestedName
+                )
+
+                guard let store = try? SQLiteTransactionStore() else {
+                    DispatchQueue.main.async { self.finish(message: String(localized: "share.error.database_failed")) }
+                    return
+                }
+
+                let draftForReview = self.resolveDuplicateDraftIfNeeded(draft, store: store)
+                if draftForReview.id == draft.id {
+                    try store.save(hotelStayDraft: draft)
+                }
+
+                self.markLedgerSaveNeedsCloudPush()
+                self.writeHotelFolioReviewHandoff(draft: draftForReview)
+
+                DispatchQueue.main.async {
+                    self.finish(
+                        message: String(localized: "share.hotel_folio.saved"),
+                        openAppURL: Self.hotelReviewURL(draftID: draftForReview.id)
+                    )
+                }
+            } catch {
+                let message = String(
+                    format: String(localized: "share.hotel_folio.error_format"),
+                    error.localizedDescription
+                )
+                DispatchQueue.main.async {
+                    self.finish(message: message)
+                }
+            }
+        }
+    }
+
+    private func loadPDFDataFallback(from provider: NSItemProvider) throws -> Data {
+        let semaphore = DispatchSemaphore(value: 0)
+        var loadedData: Data?
+
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.pdf.identifier) { data, _ in
+            loadedData = data
+            semaphore.signal()
+        }
+
+        _ = semaphore.wait(timeout: .now() + 8)
+        guard let loadedData, !loadedData.isEmpty else {
+            throw HotelFolioPDFShareError.readFailed
+        }
+        return loadedData
+    }
+
+    private func extractHotelFolioText(from pdfData: Data) throws -> String {
+        guard let document = PDFDocument(data: pdfData), document.pageCount > 0 else {
+            throw HotelFolioPDFShareError.cannotOpenPDF
+        }
+
+        let text = (0..<document.pageCount)
+            .compactMap { document.page(at: $0)?.string }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !text.isEmpty else {
+            throw HotelFolioPDFShareError.emptyText
+        }
+        return text
+    }
+
+    private func makeHotelStayDraft(
+        pdfData: Data,
+        rawText: String,
+        suggestedFileName: String?
+    ) -> HotelStayDraft {
+        let timestamp = Date()
+        let fileName = normalizedPDFFileName(suggestedFileName)
+        return HotelStayDraft(
+            sourceType: .shareExtension,
+            targetLedgerID: defaultWriteLedgerIDForSharedImports(),
+            sourceFileName: fileName,
+            sourcePDFData: pdfData,
+            rawText: rawText,
+            confidence: 0,
+            status: .textExtracted,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+    }
+
+    private func resolveDuplicateDraftIfNeeded(
+        _ draft: HotelStayDraft,
+        store: SQLiteTransactionStore
+    ) -> HotelStayDraft {
+        guard let pdfData = draft.sourcePDFData, !pdfData.isEmpty else { return draft }
+        let existingDrafts = (try? store.loadHotelStayDrafts()) ?? []
+        return existingDrafts.first { existing in
+            switch existing.status {
+            case .imported, .textExtracted, .parsed, .needsReview:
+                return existing.sourcePDFData == pdfData
+            case .confirmed, .rejected, .postedToLedger:
+                return false
+            }
+        } ?? draft
+    }
+
+    private func defaultWriteLedgerIDForSharedImports() -> String {
+        guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier),
+              let value = defaults.string(forKey: Self.defaultWriteLedgerIDKey)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return TodaySpendingSummary.defaultLedgerID
+        }
+        return value
+    }
+
+    private func normalizedPDFFileName(_ value: String?) -> String {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return "shared-hotel-folio.pdf" }
+        if trimmed.lowercased().hasSuffix(".pdf") {
+            return trimmed
+        }
+        return "\(trimmed).pdf"
+    }
+
+    private func writeHotelFolioReviewHandoff(draft: HotelStayDraft) {
+        guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier) else { return }
+
+        let reviewRequest = HotelFolioDraftReviewRequest(draftID: draft.id, createdAt: Date())
+        if let data = try? JSONEncoder().encode(reviewRequest) {
+            defaults.set(data, forKey: Self.hotelFolioDraftReviewKey)
+        }
+
+        let navigationRequest = NavigationRequest(
+            destination: .hotelReviewQueue,
+            ledgerID: draft.targetLedgerID,
+            createdAt: Date()
+        )
+        if let data = try? JSONEncoder().encode(navigationRequest) {
+            defaults.set(data, forKey: Self.navigationHandoffKey)
+            UserDefaults.standard.set(data, forKey: Self.navigationHandoffKey)
+        }
+        defaults.synchronize()
+    }
+
+    private static func hotelReviewURL(draftID: UUID) -> URL? {
+        URL(string: "autoledger://hotel-stays/review?draftID=\(draftID.uuidString)")
+    }
+
     private func writeDebug(
         stage: ImportDebugStage,
         source: ReceiptSource,
@@ -213,12 +429,19 @@ class ShareViewController: UIViewController {
         defaults.synchronize()
     }
 
-    private func finish(message: String) {
+    private func finish(message: String, openAppURL: URL? = nil) {
         activityIndicator.stopAnimating()
         statusLabel.text = message
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.extensionContext?.completeRequest(returningItems: nil)
+            guard let self else { return }
+            if let openAppURL {
+                self.extensionContext?.open(openAppURL) { [weak self] _ in
+                    self?.extensionContext?.completeRequest(returningItems: nil)
+                }
+            } else {
+                self.extensionContext?.completeRequest(returningItems: nil)
+            }
         }
     }
 }
