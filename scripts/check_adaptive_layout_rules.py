@@ -13,6 +13,8 @@ FORBIDDEN_PATTERNS = [
     "interfaceOrientation",
     ".isLandscape",
     ".isPortrait",
+    ".toolbar(.hidden, for: .navigationBar)",
+    ".navigationTitle(\"\")",
 ]
 
 REQUIRED_SNIPPETS = {
@@ -42,6 +44,7 @@ REQUIRED_SNIPPETS = {
         "autoLedgerFormChrome",
         "autoLedgerListChrome",
         "autoLedgerNavigationBarChrome",
+        "autoLedgerSolidNavigationBarChrome",
         ".regularMaterial",
     ],
     APP / "Features" / "Ledger" / "LedgerView.swift": [
@@ -75,15 +78,41 @@ REQUIRED_SNIPPETS = {
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "GridItem(.adaptive",
         "LazyVGrid",
+        ".navigationTitle(\"tab.inbox\")",
+        ".navigationBarTitleDisplayMode(.large)",
+        "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "GridItem(.adaptive",
         "LazyVGrid",
+        ".navigationTitle(\"tab.report\")",
+        ".navigationBarTitleDisplayMode(.large)",
+        "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Settings" / "SettingsView.swift": [
         "$navigationState.settingsPath",
         "autoLedgerReadableContent(maxWidth: 760",
-        "autoLedgerNavigationBarChrome",
+        ".navigationTitle(\"settings.title\")",
+        ".navigationBarTitleDisplayMode(.large)",
+        "autoLedgerSolidNavigationBarChrome",
+    ],
+    APP / "Features" / "Hotel" / "HotelFolioEmailImportView.swift": [
+        ".navigationTitle(\"hotel_stay.email.title\")",
+        ".navigationBarTitleDisplayMode(.inline)",
+        "ToolbarItem(placement: .principal)",
+        "autoLedgerSolidNavigationBarChrome",
+    ],
+}
+
+FORBIDDEN_FILE_SNIPPETS = {
+    APP / "Features" / "Inbox" / "InboxView.swift": [
+        "private var pageTitle",
+    ],
+    APP / "Features" / "Report" / "ReportView.swift": [
+        "private var pageTitle",
+    ],
+    APP / "Features" / "Settings" / "SettingsView.swift": [
+        "private var pageTitle",
     ],
 }
 
@@ -108,6 +137,12 @@ def main() -> int:
         for snippet in snippets:
             if snippet not in text:
                 failures.append(f"{path.relative_to(ROOT)} is missing required adaptive layout snippet: {snippet}")
+
+    for path, snippets in FORBIDDEN_FILE_SNIPPETS.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet in text:
+                failures.append(f"{path.relative_to(ROOT)} contains duplicate in-content tab title snippet: {snippet}")
 
     if failures:
         print("Adaptive layout guard failed:")

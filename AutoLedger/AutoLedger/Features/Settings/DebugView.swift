@@ -750,7 +750,11 @@ struct DebugView: View {
             return Color(red: 0.18, green: 0.67, blue: 0.36)
         case .duplicateSkipped, .hotelFolioDraftSaved, .hotelFolioTextExtracted:
             return Color(red: 0.75, green: 0.57, blue: 0.14)
-        case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioLocalization, .hotelFolioExchangeRate:
+        case .hotelFolioLLMRequest,
+             .hotelFolioLLMResponse,
+             .hotelFolioLocalization,
+             .hotelFolioExchangeRate,
+             .hotelFolioEmailScan:
             return AppTheme.accent
         case .ocrFailed, .parseFailed, .persistenceFailed, .hotelFolioParseFailed:
             return Color(red: 0.74, green: 0.28, blue: 0.28)
@@ -805,6 +809,8 @@ struct DebugView: View {
                 return "本地化"
             case .hotelFolioExchangeRate:
                 return "汇率"
+            case .hotelFolioEmailScan:
+                return "邮箱扫描"
             case .hotelFolioDraftSaved:
                 return "待确认"
             case .hotelFolioPosted:

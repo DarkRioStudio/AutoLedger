@@ -2472,10 +2472,10 @@ struct HotelStayWorkspaceView: View {
         .sheet(isPresented: $showsEmailImporter) {
             HotelFolioEmailImportView(
                 targetLedgerID: store.targetLedgerIDForNewTransactions,
-                onDraftReady: { draft in
+                onDraftsReady: { drafts in
                     showsEmailImporter = false
                     Task {
-                        await prepareDraftForReview(draft)
+                        await prepareEmailDraftsForReview(drafts)
                     }
                 }
             )
@@ -2539,7 +2539,36 @@ struct HotelStayWorkspaceView: View {
     }
 
     @MainActor
-    private func prepareDraftForReview(_ draft: HotelStayDraft, managesImportingState: Bool = true) async {
+    private func prepareEmailDraftsForReview(_ drafts: [HotelStayDraft]) async {
+        guard !drafts.isEmpty else { return }
+        if drafts.count == 1, let draft = drafts.first {
+            await prepareDraftForReview(draft)
+            return
+        }
+
+        isImporting = true
+        statusMessage = String(format: String(localized: "hotel_stay.email.status.batch_parsing_format"), drafts.count)
+        defer {
+            isImporting = false
+        }
+
+        var savedCount = 0
+        for draft in drafts {
+            if await prepareDraftForReview(draft, managesImportingState: false, opensReview: false) != nil {
+                savedCount += 1
+            }
+        }
+
+        statusMessage = String(format: String(localized: "hotel_stay.email.status.batch_saved_format"), savedCount, drafts.count)
+    }
+
+    @discardableResult
+    @MainActor
+    private func prepareDraftForReview(
+        _ draft: HotelStayDraft,
+        managesImportingState: Bool = true,
+        opensReview: Bool = true
+    ) async -> HotelStayDraft? {
         if managesImportingState {
             isImporting = true
             statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
@@ -2579,9 +2608,13 @@ struct HotelStayWorkspaceView: View {
         }
 
         if store.saveHotelStayDraft(preparedDraft) {
-            reviewDraft = preparedDraft
+            if opensReview {
+                reviewDraft = preparedDraft
+            }
+            return preparedDraft
         } else {
             statusMessage = store.lastImportSummary
+            return nil
         }
     }
 

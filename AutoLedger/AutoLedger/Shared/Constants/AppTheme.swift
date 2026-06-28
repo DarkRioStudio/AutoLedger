@@ -123,6 +123,14 @@ private struct AutoLedgerNavigationBarChromeModifier: ViewModifier {
     }
 }
 
+private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .toolbarBackground(AppTheme.canvas, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+    }
+}
+
 extension View {
     func autoLedgerReadableContent(maxWidth: CGFloat = 760, alignment: Alignment = .center) -> some View {
         modifier(AutoLedgerReadableContentModifier(maxWidth: maxWidth, alignment: alignment))
@@ -142,6 +150,10 @@ extension View {
 
     func autoLedgerNavigationBarChrome() -> some View {
         modifier(AutoLedgerNavigationBarChromeModifier())
+    }
+
+    func autoLedgerSolidNavigationBarChrome() -> some View {
+        modifier(AutoLedgerSolidNavigationBarChromeModifier())
     }
 
     @ViewBuilder

@@ -42,7 +42,6 @@ struct OfflineRegression {
         verifyHotelFolioDebugTrace(reporter: reporter)
         verifyHotelFolioEmailImportPlanning(reporter: reporter)
         try verifyHotelFolioEmailDeduplication(reporter: reporter)
-        try verifyHotelFolioEmailDemoMode(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
         verifyHotelStayArchivePresentation(reporter: reporter)
@@ -681,40 +680,6 @@ struct OfflineRegression {
         reporter.check(postedLedger.postConfirmedHotelStayDraft(confirmedDraft), "LedgerStore posts hotel email draft")
         reporter.check(!postedLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore rejects duplicate of posted hotel email folio")
         reporter.check(postedLedger.hotelStayRecords.count == 1, "LedgerStore keeps one posted hotel stay after duplicate")
-    }
-
-    private static func verifyHotelFolioEmailDemoMode(reporter: RegressionReporter) throws {
-        let pdfData = Data("demo-pdf-placeholder".utf8)
-        let message = HotelFolioEmailDemoFixture.message(pdfData: pdfData)
-        guard let attachment = message.attachments.first else {
-            reporter.check(false, "HotelFolioEmailDemoFixture exposes demo PDF attachment")
-            return
-        }
-        reporter.check(true, "HotelFolioEmailDemoFixture exposes demo PDF attachment")
-        let filter = HotelFolioEmailCandidateFilter()
-
-        reporter.check(message.uid == "demo-hotel-folio-001", "HotelFolioEmailDemoFixture uses stable demo uid")
-        reporter.check(message.messageID?.contains("@example.test") == true, "HotelFolioEmailDemoFixture uses reserved message id domain")
-        reporter.check(message.from.contains("@example.test"), "HotelFolioEmailDemoFixture uses reserved sender domain")
-        reporter.check(!message.from.contains("@qq.com"), "HotelFolioEmailDemoFixture avoids real mailbox domain")
-        reporter.check(attachment.fileName == "autoledger-demo-hotel-folio.pdf", "HotelFolioEmailDemoFixture exposes demo PDF filename")
-        reporter.check(attachment.data == pdfData, "HotelFolioEmailDemoFixture keeps supplied demo PDF data")
-        reporter.check(filter.isLikelyHotelFolio(message), "HotelFolioEmailDemoFixture passes hotel folio candidate filter")
-        reporter.check(HotelFolioEmailDemoFixture.extractedText.contains("Demo Bay Hotel"), "HotelFolioEmailDemoFixture exposes hotel text")
-        reporter.check(HotelFolioEmailDemoFixture.extractedText.contains("DEMO-2026-0618"), "HotelFolioEmailDemoFixture exposes demo confirmation")
-
-        let fixedNow = AppFormatters.parseFlexibleDate("2026-06-27 10:30") ?? .now
-        let draft = try HotelFolioEmailDraftFactory(now: { fixedNow }).makeDraft(
-            message: message,
-            attachment: attachment,
-            extractedText: HotelFolioEmailDemoFixture.extractedText,
-            targetLedgerID: TodaySpendingSummary.defaultLedgerID
-        )
-        reporter.check(draft.sourceType == .localEmailIMAP, "HotelFolioEmailDemoFixture draft uses local email source")
-        reporter.check(draft.sourceEmailMessageIDHash != message.messageID, "HotelFolioEmailDemoFixture draft stores hashed message id")
-        reporter.check(draft.sourceEmailAttachmentHash?.isEmpty == false, "HotelFolioEmailDemoFixture draft stores attachment hash")
-        reporter.check(draft.rawText.contains("demo@example.test"), "HotelFolioEmailDemoFixture draft keeps reserved demo email in raw text")
-        reporter.check(draft.status == .textExtracted, "HotelFolioEmailDemoFixture draft enters review workflow")
     }
 
     private static func verifyHotelStayReviewForm(reporter: RegressionReporter) {

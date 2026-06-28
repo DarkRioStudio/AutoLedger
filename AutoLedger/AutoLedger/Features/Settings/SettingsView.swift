@@ -16,8 +16,6 @@ struct SettingsView: View {
         NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    pageTitle
-
                     settingsSection(title: "settings.section.ledger_sync") {
                         NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
                             settingsRow(
@@ -243,9 +241,9 @@ struct SettingsView: View {
                 .autoLedgerReadableContent(maxWidth: 760, alignment: .leading)
             }
             .autoLedgerScreenChrome()
-            .autoLedgerNavigationBarChrome()
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+            .autoLedgerSolidNavigationBarChrome()
+            .navigationTitle("settings.title")
+            .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
                 case .ledgerProfiles:
@@ -261,13 +259,6 @@ struct SettingsView: View {
                     .environmentObject(store)
             }
         }
-    }
-
-    private var pageTitle: some View {
-        Text("settings.title")
-            .font(.largeTitle.weight(.bold))
-            .foregroundStyle(AppTheme.ink)
-            .accessibilityAddTraits(.isHeader)
     }
 
     private func settingsSection<Content: View>(

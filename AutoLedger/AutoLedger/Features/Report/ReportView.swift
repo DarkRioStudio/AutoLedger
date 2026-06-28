@@ -40,8 +40,6 @@ struct ReportView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    pageTitle
-
                     summaryCard(snapshot)
 
                     if !anomalyAlerts.isEmpty {
@@ -78,9 +76,9 @@ struct ReportView: View {
                 .padding(.bottom, 28)
             }
             .autoLedgerScreenChrome()
-            .autoLedgerNavigationBarChrome()
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+            .autoLedgerSolidNavigationBarChrome()
+            .navigationTitle("tab.report")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
@@ -100,13 +98,6 @@ struct ReportView: View {
                 }
             }
         }
-    }
-
-    private var pageTitle: some View {
-        Text("tab.report")
-            .font(.largeTitle.weight(.bold))
-            .foregroundStyle(AppTheme.ink)
-            .accessibilityAddTraits(.isHeader)
     }
 
     private func anomalySection(_ alerts: [AnomalyAlert]) -> some View {

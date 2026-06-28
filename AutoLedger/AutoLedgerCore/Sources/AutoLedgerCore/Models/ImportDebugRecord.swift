@@ -11,6 +11,7 @@ public enum ImportDebugStage: String, CaseIterable, Identifiable, Sendable {
     case hotelFolioLLMResponse
     case hotelFolioLocalization
     case hotelFolioExchangeRate
+    case hotelFolioEmailScan
     case hotelFolioParseFailed
     case hotelFolioDraftSaved
     case hotelFolioPosted
@@ -29,6 +30,7 @@ public enum ImportDebugStage: String, CaseIterable, Identifiable, Sendable {
         case .hotelFolioLLMResponse:   return "酒店 LLM 输出"
         case .hotelFolioLocalization:  return "酒店本地化"
         case .hotelFolioExchangeRate:  return "酒店汇率"
+        case .hotelFolioEmailScan:     return "酒店邮箱扫描"
         case .hotelFolioParseFailed:   return "酒店识别失败"
         case .hotelFolioDraftSaved:    return "酒店待确认"
         case .hotelFolioPosted:        return "酒店已入账"
@@ -42,6 +44,7 @@ public enum ImportDebugStage: String, CaseIterable, Identifiable, Sendable {
              .hotelFolioLLMResponse,
              .hotelFolioLocalization,
              .hotelFolioExchangeRate,
+             .hotelFolioEmailScan,
              .hotelFolioParseFailed,
              .hotelFolioDraftSaved,
              .hotelFolioPosted:

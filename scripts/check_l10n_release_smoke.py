@@ -71,7 +71,7 @@ REQUIRED_CHECKLIST_SNIPPETS = [
     "识别语言包与 Golden",
     "core_ja_receipt_total_merchant",
     "core_ja_cafe_category",
-    "Demo Mode",
+    "手动 PDF / Share Extension",
 ]
 
 

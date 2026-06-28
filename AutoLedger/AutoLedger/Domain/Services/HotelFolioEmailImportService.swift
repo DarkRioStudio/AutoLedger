@@ -34,6 +34,7 @@ enum HotelFolioEmailImportError: Error, Sendable {
     case missingCredential
     case keychainStatus(OSStatus)
     case connectionFailed(String)
+    case operationTimeout(String)
     case imapStatus(String)
     case connectionClosed
     case invalidIMAPResponse
@@ -52,6 +53,8 @@ extension HotelFolioEmailImportError: LocalizedError {
             return String(format: String(localized: "hotel_stay.email.error.keychain_status_format"), Int(status))
         case .connectionFailed(let message):
             return String(format: String(localized: "hotel_stay.email.error.connection_failed_format"), message)
+        case .operationTimeout(let operation):
+            return String(format: String(localized: "hotel_stay.email.error.timeout_format"), operation)
         case .imapStatus(let message):
             return String(format: String(localized: "hotel_stay.email.error.imap_status_format"), message)
         case .connectionClosed:
@@ -63,6 +66,30 @@ extension HotelFolioEmailImportError: LocalizedError {
         case .emptyPDFText:
             return String(localized: "hotel_stay.email.error.empty_pdf_text")
         }
+    }
+}
+
+enum HotelFolioEmailScanPhase: Sendable {
+    case connecting
+    case authenticating
+    case selectingMailbox
+    case searching
+    case foundMessages(Int)
+    case fetching(index: Int, total: Int)
+    case candidateAccepted(subject: String)
+    case messageSkipped(uid: String)
+    case completed(Int)
+}
+
+struct HotelFolioEmailScanProgress: Sendable {
+    let phase: HotelFolioEmailScanPhase
+    let debugSummary: String
+    let rawText: String
+
+    init(phase: HotelFolioEmailScanPhase, debugSummary: String, rawText: String = "") {
+        self.phase = phase
+        self.debugSummary = debugSummary
+        self.rawText = rawText
     }
 }
 
@@ -175,92 +202,45 @@ struct HotelFolioEmailAttachmentImporter: Sendable {
     }
 }
 
-enum HotelFolioEmailDemoMode {
-    static var isAvailable: Bool { true }
-
-    static func makeMessage() -> HotelFolioEmailMessage {
-        HotelFolioEmailDemoFixture.message(pdfData: makePDFData())
-    }
-
-    static func isDemoMessage(_ message: HotelFolioEmailMessage) -> Bool {
-        message.uid == HotelFolioEmailDemoFixture.uid
-            && message.messageID == HotelFolioEmailDemoFixture.messageID
-    }
-
-    static func makeDraft(
-        message: HotelFolioEmailMessage,
-        attachment: HotelFolioEmailAttachment,
-        targetLedgerID: String?
-    ) throws -> HotelStayDraft {
-        guard isDemoMessage(message),
-              attachment.fileName == HotelFolioEmailDemoFixture.attachmentFileName else {
-            throw HotelFolioEmailImportError.unsupportedAttachment
-        }
-        return try HotelFolioEmailDraftFactory().makeDraft(
-            message: message,
-            attachment: attachment,
-            extractedText: HotelFolioEmailDemoFixture.extractedText,
-            targetLedgerID: targetLedgerID
-        )
-    }
-
-    nonisolated private static func makePDFData() -> Data {
-        #if canImport(UIKit)
-        let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
-        return renderer.pdfData { context in
-            context.beginPage()
-            let titleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.boldSystemFont(ofSize: 20),
-                .foregroundColor: UIColor.label
-            ]
-            NSAttributedString(
-                string: "AutoLedger Demo Hotel Folio",
-                attributes: titleAttributes
-            ).draw(in: CGRect(x: 72, y: 64, width: 468, height: 32))
-
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.lineSpacing = 4
-            let bodyAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.monospacedSystemFont(ofSize: 13, weight: .regular),
-                .foregroundColor: UIColor.label,
-                .paragraphStyle: paragraph
-            ]
-            NSAttributedString(
-                string: HotelFolioEmailDemoFixture.extractedText,
-                attributes: bodyAttributes
-            ).draw(in: CGRect(x: 72, y: 112, width: 468, height: 560))
-        }
-        #else
-        return Data(HotelFolioEmailDemoFixture.extractedText.utf8)
-        #endif
-    }
-}
-
 struct HotelFolioIMAPClient: Sendable {
     private let parser: HotelFolioEmailMessageParser
     private let filter: HotelFolioEmailCandidateFilter
+    private let operationTimeoutSeconds: UInt64
 
     init(
         parser: HotelFolioEmailMessageParser = HotelFolioEmailMessageParser(),
-        filter: HotelFolioEmailCandidateFilter = HotelFolioEmailCandidateFilter()
+        filter: HotelFolioEmailCandidateFilter = HotelFolioEmailCandidateFilter(),
+        operationTimeoutSeconds: UInt64 = 30
     ) {
         self.parser = parser
         self.filter = filter
+        self.operationTimeoutSeconds = operationTimeoutSeconds
     }
 
-    func scan(settings: HotelEmailAccountSettings, credential: String) async throws -> [HotelFolioEmailMessage] {
+    func scan(
+        settings: HotelEmailAccountSettings,
+        credential: String,
+        onProgress: @escaping (HotelFolioEmailScanProgress) -> Void = { _ in }
+    ) async throws -> [HotelFolioEmailMessage] {
         let settings = settings.normalized
         guard !settings.emailAddress.isEmpty, !settings.imapHost.isEmpty, !credential.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw HotelFolioEmailImportError.invalidSettings
         }
 
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .connecting,
+                debugSummary: "邮箱水单扫描：连接 \(settings.imapHost):\(settings.imapPort) · TLS=\(settings.useTLS)"
+            )
+        )
         let session = HotelFolioIMAPSession(
             host: settings.imapHost,
             port: settings.imapPort,
             useTLS: settings.useTLS
         )
-        try await session.connect()
+        try await withIMAPTimeout(operation: "connect") {
+            try await session.connect()
+        }
         defer {
             Task {
                 try? await session.logout()
@@ -268,26 +248,111 @@ struct HotelFolioIMAPClient: Sendable {
             }
         }
 
-        try await session.login(username: settings.emailAddress, password: credential)
-        try await session.selectMailbox("INBOX")
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .authenticating,
+                debugSummary: "邮箱水单扫描：连接成功，开始登录 \(settings.emailAddress)"
+            )
+        )
+        try await withIMAPTimeout(operation: "login") {
+            try await session.login(username: settings.emailAddress, password: credential)
+        }
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .selectingMailbox,
+                debugSummary: "邮箱水单扫描：登录成功，选择 INBOX"
+            )
+        )
+        try await withIMAPTimeout(operation: "select INBOX") {
+            try await session.selectMailbox("INBOX")
+        }
         let sinceDate = Calendar.current.date(byAdding: .day, value: -settings.searchDays, to: Date()) ?? Date()
-        let uids = try await session.searchUIDs(since: sinceDate)
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .searching,
+                debugSummary: "邮箱水单扫描：搜索最近 \(settings.searchDays) 天邮件"
+            )
+        )
+        let uids = try await withIMAPTimeout(operation: "search") {
+            try await session.searchUIDs(since: sinceDate)
+        }
             .suffix(settings.maxMessages)
             .reversed()
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .foundMessages(uids.count),
+                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封待检查邮件，最多读取 \(settings.maxMessages) 封"
+            )
+        )
 
         var candidates: [HotelFolioEmailMessage] = []
-        for uid in uids {
+        for (index, uid) in uids.enumerated() {
+            onProgress(
+                HotelFolioEmailScanProgress(
+                    phase: .fetching(index: index + 1, total: uids.count),
+                    debugSummary: "邮箱水单扫描：读取第 \(index + 1)/\(uids.count) 封邮件 · uid=\(uid)"
+                )
+            )
             do {
-                let rawMessage = try await session.fetchRFC822(uid: uid)
+                let rawMessage = try await withIMAPTimeout(operation: "fetch \(uid)") {
+                    try await session.fetchRFC822(uid: uid)
+                }
                 let message = try parser.parse(rawMessage: rawMessage, uid: uid)
                 if filter.isLikelyHotelFolio(message) {
                     candidates.append(message)
+                    onProgress(
+                        HotelFolioEmailScanProgress(
+                            phase: .candidateAccepted(subject: message.subject),
+                            debugSummary: "邮箱水单扫描：命中候选水单邮件 · uid=\(uid) · subject=\(message.subject)",
+                            rawText: message.subject
+                        )
+                    )
+                } else {
+                    onProgress(
+                        HotelFolioEmailScanProgress(
+                            phase: .messageSkipped(uid: uid),
+                            debugSummary: "邮箱水单扫描：跳过非候选邮件 · uid=\(uid)"
+                        )
+                    )
                 }
             } catch {
+                onProgress(
+                    HotelFolioEmailScanProgress(
+                        phase: .messageSkipped(uid: uid),
+                        debugSummary: "邮箱水单扫描：跳过邮件 · uid=\(uid) · error=\(error.localizedDescription)"
+                    )
+                )
                 continue
             }
         }
+        onProgress(
+            HotelFolioEmailScanProgress(
+                phase: .completed(candidates.count),
+                debugSummary: "邮箱水单扫描：完成 · candidates=\(candidates.count)"
+            )
+        )
         return candidates
+    }
+
+    private func withIMAPTimeout<T: Sendable>(
+        operation: String,
+        _ work: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await work()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: operationTimeoutSeconds * 1_000_000_000)
+                throw HotelFolioEmailImportError.operationTimeout(operation)
+            }
+
+            guard let result = try await group.next() else {
+                throw HotelFolioEmailImportError.connectionClosed
+            }
+            group.cancelAll()
+            return result
+        }
     }
 }
 
@@ -306,6 +371,32 @@ private final class HotelFolioIMAPConnectContinuation: @unchecked Sendable {
         guard !didResume else { return }
         didResume = true
         continuation.resume()
+    }
+
+    nonisolated func resume(throwing error: Error) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        continuation.resume(throwing: error)
+    }
+}
+
+private final class HotelFolioIMAPDataContinuation: @unchecked Sendable {
+    private let lock = NSLock()
+    nonisolated(unsafe) private var didResume = false
+    private let continuation: CheckedContinuation<Data, Error>
+
+    nonisolated init(_ continuation: CheckedContinuation<Data, Error>) {
+        self.continuation = continuation
+    }
+
+    nonisolated func resume(returning data: Data) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        continuation.resume(returning: data)
     }
 
     nonisolated func resume(throwing error: Error) {
@@ -356,6 +447,9 @@ private actor HotelFolioIMAPSession {
                 default:
                     break
                 }
+            }
+            queue.asyncAfter(deadline: .now() + 30) {
+                resumeOnce.resume(throwing: HotelFolioEmailImportError.operationTimeout("connect"))
             }
             connection.start(queue: queue)
         }
@@ -427,11 +521,15 @@ private actor HotelFolioIMAPSession {
         }
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let resumeOnce = HotelFolioIMAPConnectContinuation(continuation)
+            queue.asyncAfter(deadline: .now() + 30) {
+                resumeOnce.resume(throwing: HotelFolioEmailImportError.operationTimeout("send"))
+            }
             connection.send(content: data, completion: .contentProcessed { error in
                 if let error {
-                    continuation.resume(throwing: HotelFolioEmailImportError.connectionFailed(error.localizedDescription))
+                    resumeOnce.resume(throwing: HotelFolioEmailImportError.connectionFailed(error.localizedDescription))
                 } else {
-                    continuation.resume()
+                    resumeOnce.resume()
                 }
             })
         }
@@ -467,15 +565,19 @@ private actor HotelFolioIMAPSession {
         }
 
         return try await withCheckedThrowingContinuation { continuation in
+            let resumeOnce = HotelFolioIMAPDataContinuation(continuation)
+            queue.asyncAfter(deadline: .now() + 30) {
+                resumeOnce.resume(throwing: HotelFolioEmailImportError.operationTimeout("receive"))
+            }
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, isComplete, error in
                 if let error {
-                    continuation.resume(throwing: HotelFolioEmailImportError.connectionFailed(error.localizedDescription))
+                    resumeOnce.resume(throwing: HotelFolioEmailImportError.connectionFailed(error.localizedDescription))
                 } else if let data, !data.isEmpty {
-                    continuation.resume(returning: data)
+                    resumeOnce.resume(returning: data)
                 } else if isComplete {
-                    continuation.resume(throwing: HotelFolioEmailImportError.connectionClosed)
+                    resumeOnce.resume(throwing: HotelFolioEmailImportError.connectionClosed)
                 } else {
-                    continuation.resume(returning: Data())
+                    resumeOnce.resume(throwing: HotelFolioEmailImportError.connectionClosed)
                 }
             }
         }

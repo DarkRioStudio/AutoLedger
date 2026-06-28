@@ -138,6 +138,25 @@ public enum HotelFolioDebugTraceBuilder {
         )
     }
 
+    public static func makeEmailScanRecord(
+        summary: String,
+        rawText: String = "",
+        request: String? = nil,
+        response: String? = nil
+    ) -> ImportDebugRecord {
+        ImportDebugRecord(
+            stage: .hotelFolioEmailScan,
+            source: .manual,
+            imageSource: .emailAttachment,
+            rawText: truncated(rawText),
+            parsedReceipt: nil,
+            summary: summary,
+            llmPrompt: request.map(truncated),
+            llmResponse: response.map(truncated),
+            usedRuleFallback: false
+        )
+    }
+
     public static func makeParseFailedRecord(
         draft: HotelStayDraft,
         message: String,

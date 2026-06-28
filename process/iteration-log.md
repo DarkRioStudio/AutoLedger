@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-279 酒店保存返回列表与分享扩展间距）
+更新日期：2026-06-28（ITER-280 酒店邮箱真实扫描与标题体系修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-280 酒店邮箱真实扫描与标题体系修复
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / Email B + SDK UI Polish
+- 类型：能力增强 / Bugfix / UI / 测试
+- 目标：移除邮箱水单导入页 Demo Mode，修复手动扫描卡在扫描中且无日志的问题，让扫描结果以候选水单勾选后批量导入；同时把首页、月报、设置和邮箱导入页的标题消失 / 遮挡问题按“本地账本”“酒店消费”tab 的系统标题结构统一。
+- 改动范围：邮箱导入页删除 Demo 入口并改为候选 PDF 勾选 + 批量导入；IMAP 扫描增加连接、登录、选邮箱、搜索、读取、候选命中、跳过和完成阶段回调，并写入“调试与回归”的酒店邮箱扫描记录；IMAP 连接 / 发送 / 接收加超时保护。首页、月报和设置页移除内容区重复大标题，只保留系统 `navigationTitle`，并改用不透明导航栏背景避免 material 蒙版压住标题；邮箱导入 modal 改为 inline/principal 标题并同样使用 solid navigation chrome；自适应布局静态门禁新增隐藏导航栏、空标题和主 tab 重复 `pageTitle` 检查。版本计划、回归 baseline、日文发布 checklist 和审核说明同步改为无 Demo Mode 口径。
+- 未改动范围：未实现邮箱后台自动扫描、Worker 云端代拉、云端保存邮箱授权、自动正式入账、SQLite / CloudKit schema 迁移、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：邮箱扫描不会再依赖 Demo Mode；用户主动扫描后可以看到阶段性状态和调试日志，扫描成功后候选 PDF 默认勾选并支持批量导入为待确认酒店水单草稿。首页 / 月报 / 设置不再同时存在系统标题和内容内大标题，且滚动页标题区不再被 material 蒙版覆盖；邮箱导入页在 sheet presentation 下稳定显示“邮箱水单导入”标题。
+- 未完成内容：真实 QQ / Gmail / Outlook 等邮箱端到端扫描、候选邮件勾选批量导入和 iPhone 真机标题目检仍留给 release smoke；本轮没有新增 OAuth 或 provider 专属授权帮助页。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_hotel_email_import_smoke.py`、`python3 scripts/check_l10n_release_smoke.py`、`python3 scripts/check_localization_coverage.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -quiet -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-title-email-fix CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：真实邮箱 IMAP 服务可能因授权码、IMAP 开关、网络代理或 provider 风控失败；当前会进入可恢复错误态并记录扫描阶段。邮箱导入页改为批量导入后，多附件场景不会自动打开每一个复核页，而是把多草稿保存到待确认队列。
+- 回滚方式：回退 `HotelFolioEmailImportView`、`HotelFolioEmailImportService`、`HotelFolioEmailImportPlanning`、`ImportDebugRecord`、`HotelFolioDebugTraceBuilder`、`iPadWorkspaceView`、标题相关视图、自适应 / 邮箱 smoke 脚本、本轮版本文档和日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1937` 已完成工程闭环，邮箱 B 阶段公共用户主链路回到真实主动扫描，并完成主 tab 标题体系修复。
+- 下一步建议：用真实测试邮箱检查 QQ 授权码、扫描阶段日志、候选 PDF 勾选、批量导入待确认队列；在 iPhone 真机上检查首页、月报、设置、酒店消费、账本和邮箱导入页标题位置。
 
 ### ITER-279 酒店保存返回列表与分享扩展间距
 - 日期：2026-06-28

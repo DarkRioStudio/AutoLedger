@@ -34,8 +34,6 @@ struct InboxView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    pageTitle
-
                     hero
 
                     if !upcomingSubscriptions.isEmpty {
@@ -75,8 +73,9 @@ struct InboxView: View {
                 .padding(.bottom, 28)
             }
             .autoLedgerScreenChrome()
+            .autoLedgerSolidNavigationBarChrome()
             .navigationTitle("tab.inbox")
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }
@@ -87,13 +86,6 @@ struct InboxView: View {
                 await importPickedPhoto(selectedPhoto)
             }
         }
-    }
-
-    private var pageTitle: some View {
-        Text("tab.inbox")
-            .font(.largeTitle.weight(.bold))
-            .foregroundStyle(AppTheme.ink)
-            .accessibilityAddTraits(.isHeader)
     }
 
     private var hero: some View {
