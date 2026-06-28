@@ -43,7 +43,9 @@ class ShareViewController: UIViewController {
     private static let navigationHandoffKey = "autoLedgerIntentNavigationPendingRequest.v1"
 
     private let activityIndicator = UIActivityIndicatorView(style: .large)
+    private let statusIconView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
     private let statusLabel = UILabel()
+    private let statusStack = UIStackView()
 
     // 已知 bundle ID → ReceiptSource 映射
     private static let bundleSourceMap: [String: String] = [
@@ -62,21 +64,35 @@ class ShareViewController: UIViewController {
         view.backgroundColor = UIColor.systemBackground
 
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        statusIconView.tintColor = .systemGreen
+        statusIconView.contentMode = .scaleAspectFit
+        statusIconView.setContentHuggingPriority(.required, for: .horizontal)
+        statusIconView.isHidden = true
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusLabel.font = .preferredFont(forTextStyle: .headline)
         statusLabel.textAlignment = .center
         statusLabel.numberOfLines = 0
         statusLabel.text = String(localized: "share.status.recognizing")
+        statusStack.translatesAutoresizingMaskIntoConstraints = false
+        statusStack.axis = .horizontal
+        statusStack.alignment = .center
+        statusStack.distribution = .fill
+        statusStack.spacing = 6
+        statusStack.addArrangedSubview(statusIconView)
+        statusStack.addArrangedSubview(statusLabel)
 
         view.addSubview(activityIndicator)
-        view.addSubview(statusLabel)
+        view.addSubview(statusStack)
 
         NSLayoutConstraint.activate([
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
-            statusLabel.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: 16),
-            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            statusStack.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: 14),
+            statusStack.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+            statusStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+            statusStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            statusIconView.widthAnchor.constraint(equalToConstant: 22),
+            statusIconView.heightAnchor.constraint(equalToConstant: 22),
         ])
 
         activityIndicator.startAnimating()
@@ -208,7 +224,7 @@ class ShareViewController: UIViewController {
                 self.writeShareResult(ocrText: text, receipt: receiptForSave)
                 var msg = String(format: String(localized: "share.saved_format"), receiptForSave.merchant, receiptForSave.amount)
                 self.writeDebug(stage: .persisted, source: source, rawText: text, receipt: receiptForSave, summary: msg, transactionID: transaction.id)
-                DispatchQueue.main.async { self.finish(message: msg) }
+                DispatchQueue.main.async { self.finish(message: msg, showsSuccessIcon: true) }
             } catch {
                 let debugMessage = String(format: String(localized: "share.debug.persistence_failed_format"), error.localizedDescription)
                 self.writeDebug(stage: .persistenceFailed, source: source, rawText: text, receipt: receiptForSave, summary: debugMessage)
@@ -256,7 +272,8 @@ class ShareViewController: UIViewController {
                 DispatchQueue.main.async {
                     self.finish(
                         message: String(localized: "share.hotel_folio.saved"),
-                        openAppURL: Self.hotelReviewURL(draftID: draftForReview.id)
+                        openAppURL: Self.hotelReviewURL(draftID: draftForReview.id),
+                        showsSuccessIcon: true
                     )
                 }
             } catch {
@@ -429,8 +446,9 @@ class ShareViewController: UIViewController {
         defaults.synchronize()
     }
 
-    private func finish(message: String, openAppURL: URL? = nil) {
+    private func finish(message: String, openAppURL: URL? = nil, showsSuccessIcon: Bool = false) {
         activityIndicator.stopAnimating()
+        statusIconView.isHidden = !showsSuccessIcon
         statusLabel.text = message
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in

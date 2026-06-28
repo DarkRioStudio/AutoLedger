@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-278 酒店详情编辑表单 polish）
+更新日期：2026-06-28（ITER-279 酒店保存返回列表与分享扩展间距）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-279 酒店保存返回列表与分享扩展间距
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / UI Polish
+- 类型：Bugfix / UI / 测试
+- 目标：修正酒店消费详情保存后的返回语义，放宽酒店列表名称展示空间，并收紧 Share Extension 成功状态中对勾图标与文本的间距。
+- 改动范围：`HotelStayDetailView` 保存成功后触发列表选择清空并调用 `dismiss()`；`HotelStayRowView` 提高酒店名称布局优先级、收窄图标和标题区间距，并让金额在拥挤空间下适度缩放；`ShareViewController` 将成功状态改为水平 `UIStackView`，成功时显示对勾图标并把图标与文本间距收紧到 6pt；`versions/v1.6.2-plan.md`、CHANGELOG 和本日志同步 `GOAL-1936` 状态。
+- 未改动范围：未修改 `HotelStayRecord` / `HotelStayDraft` / `Transaction` 数据模型、SQLite / CloudKit schema、酒店水单解析管线、邮箱后台自动扫描、Worker 云端自动化、Keychain、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：酒店正式记录详情保存后，compact 导航会回到列表，regular 双栏会清掉当前详情选择；酒店消费列表中短酒店名更容易完整显示；Share Extension 保存成功和酒店 PDF 保存成功状态的对勾与文字距离更紧凑。
+- 未完成内容：真实设备上从分享面板进入 Share Extension、保存成功后自动唤醒主 App、以及 iPhone / iPad / Mac 不同宽度下酒店列表行的最终目检仍留给 release smoke。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData-hotel-save-list CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：保存成功后会立即离开详情页，因此原详情头部的保存成功提示通常不会再被用户停留查看；这是本轮按“保存后回到列表”的交互要求调整。酒店名仍保持单行 tail 省略，极长名称仍需要进详情查看完整内容。
+- 回滚方式：回退 `HotelStayArchiveView` 的保存回调和行布局、`ShareViewController` 的成功状态 stack、版本文档 / CHANGELOG / 本日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1936` 已完成工程闭环，酒店消费保存后的导航语义和分享扩展成功态更贴近当前交互预期。
+- 下一步建议：release smoke 中重点检查酒店详情保存后列表返回、短酒店名完整显示、长酒店名省略、分享扩展成功态和自动唤醒主 App。
 
 ### ITER-278 酒店详情编辑表单 polish
 - 日期：2026-06-28

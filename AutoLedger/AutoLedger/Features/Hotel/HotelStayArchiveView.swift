@@ -164,6 +164,9 @@ struct HotelStayListView: View {
                 transactions: transactions,
                 ledgerID: ledgerID,
                 onUpdateRecord: onUpdateRecord,
+                onSaveRecord: {
+                    selectedRecordID = nil
+                },
                 onDeleteRecord: onDeleteRecord
             )
         } else {
@@ -323,34 +326,35 @@ private struct HotelStayRowView: View {
     let row: HotelStayListRow
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 8) {
             Image(systemName: "bed.double.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
                 .background(AppTheme.accent.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(row.hotelName)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
                         .truncationMode(.tail)
+                        .minimumScaleFactor(0.85)
                         .allowsTightening(true)
-                        .layoutPriority(1)
+                        .layoutPriority(3)
 
-                    Spacer(minLength: 6)
+                    Spacer(minLength: 4)
 
                     Text(row.totalAmountText)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .minimumScaleFactor(0.65)
                         .allowsTightening(true)
-                        .layoutPriority(2)
+                        .layoutPriority(1)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -560,6 +564,7 @@ struct HotelStayDetailView: View {
     let transactions: [Transaction]
     let ledgerID: String?
     let onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)?
+    let onSaveRecord: (() -> Void)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
 
     private let presenter = HotelStayArchivePresenter()
@@ -570,12 +575,14 @@ struct HotelStayDetailView: View {
         transactions: [Transaction] = [],
         ledgerID: String? = nil,
         onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)? = nil,
+        onSaveRecord: (() -> Void)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.record = record
         self.transactions = transactions
         self.ledgerID = ledgerID
         self.onUpdateRecord = onUpdateRecord
+        self.onSaveRecord = onSaveRecord
         self.onDeleteRecord = onDeleteRecord
         let linkedTransaction = Self.linkedTransaction(for: record, transactions: transactions, ledgerID: ledgerID)
         self._form = State(initialValue: HotelStayRecordEditForm(record: record, linkedTransaction: linkedTransaction))
@@ -969,6 +976,8 @@ struct HotelStayDetailView: View {
             saveMessage = String(localized: "common.saved")
             saveMessageIsSuccess = true
             form = HotelStayRecordEditForm(record: updatedRecord, linkedTransaction: updatedTransaction)
+            onSaveRecord?()
+            dismiss()
         } else {
             saveMessage = String(localized: "hotel_stay.detail.save.failed")
             saveMessageIsSuccess = false
