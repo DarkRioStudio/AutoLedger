@@ -45,27 +45,30 @@ public struct HotelStayLedgerPostingService: Sendable {
         guard let payload = draft.parsedPayload else {
             throw HotelStayLedgerPostingError.missingParsedPayload
         }
-        let hotelName = try requiredString(payload.hotelName, error: .missingHotelName)
-        let totalAmount = payload.totalAmount ?? 0
+        let localizedData = draft.localizedData ?? payload.localizedData
+        let hotelName = try requiredString(payload.hotelName ?? localizedData?.hotelName, error: .missingHotelName)
+        let transactionMerchant = trimmed(localizedData?.hotelName) ?? hotelName
+        let totalAmount = payload.totalAmount ?? localizedData?.totalAmount ?? 0
         guard totalAmount > 0 else {
             throw HotelStayLedgerPostingError.invalidTotalAmount
         }
+        let transactionAmount = localizedData?.totalAmount ?? totalAmount
 
         let postedAt = now()
         let hotelStayID = hotelStayIDGenerator()
         let transactionID = transactionIDGenerator()
         let ledgerID = draft.targetLedgerID ?? TodaySpendingSummary.defaultLedgerID
-        let currency = trimmed(payload.currency) ?? "CNY"
+        let currency = trimmed(payload.currency) ?? trimmed(localizedData?.currency) ?? "CNY"
         let occurredAt = transactionDate(from: payload) ?? postedAt
 
         let transaction = Transaction(
             id: transactionID,
-            merchant: hotelName,
-            amount: totalAmount,
+            merchant: transactionMerchant,
+            amount: transactionAmount,
             occurredAt: occurredAt,
             categoryLabel: "酒店住宿",
             sourceLabel: ReceiptSource.manual.rawValue,
-            note: transactionNote(from: payload),
+            note: transactionNote(from: payload, localizedData: localizedData),
             ledgerID: ledgerID,
             hotelStayRecordID: hotelStayID
         )
@@ -95,7 +98,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             sourceType: draft.sourceType,
             sourceFileName: draft.sourceFileName,
             sourcePDFData: draft.sourcePDFData,
-            localizedData: draft.localizedData ?? payload.localizedData,
+            localizedData: localizedData,
             confidence: payload.confidence ?? draft.confidence,
             rawText: draft.rawText,
             createdAt: postedAt,
@@ -135,14 +138,17 @@ public struct HotelStayLedgerPostingService: Sendable {
         return nil
     }
 
-    private func transactionNote(from payload: HotelFolioParsedPayload) -> String {
+    private func transactionNote(
+        from payload: HotelFolioParsedPayload,
+        localizedData: HotelStayLocalizedData?
+    ) -> String {
         var parts: [String] = []
         append("入住", payload.checkInDate, to: &parts)
         append("退房", payload.checkOutDate, to: &parts)
         if let nights = payload.nights {
             parts.append("晚数：\(nights)")
         }
-        append("房型", payload.roomType, to: &parts)
+        append("房型", localizedData?.roomType ?? payload.roomType, to: &parts)
         append("订单号", payload.confirmationNumber, to: &parts)
         append("支付方式", payload.paymentMethod, to: &parts)
         return parts.joined(separator: "；")

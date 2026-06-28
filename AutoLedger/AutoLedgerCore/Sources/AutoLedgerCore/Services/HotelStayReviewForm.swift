@@ -40,24 +40,25 @@ public struct HotelStayReviewForm: Equatable, Sendable {
 
     public init(draft: HotelStayDraft) {
         let payload = draft.parsedPayload
-        localizedData = draft.localizedData ?? payload?.localizedData
-        hotelName = payload?.hotelName ?? ""
-        hotelGroup = payload?.group ?? ""
-        hotelBrand = payload?.brand ?? ""
-        city = payload?.city ?? ""
-        country = payload?.country ?? ""
+        let localized = draft.localizedData ?? payload?.localizedData
+        localizedData = localized
+        hotelName = Self.displayValue(localized?.hotelName, fallback: payload?.hotelName)
+        hotelGroup = Self.displayValue(localized?.group, fallback: payload?.group)
+        hotelBrand = Self.displayValue(localized?.brand, fallback: payload?.brand)
+        city = Self.displayValue(localized?.city, fallback: payload?.city)
+        country = Self.displayValue(localized?.country, fallback: payload?.country)
         checkInDate = payload?.checkInDate ?? ""
         checkOutDate = payload?.checkOutDate ?? ""
         nightsText = payload?.nights.map(String.init) ?? ""
-        roomType = payload?.roomType ?? ""
+        roomType = Self.displayValue(localized?.roomType, fallback: payload?.roomType)
         confirmationNumber = payload?.confirmationNumber ?? ""
-        currency = payload?.currency ?? ""
-        roomChargeText = Self.formatAmount(payload?.roomCharge)
-        taxAmountText = Self.formatAmount(payload?.tax)
-        serviceChargeText = Self.formatAmount(payload?.serviceCharge)
-        foodBeverageAmountText = Self.formatAmount(payload?.foodBeverage)
-        otherAmountText = Self.formatAmount(payload?.otherCharges)
-        totalAmountText = Self.formatAmount(payload?.totalAmount)
+        currency = Self.displayValue(localized?.currency, fallback: payload?.currency)
+        roomChargeText = Self.formatAmount(localized?.roomCharge ?? payload?.roomCharge)
+        taxAmountText = Self.formatAmount(localized?.taxAmount ?? payload?.tax)
+        serviceChargeText = Self.formatAmount(localized?.serviceCharge ?? payload?.serviceCharge)
+        foodBeverageAmountText = Self.formatAmount(localized?.foodBeverageAmount ?? payload?.foodBeverage)
+        otherAmountText = Self.formatAmount(localized?.otherAmount ?? payload?.otherCharges)
+        totalAmountText = Self.formatAmount(localized?.totalAmount ?? payload?.totalAmount)
         paymentMethod = payload?.paymentMethod ?? ""
         sourceType = draft.sourceType
         sourceFileName = draft.sourceFileName
@@ -82,11 +83,18 @@ public struct HotelStayReviewForm: Equatable, Sendable {
     }
 
     public func confirmedDraft(from draft: HotelStayDraft, updatedAt: Date = Date()) throws -> HotelStayDraft {
-        let payload = try parsedPayload()
+        let displayPayload = try parsedPayload()
+        let localizedData = localizedData(from: displayPayload)
         var updated = draft
-        updated.parsedPayload = payload
-        updated.localizedData = localizedData ?? draft.localizedData ?? draft.parsedPayload?.localizedData
-        updated.confidence = payload.confidence ?? confidence
+        if var originalPayload = draft.parsedPayload {
+            originalPayload.localizedData = localizedData
+            updated.parsedPayload = originalPayload
+            updated.confidence = originalPayload.confidence ?? confidence
+        } else {
+            updated.parsedPayload = displayPayload
+            updated.confidence = displayPayload.confidence ?? confidence
+        }
+        updated.localizedData = localizedData
         updated.status = .confirmed
         updated.updatedAt = updatedAt
         return updated
@@ -132,6 +140,29 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         )
     }
 
+    private func localizedData(from payload: HotelFolioParsedPayload) -> HotelStayLocalizedData {
+        HotelStayLocalizedData(
+            hotelName: payload.hotelName,
+            brand: payload.brand,
+            group: payload.group,
+            city: payload.city,
+            country: payload.country,
+            roomType: payload.roomType,
+            currency: payload.currency,
+            roomCharge: payload.roomCharge,
+            taxAmount: payload.tax,
+            serviceCharge: payload.serviceCharge,
+            foodBeverageAmount: payload.foodBeverage,
+            otherAmount: payload.otherCharges,
+            totalAmount: payload.totalAmount,
+            exchangeRate: localizedData?.exchangeRate,
+            exchangeRateDate: localizedData?.exchangeRateDate,
+            exchangeRateProvider: localizedData?.exchangeRateProvider,
+            targetLocaleIdentifier: localizedData?.targetLocaleIdentifier ?? Locale.current.identifier,
+            generatedAt: localizedData?.generatedAt ?? Date()
+        )
+    }
+
     private var amountBreakdownTotal: Double {
         [
             roomChargeText,
@@ -162,6 +193,16 @@ public struct HotelStayReviewForm: Equatable, Sendable {
 
     private static func amount(from text: String) -> Double? {
         LedgerAmountInputParser.parse(text)
+    }
+
+    private static func displayValue(_ localized: String?, fallback: String?) -> String {
+        trimmed(localized) ?? trimmed(fallback) ?? ""
+    }
+
+    private static func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private static func intValue(from text: String) -> Int? {

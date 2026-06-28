@@ -977,9 +977,9 @@ final class LedgerStore: ObservableObject {
                 "hotel_stay.post.success_format",
                 fallback: "已归档酒店消费：%@ %@ %.2f。"
             ),
-            result.hotelStayRecord.hotelName,
-            result.hotelStayRecord.currency,
-            result.hotelStayRecord.totalAmount
+            result.transaction.merchant,
+            result.hotelStayRecord.localizedData?.currency ?? result.hotelStayRecord.currency,
+            result.transaction.amount
         )
         reloadWidgets()
         requestAutomaticBackup()
@@ -1029,7 +1029,7 @@ final class LedgerStore: ObservableObject {
                 "hotel_stay.delete.success_format",
                 fallback: "已删除酒店消费：%@。"
             ),
-            record.hotelName
+            record.localizedData?.hotelName ?? record.hotelName
         )
         reloadWidgets()
         requestAutomaticBackup()
