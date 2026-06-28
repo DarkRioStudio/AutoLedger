@@ -68,6 +68,7 @@ FORBIDDEN_SNIPPETS = [
     "hotel_stay.email.demo_footer",
     "hotel_stay.email.status.demo_loaded",
     "autoledger-demo-hotel-folio.pdf",
+    "folio-\\(uid)-\\(index).pdf",
 ]
 
 

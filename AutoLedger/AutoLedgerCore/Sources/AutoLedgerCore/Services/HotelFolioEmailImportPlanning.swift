@@ -268,21 +268,27 @@ public struct HotelFolioEmailMessageParser: Sendable {
             parameter(named: "filename", in: contentDisposition)
                 ?? parameter(named: "name", in: contentType)
                 ?? ""
-        )
-        let normalizedFileName = fileName.isEmpty ? "folio-\(uid)-\(index).pdf" : fileName
-        let isAttachment = contentDisposition.lowercased().contains("attachment")
-            || contentDisposition.lowercased().contains("inline")
-            || !fileName.isEmpty
-        let isPDF = mimeType == "application/pdf" || normalizedFileName.lowercased().hasSuffix(".pdf")
-        guard isAttachment, isPDF else { return nil }
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedDisposition = contentDisposition.lowercased()
+        let hasFileName = !fileName.isEmpty
+        let isAttachmentDisposition = normalizedDisposition.contains("attachment")
+        let isNamedInlineDisposition = normalizedDisposition.contains("inline") && hasFileName
+        let isPDF = mimeType == "application/pdf" || fileName.lowercased().hasSuffix(".pdf")
+        let hasPDFEvidence = mimeType == "application/pdf" || hasFileName
+        guard isPDF,
+              hasPDFEvidence,
+              isAttachmentDisposition || isNamedInlineDisposition || hasFileName || mimeType == "application/pdf" else {
+            return nil
+        }
 
         let encoding = (headers["content-transfer-encoding"] ?? "").lowercased()
         let data = decodeBody(body, transferEncoding: encoding)
         guard !data.isEmpty else { return nil }
+        let attachmentFileName = hasFileName ? fileName : "attachment-\(uid)-\(index).pdf"
 
         return HotelFolioEmailAttachment(
-            id: "\(uid)-\(index)-\(normalizedFileName)",
-            fileName: normalizedFileName,
+            id: "\(uid)-\(index)-\(attachmentFileName)",
+            fileName: attachmentFileName,
             mimeType: mimeType,
             size: data.count,
             data: data

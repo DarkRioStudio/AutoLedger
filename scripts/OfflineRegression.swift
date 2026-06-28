@@ -563,6 +563,20 @@ struct OfflineRegression {
         reporter.check(message?.attachments.first?.mimeType == "application/pdf", "HotelFolioEmailMessageParser records PDF mime type")
         reporter.check(message?.attachments.first?.data == pdfData, "HotelFolioEmailMessageParser decodes base64 attachment data")
 
+        let inlineHTMLMessage = """
+        From: Xcode Cloud <noreply@apple.com>
+        Subject: AutoLedger - 一键记账 -- Build 71 succeeded (main)
+        Date: Sun, 28 Jun 2026 07:04:57 +0000
+        Message-ID: <build-71@example.com>
+        Content-Type: text/html; charset=utf-8
+        Content-Disposition: inline
+        Content-Transfer-Encoding: quoted-printable
+
+        <html><body>Build succeeded</body></html>
+        """
+        let inlineMessage = try? parser.parse(rawMessage: inlineHTMLMessage, uid: "42902")
+        reporter.check(inlineMessage?.attachments.isEmpty == true, "HotelFolioEmailMessageParser does not invent PDF attachments for inline HTML")
+
         if let message {
             let filter = HotelFolioEmailCandidateFilter()
             reporter.check(filter.isLikelyHotelFolio(message), "HotelFolioEmailCandidateFilter accepts hotel folio mail with PDF")
