@@ -31,6 +31,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
     public var foodBeverageAmount: Double?
     public var otherAmount: Double?
     public var totalAmount: Double?
+    public var paymentMethod: String?
     public var exchangeRate: Double?
     public var exchangeRateDate: String?
     public var exchangeRateProvider: String?
@@ -51,6 +52,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         foodBeverageAmount: Double? = nil,
         otherAmount: Double? = nil,
         totalAmount: Double? = nil,
+        paymentMethod: String? = nil,
         exchangeRate: Double? = nil,
         exchangeRateDate: String? = nil,
         exchangeRateProvider: String? = nil,
@@ -70,6 +72,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         self.foodBeverageAmount = foodBeverageAmount
         self.otherAmount = otherAmount
         self.totalAmount = totalAmount
+        self.paymentMethod = paymentMethod
         self.exchangeRate = exchangeRate
         self.exchangeRateDate = exchangeRateDate
         self.exchangeRateProvider = exchangeRateProvider
@@ -91,6 +94,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         case foodBeverageAmount = "food_beverage"
         case otherAmount = "other_charges"
         case totalAmount = "total_amount"
+        case paymentMethod = "payment_method"
         case exchangeRate = "exchange_rate"
         case exchangeRateDate = "exchange_rate_date"
         case exchangeRateProvider = "exchange_rate_provider"

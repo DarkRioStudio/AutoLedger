@@ -6,6 +6,14 @@ public enum ImportDebugStage: String, CaseIterable, Identifiable, Sendable {
     case duplicateSkipped
     case persisted
     case persistenceFailed
+    case hotelFolioTextExtracted
+    case hotelFolioLLMRequest
+    case hotelFolioLLMResponse
+    case hotelFolioLocalization
+    case hotelFolioExchangeRate
+    case hotelFolioParseFailed
+    case hotelFolioDraftSaved
+    case hotelFolioPosted
 
     public var id: String { rawValue }
 
@@ -16,6 +24,30 @@ public enum ImportDebugStage: String, CaseIterable, Identifiable, Sendable {
         case .duplicateSkipped:  return "重复跳过"
         case .persisted:         return "已入账"
         case .persistenceFailed: return "落盘失败"
+        case .hotelFolioTextExtracted: return "酒店水单文本"
+        case .hotelFolioLLMRequest:    return "酒店 LLM 请求"
+        case .hotelFolioLLMResponse:   return "酒店 LLM 输出"
+        case .hotelFolioLocalization:  return "酒店本地化"
+        case .hotelFolioExchangeRate:  return "酒店汇率"
+        case .hotelFolioParseFailed:   return "酒店识别失败"
+        case .hotelFolioDraftSaved:    return "酒店待确认"
+        case .hotelFolioPosted:        return "酒店已入账"
+        }
+    }
+
+    public var isHotelFolioStage: Bool {
+        switch self {
+        case .hotelFolioTextExtracted,
+             .hotelFolioLLMRequest,
+             .hotelFolioLLMResponse,
+             .hotelFolioLocalization,
+             .hotelFolioExchangeRate,
+             .hotelFolioParseFailed,
+             .hotelFolioDraftSaved,
+             .hotelFolioPosted:
+            return true
+        case .ocrFailed, .parseFailed, .duplicateSkipped, .persisted, .persistenceFailed:
+            return false
         }
     }
 }
@@ -28,6 +60,9 @@ public enum ImageSource: String, CaseIterable, Identifiable, Sendable {
     case shortcutIntent    // 快捷指令
     case voiceIntent       // 语音快捷指令 / 语音输入
     case clipboard         // 剪切板粘贴
+    case documentPDF       // 本地 PDF 文档
+    case emailAttachment   // 本地邮箱附件
+    case cloudWorker       // 云端 Worker 推送
     case unknown           // 未知 / 兼容旧数据
 
     public var id: String { rawValue }
@@ -40,6 +75,9 @@ public enum ImageSource: String, CaseIterable, Identifiable, Sendable {
         case .shortcutIntent: return "快捷指令"
         case .voiceIntent:    return "语音记账"
         case .clipboard:      return "剪切板粘贴"
+        case .documentPDF:    return "本地 PDF"
+        case .emailAttachment:return "邮箱附件"
+        case .cloudWorker:    return "云端 Worker"
         case .unknown:        return "未知"
         }
     }
@@ -70,7 +108,18 @@ public struct ImportDebugRecord: Identifiable, Sendable {
     public let usedRuleFallback: Bool
 
     /// 是否经过 LLM 解析
-    public var usedLLM: Bool { llmPrompt != nil }
+    public var usedLLM: Bool {
+        switch stage {
+        case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioLocalization:
+            return true
+        case .hotelFolioParseFailed:
+            return llmProvider?.hasPrefix("external_") == true || llmResponse != nil
+        case .hotelFolioExchangeRate:
+            return false
+        default:
+            return llmPrompt != nil
+        }
+    }
 
     public init(
         id: UUID = UUID(),

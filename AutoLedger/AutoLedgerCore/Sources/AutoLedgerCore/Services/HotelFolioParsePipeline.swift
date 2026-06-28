@@ -191,7 +191,7 @@ public struct HotelFolioOpenAICompatibleCodec: Sendable {
         Extract one hotel stay from sanitized hotel folio text.
         Output exactly these top-level schema keys when known: hotel_name, brand, group, city, country, check_in_date, check_out_date, nights, room_type, confirmation_number, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, confidence, raw_text_excerpt, localized.
         Keep top-level fields as the original recognized folio values. Do not translate or convert top-level values.
-        The optional localized object is for display only. When reliable, put localized display values in localized using keys: hotel_name, brand, group, city, country, room_type, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, exchange_rate, exchange_rate_date, exchange_rate_provider, target_locale.
+        The optional localized object is for display only. When reliable, put localized display values in localized using keys: hotel_name, brand, group, city, country, room_type, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, exchange_rate, exchange_rate_date, exchange_rate_provider, target_locale.
         Only fill localized amount fields when the folio itself provides a reliable converted amount or exchange rate. Otherwise use null for localized amount fields.
         Use ISO 8601 date strings for check_in_date and check_out_date when possible.
         Amount fields must be numbers, nights must be an integer, confidence must be a number from 0 to 1.

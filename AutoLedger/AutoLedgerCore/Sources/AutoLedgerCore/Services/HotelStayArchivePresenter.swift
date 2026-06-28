@@ -244,7 +244,7 @@ public struct HotelStayArchivePresenter: Sendable {
             HotelStayDetailField(key: .otherAmount, value: amountText(displayCharge.otherAmount, currency: displayCharge.currency)),
             HotelStayDetailField(key: .totalAmount, value: amountText(displayCharge.totalAmount, currency: displayCharge.currency))
         ] + compactFields([
-            (.paymentMethod, record.paymentMethod)
+            (.paymentMethod, displayString(record.localizedData?.paymentMethod, fallback: record.paymentMethod))
         ])
     }
 

@@ -39,6 +39,7 @@ struct OfflineRegression {
         verifyStructuredLedgerJSONParsing(reporter: reporter)
         verifyHotelStayModels(reporter: reporter)
         verifyHotelFolioParsePipeline(reporter: reporter)
+        verifyHotelFolioDebugTrace(reporter: reporter)
         verifyHotelFolioEmailImportPlanning(reporter: reporter)
         try verifyHotelFolioEmailDeduplication(reporter: reporter)
         try verifyHotelFolioEmailDemoMode(reporter: reporter)
@@ -365,6 +366,143 @@ struct OfflineRegression {
         reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
     }
 
+    private static func verifyHotelFolioDebugTrace(reporter: RegressionReporter) {
+        let rawText = """
+        Demo Bay Hotel
+        Guest Email: traveler@example.com
+        Phone: 13800138000
+        Member No: GOLD123456789
+        Card Number: 4111111111111111
+        Confirmation: ABC123
+        Total Amount: JPY 50000
+        """
+        let draft = HotelStayDraft(
+            sourceType: .manualPDF,
+            sourceFileName: "demo-folio.pdf",
+            rawText: rawText,
+            status: .textExtracted
+        )
+        let payload = HotelFolioParsePayloadBuilder().build(rawText: rawText, sourceType: .manualPDF)
+        let codec = HotelFolioOpenAICompatibleCodec()
+        let requestBody = (try? codec.makeRequestData(
+            payload: payload,
+            model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+        ))
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        let parsedPayload = HotelFolioParsedPayload(
+            hotelName: "Demo Bay Hotel",
+            brand: "Demo Suites",
+            group: "Demo Hospitality",
+            city: "Tokyo",
+            country: "Japan",
+            checkInDate: "2026-06-20",
+            checkOutDate: "2026-06-22",
+            nights: 2,
+            roomType: "King Bay View",
+            confirmationNumber: "ABC123",
+            currency: "JPY",
+            roomCharge: 40000,
+            tax: 4000,
+            serviceCharge: 3000,
+            foodBeverage: 2500,
+            otherCharges: 500,
+            totalAmount: 50000,
+            paymentMethod: "Visa",
+            confidence: 0.91,
+            rawTextExcerpt: "Demo folio excerpt",
+            localizedData: HotelStayLocalizedData(
+                hotelName: "示例海湾酒店",
+                brand: "示例套房",
+                group: "示例酒店集团",
+                city: "东京",
+                country: "日本",
+                roomType: "海湾景观大床房",
+                currency: "CNY",
+                roomCharge: 1960,
+                taxAmount: 196,
+                serviceCharge: 147,
+                foodBeverageAmount: 122.5,
+                otherAmount: 24.5,
+                totalAmount: 2450,
+                exchangeRate: 0.049,
+                exchangeRateDate: "2026-06-22",
+                exchangeRateProvider: "folio_or_model",
+                targetLocaleIdentifier: "zh_CN",
+                generatedAt: Date(timeIntervalSince1970: 1_783_065_600)
+            )
+        )
+        let responseBody = """
+        {"hotel_name":"Demo Bay Hotel","currency":"JPY","total_amount":50000,"localized":{"hotel_name":"示例海湾酒店","currency":"CNY","total_amount":2450,"exchange_rate":0.049,"exchange_rate_provider":"folio_or_model"}}
+        """
+        let records = [
+            HotelFolioDebugTraceBuilder.makeTextExtractedRecord(draft: draft),
+            HotelFolioDebugTraceBuilder.makeLLMRequestRecord(
+                draft: draft,
+                payload: payload,
+                requestBody: requestBody,
+                providerID: "external_deepseek",
+                model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+            ),
+            HotelFolioDebugTraceBuilder.makeLLMResponseRecord(
+                draft: draft,
+                responseBody: responseBody,
+                httpStatus: 200,
+                providerID: "external_deepseek",
+                model: ExternalReceiptAssistProvider.deepSeek.defaultModel,
+                latencyMs: 1234,
+                parsedPayload: parsedPayload
+            ),
+            HotelFolioDebugTraceBuilder.makeLocalizationRecord(
+                draft: draft,
+                parsedPayload: parsedPayload,
+                providerID: "external_deepseek",
+                model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+            ),
+            HotelFolioDebugTraceBuilder.makeExchangeRateRecord(
+                draft: draft,
+                parsedPayload: parsedPayload
+            )
+        ]
+
+        print("Hotel folio debug chain:")
+        for record in records {
+            print("TRACE: [\(record.stage.title)] \(record.summary)")
+            if let input = record.llmPrompt {
+                print("TRACE INPUT: \(String(input.prefix(140)))")
+            }
+            if let output = record.llmResponse {
+                print("TRACE OUTPUT: \(String(output.prefix(140)))")
+            }
+        }
+
+        reporter.check(
+            records.map(\.stage) == [
+                .hotelFolioTextExtracted,
+                .hotelFolioLLMRequest,
+                .hotelFolioLLMResponse,
+                .hotelFolioLocalization,
+                .hotelFolioExchangeRate
+            ],
+            "HotelFolioDebugTraceBuilder emits the hotel recognition chain"
+        )
+        reporter.check(
+            records[1].llmPrompt?.contains("traveler@example.com") == false &&
+            records[1].llmPrompt?.contains("4111111111111111") == false,
+            "HotelFolioDebugTraceBuilder keeps LLM input sanitized"
+        )
+        reporter.check(
+            records[3].llmPrompt?.contains("\"hotel_name\"") == true &&
+            records[3].llmResponse?.contains("示例海湾酒店") == true,
+            "HotelFolioDebugTraceBuilder displays localization input and output"
+        )
+        reporter.check(
+            records[4].llmPrompt?.contains("external_fx_api") == true &&
+            records[4].llmResponse?.contains("exchange_rate") == true &&
+            !records[4].usedLLM,
+            "HotelFolioDebugTraceBuilder displays exchange-rate input/output without marking it as LLM"
+        )
+    }
+
     private static func verifyHotelFolioEmailImportPlanning(reporter: RegressionReporter) {
         let qqSettings = HotelEmailAccountSettings.qq(emailAddress: "traveler@qq.com")
         reporter.check(qqSettings.provider == .qq, "HotelEmailAccountSettings records QQ preset provider")
@@ -633,8 +771,10 @@ struct OfflineRegression {
         let confirmedAt = Date(timeIntervalSince1970: 1_783_065_600)
         let confirmedDraft = try? form.confirmedDraft(from: draft, updatedAt: confirmedAt)
         reporter.check(confirmedDraft?.status == .confirmed, "HotelStayReviewForm confirms draft")
-        reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes edited hotel name")
-        reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Amex", "HotelStayReviewForm writes edited payment method")
+        reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Demo Bay Hotel", "HotelStayReviewForm preserves original recognized hotel name")
+        reporter.check(confirmedDraft?.localizedData?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes edited localized hotel name")
+        reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Visa", "HotelStayReviewForm preserves original recognized payment method")
+        reporter.check(confirmedDraft?.localizedData?.paymentMethod == "Amex", "HotelStayReviewForm writes edited localized payment method")
         reporter.check(confirmedDraft?.sourcePDFData == sourcePDFData, "HotelStayReviewForm preserves source PDF data")
         reporter.check(confirmedDraft?.updatedAt == confirmedAt, "HotelStayReviewForm refreshes confirmed timestamp")
 
@@ -821,6 +961,9 @@ struct OfflineRegression {
 
         let presenter = HotelStayArchivePresenter()
         let list = presenter.makeListSnapshot(records: [osakaStay, tokyoStay])
+        let expectedTokyoTotal = presenter.localizedAmountText(50000, currency: "JPY")
+        let expectedTokyoRoomCharge = presenter.localizedAmountText(40000, currency: "JPY")
+        let expectedTokyoTax = presenter.localizedAmountText(4000, currency: "JPY")
         reporter.check(list.rows.map(\.id) == [tokyoStayID, osakaStayID], "HotelStayArchivePresenter sorts rows by checkout date descending")
         reporter.check(list.totalNights == 3, "HotelStayArchivePresenter totals nights")
         reporter.check(abs(list.totalAmount - 62000) < 0.001, "HotelStayArchivePresenter totals amount")
@@ -829,7 +972,7 @@ struct OfflineRegression {
         reporter.check(list.rows.first?.brandGroupText == "Demo Suites / Demo Hospitality", "HotelStayListRow formats brand and group")
         reporter.check(list.rows.first?.dateRangeText == "2026-06-20 - 2026-06-22", "HotelStayListRow formats stay date range")
         reporter.check(list.rows.first?.nightsText == "2", "HotelStayListRow formats nights")
-        reporter.check(list.rows.first?.totalAmountText == "JPY 50000", "HotelStayListRow formats amount with currency")
+        reporter.check(list.rows.first?.totalAmountText == expectedTokyoTotal, "HotelStayListRow formats amount with localized currency")
         reporter.check(list.rows.first?.linkStatus == .postedToLedger, "HotelStayListRow marks linked stays as posted")
         reporter.check(list.rows.last?.linkStatus == .missingTransaction, "HotelStayListRow marks missing linked transaction")
 
@@ -837,8 +980,8 @@ struct OfflineRegression {
         reporter.check(detail.row.id == tokyoStayID, "HotelStayDetailSnapshot exposes list row")
         reporter.check(detail.linkedTransaction?.id == tokyoTransactionID, "HotelStayDetailSnapshot resolves linked transaction")
         reporter.check(detail.rawText == "Demo folio raw text", "HotelStayDetailSnapshot keeps raw text")
-        reporter.check(detail.chargeFields.first { $0.key == .roomCharge }?.value == "JPY 40000", "HotelStayDetailSnapshot includes room charge")
-        reporter.check(detail.chargeFields.first { $0.key == .taxAmount }?.value == "JPY 4000", "HotelStayDetailSnapshot includes tax amount")
+        reporter.check(detail.chargeFields.first { $0.key == .roomCharge }?.value == expectedTokyoRoomCharge, "HotelStayDetailSnapshot includes localized room charge")
+        reporter.check(detail.chargeFields.first { $0.key == .taxAmount }?.value == expectedTokyoTax, "HotelStayDetailSnapshot includes localized tax amount")
         reporter.check(detail.sourceFields.first { $0.key == .sourceFileName }?.value == "demo-folio.pdf", "HotelStayDetailSnapshot includes source file")
         reporter.check(detail.sourceFields.first { $0.key == .confidence }?.value == "91%", "HotelStayDetailSnapshot formats confidence")
 

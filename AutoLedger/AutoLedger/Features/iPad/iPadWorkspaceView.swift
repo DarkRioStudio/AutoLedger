@@ -2546,10 +2546,27 @@ struct HotelStayWorkspaceView: View {
         }
 
         var preparedDraft = draft
+        store.recordHotelFolioDebugRecord(
+            HotelFolioDebugTraceBuilder.makeTextExtractedRecord(draft: preparedDraft)
+        )
         do {
-            preparedDraft = try await HotelFolioExternalParseClient().parse(preparedDraft)
+            let parseResult = try await HotelFolioExternalParseClient().parseWithDebug(preparedDraft)
+            preparedDraft = parseResult.draft
+            store.recordHotelFolioDebugRecords(parseResult.debugRecords)
             statusMessage = String(localized: "hotel_stay.import.status.parsed")
+        } catch let failure as HotelFolioExternalParseFailure {
+            store.recordHotelFolioDebugRecords(failure.debugRecords)
+            statusMessage = String(
+                format: String(localized: "hotel_stay.import.status.manual_review_format"),
+                failure.localizedDescription
+            )
         } catch {
+            store.recordHotelFolioDebugRecord(
+                HotelFolioDebugTraceBuilder.makeParseFailedRecord(
+                    draft: preparedDraft,
+                    message: error.localizedDescription
+                )
+            )
             statusMessage = String(
                 format: String(localized: "hotel_stay.import.status.manual_review_format"),
                 error.localizedDescription

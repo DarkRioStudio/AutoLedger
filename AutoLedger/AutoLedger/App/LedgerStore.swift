@@ -561,6 +561,16 @@ final class LedgerStore: ObservableObject {
         }
     }
 
+    func recordHotelFolioDebugRecord(_ record: ImportDebugRecord) {
+        appendDebugRecord(record)
+    }
+
+    func recordHotelFolioDebugRecords(_ records: [ImportDebugRecord]) {
+        for record in records {
+            appendDebugRecord(record)
+        }
+    }
+
     /// 从 SQLite 重新加载全部账单和调试记录（用于 App 回到前台后同步 Intent 入账记录）
     func refreshFromStore() {
         guard let store = transactionStore else { return }
@@ -832,6 +842,7 @@ final class LedgerStore: ObservableObject {
         }
 
         upsertHotelStayDraftInMemory(draft)
+        recordHotelFolioDebugRecord(HotelFolioDebugTraceBuilder.makeDraftSavedRecord(draft: draft))
         lastImportSummary = localizedMessage(
             "hotel_stay.draft.saved",
             fallback: "酒店水单草稿已保存，等待确认。"
@@ -972,6 +983,7 @@ final class LedgerStore: ObservableObject {
         hotelStayDrafts.removeAll { $0.id == draft.id }
         transactions.insert(result.transaction, at: 0)
         sortTransactions()
+        recordHotelFolioDebugRecord(HotelFolioDebugTraceBuilder.makePostedRecord(result: result))
         lastImportSummary = String(
             format: localizedMessage(
                 "hotel_stay.post.success_format",
@@ -1907,6 +1919,10 @@ final class LedgerStore: ObservableObject {
             llmConfidence: llmConfidence,
             usedRuleFallback: usedRuleFallback
         )
+        appendDebugRecord(record)
+    }
+
+    private func appendDebugRecord(_ record: ImportDebugRecord) {
         debugRecords.insert(record, at: 0)
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.saveDebugEvent(record)

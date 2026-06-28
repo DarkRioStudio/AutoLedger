@@ -25,6 +25,9 @@ struct DebugView: View {
                 supportDebugCard
                 gemmaMetricsCard
                 externalAPIMetricsCard
+                if !hotelFolioDebugRecords.isEmpty {
+                    hotelFolioDebugCard
+                }
                 containerInfoCard
 
                 if let summary = store.lastImportSummary {
@@ -291,6 +294,57 @@ struct DebugView: View {
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
     }
 
+    private var hotelFolioDebugCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("酒店识别链路")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                Text("\(hotelFolioDebugRecords.count) 条")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Text("显示酒店水单从 PDF 文本、LLM 解析、本地化/翻译、汇率换算到待确认/入账的脱敏输入输出。")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+
+            ForEach(Array(hotelFolioDebugRecords.prefix(8))) { record in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Circle()
+                            .fill(stageColor(record.stage))
+                            .frame(width: 8, height: 8)
+                        Text(record.stage.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.ink)
+                        Spacer()
+                        Text(AppFormatters.shortDateTime(record.createdAt))
+                            .font(.caption.monospaced())
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    Text(record.summary)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(3)
+                    if let prompt = record.llmPrompt {
+                        debugTracePreview(title: debugInputTitle(for: record), text: prompt)
+                    }
+                    if let response = record.llmResponse {
+                        debugTracePreview(title: debugOutputTitle(for: record), text: response)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.black.opacity(0.03))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(AppTheme.card))
+    }
+
     private var containerInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("App Group 容器")
@@ -390,6 +444,22 @@ struct DebugView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.black.opacity(0.03))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func debugTracePreview(title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+            Text(text)
+                .font(.caption2.monospaced())
+                .foregroundStyle(AppTheme.ink.opacity(0.72))
+                .lineLimit(4)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.accent.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func infoRow(_ title: String, _ value: String) -> some View {
@@ -585,7 +655,7 @@ struct DebugView: View {
 
             if let prompt = record.llmPrompt {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("模型输入")
+                    Text(debugInputTitle(for: record))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(AppTheme.accent)
                     Text(prompt)
@@ -601,7 +671,7 @@ struct DebugView: View {
 
             if let response = record.llmResponse {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("模型输出")
+                    Text(debugOutputTitle(for: record))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color(red: 0.18, green: 0.67, blue: 0.36))
                     Text(response)
@@ -676,11 +746,13 @@ struct DebugView: View {
 
     private func stageColor(_ stage: ImportDebugStage) -> Color {
         switch stage {
-        case .persisted:
+        case .persisted, .hotelFolioPosted:
             return Color(red: 0.18, green: 0.67, blue: 0.36)
-        case .duplicateSkipped:
+        case .duplicateSkipped, .hotelFolioDraftSaved, .hotelFolioTextExtracted:
             return Color(red: 0.75, green: 0.57, blue: 0.14)
-        case .ocrFailed, .parseFailed, .persistenceFailed:
+        case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioLocalization, .hotelFolioExchangeRate:
+            return AppTheme.accent
+        case .ocrFailed, .parseFailed, .persistenceFailed, .hotelFolioParseFailed:
             return Color(red: 0.74, green: 0.28, blue: 0.28)
         }
     }
@@ -690,6 +762,58 @@ struct DebugView: View {
             guard record.llmProvider?.hasPrefix("external_") == true else { return nil }
             return record.llmLatencyMs
         }
+    }
+
+    private var hotelFolioDebugRecords: [ImportDebugRecord] {
+        store.debugRecords.filter { $0.stage.isHotelFolioStage }
+    }
+
+    private func debugInputTitle(for record: ImportDebugRecord) -> String {
+        switch record.stage {
+        case .hotelFolioLocalization:
+            return "本地化输入"
+        case .hotelFolioExchangeRate:
+            return "汇率输入"
+        case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioParseFailed:
+            return "LLM 输入"
+        default:
+            return "模型输入"
+        }
+    }
+
+    private func debugOutputTitle(for record: ImportDebugRecord) -> String {
+        switch record.stage {
+        case .hotelFolioLocalization:
+            return "本地化输出"
+        case .hotelFolioExchangeRate:
+            return "汇率输出"
+        case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioParseFailed:
+            return "LLM 输出"
+        default:
+            return "模型输出"
+        }
+    }
+
+    private func debugModeDisplayName(for record: ImportDebugRecord) -> String {
+        if record.stage.isHotelFolioStage {
+            switch record.stage {
+            case .hotelFolioTextExtracted:
+                return "PDF/Text"
+            case .hotelFolioLLMRequest, .hotelFolioLLMResponse, .hotelFolioParseFailed:
+                return providerDisplayName(record.llmProvider)
+            case .hotelFolioLocalization:
+                return "本地化"
+            case .hotelFolioExchangeRate:
+                return "汇率"
+            case .hotelFolioDraftSaved:
+                return "待确认"
+            case .hotelFolioPosted:
+                return "已入账"
+            default:
+                break
+            }
+        }
+        return record.usedLLM ? providerDisplayName(record.llmProvider) : "规则"
     }
 
     private func providerDisplayName(_ provider: String?) -> String {
@@ -757,7 +881,7 @@ struct DebugView: View {
         if !store.debugRecords.isEmpty {
             lines.append("最近调试记录：")
             for record in store.debugRecords.prefix(10) {
-                let parseMode = record.usedLLM ? providerDisplayName(record.llmProvider) : "规则"
+                let parseMode = debugModeDisplayName(for: record)
                 lines.append("- [\(record.stage.title)] \(record.source.title) · \(record.imageSource.title) · \(parseMode) · \(AppFormatters.exportDateTime(record.createdAt))")
                 lines.append("  结论：\(record.summary)")
                 if let receipt = record.parsedReceipt {
@@ -783,10 +907,10 @@ struct DebugView: View {
                     lines.append("  OCR：\(record.rawText)")
                 }
                 if let prompt = record.llmPrompt {
-                    lines.append("  模型输入：\(prompt)")
+                    lines.append("  \(debugInputTitle(for: record))：\(prompt)")
                 }
                 if let response = record.llmResponse {
-                    lines.append("  模型输出：\(response)")
+                    lines.append("  \(debugOutputTitle(for: record))：\(response)")
                 }
             }
         }
@@ -814,7 +938,7 @@ struct DebugView: View {
             "阶段：\(record.stage.title)",
             "来源：\(record.source.title)",
             "图片来源：\(record.imageSource.title)",
-            "解析模式：\(record.usedLLM ? "LLM 智能解析" : "纯规则解析")",
+            "解析模式：\(debugModeDisplayName(for: record))",
             "结论：\(record.summary)"
         ]
 
@@ -857,12 +981,12 @@ struct DebugView: View {
         }
 
         if let prompt = record.llmPrompt {
-            lines.append("模型输入：")
+            lines.append("\(debugInputTitle(for: record))：")
             lines.append(prompt)
         }
 
         if let response = record.llmResponse {
-            lines.append("模型输出：")
+            lines.append("\(debugOutputTitle(for: record))：")
             lines.append(response)
         }
 

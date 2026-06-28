@@ -94,7 +94,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             foodBeverageAmount: payload.foodBeverage ?? 0,
             otherAmount: payload.otherCharges ?? 0,
             totalAmount: totalAmount,
-            paymentMethod: trimmed(payload.paymentMethod),
+            paymentMethod: trimmed(localizedData?.paymentMethod) ?? trimmed(payload.paymentMethod),
             sourceType: draft.sourceType,
             sourceFileName: draft.sourceFileName,
             sourcePDFData: draft.sourcePDFData,
@@ -150,7 +150,7 @@ public struct HotelStayLedgerPostingService: Sendable {
         }
         append("房型", localizedData?.roomType ?? payload.roomType, to: &parts)
         append("订单号", payload.confirmationNumber, to: &parts)
-        append("支付方式", payload.paymentMethod, to: &parts)
+        append("支付方式", localizedData?.paymentMethod ?? payload.paymentMethod, to: &parts)
         return parts.joined(separator: "；")
     }
 

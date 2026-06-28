@@ -59,7 +59,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         foodBeverageAmountText = Self.formatAmount(localized?.foodBeverageAmount ?? payload?.foodBeverage)
         otherAmountText = Self.formatAmount(localized?.otherAmount ?? payload?.otherCharges)
         totalAmountText = Self.formatAmount(localized?.totalAmount ?? payload?.totalAmount)
-        paymentMethod = payload?.paymentMethod ?? ""
+        paymentMethod = Self.displayValue(localized?.paymentMethod, fallback: payload?.paymentMethod)
         sourceType = draft.sourceType
         sourceFileName = draft.sourceFileName
         sourceEmailSubject = draft.sourceEmailSubject
@@ -155,6 +155,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
             foodBeverageAmount: payload.foodBeverage,
             otherAmount: payload.otherCharges,
             totalAmount: payload.totalAmount,
+            paymentMethod: payload.paymentMethod,
             exchangeRate: localizedData?.exchangeRate,
             exchangeRateDate: localizedData?.exchangeRateDate,
             exchangeRateProvider: localizedData?.exchangeRateProvider,

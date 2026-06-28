@@ -225,6 +225,7 @@ private struct AutoLedgerRootView: View {
         case .receiptScan:
             navigationState.selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
         case .hotelReviewQueue:
+            navigationState.selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
             navigationState.openHotelReviewQueue()
         }
     }

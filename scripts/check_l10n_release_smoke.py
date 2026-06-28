@@ -19,11 +19,17 @@ CHECKLIST = ROOT / "versions/v1.6.2-ja-release-review-checklist.md"
 REQUIRED_WIDGET_SNIPPETS = [
     "fileprivate static var isJapanese",
     'localized(zh: "今日支出", ja: "今日の支出", en: "Today\'s Spend")',
-    'localized(zh: "默认写入账本：%@", ja: "既定の記録先：%@", en: "Default ledger: %@")',
     'localized(zh: "本地账本", ja: "ローカル台帳", en: "Local Ledger")',
     'localized(zh: "待确认", ja: "確認待ち", en: "Needs Review")',
     'localized(zh: "餐饮", ja: "飲食", en: "Dining")',
     'localized(zh: "手动记录", ja: "手動記録", en: "Manual")',
+]
+
+FORBIDDEN_WIDGET_SNIPPETS = [
+    'localized(zh: "默认写入账本：%@", ja: "既定の記録先：%@", en: "Default ledger: %@")',
+    "默认写入账本：",
+    "Default ledger:",
+    "既定の記録先：",
 ]
 
 REQUIRED_SHORTCUT_PHRASES = [
@@ -81,10 +87,18 @@ def require_snippets(source: str, snippets: list[str], path: Path, failures: lis
             failures.append(f"{path.relative_to(ROOT)} missing snippet: {snippet}")
 
 
+def reject_snippets(source: str, snippets: list[str], path: Path, failures: list[str]) -> None:
+    for snippet in snippets:
+        if snippet in source:
+            failures.append(f"{path.relative_to(ROOT)} should not contain removed widget copy: {snippet}")
+
+
 def main() -> int:
     failures: list[str] = []
 
-    require_snippets(read(WIDGET_FILE), REQUIRED_WIDGET_SNIPPETS, WIDGET_FILE, failures)
+    widget_source = read(WIDGET_FILE)
+    require_snippets(widget_source, REQUIRED_WIDGET_SNIPPETS, WIDGET_FILE, failures)
+    reject_snippets(widget_source, FORBIDDEN_WIDGET_SNIPPETS, WIDGET_FILE, failures)
 
     shortcuts_source = read(SHORTCUTS_FILE)
     require_snippets(shortcuts_source, REQUIRED_SHORTCUT_PHRASES, SHORTCUTS_FILE, failures)
