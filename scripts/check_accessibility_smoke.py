@@ -45,7 +45,7 @@ REQUIRED_SNIPPETS = {
     APP / "Features" / "Hotel" / "HotelStayArchiveView.swift": [
         ".accessibilityElement(children: .combine)",
         ".accessibilityLabel(Text(\"hotel_stay.detail.source_pdf\"))",
-        "lineLimit(2)",
+        "truncationMode(.tail)",
     ],
     APP / "Features" / "Settings" / "SubscriptionListView.swift": [
         ".accessibilityElement(children: .ignore)",

@@ -258,7 +258,7 @@ struct HotelStayListView: View {
         Section {
             let recordsByID = recordByID
             ForEach(snapshot.rows) { row in
-                if let record = recordsByID[row.id] {
+                if recordsByID[row.id] != nil {
                     NavigationLink(value: row.id) {
                         HotelStayRowView(row: row)
                     }
@@ -323,49 +323,63 @@ private struct HotelStayRowView: View {
     let row: HotelStayListRow
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: "bed.double.fill")
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
-                .frame(width: 34, height: 34)
+                .frame(width: 30, height: 30)
                 .background(AppTheme.accent.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(row.hotelName)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
 
-                    Spacer()
+                    Spacer(minLength: 6)
 
                     Text(row.totalAmountText)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
+                        .allowsTightening(true)
+                        .layoutPriority(2)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     if !row.locationText.isEmpty {
                         Text(row.locationText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     if !row.brandGroupText.isEmpty {
                         Text(row.brandGroupText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     HStack(spacing: 8) {
                         if !row.dateRangeText.isEmpty {
                             Text(row.dateRangeText)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                         if !row.nightsText.isEmpty {
                             Text(String(format: String(localized: "hotel_stay.list.nights_format"), row.nightsText))
+                                .lineLimit(1)
                         }
                     }
                     HStack(spacing: 8) {
                         Label(sourceTitleKey(for: row.sourceType), systemImage: "doc.text")
+                            .lineLimit(1)
                         Label(statusTitleKey(for: row.linkStatus), systemImage: statusIconName(for: row.linkStatus))
+                            .lineLimit(1)
                     }
                 }
                 .font(.caption)
@@ -460,45 +474,57 @@ private struct HotelStayDraftRowView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: "doc.text.magnifyingglass")
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.orange)
-                .frame(width: 34, height: 34)
+                .frame(width: 30, height: 30)
                 .background(Color.orange.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(title)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
 
-                    Spacer()
+                    Spacer(minLength: 6)
 
                     Text(amountText)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
+                        .allowsTightening(true)
+                        .layoutPriority(2)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     if let locationText {
                         Text(locationText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     if let dateText {
                         Text(dateText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     if let sourceDetailText {
                         Text(sourceDetailText)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                     HStack(spacing: 8) {
                         Label(sourceTitleKey(for: draft.sourceType), systemImage: "tray.and.arrow.down")
+                            .lineLimit(1)
                         Label("hotel_stay.draft.status.needs_review", systemImage: "exclamationmark.circle")
+                            .lineLimit(1)
                     }
                 }
                 .font(.caption)
@@ -527,6 +553,7 @@ struct HotelStayDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var form: HotelStayRecordEditForm
     @State private var saveMessage: String?
+    @State private var saveMessageIsSuccess = false
     @State private var showsDeleteConfirmation = false
 
     let record: HotelStayRecord
@@ -602,9 +629,18 @@ struct HotelStayDetailView: View {
                 }
             }
         }
-        .onChange(of: record) { _, newRecord in
+        .onChange(of: record) { oldRecord, newRecord in
             form = HotelStayRecordEditForm(record: newRecord, linkedTransaction: linkedTransaction)
-            saveMessage = nil
+            if oldRecord.id != newRecord.id {
+                saveMessage = nil
+                saveMessageIsSuccess = false
+            }
+        }
+        .onChange(of: form.checkInDateValue) { _, _ in
+            form.updateNightsFromDates()
+        }
+        .onChange(of: form.checkOutDateValue) { _, _ in
+            form.updateNightsFromDates()
         }
         .confirmationDialog(
             "hotel_stay.delete.confirm.title",
@@ -648,9 +684,9 @@ struct HotelStayDetailView: View {
                     .foregroundStyle(AppTheme.accent)
 
                 if let saveMessage {
-                    Text(saveMessage)
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.mutedInk)
+                    Label(saveMessage, systemImage: saveMessageIsSuccess ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(saveMessageIsSuccess ? AppTheme.accent : .orange)
                 }
             }
             .padding(.vertical, 6)
@@ -663,16 +699,16 @@ struct HotelStayDetailView: View {
             editableTextField("hotel_stay.review.hotel_name", text: $form.hotelName)
             editableTextField("hotel_stay.review.brand", text: $form.hotelBrand)
             editableTextField("hotel_stay.review.group", text: $form.hotelGroup)
-            editableTextField("hotel_stay.review.city", text: $form.city)
-            editableTextField("hotel_stay.review.country", text: $form.country)
+            editableOptionField("hotel_stay.review.city", text: $form.city, options: form.cityOptions)
+            editableOptionField("hotel_stay.review.country", text: $form.country, options: form.countryOptions)
         }
     }
 
     private var stayEditorSection: some View {
         Section("hotel_stay.detail.stay") {
-            editableTextField("hotel_stay.review.check_in", text: $form.checkInDate)
-            editableTextField("hotel_stay.review.check_out", text: $form.checkOutDate)
-            editableTextField("hotel_stay.review.nights", text: $form.nightsText)
+            DatePicker("hotel_stay.review.check_in", selection: $form.checkInDateValue, displayedComponents: [.date])
+            DatePicker("hotel_stay.review.check_out", selection: $form.checkOutDateValue, displayedComponents: [.date])
+            editableNumberField("hotel_stay.review.nights", text: $form.nightsText)
             editableTextField("hotel_stay.review.room_type", text: $form.roomType)
             editableTextField("hotel_stay.review.confirmation", text: $form.confirmationNumber)
         }
@@ -680,13 +716,18 @@ struct HotelStayDetailView: View {
 
     private var chargeEditorSection: some View {
         Section("hotel_stay.detail.charges") {
-            editableTextField("hotel_stay.review.currency", text: $form.currency)
-            editableTextField("hotel_stay.review.room_charge", text: $form.roomChargeText)
-            editableTextField("hotel_stay.review.tax", text: $form.taxAmountText)
-            editableTextField("hotel_stay.review.service_charge", text: $form.serviceChargeText)
-            editableTextField("hotel_stay.review.food_beverage", text: $form.foodBeverageAmountText)
-            editableTextField("hotel_stay.review.other_charges", text: $form.otherAmountText)
-            editableTextField("hotel_stay.review.total", text: $form.totalAmountText)
+            Picker("hotel_stay.review.currency", selection: $form.currency) {
+                ForEach(form.currencyOptions, id: \.self) { currency in
+                    Text(currency).tag(currency)
+                }
+            }
+            .pickerStyle(.menu)
+            editableAmountField("hotel_stay.review.room_charge", text: $form.roomChargeText)
+            editableAmountField("hotel_stay.review.tax", text: $form.taxAmountText)
+            editableAmountField("hotel_stay.review.service_charge", text: $form.serviceChargeText)
+            editableAmountField("hotel_stay.review.food_beverage", text: $form.foodBeverageAmountText)
+            editableAmountField("hotel_stay.review.other_charges", text: $form.otherAmountText)
+            editableAmountField("hotel_stay.review.total", text: $form.totalAmountText)
             editableTextField("hotel_stay.review.payment_method", text: $form.paymentMethod)
             if !form.isValid {
                 Text("hotel_stay.review.validation.required")
@@ -711,14 +752,14 @@ struct HotelStayDetailView: View {
         Section("hotel_stay.detail.linked_transaction") {
             if linkedTransaction != nil {
                 editableTextField("hotel_stay.detail.transaction_merchant", text: $form.transactionMerchant)
-                editableTextField("hotel_stay.detail.transaction_amount", text: $form.transactionAmountText)
+                editableAmountField("hotel_stay.detail.transaction_amount", text: $form.transactionAmountText)
                 DatePicker(
                     "hotel_stay.detail.transaction_date",
                     selection: $form.transactionOccurredAt,
                     displayedComponents: [.date, .hourAndMinute]
                 )
                 LabeledContent("hotel_stay.detail.transaction_category", value: TransactionCategory.hotel.title)
-                editableTextField("hotel_stay.detail.transaction_note", text: $form.transactionNote)
+                editableLongTextField("hotel_stay.detail.transaction_note", text: $form.transactionNote)
             } else {
                 Label("hotel_stay.detail.linked_transaction.missing", systemImage: "exclamationmark.circle")
                     .foregroundStyle(.orange)
@@ -842,6 +883,75 @@ struct HotelStayDetailView: View {
         LabeledContent(titleKey) {
             TextField(titleKey, text: text, axis: .vertical)
                 .multilineTextAlignment(.trailing)
+                .lineLimit(1...3)
+        }
+    }
+
+    private func editableOptionField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>,
+        options: [String]
+    ) -> some View {
+        LabeledContent(titleKey) {
+            HStack(spacing: 8) {
+                TextField(titleKey, text: text)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Menu {
+                    ForEach(options, id: \.self) { option in
+                        Button(option) {
+                            text.wrappedValue = option
+                        }
+                    }
+                } label: {
+                    Image(systemName: "chevron.down.circle")
+                        .imageScale(.medium)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+            }
+        }
+    }
+
+    private func editableNumberField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>
+    ) -> some View {
+        LabeledContent(titleKey) {
+            TextField(titleKey, text: text)
+                .multilineTextAlignment(.trailing)
+                .hotelNumberKeyboard()
+        }
+    }
+
+    private func editableAmountField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>
+    ) -> some View {
+        LabeledContent(titleKey) {
+            TextField(titleKey, text: text)
+                .multilineTextAlignment(.trailing)
+                .hotelDecimalKeyboard()
+        }
+    }
+
+    private func editableLongTextField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(titleKey)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+            TextField(titleKey, text: text, axis: .vertical)
+                .lineLimit(4...10)
+                .textFieldStyle(.plain)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.canvas.opacity(0.7))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
     }
 
@@ -849,6 +959,7 @@ struct HotelStayDetailView: View {
         guard let onUpdateRecord else { return }
         guard form.isValid else {
             saveMessage = String(localized: "hotel_stay.review.validation.required")
+            saveMessageIsSuccess = false
             return
         }
 
@@ -856,9 +967,11 @@ struct HotelStayDetailView: View {
         let updatedTransaction = form.updatedTransaction(from: linkedTransaction, record: updatedRecord)
         if onUpdateRecord(updatedRecord, updatedTransaction) {
             saveMessage = String(localized: "common.saved")
+            saveMessageIsSuccess = true
             form = HotelStayRecordEditForm(record: updatedRecord, linkedTransaction: updatedTransaction)
         } else {
             saveMessage = String(localized: "hotel_stay.detail.save.failed")
+            saveMessageIsSuccess = false
         }
     }
 
@@ -887,8 +1000,8 @@ private struct HotelStayRecordEditForm: Equatable {
     var hotelBrand: String
     var city: String
     var country: String
-    var checkInDate: String
-    var checkOutDate: String
+    var checkInDateValue: Date
+    var checkOutDateValue: Date
     var nightsText: String
     var roomType: String
     var confirmationNumber: String
@@ -914,8 +1027,8 @@ private struct HotelStayRecordEditForm: Equatable {
         hotelBrand = Self.displayString(record.localizedData?.brand, fallback: record.hotelBrand)
         city = Self.displayString(record.localizedData?.city, fallback: record.city)
         country = Self.displayString(record.localizedData?.country, fallback: record.country)
-        checkInDate = record.checkInDate ?? ""
-        checkOutDate = record.checkOutDate ?? ""
+        checkInDateValue = Self.parsedDate(record.checkInDate) ?? record.createdAt
+        checkOutDateValue = Self.parsedDate(record.checkOutDate) ?? record.updatedAt
         nightsText = record.nights.map(String.init) ?? ""
         roomType = Self.displayString(record.localizedData?.roomType, fallback: record.roomType)
         confirmationNumber = record.confirmationNumber ?? ""
@@ -947,6 +1060,28 @@ private struct HotelStayRecordEditForm: Equatable {
             .nilIfEmpty
     }
 
+    var cityOptions: [String] {
+        Self.uniqueOptions([city] + Self.commonCityOptions)
+    }
+
+    var countryOptions: [String] {
+        Self.uniqueOptions([country] + Self.commonCountryOptions)
+    }
+
+    var currencyOptions: [String] {
+        Self.uniqueOptions([currency] + Self.commonCurrencyOptions)
+    }
+
+    mutating func updateNightsFromDates() {
+        let start = AppFormatters.calendar.startOfDay(for: checkInDateValue)
+        let end = AppFormatters.calendar.startOfDay(for: checkOutDateValue)
+        guard let days = AppFormatters.calendar.dateComponents([.day], from: start, to: end).day,
+              days > 0 else {
+            return
+        }
+        nightsText = String(days)
+    }
+
     func displayTotalAmountText(using presenter: HotelStayArchivePresenter) -> String {
         presenter.localizedAmountText(parsedAmount(totalAmountText), currency: currency)
     }
@@ -954,8 +1089,8 @@ private struct HotelStayRecordEditForm: Equatable {
     func updatedRecord(from record: HotelStayRecord) -> HotelStayRecord {
         var updated = record
         updated.hotelName = trimmedRequired(hotelName, fallback: record.hotelName)
-        updated.checkInDate = trimmedOptional(checkInDate)
-        updated.checkOutDate = trimmedOptional(checkOutDate)
+        updated.checkInDate = Self.dateText(checkInDateValue)
+        updated.checkOutDate = Self.dateText(checkOutDateValue)
         updated.nights = Int(nightsText.trimmingCharacters(in: .whitespacesAndNewlines))
         updated.confirmationNumber = trimmedOptional(confirmationNumber)
         updated.currency = trimmedRequired(currency, fallback: record.currency)
@@ -1018,6 +1153,46 @@ private struct HotelStayRecordEditForm: Equatable {
         components.second = 0
         return AppFormatters.calendar.date(from: components) ?? fallback
     }
+
+    private static func parsedDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        return AppFormatters.parseFlexibleDate(value)
+    }
+
+    private static func dateText(_ date: Date) -> String {
+        let components = AppFormatters.calendar.dateComponents([.year, .month, .day], from: date)
+        guard let year = components.year,
+              let month = components.month,
+              let day = components.day else {
+            return ""
+        }
+        return String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    private static func uniqueOptions(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        return values
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .filter { seen.insert($0).inserted }
+    }
+
+    private static let commonCityOptions = [
+        "北京", "上海", "广州", "深圳", "重庆", "成都", "杭州", "南京", "天津", "西安",
+        "香港", "澳门", "台北", "东京", "大阪", "京都", "首尔", "曼谷", "新加坡",
+        "New York", "Los Angeles", "San Francisco", "London", "Paris", "Berlin"
+    ]
+
+    private static let commonCountryOptions = [
+        "中国", "中国香港", "中国澳门", "中国台湾", "日本", "韩国", "新加坡", "泰国",
+        "美国", "英国", "法国", "德国", "澳大利亚", "加拿大", "United States",
+        "United Kingdom", "Japan", "Singapore"
+    ]
+
+    private static let commonCurrencyOptions = [
+        "CNY", "USD", "JPY", "EUR", "GBP", "HKD", "MOP", "TWD", "SGD", "KRW",
+        "THB", "MYR", "AUD", "CAD"
+    ]
 
     private static func displayString(_ localized: String?, fallback: String?) -> String {
         trimmedOptional(localized) ?? trimmedOptional(fallback) ?? ""
@@ -1098,6 +1273,26 @@ private struct HotelStayPDFPreview: NSViewRepresentable {
     }
 }
 #endif
+
+private extension View {
+    @ViewBuilder
+    func hotelDecimalKeyboard() -> some View {
+        #if canImport(UIKit)
+        keyboardType(.decimalPad)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func hotelNumberKeyboard() -> some View {
+        #if canImport(UIKit)
+        keyboardType(.numberPad)
+        #else
+        self
+        #endif
+    }
+}
 
 private extension String {
     var nilIfEmpty: String? {

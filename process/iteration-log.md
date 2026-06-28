@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-28（ITER-277 酒店水单分享唤醒与详情编辑）
+更新日期：2026-06-28（ITER-278 酒店详情编辑表单 polish）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-278 酒店详情编辑表单 polish
+- 日期：2026-06-28
+- 所属版本：v1.6.2
+- 所属阶段：Hotel / UI Polish
+- 类型：能力增强 / UI / 测试
+- 目标：优化酒店消费详情编辑页的字段输入方式和保存反馈，并改善酒店消费列表、账本列表中过长文本和图标间距的展示。
+- 改动范围：`HotelStayDetailView` 的城市 / 国家字段保留可编辑文本并新增下拉建议菜单；入住 / 退房改为 `DatePicker`，日期变更时自动刷新房晚；币种改为菜单；费用字段和关联账单金额增加数字键盘 hint；关联账单备注改为多行折行输入；保存成功反馈改为更醒目的图标提示，且同 ID 记录刷新不会立即清除提示。酒店消费列表和待确认草稿列表收紧图标与文本间距，长酒店名、地点、品牌 / 集团和来源状态改为 tail 省略；账本列表长商户名改为单行省略。`scripts/check_accessibility_smoke.py` 从旧的 `lineLimit(2)` 门禁更新为 `truncationMode(.tail)` 门禁；`versions/v1.6.2-plan.md`、CHANGELOG 和本日志同步 `GOAL-1935` 状态。
+- 未改动范围：未修改 `HotelStayRecord` / `Transaction` 数据模型、SQLite / CloudKit schema、酒店水单解析管线、邮箱后台自动扫描、Worker 云端自动化、Keychain、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未处理当前工作区中既有的 `AutoLedger/AutoLedger.xcodeproj/project.pbxproj` 排序噪声。
+- 完成内容：酒店详情编辑页现在使用更贴合字段类型的控件，金额输入在 iOS 上会给出 decimal pad hint；备注可多行输入；保存后的“已保存”反馈会留在详情头部。酒店消费列表和账本列表在长文本场景下优先保持金额 / 日期可见，标题和元信息以省略号收尾。
+- 未完成内容：城市 / 国家下拉仍是本地建议列表，不是完整全球地理库；真实设备键盘、长备注输入和不同 Dynamic Type 档位下的最终目检仍留给 release smoke。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：城市 / 国家建议列表只覆盖常见目的地并保留手输兜底，后续如果需要完整选择器，应引入独立地区数据源或系统地区代码映射。长文本改为单行省略后，列表更稳定，但完整内容需要进入详情查看。
+- 回滚方式：回退 `HotelStayArchiveView` 表单控件与列表布局、`LedgerView` 列表省略策略、`check_accessibility_smoke.py` smoke 更新和版本文档 / 日志即可；无数据迁移或 schema 回滚。
+- 结论：`GOAL-1935` 已完成工程闭环，酒店消费详情编辑和列表展示更接近正式可测试状态。
+- 下一步建议：真机 smoke 中重点检查酒店详情保存反馈、长备注输入、中文 / 英文酒店名省略、金额数字键盘和大字体下的列表行高度。
 
 ### ITER-277 酒店水单分享唤醒与详情编辑
 - 日期：2026-06-28

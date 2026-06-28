@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.6.2）
+- [2026-06-28 +0800] 完成 `GOAL-1935` 酒店消费详情编辑表单 polish：城市 / 国家字段保留文本编辑并新增下拉建议，入住 / 退房改为日期 Picker，币种改为菜单，房费 / 税费 / 服务费 / 餐饮 / 其他 / 总额和关联账单金额使用数字键盘 hint，关联账单备注支持多行折行；保存成功提示不再被同 ID 记录刷新立即清除。酒店消费列表和账本列表的长酒店名 / 商户名 / 元信息改为单行 tail 省略，并收紧图标与文本间距；accessibility smoke 从旧的两行展示检查改为 tail truncation 检查。本轮不修改数据模型、SQLite / CloudKit schema、识别管线、邮箱后台扫描、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-28 +0800] 完成 `GOAL-1934` 酒店水单分享与正式记录编辑补强：Share Extension 分享酒店水单 PDF 后会写入待复核 handoff，并显式打开 `autoledger://hotel-stays/review?draftID=...` 唤醒主 App、切到酒店消费 tab 和对应待确认水单；正式酒店消费详情页改为可编辑表单，右上角对勾保存会更新 `HotelStayRecord` 与关联普通支出流水，酒店关联账单默认时间为退房日期 16:00 且可编辑；四语补齐保存提示，离线回归新增酒店记录编辑持久化断言。本轮不修改 SQLite / CloudKit schema、邮箱后台扫描、Worker 自动化、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-27 +0800] 完成 `GOAL-1933` 酒店邮箱常用 provider 默认设置扩展：本地邮箱导入配置从 QQ / 自定义扩展为 QQ、网易 163、网易 126、Gmail、Outlook / Hotmail、iCloud Mail、Yahoo Mail 和自定义；选择常用 provider 会自动填充 IMAP host、993 端口和 TLS，并保留用户已输入的邮箱地址；四语补齐 provider 名称，离线回归新增常用 IMAP 预设断言。本轮不新增邮箱后台自动扫描、不上传邮箱授权码、不修改 Keychain 保存逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-27 +0800] 修正 `GOAL-1922` Widget 展示口径：移除 iPhone / iOS Widget 中尚未实现的预算剩余占位和 `monthlyBudgetAmount` 读取逻辑，`MonthlyReportWidget` 改为展示本月支出、Top 分类、最近账单、即将续费和 `autoledger://quick-add` 快速记一笔入口；`scripts/check_widget_smoke.py` 增加预算占位禁用检查。本轮不新增预算模型、不修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。

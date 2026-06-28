@@ -347,13 +347,13 @@ struct LedgerView: View {
     }
 
     private func transactionRow(_ transaction: Transaction) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             Image(systemName: transaction.categoryEnum.iconName)
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(transaction.categoryEnum.tint)
-                .frame(width: 32, height: 32)
+                .frame(width: 30, height: 30)
                 .background(transaction.categoryEnum.tint.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -361,7 +361,8 @@ struct LedgerView: View {
                     Text(transaction.merchant)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .minimumScaleFactor(0.9)
                         .allowsTightening(true)
                         .layoutPriority(1)
@@ -390,7 +391,7 @@ struct LedgerView: View {
 
                     Text(AppFormatters.shortDateTime(transaction.occurredAt))
                         .multilineTextAlignment(.trailing)
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .frame(minWidth: 58, alignment: .trailing)
                         .layoutPriority(1)
                 }
