@@ -30,7 +30,7 @@ final class WatchConnectivityHost: NSObject {
 
     /// App 进入前台或账单变化时调用：将最近 20 条账单同步给 Watch。
     func pushRecentTransactionsIfReachable() {
-        guard WCSession.default.activationState == .activated else { return }
+        guard canPushSnapshotToWatch else { return }
         recordFallbackSnapshotUpdatedAtIfNeeded()
         let payload = makeSyncPayload()
 
@@ -51,6 +51,22 @@ final class WatchConnectivityHost: NSObject {
     }
 
     // MARK: - Private helpers
+
+    private var canPushSnapshotToWatch: Bool {
+        guard WCSession.isSupported(),
+              WCSession.default.activationState == .activated else {
+            return false
+        }
+
+        #if os(iOS) && !targetEnvironment(macCatalyst)
+        guard WCSession.default.isPaired,
+              WCSession.default.isWatchAppInstalled else {
+            return false
+        }
+        #endif
+
+        return true
+    }
 
     /// 将 Transaction 序列化为 Watch 侧 WatchTransaction.init?(from:) 可反序列化的字典。
     private func serialize(_ t: Transaction) -> [String: Any] {
