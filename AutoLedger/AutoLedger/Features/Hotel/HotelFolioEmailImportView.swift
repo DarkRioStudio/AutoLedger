@@ -2,24 +2,42 @@ import AutoLedgerCore
 import SwiftUI
 
 struct HotelFolioEmailImportView: View {
+    private static let phoneSearchDays = 30
+    private static let phoneMaxMessages = 100
+    private static let macSearchDayOptions = [0, 30, 90, 180, 365]
+    private static let macMaxMessageOptions = [0, 20, 50, 100]
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
     let targetLedgerID: String?
     let onDraftsReady: ([HotelStayDraft]) -> Void
 
-    @State private var settings = HotelEmailAccountSettingsStore.current
-    @State private var portText = String(HotelEmailAccountSettingsStore.current.imapPort)
-    @State private var searchDaysText = String(HotelEmailAccountSettingsStore.current.searchDays)
-    @State private var maxMessagesText = String(HotelEmailAccountSettingsStore.current.maxMessages)
+    @State private var settings: HotelEmailAccountSettings
+    @State private var portText: String
+    @State private var searchDaysText: String
+    @State private var maxMessagesText: String
     @State private var credentialInput = ""
-    @State private var hasStoredCredential = HotelEmailCredentialStore.hasStoredCredential(
-        for: HotelEmailAccountSettingsStore.current.emailAddress
-    )
+    @State private var hasStoredCredential: Bool
     @State private var candidates: [HotelFolioEmailMessage] = []
     @State private var selectedAttachmentIDs: Set<String> = []
     @State private var statusMessage: String?
     @State private var isScanning = false
     @State private var isImportingSelection = false
+
+    init(
+        targetLedgerID: String?,
+        onDraftsReady: @escaping ([HotelStayDraft]) -> Void
+    ) {
+        self.targetLedgerID = targetLedgerID
+        self.onDraftsReady = onDraftsReady
+
+        let current = HotelEmailAccountSettingsStore.current
+        _settings = State(initialValue: current)
+        _portText = State(initialValue: String(current.imapPort))
+        _searchDaysText = State(initialValue: String(current.searchDays))
+        _maxMessagesText = State(initialValue: String(current.maxMessages))
+        _hasStoredCredential = State(initialValue: HotelEmailCredentialStore.hasStoredCredential(for: current.emailAddress))
+    }
 
     var body: some View {
         NavigationStack {
@@ -80,15 +98,9 @@ struct HotelFolioEmailImportView: View {
 
             Toggle("hotel_stay.email.tls", isOn: $settings.useTLS)
 
-            TextField("hotel_stay.email.search_days", text: $searchDaysText)
-                #if os(iOS)
-                .keyboardType(.numberPad)
-                #endif
-
-            TextField("hotel_stay.email.max_messages", text: $maxMessagesText)
-                #if os(iOS)
-                .keyboardType(.numberPad)
-                #endif
+            if shouldShowScanScopeFields {
+                macScanScopeFields
+            }
 
             HStack {
                 SecureField("hotel_stay.email.auth_code", text: $credentialInput)
@@ -107,6 +119,50 @@ struct HotelFolioEmailImportView: View {
         } footer: {
             Text("hotel_stay.email.account_footer")
         }
+    }
+
+    private var shouldShowScanScopeFields: Bool {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
+    private var macScanScopeFields: some View {
+        Group {
+            Picker("hotel_stay.email.search_days", selection: scanDaysSelection) {
+                ForEach(Self.macSearchDayOptions, id: \.self) { days in
+                    scanScopeOptionLabel(value: days).tag(days)
+                }
+            }
+            .pickerStyle(.menu)
+
+            Picker("hotel_stay.email.max_messages", selection: maxMessagesSelection) {
+                ForEach(Self.macMaxMessageOptions, id: \.self) { count in
+                    scanScopeOptionLabel(value: count).tag(count)
+                }
+            }
+            .pickerStyle(.menu)
+        }
+    }
+
+    private var scanDaysSelection: Binding<Int> {
+        Binding(
+            get: { Int(searchDaysText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0 },
+            set: { searchDaysText = String($0) }
+        )
+    }
+
+    private var maxMessagesSelection: Binding<Int> {
+        Binding(
+            get: { Int(maxMessagesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0 },
+            set: { maxMessagesText = String($0) }
+        )
+    }
+
+    private func scanScopeOptionLabel(value: Int) -> Text {
+        value == 0 ? Text("ledger.filter.all") : Text(verbatim: "\(value)")
     }
 
     private var credentialActionButtons: some View {
@@ -477,12 +533,24 @@ struct HotelFolioEmailImportView: View {
     }
 
     private func makeSettings() throws -> HotelEmailAccountSettings {
-        guard let port = Int(portText.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let searchDays = Int(searchDaysText.trimmingCharacters(in: .whitespacesAndNewlines)),
-              let maxMessages = Int(maxMessagesText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+        guard let port = Int(portText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             throw HotelFolioEmailImportError.invalidSettings
         }
-        let normalized = HotelEmailAccountSettings(
+        let searchDays: Int
+        let maxMessages: Int
+        if shouldShowScanScopeFields {
+            guard let parsedSearchDays = Int(searchDaysText.trimmingCharacters(in: .whitespacesAndNewlines)),
+                  let parsedMaxMessages = Int(maxMessagesText.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                throw HotelFolioEmailImportError.invalidSettings
+            }
+            searchDays = parsedSearchDays
+            maxMessages = parsedMaxMessages
+        } else {
+            searchDays = Self.phoneSearchDays
+            maxMessages = Self.phoneMaxMessages
+        }
+
+        let scoped = effectiveScanScopeSettings(from: HotelEmailAccountSettings(
             emailAddress: settings.emailAddress,
             provider: settings.provider,
             imapHost: settings.imapHost,
@@ -490,11 +558,20 @@ struct HotelFolioEmailImportView: View {
             useTLS: settings.useTLS,
             searchDays: searchDays,
             maxMessages: maxMessages
-        ).normalized
+        ))
+        let normalized = scoped.normalized
         guard !normalized.emailAddress.isEmpty, !normalized.imapHost.isEmpty else {
             throw HotelFolioEmailImportError.invalidSettings
         }
         return normalized
+    }
+
+    private func effectiveScanScopeSettings(from settings: HotelEmailAccountSettings) -> HotelEmailAccountSettings {
+        guard !shouldShowScanScopeFields else { return settings }
+        var copy = settings
+        copy.searchDays = Self.phoneSearchDays
+        copy.maxMessages = Self.phoneMaxMessages
+        return copy
     }
 
     private func refreshStoredCredentialState() {

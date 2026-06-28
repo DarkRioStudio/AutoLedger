@@ -267,27 +267,32 @@ struct HotelFolioIMAPClient: Sendable {
         try await withIMAPTimeout(operation: "select INBOX") {
             try await session.selectMailbox("INBOX")
         }
-        let sinceDate = Calendar.current.date(byAdding: .day, value: -settings.searchDays, to: Date()) ?? Date()
+        let scanScopeSummary = settings.searchDays > 0 ? "days=\(settings.searchDays)" : "all"
         onProgress(
             HotelFolioEmailScanProgress(
                 phase: .searching,
-                debugSummary: "邮箱水单扫描：扫描时间窗内全部邮件 · days=\(settings.searchDays)"
+                debugSummary: "邮箱水单扫描：扫描时间窗内全部邮件 · \(scanScopeSummary)"
             )
         )
         let uids = try await withIMAPTimeout(operation: "search attachment window") {
-            try await session.searchUIDs(since: sinceDate)
+            if settings.searchDays > 0 {
+                let sinceDate = Calendar.current.date(byAdding: .day, value: -settings.searchDays, to: Date()) ?? Date()
+                return try await session.searchUIDs(since: sinceDate)
+            }
+            return try await session.searchAllUIDs()
         }
             .reversed()
+        let maxMessagesSummary = settings.maxMessages > 0 ? "\(settings.maxMessages)" : "全部"
         onProgress(
             HotelFolioEmailScanProgress(
                 phase: .foundMessages(uids.count),
-                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封时间窗内邮件，开始筛选 PDF 附件 · 最多展示 \(settings.maxMessages) 封"
+                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封时间窗内邮件，开始筛选 PDF 附件 · 最多展示 \(maxMessagesSummary) 封"
             )
         )
 
         var candidates: [HotelFolioEmailMessage] = []
         for (index, uid) in uids.enumerated() {
-            if candidates.count >= settings.maxMessages {
+            if settings.maxMessages > 0 && candidates.count >= settings.maxMessages {
                 onProgress(
                     HotelFolioEmailScanProgress(
                         phase: .completed(candidates.count),
@@ -627,6 +632,11 @@ private actor HotelFolioIMAPSession {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "dd-MMM-yyyy"
         let response = try await execute("UID SEARCH SINCE \(formatter.string(from: date))")
+        return parseSearchUIDs(from: response)
+    }
+
+    func searchAllUIDs() async throws -> [String] {
+        let response = try await execute("UID SEARCH ALL")
         return parseSearchUIDs(from: response)
     }
 

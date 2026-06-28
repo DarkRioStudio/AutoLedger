@@ -28,8 +28,8 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
         imapHost: String,
         imapPort: Int,
         useTLS: Bool,
-        searchDays: Int = 90,
-        maxMessages: Int = 20
+        searchDays: Int = 0,
+        maxMessages: Int = 0
     ) {
         self.emailAddress = emailAddress
         self.provider = provider
@@ -75,8 +75,8 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
             imapHost: "",
             imapPort: 993,
             useTLS: true,
-            searchDays: 90,
-            maxMessages: 20
+            searchDays: 0,
+            maxMessages: 0
         )
     }
 
@@ -107,8 +107,8 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
             imapHost: host,
             imapPort: 993,
             useTLS: true,
-            searchDays: 90,
-            maxMessages: 20
+            searchDays: 0,
+            maxMessages: 0
         )
     }
 
@@ -117,8 +117,8 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
         copy.emailAddress = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.imapHost = imapHost.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.imapPort = min(max(imapPort, 1), 65_535)
-        copy.searchDays = min(max(searchDays, 1), 365)
-        copy.maxMessages = min(max(maxMessages, 1), 100)
+        copy.searchDays = min(max(searchDays, 0), 365)
+        copy.maxMessages = min(max(maxMessages, 0), 100)
         return copy
     }
 }

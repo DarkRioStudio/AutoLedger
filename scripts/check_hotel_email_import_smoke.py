@@ -23,6 +23,11 @@ REQUIRED_VIEW_SNIPPETS = [
     "recordEmailScanDebug(",
     "handleScanProgress(",
     "checkmark.square.fill",
+    "phoneSearchDays = 30",
+    "phoneMaxMessages = 100",
+    "shouldShowScanScopeFields",
+    "macScanScopeFields",
+    "effectiveScanScopeSettings(from:",
 ]
 
 REQUIRED_SERVICE_SNIPPETS = [
@@ -42,8 +47,9 @@ REQUIRED_SERVICE_SNIPPETS = [
     r'#"(?:~)?\{(\d+)\+?\}\r?\n"#',
     "hotel_stay.email.error.invalid_response_format",
     "UID SEARCH SINCE",
+    "UID SEARCH ALL",
     "pdfAttachmentMessage(",
-    "candidates.count >= settings.maxMessages",
+    "settings.maxMessages > 0 && candidates.count >= settings.maxMessages",
     "扫描时间窗内全部邮件",
     "readResponse(tag: String) async throws -> HotelFolioIMAPTaggedResponse",
     ".candidateAccepted(subject:",

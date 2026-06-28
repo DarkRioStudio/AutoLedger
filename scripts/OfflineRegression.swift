@@ -508,8 +508,20 @@ struct OfflineRegression {
         reporter.check(qqSettings.imapHost == "imap.qq.com", "HotelEmailAccountSettings uses QQ IMAP host")
         reporter.check(qqSettings.imapPort == 993, "HotelEmailAccountSettings uses IMAP over TLS port")
         reporter.check(qqSettings.useTLS, "HotelEmailAccountSettings enables TLS by default")
-        reporter.check(qqSettings.searchDays == 90, "HotelEmailAccountSettings keeps a bounded scan window")
-        reporter.check(qqSettings.maxMessages == 20, "HotelEmailAccountSettings keeps a bounded message scan")
+        reporter.check(qqSettings.searchDays == 0, "HotelEmailAccountSettings defaults scan window to all")
+        reporter.check(qqSettings.maxMessages == 0, "HotelEmailAccountSettings defaults message limit to all")
+
+        let boundedSettings = HotelEmailAccountSettings(
+            emailAddress: "traveler@qq.com",
+            provider: .qq,
+            imapHost: "imap.qq.com",
+            imapPort: 993,
+            useTLS: true,
+            searchDays: 999,
+            maxMessages: 999
+        ).normalized
+        reporter.check(boundedSettings.searchDays == 365, "HotelEmailAccountSettings clamps scan window upper bound")
+        reporter.check(boundedSettings.maxMessages == 100, "HotelEmailAccountSettings clamps message limit upper bound")
 
         let commonPresets: [(HotelEmailAccountSettings.Provider, String)] = [
             (.qq, "imap.qq.com"),
