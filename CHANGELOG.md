@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.6.3）
+- [2026-06-29 +0800] 完成 `GOAL-2000` 至 `GOAL-2014` 酒店水单 C1 第一版 App/Core 工程骨架：新增 `HotelCloudFolioInboxAddress`、`CloudHotelFolioCandidate`、`CloudHotelFolioCandidateStatus`、`CloudHotelFolioCandidateFactory` 和 `HotelCloudFolioDraftFactory`，冻结 `folio+<token>@getautoledger.app` 专属收件箱、token hash、候选 metadata、附件 hash、对象存储 key、短期过期和状态转换合同；App 侧新增 `HotelFolioCloudCandidatePDFImporter`，为未来云候选下载 PDF 后复用 PDFKit 文本提取并生成 `HotelStayDraft(sourceType: .cloudWorker)`；deep link 新增 `autoledger://hotel-cloud-candidate/{candidateID}` 与 `autoledger://hotel-cloud-candidates`，可打开酒店消费 tab 并记录待处理候选 ID。离线回归覆盖地址生成、hash / 脱敏、候选状态和 `.cloudWorker` Draft 生成，deep link smoke 覆盖新路由。本轮不实现真实 Worker、对象存储、APNs、订阅后端、云候选列表 UI、自动入账、CloudKit / SQLite schema 变更、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+
 ### 变更（v1.6.2）
 - [2026-06-29 +0800] 完成 `GOAL-1960` v1.6.2 回归基线与 release smoke 收口：`versions/v1.6.2-plan.md` 和 `versions/v1.6.2-regression-baseline.md` 标记为 Completed，记录 `git diff --check`、本地化覆盖、自适应布局、deep link、离线回归、golden 回归和 Xcode 27 iOS Simulator Debug 构建均通过；不能由 CLI 伪造的 Device Hub Resize Mode、iPhone Mirroring、真机 Widget / App Intents、酒店水单 Share Extension、真实测试邮箱、日文截图 / ASC 文案和平台素材目检继续作为人工发布证据。新增 `versions/v1.6.3-plan.md`，规划酒店水单 C1 AutoLedger 专属收件箱自动导入主线，明确 `folio+<token>@getautoledger.app`、Worker 入站邮件解析、PDF 短期暂存、APNs 待确认推送、App 本地 PDFKit / 脱敏 / `HotelFolioParsePipeline` 识别、用户确认后入账；C2 Worker 登录用户邮箱自动扫描仅作为个人自用或未来实验路线。同步更新根 README 四语路线图。本轮只更新文档，不修改 Swift 代码、Worker 实现、业务逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-29 +0800] 统一账本账单与酒店消费列表的操作模型：账本详情保存按钮改为对勾图标，已有账单详情右上角 `···` 直接弹出复制 / 移动 / 删除菜单；账本列表新增复制账单入口，左侧滑动复制、右侧滑动删除，长按菜单与详情右上角菜单保持同一组核心操作。酒店消费列表补齐滑动 / 长按删除入口，并复用详情页删除确认文案。复制账单会生成新 `Transaction`、保留原账本归属、不继承酒店关联 ID，并走既有 Widget / 自动备份 / CloudKit 增量推送路径。本轮不修改 SQLite / CloudKit schema、酒店识别、邮箱导入、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。

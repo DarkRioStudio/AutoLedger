@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-285 GOAL-1960 release smoke 与 v1.6.3 酒店 C 阶段规划）
+更新日期：2026-06-29（ITER-286 GOAL-2000 至 GOAL-2014 酒店 C1 第一版工程骨架）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-286 GOAL-2000 至 GOAL-2014 酒店 C1 第一版工程骨架
+- 日期：2026-06-29
+- 所属版本：v1.6.3
+- 所属阶段：Hotel C1 / Cloud Inbox Skeleton
+- 类型：能力增强 / 架构 / 测试
+- 目标：处理 `GOAL-2000` 至 `GOAL-2014` 第一版，先冻结 AutoLedger 专属收件箱 C1 合同，并让 App 能把未来云端候选 PDF 接回本地酒店水单识别、复核和入账链路。
+- 改动范围：新增 `HotelFolioCloudInboxPlanning.swift` 定义 `HotelCloudFolioInboxAddress`、`CloudHotelFolioCandidate`、候选状态、候选工厂和 cloud candidate -> `HotelStayDraft` 工厂；扩展 `HotelFolioEmailFingerprint` 支持 token hash；新增 App 侧 `HotelFolioCloudCandidatePDFImporter`；扩展 `AutoLedgerDeepLinkParser` / `AutoLedgerNavigationState` 支持 `autoledger://hotel-cloud-candidate/{candidateID}` 与候选队列 deep link；更新 `versions/v1.6.3-plan.md`、`CHANGELOG.md`、离线回归脚本和 deep link smoke。
+- 未改动范围：未实现真实 Worker inbound email、对象存储、APNs、订阅后端、云候选列表 UI、手动刷新云候选 API、Worker 状态回写或云端 PDF 清理；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：C1 地址 / token hash / 对象前缀合同已落地；云候选 metadata 覆盖脱敏来源、Message-ID hash、附件 hash、对象 key、PDF 大小、MIME、状态和过期时间；状态 helper 覆盖 downloaded / converted / deleted / failed；App 已具备“已下载 PDF data -> PDFKit 提取文本 -> `HotelStayDraft(sourceType: .cloudWorker)`”服务；新 deep link 可切到酒店消费 tab 并记录待处理候选 ID。
+- 未完成内容：C1 还不能接收真实邮件或推送；App 还没有云候选列表 / 下载 UI；确认入账后的 Worker 状态更新和云端 PDF 删除仍待后续 GOAL；隐私审核材料和测试专属地址仍待 `GOAL-2015`。
+- 测试情况：先新增失败用例并确认 `bash scripts/run_offline_regression.sh` 因缺少 `HotelCloudFolioInboxAddress`、`CloudHotelFolioCandidateFactory`、`HotelCloudFolioDraftFactory` 失败；新增 deep link smoke 期望并确认 `python3 scripts/check_deep_link_smoke.py` 因缺少 cloud candidate 路由失败。实现后执行 `python3 scripts/check_deep_link_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，覆盖 cloud inbox 地址、hash / 脱敏、候选状态转换和 `.cloudWorker` Draft 生成；执行 `git diff --check` 通过。
+- 风险与注意事项：`sourceEmailUID` 暂用 cloud candidate id 字符串承载候选关联，避免本轮引入 SQLite / CloudKit schema 迁移；后续若需要独立 `cloudCandidateID` 字段，应作为 schema 版本升级单独处理。当前 token hash 使用现有稳定非加密 fingerprint，适合去重 / key 隔离，不应作为安全签名；真实 Worker 仍需要服务端级别的 token 校验、订阅校验、rate limit、对象存储权限和日志脱敏。
+- 回滚方式：回退新增 cloud inbox Core 文件、App cloud candidate importer、`HotelFolioEmailFingerprint.tokenHash`、deep link 新分支、离线回归 / smoke 脚本和文档记录即可；无数据库、CloudKit 或签名配置迁移。
+- 结论：`GOAL-2000` 至 `GOAL-2014` 第一版工程骨架完成，C1 已有可回归的数据合同和 App 接入点；下一步应进入 `GOAL-2015` 隐私 / 审核材料，或继续真实 Worker / 云候选 API 的后续实现。
+- 下一步建议：优先补 C1 测试专属地址 / 示例 PDF / 隐私说明，再实现 Worker inbound email 与 App 云候选列表下载闭环。
 
 ### ITER-285 GOAL-1960 release smoke 与 v1.6.3 酒店 C 阶段规划
 - 日期：2026-06-29

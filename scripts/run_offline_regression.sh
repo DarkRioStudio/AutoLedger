@@ -292,6 +292,7 @@ swiftc \
   "$CORE/Services/ExternalReceiptAssistCache.swift" \
   "$CORE/Services/ExternalReceiptAssistPayload.swift" \
   "$CORE/Services/HotelFolioEmailImportPlanning.swift" \
+  "$CORE/Services/HotelFolioCloudInboxPlanning.swift" \
   "$CORE/Services/HotelFolioDebugTraceBuilder.swift" \
   "$CORE/Services/HotelFolioParsePipeline.swift" \
   "$CORE/Services/HotelStayArchivePresenter.swift" \

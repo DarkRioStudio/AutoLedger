@@ -41,6 +41,7 @@ struct OfflineRegression {
         verifyHotelFolioParsePipeline(reporter: reporter)
         verifyHotelFolioDebugTrace(reporter: reporter)
         verifyHotelFolioEmailImportPlanning(reporter: reporter)
+        verifyHotelFolioCloudInboxPlanning(reporter: reporter)
         try verifyHotelFolioEmailDeduplication(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
@@ -618,6 +619,71 @@ struct OfflineRegression {
                 reporter.check(draft?.createdAt == now, "HotelFolioEmailDraftFactory records creation time")
             }
         }
+    }
+
+    private static func verifyHotelFolioCloudInboxPlanning(reporter: RegressionReporter) {
+        let address = HotelCloudFolioInboxAddress(token: "  User-Token_42  ")
+        reporter.check(address.normalizedToken == "user-token_42", "HotelCloudFolioInboxAddress normalizes token")
+        reporter.check(address.emailAddress == "folio+user-token_42@getautoledger.app", "HotelCloudFolioInboxAddress builds dedicated import mailbox")
+        reporter.check(address.tokenHash?.isEmpty == false, "HotelCloudFolioInboxAddress hashes token for cloud storage")
+        reporter.check(!address.objectStoragePrefix.contains("user-token_42"), "HotelCloudFolioInboxAddress keeps raw token out of object prefix")
+
+        let pdfData = Data("%PDF-1.7 cloud hotel folio".utf8)
+        let message = HotelFolioEmailMessage(
+            uid: "cloud-uid-1",
+            messageID: "cloud-folio-001@example.com",
+            subject: "Moxy Chongqing Folio 13800138000",
+            from: "Moxy Chongqing <folio@example.com>",
+            dateText: "Tue, 23 Jun 2026 10:00:00 +0800",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "cloud-uid-1-1-moxy.pdf",
+                    fileName: "moxy-chongqing-folio.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        let receivedAt = Date(timeIntervalSince1970: 1_782_150_000)
+        let candidateFactory = CloudHotelFolioCandidateFactory(now: { receivedAt })
+        let candidate = candidateFactory.makeCandidate(
+            inboxAddress: address,
+            message: message,
+            attachment: message.attachments[0],
+            retentionDays: 7
+        )
+        reporter.check(candidate.sourceType == .cloudWorker, "CloudHotelFolioCandidate records cloud worker source")
+        reporter.check(candidate.status == .stored, "CloudHotelFolioCandidate starts as stored candidate")
+        reporter.check(candidate.attachmentFileName == "moxy-chongqing-folio.pdf", "CloudHotelFolioCandidate records attachment filename")
+        reporter.check(candidate.attachmentHash == HotelFolioEmailFingerprint.attachmentHash(pdfData), "CloudHotelFolioCandidate records attachment hash")
+        reporter.check(candidate.messageIDHash == HotelFolioEmailFingerprint.messageIDHash(message.messageID), "CloudHotelFolioCandidate records message id hash")
+        reporter.check(!candidate.objectStorageKey.contains(address.normalizedToken), "CloudHotelFolioCandidate does not leak raw token in storage key")
+        reporter.check(candidate.objectStorageKey.hasSuffix(".pdf"), "CloudHotelFolioCandidate stores PDF object key")
+        reporter.check(candidate.expiresAt > candidate.receivedAt, "CloudHotelFolioCandidate records short retention window")
+        reporter.check(candidate.sourceEmailSubject?.contains("13800138000") == false, "CloudHotelFolioCandidate redacts phone from subject metadata")
+        reporter.check(candidate.sourceEmailFrom?.contains("@") == false, "CloudHotelFolioCandidate redacts sender email metadata")
+        reporter.check(candidate.markedDownloaded(at: receivedAt.addingTimeInterval(10)).status == .downloaded, "CloudHotelFolioCandidate can mark PDF downloaded")
+        reporter.check(candidate.markedConverted(at: receivedAt.addingTimeInterval(20)).status == .converted, "CloudHotelFolioCandidate can mark candidate converted")
+        reporter.check(candidate.markedDeleted(at: receivedAt.addingTimeInterval(30)).status == .deleted, "CloudHotelFolioCandidate can mark cloud PDF deleted")
+        reporter.check(candidate.markedFailed("download failed", at: receivedAt.addingTimeInterval(40)).failureReason == "download failed", "CloudHotelFolioCandidate records failure reason")
+
+        let draftFactory = HotelCloudFolioDraftFactory(now: { receivedAt.addingTimeInterval(60) })
+        let draft = try? draftFactory.makeDraft(
+            candidate: candidate,
+            pdfData: pdfData,
+            extractedText: "重庆 Moxy 酒店\nTotal Amount CNY 369.39",
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID
+        )
+        reporter.check(draft?.sourceType == .cloudWorker, "HotelCloudFolioDraftFactory marks cloud worker source")
+        reporter.check(draft?.targetLedgerID == TodaySpendingSummary.defaultLedgerID, "HotelCloudFolioDraftFactory keeps target ledger id")
+        reporter.check(draft?.sourceFileName == candidate.attachmentFileName, "HotelCloudFolioDraftFactory records source filename")
+        reporter.check(draft?.sourcePDFData == pdfData, "HotelCloudFolioDraftFactory keeps downloaded PDF data")
+        reporter.check(draft?.sourceEmailUID == candidate.id.uuidString, "HotelCloudFolioDraftFactory maps candidate id to source uid")
+        reporter.check(draft?.sourceEmailMessageIDHash == candidate.messageIDHash, "HotelCloudFolioDraftFactory preserves message hash")
+        reporter.check(draft?.sourceEmailAttachmentHash == candidate.attachmentHash, "HotelCloudFolioDraftFactory preserves attachment hash")
+        reporter.check(draft?.status == .textExtracted, "HotelCloudFolioDraftFactory keeps cloud draft before model parse")
+
     }
 
     private static func verifyHotelFolioEmailDeduplication(reporter: RegressionReporter) throws {

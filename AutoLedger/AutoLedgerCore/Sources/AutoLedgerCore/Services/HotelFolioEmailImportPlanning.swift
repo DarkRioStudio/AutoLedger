@@ -465,6 +465,12 @@ public struct HotelFolioEmailCandidateFilter: Sendable {
 }
 
 public enum HotelFolioEmailFingerprint: Sendable {
+    public static func tokenHash(_ token: String) -> String? {
+        let normalized = token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().nilIfEmpty
+        guard let normalized else { return nil }
+        return stableHashHex(Data(normalized.utf8))
+    }
+
     public static func messageIDHash(_ messageID: String?) -> String? {
         guard let normalized = messageID?
             .trimmingCharacters(in: .whitespacesAndNewlines)

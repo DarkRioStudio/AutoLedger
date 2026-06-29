@@ -13,6 +13,7 @@ enum AutoLedgerDeepLinkDestination: Equatable {
     case ledgerToday
     case transaction(UUID)
     case hotelStay(UUID)
+    case hotelCloudCandidate(UUID?)
     case hotelReviewQueue(UUID?)
     case subscriptions
     case ledgerProfiles
@@ -41,6 +42,10 @@ enum AutoLedgerDeepLinkParser {
         case "hotel-stay", "hotelstay":
             guard let id = uuid(from: parts.dropFirst().first) else { return nil }
             return .hotelStay(id)
+        case "hotel-cloud-candidate", "hotelcloudcandidate":
+            return .hotelCloudCandidate(uuid(from: parts.dropFirst().first))
+        case "hotel-cloud-candidates", "hotelcloudcandidates":
+            return .hotelCloudCandidate(nil)
         case "hotel-stays", "hotelstays", "hotel-review", "hotelreview":
             return .hotelReviewQueue(uuid(from: queryItems(from: url)["draftID"]))
         case "subscriptions", "subscription":
@@ -132,6 +137,7 @@ final class AutoLedgerNavigationState: ObservableObject {
 
     @Published var selectedHotelStayRecordID: UUID?
     @Published var pendingHotelStayDraftReviewID: UUID?
+    @Published var pendingHotelCloudCandidateID: UUID?
 
     @Published var selectedSubscriptionID: UUID?
     @Published var subscriptionEditor: SubscriptionEditorPresentation?
@@ -150,6 +156,11 @@ final class AutoLedgerNavigationState: ObservableObject {
         if let draftID {
             pendingHotelStayDraftReviewID = draftID
         }
+    }
+
+    func openHotelCloudCandidate(_ candidateID: UUID? = nil) {
+        selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
+        pendingHotelCloudCandidateID = candidateID
     }
 
     @discardableResult
@@ -171,6 +182,8 @@ final class AutoLedgerNavigationState: ObservableObject {
             selectLedgerForHotelStay(id, store: store)
             selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
             selectedHotelStayRecordID = id
+        case .hotelCloudCandidate(let candidateID):
+            openHotelCloudCandidate(candidateID)
         case .hotelReviewQueue(let draftID):
             openHotelReviewQueue(draftID: draftID)
         case .subscriptions:
