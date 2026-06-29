@@ -123,6 +123,38 @@ npx wrangler secret put APNS_PRIVATE_KEY
 
 `APNS_TOPIC` is a non-secret Worker var and defaults to `top.darkrio326.AutoLedger`.
 
+## Current Cloudflare Deployment
+
+Deployed on 2026-06-29 under the `darkrio326` Cloudflare account.
+
+Workers:
+
+- `autoledger-hotel-folio-inbox`
+- `autoledger-hotel-folio-inbox-staging`
+- `autoledger-hotel-folio-inbox-production`
+
+Domains:
+
+- `https://folio.getautoledger.app`
+- `https://staging-folio.getautoledger.app`
+
+Resources:
+
+- R2: `autoledger-hotel-folio-candidates-dev`, `autoledger-hotel-folio-candidates-staging`, `autoledger-hotel-folio-candidates`
+- D1: `autoledger-hotel-folio-inbox-dev`, `autoledger-hotel-folio-inbox-staging`, `autoledger-hotel-folio-inbox`
+- Queue: `autoledger-hotel-folio-apns-dev`, `autoledger-hotel-folio-apns-staging`, `autoledger-hotel-folio-apns`
+
+Email Routing:
+
+- `getautoledger.app` Email Routing is enabled and ready.
+- `folio@getautoledger.app` routes to `autoledger-hotel-folio-inbox-production`.
+- Catch-all remains disabled and drops unmatched mail.
+
+Still required before push notifications work:
+
+- Configure `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` Worker secrets.
+- Insert or provision active rows in `pro_inbox_tokens`.
+
 ## API
 
 All candidate API calls require the raw inbox token in `Authorization: Bearer <token>`.

@@ -23,7 +23,7 @@
     {
       "binding": "DB",
       "database_name": "autoledger-hotel-folio-inbox-dev",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "7553aa78-58d6-43c0-a9ff-0fce730ab1bb"
     }
   ],
   "queues": {
@@ -48,6 +48,12 @@
   "env": {
     "staging": {
       "name": "autoledger-hotel-folio-inbox-staging",
+      "routes": [
+        {
+          "pattern": "staging-folio.getautoledger.app",
+          "custom_domain": true
+        }
+      ],
       "vars": {
         "PUBLIC_CANDIDATE_API_ORIGIN": "https://staging-folio.getautoledger.app",
         "CANDIDATE_RETENTION_DAYS": "7",
@@ -63,7 +69,7 @@
         {
           "binding": "DB",
           "database_name": "autoledger-hotel-folio-inbox-staging",
-          "database_id": "00000000-0000-0000-0000-000000000000"
+          "database_id": "3723ede1-4ecd-442c-9cac-7f7b91b2ed19"
         }
       ],
       "queues": {
@@ -85,6 +91,12 @@
     },
     "production": {
       "name": "autoledger-hotel-folio-inbox-production",
+      "routes": [
+        {
+          "pattern": "folio.getautoledger.app",
+          "custom_domain": true
+        }
+      ],
       "vars": {
         "PUBLIC_CANDIDATE_API_ORIGIN": "https://folio.getautoledger.app",
         "CANDIDATE_RETENTION_DAYS": "7",
@@ -100,7 +112,7 @@
         {
           "binding": "DB",
           "database_name": "autoledger-hotel-folio-inbox",
-          "database_id": "00000000-0000-0000-0000-000000000000"
+          "database_id": "4040b259-55ca-4edc-8197-d6f91067146c"
         }
       ],
       "queues": {

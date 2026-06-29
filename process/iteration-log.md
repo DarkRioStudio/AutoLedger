@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-290 v1.6.4 C1 专属收件箱与 Pro gate 主链路）
+更新日期：2026-06-29（ITER-291 v1.6.4 酒店水单收件箱 Cloudflare 部署）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-291 v1.6.4 酒店水单收件箱 Cloudflare 部署
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Cloud Inbox / Cloudflare Deployment
+- 类型：部署 / 配置 / 文档
+- 目标：在不影响既有 Cloudflare 资源的前提下，为酒店水单专属收件箱创建并部署独立 R2、D1、Queue、Worker、自定义域和 Email Routing。
+- 改动范围：创建 `autoledger-hotel-folio-*` 前缀的 Cloudflare 资源；更新 `tools/worker/hotel-folio-inbox/wrangler.jsonc` 的真实 D1 ID 和 custom domain；更新 Worker README、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改或删除 `autoledger-models`、`ebc-audio-drops`、`ebc-audio-jobs`、`ebc-audio-jobs-dlq` 等既有资源；未配置 APNs secrets；未插入真实用户 `pro_inbox_tokens`；未修改 App 代码、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：创建 dev / staging / production 三套 R2 bucket、D1 database 和 APNs Queue；对三套远端 D1 执行 `migrations/0001_hotel_folio_inbox.sql`；部署 `autoledger-hotel-folio-inbox`、`autoledger-hotel-folio-inbox-staging`、`autoledger-hotel-folio-inbox-production`；绑定 `https://folio.getautoledger.app` 和 `https://staging-folio.getautoledger.app`；启用并确认 `getautoledger.app` Email Routing ready；创建 `folio@getautoledger.app -> autoledger-hotel-folio-inbox-production` 路由规则，catch-all 保持 disabled / drop。
+- 未完成内容：APNs `APNS_KEY_ID`、`APNS_TEAM_ID`、`APNS_PRIVATE_KEY` 仍需用户提供 Apple Developer key 后用 `wrangler secret put` 配置；订阅用户 token 生成 / 轮换 / 停用和 `pro_inbox_tokens` active row provisioning 仍需后续接入。
+- 测试情况：执行 production / staging `/health` curl 均返回 `{"ok":true,"service":"autoledger-hotel-folio-inbox"}`；执行 `npm run check` 通过，覆盖 Wrangler types、TypeScript 和 7 个 Vitest contract tests；执行 `wrangler email routing rules list getautoledger.app` 确认规则存在并启用；执行远端 D1 表查询确认 production schema 包含 `pro_inbox_tokens`、`cloud_hotel_folio_candidates`、`apns_devices` 和 `notification_outbox`。
+- 风险与注意事项：Cloudflare Email Routing 能把 `folio+token@getautoledger.app` 投递到 Worker，但没有 active token 时 Worker 会拒收；APNs secrets 缺失时通知 outbox 会进入等待配置，App 仍可通过手动刷新候选测试邮件导入。
+- 回滚方式：可删除 `folio@getautoledger.app` Email Routing rule、移除 Worker custom domain、删除新建的 `autoledger-hotel-folio-*` R2 / D1 / Queue / Worker 资源，并回退 `wrangler.jsonc` 中的真实 D1 ID / routes。
+- 结论：Cloudflare 侧基础设施已部署完成，下一步应配置 APNs secrets，并插入一个测试 inbox token 做真实邮件端到端 smoke。
+- 下一步建议：生成 staging / production 测试 token，写入 `pro_inbox_tokens`，向 `folio+<token>@getautoledger.app` 转发虚构水单 PDF，验证 R2 / D1 / App 手动刷新链路。
 
 ### ITER-290 v1.6.4 C1 专属收件箱与 Pro gate 主链路
 - 日期：2026-06-29
