@@ -2423,9 +2423,11 @@ struct HotelStayWorkspaceView: View {
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @State private var showsPDFImporter = false
     @State private var showsEmailImporter = false
+    @State private var showsCloudInboxImporter = false
     @State private var reviewDraft: HotelStayDraft?
     @State private var statusMessage: String?
     @State private var isImporting = false
+    @State private var pendingCloudCandidateID: UUID?
 
     private var ledgerID: String? {
         store.isShowingAllLedgers ? nil : store.selectedLedgerID
@@ -2445,6 +2447,10 @@ struct HotelStayWorkspaceView: View {
             },
             onImportEmail: {
                 showsEmailImporter = true
+            },
+            onImportCloudInbox: {
+                pendingCloudCandidateID = nil
+                showsCloudInboxImporter = true
             },
             onReviewDraft: { draft in
                 reviewDraft = draft
@@ -2480,6 +2486,18 @@ struct HotelStayWorkspaceView: View {
                 }
             )
         }
+        .sheet(isPresented: $showsCloudInboxImporter) {
+            HotelFolioInboxImportView(
+                targetLedgerID: store.targetLedgerIDForNewTransactions,
+                targetCandidateID: pendingCloudCandidateID,
+                onDraftsReady: { drafts in
+                    showsCloudInboxImporter = false
+                    Task {
+                        await prepareEmailDraftsForReview(drafts)
+                    }
+                }
+            )
+        }
         .sheet(item: $reviewDraft) { draft in
             HotelStayReviewView(
                 draft: draft,
@@ -2501,9 +2519,16 @@ struct HotelStayWorkspaceView: View {
         }
         .onAppear {
             consumePendingDraftReviewIfNeeded()
+            consumePendingCloudCandidateIfNeeded()
         }
         .onChange(of: navigationState.pendingHotelStayDraftReviewID) { _, _ in
             consumePendingDraftReviewIfNeeded()
+        }
+        .onChange(of: navigationState.pendingHotelCloudCandidateID) { _, _ in
+            consumePendingCloudCandidateIfNeeded()
+        }
+        .onChange(of: navigationState.isPresentingHotelCloudInbox) { _, _ in
+            consumePendingCloudCandidateIfNeeded()
         }
         .onChange(of: store.hotelStayDrafts.map(\.id)) { _, _ in
             consumePendingDraftReviewIfNeeded()
@@ -2636,6 +2661,20 @@ struct HotelStayWorkspaceView: View {
         Task {
             await prepareDraftForReview(draft)
         }
+    }
+
+    @MainActor
+    private func consumePendingCloudCandidateIfNeeded() {
+        guard !isImporting,
+              navigationState.isPresentingHotelCloudInbox else {
+            return
+        }
+
+        let candidateID = navigationState.pendingHotelCloudCandidateID
+        navigationState.pendingHotelCloudCandidateID = nil
+        navigationState.isPresentingHotelCloudInbox = false
+        pendingCloudCandidateID = candidateID
+        showsCloudInboxImporter = true
     }
 }
 

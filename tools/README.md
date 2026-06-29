@@ -10,7 +10,7 @@ These tools are not part of the shipping app runtime. Most generated outputs are
 - [appstore-screenshots/](appstore-screenshots/) - App Store screenshot export pipeline for iPhone, iPad, Mac Catalyst, Apple Watch, tvOS, and visionOS.
 - [receipt_ocr/](receipt_ocr/) - local batch OCR, parse, report, and Golden regression helpers.
 - [feedback/](feedback/) - email-to-Issue helper scripts for feedback triage.
-- [worker/](worker/) - Worker / remote parser evaluation notes.
+- [worker/hotel-folio-inbox/](worker/hotel-folio-inbox/) - Cloudflare Email Routing Worker for the hotel folio inbox path, including D1/R2/Queue contracts and APNs notification delivery.
 
 ## Common Commands
 

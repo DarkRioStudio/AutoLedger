@@ -1,0 +1,124 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "autoledger-hotel-folio-inbox",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "PUBLIC_CANDIDATE_API_ORIGIN": "https://folio.getautoledger.app",
+    "CANDIDATE_RETENTION_DAYS": "7",
+    "APNS_TOPIC": "top.darkrio326.AutoLedger"
+  },
+  "r2_buckets": [
+    {
+      "binding": "HOTEL_FOLIO_BUCKET",
+      "bucket_name": "autoledger-hotel-folio-candidates-dev"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "autoledger-hotel-folio-inbox-dev",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "APNS_QUEUE",
+        "queue": "autoledger-hotel-folio-apns-dev"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "autoledger-hotel-folio-apns-dev",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
+  "env": {
+    "staging": {
+      "name": "autoledger-hotel-folio-inbox-staging",
+      "vars": {
+        "PUBLIC_CANDIDATE_API_ORIGIN": "https://staging-folio.getautoledger.app",
+        "CANDIDATE_RETENTION_DAYS": "7",
+        "APNS_TOPIC": "top.darkrio326.AutoLedger"
+      },
+      "r2_buckets": [
+        {
+          "binding": "HOTEL_FOLIO_BUCKET",
+          "bucket_name": "autoledger-hotel-folio-candidates-staging"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "autoledger-hotel-folio-inbox-staging",
+          "database_id": "00000000-0000-0000-0000-000000000000"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "APNS_QUEUE",
+            "queue": "autoledger-hotel-folio-apns-staging"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "autoledger-hotel-folio-apns-staging",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3
+          }
+        ]
+      }
+    },
+    "production": {
+      "name": "autoledger-hotel-folio-inbox-production",
+      "vars": {
+        "PUBLIC_CANDIDATE_API_ORIGIN": "https://folio.getautoledger.app",
+        "CANDIDATE_RETENTION_DAYS": "7",
+        "APNS_TOPIC": "top.darkrio326.AutoLedger"
+      },
+      "r2_buckets": [
+        {
+          "binding": "HOTEL_FOLIO_BUCKET",
+          "bucket_name": "autoledger-hotel-folio-candidates"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "autoledger-hotel-folio-inbox",
+          "database_id": "00000000-0000-0000-0000-000000000000"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "APNS_QUEUE",
+            "queue": "autoledger-hotel-folio-apns"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "autoledger-hotel-folio-apns",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3
+          }
+        ]
+      }
+    }
+  }
+}

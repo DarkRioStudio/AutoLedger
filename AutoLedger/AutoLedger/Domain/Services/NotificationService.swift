@@ -7,14 +7,17 @@ final class NotificationService: Sendable {
     static let shared = NotificationService()
     static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
     static let openNewTransactionEvent = Notification.Name("AutoLedger.openNewTransactionEvent")
+    static let openDeepLinkEvent = Notification.Name("AutoLedger.openDeepLinkEvent")
     /// Intent 入账成功后发送，通知 LedgerStore 刷新
     static let didSaveTransactionFromIntent = Notification.Name("AutoLedger.didSaveTransactionFromIntent")
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
     static let quickLedgerTransactionIDUserInfoKey = "transactionID"
+    static let deepLinkUserInfoKey = "autoledgerDeepLink"
     /// 略微延迟，避免与快捷指令完成瞬间的系统 UI 切换抢占展示
     static let quickLedgerNotificationDelay: TimeInterval = 1
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
+    private static let remoteDeviceTokenKey = "autoLedgerRemoteDeviceToken"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "NotificationService")
     private static var appGroupDefaults: UserDefaults? {
@@ -36,6 +39,21 @@ final class NotificationService: Sendable {
     static func clearIntentLedgerSaveNeedsCloudPush() {
         UserDefaults.standard.removeObject(forKey: pendingIntentLedgerCloudPushKey)
         appGroupDefaults?.removeObject(forKey: pendingIntentLedgerCloudPushKey)
+    }
+
+    @discardableResult
+    static func storeRemoteDeviceToken(_ deviceToken: Data) -> String {
+        let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        UserDefaults.standard.set(token, forKey: remoteDeviceTokenKey)
+        appGroupDefaults?.set(token, forKey: remoteDeviceTokenKey)
+        return token
+    }
+
+    static var remoteDeviceToken: String? {
+        let token = UserDefaults.standard.string(forKey: remoteDeviceTokenKey) ??
+            appGroupDefaults?.string(forKey: remoteDeviceTokenKey)
+        let trimmed = token?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed : nil
     }
 
     // MARK: - Permission

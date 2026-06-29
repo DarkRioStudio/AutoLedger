@@ -1,9 +1,12 @@
 import Foundation
+import os.log
 import UIKit
 import UserNotifications
 
 @MainActor
 final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "AutoLedgerAppDelegate")
+
     private enum HomeQuickAction {
         static let addTransaction = "top.darkrio326.AutoLedger.addTransaction"
     }
@@ -44,6 +47,23 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         completionHandler(Self.handleHomeQuickAction(shortcutItem))
     }
 
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        let token = NotificationService.storeRemoteDeviceToken(deviceToken)
+        Task {
+            await Self.registerHotelFolioInboxDeviceTokenIfPossible(token)
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        Self.logger.error("Failed to register remote notifications: \(error.localizedDescription)")
+    }
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -57,6 +77,13 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        if let deepLink = response.notification.request.content.userInfo[NotificationService.deepLinkUserInfoKey] as? String {
+            AutoLedgerDeepLinkHandoff.submit(deepLink)
+            NotificationCenter.default.post(name: NotificationService.openDeepLinkEvent, object: nil)
+            completionHandler()
+            return
+        }
+
         let destination = response.notification.request.content.userInfo[NotificationService.quickLedgerDestinationUserInfoKey] as? String
         guard destination == NotificationService.quickLedgerDestinationLedgerValue else {
             completionHandler()
@@ -78,5 +105,18 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
                 userInfo: nil
             )
         ]
+    }
+
+    private static func registerHotelFolioInboxDeviceTokenIfPossible(_ deviceToken: String) async {
+        let settings = HotelFolioInboxSettings()
+        guard settings.canRequest else { return }
+        do {
+            try await HotelFolioInboxClient().registerDeviceToken(
+                settings: settings,
+                deviceToken: deviceToken
+            )
+        } catch {
+            logger.error("Failed to register hotel folio inbox device token: \(error.localizedDescription)")
+        }
     }
 }

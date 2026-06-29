@@ -1072,3 +1072,36 @@
 "ledger_profiles.default_write.section" = "Default Write Ledger";
 "ledger_profiles.default_write.current" = "New entries write to";
 "ledger_profiles.default_write.description" = "New manual entries, receipt recognition, and confirmed hotel stays write to this ledger by default. The default is Local Ledger.";
+
+// MARK: - Hotel Folio Inbox
+"hotel_stay.import.cloud_inbox" = "Cloud Inbox";
+"hotel_stay.cloud_inbox.title" = "Hotel Folio Inbox";
+"hotel_stay.cloud_inbox.pro.active" = "Pro automation is available";
+"hotel_stay.cloud_inbox.pro.required" = "AutoLedger Pro required";
+"hotel_stay.cloud_inbox.pro.description" = "The dedicated inbox only receives hotel folios forwarded to your AutoLedger address. After download, PDF text extraction, recognition, and review still happen on this device.";
+"hotel_stay.cloud_inbox.endpoint" = "Service endpoint";
+"hotel_stay.cloud_inbox.token" = "Inbox token";
+"hotel_stay.cloud_inbox.address" = "Inbox address";
+"hotel_stay.cloud_inbox.save" = "Save";
+"hotel_stay.cloud_inbox.copy_address" = "Copy Address";
+"hotel_stay.cloud_inbox.section.address" = "Dedicated Inbox";
+"hotel_stay.cloud_inbox.address_footer" = "Forward hotel folios manually, or set up a rule in your own mailbox to forward hotel / OTA folios to this address. The token is stored only in local Keychain.";
+"hotel_stay.cloud_inbox.section.candidates" = "Candidate Folios";
+"hotel_stay.cloud_inbox.refresh" = "Refresh Candidates";
+"hotel_stay.cloud_inbox.refreshing" = "Refreshing";
+"hotel_stay.cloud_inbox.no_results" = "No cloud folio candidates yet.";
+"hotel_stay.cloud_inbox.import_selected" = "Import Selected";
+"hotel_stay.cloud_inbox.importing" = "Importing";
+"hotel_stay.cloud_inbox.selected_count_format" = "%d candidates selected.";
+"hotel_stay.cloud_inbox.status.saved" = "Cloud inbox settings saved.";
+"hotel_stay.cloud_inbox.status.address_copied" = "Inbox address copied.";
+"hotel_stay.cloud_inbox.status.pro_required" = "The cloud hotel folio inbox requires AutoLedger Pro.";
+"hotel_stay.cloud_inbox.status.no_results" = "No cloud folio candidates found.";
+"hotel_stay.cloud_inbox.status.results_format" = "Found %d cloud folio candidates.";
+"hotel_stay.cloud_inbox.status.downloading_format" = "Downloading %@.";
+"hotel_stay.cloud_inbox.status.imported_format" = "Imported %d cloud hotel folios. Review is required before posting.";
+"hotel_stay.cloud_inbox.error.missing_token" = "Enter the inbox token first.";
+"hotel_stay.cloud_inbox.error.invalid_endpoint" = "The cloud inbox endpoint is invalid.";
+"hotel_stay.cloud_inbox.error.invalid_response" = "The cloud inbox response could not be parsed.";
+"hotel_stay.cloud_inbox.error.http_status_format" = "Cloud inbox request failed (%d): %@";
+"hotel_stay.cloud_inbox.error.keychain_format" = "Failed to save the inbox token (Keychain %d).";

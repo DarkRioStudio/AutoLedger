@@ -1072,3 +1072,36 @@
 "ledger_profiles.default_write.section" = "既定の書き込み先台帳";
 "ledger_profiles.default_write.current" = "新規記録の書き込み先";
 "ledger_profiles.default_write.description" = "手入力、レシート認識、確認済みホテル消費は、既定でここで選んだ台帳に書き込まれます。初期値はローカル台帳です。";
+
+// MARK: - Hotel Folio Inbox
+"hotel_stay.import.cloud_inbox" = "クラウド専用受信箱";
+"hotel_stay.cloud_inbox.title" = "ホテル明細受信箱";
+"hotel_stay.cloud_inbox.pro.active" = "Pro 自動化を利用できます";
+"hotel_stay.cloud_inbox.pro.required" = "AutoLedger Pro が必要です";
+"hotel_stay.cloud_inbox.pro.description" = "専用受信箱は AutoLedger アドレスへ転送されたホテル明細だけを受け取ります。PDF ダウンロード後のテキスト抽出、認識、確認はこの端末で行います。";
+"hotel_stay.cloud_inbox.endpoint" = "サービス URL";
+"hotel_stay.cloud_inbox.token" = "受信箱 Token";
+"hotel_stay.cloud_inbox.address" = "専用アドレス";
+"hotel_stay.cloud_inbox.save" = "保存";
+"hotel_stay.cloud_inbox.copy_address" = "アドレスをコピー";
+"hotel_stay.cloud_inbox.section.address" = "専用受信箱";
+"hotel_stay.cloud_inbox.address_footer" = "ホテル明細を手動転送するか、自分のメール側でホテル / OTA 明細をこのアドレスへ自動転送できます。Token はローカル Keychain のみに保存されます。";
+"hotel_stay.cloud_inbox.section.candidates" = "候補明細";
+"hotel_stay.cloud_inbox.refresh" = "候補を更新";
+"hotel_stay.cloud_inbox.refreshing" = "更新中";
+"hotel_stay.cloud_inbox.no_results" = "クラウド候補明細はまだありません。";
+"hotel_stay.cloud_inbox.import_selected" = "選択項目を取り込む";
+"hotel_stay.cloud_inbox.importing" = "取り込み中";
+"hotel_stay.cloud_inbox.selected_count_format" = "%d 件の候補を選択中。";
+"hotel_stay.cloud_inbox.status.saved" = "クラウド受信箱設定を保存しました。";
+"hotel_stay.cloud_inbox.status.address_copied" = "専用受信箱アドレスをコピーしました。";
+"hotel_stay.cloud_inbox.status.pro_required" = "クラウド専用受信箱には AutoLedger Pro が必要です。";
+"hotel_stay.cloud_inbox.status.no_results" = "クラウド候補明細が見つかりません。";
+"hotel_stay.cloud_inbox.status.results_format" = "%d 件のクラウド候補明細が見つかりました。";
+"hotel_stay.cloud_inbox.status.downloading_format" = "%@ をダウンロード中。";
+"hotel_stay.cloud_inbox.status.imported_format" = "%d 件のクラウドホテル明細を取り込みました。記帳前に確認が必要です。";
+"hotel_stay.cloud_inbox.error.missing_token" = "先に受信箱 Token を入力してください。";
+"hotel_stay.cloud_inbox.error.invalid_endpoint" = "クラウド受信箱サービス URL が無効です。";
+"hotel_stay.cloud_inbox.error.invalid_response" = "クラウド受信箱の応答を解析できません。";
+"hotel_stay.cloud_inbox.error.http_status_format" = "クラウド受信箱リクエスト失敗（%d）：%@";
+"hotel_stay.cloud_inbox.error.keychain_format" = "受信箱 Token の保存に失敗しました（Keychain %d）。";

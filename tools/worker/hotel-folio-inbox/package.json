@@ -1,0 +1,26 @@
+{
+  "name": "@autoledger/hotel-folio-inbox-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "wrangler types && tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test",
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "jose": "^6.2.3",
+    "postal-mime": "^2.4.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.69",
+    "@types/node": "^26.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.24.0"
+  }
+}

@@ -48,6 +48,11 @@ Secrets.xcconfig
 __pycache__/
 *.py[cod]
 
+# Node / Cloudflare Workers
+node_modules/
+.wrangler/
+worker-configuration.d.ts
+
 # Signing / private Apple developer material
 *.mobileprovision
 *.cer

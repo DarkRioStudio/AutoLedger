@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-289 v1.6.4 GOAL-2200 Free / Pro 边界冻结）
+更新日期：2026-06-29（ITER-290 v1.6.4 C1 专属收件箱与 Pro gate 主链路）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-290 v1.6.4 C1 专属收件箱与 Pro gate 主链路
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Cloud Inbox / Personal Pro Gate
+- 类型：能力增强 / Worker / UI / 文档
+- 目标：结合 Personal Pro gate，把 `v1.6.3` 顺延的酒店水单 C1 专属收件箱真实 Worker、云候选 API、App 云候选下载和 APNs 唤醒代码主链路补齐。
+- 改动范围：新增 `tools/worker/hotel-folio-inbox` Cloudflare Worker；新增 `ProEntitlementManager`、`HotelFolioInboxClient`、`HotelFolioInboxImportView`；调整 AppDelegate / NotificationService / NavigationState / HotelStayWorkspace / HotelStayArchiveView；补齐四语文案；更新 `versions/v1.6.3-plan.md`、`versions/v1.6.4-plan.md`、README、tools README、CHANGELOG 和本日志。
+- 未改动范围：未让 Worker 登录用户邮箱；未在 Worker 识别 PDF、调用酒店 LLM、生成正式酒店记录或自动入账；未保存邮箱授权码到云端；未修改 SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 `Support Developer` 赞助内购。
+- 完成内容：Worker 通过 Cloudflare Email Routing 接收 `folio+<token>@getautoledger.app` 邮件，使用 D1 `pro_inbox_tokens` 做服务端 Pro gate，解析 MIME、筛选 PDF 附件、计算 hash、写入 R2、创建 D1 云候选，提供候选列表 / PDF 下载 / 状态回写 / APNs device 登记 API，并通过 Queue consumer 发送只含隐私安全文案和 deep link 的 APNs。App 侧通过 `AutoLedgerCapability.cloudFolioInbox` / `ProEntitlementManager.canUse(_:)` gate 云端酒店水单收件箱入口，支持保存 endpoint / token、展示专属地址、登记 APNs device token、刷新候选、下载 PDF、复用 PDFKit 和现有酒店水单解析复核链路生成 `HotelStayDraft(sourceType: .cloudWorker)`；通知点击复用 deep link handoff 打开酒店消费候选导入页。程序目录、包名、Worker 名、API、变量和表名均使用稳定业务域命名，不使用版本号、`C1` 或 GOAL 号。
+- 未完成内容：真实 Cloudflare D1 / R2 / Queue / Email Routing / route / custom domain 绑定、APNs secrets、订阅用户 token 生成 / 轮换 / 到期同步、StoreKit 购买页、恢复购买 UI、订阅状态摘要、审核截图和隐私政策仍属于部署 / 后续收口。
+- 测试情况：执行 `npm run check` 于 `tools/worker/hotel-folio-inbox` 通过，覆盖 Wrangler runtime types、TypeScript 和 7 个 Vitest contract tests；执行 `npm audit --omit=dev` 通过，生产依赖 0 vulnerabilities；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `git diff --check` 通过。
+- 风险与注意事项：C1 代码主链路已具备可部署形态，但真实线上可用还依赖 Cloudflare 资源 ID、Email Routing rule、APNs key / team / private key、订阅 token provisioning 和 App Store Connect Pro 商品配置。APNs payload 已避免携带酒店名、金额、订单号、附件名和 token hash；云端 PDF 默认短期暂存，App 成功转换后优先删除。
+- 回滚方式：可回退新增 Worker 目录、App 云收件箱入口 / client / entitlement manager / APNs token 登记和对应文档；保留 `v1.6.3` 的 App/Core skeleton 时，手动 PDF 导入、酒店消费历史、普通记账和本地邮箱导入不受影响。
+- 结论：C1 专属收件箱代码主链路已结合 Pro gate 补齐；下一步应优先做真实 Cloudflare / APNs 部署配置和 StoreKit Pro 页面 / 恢复购买 / 审核材料。
+- 下一步建议：建立真实 Cloudflare staging 资源并写入 D1 token fixture，使用测试专属地址转发虚构水单邮件做端到端 smoke；并继续 `GOAL-2212` Pro 页面与恢复购买。
 
 ### ITER-289 v1.6.4 GOAL-2200 Free / Pro 边界冻结
 - 日期：2026-06-29

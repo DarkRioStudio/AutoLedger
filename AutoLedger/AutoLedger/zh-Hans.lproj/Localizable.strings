@@ -1072,3 +1072,36 @@
 "ledger_profiles.default_write.section" = "默认写入账本";
 "ledger_profiles.default_write.current" = "新账单默认写入";
 "ledger_profiles.default_write.description" = "新增账单、截图识别和酒店消费确认入账时，默认写入这里选择的账本。默认是本地账本。";
+
+// MARK: - Hotel Folio Inbox
+"hotel_stay.import.cloud_inbox" = "云端专属收件箱";
+"hotel_stay.cloud_inbox.title" = "云端水单收件箱";
+"hotel_stay.cloud_inbox.pro.active" = "Pro 自动化已可用";
+"hotel_stay.cloud_inbox.pro.required" = "需要 AutoLedger Pro";
+"hotel_stay.cloud_inbox.pro.description" = "专属收件箱只接收转发到 AutoLedger 地址的酒店水单。PDF 下载后仍在本机提取文本、识别并等待你确认。";
+"hotel_stay.cloud_inbox.endpoint" = "服务地址";
+"hotel_stay.cloud_inbox.token" = "收件箱 Token";
+"hotel_stay.cloud_inbox.address" = "专属地址";
+"hotel_stay.cloud_inbox.save" = "保存";
+"hotel_stay.cloud_inbox.copy_address" = "复制地址";
+"hotel_stay.cloud_inbox.section.address" = "专属收件箱";
+"hotel_stay.cloud_inbox.address_footer" = "可手动转发酒店水单，或在自己的邮箱中把酒店/OTA 水单自动转发到该地址。Token 只保存在本机 Keychain。";
+"hotel_stay.cloud_inbox.section.candidates" = "候选水单";
+"hotel_stay.cloud_inbox.refresh" = "刷新候选";
+"hotel_stay.cloud_inbox.refreshing" = "正在刷新";
+"hotel_stay.cloud_inbox.no_results" = "暂无云端候选水单。";
+"hotel_stay.cloud_inbox.import_selected" = "导入选中水单";
+"hotel_stay.cloud_inbox.importing" = "正在导入";
+"hotel_stay.cloud_inbox.selected_count_format" = "已选择 %d 条候选。";
+"hotel_stay.cloud_inbox.status.saved" = "云端收件箱配置已保存。";
+"hotel_stay.cloud_inbox.status.address_copied" = "专属收件箱地址已复制。";
+"hotel_stay.cloud_inbox.status.pro_required" = "云端专属收件箱需要 AutoLedger Pro。";
+"hotel_stay.cloud_inbox.status.no_results" = "没有找到云端候选水单。";
+"hotel_stay.cloud_inbox.status.results_format" = "找到 %d 条云端候选水单。";
+"hotel_stay.cloud_inbox.status.downloading_format" = "正在下载 %@。";
+"hotel_stay.cloud_inbox.status.imported_format" = "已导入 %d 条云端酒店水单，等待确认。";
+"hotel_stay.cloud_inbox.error.missing_token" = "请先填写收件箱 Token。";
+"hotel_stay.cloud_inbox.error.invalid_endpoint" = "云端收件箱服务地址无效。";
+"hotel_stay.cloud_inbox.error.invalid_response" = "云端收件箱返回内容无法解析。";
+"hotel_stay.cloud_inbox.error.http_status_format" = "云端收件箱请求失败（%d）：%@";
+"hotel_stay.cloud_inbox.error.keychain_format" = "收件箱 Token 保存失败（Keychain %d）。";

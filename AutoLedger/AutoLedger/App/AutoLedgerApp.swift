@@ -94,6 +94,7 @@ private struct AutoLedgerRootView: View {
             }
             .task {
                 SupportPurchaseManager.shared.startTransactionListener()
+                ProEntitlementManager.shared.startTransactionListener()
                 scheduleLaunchCloudSyncIfNeeded()
                 scheduleGemmaWarmupIfNeeded()
             }
@@ -102,6 +103,9 @@ private struct AutoLedgerRootView: View {
                 Task {
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationService.openDeepLinkEvent)) { _ in
+                consumeNotificationDeepLinkHandoffIfNeeded()
             }
             .sheet(item: $pendingStructuredJSONHandoff) { handoff in
                 StructuredLedgerJSONConfirmView(handoff: handoff)
@@ -128,6 +132,7 @@ private struct AutoLedgerRootView: View {
                     }
                     consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
                     consumeAppIntentNavigationHandoffIfNeeded()
+                    consumeNotificationDeepLinkHandoffIfNeeded()
                     consumeClipboardImportIntentHandoffIfNeeded()
                     // 订阅提醒通知调度
                     if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
@@ -140,6 +145,7 @@ private struct AutoLedgerRootView: View {
             }
             .onAppear {
                 consumeAppIntentNavigationHandoffIfNeeded()
+                consumeNotificationDeepLinkHandoffIfNeeded()
                 consumeStructuredJSONHandoffIfNeeded()
                 consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
                 consumeClipboardImportIntentHandoffIfNeeded()
@@ -228,6 +234,12 @@ private struct AutoLedgerRootView: View {
             navigationState.selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
             navigationState.openHotelReviewQueue()
         }
+    }
+
+    @MainActor
+    private func consumeNotificationDeepLinkHandoffIfNeeded() {
+        guard let url = AutoLedgerDeepLinkHandoff.consume() else { return }
+        _ = navigationState.openDeepLink(url, store: store)
     }
 
 }

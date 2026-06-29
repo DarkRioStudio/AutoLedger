@@ -19,6 +19,7 @@ struct HotelStayListView: View {
     let statusMessage: String?
     let onImportPDF: (() -> Void)?
     let onImportEmail: (() -> Void)?
+    let onImportCloudInbox: (() -> Void)?
     let onReviewDraft: ((HotelStayDraft) -> Void)?
     let onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)?
     let onDeleteRecord: ((HotelStayRecord) -> Bool)?
@@ -37,6 +38,7 @@ struct HotelStayListView: View {
         selectedRecordID: Binding<UUID?> = .constant(nil),
         onImportPDF: (() -> Void)? = nil,
         onImportEmail: (() -> Void)? = nil,
+        onImportCloudInbox: (() -> Void)? = nil,
         onReviewDraft: ((HotelStayDraft) -> Void)? = nil,
         onUpdateRecord: ((HotelStayRecord, Transaction?) -> Bool)? = nil,
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
@@ -49,6 +51,7 @@ struct HotelStayListView: View {
         self.statusMessage = statusMessage
         self.onImportPDF = onImportPDF
         self.onImportEmail = onImportEmail
+        self.onImportCloudInbox = onImportCloudInbox
         self.onReviewDraft = onReviewDraft
         self.onUpdateRecord = onUpdateRecord
         self.onDeleteRecord = onDeleteRecord
@@ -56,7 +59,7 @@ struct HotelStayListView: View {
     }
 
     private var hasImportActions: Bool {
-        onImportPDF != nil || onImportEmail != nil
+        onImportPDF != nil || onImportEmail != nil || onImportCloudInbox != nil
     }
 
     private var snapshot: HotelStayListSnapshot {
@@ -213,6 +216,13 @@ struct HotelStayListView: View {
                     onImportEmail?()
                 } label: {
                     Label("hotel_stay.import.email", systemImage: "envelope.badge")
+                }
+            }
+            if onImportCloudInbox != nil {
+                Button {
+                    onImportCloudInbox?()
+                } label: {
+                    Label("hotel_stay.import.cloud_inbox", systemImage: "icloud.and.arrow.down")
                 }
             }
         } label: {

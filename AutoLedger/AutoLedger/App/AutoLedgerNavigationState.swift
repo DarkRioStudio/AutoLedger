@@ -90,6 +90,26 @@ enum AutoLedgerDeepLinkParser {
     }
 }
 
+enum AutoLedgerDeepLinkHandoff {
+    private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
+    private static let pendingDeepLinkKey = "autoLedgerPendingDeepLink.v1"
+
+    static func submit(_ urlString: String) {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard URL(string: trimmed) != nil else { return }
+        UserDefaults.standard.set(trimmed, forKey: pendingDeepLinkKey)
+        UserDefaults(suiteName: appGroupIdentifier)?.set(trimmed, forKey: pendingDeepLinkKey)
+    }
+
+    static func consume() -> URL? {
+        let stores = [UserDefaults(suiteName: appGroupIdentifier), UserDefaults.standard].compactMap { $0 }
+        let value = stores.lazy.compactMap { $0.string(forKey: pendingDeepLinkKey) }.first
+        stores.forEach { $0.removeObject(forKey: pendingDeepLinkKey) }
+        guard let value else { return nil }
+        return URL(string: value)
+    }
+}
+
 struct SubscriptionEditorPresentation: Identifiable {
     enum Mode {
         case create
@@ -138,6 +158,7 @@ final class AutoLedgerNavigationState: ObservableObject {
     @Published var selectedHotelStayRecordID: UUID?
     @Published var pendingHotelStayDraftReviewID: UUID?
     @Published var pendingHotelCloudCandidateID: UUID?
+    @Published var isPresentingHotelCloudInbox = false
 
     @Published var selectedSubscriptionID: UUID?
     @Published var subscriptionEditor: SubscriptionEditorPresentation?
@@ -161,6 +182,7 @@ final class AutoLedgerNavigationState: ObservableObject {
     func openHotelCloudCandidate(_ candidateID: UUID? = nil) {
         selectedHomeTab = AutoLedgerHomeTab.hotelStays.rawValue
         pendingHotelCloudCandidateID = candidateID
+        isPresentingHotelCloudInbox = true
     }
 
     @discardableResult
