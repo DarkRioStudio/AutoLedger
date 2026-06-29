@@ -21,6 +21,7 @@ struct HotelFolioInboxImportView: View {
     @State private var isClaimingAddress = false
     @State private var isRefreshing = false
     @State private var isImporting = false
+    @State private var isPresentingProSheet = false
 
     private let client = HotelFolioInboxClient()
 
@@ -82,83 +83,135 @@ struct HotelFolioInboxImportView: View {
                 await refreshCandidates()
             }
         }
+        .sheet(isPresented: $isPresentingProSheet) {
+            NavigationStack {
+                AutoLedgerProView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingProSheet = false
+                            }
+                        }
+                    }
+            }
+        }
     }
 
     private var entitlementSection: some View {
         Section {
-            Label {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.pro.active" : "hotel_stay.cloud_inbox.pro.required")
-                        .font(.body.weight(.semibold))
-                    Text("hotel_stay.cloud_inbox.pro.description")
-                        .font(.footnote)
-                        .foregroundStyle(AppTheme.mutedInk)
+            VStack(alignment: .leading, spacing: 12) {
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.pro.active" : "hotel_stay.cloud_inbox.pro.trial_title")
+                            .font(.body.weight(.semibold))
+                        Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.pro.description" : "hotel_stay.cloud_inbox.pro.trial_description")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                } icon: {
+                    Image(systemName: canUseCloudInbox ? "checkmark.seal.fill" : "sparkles")
+                        .foregroundStyle(canUseCloudInbox ? AppTheme.accent : .orange)
                 }
-            } icon: {
-                Image(systemName: canUseCloudInbox ? "checkmark.seal.fill" : "lock.fill")
-                    .foregroundStyle(canUseCloudInbox ? AppTheme.accent : .orange)
+
+                if !canUseCloudInbox {
+                    Button {
+                        isPresentingProSheet = true
+                    } label: {
+                        Label("pro.cta.view_plans", systemImage: "sparkles")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }
 
     private var addressSection: some View {
         Section {
-            Button {
-                Task {
-                    await claimInboxAddress()
+            if settings.normalizedToken.isEmpty {
+                Label {
+                    Text("hotel_stay.cloud_inbox.address_not_claimed")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                } icon: {
+                    Image(systemName: "envelope.badge")
+                        .foregroundStyle(AppTheme.accent)
                 }
-            } label: {
-                HStack {
-                    if isClaimingAddress {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "envelope.badge")
+            } else {
+                LabeledContent("hotel_stay.cloud_inbox.address") {
+                    Text(settings.inboxAddress)
+                        .textSelection(.enabled)
+                        .font(.callout.monospaced())
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                cloudInboxActionButton(
+                    titleKey: isClaimingAddress ? "hotel_stay.cloud_inbox.claiming_address" : "hotel_stay.cloud_inbox.claim_address",
+                    systemImage: "envelope.badge",
+                    isPrimary: true,
+                    isLoading: isClaimingAddress,
+                    isDisabled: isClaimingAddress || isRefreshing || isImporting
+                ) {
+                    Task {
+                        await claimInboxAddress()
                     }
-                    Text(isClaimingAddress ? "hotel_stay.cloud_inbox.claiming_address" : "hotel_stay.cloud_inbox.claim_address")
                 }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!canUseCloudInbox || isClaimingAddress || isRefreshing || isImporting)
 
-            TextField("hotel_stay.cloud_inbox.endpoint", text: $endpoint)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            SecureField("hotel_stay.cloud_inbox.token", text: $token)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-
-            LabeledContent("hotel_stay.cloud_inbox.address") {
-                Text(settings.inboxAddress)
-                    .textSelection(.enabled)
-                    .font(.callout.monospaced())
-                    .lineLimit(2)
-                    .multilineTextAlignment(.trailing)
-            }
-
-            HStack(spacing: 12) {
-                Button {
-                    saveSettings()
-                } label: {
-                    Label("hotel_stay.cloud_inbox.save", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button {
+                cloudInboxActionButton(
+                    titleKey: "hotel_stay.cloud_inbox.copy_address",
+                    systemImage: "doc.on.doc",
+                    isPrimary: false,
+                    isDisabled: settings.normalizedToken.isEmpty
+                ) {
                     copyInboxAddress()
-                } label: {
-                    Label("hotel_stay.cloud_inbox.copy_address", systemImage: "doc.on.doc")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .disabled(settings.normalizedToken.isEmpty)
             }
         } header: {
             Text("hotel_stay.cloud_inbox.section.address")
         } footer: {
             Text("hotel_stay.cloud_inbox.address_footer")
         }
+    }
+
+    private func cloudInboxActionButton(
+        titleKey: LocalizedStringKey,
+        systemImage: String,
+        isPrimary: Bool,
+        isLoading: Bool = false,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(isPrimary ? .white : AppTheme.accent)
+                } else {
+                    Image(systemName: systemImage)
+                }
+
+                Text(titleKey)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isPrimary ? Color.white : AppTheme.accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isPrimary ? AppTheme.accent : AppTheme.accent.opacity(0.12))
+            )
+            .opacity(isDisabled ? 0.45 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
     }
 
     private var candidateSection: some View {
@@ -179,7 +232,7 @@ struct HotelFolioInboxImportView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!canUseCloudInbox || !settings.canRequest || isRefreshing || isImporting)
+            .disabled(!settings.canRequest || isRefreshing || isImporting)
 
             if let statusMessage {
                 Text(statusMessage)
@@ -217,7 +270,7 @@ struct HotelFolioInboxImportView: View {
                             ProgressView()
                                 .controlSize(.small)
                         } else {
-                            Image(systemName: "tray.and.arrow.down")
+                            Image(systemName: canUseCloudInbox ? "tray.and.arrow.down" : "lock.open.display")
                         }
                         Text(isImporting ? "hotel_stay.cloud_inbox.importing" : "hotel_stay.cloud_inbox.import_selected")
                     }
@@ -251,30 +304,9 @@ struct HotelFolioInboxImportView: View {
         .buttonStyle(.borderless)
     }
 
-    private func saveSettings() {
-        do {
-            try settings.save()
-            token = settings.normalizedToken
-            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.saved")
-            NotificationService.shared.requestPermissionIfNeeded()
-            #if canImport(UIKit)
-            UIApplication.shared.registerForRemoteNotifications()
-            #endif
-            Task {
-                await registerRemoteDeviceTokenIfAvailable()
-            }
-        } catch {
-            statusMessage = error.localizedDescription
-        }
-    }
-
     @MainActor
     private func claimInboxAddress() async {
         guard !isClaimingAddress, !isRefreshing, !isImporting else { return }
-        guard canUseCloudInbox else {
-            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.pro_required")
-            return
-        }
 
         isClaimingAddress = true
         statusMessage = String(localized: "hotel_stay.cloud_inbox.claiming_address")
@@ -321,10 +353,6 @@ struct HotelFolioInboxImportView: View {
     @MainActor
     private func refreshCandidates() async {
         guard !isRefreshing, !isImporting else { return }
-        guard canUseCloudInbox else {
-            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.pro_required")
-            return
-        }
 
         isRefreshing = true
         statusMessage = String(localized: "hotel_stay.cloud_inbox.refreshing")
@@ -357,6 +385,11 @@ struct HotelFolioInboxImportView: View {
         let selection = selectedCandidates
         guard !selection.isEmpty else {
             statusMessage = String(localized: "hotel_stay.email.status.no_selection")
+            return
+        }
+        guard canUseCloudInbox else {
+            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.pro_required")
+            isPresentingProSheet = true
             return
         }
 
@@ -450,6 +483,7 @@ private struct CloudHotelFolioCandidateRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                 .foregroundStyle(AppTheme.accent)
+                .font(.body.weight(.semibold))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 5) {
@@ -481,7 +515,16 @@ private struct CloudHotelFolioCandidateRow: View {
 
             Spacer(minLength: 8)
         }
-        .padding(.vertical, 6)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isSelected ? AppTheme.accent.opacity(0.12) : AppTheme.canvas.opacity(0.45))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isSelected ? AppTheme.accent.opacity(0.28) : AppTheme.cardStroke, lineWidth: 1)
+        }
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
     }
 }

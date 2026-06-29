@@ -134,10 +134,7 @@ struct ReportView: View {
             }
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func summaryCard(_ snapshot: MonthlySnapshot) -> some View {
@@ -165,10 +162,7 @@ struct ReportView: View {
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(AppTheme.heroGradient)
-        )
+        .autoLedgerHeroSurface(cornerRadius: 28)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(summaryAccessibilityLabel(snapshot)))
     }
@@ -203,12 +197,9 @@ struct ReportView: View {
         Text(textKey)
             .font(.subheadline)
             .foregroundStyle(AppTheme.mutedInk)
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(AppTheme.card)
-            )
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .autoLedgerCardSurface(cornerRadius: 20)
     }
 
     private func categoryDonut(_ snapshot: MonthlySnapshot) -> some View {
@@ -248,10 +239,7 @@ struct ReportView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(categoryChartAccessibilityLabel(snapshot)))
     }
@@ -340,10 +328,7 @@ struct ReportView: View {
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: activeLabel)
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(trendChartAccessibilityLabel(snapshot)))
     }
@@ -407,10 +392,7 @@ struct ReportView: View {
             }
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func activeCategoryID(in snapshot: MonthlySnapshot) -> String? {

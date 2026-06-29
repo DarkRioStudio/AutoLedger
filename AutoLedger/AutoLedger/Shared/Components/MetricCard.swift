@@ -6,7 +6,7 @@ struct MetricCard: View {
     let detail: String
     let accent: Color
 
-    private let cardHeight: CGFloat = 132
+    private let cardHeight: CGFloat = 124
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -35,14 +35,18 @@ struct MetricCard: View {
         .padding(18)
         .frame(maxWidth: .infinity, minHeight: cardHeight, idealHeight: cardHeight, maxHeight: cardHeight, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [accent.opacity(0.92), accent.opacity(0.66)],
+                        colors: [accent.opacity(0.94), accent.opacity(0.72)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        }
     }
 }

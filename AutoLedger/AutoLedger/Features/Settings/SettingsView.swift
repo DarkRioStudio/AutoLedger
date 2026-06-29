@@ -12,6 +12,10 @@ struct SettingsView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 
+    private var privacyPolicyURL: URL {
+        URL(string: "https://app.darkrio326.top/autoledger/privacy")!
+    }
+
     var body: some View {
         NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
@@ -164,6 +168,18 @@ struct SettingsView: View {
                     }
 
                     settingsSection(title: "settings.section.support") {
+                        NavigationLink {
+                            AutoLedgerProView()
+                        } label: {
+                            settingsRow(
+                                icon: "sparkles.rectangle.stack.fill",
+                                iconColor: AppTheme.accent,
+                                title: "settings.pro.title",
+                                subtitle: "settings.pro.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         Button {
                             showFeedbackComposer = true
                         } label: {
@@ -198,10 +214,7 @@ struct SettingsView: View {
                         }
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(AppTheme.card)
-                        )
+                        .autoLedgerCardSurface(cornerRadius: 22)
                         .onTapGesture {
                             versionTapCount += 1
                             if versionTapCount >= 5 && !showDebugUnlocked {
@@ -210,10 +223,7 @@ struct SettingsView: View {
                             }
                         }
 
-                        infoCard(
-                            title: "settings.privacy.title",
-                            body: "settings.privacy.body"
-                        )
+                        privacyCard()
 
                         infoCard(
                             title: "settings.release_status.title",
@@ -312,10 +322,7 @@ struct SettingsView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func toggleCard(
@@ -353,10 +360,7 @@ struct SettingsView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func infoCard(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
@@ -371,10 +375,28 @@ struct SettingsView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
+    }
+
+    private func privacyCard() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("settings.privacy.title")
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+
+            Text("settings.privacy.body")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+
+            Link(destination: privacyPolicyURL) {
+                Label("settings.privacy.link", systemImage: "safari.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
 }

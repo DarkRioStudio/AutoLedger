@@ -235,9 +235,10 @@ struct HotelStayListView: View {
         Section {
             if let statusMessage {
                 statusRow(statusMessage)
+                    .padding(.vertical, 8)
             }
         }
-        .listRowBackground(AppTheme.card)
+        .autoLedgerSelectableRowBackground(false)
     }
 
     private func statusRow(_ message: String) -> some View {
@@ -272,7 +273,7 @@ struct HotelStayListView: View {
                 )
             }
             .padding(.vertical, 4)
-            .listRowBackground(AppTheme.card)
+            .autoLedgerSelectableRowBackground(false)
         }
     }
 
@@ -326,7 +327,7 @@ struct HotelStayListView: View {
                     HotelStayDraftRowView(draft: draft)
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(AppTheme.card)
+                .autoLedgerSelectableRowBackground(false)
             }
         } header: {
             Text("hotel_stay.list.section.pending_drafts")
@@ -398,13 +399,13 @@ private struct HotelStayRowView: View {
     let row: HotelStayListRow
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: "bed.double.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
-                .frame(width: 28, height: 28)
+                .frame(width: 34, height: 34)
                 .background(AppTheme.accent.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -421,7 +422,7 @@ private struct HotelStayRowView: View {
                     Spacer(minLength: 4)
 
                     Text(row.totalAmountText)
-                        .font(.headline.weight(.bold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -462,7 +463,7 @@ private struct HotelStayRowView: View {
                 .foregroundStyle(AppTheme.mutedInk)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 
@@ -550,13 +551,13 @@ private struct HotelStayDraftRowView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.orange)
-                .frame(width: 30, height: 30)
+                .frame(width: 34, height: 34)
                 .background(Color.orange.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -572,7 +573,7 @@ private struct HotelStayDraftRowView: View {
                     Spacer(minLength: 6)
 
                     Text(amountText)
-                        .font(.headline.weight(.bold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -607,7 +608,7 @@ private struct HotelStayDraftRowView: View {
                 .foregroundStyle(AppTheme.mutedInk)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
 
@@ -769,7 +770,7 @@ struct HotelStayDetailView: View {
                 }
             }
             .padding(.vertical, 6)
-            .listRowBackground(AppTheme.card)
+            .autoLedgerSelectableRowBackground(false)
         }
     }
 

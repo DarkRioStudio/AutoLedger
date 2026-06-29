@@ -15,7 +15,19 @@ enum AppTheme {
     static let card = Color(uiColor: UIColor { tc in
         tc.userInterfaceStyle == .dark
             ? UIColor(red: 0.20, green: 0.20, blue: 0.19, alpha: 1)
-            : UIColor(white: 1, alpha: 0.88)
+            : UIColor(white: 1, alpha: 0.94)
+    })
+
+    static let cardStroke = Color(uiColor: UIColor { tc in
+        tc.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.07)
+            : UIColor(red: 0.82, green: 0.79, blue: 0.70, alpha: 0.30)
+    })
+
+    static let softShadow = Color(uiColor: UIColor { tc in
+        tc.userInterfaceStyle == .dark
+            ? UIColor(white: 0, alpha: 0.34)
+            : UIColor(red: 0.30, green: 0.25, blue: 0.16, alpha: 0.10)
     })
 
     /// 主文字：深墨绿 / 暖白
@@ -41,8 +53,8 @@ enum AppTheme {
 
     static let heroGradient = LinearGradient(
         colors: [
-            Color(red: 0.17, green: 0.47, blue: 0.34),
-            Color(red: 0.74, green: 0.42, blue: 0.17)
+            Color(red: 0.15, green: 0.44, blue: 0.32),
+            Color(red: 0.72, green: 0.45, blue: 0.18)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
@@ -146,12 +158,13 @@ private struct AutoLedgerSelectableRowBackground: View {
     var body: some View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? AppTheme.accent.opacity(0.18) : AppTheme.card)
+                .fill(isSelected ? AppTheme.accent.opacity(0.20) : AppTheme.card)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(isSelected ? AppTheme.accent.opacity(0.60) : AppTheme.cardStroke, lineWidth: 1)
+                }
 
             if isSelected {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(AppTheme.accent.opacity(0.55), lineWidth: 1)
-
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(AppTheme.accent)
                     .frame(width: 4)
@@ -160,6 +173,40 @@ private struct AutoLedgerSelectableRowBackground: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+private struct AutoLedgerCardSurfaceModifier: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(AppTheme.card)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AppTheme.cardStroke, lineWidth: 1)
+            }
+            .shadow(color: AppTheme.softShadow, radius: 14, x: 0, y: 8)
+    }
+}
+
+private struct AutoLedgerHeroSurfaceModifier: ViewModifier {
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(AppTheme.heroGradient)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            }
+            .shadow(color: AppTheme.softShadow.opacity(1.25), radius: 18, x: 0, y: 10)
     }
 }
 
@@ -234,6 +281,14 @@ extension View {
 
     func autoLedgerSelectableRowBackground(_ isSelected: Bool) -> some View {
         listRowBackground(AutoLedgerSelectableRowBackground(isSelected: isSelected))
+    }
+
+    func autoLedgerCardSurface(cornerRadius: CGFloat = 22) -> some View {
+        modifier(AutoLedgerCardSurfaceModifier(cornerRadius: cornerRadius))
+    }
+
+    func autoLedgerHeroSurface(cornerRadius: CGFloat = 28) -> some View {
+        modifier(AutoLedgerHeroSurfaceModifier(cornerRadius: cornerRadius))
     }
 
     func autoLedgerFormChrome(maxWidth: CGFloat = 720) -> some View {

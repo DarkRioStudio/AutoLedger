@@ -259,6 +259,8 @@ struct HotelFolioEmailImportView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(message.subject.isEmpty ? String(localized: "hotel_stay.email.untitled") : message.subject)
                                 .font(.headline)
+                                .foregroundStyle(AppTheme.ink)
+                                .lineLimit(2)
                             Text(message.from)
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.mutedInk)
@@ -271,11 +273,12 @@ struct HotelFolioEmailImportView: View {
                         }
 
                         ForEach(message.attachments) { attachment in
+                            let isSelected = selectedAttachmentIDs.contains(attachment.id)
                             Button {
                                 toggleAttachmentSelection(attachment.id)
                             } label: {
                                 HStack(spacing: 10) {
-                                    Image(systemName: selectedAttachmentIDs.contains(attachment.id) ? "checkmark.square.fill" : "square")
+                                    Image(systemName: isSelected ? "checkmark.square.fill" : "square")
                                         .foregroundStyle(AppTheme.accent)
                                         .accessibilityHidden(true)
                                     VStack(alignment: .leading, spacing: 2) {
@@ -288,13 +291,22 @@ struct HotelFolioEmailImportView: View {
                                     }
                                     Spacer(minLength: 8)
                                 }
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(isSelected ? AppTheme.accent.opacity(0.12) : AppTheme.canvas.opacity(0.45))
+                                )
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(isSelected ? AppTheme.accent.opacity(0.28) : AppTheme.cardStroke, lineWidth: 1)
+                                }
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .disabled(isImportingSelection)
                         }
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 8)
                 }
 
                 Button {

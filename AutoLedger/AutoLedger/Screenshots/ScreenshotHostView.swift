@@ -28,6 +28,12 @@ struct ScreenshotHostView: View {
                     ScreenshotAppPage(scene: .report)
                 case .settingsManagement:
                     ScreenshotAppPage(scene: .settings)
+                case .cloudFolioInbox:
+                    ScreenshotCloudFolioInboxHost()
+                case .hotelStays:
+                    ScreenshotHotelStaysHost()
+                case .proSubscription:
+                    ScreenshotProSubscriptionHost()
                 }
             case .ipad:
                 ScreenshotWorkspaceHost(section: screenshotWorkspaceSection(for: sceneIdentifier, platform: .ipad))
@@ -80,6 +86,50 @@ struct ScreenshotHostView: View {
         case .ios, .watch:
             .overview
         }
+    }
+}
+
+private struct ScreenshotCloudFolioInboxHost: View {
+    @StateObject private var store: LedgerStore
+
+    init() {
+        ScreenshotFixtures.installUserDefaults()
+        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+    }
+
+    var body: some View {
+        HotelFolioInboxImportView(targetLedgerID: nil) { _ in }
+            .environmentObject(store)
+            .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotHotelStaysHost: View {
+    @State private var selectedRecordID: UUID?
+
+    var body: some View {
+        HotelStayListView(
+            records: ScreenshotHotelStayFixtures.records,
+            drafts: ScreenshotHotelStayFixtures.drafts,
+            transactions: ScreenshotHotelStayFixtures.transactions,
+            selectedRecordID: $selectedRecordID,
+            onImportPDF: {},
+            onImportEmail: {},
+            onImportCloudInbox: {},
+            onReviewDraft: { _ in },
+            onUpdateRecord: { _, _ in true },
+            onDeleteRecord: { _ in true }
+        )
+        .preferredColorScheme(.light)
+    }
+}
+
+private struct ScreenshotProSubscriptionHost: View {
+    var body: some View {
+        NavigationStack {
+            AutoLedgerProView()
+        }
+        .preferredColorScheme(.light)
     }
 }
 
@@ -556,6 +606,123 @@ private enum ScreenshotFixtures {
         UserDefaults.standard.set(false, forKey: "subscriptionReminder")
         UserDefaults.standard.set(false, forKey: "autoClipboardImport")
     }
+}
+
+private enum ScreenshotHotelStayFixtures {
+    static let stayID = UUID(uuidString: "00000000-0000-0000-0000-000000001920")!
+    static let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001921")!
+    static let draftID = UUID(uuidString: "00000000-0000-0000-0000-000000001922")!
+
+    static let records = [
+        HotelStayRecord(
+            id: stayID,
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            linkedTransactionID: transactionID,
+            hotelName: "重庆 Moxy 酒店",
+            hotelGroup: "万豪国际集团",
+            hotelBrand: "Moxy",
+            city: "重庆",
+            country: "中国",
+            checkInDate: "2026-06-22",
+            checkOutDate: "2026-06-23",
+            nights: 1,
+            roomType: "城市景观大床房",
+            confirmationNumber: "49046209",
+            currency: "CNY",
+            roomCharge: 325,
+            taxAmount: 28.5,
+            serviceCharge: 15.89,
+            foodBeverageAmount: 0,
+            otherAmount: 0,
+            totalAmount: 369.39,
+            paymentMethod: "Visa",
+            sourceType: .manualPDF,
+            sourceFileName: "moxy-chongqing-folio.pdf",
+            localizedData: HotelStayLocalizedData(
+                hotelName: "重庆 Moxy 酒店",
+                brand: "Moxy",
+                group: "万豪国际集团",
+                city: "重庆",
+                country: "中国",
+                roomType: "城市景观大床房",
+                currency: "CNY",
+                roomCharge: 325,
+                taxAmount: 28.5,
+                serviceCharge: 15.89,
+                foodBeverageAmount: 0,
+                otherAmount: 0,
+                totalAmount: 369.39,
+                paymentMethod: "Visa"
+            ),
+            confidence: 0.94,
+            rawText: "Moxy Chongqing\nRoom charge CNY 325.00\nTax CNY 28.50\nTotal CNY 369.39"
+        )
+    ]
+
+    static let drafts = [
+        HotelStayDraft(
+            id: draftID,
+            sourceType: .cloudWorker,
+            targetLedgerID: TodaySpendingSummary.defaultLedgerID,
+            sourceFileName: "beihai-marriott-folio.pdf",
+            sourceEmailSubject: "北海万豪度假酒店的电子账单",
+            sourceEmailFrom: "folio@getautoledger.app",
+            rawText: "Beihai Marriott Resort\nTotal CNY 1280.00",
+            parsedPayload: HotelFolioParsedPayload(
+                hotelName: "Beihai Marriott Resort",
+                brand: "Marriott",
+                group: "Marriott International",
+                city: "Beihai",
+                country: "China",
+                checkInDate: "2026-06-20",
+                checkOutDate: "2026-06-22",
+                nights: 2,
+                roomType: "Sea View King",
+                confirmationNumber: "ABC123",
+                currency: "CNY",
+                roomCharge: 1120,
+                tax: 120,
+                serviceCharge: 40,
+                foodBeverage: 0,
+                otherCharges: 0,
+                totalAmount: 1280,
+                paymentMethod: "Visa",
+                confidence: 0.88,
+                rawTextExcerpt: "Beihai Marriott Resort Total CNY 1280.00"
+            ),
+            localizedData: HotelStayLocalizedData(
+                hotelName: "北海万豪度假酒店",
+                brand: "万豪",
+                group: "万豪国际集团",
+                city: "北海",
+                country: "中国",
+                roomType: "海景大床房",
+                currency: "CNY",
+                roomCharge: 1120,
+                taxAmount: 120,
+                serviceCharge: 40,
+                foodBeverageAmount: 0,
+                otherAmount: 0,
+                totalAmount: 1280,
+                paymentMethod: "Visa"
+            ),
+            confidence: 0.88,
+            status: .needsReview
+        )
+    ]
+
+    static let transactions = [
+        Transaction(
+            id: transactionID,
+            merchant: "重庆 Moxy 酒店",
+            amount: 369.39,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-06-23 16:00") ?? ScreenshotFixtures.baseDate,
+            categoryLabel: TransactionCategory.hotel.rawValue,
+            sourceLabel: ReceiptSource.manual.rawValue,
+            note: "入住：2026-06-22；退房：2026-06-23；订单号：49046209",
+            hotelStayRecordID: stayID
+        )
+    ]
 }
 
 private final class ScreenshotTransactionStore: TransactionStore, @unchecked Sendable {

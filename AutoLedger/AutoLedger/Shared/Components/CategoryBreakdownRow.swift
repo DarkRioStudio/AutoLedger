@@ -49,10 +49,7 @@ struct CategoryBreakdownRow: View {
         }
         .padding(16)
         .opacity(isDimmed ? 0.72 : 1)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 20)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(isSelected ? AppTheme.accent : .clear, lineWidth: 2)

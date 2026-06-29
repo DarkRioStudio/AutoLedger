@@ -20,6 +20,9 @@ final class NotificationService: Sendable {
     private static let remoteDeviceTokenKey = "autoLedgerRemoteDeviceToken"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "NotificationService")
+    private static var isScreenshotMode: Bool {
+        ProcessInfo.processInfo.arguments.contains("--screenshot-mode")
+    }
     private static var appGroupDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupIdentifier)
     }
@@ -59,6 +62,7 @@ final class NotificationService: Sendable {
     // MARK: - Permission
 
     func requestPermissionIfNeeded() {
+        guard !Self.isScreenshotMode else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .notDetermined else { return }

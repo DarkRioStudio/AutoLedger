@@ -120,10 +120,7 @@ struct InboxView: View {
             }
         }
         .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(AppTheme.heroGradient)
-        )
+        .autoLedgerHeroSurface(cornerRadius: 28)
     }
 
     private var quickSetupCard: some View {
@@ -204,10 +201,7 @@ struct InboxView: View {
                 .foregroundStyle(AppTheme.mutedInk)
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private var quickSetupCollapsed: some View {
@@ -246,10 +240,7 @@ struct InboxView: View {
                     .accessibilityHidden(true)
             }
             .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(AppTheme.card)
-            )
+            .autoLedgerCardSurface(cornerRadius: 22)
         }
         .buttonStyle(.plain)
     }
@@ -303,10 +294,7 @@ struct InboxView: View {
             }
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func setupStep(number: String, title: String, detail: String) -> some View {
@@ -419,10 +407,7 @@ struct InboxView: View {
                 .foregroundStyle(AppTheme.mutedInk)
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
         .sheet(isPresented: $showCamera) {
             CameraPicker(imageData: $capturedImageData)
         }
@@ -460,10 +445,7 @@ struct InboxView: View {
                 .foregroundStyle(AppTheme.mutedInk)
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 20)
     }
 
     private func statusBanner(_ summary: String) -> some View {
@@ -478,10 +460,7 @@ struct InboxView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 18)
     }
 
     private var recognizedTextCard: some View {
@@ -499,10 +478,7 @@ struct InboxView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.card)
-        )
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
