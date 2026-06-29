@@ -2,25 +2,53 @@
 
 [简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md) · [日本語](README.ja.md)
 
-AutoLedger is a local-first personal ledger, automation, and hotel folio archive for Apple platforms.
+AutoLedger is a local-first personal automated ledger. It extracts expense information from screenshots, receipts, voice input, the clipboard, Shortcuts, and hotel folio PDFs, then turns it into reviewable ledger entries. Core bookkeeping stays free; Pro only unlocks time-saving automation such as email folios, batch candidates, and a dedicated folio inbox.
 
-AutoLedger turns payment screenshots, camera receipts, voice input, clipboard text, Shortcuts/App Intent input, and hotel folio PDFs into reviewable personal expense records.
+## Why AutoLedger
+
+AutoLedger is not just another manual bookkeeping app. It focuses on reducing repetitive input and organizing messy expense materials such as screenshots, receipts, subscriptions, and hotel folios.
+
+Parsed results stay reviewable before saving, so the user can correct the record before it becomes part of the ledger.
 
 ## Features
 
-- Screenshot-based expense capture
-- On-device OCR-based parsing
-- Camera receipt capture
-- Clipboard import
-- Shortcuts / App Intent support
-- Apple Watch quick entry
-- Share Extension import from other apps
-- Control Center widget for quick clipboard import
-- Hotel folio archive workflow for user-selected PDFs, local email PDF attachments, and dedicated inbox candidates
-- Foundational multi-ledger support with a local ledger, ledger management, current/all-ledger views, and a default write ledger
-- Localization and recognition language packs for Simplified Chinese, Traditional Chinese, English, and Japanese
-- iCloud backup / restore support
-- Local-first personal bookkeeping workflow
+### Quick Capture
+
+- Screenshot and photo receipt OCR for amounts, merchants, and dates.
+- Clipboard and Share Extension import from other apps.
+- Voice bookkeeping, Siri / Shortcuts, and App Intent input.
+- Action Button, Control Center Widget, and Apple Watch quick entry.
+
+### Automatic Organization
+
+- Rule engine plus on-device LLM parsing for common payment screenshots, receipts, and bill text.
+- Category learning and editable category / source labels.
+- Subscription recognition and reminders for recurring charges.
+- Monthly reports with category, trend, and merchant views.
+- Multi-ledger support with local ledgers, ledger management, current/all-ledger views, and a default write ledger.
+- JSON export / import plus iCloud sync / backup for migration and recovery.
+
+### Hotel Folio Workflow
+
+- Manual hotel folio PDF import with PDFKit text extraction and review.
+- Pro local email PDF candidate import after explicit user scanning and selection.
+- Dedicated folio inbox as a Pro automation path for forwarded hotel folio emails.
+- Candidate review before saving; no silent posting to the official ledger.
+- Hotel expense archive for stays, hotel brands / groups, dates, nights, charge breakdowns, and linked transactions.
+
+## Free / Pro Boundary
+
+Free remains useful for everyday bookkeeping. AutoLedger does not move existing core features behind Pro, and Pro does not lock the user's ledger history.
+
+Free includes manual entries, single screenshot / photo import, voice / text input, manual hotel folio PDF import, hotel history review, basic subscription management, basic reports, widgets / Share Extension, export / import, backup, and editing or deleting historical records.
+
+Pro is positioned as time-saving automation, not as a lock on the ledger. Pro includes or will include local email folio scan, batch candidate import, advanced deduplication, and the dedicated cloud folio inbox.
+
+## Local-First And Cloud Automation
+
+AutoLedger is local-first and does not require an account for core bookkeeping. Cloud folio inbox automation is optional. The cloud inbox only receives forwarded email attachments, short-term stores source PDFs when needed, and creates reviewable candidates.
+
+The App still requires user review before saving entries. Cloud automation must not silently write transactions into the ledger.
 
 ## Hotel Folio Import
 
@@ -30,7 +58,7 @@ Supported import paths:
 
 - **Manual PDF import**: choose a hotel folio PDF in the Hotel tab. The App extracts text with PDFKit and opens the hotel folio recognition review flow.
 - **Share PDF to AutoLedger**: share a hotel folio PDF from Files, Mail, or another app to enter the pending hotel review flow.
-- **Local email scan**: the user explicitly connects an IMAP mailbox inside the App. The authorization code stays in local Keychain. The App lists candidate emails with PDF attachments, and the user selects which PDFs to import.
+- **Local email scan**: as a Pro automation path, the user explicitly connects an IMAP mailbox inside the App. The authorization code stays in local Keychain. The App lists candidate emails with PDF attachments, and the user selects which PDFs to import.
 - **Dedicated inbox candidates**: in the Pro automation path, the user can claim a `folio+<token>@getautoledger.app` address, manually forward hotel folios, or configure their own mailbox forwarding rule. The Worker only stores short-lived PDF candidates; the App still downloads the PDF and performs text extraction, recognition, and review locally.
 
 The target fields include hotel name, brand / group, city / country, check-in / check-out dates, nights, room type, confirmation number, currency, room charge, tax, service charge, food and beverage, other charges, total amount, payment method, source file, and recognition confidence. After confirmation, AutoLedger creates a `HotelStayRecord` and links a normal expense transaction, using the hotel accommodation category by default.
