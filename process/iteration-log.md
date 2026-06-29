@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-284 账本与酒店列表操作模型统一）
+更新日期：2026-06-29（ITER-285 GOAL-1960 release smoke 与 v1.6.3 酒店 C 阶段规划）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-285 GOAL-1960 release smoke 与 v1.6.3 酒店 C 阶段规划
+- 日期：2026-06-29
+- 所属版本：v1.6.2 / v1.6.3
+- 所属阶段：Release Smoke / Hotel C Planning
+- 类型：测试 / 文档 / 规划
+- 目标：完成 `GOAL-1960` v1.6.2 回归基线与 release smoke 收口，并规划 `v1.6.3` 酒店水单 C 阶段主线。
+- 改动范围：`versions/v1.6.2-plan.md` 标记为完成态并更新 `GOAL-1960` 结果；`versions/v1.6.2-regression-baseline.md` 记录本轮自动门禁、Xcode 27 构建结果和人工证据边界；新增 `versions/v1.6.3-plan.md`，将酒店 C 阶段拆为 C1 AutoLedger 专属收件箱自动导入和 C2 Worker 登录用户邮箱实验路线；同步更新 `README.md`、`README.en.md`、`README.zh-Hant.md`、`README.ja.md` 路线图；更新 `CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、Worker 实现、业务逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：`v1.6.2` 当前规划范围标记为已完成；`GOAL-1960` 自动 release smoke 记录可追溯；`v1.6.3` 计划明确 C1 的公开订阅主线是 `folio+<token>@getautoledger.app` 专属收件箱、Worker 只解析入站邮件和暂存 PDF、App 本地下载后识别并由用户确认入账；C2 Worker 登录用户邮箱自动扫描只保留为个人自用或未来实验能力。
+- 未完成内容：Device Hub Resize Mode、iPhone Mirroring 连续拖拽、真实 Widget / App Intents、酒店水单手动 PDF / Share Extension、真实测试邮箱、日文截图 / ASC 文案和平台素材最终目检仍需要人工截图或视频证据；本轮没有也不应在 CLI 中伪造这些结论。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_localization_coverage.py`、`python3 scripts/check_adaptive_layout_rules.py`、`python3 scripts/check_deep_link_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，覆盖 CloudKit sync、CloudKit hotel PDF asset、酒店邮箱导入、App Intents、Widget、可靠性、长列表性能和 L10N release smoke；执行 `bash scripts/run_golden_regression.sh` 通过 38 个 case；确认 `xcodebuild -version` 为 Xcode 27.0 / 27A5194q；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData-release-smoke CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：`v1.6.3` C1 将引入云端 inbound email、对象存储、APNs、订阅 gating 和短期 PDF 暂存，需要在实现前再次确认隐私说明、对象过期、token 轮换、日志脱敏和审核材料；C2 不应混入公开订阅主线。
+- 回滚方式：回退本轮文档改动即可；无代码、schema 或构建配置回滚。
+- 结论：`GOAL-1960` 工程侧 release smoke 已完成，`v1.6.2` 规划范围收口；可以进入 `v1.6.3` 酒店 C1 专属收件箱主线。
+- 下一步建议：从 `GOAL-2000` 开始冻结 C1 / C2 边界，再按 `GOAL-2010` 至 `GOAL-2015` 推进专属收件地址、Worker 入站邮件、APNs、App 云端候选、本地识别和隐私审核材料。
 
 ### ITER-284 账本与酒店列表操作模型统一
 - 日期：2026-06-29

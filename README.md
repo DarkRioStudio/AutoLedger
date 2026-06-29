@@ -175,8 +175,8 @@ bash scripts/run_golden_regression.sh
 
 - `v1.6.0` 与 `v1.6.1` 已完成并继续对应 ASC / App Store `1.5.0` 大版本口径。
 - App Store `1.4.0` 已发布；内部 `v1.5.1` 是该发布线的最终收口版本，`v1.5.0` 作为实现基线并入发布。
-- `v1.6.2` 已进入开发阶段，重点是 SDK 适配阶段二、酒店邮箱导入收口、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
-- Device Hub Resize Mode、iPhone Mirroring 连续 resize、visionOS 真机和日文母语审校属于人工 smoke / evidence；酒店邮箱草稿队列、去重、Demo Mode、Deep link、Widget 和 App Intents 属于 `v1.6.2` 开发内容。
+- `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
+- `v1.6.3` 进入规划阶段，酒店主线转向 C1 AutoLedger 专属收件箱自动导入；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -195,7 +195,8 @@ bash scripts/run_golden_regression.sh
 | v1.5.1 | **1.4.0** | ✅ 已发布 | 最低系统需求优化、识别链路 Core 化、外部辅助识别试点、编辑保存稳定性、iCloud 同步性能、当前平台截图与 App Preview v001；tvOS / visionOS 与多账本顺延 |
 | v1.6.0 | **1.5.0** | ✅ 已完成 | 订阅管理补强、AI 订阅判断、商户 / 分类 / 订阅倾向学习缓存、tvOS 只读看板、visionOS 展示版、全平台构建 / TestFlight / ASC / schema / 截图收口 |
 | v1.6.1 | **1.5.0** | ✅ 已完成 | 酒店水单识别与酒店消费归档、多账本基础能力、新一轮多语言支持、日文支持、跨平台 App Icon 重绘、iOS 27 可拉伸布局阶段一；商店不区分内部小版本 |
-| v1.6.2 | **1.5.0 默认沿用** | 🚧 开发中 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / Demo Mode、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校 |
+| v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
+| v1.6.3 | **1.5.0 默认沿用** | 🧭 规划中 | 酒店水单 C1 专属收件箱自动导入：`folio+<token>@getautoledger.app`、Worker 入站邮件解析、PDF 短期暂存、APNs 待确认推送、App 本地识别与用户确认入账 |
 
 ## License
 

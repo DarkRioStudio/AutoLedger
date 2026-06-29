@@ -133,8 +133,8 @@ bash scripts/run_golden_regression.sh
 
 - `v1.6.0` と `v1.6.1` は完了しており、ASC / App Store `1.5.0` のリリースラインに対応しています。
 - App Store `1.4.0` はリリース済みです。内部 `v1.5.1` がこのリリースラインの最終クローズアウトで、`v1.5.0` は実装ベースラインとして含まれます。
-- `v1.6.2` は開発中です。SDK adaptation phase 2、ホテルメール取り込みの強化、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビューが中心です。
-- Device Hub Resize Mode、iPhone Mirroring 連続 resize、visionOS 実機、日本語ネイティブレビューは release smoke / evidence です。ホテル下書き永続化、メール重複排除、Demo Mode、Deep link、Widget、App Intents は `v1.6.2` の開発項目です。
+- `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
+- `v1.6.3` は計画段階です。ホテル主線は C1 AutoLedger 専用受信箱による自動取り込みへ進みます。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いです。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -142,7 +142,8 @@ bash scripts/run_golden_regression.sh
 | v1.5.1 | 1.4.0 | Released | Lower deployment targets, Core parsing refactor, external assist pilot, edit-save stability, iCloud sync performance, current-platform screenshots, App Preview v001 |
 | v1.6.0 | 1.5.0 | Completed | Subscription improvements, learning cache, tvOS / visionOS display apps, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, iOS 27 resizable-layout phase 1 |
-| v1.6.2 | 1.5.0 by default | Active development | SDK adaptation phase 2, hotel email draft queue / dedupe / Demo Mode, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review |
+| v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
+| v1.6.3 | 1.5.0 by default | Planned | Hotel C1 dedicated folio inbox: `folio+<token>@getautoledger.app`, Worker inbound-mail parsing, short-lived PDF storage, APNs pending-review push, local App parsing, user-confirmed posting |
 
 ## License
 
