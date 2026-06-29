@@ -6,6 +6,7 @@ enum HotelFolioInboxClientError: LocalizedError, Sendable {
     case missingToken
     case invalidEndpoint
     case invalidHTTPResponse
+    case invalidTokenClaimResponse
     case httpStatus(Int, String)
     case keychainStatus(OSStatus)
 
@@ -17,6 +18,8 @@ enum HotelFolioInboxClientError: LocalizedError, Sendable {
             return String(localized: "hotel_stay.cloud_inbox.error.invalid_endpoint")
         case .invalidHTTPResponse:
             return String(localized: "hotel_stay.cloud_inbox.error.invalid_response")
+        case .invalidTokenClaimResponse:
+            return String(localized: "hotel_stay.cloud_inbox.error.invalid_token_claim_response")
         case .httpStatus(let status, let message):
             return String(format: String(localized: "hotel_stay.cloud_inbox.error.http_status_format"), status, message)
         case .keychainStatus(let status):
@@ -28,6 +31,7 @@ enum HotelFolioInboxClientError: LocalizedError, Sendable {
 struct HotelFolioInboxSettings: Equatable, Sendable {
     static let defaultEndpoint = "https://folio.getautoledger.app"
     static let endpointKey = "hotelFolioInboxEndpoint"
+    static let clientIDKey = "hotelFolioInboxClientID"
 
     var endpoint: String
     var token: String
@@ -54,6 +58,16 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
         return stored?.isEmpty == false ? stored! : defaultEndpoint
     }
 
+    static var currentClientID: String {
+        if let stored = UserDefaults.standard.string(forKey: clientIDKey)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !stored.isEmpty {
+            return stored
+        }
+        let clientID = UUID().uuidString.lowercased()
+        UserDefaults.standard.set(clientID, forKey: clientIDKey)
+        return clientID
+    }
+
     func save() throws {
         let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedEndpoint.isEmpty {
@@ -67,6 +81,16 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
         }
     }
 }
+
+struct HotelFolioInboxTokenClaim: Equatable, Sendable {
+    var token: String
+    var inboxEmail: String
+    var tokenHash: String
+    var userID: String
+    var status: String
+}
+
+extension HotelFolioInboxTokenClaim: Decodable {}
 
 enum HotelFolioInboxTokenStore {
     private static let service = "top.darkrio326.AutoLedger.hotelFolioInbox"
@@ -136,6 +160,12 @@ struct HotelFolioInboxClient: Sendable {
         var environment: String
     }
 
+    private struct TokenClaimPayload: Encodable {
+        var clientID: String
+        var platform: String
+        var environment: String
+    }
+
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
@@ -146,6 +176,28 @@ struct HotelFolioInboxClient: Sendable {
         self.encoder = JSONEncoder()
         self.decoder.dateDecodingStrategy = .custom(Self.decodeISODate)
         self.encoder.dateEncodingStrategy = .iso8601
+    }
+
+    func claimInboxToken(settings: HotelFolioInboxSettings) async throws -> HotelFolioInboxTokenClaim {
+        var request = try makeBaseRequest(
+            path: "/v1/cloud-hotel-folio-token",
+            endpoint: settings.endpoint
+        )
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(TokenClaimPayload(
+            clientID: HotelFolioInboxSettings.currentClientID,
+            platform: Self.currentPlatform,
+            environment: Self.currentPushEnvironment
+        ))
+
+        let data = try await data(for: request)
+        let claim = try decoder.decode(HotelFolioInboxTokenClaim.self, from: data)
+        guard !claim.token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !claim.inboxEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw HotelFolioInboxClientError.invalidTokenClaimResponse
+        }
+        return claim
     }
 
     func listCandidates(settings: HotelFolioInboxSettings) async throws -> [CloudHotelFolioCandidate] {
@@ -212,7 +264,13 @@ struct HotelFolioInboxClient: Sendable {
         guard !settings.normalizedToken.isEmpty else {
             throw HotelFolioInboxClientError.missingToken
         }
-        guard let baseURL = URL(string: settings.endpoint.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+        var request = try makeBaseRequest(path: path, endpoint: settings.endpoint)
+        request.setValue("Bearer \(settings.normalizedToken)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    private func makeBaseRequest(path: String, endpoint: String) throws -> URLRequest {
+        guard let baseURL = URL(string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             throw HotelFolioInboxClientError.invalidEndpoint
         }
 
@@ -225,7 +283,6 @@ struct HotelFolioInboxClient: Sendable {
         }
 
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(settings.normalizedToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 30
         return request
     }

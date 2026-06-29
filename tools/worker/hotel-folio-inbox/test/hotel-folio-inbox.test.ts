@@ -18,6 +18,17 @@ describe("hotel folio inbox worker contract", () => {
     expect(hash).toBe(await testInternals.sha256Hex("abc-123_"));
   });
 
+  it("generates stable dedicated inbox addresses for claimed tokens", () => {
+    const token = testInternals.generateInboxToken();
+    expect(token).toMatch(/^[a-z2-9]{26}$/);
+    expect(testInternals.inboxEmailForToken(` ${token.toUpperCase()} `)).toBe(`folio+${token}@getautoledger.app`);
+  });
+
+  it("normalizes client identifiers before token provisioning", () => {
+    expect(testInternals.normalizeClientID(" Device:ABC-123_ / extra ")).toBe("deviceabc-123_extra");
+    expect(testInternals.normalizeClientID("")).toBe("");
+  });
+
   it("redacts privacy-sensitive email metadata", () => {
     expect(testInternals.redactMetadata("Moxy Folio for user@example.com 13800138000")).toBe(
       "Moxy Folio for [redacted-email] [redacted-number]"

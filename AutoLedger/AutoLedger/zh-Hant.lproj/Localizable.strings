@@ -1084,6 +1084,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "專屬收件箱只接收轉寄到 AutoLedger 地址的飯店水單。PDF 下載後仍在本機提取文字、辨識並等待你確認。";
 "hotel_stay.cloud_inbox.endpoint" = "服務地址";
 "hotel_stay.cloud_inbox.token" = "收件箱 Token";
+"hotel_stay.cloud_inbox.claim_address" = "領取 / 輪換專屬地址";
+"hotel_stay.cloud_inbox.claiming_address" = "正在領取專屬地址";
 "hotel_stay.cloud_inbox.address" = "專屬地址";
 "hotel_stay.cloud_inbox.save" = "儲存";
 "hotel_stay.cloud_inbox.copy_address" = "複製地址";
@@ -1097,6 +1099,7 @@
 "hotel_stay.cloud_inbox.importing" = "正在匯入";
 "hotel_stay.cloud_inbox.selected_count_format" = "已選擇 %d 條候選。";
 "hotel_stay.cloud_inbox.status.saved" = "雲端收件箱設定已儲存。";
+"hotel_stay.cloud_inbox.status.address_claimed" = "專屬收件箱地址已領取並儲存。";
 "hotel_stay.cloud_inbox.status.address_copied" = "專屬收件箱地址已複製。";
 "hotel_stay.cloud_inbox.status.pro_required" = "雲端專屬收件箱需要 AutoLedger Pro。";
 "hotel_stay.cloud_inbox.status.no_results" = "沒有找到雲端候選水單。";
@@ -1106,5 +1109,6 @@
 "hotel_stay.cloud_inbox.error.missing_token" = "請先填寫收件箱 Token。";
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "雲端收件箱服務地址無效。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "雲端收件箱返回內容無法解析。";
+"hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "專屬收件箱地址領取結果無法解析。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "雲端收件箱請求失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "收件箱 Token 儲存失敗（Keychain %d）。";

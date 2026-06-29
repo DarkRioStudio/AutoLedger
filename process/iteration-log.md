@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-291 v1.6.4 酒店水单收件箱 Cloudflare 部署）
+更新日期：2026-06-29（ITER-292 v1.6.4 酒店水单收件箱 token 自动领取）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-292 v1.6.4 酒店水单收件箱 token 自动领取
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Cloud Inbox / Token Provisioning
+- 类型：能力增强 / Worker / UI / 文档
+- 目标：让用户在 App 内自动向服务器领取或轮换专属酒店水单收件箱 token，并获得可复制的 `folio+<token>@getautoledger.app` 地址。
+- 改动范围：更新 `tools/worker/hotel-folio-inbox` Worker token provisioning API、Swift `HotelFolioInboxClient`、`HotelFolioInboxImportView`、四语本地化、Worker README、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未实现 StoreKit 购买页、恢复购买、服务端订阅 entitlement 校验、token 停用运营面板、APNs secrets 配置、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Worker 新增 `POST /v1/cloud-hotel-folio-token` bootstrap provisioning API，接收 App 本机稳定 client id，生成随机 raw token，写入 `pro_inbox_tokens` 时只保存 SHA-256 token hash 和专属邮箱地址，并将同一 `client:<clientID>` 旧 active token 标记为 rotated；App 新增本机 `hotelFolioInboxClientID`、token claim client、收件箱页面“领取/轮换专属地址”按钮，领取成功后自动保存 token 到 Keychain、展示专属地址、请求通知权限并尝试登记 APNs device token；保留手工 token 输入作为调试兜底。
+- 未完成内容：APNs `APNS_KEY_ID`、`APNS_TEAM_ID`、`APNS_PRIVATE_KEY` 仍需用户提供 Apple Developer key 后用 `wrangler secret put` 配置；服务端订阅 entitlement 校验、token 停用 / 到期同步、后台运营面板和 StoreKit Pro 页面继续后续推进。
+- 测试情况：执行 `npm run check` 于 `tools/worker/hotel-folio-inbox` 通过，覆盖 Wrangler types、TypeScript 和 9 个 Vitest contract tests；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `curl -X POST https://folio.getautoledger.app/v1/cloud-hotel-folio-token ...` 验证 production token claim 返回 201 与 `folio+...@getautoledger.app` 地址；随后将 smoke token 在 production D1 标记为 `rotated`，未保留可用测试地址；执行 `git diff --check` 通过。
+- 风险与注意事项：当前 token claim 是订阅后端接入前的 bootstrap provisioning，App UI 仍由本地 Pro entitlement gate 控制；服务端还未根据 App Store 订阅状态拒绝非订阅用户。真实公开前需要补上服务端 entitlement 校验、token 停用 / 到期同步和运营面板。
+- 回滚方式：可回退 Worker token claim 路由、App claim 按钮 / clientID / 本地化和文档记录；已有候选列表、PDF 下载、状态回写和手动 token 输入链路仍可按上一轮部署方式使用。
+- 结论：用户已可在 App 内领取或轮换专属酒店水单邮箱地址，真实邮件端到端测试不再需要手动写入 `pro_inbox_tokens`。
+- 下一步建议：配置 APNs secrets 后，用 TestFlight 领取地址、向该地址转发真实 / 虚构水单 PDF，验证 Email Routing -> R2 / D1 -> App 手动刷新 / 通知唤醒。
 
 ### ITER-291 v1.6.4 酒店水单收件箱 Cloudflare 部署
 - 日期：2026-06-29

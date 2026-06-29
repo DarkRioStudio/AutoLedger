@@ -1081,6 +1081,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "The dedicated inbox only receives hotel folios forwarded to your AutoLedger address. After download, PDF text extraction, recognition, and review still happen on this device.";
 "hotel_stay.cloud_inbox.endpoint" = "Service endpoint";
 "hotel_stay.cloud_inbox.token" = "Inbox token";
+"hotel_stay.cloud_inbox.claim_address" = "Claim / Rotate Address";
+"hotel_stay.cloud_inbox.claiming_address" = "Claiming Address";
 "hotel_stay.cloud_inbox.address" = "Inbox address";
 "hotel_stay.cloud_inbox.save" = "Save";
 "hotel_stay.cloud_inbox.copy_address" = "Copy Address";
@@ -1094,6 +1096,7 @@
 "hotel_stay.cloud_inbox.importing" = "Importing";
 "hotel_stay.cloud_inbox.selected_count_format" = "%d candidates selected.";
 "hotel_stay.cloud_inbox.status.saved" = "Cloud inbox settings saved.";
+"hotel_stay.cloud_inbox.status.address_claimed" = "Dedicated inbox address claimed and saved.";
 "hotel_stay.cloud_inbox.status.address_copied" = "Inbox address copied.";
 "hotel_stay.cloud_inbox.status.pro_required" = "The cloud hotel folio inbox requires AutoLedger Pro.";
 "hotel_stay.cloud_inbox.status.no_results" = "No cloud folio candidates found.";
@@ -1103,5 +1106,6 @@
 "hotel_stay.cloud_inbox.error.missing_token" = "Enter the inbox token first.";
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "The cloud inbox endpoint is invalid.";
 "hotel_stay.cloud_inbox.error.invalid_response" = "The cloud inbox response could not be parsed.";
+"hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "The dedicated inbox token claim response could not be parsed.";
 "hotel_stay.cloud_inbox.error.http_status_format" = "Cloud inbox request failed (%d): %@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "Failed to save the inbox token (Keychain %d).";

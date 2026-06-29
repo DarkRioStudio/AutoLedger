@@ -28,7 +28,7 @@ Cloudflare Email Routing
 -> HotelStayRecord + Transaction
 ```
 
-## Pro Gate
+## Inbox Token Claim / Pro Gate
 
 The service-side gate is the `pro_inbox_tokens` D1 table:
 
@@ -37,6 +37,33 @@ The service-side gate is the `pro_inbox_tokens` D1 table:
 - `pro_expires_at`: optional ISO timestamp. Expired values reject new inbound email and API requests.
 
 The App-side gate should use `AutoLedgerCapability.cloudFolioInbox`.
+
+The App can claim or rotate a dedicated inbox address through the Worker:
+
+```http
+POST /v1/cloud-hotel-folio-token
+Content-Type: application/json
+
+{
+  "clientID": "<locally-stored-client-id>",
+  "platform": "ios",
+  "environment": "production"
+}
+```
+
+The Worker returns the raw token once, stores only its SHA-256 hash in D1, and marks any previous active token for the same `client:<clientID>` user as `rotated`:
+
+```json
+{
+  "token": "<raw-token>",
+  "inboxEmail": "folio+<raw-token>@getautoledger.app",
+  "tokenHash": "<sha256-normalized-token>",
+  "userID": "client:<clientID>",
+  "status": "active"
+}
+```
+
+Until a subscription backend is connected, this endpoint is the bootstrap provisioning path. The App still gates the UI with Pro entitlement locally; a future service-side subscription check can be added before inserting `pro_inbox_tokens`.
 
 ## APNs Device Registration
 
@@ -83,27 +110,7 @@ npx wrangler d1 execute autoledger-hotel-folio-inbox-dev \
   --file migrations/0001_hotel_folio_inbox.sql
 ```
 
-Insert a development token:
-
-```sql
-INSERT INTO pro_inbox_tokens (
-    token_hash,
-    user_id,
-    inbox_email,
-    status,
-    pro_expires_at,
-    created_at,
-    updated_at
-) VALUES (
-    '<sha256-normalized-token>',
-    '<app-user-id>',
-    'folio+<token>@getautoledger.app',
-    'active',
-    NULL,
-    datetime('now'),
-    datetime('now')
-);
-```
+Use `POST /v1/cloud-hotel-folio-token` from the App or curl to provision a development token. Manual `pro_inbox_tokens` inserts are only needed for direct database debugging.
 
 Create queues and object/database resources in Cloudflare before deployment, then replace placeholder D1 IDs in `wrangler.jsonc`:
 
@@ -153,13 +160,14 @@ Email Routing:
 Still required before push notifications work:
 
 - Configure `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` Worker secrets.
-- Insert or provision active rows in `pro_inbox_tokens`.
+- Use the App cloud inbox screen to claim a dedicated address and provision an active `pro_inbox_tokens` row.
 
 ## API
 
-All candidate API calls require the raw inbox token in `Authorization: Bearer <token>`.
+Token claim is unauthenticated bootstrap. All candidate API calls require the raw inbox token in `Authorization: Bearer <token>`.
 
 ```http
+POST /v1/cloud-hotel-folio-token
 GET /v1/cloud-hotel-folio-candidates
 GET /v1/cloud-hotel-folio-candidates/{id}/pdf
 POST /v1/cloud-hotel-folio-candidates/{id}/status

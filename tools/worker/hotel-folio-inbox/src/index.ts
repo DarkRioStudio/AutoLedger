@@ -86,6 +86,14 @@ type CloudHotelFolioCandidateDTO = {
   failureReason: string | null;
 };
 
+type InboxTokenClaimDTO = {
+  token: string;
+  inboxEmail: string;
+  tokenHash: string;
+  userID: string;
+  status: "active";
+};
+
 type NotificationPayload = {
   type: "hotel_folio_candidate_created";
   userID: string;
@@ -104,6 +112,10 @@ type StoredCandidate = {
 
 const encoder = new TextEncoder();
 const pdfMimeTypes = new Set(["application/pdf", "application/x-pdf"]);
+const inboxLocalPart = "folio";
+const inboxDomain = "getautoledger.app";
+const inboxTokenAlphabet = "abcdefghijklmnopqrstuvwxyz23456789";
+const inboxTokenLength = 26;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -132,6 +144,10 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
 
   if (url.pathname === "/health") {
     return json({ ok: true, service: "autoledger-hotel-folio-inbox" }, env);
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/cloud-hotel-folio-token") {
+    return claimInboxToken(request, env);
   }
 
   const auth = await authenticateRequest(request, env);
@@ -272,12 +288,15 @@ function authToken(request: Request): string | null {
 }
 
 function parseInboxAddress(address: string): { token: string; normalized: string } | null {
-  const match = address.trim().toLowerCase().match(/^folio\+([a-z0-9_-]+)@getautoledger\.app$/);
+  const match = address
+    .trim()
+    .toLowerCase()
+    .match(new RegExp(`^${inboxLocalPart}\\+([a-z0-9_-]+)@${inboxDomain.replace(".", "\\.")}$`));
   if (!match?.[1]) {
     return null;
   }
   const token = normalizeToken(match[1]);
-  return token ? { token, normalized: `folio+${token}@getautoledger.app` } : null;
+  return token ? { token, normalized: inboxEmailForToken(token) } : null;
 }
 
 function normalizeToken(token: string): string {
@@ -287,6 +306,83 @@ function normalizeToken(token: string): string {
     .split("")
     .filter((character) => /[a-z0-9_-]/.test(character))
     .join("");
+}
+
+function inboxEmailForToken(token: string): string {
+  return `${inboxLocalPart}+${normalizeToken(token)}@${inboxDomain}`;
+}
+
+function normalizeClientID(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .split("")
+    .filter((character) => /[a-z0-9_-]/.test(character))
+    .join("")
+    .slice(0, 80);
+}
+
+function generateInboxToken(): string {
+  const characters: string[] = [];
+  const maxAcceptedByte = 256 - (256 % inboxTokenAlphabet.length);
+
+  while (characters.length < inboxTokenLength) {
+    const bytes = new Uint8Array(inboxTokenLength);
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte >= maxAcceptedByte) {
+        continue;
+      }
+      characters.push(inboxTokenAlphabet[byte % inboxTokenAlphabet.length]!);
+      if (characters.length === inboxTokenLength) {
+        break;
+      }
+    }
+  }
+
+  return characters.join("");
+}
+
+async function claimInboxToken(request: Request, env: Env): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as Partial<{
+    clientID: string;
+    platform: string;
+    environment: string;
+  }>;
+  const clientID = normalizeClientID(body.clientID ?? "") || crypto.randomUUID().toLowerCase();
+  const userID = `client:${clientID}`;
+  const now = new Date().toISOString();
+  const token = generateInboxToken();
+  const tokenHash = await sha256Hex(token);
+  const inboxEmail = inboxEmailForToken(token);
+
+  await env.DB.prepare(
+    `INSERT INTO pro_inbox_tokens (
+        token_hash, user_id, inbox_email, status, pro_expires_at, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(tokenHash, userID, inboxEmail, "active", null, now, now)
+    .run();
+
+  await env.DB.prepare(
+    `UPDATE pro_inbox_tokens
+        SET status = 'rotated',
+            updated_at = ?
+      WHERE user_id = ?
+        AND token_hash != ?
+        AND status = 'active'`
+  )
+    .bind(now, userID, tokenHash)
+    .run();
+
+  const payload: InboxTokenClaimDTO = {
+    token,
+    inboxEmail,
+    tokenHash,
+    userID,
+    status: "active"
+  };
+  return json(payload, env, 201);
 }
 
 async function loadActiveToken(env: Env, tokenHash: string): Promise<TokenRow | null> {
@@ -940,6 +1036,9 @@ function errorMessage(error: unknown): string {
 export const testInternals = {
   parseInboxAddress,
   normalizeToken,
+  inboxEmailForToken,
+  normalizeClientID,
+  generateInboxToken,
   normalizeDeviceToken,
   normalizeAPNSEnvironment,
   redactMetadata,

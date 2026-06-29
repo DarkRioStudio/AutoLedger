@@ -1081,6 +1081,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "专属收件箱只接收转发到 AutoLedger 地址的酒店水单。PDF 下载后仍在本机提取文本、识别并等待你确认。";
 "hotel_stay.cloud_inbox.endpoint" = "服务地址";
 "hotel_stay.cloud_inbox.token" = "收件箱 Token";
+"hotel_stay.cloud_inbox.claim_address" = "领取/轮换专属地址";
+"hotel_stay.cloud_inbox.claiming_address" = "正在领取专属地址";
 "hotel_stay.cloud_inbox.address" = "专属地址";
 "hotel_stay.cloud_inbox.save" = "保存";
 "hotel_stay.cloud_inbox.copy_address" = "复制地址";
@@ -1094,6 +1096,7 @@
 "hotel_stay.cloud_inbox.importing" = "正在导入";
 "hotel_stay.cloud_inbox.selected_count_format" = "已选择 %d 条候选。";
 "hotel_stay.cloud_inbox.status.saved" = "云端收件箱配置已保存。";
+"hotel_stay.cloud_inbox.status.address_claimed" = "专属收件箱地址已领取并保存。";
 "hotel_stay.cloud_inbox.status.address_copied" = "专属收件箱地址已复制。";
 "hotel_stay.cloud_inbox.status.pro_required" = "云端专属收件箱需要 AutoLedger Pro。";
 "hotel_stay.cloud_inbox.status.no_results" = "没有找到云端候选水单。";
@@ -1103,5 +1106,6 @@
 "hotel_stay.cloud_inbox.error.missing_token" = "请先填写收件箱 Token。";
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "云端收件箱服务地址无效。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "云端收件箱返回内容无法解析。";
+"hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "专属收件箱地址领取结果无法解析。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "云端收件箱请求失败（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "收件箱 Token 保存失败（Keychain %d）。";

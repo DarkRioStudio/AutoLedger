@@ -1081,6 +1081,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "専用受信箱は AutoLedger アドレスへ転送されたホテル明細だけを受け取ります。PDF ダウンロード後のテキスト抽出、認識、確認はこの端末で行います。";
 "hotel_stay.cloud_inbox.endpoint" = "サービス URL";
 "hotel_stay.cloud_inbox.token" = "受信箱 Token";
+"hotel_stay.cloud_inbox.claim_address" = "専用アドレスを取得 / 更新";
+"hotel_stay.cloud_inbox.claiming_address" = "専用アドレスを取得中";
 "hotel_stay.cloud_inbox.address" = "専用アドレス";
 "hotel_stay.cloud_inbox.save" = "保存";
 "hotel_stay.cloud_inbox.copy_address" = "アドレスをコピー";
@@ -1094,6 +1096,7 @@
 "hotel_stay.cloud_inbox.importing" = "取り込み中";
 "hotel_stay.cloud_inbox.selected_count_format" = "%d 件の候補を選択中。";
 "hotel_stay.cloud_inbox.status.saved" = "クラウド受信箱設定を保存しました。";
+"hotel_stay.cloud_inbox.status.address_claimed" = "専用受信箱アドレスを取得して保存しました。";
 "hotel_stay.cloud_inbox.status.address_copied" = "専用受信箱アドレスをコピーしました。";
 "hotel_stay.cloud_inbox.status.pro_required" = "クラウド専用受信箱には AutoLedger Pro が必要です。";
 "hotel_stay.cloud_inbox.status.no_results" = "クラウド候補明細が見つかりません。";
@@ -1103,5 +1106,6 @@
 "hotel_stay.cloud_inbox.error.missing_token" = "先に受信箱 Token を入力してください。";
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "クラウド受信箱サービス URL が無効です。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "クラウド受信箱の応答を解析できません。";
+"hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "専用受信箱アドレスの取得結果を解析できません。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "クラウド受信箱リクエスト失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "受信箱 Token の保存に失敗しました（Keychain %d）。";

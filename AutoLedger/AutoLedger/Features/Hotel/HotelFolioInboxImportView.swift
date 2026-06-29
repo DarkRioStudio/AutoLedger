@@ -18,6 +18,7 @@ struct HotelFolioInboxImportView: View {
     @State private var candidates: [CloudHotelFolioCandidate] = []
     @State private var selectedCandidateIDs: Set<UUID> = []
     @State private var statusMessage: String?
+    @State private var isClaimingAddress = false
     @State private var isRefreshing = false
     @State private var isImporting = false
 
@@ -102,6 +103,24 @@ struct HotelFolioInboxImportView: View {
 
     private var addressSection: some View {
         Section {
+            Button {
+                Task {
+                    await claimInboxAddress()
+                }
+            } label: {
+                HStack {
+                    if isClaimingAddress {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "envelope.badge")
+                    }
+                    Text(isClaimingAddress ? "hotel_stay.cloud_inbox.claiming_address" : "hotel_stay.cloud_inbox.claim_address")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!canUseCloudInbox || isClaimingAddress || isRefreshing || isImporting)
+
             TextField("hotel_stay.cloud_inbox.endpoint", text: $endpoint)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -246,6 +265,41 @@ struct HotelFolioInboxImportView: View {
             }
         } catch {
             statusMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func claimInboxAddress() async {
+        guard !isClaimingAddress, !isRefreshing, !isImporting else { return }
+        guard canUseCloudInbox else {
+            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.pro_required")
+            return
+        }
+
+        isClaimingAddress = true
+        statusMessage = String(localized: "hotel_stay.cloud_inbox.claiming_address")
+        recordCloudInboxDebug("云端酒店水单收件箱：开始领取专属地址")
+        defer { isClaimingAddress = false }
+
+        do {
+            let claim = try await client.claimInboxToken(settings: settings)
+            let normalizedToken = HotelCloudFolioInboxAddress(token: claim.token).normalizedToken
+            guard !normalizedToken.isEmpty else {
+                throw HotelFolioInboxClientError.invalidTokenClaimResponse
+            }
+            let updatedSettings = HotelFolioInboxSettings(endpoint: endpoint, token: normalizedToken)
+            try updatedSettings.save()
+            token = normalizedToken
+            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.address_claimed")
+            recordCloudInboxDebug("云端酒店水单收件箱：专属地址已领取 · tokenHash=\(claim.tokenHash)")
+            NotificationService.shared.requestPermissionIfNeeded()
+            #if canImport(UIKit)
+            UIApplication.shared.registerForRemoteNotifications()
+            #endif
+            await registerRemoteDeviceTokenIfAvailable()
+        } catch {
+            statusMessage = error.localizedDescription
+            recordCloudInboxDebug("云端酒店水单收件箱领取地址失败：\(error.localizedDescription)")
         }
     }
 
