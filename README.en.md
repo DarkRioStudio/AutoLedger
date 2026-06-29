@@ -154,7 +154,8 @@ Current repository status:
 - `v1.6.0` and `v1.6.1` are complete and continue to map to the ASC / App Store `1.5.0` release line.
 - App Store `1.4.0` has been released through the internal `v1.5.1` closeout; `v1.5.0` remains the implementation baseline included in that release.
 - `v1.6.2` is complete. It closed SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, Japanese release-material review, and the GOAL-1960 release-smoke baseline.
-- `v1.6.3` is now planned around the hotel C1 track: an AutoLedger dedicated folio inbox. C2 Worker login to user mailboxes remains personal-use / future experimental only.
+- `v1.6.3` is now in first-skeleton implementation around the hotel C1 track: an AutoLedger dedicated folio inbox. C2 Worker login to user mailboxes remains personal-use / future experimental only.
+- `v1.6.4` is planned around Personal Pro foundations: Free / Pro boundaries, StoreKit entitlement infrastructure, email-automation gates, and review-ready subscription wording.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -164,7 +165,8 @@ Current repository status:
 | v1.6.0 | 1.5.0 | Completed | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio recognition and archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, and iOS 27 resizable-layout phase 1; the store version stays on ASC 1.5.0 for internal patch lines |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, Japanese release-material review, and GOAL-1960 release smoke |
-| v1.6.3 | 1.5.0 by default | Planned | Hotel C1 dedicated folio inbox: `folio+<token>@getautoledger.app`, Worker inbound-mail parsing, short-lived PDF storage, APNs pending-review push, local App parsing, and user-confirmed posting |
+| v1.6.3 | 1.5.0 by default | First skeleton | Hotel C1 dedicated folio inbox: `folio+<token>@getautoledger.app`, Worker inbound-mail parsing, short-lived PDF storage, APNs pending-review push, local App parsing, and user-confirmed posting |
+| v1.6.4 | 1.5.0 by default | Planned | Personal Pro subscription foundations: `ProEntitlementManager`, `ProFeature` gates, Pro page, restore purchases, email automation gates, onboarding, and no data lockout after expiry |
 
 ## License
 

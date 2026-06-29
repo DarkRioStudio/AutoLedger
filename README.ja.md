@@ -134,7 +134,8 @@ bash scripts/run_golden_regression.sh
 - `v1.6.0` と `v1.6.1` は完了しており、ASC / App Store `1.5.0` のリリースラインに対応しています。
 - App Store `1.4.0` はリリース済みです。内部 `v1.5.1` がこのリリースラインの最終クローズアウトで、`v1.5.0` は実装ベースラインとして含まれます。
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
-- `v1.6.3` は計画段階です。ホテル主線は C1 AutoLedger 専用受信箱による自動取り込みへ進みます。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いです。
+- `v1.6.3` は第一版の工程骨格を進めています。ホテル主線は C1 AutoLedger 専用受信箱による自動取り込みへ進みます。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いです。
+- `v1.6.4` は計画段階です。Personal Pro の基盤、Free / Pro 境界、メール自動化 gate、StoreKit / App Review 準備に集中します。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -143,7 +144,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.0 | 1.5.0 | Completed | Subscription improvements, learning cache, tvOS / visionOS display apps, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, iOS 27 resizable-layout phase 1 |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
-| v1.6.3 | 1.5.0 by default | Planned | Hotel C1 dedicated folio inbox: `folio+<token>@getautoledger.app`, Worker inbound-mail parsing, short-lived PDF storage, APNs pending-review push, local App parsing, user-confirmed posting |
+| v1.6.3 | 1.5.0 by default | First skeleton | Hotel C1 dedicated folio inbox: `folio+<token>@getautoledger.app`, Worker inbound-mail parsing, short-lived PDF storage, APNs pending-review push, local App parsing, user-confirmed posting |
+| v1.6.4 | 1.5.0 by default | Planned | Personal Pro foundation: `ProEntitlementManager`, `ProFeature` gates, Pro page, purchase restore, email automation gates, onboarding, and no historical data lockout after expiry |
 
 ## License
 

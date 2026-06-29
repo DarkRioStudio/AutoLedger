@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-286 GOAL-2000 至 GOAL-2014 酒店 C1 第一版工程骨架）
+更新日期：2026-06-29（ITER-287 Personal Pro 设计归档与 v1.6.4 规划）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-287 Personal Pro 设计归档与 v1.6.4 规划
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Planning
+- 类型：文档 / 产品规划 / 订阅设计
+- 目标：分析 Personal Pro 订阅设计文档，将其归档到 `docs/`，并规划 `v1.6.4` 的可执行版本范围。
+- 改动范围：新增 `docs/autoledger-personal-pro-design.md`；新增 `versions/v1.6.4-plan.md`；更新 `docs/README.md`、根 README 四语路线图、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 代码、StoreKit 商品配置、订阅状态逻辑、邮箱扫描业务逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：将 Pro 设计结论收敛为“免费版手动完成，Pro 自动整理”的产品边界；明确既有手动记账、截图识别、手动 PDF 导入、历史数据查看编辑、基础导出和备份恢复不应被回收；规划 `v1.6.4` P0 为 `ProEntitlementManager`、`ProFeature` gate、Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导、Pro 到期不锁数据和 StoreKit / App Review 验收；将高级搜索、订阅异常、月结导出包和高级规则放入 P1。
+- 未完成内容：未实现任何订阅代码；未创建 App Store Connect subscription group / product；未更新隐私政策正文、Review Notes 或 Pro 截图资产；未执行 StoreKit 本地测试。
+- 测试情况：执行 `git diff --check` 通过；本轮为文档规划，无 Swift 构建或离线回归需求。
+- 风险与注意事项：`v1.6.4` 进入实现时需要非常小心 Pro gate 边界，不能误伤手动 PDF 导入、历史数据访问、基础导出和 Support Developer 赞助线；StoreKit 商品上线前必须补隐私政策、审核说明和本地订阅状态回归。
+- 回滚方式：回退新增 `docs/autoledger-personal-pro-design.md`、`versions/v1.6.4-plan.md` 以及 `docs/README.md`、`CHANGELOG.md`、本日志的索引和记录即可；无代码或数据迁移回滚。
+- 结论：Personal Pro 设计已归档，`v1.6.4` 可作为 Pro 订阅基础设施与邮箱自动化付费边界的下一条规划线。
+- 下一步建议：先做 `GOAL-2200` 冻结 Free / Pro gate 清单，再进入 StoreKit configuration 与 `ProEntitlementManager` 实现。
 
 ### ITER-286 GOAL-2000 至 GOAL-2014 酒店 C1 第一版工程骨架
 - 日期：2026-06-29

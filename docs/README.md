@@ -18,6 +18,7 @@ Root-level Markdown is reserved for repository entry points such as `README.md`,
 
 - [autoledger_icloud_backup_design.md](autoledger_icloud_backup_design.md) - iCloud single-file backup and restore design.
 - [autoledger_voice_siri_design.md](autoledger_voice_siri_design.md) - voice ledger and Siri interaction design.
+- [autoledger-personal-pro-design.md](autoledger-personal-pro-design.md) - Personal Pro subscription positioning, Free / Pro boundary, and automation entitlement design.
 - [AutoLedger_Watch_Design.md](AutoLedger_Watch_Design.md) - Apple Watch quick entry and glanceable ledger design.
 - [ReceiptDebugTool-implementation-draft.md](ReceiptDebugTool-implementation-draft.md) - local macOS receipt debugging tool implementation draft.
 - [shortcuts-json-ledger-import.md](shortcuts-json-ledger-import.md) - Shortcuts JSON ledger import contract.
