@@ -154,8 +154,10 @@ Resources:
 Email Routing:
 
 - `getautoledger.app` Email Routing is enabled and ready.
-- `folio@getautoledger.app` routes to `autoledger-hotel-folio-inbox-production`.
+- Cloudflare Email Routing subaddressing is enabled.
+- `folio@getautoledger.app` routes to `autoledger-hotel-folio-inbox-production` and accepts `folio+<token>@getautoledger.app`.
 - Catch-all remains disabled and drops unmatched mail.
+- If a forwarded message has no PDF attachment, the Worker stores a short-lived `email-body-folio.pdf` generated from the message body so the App can use the same PDFKit review pipeline.
 
 Still required before push notifications work:
 

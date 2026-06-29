@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-292 v1.6.4 酒店水单收件箱 token 自动领取）
+更新日期：2026-06-29（ITER-294 v1.6.4 酒店列表换行与已处理候选过滤）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-294 v1.6.4 酒店列表换行与已处理候选过滤
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Folio / Cloud Inbox Polish
+- 类型：Bugfix / UI / Worker / 测试
+- 目标：修复酒店消费列表长中文酒店名挤压金额，以及云端水单收件箱刷新仍显示已处理候选的问题。
+- 改动范围：更新 `HotelStayArchiveView` 酒店记录行布局；更新 `CloudHotelFolioCandidateStatus` 待导入可见性合同、`HotelFolioInboxClient` 本地过滤、Worker 候选列表查询和 Worker contract tests；更新 CHANGELOG 和本日志。
+- 未改动范围：未改变酒店消费数据模型、SQLite / CloudKit schema、StoreKit 商品、邮箱授权、PDF 识别管线、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：酒店名称中汉字数超过 8 个时允许两行展示，金额文本保持更高 layout priority；云端候选列表只返回 / 展示 `stored` 和 `notified`，导入成功后的 `converted`、下载过的 `downloaded`、失败 / 删除 / 过期状态不再显示在“待导入水单”中；生产 Worker 已部署版本 `3f1ff627-f5d0-4df1-bbe9-b612c2573350`。
+- 未完成内容：模拟器因本地没有真实酒店消费数据，未能目检长酒店名的真实数据行；已完成 iOS Simulator 构建、安装和截图尝试，最终仍需 TestFlight / 真机带真实酒店数据确认一次视觉效果。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh` 通过；执行 `npm run check` 于 `tools/worker/hotel-folio-inbox` 通过，13 个 Vitest contract tests 通过；执行 iOS generic Debug build 通过；执行 iOS 27 Simulator Debug build 通过；执行 `git diff --check` 通过；执行 `npx wrangler deploy --env production --dry-run` 和 `npx wrangler deploy --env production` 通过。
+- 风险与注意事项：App 侧也过滤非待处理状态，以兼容旧服务或异常响应；如果未来需要展示“已下载 / 已处理历史”，应单独设计历史列表，不混入待导入列表。
+- 回滚方式：可回退酒店行 lineLimit / layout priority、Core 可见性合同、App 过滤和 Worker `listCandidates` 查询；Worker 可回滚到上一版本。
+- 结论：长酒店名不会优先挤掉金额，已处理云候选不会在刷新后继续作为待导入项出现。
+- 下一步建议：下一版 TestFlight 中用超过 8 个汉字的酒店名称和已导入云候选各做一次真机复核。
+
+### ITER-293 v1.6.4 酒店水单币种归一与正文水单导入
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Folio / Cloud Inbox / Local Email Import
+- 类型：能力增强 / Bugfix / Worker / 测试
+- 目标：让酒店水单解析后的币种落成现有编辑选择器一致的英文币种代码，并让无 PDF 附件但正文即水单的邮件也能进入既有 PDFKit 复核流程。
+- 改动范围：新增 `HotelCurrencyCodeNormalizer` 和 `HotelFolioTextPDFBuilder`；更新 `HotelFolioParsePipeline`、`HotelStayReviewForm`、酒店正式记录编辑、酒店关联账本入账、本地 IMAP 导入、邮件 MIME 正文解析、Worker 云端候选生成、Worker README、离线回归和 Worker contract tests。
+- 未改动范围：未让 Worker 识别 PDF、调用 LLM、生成正式账单或自动入账；未改变邮箱授权码本地 Keychain 规则；未修改 SQLite / CloudKit schema、StoreKit 商品、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：酒店水单解析、复核、正式记录编辑和关联普通流水入账会将 `人民币`、`美元`、`日元`、`Australian Dollar`、货币符号等归一为 `CNY`、`USD`、`JPY`、`AUD` 等代码；本地 IMAP 解析邮件正文并在无 PDF 附件时生成 `email-body-folio.pdf` 候选；Worker 对专属收件箱邮件优先使用真实 PDF 附件，无 PDF 时将正文生成短期 PDF 对象并创建云候选；生产 Worker 已部署版本 `cf316422-b71f-4e2b-be5a-5ccc205a6e6c`。
+- 未完成内容：TestFlight 端需要下次 App 构建后才能验证本地 IMAP 正文水单和币种 UI；云端正文水单候选已在线上 Worker 生效，但 App 端新币种归一仍需随下一次推送 / TestFlight 发布进入用户设备。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh` 通过，覆盖币种归一、正文水单 MIME 解析、正文 PDF 生成和既有酒店 / 同步 / 备份回归；执行 `npm run check` 于 `tools/worker/hotel-folio-inbox` 通过，覆盖 Wrangler types、TypeScript 和 12 个 Vitest contract tests；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 `git diff --check` 通过；执行 `npx wrangler deploy --env production --dry-run` 和 `npx wrangler deploy --env production` 通过。
+- 风险与注意事项：正文转 PDF 是为了复用既有 PDFKit / 复核链路，不代表云端会识别或自动入账；专属收件箱如果收到非水单正文也可能生成候选，仍需要用户在 App 中确认或删除。
+- 回滚方式：可回退 Worker `candidatePDFInputs` / 正文 PDF 生成、本地 IMAP `hotelFolioCandidateMessage` 正文兜底、币种 normalizer 接入和相关测试；已部署 Worker 可回滚到上一版本，现有 PDF 附件候选链路仍保持可用。
+- 结论：酒店水单币种落库口径已和编辑选择器统一，正文型水单邮件已能作为 PDF 候选进入同一复核流程。
+- 下一步建议：推送下一版 TestFlight 后，用无附件正文水单、美元 / 日元 / 人民币水单各做一次真机端到端复核。
 
 ### ITER-292 v1.6.4 酒店水单收件箱 token 自动领取
 - 日期：2026-06-29
