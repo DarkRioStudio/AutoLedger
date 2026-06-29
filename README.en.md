@@ -2,9 +2,9 @@
 
 [简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md) · [日本語](README.ja.md)
 
-AutoLedger is a fast local-first expense capture app for iPhone, iPad, and Apple Watch.
+AutoLedger is a local-first personal ledger, automation, and hotel folio archive for Apple platforms.
 
-AutoLedger helps turn payment screenshots, camera receipts, clipboard text, and Shortcuts/App Intent input into structured personal expense records.
+AutoLedger turns payment screenshots, camera receipts, voice input, clipboard text, Shortcuts/App Intent input, and hotel folio PDFs into reviewable personal expense records.
 
 ## Features
 
@@ -16,7 +16,7 @@ AutoLedger helps turn payment screenshots, camera receipts, clipboard text, and 
 - Apple Watch quick entry
 - Share Extension import from other apps
 - Control Center widget for quick clipboard import
-- Hotel folio archive workflow for user-selected PDFs and local email PDF attachments
+- Hotel folio archive workflow for user-selected PDFs, local email PDF attachments, and dedicated inbox candidates
 - Foundational multi-ledger support with a local ledger, ledger management, current/all-ledger views, and a default write ledger
 - Localization and recognition language packs for Simplified Chinese, Traditional Chinese, English, and Japanese
 - iCloud backup / restore support
@@ -154,8 +154,8 @@ Current repository status:
 - `v1.6.0` and `v1.6.1` are complete and continue to map to the ASC / App Store `1.5.0` release line.
 - App Store `1.4.0` has been released through the internal `v1.5.1` closeout; `v1.5.0` remains the implementation baseline included in that release.
 - `v1.6.2` is complete. It closed SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, Japanese release-material review, and the GOAL-1960 release-smoke baseline.
-- `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. The real Worker, APNs, and cloud-candidate API remain deferred; C2 Worker login to user mailboxes stays personal-use / future experimental only.
-- `v1.6.4` is now in development. `GOAL-2200` has frozen the Free / Pro boundary through a platform-neutral Pro access policy contract; StoreKit, the Pro page, email-automation gates, and review material follow next.
+- `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. C2 Worker login to user mailboxes stays personal-use / future experimental only.
+- `v1.6.4` is now in development. `GOAL-2200` has frozen the Free / Pro boundary through a platform-neutral Pro access policy contract; the C1 Cloudflare Worker, D1/R2/Queue resources, token claim / rotation API, APNs secrets, cloud-candidate API, and App-side PDFKit local conversion entry have landed. The next work is the Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -165,8 +165,8 @@ Current repository status:
 | v1.6.0 | 1.5.0 | Completed | Stronger subscription management, AI subscription hints, merchant / category / subscription learning cache, tvOS read-only dashboard, visionOS showcase, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio recognition and archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, and iOS 27 resizable-layout phase 1; the store version stays on ASC 1.5.0 for internal patch lines |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, Japanese release-material review, and GOAL-1960 release smoke |
-| v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline; real Worker / APNs / cloud-candidate API are deferred |
-| v1.6.4 | 1.5.0 by default | In development | Personal Pro foundations: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; next are `ProEntitlementManager`, `ProFeature` gates, Pro page, restore purchases, email automation gates, onboarding, and no data lockout after expiry |
+| v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline |
+| v1.6.4 | 1.5.0 by default | In development | Personal Pro foundations: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, the C1 Cloudflare Worker, D1/R2/Queue, token claim / rotation, APNs secrets, cloud-candidate API, and App-side PDFKit conversion have landed; next are Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation |
 
 ## License
 

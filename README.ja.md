@@ -7,8 +7,8 @@
 <h1 align="center">AutoLedger</h1>
 
 <p align="center">
-  <strong>スクリーンショットからすぐ記帳 — iPhone / iPad / Apple Watch 向けの支出記録アプリ</strong><br/>
-  支払い画面、レシート写真、クリップボード、ショートカット入力から、構造化された支出記録を作成します。
+  <strong>ローカル優先の個人台帳、自動取り込み、ホテル明細アーカイブ</strong><br/>
+  スクリーンショット、レシート写真、音声、クリップボード、ショートカット、ホテル明細 PDF から、確認可能な個人支出記録を作成します。
 </p>
 
 <p align="center">
@@ -134,8 +134,8 @@ bash scripts/run_golden_regression.sh
 - `v1.6.0` と `v1.6.1` は完了しており、ASC / App Store `1.5.0` のリリースラインに対応しています。
 - App Store `1.4.0` はリリース済みです。内部 `v1.5.1` がこのリリースラインの最終クローズアウトで、`v1.5.0` は実装ベースラインとして含まれます。
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
-- `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。実際の Worker / APNs / クラウド候補 API は後続に回し、C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
-- `v1.6.4` は開発段階に入りました。`GOAL-2200` で Free / Pro 境界を固定し、プラットフォーム非依存の Pro access policy contract を追加しました。次は StoreKit、Pro ページ、メール自動化 gate、レビュー資料を進めます。
+- `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
+- `v1.6.4` は開発段階に入りました。`GOAL-2200` で Free / Pro 境界を固定し、プラットフォーム非依存の Pro access policy contract を追加しました。C1 Cloudflare Worker、D1/R2/Queue、token 取得 / ローテーション API、APNs secrets、クラウド候補 API、App 側 PDFKit ローカル変換入口は実装済みです。次は Pro ページ、購入復元、メール自動化 gate、レビュー資料、TestFlight end-to-end 検証を進めます。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -144,8 +144,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.0 | 1.5.0 | Completed | Subscription improvements, learning cache, tvOS / visionOS display apps, full-platform build / TestFlight / ASC / schema / screenshot closeout |
 | v1.6.1 | 1.5.0 | Completed | Hotel folio archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, iOS 27 resizable-layout phase 1 |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
-| v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline; real Worker / APNs / cloud-candidate API are deferred |
-| v1.6.4 | 1.5.0 by default | In development | Personal Pro foundation: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; next are `ProEntitlementManager`, `ProFeature` gates, Pro page, purchase restore, email automation gates, onboarding, and no historical data lockout after expiry |
+| v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
+| v1.6.4 | 1.5.0 by default | In development | Personal Pro foundation: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, the C1 Cloudflare Worker, D1/R2/Queue, token claim / rotation, APNs secrets, cloud-candidate API, and App-side PDFKit conversion have landed; next are Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation |
 
 ## License
 
