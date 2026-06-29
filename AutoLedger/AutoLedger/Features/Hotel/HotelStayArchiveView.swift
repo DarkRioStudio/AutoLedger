@@ -398,6 +398,10 @@ struct HotelStayListView: View {
 private struct HotelStayRowView: View {
     let row: HotelStayListRow
 
+    private var hotelNameLineLimit: Int {
+        Self.cjkIdeographCount(in: row.hotelName) > 8 ? 2 : 1
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "bed.double.fill")
@@ -409,15 +413,16 @@ private struct HotelStayRowView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .top, spacing: 8) {
                     Text(row.hotelName)
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
-                        .lineLimit(1)
+                        .lineLimit(hotelNameLineLimit)
                         .truncationMode(.tail)
                         .minimumScaleFactor(0.85)
                         .allowsTightening(true)
-                        .layoutPriority(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
 
                     Spacer(minLength: 4)
 
@@ -427,7 +432,7 @@ private struct HotelStayRowView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                         .allowsTightening(true)
-                        .layoutPriority(1)
+                        .layoutPriority(4)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -496,6 +501,14 @@ private struct HotelStayRowView: View {
         case .missingTransaction:
             return "exclamationmark.circle"
         }
+    }
+
+    private static func cjkIdeographCount(in value: String) -> Int {
+        value.unicodeScalars.filter { scalar in
+            (0x4E00...0x9FFF).contains(Int(scalar.value)) ||
+            (0x3400...0x4DBF).contains(Int(scalar.value)) ||
+            (0xF900...0xFAFF).contains(Int(scalar.value))
+        }.count
     }
 }
 
@@ -1114,7 +1127,7 @@ private struct HotelStayRecordEditForm: Equatable {
         nightsText = record.nights.map(String.init) ?? ""
         roomType = Self.displayString(record.localizedData?.roomType, fallback: record.roomType)
         confirmationNumber = record.confirmationNumber ?? ""
-        currency = Self.displayString(record.localizedData?.currency, fallback: record.currency)
+        currency = Self.currencyString(record.localizedData?.currency, fallback: record.currency, context: record.rawText)
         roomChargeText = Self.amountText(record.localizedData?.roomCharge ?? record.roomCharge)
         taxAmountText = Self.amountText(record.localizedData?.taxAmount ?? record.taxAmount)
         serviceChargeText = Self.amountText(record.localizedData?.serviceCharge ?? record.serviceCharge)
@@ -1175,7 +1188,7 @@ private struct HotelStayRecordEditForm: Equatable {
         updated.checkOutDate = Self.dateText(checkOutDateValue)
         updated.nights = Int(nightsText.trimmingCharacters(in: .whitespacesAndNewlines))
         updated.confirmationNumber = trimmedOptional(confirmationNumber)
-        updated.currency = trimmedRequired(currency, fallback: record.currency)
+        updated.currency = normalizedCurrency(fallback: record.currency)
         updated.roomCharge = parsedAmount(roomChargeText)
         updated.taxAmount = parsedAmount(taxAmountText)
         updated.serviceCharge = parsedAmount(serviceChargeText)
@@ -1195,7 +1208,7 @@ private struct HotelStayRecordEditForm: Equatable {
             city: trimmedOptional(city),
             country: trimmedOptional(country),
             roomType: trimmedOptional(roomType),
-            currency: trimmedOptional(currency),
+            currency: normalizedCurrency(fallback: record.currency),
             roomCharge: parsedAmount(roomChargeText),
             taxAmount: parsedAmount(taxAmountText),
             serviceCharge: parsedAmount(serviceChargeText),
@@ -1278,6 +1291,16 @@ private struct HotelStayRecordEditForm: Equatable {
 
     private static func displayString(_ localized: String?, fallback: String?) -> String {
         trimmedOptional(localized) ?? trimmedOptional(fallback) ?? ""
+    }
+
+    private static func currencyString(_ localized: String?, fallback: String?, context: String) -> String {
+        let value = displayString(localized, fallback: fallback)
+        return HotelCurrencyCodeNormalizer.normalizedCode(value, context: context) ?? value
+    }
+
+    private func normalizedCurrency(fallback: String) -> String {
+        HotelCurrencyCodeNormalizer.normalizedCode(currency, context: [country, city].joined(separator: " "))
+            ?? trimmedRequired(currency.uppercased(), fallback: fallback)
     }
 
     private static func amountText(_ value: Double) -> String {
