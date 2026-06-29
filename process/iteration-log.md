@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-294 v1.6.4 酒店列表换行与已处理候选过滤）
+更新日期：2026-06-29（ITER-301 v1.6.4 数据清洗 Pro Gate）
 
 ## 记录规则
 
@@ -43,6 +43,118 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-301 v1.6.4 数据清洗 Pro Gate
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / Automation Gate
+- 类型：能力增强 / UI / 文档 / 测试
+- 目标：收口 `GOAL-2211` 中“高级去重继续接入实际 Pro gate”的剩余工程缺口。
+- 改动范围：更新 `IPadWorkspaceView` 的数据清洗工作区、四语本地化、截图模式免费态开关、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 `DataCleaningPreviewPlanner`、账单去重算法、商户别名 / 分类修正规则、SQLite / CloudKit schema、StoreKit 商品、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：iPad / Mac 数据清洗与疑似重复处理工作区在展示预览和执行清理前调用 `ProEntitlementManager.canUse(.advancedDeduplication)`；未订阅时展示 Pro 自动化说明、免费边界和查看 Pro 方案入口；已订阅或 DEBUG override 状态继续进入原清理界面。免费用户仍可手动查看、编辑和删除所有历史账单。
+- 未完成内容：真实 StoreKit 购买 / 到期状态下的界面切换仍需结合 `GOAL-2216` 生命周期 smoke 验证。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行主 App iOS generic Debug build，结果 PASS；执行 iOS 27 iPad Simulator Debug 构建通过；安装并以 `workspace_cleaning` screenshot mode 启动通过；新增 `--screenshot-free-pro` 覆盖 Debug override 后，截图 `/tmp/autoledger-cleaning-pro-gate-ipad-free.png` 检查左侧选中态、右侧 Pro gate 卡片、按钮和文案无明显遮挡 / 折行；截图模式已避开通知权限弹窗对 UI 回归的干扰。
+- 风险与注意事项：本轮只 gate 批量自动清理工作区，不 gate 单笔账单编辑、历史查看、删除或恢复。
+- 回滚方式：回退 `IPadCleaningPreviewWorkspaceView` 中的 Pro 判断 / Pro sheet / gate card，以及四语 `ipad.cleaning.pro.*` 文案；数据清理底层算法和历史账本不受影响。
+- 结论：`GOAL-2211` 的 P0 自动化 gate 已覆盖 C1 专属收件箱、本地邮箱扫描、批量候选导入和高级去重 / 数据清洗工作区。
+- 下一步建议：把 `GOAL-2216` 的 StoreKit 生命周期和 ASC 沙盒购买作为提审前 QA 项继续验证。
+
+### ITER-300 v1.6.4 邮箱授权引导第一版
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Email / Pro Automation
+- 类型：能力增强 / UI / 文档 / 测试
+- 目标：推进 `GOAL-2214` 第一版，把本地邮箱水单导入页从纯配置表单调整为面向公众用户的授权引导和隐私说明入口。
+- 改动范围：更新 `HotelFolioEmailImportView`、`HotelEmailAccountSettings.Provider`、四语本地化、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 IMAP 登录 / mailbox 选择 / 候选扫描 / PDF 导入 / 酒店水单解析 / Keychain 写入逻辑；未修改 StoreKit 商品、Pro gate、SQLite / CloudKit schema、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：邮箱水单导入页在账号配置前新增导入说明，明确会优先寻找 Folio、账单、电子账单和酒店品牌线索；新增隐私边界说明，强调授权码只保存在本机 Keychain、完整邮件内容不会上传；新增保存前仍需确认说明；授权指引会随 QQ、网易 163 / 126、Gmail、Outlook / Hotmail、iCloud Mail、Yahoo Mail 和自定义 IMAP provider 切换，提示使用授权码或应用专用密码。
+- 未完成内容：真实 provider 连接测试、逐步式授权向导、错误码到操作建议的细分文案和更多邮箱服务商截图说明继续后续收口。
+- 测试情况：执行 iOS 27 iPhone 17 Simulator Debug 构建通过；安装并以 `email_folio_import` screenshot mode 启动通过；截图 `/tmp/autoledger-email-folio-guide.png` 检查标题、导入说明、授权指引和配置区无明显遮挡 / 重叠 / 按钮折行；本轮最终统一执行 `git diff --check`、`bash scripts/run_offline_regression.sh` 和 iOS generic build，均通过。
+- 风险与注意事项：本轮只改用户引导和 provider 文案，不改变真实邮箱扫描策略；若后续 provider 授权页面或 IMAP 策略变化，需要继续更新文案和错误提示。
+- 回滚方式：回退邮箱导入页新增的 `introSection` / `providerGuideSection`、`authorizationGuideKey` 和四语新增文案即可；既有邮箱配置、手动扫描、候选列表和批量导入逻辑不受影响。
+- 结论：`GOAL-2214` 邮箱授权引导第一版已完成，可以继续做真实邮箱连接错误分流和分步授权向导。
+- 下一步建议：结合真实 QQ / Gmail / Outlook smoke，把 login / select mailbox / MIME parse 等错误转成用户可操作的检查项。
+
+### ITER-299 v1.6.4 StoreKit Pro 本地订阅配置
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / StoreKit QA
+- 类型：配置 / 文档 / 测试
+- 目标：推进 `GOAL-2216` 第一段，为 `AutoLedger Pro` 补齐本地 StoreKit 订阅配置和审核 / 测试文档口径。
+- 改动范围：更新 `AutoLedger/AutoLedgerSupport.storekit`、`docs/iap-support.md`、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 `Support Developer` 赞助商品 ID、Pro 商品 ID、Swift 购买逻辑、SQLite / CloudKit schema、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`AutoLedgerSupport.storekit` 新增 `AutoLedger Pro` subscription group，补齐月付 `top.darkrio326.AutoLedger.pro.monthly`、年付 `top.darkrio326.AutoLedger.pro.yearly`、本地价格 `$2.99` / `$19.99`、`P1M` / `P1Y` 周期和英文 / 简体中文 / 繁体中文 / 日文展示名与说明；`docs/iap-support.md` 从旧的 Support Developer-only 文档更新为 Support Developer consumables + AutoLedger Pro subscriptions 双轨说明，明确 Pro 只 gate 自动化入口，不锁基础记账、历史数据、手动水单、导入导出或编辑删除。
+- 未完成内容：订阅生命周期截图、真实 ASC 沙盒购买、隐私政策 URL 最终检查、App Review Notes 最终提交文案和服务端订阅 entitlement 校验继续后续收口。
+- 测试情况：执行 `ruby -rjson -e 'JSON.parse(File.read("AutoLedger/AutoLedgerSupport.storekit"))'` 通过；执行 `swift -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -e 'import StoreKitTest; import Foundation; _ = try SKTestSession(contentsOf: URL(fileURLWithPath: "AutoLedger/AutoLedgerSupport.storekit")); print("storekit-session-loaded")'` 通过并输出 `storekit-session-loaded`；执行结构读取确认月付为 `P1M / 2.99 / RecurringSubscription`，年付为 `P1Y / 19.99 / RecurringSubscription`。
+- 风险与注意事项：`.storekit` 本地配置不能替代 App Store Connect 真商品和沙盒购买；真实价格、本地化展示和订阅状态仍以 ASC / StoreKit 运行环境为准。仓库中不写 APNs 私钥、StoreKit 私钥或任何真实订阅用户 token。
+- 回滚方式：回退 `AutoLedgerSupport.storekit` 中新增的 subscription group，回退 `docs/iap-support.md`、`v1.6.4` 计划、CHANGELOG 和本日志中的 Pro subscription 说明即可；既有 `Support Developer` 消耗型内购和 Pro 页面代码不受影响。
+- 结论：`GOAL-2216` 本地 StoreKit 配置第一段已完成，可以继续做订阅生命周期截图和 ASC 沙盒购买 smoke。
+- 下一步建议：用 Xcode StoreKit 测试面板模拟购买 / 取消 / 过期 / 恢复，补齐 Review Notes 和隐私政策链接检查。
+
+### ITER-298 v1.6.4 Pro 页面订阅状态与管理入口
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / StoreKit UI
+- 类型：能力增强 / UI / 文档 / 测试
+- 目标：把 `GOAL-2212 / GOAL-2215` 推进到第一版可运行实现，让 Pro 页面展示订阅状态、恢复购买、管理订阅和到期不锁历史数据的公众文案。
+- 改动范围：更新 `ProEntitlementManager`、`AutoLedgerProView` / `SupportAutoLedgerView`、四语本地化、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 `Support Developer` 赞助内购、StoreKit 商品 ID、SQLite / CloudKit schema、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`ProEntitlementManager` 新增 active subscription snapshot、恢复购买 loading、管理订阅 loading 和系统订阅管理入口；Pro 页面新增未订阅 / 已订阅 / DEBUG override 状态卡，展示当前 product、到期时间和最近校验时间；恢复购买与管理订阅使用统一操作区；未订阅和到期文案明确免费基础记账、手动酒店水单导入、历史账本 / 酒店记录和基础导出继续可用，Pro 只暂停新的自动化能力。
+- 未完成内容：本地 StoreKit configuration、订阅生命周期截图、审核说明和隐私政策最终材料继续由 `GOAL-2216` 收口；高级去重 / 数据清洗 gate 已由 `ITER-301` 收口。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 iOS 27 iPhone 17 Simulator Debug 构建、安装和 `pro_subscription` screenshot mode 启动通过，截图 `/tmp/autoledger-pro-subscription.png` 与裁图 `/tmp/autoledger-pro-subscription-bottom.png` 检查 Pro 首屏和状态卡无明显遮挡 / 重叠。XcodeBuildMCP UI snapshot 在当前 Xcode beta 上因 `SimulatorKit.framework` 路径缺失不可用，未能用 CLI 滚动截取首屏以下按钮区。
+- 风险与注意事项：当前真购买能力依赖 App Store Connect 商品和 StoreKit 运行环境；本轮只把 App 内状态展示、恢复购买和系统管理订阅入口接上。订阅生命周期仍需要 StoreKit 测试面板和 ASC 沙盒购买继续验证。
+- 回滚方式：回退 `ProEntitlementManager` 新增订阅状态 / 管理入口、`AutoLedgerProView` 状态卡 / 操作区、四语 Pro 状态文案以及版本计划 / CHANGELOG / 本日志记录即可；既有免费记账、手动水单导入、C1 云候选和本地 IMAP 候选召回不受影响。
+- 结论：`GOAL-2212 / GOAL-2215` 第一版工程闭环已完成；Pro 页面已能表达当前状态和免费边界。
+- 下一步建议：进入 `GOAL-2216`，补 StoreKit 本地订阅配置、过期 / 恢复 / 管理订阅截图、App Review 说明和隐私政策链接。
+
+### ITER-297 v1.6.4 本地 IMAP 水单候选召回落地
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Email / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：把 `GOAL-2218` 从规划推进到第一版可运行实现，降低本地 IMAP 扫描把普通附件邮件误判为酒店水单候选的概率。
+- 改动范围：更新 `HotelFolioEmailImportPlanning` 候选分层与打分合同；更新 `HotelFolioEmailImportService` 本地 IMAP 候选过滤；更新 `HotelFolioEmailImportView` Pro gate、候选命中原因展示和默认勾选策略；补齐四语文案、screenshot mode 邮箱水单导入场景和离线回归样例；更新 `v1.6.4` 计划、CHANGELOG 和本日志。
+- 未改动范围：未修改邮箱授权码 Keychain 保存规则、IMAP 登录 / mailbox 选择底层实现、PDFKit / LLM 酒店水单解析、SQLite / CloudKit schema、StoreKit 商品、Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：本地邮箱候选现在按 `pdfFolioSignal`、`pdfHotelSignal`、`bodySubjectSignal` 分层；候选保留命中原因、关键词、得分和是否默认勾选；Xcode Cloud、TestFlight、Apple Developer、WWDC、航旅凭证、构建通知等明显非水单邮件即使带 PDF 附件也会被排除；真实酒店水单主题 / 附件 / 发件人信号会进入候选；无附件但主题命中水单关键词的正文邮件可进入候选但不默认勾选；非 Pro 用户点击本地邮箱扫描或批量导入时会先看到 `AutoLedger Pro` 说明，手动 PDF 导入仍保持免费。
+- 未完成内容：Provider-safe 的两阶段 header fetch / MIME 轻量预筛仍可继续深化；真实 QQ / Gmail / Outlook 邮箱还需要下一版 TestFlight 用高频邮箱做人工 smoke。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh` 通过，覆盖普通附件噪音排除、Marriott / Moxy / Na Lotus / Crowne Plaza 等酒店水单召回、正文水单候选和默认勾选策略；执行 iOS 27 iPhone 17 Simulator Debug build + run 通过；新增 `email_folio_import` screenshot scene 并截图检查邮箱导入页 Pro 提示区域，当前 headless 模拟器仍出现系统“在 AutoLedger 中打开？”确认弹窗，页面本体已可见但截图被系统层部分遮挡；执行 `git diff --check` 通过。
+- 风险与注意事项：当前第一版优先解决“所有附件都进候选”的误触发问题，真实 provider 的 `SEARCH` 差异和中文主题编码仍需在后续高频邮箱 smoke 中继续收紧；正文候选只进入待确认流程，不会自动入账。
+- 回滚方式：可回退 `HotelFolioEmailImportPlanning` 候选合同、`HotelFolioEmailImportService` 过滤接入、邮箱导入 UI Pro gate / 命中原因展示、四语文案和离线回归新增样例。
+- 结论：本地 IMAP 水单候选召回已具备第一版工程闭环，普通附件邮件不再默认污染候选列表。
+- 下一步建议：用 TestFlight 真实 QQ 邮箱继续验证 6 月 20-23 日酒店水单召回，并根据漏召 / 误召样例微调关键词和 provider-safe 拉取策略。
+
+### ITER-296 v1.6.4 设置页 Pro 入口置顶高亮
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Pro UI / Settings Polish
+- 类型：UI / 变更 / 测试
+- 目标：把 `AutoLedger Pro` 放在设置页最上方，并用更突出的底色展示。
+- 改动范围：更新 `SettingsView`，在页面标题下新增 Pro 高亮渐变卡片，继续跳转现有 `AutoLedgerProView`；从“支持”分组移除重复的 Pro 普通列表入口；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品、订阅状态判断、购买 / 恢复购买流程、Pro entitlement、设置页其他入口、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：设置页顶部现在首先展示 `AutoLedger Pro` 卡片，包含皇冠图标、Pro badge、Pro 功能摘要、价格说明和“查看 Pro”按钮；窄屏下价格文案可完整显示，不被 CTA 挤断。
+- 未完成内容：未做 iPad / Mac 截图；本轮聚焦 iPhone 设置页首屏。
+- 测试情况：执行 iOS 27 iPhone 17 Simulator Debug build + run 通过；使用 screenshot mode 打开 `settings_management` 场景并截图检查顶部 Pro 卡片位置和文字折行；执行 `git diff --check` 通过。截图时模拟器仍残留系统“打开 AutoLedger”确认框，但未遮挡顶部 Pro 卡片。
+- 风险与注意事项：Pro 卡片使用设置页现有本地化文案和现有 `AutoLedgerProView`，不会新增订阅逻辑风险；后续如果设置页继续重排，可把该卡片抽成共享组件。
+- 回滚方式：删除 `SettingsView.proHighlightCard()` 与标题下的 `NavigationLink`，恢复“支持”分组里的 Pro 普通列表入口即可。
+- 结论：`AutoLedger Pro` 已在设置页首屏形成明确的优先入口。
+- 下一步建议：后续整体 UI 美化时同步检查 iPad / Mac 设置页宽屏排版。
+
+### ITER-295 v1.6.4 本地 IMAP 水单候选召回规划
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Hotel Email / Pro Automation Planning
+- 类型：文档 / 规划
+- 目标：把本地 IMAP 导入候选过多的问题整理成独立开发 GOAL，明确附件邮件优先、无附件但主题包含水单关键词也应纳入的召回策略。
+- 改动范围：更新 `versions/v1.6.4-plan.md`，新增 `GOAL-2218` 本地 IMAP 水单候选召回规则重审；补充候选分层、排除 / 降权规则、命中原因展示、自动回归和人工 smoke 验收；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 App Swift 代码、Worker 代码、IMAP 实现、邮箱授权、PDFKit 流程、酒店水单解析、StoreKit、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：规划要求本地邮箱扫描不再把近期全部附件邮件直接展示为候选；PDF 附件与水单主题优先；无附件但主题包含 `folio`、`账单`、`电子账单`、酒店品牌或酒店名的邮件进入正文水单候选；普通构建通知、TestFlight、Apple Developer、验证码和非水单行程邮件应排除或降权；候选需要展示命中原因并限制默认勾选。
+- 未完成内容：本轮不实现召回算法、不改 UI、不新增测试 fixtures、不调整真实 IMAP 拉取行为。
+- 测试情况：文档-only 变更；执行 `git diff --check` 作为格式检查。
+- 风险与注意事项：后续实现时需兼容不同 IMAP provider 对 `SEARCH`、中文主题、附件标记和 mailbox 选择的差异；正文邮件只能在用户主动选择后继续本地处理，仍不得上传完整邮箱内容。
+- 回滚方式：回退 `versions/v1.6.4-plan.md`、`CHANGELOG.md` 和本日志中本次新增的 `GOAL-2218` 记录即可。
+- 结论：本地 IMAP 水单候选召回已从临时修补项提升为独立 P0 开发任务。
+- 下一步建议：进入实现时先做 fixture 驱动的候选打分器，再接入真实 IMAP header fetch / MIME 拉取路径。
 
 ### ITER-294 v1.6.4 酒店列表换行与已处理候选过滤
 - 日期：2026-06-29

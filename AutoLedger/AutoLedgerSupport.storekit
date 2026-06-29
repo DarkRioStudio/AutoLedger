@@ -92,7 +92,98 @@
     ]
   },
   "subscriptionGroups" : [
-
+    {
+      "id" : "8CB30C88-74FC-4D4D-91A5-BA9F02F0BB78",
+      "localizations" : [
+        {
+          "description" : "Time-saving automation for email folios, batch candidates, deduplication, and the dedicated folio inbox.",
+          "displayName" : "AutoLedger Pro",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "解锁邮箱水单、批量候选、去重和专属水单收件箱等省时间自动化能力。",
+          "displayName" : "AutoLedger Pro",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "解鎖郵件水單、批次候選、去重和專屬水單收件箱等節省時間的自動化能力。",
+          "displayName" : "AutoLedger Pro",
+          "locale" : "zh_TW"
+        },
+        {
+          "description" : "メール明細、候補の一括処理、重複整理、専用明細受信箱など、時間を節約する自動化機能を解放します。",
+          "displayName" : "AutoLedger Pro",
+          "locale" : "ja_JP"
+        }
+      ],
+      "name" : "AutoLedger Pro",
+      "subscriptions" : [
+        {
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "99C76C29-A4AD-4BE5-822F-7C7A79E24F9C",
+          "localizations" : [
+            {
+              "description" : "Unlock time-saving automation for AutoLedger.",
+              "displayName" : "AutoLedger Pro Monthly",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "按月解锁 AutoLedger 的省时间自动化能力。",
+              "displayName" : "AutoLedger Pro 月付",
+              "locale" : "zh_CN"
+            },
+            {
+              "description" : "按月解鎖 AutoLedger 的節省時間自動化能力。",
+              "displayName" : "AutoLedger Pro 月付",
+              "locale" : "zh_TW"
+            },
+            {
+              "description" : "AutoLedger の時間を節約する自動化機能を月単位で利用できます。",
+              "displayName" : "AutoLedger Pro 月額",
+              "locale" : "ja_JP"
+            }
+          ],
+          "productID" : "top.darkrio326.AutoLedger.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "AutoLedger Pro Monthly",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "57A54AD0-6F03-45DA-9190-679632A40D88",
+          "localizations" : [
+            {
+              "description" : "Early supporter yearly access to AutoLedger Pro automation.",
+              "displayName" : "AutoLedger Pro Yearly",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "首发年付价，解锁 AutoLedger Pro 自动化能力。",
+              "displayName" : "AutoLedger Pro 年付",
+              "locale" : "zh_CN"
+            },
+            {
+              "description" : "首發年付價，解鎖 AutoLedger Pro 自動化能力。",
+              "displayName" : "AutoLedger Pro 年付",
+              "locale" : "zh_TW"
+            },
+            {
+              "description" : "初期サポーター向け年額価格で、AutoLedger Pro の自動化機能を利用できます。",
+              "displayName" : "AutoLedger Pro 年額",
+              "locale" : "ja_JP"
+            }
+          ],
+          "productID" : "top.darkrio326.AutoLedger.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "AutoLedger Pro Yearly",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

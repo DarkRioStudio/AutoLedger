@@ -10,8 +10,17 @@
 ## [Unreleased]
 
 ### 新增（v1.6.4）
+- [2026-06-29 +0800] 新增 `GOAL-2218` 本地 IMAP 水单候选召回规则重审规划：明确本地邮箱扫描不能把近期全部附件邮件直接展示为候选，应先做日期 / 主题 / 附件 hint / header fetch / MIME metadata 打分；PDF 附件与水单主题优先，无附件但主题包含 `folio` / `账单` / `电子账单` 的邮件也应进入正文水单候选并复用正文转 PDF -> PDFKit -> 酒店水单复核链路。同步补充自动与人工验收标准。本轮只更新版本规划文档，不修改 App / Worker 代码。
 - [2026-06-29 +0800] 酒店水单识别链路新增币种代码归一化和邮件正文水单兜底：`HotelFolioParsePipeline`、复核表单、正式酒店记录编辑和关联账本流水统一将 `人民币` / `美元` / `日元` / 符号等解析结果落成 `CNY` / `USD` / `JPY` 等英文币种代码，和现有编辑 Picker 保持一致；本地 IMAP 与云端专属收件箱在邮件无 PDF 附件但正文命中水单关键词时，会生成 `email-body-folio.pdf` 并继续复用 PDFKit -> 酒店水单复核流程。生产 Worker 已部署 `cf316422-b71f-4e2b-be5a-5ccc205a6e6c`，支持真实 `folio+<token>@getautoledger.app` 正文水单候选。
 - [2026-06-29 +0800] 补齐酒店水单专属收件箱 token 自动领取闭环：Worker 新增 `POST /v1/cloud-hotel-folio-token` bootstrap provisioning API，App 使用本机稳定 client id 自动领取 / 轮换 `folio+<token>@getautoledger.app` 专属地址；Worker 只保存 token hash 并将同一 client 旧 active token 标记为 rotated，raw token 只返回一次并由 App 存入本机 Keychain。酒店云收件箱页面新增“领取/轮换专属地址”按钮，领取成功后自动请求通知权限并尝试登记 APNs device token；四语文案、Worker README、`v1.6.4` 计划和迭代日志同步更新。APNs secrets、服务端订阅 entitlement 校验、token 停用 / 到期同步和运营面板仍属于后续配置 / 后端收口。
+
+### 变更（v1.6.4）
+- [2026-06-29 +0800] 收口 `GOAL-2211` Pro 自动化 gate：iPad / Mac 数据清洗与疑似重复处理工作区接入 `ProEntitlementManager.canUse(.advancedDeduplication)`，未订阅时展示 Pro 自动化说明和查看方案入口；免费用户仍可继续查看、编辑和删除所有历史账单。截图模式新增免费 Pro 状态覆盖，并避免通知权限弹窗遮挡回归截图。
+- [2026-06-29 +0800] 完成 `GOAL-2214` 邮箱授权引导重构第一版：邮箱水单导入页在配置表单前新增公众化导入说明、隐私边界、保存前复核说明和 provider 专属授权码 / 应用专用密码提示，覆盖 QQ、网易 163 / 126、Gmail、Outlook / Hotmail、iCloud Mail、Yahoo Mail 和自定义 IMAP；四语文案同步补齐。既有本地 Keychain 保存、Pro gate、手动扫描、候选列表和批量导入逻辑不变。
+- [2026-06-29 +0800] 推进 `GOAL-2216` StoreKit 与审核材料第一段：`AutoLedgerSupport.storekit` 新增 `AutoLedger Pro` subscription group，补齐 `top.darkrio326.AutoLedger.pro.monthly` 月付 `$2.99` 和 `top.darkrio326.AutoLedger.pro.yearly` 首发年付 `$19.99` 本地订阅商品及四语展示名 / 说明；`docs/iap-support.md` 从旧的 Support Developer 文档更新为 Support Developer consumables + AutoLedger Pro subscriptions 双轨说明，明确基础记账长期免费、Pro 只 gate 自动化入口、云候选不会自动入账。订阅生命周期截图、隐私政策链接和真实 ASC 沙盒购买继续后续收口。
+- [2026-06-29 +0800] 完成 `GOAL-2212 / GOAL-2215` Pro 页面订阅状态与管理入口第一版：`ProEntitlementManager` 新增 active subscription snapshot、恢复购买 loading、管理订阅 loading 和系统订阅管理入口；`AutoLedgerProView` 新增未订阅 / 已订阅 / DEBUG 状态卡、最近校验时间、恢复购买和管理订阅操作区，四语文案明确免费基础记账、手动酒店水单导入和历史数据不会被 Pro 锁住。订阅生命周期截图和 App Review 材料继续由 `GOAL-2216` 收口。
+- [2026-06-29 +0800] 完成 `GOAL-2218` 本地 IMAP 水单候选召回第一版工程落地：Core 新增酒店水单邮件候选分层、命中原因、得分与默认勾选策略，本地邮箱扫描不再把所有 PDF 附件直接展示为候选；Xcode Cloud / TestFlight / Apple Developer / WWDC / 航旅凭证等明显非水单邮件会被排除，`Folio`、`Marriott`、`Hotel`、`电子账单`、`账单` 等主题 / 附件 / 发件人信号会进入候选；无附件但水单主题命中的正文邮件作为低风险候选展示但不默认勾选。邮箱水单扫描和批量导入接入 `AutoLedger Pro` gate，候选列表展示命中原因，四语文案和 screenshot mode 场景同步补齐。离线回归覆盖真实邮箱噪音样例、酒店水单样例和默认勾选策略；iOS 27 Simulator Debug build / run 通过。
+- [2026-06-29 +0800] 设置页将 `AutoLedger Pro` 入口移到页面最上方，改为独立高亮渐变卡片展示，并从“支持”分组移除重复入口；卡片继续跳转现有 `AutoLedgerProView`，不修改 StoreKit 商品、订阅状态逻辑或购买流程。已通过 iOS 27 iPhone 17 Simulator Debug 构建和 screenshot mode 设置页截图检查。
 
 ### 修复（v1.6.4）
 - [2026-06-29 +0800] 修复酒店消费列表长中文酒店名挤压金额，以及云端水单收件箱刷新仍显示已处理候选的问题：酒店名超过 8 个汉字时允许两行展示，金额保持更高布局优先级；云端候选列表只返回 / 展示仍可处理的 `stored`、`notified` 状态，`downloaded`、`converted`、`failed`、`deleted`、`expired` 不再作为待导入候选出现。生产 Worker 已部署 `3f1ff627-f5d0-4df1-bbe9-b612c2573350`。

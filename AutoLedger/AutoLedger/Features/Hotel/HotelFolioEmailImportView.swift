@@ -9,6 +9,7 @@ struct HotelFolioEmailImportView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     let targetLedgerID: String?
     let onDraftsReady: ([HotelStayDraft]) -> Void
 
@@ -23,6 +24,7 @@ struct HotelFolioEmailImportView: View {
     @State private var statusMessage: String?
     @State private var isScanning = false
     @State private var isImportingSelection = false
+    @State private var isPresentingProSheet = false
 
     init(
         targetLedgerID: String?,
@@ -42,7 +44,10 @@ struct HotelFolioEmailImportView: View {
     var body: some View {
         NavigationStack {
             Form {
+                introSection
+                providerGuideSection
                 accountSection
+                entitlementSection
                 scanSection
                 resultSection
             }
@@ -70,6 +75,96 @@ struct HotelFolioEmailImportView: View {
         }
         .onChange(of: settings.emailAddress) { _, _ in
             refreshStoredCredentialState()
+        }
+        .task {
+            await proEntitlement.loadProducts()
+            await proEntitlement.refreshEntitlements()
+        }
+        .sheet(isPresented: $isPresentingProSheet) {
+            NavigationStack {
+                AutoLedgerProView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingProSheet = false
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
+    private var canUseLocalEmailScan: Bool {
+        proEntitlement.canUse(.localEmailFolioScan)
+    }
+
+    private var introSection: some View {
+        Section {
+            emailInfoRow(
+                icon: "envelope.badge",
+                tint: AppTheme.accent,
+                titleKey: "hotel_stay.email.intro.value.title",
+                bodyKey: "hotel_stay.email.intro.value.body"
+            )
+            emailInfoRow(
+                icon: "lock.shield.fill",
+                tint: .blue,
+                titleKey: "hotel_stay.email.intro.privacy.title",
+                bodyKey: "hotel_stay.email.intro.privacy.body"
+            )
+            emailInfoRow(
+                icon: "checkmark.seal.fill",
+                tint: .orange,
+                titleKey: "hotel_stay.email.intro.review.title",
+                bodyKey: "hotel_stay.email.intro.review.body"
+            )
+        } header: {
+            Text("hotel_stay.email.section.intro")
+        }
+    }
+
+    private var providerGuideSection: some View {
+        Section {
+            Label {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("hotel_stay.email.guide.title")
+                        .font(.body.weight(.semibold))
+                    Text(LocalizedStringKey(settings.provider.authorizationGuideKey))
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("hotel_stay.email.guide.password_note")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } icon: {
+                Image(systemName: "key.horizontal.fill")
+                    .foregroundStyle(AppTheme.accent)
+            }
+        } header: {
+            Text("hotel_stay.email.section.guide")
+        }
+    }
+
+    private func emailInfoRow(
+        icon: String,
+        tint: Color,
+        titleKey: LocalizedStringKey,
+        bodyKey: LocalizedStringKey
+    ) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(titleKey)
+                    .font(.body.weight(.semibold))
+                Text(bodyKey)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } icon: {
+            Image(systemName: icon)
+                .foregroundStyle(tint)
         }
     }
 
@@ -216,20 +311,54 @@ struct HotelFolioEmailImportView: View {
         .contentShape(Rectangle())
     }
 
+    private var entitlementSection: some View {
+        Section {
+            Label {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(canUseLocalEmailScan ? "hotel_stay.email.pro.active" : "hotel_stay.email.pro.required")
+                        .font(.body.weight(.semibold))
+                    Text(canUseLocalEmailScan ? "hotel_stay.email.pro.active_description" : "hotel_stay.email.pro.description")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+            } icon: {
+                Image(systemName: canUseLocalEmailScan ? "checkmark.seal.fill" : "sparkles")
+                    .foregroundStyle(canUseLocalEmailScan ? AppTheme.accent : .orange)
+            }
+
+            if !canUseLocalEmailScan {
+                Button {
+                    isPresentingProSheet = true
+                } label: {
+                    Label("pro.cta.view_plans", systemImage: "sparkles")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     private var scanSection: some View {
         Section {
             Button {
-                Task {
-                    await scanMailbox()
+                if canUseLocalEmailScan {
+                    Task {
+                        await scanMailbox()
+                    }
+                } else {
+                    isPresentingProSheet = true
                 }
             } label: {
                 HStack {
                     if isScanning {
                         ProgressView()
-                    } else {
+                    } else if canUseLocalEmailScan {
                         Image(systemName: "envelope.badge")
+                    } else {
+                        Image(systemName: "sparkles")
                     }
-                    Text(isScanning ? "hotel_stay.email.scanning" : "hotel_stay.email.scan")
+                    Text(isScanning ? "hotel_stay.email.scanning" : (canUseLocalEmailScan ? "hotel_stay.email.scan" : "pro.cta.view_plans"))
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -269,6 +398,11 @@ struct HotelFolioEmailImportView: View {
                                 Text(dateText)
                                     .font(.caption2)
                                     .foregroundStyle(AppTheme.mutedInk)
+                            }
+                            if let match = candidateMatch(for: message) {
+                                Label(candidateReasonTitle(for: match.reason), systemImage: candidateReasonIcon(for: match.reason))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(AppTheme.accent)
                             }
                         }
 
@@ -310,8 +444,12 @@ struct HotelFolioEmailImportView: View {
                 }
 
                 Button {
-                    Task {
-                        await importSelectedAttachments()
+                    if canUseLocalEmailScan {
+                        Task {
+                            await importSelectedAttachments()
+                        }
+                    } else {
+                        isPresentingProSheet = true
                     }
                 } label: {
                     HStack {
@@ -355,6 +493,13 @@ struct HotelFolioEmailImportView: View {
 
     private var allAttachmentIDs: [String] {
         candidates.flatMap { $0.attachments.map(\.id) }
+    }
+
+    private var defaultSelectedAttachmentIDs: [String] {
+        candidates.flatMap { message -> [String] in
+            guard candidateMatch(for: message)?.defaultSelected == true else { return [] }
+            return message.attachments.map(\.id)
+        }
     }
 
     private var selectedAttachmentPairs: [(message: HotelFolioEmailMessage, attachment: HotelFolioEmailAttachment)] {
@@ -431,11 +576,11 @@ struct HotelFolioEmailImportView: View {
                     handleScanProgress(progress)
                 }
             )
-            selectedAttachmentIDs = Set(allAttachmentIDs)
+            selectedAttachmentIDs = Set(defaultSelectedAttachmentIDs)
             statusMessage = candidates.isEmpty
                 ? String(localized: "hotel_stay.email.status.no_results")
                 : String(format: String(localized: "hotel_stay.email.status.results_format"), candidates.count)
-            recordEmailScanDebug("邮箱水单扫描：结果已显示 · candidates=\(candidates.count) · attachments=\(allAttachmentIDs.count)")
+            recordEmailScanDebug("邮箱水单扫描：结果已显示 · candidates=\(candidates.count) · attachments=\(allAttachmentIDs.count) · selected=\(selectedAttachmentIDs.count)")
         } catch {
             statusMessage = error.localizedDescription
             recordEmailScanDebug("邮箱水单扫描失败：\(error.localizedDescription)")
@@ -589,10 +734,40 @@ struct HotelFolioEmailImportView: View {
     private func refreshStoredCredentialState() {
         hasStoredCredential = HotelEmailCredentialStore.hasStoredCredential(for: settings.emailAddress)
     }
+
+    private func candidateMatch(for message: HotelFolioEmailMessage) -> HotelFolioEmailCandidateMatch? {
+        HotelFolioEmailCandidateFilter().evaluate(message)
+    }
+
+    private func candidateReasonTitle(for reason: HotelFolioEmailCandidateReason) -> LocalizedStringKey {
+        switch reason {
+        case .pdfFolioSubjectOrAttachment:
+            return "hotel_stay.email.candidate_reason.pdf_folio"
+        case .pdfHotelSenderOrBody:
+            return "hotel_stay.email.candidate_reason.pdf_hotel"
+        case .bodySubjectFolio:
+            return "hotel_stay.email.candidate_reason.body_subject"
+        }
+    }
+
+    private func candidateReasonIcon(for reason: HotelFolioEmailCandidateReason) -> String {
+        switch reason {
+        case .pdfFolioSubjectOrAttachment:
+            return "doc.text.magnifyingglass"
+        case .pdfHotelSenderOrBody:
+            return "building.2.crop.circle"
+        case .bodySubjectFolio:
+            return "text.page.badge.magnifyingglass"
+        }
+    }
 }
 
 private extension HotelEmailAccountSettings.Provider {
     var localizedTitleKey: String {
         "hotel_stay.email.provider.\(rawValue)"
+    }
+
+    var authorizationGuideKey: String {
+        "hotel_stay.email.guide.\(rawValue)"
     }
 }

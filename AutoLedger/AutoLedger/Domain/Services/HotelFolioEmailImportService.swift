@@ -312,13 +312,14 @@ struct HotelFolioIMAPClient: Sendable {
                     try await session.fetchRFC822(uid: uid)
                 }
                 let message = try parser.parse(rawMessage: rawMessage, uid: uid)
-                if let candidateMessage = hotelFolioCandidateMessage(message) {
+                if let candidate = hotelFolioCandidateMessage(message) {
+                    let candidateMessage = candidate.message
                     candidates.append(candidateMessage)
                     let generatedBodyPDFCount = candidateMessage.attachments.filter { $0.id.contains("-body-") }.count
                     onProgress(
                         HotelFolioEmailScanProgress(
                             phase: .candidateAccepted(subject: candidateMessage.subject),
-                            debugSummary: "邮箱水单扫描：发现候选水单邮件 · uid=\(uid) · subject=\(candidateMessage.subject) · pdf=\(candidateMessage.attachments.count) · bodyPDF=\(generatedBodyPDFCount)",
+                            debugSummary: "邮箱水单扫描：发现候选水单邮件 · uid=\(uid) · subject=\(candidateMessage.subject) · reason=\(candidate.match.reason.rawValue) · score=\(candidate.match.score) · pdf=\(candidateMessage.attachments.count) · bodyPDF=\(generatedBodyPDFCount)",
                             rawText: candidateMessage.bodyText ?? candidateMessage.subject
                         )
                     )
@@ -349,25 +350,33 @@ struct HotelFolioIMAPClient: Sendable {
         return candidates
     }
 
-    private func hotelFolioCandidateMessage(_ message: HotelFolioEmailMessage) -> HotelFolioEmailMessage? {
+    private func hotelFolioCandidateMessage(
+        _ message: HotelFolioEmailMessage
+    ) -> (message: HotelFolioEmailMessage, match: HotelFolioEmailCandidateMatch)? {
+        let filter = HotelFolioEmailCandidateFilter()
+        guard let match = filter.evaluate(message) else {
+            return nil
+        }
+
         let pdfAttachments = message.attachments.filter { attachment in
             attachment.mimeType == "application/pdf" || attachment.fileName.lowercased().hasSuffix(".pdf")
         }
         if !pdfAttachments.isEmpty {
-            return HotelFolioEmailMessage(
-                uid: message.uid,
-                messageID: message.messageID,
-                subject: message.subject,
-                from: message.from,
-                dateText: message.dateText,
-                bodyText: message.bodyText,
-                attachments: pdfAttachments
+            return (
+                HotelFolioEmailMessage(
+                    uid: message.uid,
+                    messageID: message.messageID,
+                    subject: message.subject,
+                    from: message.from,
+                    dateText: message.dateText,
+                    bodyText: message.bodyText,
+                    attachments: pdfAttachments
+                ),
+                match
             )
         }
 
-        let filter = HotelFolioEmailCandidateFilter()
-        guard filter.isLikelyHotelFolio(message),
-              let bodyText = message.bodyText?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let bodyText = message.bodyText?.trimmingCharacters(in: .whitespacesAndNewlines),
               !bodyText.isEmpty else {
             return nil
         }
@@ -383,14 +392,17 @@ struct HotelFolioIMAPClient: Sendable {
             size: pdfData.count,
             data: pdfData
         )
-        return HotelFolioEmailMessage(
-            uid: message.uid,
-            messageID: message.messageID,
-            subject: message.subject,
-            from: message.from,
-            dateText: message.dateText,
-            bodyText: bodyText,
-            attachments: [attachment]
+        return (
+            HotelFolioEmailMessage(
+                uid: message.uid,
+                messageID: message.messageID,
+                subject: message.subject,
+                from: message.from,
+                dateText: message.dateText,
+                bodyText: bodyText,
+                attachments: [attachment]
+            ),
+            match
         )
     }
 

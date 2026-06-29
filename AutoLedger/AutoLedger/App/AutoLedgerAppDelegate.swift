@@ -24,7 +24,9 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
+        if !ProcessInfo.processInfo.arguments.contains("--screenshot-mode") {
+            UNUserNotificationCenter.current().delegate = self
+        }
         configureHomeQuickActions(for: application)
         return true
     }

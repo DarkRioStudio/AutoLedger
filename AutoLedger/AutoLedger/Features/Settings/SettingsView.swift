@@ -22,6 +22,13 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     AutoLedgerPageTitle("settings.title")
 
+                    NavigationLink {
+                        AutoLedgerProView()
+                    } label: {
+                        proHighlightCard()
+                    }
+                    .buttonStyle(.plain)
+
                     settingsSection(title: "settings.section.ledger_sync") {
                         NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
                             settingsRow(
@@ -168,18 +175,6 @@ struct SettingsView: View {
                     }
 
                     settingsSection(title: "settings.section.support") {
-                        NavigationLink {
-                            AutoLedgerProView()
-                        } label: {
-                            settingsRow(
-                                icon: "sparkles.rectangle.stack.fill",
-                                iconColor: AppTheme.accent,
-                                title: "settings.pro.title",
-                                subtitle: "settings.pro.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-
                         Button {
                             showFeedbackComposer = true
                         } label: {
@@ -270,6 +265,96 @@ struct SettingsView: View {
                     .environmentObject(store)
             }
         }
+    }
+
+    private func proHighlightCard() -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(.white.opacity(0.20))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(.white.opacity(0.26), lineWidth: 1)
+                    }
+
+                Image(systemName: "crown.fill")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Color(red: 1.0, green: 0.82, blue: 0.30))
+            }
+            .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text("settings.pro.title")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.84)
+
+                    Text("pro.hero.badge")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.08))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color(red: 1.0, green: 0.82, blue: 0.30))
+                        )
+                }
+
+                Text("settings.pro.subtitle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Label("pro.hero.price_line", systemImage: "tag.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.84))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack {
+                    Spacer(minLength: 0)
+
+                    Label("pro.cta.view_plans", systemImage: "arrow.right.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color(red: 0.14, green: 0.16, blue: 0.15))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(.white.opacity(0.92))
+                        )
+                }
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.78))
+                .padding(.top, 4)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.10, green: 0.22, blue: 0.34),
+                            AppTheme.accent,
+                            Color(red: 0.76, green: 0.51, blue: 0.16)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(.white.opacity(0.18), lineWidth: 1)
+        }
+        .shadow(color: AppTheme.softShadow.opacity(1.6), radius: 18, x: 0, y: 10)
+        .accessibilityElement(children: .combine)
     }
 
     private func settingsSection<Content: View>(

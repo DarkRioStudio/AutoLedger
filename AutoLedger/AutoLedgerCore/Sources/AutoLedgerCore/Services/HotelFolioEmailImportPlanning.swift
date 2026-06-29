@@ -508,28 +508,184 @@ public struct HotelFolioEmailMessageParser: Sendable {
     }
 }
 
-public struct HotelFolioEmailCandidateFilter: Sendable {
-    private let keywords: [String]
+public enum HotelFolioEmailCandidateTier: String, Codable, Equatable, Sendable {
+    case pdfFolioSignal
+    case pdfHotelSignal
+    case bodySubjectSignal
 
-    public init(keywords: [String]? = nil) {
-        self.keywords = keywords ?? [
-            "hotel", "folio", "invoice", "receipt", "stay", "booking", "accommodation",
-            "酒店", "水单", "水單", "住宿", "账单", "帳單",
-            "ホテル", "宿泊", "領収書", "請求書"
+    public var defaultSelected: Bool {
+        switch self {
+        case .pdfFolioSignal, .pdfHotelSignal:
+            return true
+        case .bodySubjectSignal:
+            return false
+        }
+    }
+}
+
+public enum HotelFolioEmailCandidateReason: String, Codable, Equatable, Sendable {
+    case pdfFolioSubjectOrAttachment
+    case pdfHotelSenderOrBody
+    case bodySubjectFolio
+}
+
+public struct HotelFolioEmailCandidateMatch: Codable, Equatable, Sendable {
+    public var tier: HotelFolioEmailCandidateTier
+    public var reason: HotelFolioEmailCandidateReason
+    public var score: Int
+    public var matchedKeywords: [String]
+
+    public init(
+        tier: HotelFolioEmailCandidateTier,
+        reason: HotelFolioEmailCandidateReason,
+        score: Int,
+        matchedKeywords: [String]
+    ) {
+        self.tier = tier
+        self.reason = reason
+        self.score = score
+        self.matchedKeywords = matchedKeywords
+    }
+
+    public var defaultSelected: Bool {
+        tier.defaultSelected
+    }
+}
+
+public struct HotelFolioEmailCandidateFilter: Sendable {
+    private let folioKeywords: [String]
+    private let hotelKeywords: [String]
+    private let weakDocumentKeywords: [String]
+    private let negativeKeywords: [String]
+
+    public init() {
+        self.folioKeywords = [
+            "folio", "hotel folio", "guest folio", "e-folio",
+            "水单", "水單", "账单", "帳單", "电子账单", "電子帳單",
+            "明细", "明細", "請求書", "領収書", "精算書"
+        ]
+        self.hotelKeywords = [
+            "hotel", "resort", "inn", "suites", "accommodation", "booking",
+            "moxy", "marriott", "luxury collection", "crowne plaza", "holiday inn",
+            "intercontinental", "ihg", "hyatt", "hilton", "sheraton", "westin",
+            "ritz", "courtyard", "fairfield", "aloft", "accor", "novotel",
+            "mercure", "ibis", "sofitel", "pullman", "radisson", "wyndham",
+            "four seasons", "mandarin oriental", "shangri", "peninsula", "lotus",
+            "酒店", "饭店", "飯店", "度假酒店", "度假飯店", "万豪", "萬豪",
+            "皇冠假日", "洲际", "洲際", "凯悦", "凱悅", "希尔顿", "希爾頓",
+            "喜来登", "喜來登", "威斯汀", "雅乐轩", "雅樂軒",
+            "ホテル", "リゾート", "宿泊", "マリオット", "ヒルトン", "ハイアット"
+        ]
+        self.weakDocumentKeywords = [
+            "invoice", "receipt", "statement", "pdf", "attachment", "附件"
+        ]
+        self.negativeKeywords = [
+            "xcode cloud", "testflight", "app store connect", "apple developer",
+            "wwdc", "build succeeded", "approved for beta testing", "available to test",
+            "boarding pass", "flight", "airline", "itinerary", "航旅纵横", "航旅縱橫",
+            "行程乘机凭证", "行程乘機憑證", "乘机凭证", "乘機憑證", "验证码", "驗證碼"
         ]
     }
 
     public func isLikelyHotelFolio(_ message: HotelFolioEmailMessage) -> Bool {
-        let hasPDF = message.attachments.contains { $0.mimeType == "application/pdf" || $0.fileName.lowercased().hasSuffix(".pdf") }
+        evaluate(message) != nil
+    }
+
+    public func evaluate(_ message: HotelFolioEmailMessage) -> HotelFolioEmailCandidateMatch? {
+        let pdfAttachments = message.attachments.filter(isPDF)
+        let hasPDF = !pdfAttachments.isEmpty
         let hasBody = message.bodyText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         guard hasPDF || hasBody else {
-            return false
+            return nil
         }
 
-        let searchable = ([message.subject, message.from, message.bodyText ?? ""] + message.attachments.map(\.fileName))
-            .joined(separator: " ")
+        let subject = normalized(message.subject)
+        let from = normalized(message.from)
+        let body = normalized(message.bodyText ?? "")
+        let attachmentNames = normalized(pdfAttachments.map(\.fileName).joined(separator: " "))
+        let subjectAndAttachmentText = [subject, attachmentNames].joined(separator: " ")
+        let broaderText = [subjectAndAttachmentText, from, body].joined(separator: " ")
+
+        let subjectFolioSignal = matchedKeywords(in: subject, from: folioKeywords)
+        let subjectHotelSignal = matchedKeywords(in: subject, from: hotelKeywords)
+        let subjectOrAttachmentFolio = matchedKeywords(in: subjectAndAttachmentText, from: folioKeywords)
+        let subjectOrAttachmentHotel = matchedKeywords(in: subjectAndAttachmentText, from: hotelKeywords)
+        let broaderHotel = matchedKeywords(in: broaderText, from: hotelKeywords)
+        let broaderFolio = matchedKeywords(in: broaderText, from: folioKeywords)
+        let weakDocuments = matchedKeywords(in: broaderText, from: weakDocumentKeywords)
+        let negative = matchedKeywords(in: [subject, from].joined(separator: " "), from: negativeKeywords)
+        let hasStrongSubjectOrAttachmentSignal = !subjectOrAttachmentFolio.isEmpty || !subjectOrAttachmentHotel.isEmpty
+        let hasStrongSubjectSignal = !subjectFolioSignal.isEmpty || !subjectHotelSignal.isEmpty
+
+        guard negative.isEmpty || hasStrongSubjectSignal else {
+            return nil
+        }
+
+        if hasPDF {
+            if hasStrongSubjectOrAttachmentSignal {
+                let matches = unique(subjectOrAttachmentFolio + subjectOrAttachmentHotel)
+                return HotelFolioEmailCandidateMatch(
+                    tier: .pdfFolioSignal,
+                    reason: .pdfFolioSubjectOrAttachment,
+                    score: 90 + min(matches.count * 2, 8),
+                    matchedKeywords: matches
+                )
+            }
+
+            if !broaderHotel.isEmpty, !broaderFolio.isEmpty || !weakDocuments.isEmpty {
+                let matches = unique(broaderHotel + broaderFolio + weakDocuments)
+                return HotelFolioEmailCandidateMatch(
+                    tier: .pdfHotelSignal,
+                    reason: .pdfHotelSenderOrBody,
+                    score: 72 + min(matches.count * 2, 8),
+                    matchedKeywords: matches
+                )
+            }
+
+            return nil
+        }
+
+        guard hasBody else { return nil }
+        guard !subjectFolioSignal.isEmpty || (!subjectHotelSignal.isEmpty && !broaderFolio.isEmpty) else {
+            return nil
+        }
+
+        let matches = unique(subjectFolioSignal + subjectHotelSignal + broaderFolio)
+        return HotelFolioEmailCandidateMatch(
+            tier: .bodySubjectSignal,
+            reason: .bodySubjectFolio,
+            score: 64 + min(matches.count * 2, 8),
+            matchedKeywords: matches
+        )
+    }
+
+    private func isPDF(_ attachment: HotelFolioEmailAttachment) -> Bool {
+        attachment.mimeType == "application/pdf" || attachment.fileName.lowercased().hasSuffix(".pdf")
+    }
+
+    private func normalized(_ text: String) -> String {
+        text
+            .folding(options: [.diacriticInsensitive, .widthInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .lowercased()
-        return keywords.contains { searchable.contains($0.lowercased()) }
+    }
+
+    private func matchedKeywords(in text: String, from keywords: [String]) -> [String] {
+        guard !text.isEmpty else { return [] }
+        return keywords.filter { keyword in
+            text.contains(normalized(keyword))
+        }
+    }
+
+    private func unique(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for value in values {
+            let key = normalized(value)
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            result.append(value)
+        }
+        return result
     }
 }
 

@@ -483,9 +483,11 @@ private struct IPadBatchCandidateDraft: Equatable {
 
 private struct IPadCleaningPreviewWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     @State private var selectedPreviewID: String?
     @State private var previewPendingApplication: DataCleaningPreviewItem?
     @State private var showsApplyConfirmation = false
+    @State private var isPresentingProSheet = false
 
     private var snapshot: DataCleaningPreviewSnapshot {
         DataCleaningPreviewPlanner().buildSnapshot(
@@ -517,14 +519,20 @@ private struct IPadCleaningPreviewWorkspaceView: View {
 
     var body: some View {
         NavigationStack {
-            HStack(spacing: 0) {
-                previewList
-                    .frame(minWidth: 390, idealWidth: 460, maxWidth: 540)
+            Group {
+                if proEntitlement.canUse(.advancedDeduplication) {
+                    HStack(spacing: 0) {
+                        previewList
+                            .frame(minWidth: 390, idealWidth: 460, maxWidth: 540)
 
-                Divider()
+                        Divider()
 
-                previewDetail
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        previewDetail
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                } else {
+                    cleaningProGate
+                }
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("ipad.workspace.cleaning")
@@ -532,6 +540,10 @@ private struct IPadCleaningPreviewWorkspaceView: View {
                 if selectedPreviewID == nil {
                     selectedPreviewID = previews.first?.id
                 }
+            }
+            .task {
+                await proEntitlement.loadProducts()
+                await proEntitlement.refreshEntitlements()
             }
             .confirmationDialog(
                 "ipad.cleaning.apply_confirm_title",
@@ -548,6 +560,65 @@ private struct IPadCleaningPreviewWorkspaceView: View {
                 Text("ipad.cleaning.apply_confirm_message")
             }
         }
+        .sheet(isPresented: $isPresentingProSheet) {
+            NavigationStack {
+                AutoLedgerProView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingProSheet = false
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
+    private var cleaningProGate: some View {
+        VStack {
+            Spacer(minLength: 24)
+
+            VStack(alignment: .leading, spacing: 18) {
+                Image(systemName: "wand.and.sparkles")
+                    .font(.largeTitle.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 58, height: 58)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ipad.cleaning.pro.title")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+                    Text("ipad.cleaning.pro.body")
+                        .font(.body)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("ipad.cleaning.pro.free_note")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button {
+                    isPresentingProSheet = true
+                } label: {
+                    Label("pro.cta.view_plans", systemImage: "sparkles")
+                        .font(.headline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+            }
+            .padding(24)
+            .frame(maxWidth: 560, alignment: .leading)
+            .background(AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .shadow(color: Color.black.opacity(0.05), radius: 18, x: 0, y: 10)
+
+            Spacer(minLength: 24)
+        }
+        .padding(24)
     }
 
     private var previewList: some View {

@@ -608,6 +608,81 @@ struct OfflineRegression {
         let inlineMessage = try? parser.parse(rawMessage: inlineHTMLMessage, uid: "42902")
         reporter.check(inlineMessage?.attachments.isEmpty == true, "HotelFolioEmailMessageParser does not invent PDF attachments for inline HTML")
 
+        let filter = HotelFolioEmailCandidateFilter()
+        let xcodeBuildMessage = HotelFolioEmailMessage(
+            uid: "xcode-build",
+            messageID: "xcode-build@example.com",
+            subject: "AutoLedger - 一键记账 -- Build 71 succeeded (main)",
+            from: "Xcode Cloud <noreply@apple.com>",
+            dateText: "Sun, 28 Jun 2026 07:04:57 +0000",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "xcode-build-1",
+                    fileName: "folio-42902-1.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        reporter.check(filter.evaluate(xcodeBuildMessage) == nil, "HotelFolioEmailCandidateFilter rejects Xcode Cloud PDF noise even when filename says folio")
+
+        let testFlightMessage = HotelFolioEmailMessage(
+            uid: "testflight",
+            messageID: "testflight@example.com",
+            subject: "AutoLedger - 一键记账 1.5.0 (71) for tvOS is now available to test.",
+            from: "JINCHENG ZHANG via TestFlight <testflight_no_reply@email.apple.com>",
+            dateText: "Sun, 28 Jun 2026 07:04:59 +0000",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "testflight-1",
+                    fileName: "folio-42901-1.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        reporter.check(filter.evaluate(testFlightMessage) == nil, "HotelFolioEmailCandidateFilter rejects TestFlight PDF noise")
+
+        let marriottFolioMessage = HotelFolioEmailMessage(
+            uid: "marriott",
+            messageID: "marriott@example.com",
+            subject: "Beihai Marriott Resort 北海万豪度假酒店的电子账单",
+            from: "Beihai Marriott Resort <folio@example.com>",
+            dateText: "Mon, 22 Jun 2026 09:00:00 +0800",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "marriott-1",
+                    fileName: "guest-folio.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        let marriottMatch = filter.evaluate(marriottFolioMessage)
+        reporter.check(marriottMatch?.reason == .pdfFolioSubjectOrAttachment, "HotelFolioEmailCandidateFilter accepts Marriott folio PDF by subject")
+        reporter.check(marriottMatch?.defaultSelected == true, "HotelFolioEmailCandidateFilter defaults strong PDF folio candidates selected")
+
+        let naLotusMessage = HotelFolioEmailMessage(
+            uid: "na-lotus",
+            messageID: "na-lotus@example.com",
+            subject: "Na Lotus Hotel, a Luxury Collection Hotel, Nanning 您于20/06/26至21/06/26入住南宁龙光那莲豪华精选酒店的电子账单",
+            from: "Na Lotus Hotel <folio@example.com>",
+            dateText: "Sun, 21 Jun 2026 08:00:00 +0800",
+            attachments: [
+                HotelFolioEmailAttachment(
+                    id: "na-lotus-1",
+                    fileName: "statement.pdf",
+                    mimeType: "application/pdf",
+                    size: pdfData.count,
+                    data: pdfData
+                )
+            ]
+        )
+        reporter.check(filter.isLikelyHotelFolio(naLotusMessage), "HotelFolioEmailCandidateFilter accepts hotel brand plus electronic bill subject")
+
         let bodyOnlyFolioMessage = """
         From: Moxy Chongqing <folio@example.com>
         Subject: Moxy-Chongqing Folio账单
@@ -623,10 +698,12 @@ struct OfflineRegression {
         let bodyMessage = try? parser.parse(rawMessage: bodyOnlyFolioMessage, uid: "42903")
         reporter.check(bodyMessage?.attachments.isEmpty == true, "HotelFolioEmailMessageParser keeps body folio without fake attachment")
         reporter.check(bodyMessage?.bodyText?.contains("Total CNY 369.39") == true, "HotelFolioEmailMessageParser extracts body folio text")
+        let bodyMatch = bodyMessage.flatMap(filter.evaluate)
         reporter.check(
-            bodyMessage.map { HotelFolioEmailCandidateFilter().isLikelyHotelFolio($0) } == true,
+            bodyMatch?.reason == .bodySubjectFolio,
             "HotelFolioEmailCandidateFilter accepts hotel folio mail from body text"
         )
+        reporter.check(bodyMatch?.defaultSelected == false, "HotelFolioEmailCandidateFilter does not default-select body-only folio candidates")
         let bodyPDFData = HotelFolioTextPDFBuilder.makePDFData(
             text: bodyMessage?.bodyText ?? "",
             title: bodyMessage?.subject ?? "Hotel folio email body"
@@ -634,7 +711,6 @@ struct OfflineRegression {
         reporter.check(String(data: Data(bodyPDFData.prefix(8)), encoding: .utf8) == "%PDF-1.7", "HotelFolioTextPDFBuilder creates PDF data for body folio")
 
         if let message {
-            let filter = HotelFolioEmailCandidateFilter()
             reporter.check(filter.isLikelyHotelFolio(message), "HotelFolioEmailCandidateFilter accepts hotel folio mail with PDF")
 
             if let attachment = message.attachments.first {

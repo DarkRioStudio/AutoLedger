@@ -12,14 +12,12 @@ struct AutoLedgerProView: View {
             VStack(alignment: .leading, spacing: 22) {
                 heroPanel
 
-                if proEntitlement.isProActive {
-                    activeCard
-                }
+                subscriptionStatusCard
+                subscriptionActionsCard
 
                 featureGrid
                 assurancePanel
                 productSection
-                restoreCard
                 boundaryCard
             }
             .padding(.horizontal, 20)
@@ -171,24 +169,181 @@ struct AutoLedgerProView: View {
         )
     }
 
-    private var activeCard: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("pro.active.title")
-                    .font(.headline)
-                Text("pro.active.body")
+    private var subscriptionStatusCard: some View {
+        let presentation = subscriptionStatusPresentation
+
+        return Label {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(presentation.title)
+                        .font(.headline.weight(.bold))
+                    Text(presentation.badge)
+                        .font(.caption.weight(.black))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule(style: .continuous).fill(presentation.tint))
+                }
+
+                Text(presentation.body)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let detail = presentation.detail {
+                    Text(detail)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(presentation.tint)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let checkedText = lastVerifiedText {
+                    Text(checkedText)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
             }
         } icon: {
-            Image(systemName: "checkmark.seal.fill")
-                .foregroundStyle(AppTheme.accent)
+            Image(systemName: presentation.icon)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(presentation.tint)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.accent.opacity(0.10))
+                .fill(presentation.tint.opacity(0.10))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(presentation.tint.opacity(0.18), lineWidth: 1)
+        }
+    }
+
+    private var subscriptionActionsCard: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                restoreButton
+                manageSubscriptionButton
+            }
+
+            VStack(spacing: 10) {
+                restoreButton
+                manageSubscriptionButton
+            }
+        }
+    }
+
+    private var restoreButton: some View {
+        Button {
+            Task { await proEntitlement.restorePurchases() }
+        } label: {
+            subscriptionActionLabel(
+                titleKey: "pro.restore",
+                systemImage: "arrow.clockwise.circle.fill",
+                isLoading: proEntitlement.isRestoringPurchases
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(proEntitlement.isRestoringPurchases || proEntitlement.isManagingSubscriptions)
+    }
+
+    private var manageSubscriptionButton: some View {
+        Button {
+            Task { await proEntitlement.manageSubscriptions() }
+        } label: {
+            subscriptionActionLabel(
+                titleKey: "pro.manage",
+                systemImage: "person.crop.circle.badge.gearshape",
+                isLoading: proEntitlement.isManagingSubscriptions
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(proEntitlement.isRestoringPurchases || proEntitlement.isManagingSubscriptions)
+    }
+
+    private func subscriptionActionLabel(
+        titleKey: LocalizedStringKey,
+        systemImage: String,
+        isLoading: Bool
+    ) -> some View {
+        HStack(spacing: 8) {
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: systemImage)
+                    .imageScale(.medium)
+            }
+
+            Text(titleKey)
+                .font(.subheadline.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .foregroundStyle(AppTheme.accent)
+        .frame(maxWidth: .infinity)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppTheme.card)
+        )
+    }
+
+    private var subscriptionStatusPresentation: ProStatusPresentation {
+        if proEntitlement.isDevelopmentOverrideActive {
+            return ProStatusPresentation(
+                title: "pro.status.debug.title",
+                badge: "pro.status.debug.badge",
+                body: "pro.status.debug.body",
+                detail: nil,
+                icon: "wrench.and.screwdriver.fill",
+                tint: .orange
+            )
+        }
+
+        if proEntitlement.isProActive {
+            return ProStatusPresentation(
+                title: "pro.status.active.title",
+                badge: "pro.status.active.badge",
+                body: "pro.status.active.body",
+                detail: activeSubscriptionDetail,
+                icon: "checkmark.seal.fill",
+                tint: AppTheme.accent
+            )
+        }
+
+        return ProStatusPresentation(
+            title: "pro.status.inactive.title",
+            badge: "pro.status.inactive.badge",
+            body: "pro.status.inactive.body",
+            detail: nil,
+            icon: "sparkles",
+            tint: gold
+        )
+    }
+
+    private var activeSubscriptionDetail: String? {
+        guard let subscription = proEntitlement.primaryActiveSubscription else { return nil }
+        let productName = productTitle(for: subscription.productID)
+        if let expirationDate = subscription.expirationDate {
+            return String(
+                format: String(localized: "pro.status.expiration_format"),
+                productName,
+                AppFormatters.exportDateTime(expirationDate)
+            )
+        }
+        return String(
+            format: String(localized: "pro.status.product_format"),
+            productName
+        )
+    }
+
+    private var lastVerifiedText: String? {
+        guard let date = proEntitlement.lastVerifiedAt else { return nil }
+        return String(
+            format: String(localized: "pro.status.verified_format"),
+            AppFormatters.exportDateTime(date)
         )
     }
 
@@ -376,23 +531,6 @@ struct AutoLedgerProView: View {
         )
     }
 
-    private var restoreCard: some View {
-        Button {
-            Task { await proEntitlement.restorePurchases() }
-        } label: {
-            Label("pro.restore", systemImage: "arrow.clockwise.circle.fill")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(AppTheme.accent)
-                .frame(maxWidth: .infinity)
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(AppTheme.card)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
     private var boundaryCard: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.shield.fill")
@@ -499,6 +637,17 @@ struct AutoLedgerProView: View {
         }
     }
 
+    private func productTitle(for productID: String) -> String {
+        switch AutoLedgerProProduct(rawValue: productID) {
+        case .monthly:
+            String(localized: "pro.product.monthly.title")
+        case .yearly:
+            String(localized: "pro.product.yearly.title")
+        case .none:
+            productID
+        }
+    }
+
     private func productDescription(for product: Product) -> String {
         switch AutoLedgerProProduct(rawValue: product.id) {
         case .monthly:
@@ -535,6 +684,15 @@ private struct ProAssuranceItem: Identifiable {
     let icon: String
     let title: LocalizedStringKey
     let body: LocalizedStringKey
+}
+
+private struct ProStatusPresentation {
+    let title: LocalizedStringKey
+    let badge: LocalizedStringKey
+    let body: LocalizedStringKey
+    let detail: String?
+    let icon: String
+    let tint: Color
 }
 
 private struct ProDashboardPreview: View {

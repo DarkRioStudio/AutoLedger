@@ -76,6 +76,7 @@ final class NotificationService: Sendable {
     // MARK: - Schedule
 
     func scheduleUpcomingChargeReminders(for subscriptions: [Subscription]) {
+        guard !Self.isScreenshotMode else { return }
         let center = UNUserNotificationCenter.current()
         // 移除旧的订阅提醒
         center.removePendingNotificationRequests(withIdentifiers:
@@ -96,6 +97,7 @@ final class NotificationService: Sendable {
     }
 
     func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
+        guard !Self.isScreenshotMode else { return }
         let center = UNUserNotificationCenter.current()
         let formattedAmountText = String(format: "¥%.2f", amount)
         center.getNotificationSettings { settings in

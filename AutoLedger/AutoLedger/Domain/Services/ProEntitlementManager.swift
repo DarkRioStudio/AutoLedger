@@ -2,6 +2,9 @@ import AutoLedgerCore
 import Combine
 import Foundation
 import StoreKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 enum AutoLedgerProProduct: String, CaseIterable, Identifiable {
     case monthly = "top.darkrio326.AutoLedger.pro.monthly"
@@ -23,6 +26,14 @@ struct ProPurchaseNotice: Identifiable, Equatable {
     let message: String
 }
 
+struct ProSubscriptionSnapshot: Identifiable, Equatable {
+    let productID: String
+    let purchaseDate: Date
+    let expirationDate: Date?
+
+    var id: String { productID }
+}
+
 @MainActor
 final class ProEntitlementManager: ObservableObject {
     static let shared = ProEntitlementManager()
@@ -31,7 +42,10 @@ final class ProEntitlementManager: ObservableObject {
     @Published private(set) var loadState: ProEntitlementLoadState = .idle
     @Published private(set) var purchasingProductID: String?
     @Published private(set) var activeProductIDs: Set<String> = []
+    @Published private(set) var activeSubscriptions: [ProSubscriptionSnapshot] = []
     @Published private(set) var lastVerifiedAt: Date?
+    @Published private(set) var isRestoringPurchases = false
+    @Published private(set) var isManagingSubscriptions = false
     @Published var notice: ProPurchaseNotice?
 
     private let policy: AutoLedgerProAccessPolicy
@@ -43,6 +57,25 @@ final class ProEntitlementManager: ObservableObject {
 
     var isProActive: Bool {
         !activeProductIDs.isEmpty || isDevelopmentOverrideEnabled
+    }
+
+    var isDevelopmentOverrideActive: Bool {
+        isDevelopmentOverrideEnabled
+    }
+
+    var primaryActiveSubscription: ProSubscriptionSnapshot? {
+        activeSubscriptions.sorted { lhs, rhs in
+            switch (lhs.expirationDate, rhs.expirationDate) {
+            case let (lhsDate?, rhsDate?):
+                return lhsDate > rhsDate
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                return productSortOrder(lhs.productID) < productSortOrder(rhs.productID)
+            }
+        }.first
     }
 
     func startTransactionListener() {
@@ -79,17 +112,29 @@ final class ProEntitlementManager: ObservableObject {
 
     func refreshEntitlements() async {
         var activeIDs: Set<String> = []
+        var snapshots: [ProSubscriptionSnapshot] = []
+        let now = Date()
         for await verification in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = verification,
                   Self.isProProductID(transaction.productID),
                   transaction.revocationDate == nil,
-                  transaction.expirationDate.map({ $0 > Date() }) ?? true else {
+                  transaction.expirationDate.map({ $0 > now }) ?? true else {
                 continue
             }
             activeIDs.insert(transaction.productID)
+            snapshots.append(
+                ProSubscriptionSnapshot(
+                    productID: transaction.productID,
+                    purchaseDate: transaction.purchaseDate,
+                    expirationDate: transaction.expirationDate
+                )
+            )
         }
 
         activeProductIDs = activeIDs
+        activeSubscriptions = snapshots.sorted {
+            productSortOrder($0.productID) < productSortOrder($1.productID)
+        }
         lastVerifiedAt = Date()
     }
 
@@ -126,6 +171,10 @@ final class ProEntitlementManager: ObservableObject {
     }
 
     func restorePurchases() async {
+        guard !isRestoringPurchases else { return }
+        isRestoringPurchases = true
+        defer { isRestoringPurchases = false }
+
         do {
             try await AppStore.sync()
             await refreshEntitlements()
@@ -144,6 +193,40 @@ final class ProEntitlementManager: ObservableObject {
                 message: String(localized: "pro.restore.failed")
             )
         }
+    }
+
+    func manageSubscriptions() async {
+        guard !isManagingSubscriptions else { return }
+        isManagingSubscriptions = true
+        defer { isManagingSubscriptions = false }
+
+        #if canImport(UIKit)
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive })
+            ?? UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else {
+            notice = ProPurchaseNotice(
+                title: String(localized: "pro.manage.failed.title"),
+                message: String(localized: "pro.manage.unavailable")
+            )
+            return
+        }
+
+        do {
+            try await AppStore.showManageSubscriptions(in: scene)
+            await refreshEntitlements()
+        } catch {
+            notice = ProPurchaseNotice(
+                title: String(localized: "pro.manage.failed.title"),
+                message: String(localized: "pro.manage.failed.message")
+            )
+        }
+        #else
+        notice = ProPurchaseNotice(
+            title: String(localized: "pro.manage.failed.title"),
+            message: String(localized: "pro.manage.unavailable")
+        )
+        #endif
     }
 
     func canUse(_ capability: AutoLedgerCapability) -> Bool {

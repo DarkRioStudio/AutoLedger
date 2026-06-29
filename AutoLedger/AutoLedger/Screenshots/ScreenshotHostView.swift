@@ -28,6 +28,8 @@ struct ScreenshotHostView: View {
                     ScreenshotAppPage(scene: .report)
                 case .settingsManagement:
                     ScreenshotAppPage(scene: .settings)
+                case .emailFolioImport:
+                    ScreenshotEmailFolioImportHost()
                 case .cloudFolioInbox:
                     ScreenshotCloudFolioInboxHost()
                 case .hotelStays:
@@ -86,6 +88,21 @@ struct ScreenshotHostView: View {
         case .ios, .watch:
             .overview
         }
+    }
+}
+
+private struct ScreenshotEmailFolioImportHost: View {
+    @StateObject private var store: LedgerStore
+
+    init() {
+        ScreenshotFixtures.installUserDefaults()
+        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+    }
+
+    var body: some View {
+        HotelFolioEmailImportView(targetLedgerID: nil) { _ in }
+            .environmentObject(store)
+            .preferredColorScheme(.light)
     }
 }
 
@@ -275,6 +292,9 @@ private struct ScreenshotWorkspaceHost: View {
     init(section: IPadWorkspaceSection) {
         self.section = section
         ScreenshotFixtures.installUserDefaults()
+        if ScreenshotModeConfig.usesFreeProState {
+            UserDefaults.standard.set(false, forKey: "autoLedgerProDevelopmentOverride")
+        }
         _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
     }
 
