@@ -29,10 +29,67 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.normalizeClientID("")).toBe("");
   });
 
+  it("accepts Swift UUID path casing for candidate detail endpoints", () => {
+    expect(testInternals.normalizeCandidateID(" 9A91F1E2-0A3F-414E-8B6C-99236F58AAF9 ")).toBe(
+      "9a91f1e2-0a3f-414e-8b6c-99236f58aaf9"
+    );
+  });
+
+  it("only lists still-actionable inbox candidates", () => {
+    expect(testInternals.isVisibleInboxCandidateStatus("stored")).toBe(true);
+    expect(testInternals.isVisibleInboxCandidateStatus("notified")).toBe(true);
+    expect(testInternals.isVisibleInboxCandidateStatus("downloaded")).toBe(false);
+    expect(testInternals.isVisibleInboxCandidateStatus("converted")).toBe(false);
+    expect(testInternals.isVisibleInboxCandidateStatus("deleted")).toBe(false);
+    expect(testInternals.isVisibleInboxCandidateStatus("expired")).toBe(false);
+    expect(testInternals.isVisibleInboxCandidateStatus("failed")).toBe(false);
+  });
+
   it("redacts privacy-sensitive email metadata", () => {
     expect(testInternals.redactMetadata("Moxy Folio for user@example.com 13800138000")).toBe(
       "Moxy Folio for [redacted-email] [redacted-number]"
     );
+  });
+
+  it("turns email body folios into generated PDF candidates when no PDF attachment exists", () => {
+    const inputs = testInternals.candidatePDFInputs(
+      {
+        attachments: [],
+        text: "重庆 Moxy 酒店\nFolio 账单\nTotal CNY 369.39",
+        html: null
+      },
+      "931 账单"
+    );
+
+    expect(inputs).toHaveLength(1);
+    const generated = inputs[0]!;
+    expect(generated).toMatchObject({
+      fileName: "email-body-folio.pdf",
+      source: "emailBody"
+    });
+    expect(new TextDecoder().decode(generated.bytes.slice(0, 8))).toBe("%PDF-1.7");
+  });
+
+  it("prefers real PDF attachments over generated body PDFs", () => {
+    const inputs = testInternals.candidatePDFInputs(
+      {
+        attachments: [
+          {
+            filename: "folio.pdf",
+            mimeType: "application/pdf",
+            content: new TextEncoder().encode("%PDF-1.7 attachment")
+          }
+        ],
+        text: "Body folio should not create another candidate",
+        html: null
+      },
+      "Folio"
+    );
+
+    expect(inputs).toHaveLength(1);
+    const attachment = inputs[0]!;
+    expect(attachment.source).toBe("attachment");
+    expect(attachment.fileName).toBe("folio.pdf");
   });
 
   it("stores only safe pdf object names", () => {

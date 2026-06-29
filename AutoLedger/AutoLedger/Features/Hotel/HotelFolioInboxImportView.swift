@@ -79,7 +79,7 @@ struct HotelFolioInboxImportView: View {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()
             await registerRemoteDeviceTokenIfAvailable()
-            if targetCandidateID != nil {
+            if settings.canRequest {
                 await refreshCandidates()
             }
         }

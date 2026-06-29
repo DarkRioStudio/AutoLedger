@@ -365,6 +365,23 @@ struct OfflineRegression {
         reporter.check(parsedDraft?.sourceType == .manualPDF, "HotelFolioParsePipeline preserves source type")
         reporter.check(parsedDraft?.rawText == rawText, "HotelFolioParsePipeline preserves raw text")
         reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
+
+        let localizedCurrencyPayload = HotelFolioParsedPayload(
+            hotelName: "重庆 Moxy 酒店",
+            city: "重庆",
+            country: "中国",
+            currency: "人民币",
+            totalAmount: 369.39,
+            confidence: 0.9,
+            localizedData: HotelStayLocalizedData(currency: "人民币", totalAmount: 369.39)
+        )
+        let localizedCurrencyDraft = try? pipeline.apply(localizedCurrencyPayload, to: draft)
+        reporter.check(localizedCurrencyDraft?.parsedPayload?.currency == "CNY", "HotelFolioParsePipeline normalizes parsed currency to code")
+        reporter.check(localizedCurrencyDraft?.localizedData?.currency == "CNY", "HotelFolioParsePipeline normalizes localized currency to code")
+        reporter.check(HotelCurrencyCodeNormalizer.normalizedCode("美元") == "USD", "HotelCurrencyCodeNormalizer keeps USD Chinese alias out of CNY generic yuan")
+        reporter.check(HotelCurrencyCodeNormalizer.normalizedCode("日元") == "JPY", "HotelCurrencyCodeNormalizer keeps JPY Chinese alias out of CNY generic yuan")
+        reporter.check(HotelCurrencyCodeNormalizer.normalizedCode("Australian Dollar") == "AUD", "HotelCurrencyCodeNormalizer handles regional dollar aliases")
+        reporter.check(HotelCurrencyCodeNormalizer.normalizedCode("元", context: "重庆 Moxy 酒店") == "CNY", "HotelCurrencyCodeNormalizer keeps bare yuan as CNY")
     }
 
     private static func verifyHotelFolioDebugTrace(reporter: RegressionReporter) {
@@ -591,6 +608,31 @@ struct OfflineRegression {
         let inlineMessage = try? parser.parse(rawMessage: inlineHTMLMessage, uid: "42902")
         reporter.check(inlineMessage?.attachments.isEmpty == true, "HotelFolioEmailMessageParser does not invent PDF attachments for inline HTML")
 
+        let bodyOnlyFolioMessage = """
+        From: Moxy Chongqing <folio@example.com>
+        Subject: Moxy-Chongqing Folio账单
+        Date: Sun, 28 Jun 2026 07:04:57 +0000
+        Message-ID: <body-folio@example.com>
+        Content-Type: text/plain; charset=utf-8
+        Content-Transfer-Encoding: quoted-printable
+
+        重庆 Moxy 酒店
+        Folio 账单
+        Total CNY 369.39
+        """
+        let bodyMessage = try? parser.parse(rawMessage: bodyOnlyFolioMessage, uid: "42903")
+        reporter.check(bodyMessage?.attachments.isEmpty == true, "HotelFolioEmailMessageParser keeps body folio without fake attachment")
+        reporter.check(bodyMessage?.bodyText?.contains("Total CNY 369.39") == true, "HotelFolioEmailMessageParser extracts body folio text")
+        reporter.check(
+            bodyMessage.map { HotelFolioEmailCandidateFilter().isLikelyHotelFolio($0) } == true,
+            "HotelFolioEmailCandidateFilter accepts hotel folio mail from body text"
+        )
+        let bodyPDFData = HotelFolioTextPDFBuilder.makePDFData(
+            text: bodyMessage?.bodyText ?? "",
+            title: bodyMessage?.subject ?? "Hotel folio email body"
+        )
+        reporter.check(String(data: Data(bodyPDFData.prefix(8)), encoding: .utf8) == "%PDF-1.7", "HotelFolioTextPDFBuilder creates PDF data for body folio")
+
         if let message {
             let filter = HotelFolioEmailCandidateFilter()
             reporter.check(filter.isLikelyHotelFolio(message), "HotelFolioEmailCandidateFilter accepts hotel folio mail with PDF")
@@ -668,6 +710,12 @@ struct OfflineRegression {
         reporter.check(candidate.markedConverted(at: receivedAt.addingTimeInterval(20)).status == .converted, "CloudHotelFolioCandidate can mark candidate converted")
         reporter.check(candidate.markedDeleted(at: receivedAt.addingTimeInterval(30)).status == .deleted, "CloudHotelFolioCandidate can mark cloud PDF deleted")
         reporter.check(candidate.markedFailed("download failed", at: receivedAt.addingTimeInterval(40)).failureReason == "download failed", "CloudHotelFolioCandidate records failure reason")
+        reporter.check(candidate.isVisibleInInboxImportList, "CloudHotelFolioCandidate keeps stored candidates visible in inbox import list")
+        reporter.check(candidate.markedNotified().isVisibleInInboxImportList, "CloudHotelFolioCandidate keeps notified candidates visible in inbox import list")
+        reporter.check(!candidate.markedDownloaded(at: receivedAt.addingTimeInterval(10)).isVisibleInInboxImportList, "CloudHotelFolioCandidate hides downloaded candidates from inbox import list")
+        reporter.check(!candidate.markedConverted(at: receivedAt.addingTimeInterval(20)).isVisibleInInboxImportList, "CloudHotelFolioCandidate hides converted candidates from inbox import list")
+        reporter.check(!candidate.markedDeleted(at: receivedAt.addingTimeInterval(30)).isVisibleInInboxImportList, "CloudHotelFolioCandidate hides deleted candidates from inbox import list")
+        reporter.check(!candidate.markedFailed("download failed", at: receivedAt.addingTimeInterval(40)).isVisibleInInboxImportList, "CloudHotelFolioCandidate hides failed candidates from inbox import list")
 
         let draftFactory = HotelCloudFolioDraftFactory(now: { receivedAt.addingTimeInterval(60) })
         let draft = try? draftFactory.makeDraft(

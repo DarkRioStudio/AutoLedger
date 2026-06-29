@@ -52,7 +52,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         nightsText = payload?.nights.map(String.init) ?? ""
         roomType = Self.displayValue(localized?.roomType, fallback: payload?.roomType)
         confirmationNumber = payload?.confirmationNumber ?? ""
-        currency = Self.displayValue(localized?.currency, fallback: payload?.currency)
+        currency = Self.currencyValue(localized?.currency, fallback: payload?.currency, context: draft.rawText)
         roomChargeText = Self.formatAmount(localized?.roomCharge ?? payload?.roomCharge)
         taxAmountText = Self.formatAmount(localized?.taxAmount ?? payload?.tax)
         serviceChargeText = Self.formatAmount(localized?.serviceCharge ?? payload?.serviceCharge)
@@ -126,7 +126,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
             nights: Self.intValue(from: nightsText),
             roomType: trimmedOptional(roomType),
             confirmationNumber: trimmedOptional(confirmationNumber),
-            currency: trimmedOptional(currency.uppercased()),
+            currency: HotelCurrencyCodeNormalizer.normalizedCode(currency, context: rawText) ?? trimmedOptional(currency.uppercased()),
             roomCharge: Self.amount(from: roomChargeText),
             tax: Self.amount(from: taxAmountText),
             serviceCharge: Self.amount(from: serviceChargeText),
@@ -198,6 +198,11 @@ public struct HotelStayReviewForm: Equatable, Sendable {
 
     private static func displayValue(_ localized: String?, fallback: String?) -> String {
         trimmed(localized) ?? trimmed(fallback) ?? ""
+    }
+
+    private static func currencyValue(_ localized: String?, fallback: String?, context: String) -> String {
+        let value = displayValue(localized, fallback: fallback)
+        return HotelCurrencyCodeNormalizer.normalizedCode(value, context: context) ?? value
     }
 
     private static func trimmed(_ value: String?) -> String? {

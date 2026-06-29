@@ -292,6 +292,8 @@ swiftc \
   "$CORE/Services/SmartReceiptMergePolicy.swift" \
   "$CORE/Services/ExternalReceiptAssistCache.swift" \
   "$CORE/Services/ExternalReceiptAssistPayload.swift" \
+  "$CORE/Services/HotelCurrencyCodeNormalizer.swift" \
+  "$CORE/Services/HotelFolioTextPDFBuilder.swift" \
   "$CORE/Services/HotelFolioEmailImportPlanning.swift" \
   "$CORE/Services/HotelFolioCloudInboxPlanning.swift" \
   "$CORE/Services/HotelFolioDebugTraceBuilder.swift" \

@@ -206,12 +206,15 @@ struct HotelFolioInboxClient: Sendable {
             settings: settings
         )
         let data = try await data(for: request)
-        return try decoder.decode(CandidateListResponse.self, from: data).candidates
+        return try decoder
+            .decode(CandidateListResponse.self, from: data)
+            .candidates
+            .filter(\.isVisibleInInboxImportList)
     }
 
     func downloadPDF(candidate: CloudHotelFolioCandidate, settings: HotelFolioInboxSettings) async throws -> Data {
         let request = try makeRequest(
-            path: "/v1/cloud-hotel-folio-candidates/\(candidate.id.uuidString)/pdf",
+            path: "/v1/cloud-hotel-folio-candidates/\(candidateIDPathComponent(candidate))/pdf",
             settings: settings
         )
         return try await data(for: request)
@@ -246,7 +249,7 @@ struct HotelFolioInboxClient: Sendable {
         settings: HotelFolioInboxSettings
     ) async throws -> CloudHotelFolioCandidate? {
         var request = try makeRequest(
-            path: "/v1/cloud-hotel-folio-candidates/\(candidate.id.uuidString)/status",
+            path: "/v1/cloud-hotel-folio-candidates/\(candidateIDPathComponent(candidate))/status",
             settings: settings
         )
         request.httpMethod = "POST"
@@ -258,6 +261,10 @@ struct HotelFolioInboxClient: Sendable {
         ))
         let data = try await data(for: request)
         return try? decoder.decode([String: CloudHotelFolioCandidate].self, from: data)["candidate"]
+    }
+
+    private func candidateIDPathComponent(_ candidate: CloudHotelFolioCandidate) -> String {
+        candidate.id.uuidString.lowercased()
     }
 
     private func makeRequest(path: String, settings: HotelFolioInboxSettings) throws -> URLRequest {

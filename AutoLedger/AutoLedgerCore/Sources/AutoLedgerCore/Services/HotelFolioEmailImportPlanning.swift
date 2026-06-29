@@ -152,6 +152,7 @@ public struct HotelFolioEmailMessage: Identifiable, Codable, Equatable, Sendable
     public var subject: String
     public var from: String
     public var dateText: String?
+    public var bodyText: String?
     public var attachments: [HotelFolioEmailAttachment]
 
     public init(
@@ -160,6 +161,7 @@ public struct HotelFolioEmailMessage: Identifiable, Codable, Equatable, Sendable
         subject: String,
         from: String,
         dateText: String?,
+        bodyText: String? = nil,
         attachments: [HotelFolioEmailAttachment]
     ) {
         self.uid = uid
@@ -167,6 +169,7 @@ public struct HotelFolioEmailMessage: Identifiable, Codable, Equatable, Sendable
         self.subject = subject
         self.from = from
         self.dateText = dateText
+        self.bodyText = bodyText
         self.attachments = attachments
     }
 }
@@ -192,6 +195,7 @@ public struct HotelFolioEmailMessageParser: Sendable {
         let from = decodeHeaderValue(headers["from"] ?? "")
         let dateText = decodeHeaderValue(headers["date"] ?? "")
         let messageID = normalizeMessageID(headers["message-id"])
+        let bodyText = extractBodyText(headers: headers, body: envelope.body)
         let attachments = try parseAttachments(
             headers: headers,
             body: envelope.body,
@@ -204,6 +208,7 @@ public struct HotelFolioEmailMessageParser: Sendable {
             subject: subject,
             from: from,
             dateText: dateText.isEmpty ? nil : dateText,
+            bodyText: bodyText,
             attachments: attachments
         )
     }
@@ -293,6 +298,68 @@ public struct HotelFolioEmailMessageParser: Sendable {
             size: data.count,
             data: data
         )
+    }
+
+    private func extractBodyText(headers: [String: String], body: String) -> String? {
+        let contentType = headers["content-type"] ?? "text/plain"
+        if let boundary = parameter(named: "boundary", in: contentType),
+           contentType.lowercased().contains("multipart/") {
+            let parts = splitMultipartBody(body, boundary: boundary)
+            let texts = parts.compactMap { part -> String? in
+                let envelope = splitHeaderBody(part)
+                let partHeaders = parseHeaders(envelope.headers)
+                return extractBodyText(headers: partHeaders, body: envelope.body)
+            }
+            return texts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        }
+
+        let contentDisposition = (headers["content-disposition"] ?? "").lowercased()
+        guard !contentDisposition.contains("attachment") else {
+            return nil
+        }
+
+        let mimeType = contentType.split(separator: ";", maxSplits: 1).first.map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        } ?? "text/plain"
+        guard mimeType == "text/plain" || mimeType == "text/html" else {
+            return nil
+        }
+
+        let encoding = (headers["content-transfer-encoding"] ?? "").lowercased()
+        let data = decodeBody(body, transferEncoding: encoding)
+        let charset = parameter(named: "charset", in: contentType)?.lowercased()
+        let text = decodeText(data, charset: charset) ?? String(decoding: data, as: UTF8.self)
+        let normalized = mimeType == "text/html" ? stripHTML(text) : text
+        return normalized.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private func decodeText(_ data: Data, charset: String?) -> String? {
+        let normalized = charset?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let encoding: String.Encoding
+        switch normalized {
+        case "iso-8859-1", "latin1", "latin-1":
+            encoding = .isoLatin1
+        case "us-ascii", "ascii":
+            encoding = .ascii
+        default:
+            encoding = .utf8
+        }
+        return String(data: data, encoding: encoding)
+    }
+
+    private func stripHTML(_ html: String) -> String {
+        html
+            .replacingOccurrences(of: #"(?i)<\s*br\s*/?\s*>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)</\s*(p|div|tr|li|table|h[1-6])\s*>"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: #"[ \t]{2,}"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
     }
 
     private func decodeBody(_ body: String, transferEncoding: String) -> Data {
@@ -453,11 +520,13 @@ public struct HotelFolioEmailCandidateFilter: Sendable {
     }
 
     public func isLikelyHotelFolio(_ message: HotelFolioEmailMessage) -> Bool {
-        guard message.attachments.contains(where: { $0.mimeType == "application/pdf" || $0.fileName.lowercased().hasSuffix(".pdf") }) else {
+        let hasPDF = message.attachments.contains { $0.mimeType == "application/pdf" || $0.fileName.lowercased().hasSuffix(".pdf") }
+        let hasBody = message.bodyText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        guard hasPDF || hasBody else {
             return false
         }
 
-        let searchable = ([message.subject, message.from] + message.attachments.map(\.fileName))
+        let searchable = ([message.subject, message.from, message.bodyText ?? ""] + message.attachments.map(\.fileName))
             .joined(separator: " ")
             .lowercased()
         return keywords.contains { searchable.contains($0.lowercased()) }

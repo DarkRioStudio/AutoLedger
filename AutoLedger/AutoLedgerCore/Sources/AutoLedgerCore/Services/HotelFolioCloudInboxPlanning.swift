@@ -53,6 +53,12 @@ public enum CloudHotelFolioCandidateStatus: String, Codable, CaseIterable, Equat
     case failed
 }
 
+public extension CloudHotelFolioCandidateStatus {
+    var isVisibleInInboxImportList: Bool {
+        self == .stored || self == .notified
+    }
+}
+
 public struct CloudHotelFolioCandidate: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var sourceType: HotelFolioSourceType
@@ -148,6 +154,10 @@ public struct CloudHotelFolioCandidate: Identifiable, Codable, Equatable, Sendab
         copy.failureReason = reason.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         copy.downloadedAt = copy.downloadedAt ?? date
         return copy
+    }
+
+    public var isVisibleInInboxImportList: Bool {
+        status.isVisibleInInboxImportList
     }
 }
 

@@ -286,7 +286,7 @@ struct HotelFolioIMAPClient: Sendable {
         onProgress(
             HotelFolioEmailScanProgress(
                 phase: .foundMessages(uids.count),
-                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封时间窗内邮件，开始筛选 PDF 附件 · 最多展示 \(maxMessagesSummary) 封"
+                debugSummary: "邮箱水单扫描：找到 \(uids.count) 封时间窗内邮件，开始筛选 PDF 附件或正文水单 · 最多展示 \(maxMessagesSummary) 封"
             )
         )
 
@@ -296,7 +296,7 @@ struct HotelFolioIMAPClient: Sendable {
                 onProgress(
                     HotelFolioEmailScanProgress(
                         phase: .completed(candidates.count),
-                        debugSummary: "邮箱水单扫描：PDF 附件邮件已达到展示上限 · limit=\(settings.maxMessages)"
+                        debugSummary: "邮箱水单扫描：候选水单邮件已达到展示上限 · limit=\(settings.maxMessages)"
                     )
                 )
                 break
@@ -312,13 +312,14 @@ struct HotelFolioIMAPClient: Sendable {
                     try await session.fetchRFC822(uid: uid)
                 }
                 let message = try parser.parse(rawMessage: rawMessage, uid: uid)
-                if let pdfMessage = pdfAttachmentMessage(message) {
-                    candidates.append(pdfMessage)
+                if let candidateMessage = hotelFolioCandidateMessage(message) {
+                    candidates.append(candidateMessage)
+                    let generatedBodyPDFCount = candidateMessage.attachments.filter { $0.id.contains("-body-") }.count
                     onProgress(
                         HotelFolioEmailScanProgress(
-                            phase: .candidateAccepted(subject: pdfMessage.subject),
-                            debugSummary: "邮箱水单扫描：发现 PDF 附件邮件 · uid=\(uid) · subject=\(pdfMessage.subject) · pdf=\(pdfMessage.attachments.count)",
-                            rawText: pdfMessage.subject
+                            phase: .candidateAccepted(subject: candidateMessage.subject),
+                            debugSummary: "邮箱水单扫描：发现候选水单邮件 · uid=\(uid) · subject=\(candidateMessage.subject) · pdf=\(candidateMessage.attachments.count) · bodyPDF=\(generatedBodyPDFCount)",
+                            rawText: candidateMessage.bodyText ?? candidateMessage.subject
                         )
                     )
                 } else {
@@ -348,20 +349,48 @@ struct HotelFolioIMAPClient: Sendable {
         return candidates
     }
 
-    private func pdfAttachmentMessage(_ message: HotelFolioEmailMessage) -> HotelFolioEmailMessage? {
+    private func hotelFolioCandidateMessage(_ message: HotelFolioEmailMessage) -> HotelFolioEmailMessage? {
         let pdfAttachments = message.attachments.filter { attachment in
             attachment.mimeType == "application/pdf" || attachment.fileName.lowercased().hasSuffix(".pdf")
         }
-        guard !pdfAttachments.isEmpty else {
+        if !pdfAttachments.isEmpty {
+            return HotelFolioEmailMessage(
+                uid: message.uid,
+                messageID: message.messageID,
+                subject: message.subject,
+                from: message.from,
+                dateText: message.dateText,
+                bodyText: message.bodyText,
+                attachments: pdfAttachments
+            )
+        }
+
+        let filter = HotelFolioEmailCandidateFilter()
+        guard filter.isLikelyHotelFolio(message),
+              let bodyText = message.bodyText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !bodyText.isEmpty else {
             return nil
         }
+
+        let pdfData = HotelFolioTextPDFBuilder.makePDFData(
+            text: bodyText,
+            title: message.subject
+        )
+        let attachment = HotelFolioEmailAttachment(
+            id: "\(message.uid)-body-email-body-folio.pdf",
+            fileName: "email-body-folio.pdf",
+            mimeType: "application/pdf",
+            size: pdfData.count,
+            data: pdfData
+        )
         return HotelFolioEmailMessage(
             uid: message.uid,
             messageID: message.messageID,
             subject: message.subject,
             from: message.from,
             dateText: message.dateText,
-            attachments: pdfAttachments
+            bodyText: bodyText,
+            attachments: [attachment]
         )
     }
 

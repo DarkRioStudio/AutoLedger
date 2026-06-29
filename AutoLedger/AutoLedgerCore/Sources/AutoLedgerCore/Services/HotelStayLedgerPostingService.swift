@@ -58,7 +58,12 @@ public struct HotelStayLedgerPostingService: Sendable {
         let hotelStayID = hotelStayIDGenerator()
         let transactionID = transactionIDGenerator()
         let ledgerID = draft.targetLedgerID ?? TodaySpendingSummary.defaultLedgerID
-        let currency = trimmed(payload.currency) ?? trimmed(localizedData?.currency) ?? "CNY"
+        let currency = HotelCurrencyCodeNormalizer.normalizedCode(
+            trimmed(localizedData?.currency) ?? trimmed(payload.currency),
+            context: [payload.country, payload.city, localizedData?.country, localizedData?.city, draft.rawText]
+                .compactMap { $0 }
+                .joined(separator: " ")
+        ) ?? "CNY"
         let occurredAt = transactionDate(from: payload) ?? postedAt
 
         let transaction = Transaction(

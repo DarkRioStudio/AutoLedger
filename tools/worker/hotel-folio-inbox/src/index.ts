@@ -110,6 +110,12 @@ type StoredCandidate = {
   inserted: boolean;
 };
 
+type CandidatePDFInput = {
+  fileName: string;
+  bytes: Uint8Array;
+  source: "attachment" | "emailBody";
+};
+
 const encoder = new TextEncoder();
 const pdfMimeTypes = new Set(["application/pdf", "application/x-pdf"]);
 const inboxLocalPart = "folio";
@@ -203,11 +209,11 @@ export async function receiveEmail(
   const from = redactMetadata(message.from);
   const messageIDHash = await optionalHash(message.headers.get("message-id") ?? parsed.messageId ?? "");
 
-  const attachments = parsed.attachments.filter((attachment) => isPDFAttachment(attachment));
-  for (const attachment of attachments) {
-    const bytes = attachmentContentBytes(attachment);
+  const pdfInputs = candidatePDFInputs(parsed, subject);
+  for (const input of pdfInputs) {
+    const bytes = input.bytes;
     const attachmentHash = await sha256BytesHex(bytes);
-    const fileName = safeFileName(attachment.filename ?? "folio.pdf");
+    const fileName = safeFileName(input.fileName);
     const objectKey = [
       "hotel-folio-candidates",
       tokenHash,
@@ -221,7 +227,7 @@ export async function receiveEmail(
     await env.HOTEL_FOLIO_BUCKET.put(objectKey, bytes, {
       httpMetadata: { contentType: "application/pdf" },
       customMetadata: {
-        candidateSource: "cloudWorker",
+        candidateSource: input.source === "emailBody" ? "cloudWorkerEmailBody" : "cloudWorker",
         tokenHash,
         attachmentHash
       }
@@ -413,7 +419,7 @@ async function listCandidates(env: Env, tokenHash: string): Promise<CandidateRow
     `SELECT *
        FROM cloud_hotel_folio_candidates
       WHERE token_hash = ?
-        AND status NOT IN ('deleted', 'expired')
+        AND status IN ('stored', 'notified')
       ORDER BY received_at DESC
       LIMIT 100`
   )
@@ -421,6 +427,10 @@ async function listCandidates(env: Env, tokenHash: string): Promise<CandidateRow
     .all<CandidateRow>();
 
   return result.results ?? [];
+}
+
+function isVisibleInboxCandidateStatus(status: string): boolean {
+  return status === "stored" || status === "notified";
 }
 
 async function downloadCandidatePDF(env: Env, tokenHash: string, id: string): Promise<Response> {
@@ -565,6 +575,7 @@ async function insertCandidate(env: Env, candidate: CandidateRow): Promise<Store
 }
 
 async function findCandidateByID(env: Env, tokenHash: string, id: string): Promise<CandidateRow | null> {
+  const normalizedID = normalizeCandidateID(id);
   return env.DB.prepare(
     `SELECT *
        FROM cloud_hotel_folio_candidates
@@ -572,8 +583,12 @@ async function findCandidateByID(env: Env, tokenHash: string, id: string): Promi
         AND token_hash = ?
       LIMIT 1`
   )
-    .bind(id, tokenHash)
+    .bind(normalizedID, tokenHash)
     .first<CandidateRow>();
+}
+
+function normalizeCandidateID(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 async function findCandidateByAttachmentHash(
@@ -951,10 +966,79 @@ function candidateDTO(row: CandidateRow): CloudHotelFolioCandidateDTO {
   };
 }
 
+function candidatePDFInputs(
+  parsed: { attachments: Array<{ filename?: string | null; mimeType?: string | null; content?: unknown }>; text?: string | null; html?: string | null },
+  subject: string | null
+): CandidatePDFInput[] {
+  const pdfAttachments = parsed.attachments
+    .filter((attachment) => isPDFAttachment(attachment))
+    .map((attachment): CandidatePDFInput => ({
+      fileName: attachment.filename ?? "folio.pdf",
+      bytes: attachmentContentBytes(attachment),
+      source: "attachment"
+    }))
+    .filter((input) => input.bytes.byteLength > 0);
+
+  if (pdfAttachments.length > 0) {
+    return pdfAttachments;
+  }
+
+  const bodyText = emailBodyText(parsed);
+  if (!bodyText) {
+    return [];
+  }
+
+  return [{
+    fileName: "email-body-folio.pdf",
+    bytes: makeEmailBodyPDF(bodyText, subject ?? "Hotel folio email body"),
+    source: "emailBody"
+  }];
+}
+
 function isPDFAttachment(attachment: { filename?: string | null; mimeType?: string | null }): boolean {
   const mimeType = attachment.mimeType?.toLowerCase() ?? "";
   const fileName = attachment.filename?.toLowerCase() ?? "";
   return pdfMimeTypes.has(mimeType) || fileName.endsWith(".pdf");
+}
+
+function emailBodyText(parsed: { text?: string | null; html?: string | null }): string | null {
+  const text = parsed.text?.trim();
+  if (text) {
+    return limitBodyText(text);
+  }
+
+  const html = parsed.html?.trim();
+  if (!html) {
+    return null;
+  }
+
+  const stripped = htmlToText(html).trim();
+  return stripped ? limitBodyText(stripped) : null;
+}
+
+function htmlToText(html: string): string {
+  return decodeHTMLEntities(
+    html
+      .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+      .replace(/<\/\s*(p|div|tr|li|table|h[1-6])\s*>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+  );
+}
+
+function decodeHTMLEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'");
+}
+
+function limitBodyText(value: string): string {
+  return value.trim().slice(0, 12_000);
 }
 
 function attachmentContentBytes(attachment: { content?: unknown }): Uint8Array {
@@ -969,6 +1053,119 @@ function attachmentContentBytes(attachment: { content?: unknown }): Uint8Array {
     return encoder.encode(content);
   }
   return new Uint8Array();
+}
+
+function makeEmailBodyPDF(text: string, title: string): Uint8Array {
+  const lines = normalizedPDFLines(text, title);
+  let nextCID = 1;
+  const mappings: string[] = [];
+  let content = "BT /F1 11 Tf 50 760 Td 14 TL\n";
+
+  for (const line of lines) {
+    if (line.length === 0) {
+      content += "T*\n";
+      continue;
+    }
+
+    let run = "";
+    for (const character of Array.from(line)) {
+      const cid = nextCID++;
+      run += fourDigitHex(cid);
+      mappings.push(`<${fourDigitHex(cid)}> <${utf16BEHex(character)}>`);
+    }
+    content += `<${run}> Tj T*\n`;
+  }
+  content += "ET";
+
+  const cmap = makeToUnicodeCMap(mappings);
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 8 0 R >>",
+    "<< /Type /Font /Subtype /Type0 /BaseFont /Helvetica /Encoding /Identity-H /DescendantFonts [5 0 R] /ToUnicode 7 0 R >>",
+    "<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Helvetica /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor 6 0 R /DW 600 >>",
+    "<< /Type /FontDescriptor /FontName /Helvetica /Flags 32 /FontBBox [-166 -225 1000 931] /ItalicAngle 0 /Ascent 931 /Descent -225 /CapHeight 718 /StemV 80 >>",
+    streamObject(cmap),
+    streamObject(content)
+  ];
+  return makePDF(objects);
+}
+
+function normalizedPDFLines(text: string, title: string): string[] {
+  const fallback = title.trim() || "Hotel folio email body";
+  const capped = (text.trim() || fallback)
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .slice(0, 12_000);
+  return capped.split("\n").flatMap((line) => wrapPDFLine(line, 72));
+}
+
+function wrapPDFLine(line: string, maxLength: number): string[] {
+  const characters = Array.from(line);
+  if (characters.length <= maxLength) {
+    return [line];
+  }
+
+  const wrapped: string[] = [];
+  for (let index = 0; index < characters.length; index += maxLength) {
+    wrapped.push(characters.slice(index, index + maxLength).join(""));
+  }
+  return wrapped;
+}
+
+function makeToUnicodeCMap(mappings: string[]): string {
+  const chunks: string[] = [];
+  for (let index = 0; index < mappings.length; index += 100) {
+    const chunk = mappings.slice(index, index + 100);
+    chunks.push(`${chunk.length} beginbfchar\n${chunk.join("\n")}\nendbfchar`);
+  }
+  return `/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /AutoLedgerUnicode def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+${chunks.join("\n")}
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end`;
+}
+
+function streamObject(content: string): string {
+  return `<< /Length ${encoder.encode(content).byteLength} >>\nstream\n${content}\nendstream`;
+}
+
+function makePDF(objects: string[]): Uint8Array {
+  let pdf = "%PDF-1.7\n";
+  const offsets = [0];
+  for (const [index, object] of objects.entries()) {
+    offsets.push(encoder.encode(pdf).byteLength);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  }
+
+  const xrefOffset = encoder.encode(pdf).byteLength;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return encoder.encode(pdf);
+}
+
+function fourDigitHex(value: number): string {
+  return value.toString(16).padStart(4, "0").toUpperCase();
+}
+
+function utf16BEHex(value: string): string {
+  const units: number[] = [];
+  for (let index = 0; index < value.length; index++) {
+    units.push(value.charCodeAt(index));
+  }
+  return units.map(fourDigitHex).join("");
 }
 
 function safeFileName(fileName: string): string {
@@ -1043,7 +1240,12 @@ export const testInternals = {
   normalizeAPNSEnvironment,
   redactMetadata,
   safeFileName,
+  normalizeCandidateID,
+  candidatePDFInputs,
+  emailBodyText,
+  makeEmailBodyPDF,
   isPDFAttachment,
+  isVisibleInboxCandidateStatus,
   candidateDTO,
   makeAPNSNotificationBody,
   notificationPayloadFromQueueBody,

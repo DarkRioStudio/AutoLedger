@@ -252,7 +252,10 @@ public struct HotelFolioParsePipeline: Sendable {
         responseData: Data,
         codec: HotelFolioOpenAICompatibleCodec = HotelFolioOpenAICompatibleCodec()
     ) throws -> HotelStayDraft {
-        let parsedPayload = try codec.decodeParsedPayload(from: responseData)
+        let parsedPayload = normalizeCurrencies(
+            in: try codec.decodeParsedPayload(from: responseData),
+            rawText: draft.rawText
+        )
         return try apply(parsedPayload, to: draft)
     }
 
@@ -264,9 +267,10 @@ public struct HotelFolioParsePipeline: Sendable {
             throw HotelFolioParsePipelineError.missingStructuredFields
         }
 
+        let normalizedPayload = normalizeCurrencies(in: parsedPayload, rawText: draft.rawText)
         var updated = draft
-        updated.parsedPayload = parsedPayload
-        updated.localizedData = parsedPayload.localizedData ?? draft.localizedData
+        updated.parsedPayload = normalizedPayload
+        updated.localizedData = normalizedPayload.localizedData ?? draft.localizedData
         updated.confidence = normalizedConfidence(parsedPayload.confidence)
         updated.status = .needsReview
         updated.updatedAt = now()
@@ -279,6 +283,40 @@ public struct HotelFolioParsePipeline: Sendable {
             return min(max(confidence / 100, 0), 1)
         }
         return min(max(confidence, 0), 1)
+    }
+
+    private func normalizeCurrencies(
+        in payload: HotelFolioParsedPayload,
+        rawText: String
+    ) -> HotelFolioParsedPayload {
+        var normalized = payload
+        let context = [
+            payload.country,
+            payload.city,
+            payload.localizedData?.country,
+            payload.localizedData?.city,
+            rawText
+        ]
+            .compactMap { $0 }
+            .joined(separator: " ")
+
+        normalized.currency = HotelCurrencyCodeNormalizer.normalizedCode(payload.currency, context: context)
+            ?? payload.currency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+        if var localizedData = normalized.localizedData {
+            let localizedContext = [
+                localizedData.country,
+                localizedData.city,
+                context
+            ]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            localizedData.currency = HotelCurrencyCodeNormalizer.normalizedCode(localizedData.currency, context: localizedContext)
+                ?? localizedData.currency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            normalized.localizedData = localizedData
+        }
+
+        return normalized
     }
 }
 
