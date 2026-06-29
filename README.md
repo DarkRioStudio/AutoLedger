@@ -62,6 +62,27 @@
 
 **分享扩展** — 在微信/支付宝中分享截图 → 选择 AutoLedger
 
+## 酒店消费导入
+
+AutoLedger 的酒店消费不是只识别一笔金额，而是把酒店水单整理成可复核的住宿消费档案。
+
+支持的导入入口：
+
+- **手动 PDF 导入**：在酒店消费模块选择或拖入酒店水单 PDF，App 使用 PDFKit 提取文本，并进入酒店水单识别与复核流程。
+- **分享 PDF 到 App**：从 Files、Mail 或其他 App 分享酒店水单 PDF 到 AutoLedger，可直接进入酒店消费待确认流程。
+- **本地邮箱扫描**：用户主动在 App 内连接 IMAP 邮箱，授权码只保存在本机 Keychain；App 拉取带 PDF 附件的候选邮件，用户勾选后批量导入。
+- **专属收件箱候选**：Pro 自动化路径中，用户可领取 `folio+<token>@getautoledger.app` 专属地址，手动转发酒店水单邮件或设置自己的邮箱转发规则；Worker 只短期暂存 PDF 候选，App 下载后仍在本机提取文本、识别和复核。
+
+识别目标包括酒店名称、品牌 / 集团、城市 / 国家、入住 / 退房日期、晚数、房型、订单号、币种、房费、税费、服务费、餐饮、其他消费、总额、支付方式、来源文件和识别置信度。确认后会生成 `HotelStayRecord`，并自动关联一条普通支出流水，默认归入酒店住宿分类。
+
+隐私边界：
+
+- Worker 不登录用户邮箱，不保存 QQ / IMAP / Gmail / Outlook 授权码。
+- 本地邮箱扫描必须由用户主动触发，结果进入待确认状态，不自动正式入账。
+- 云端专属收件箱只处理用户转发到 AutoLedger 地址的邮件，不扫描用户私人邮箱。
+- PDF 候选在云端只做短期暂存；App 成功下载 / 转换后会优先删除云端 PDF。
+- 用户确认前不会写入正式账本；酒店记录和关联流水仍可在 App 内查看、编辑和删除。
+
 ## Screenshot Preview
 
 App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/appstore-screenshots/README.md)

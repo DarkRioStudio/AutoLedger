@@ -22,6 +22,27 @@ AutoLedger turns payment screenshots, camera receipts, voice input, clipboard te
 - iCloud backup / restore support
 - Local-first personal bookkeeping workflow
 
+## Hotel Folio Import
+
+AutoLedger treats hotel folios as reviewable stay records, not just a single OCR amount.
+
+Supported import paths:
+
+- **Manual PDF import**: choose a hotel folio PDF in the Hotel tab. The App extracts text with PDFKit and opens the hotel folio recognition review flow.
+- **Share PDF to AutoLedger**: share a hotel folio PDF from Files, Mail, or another app to enter the pending hotel review flow.
+- **Local email scan**: the user explicitly connects an IMAP mailbox inside the App. The authorization code stays in local Keychain. The App lists candidate emails with PDF attachments, and the user selects which PDFs to import.
+- **Dedicated inbox candidates**: in the Pro automation path, the user can claim a `folio+<token>@getautoledger.app` address, manually forward hotel folios, or configure their own mailbox forwarding rule. The Worker only stores short-lived PDF candidates; the App still downloads the PDF and performs text extraction, recognition, and review locally.
+
+The target fields include hotel name, brand / group, city / country, check-in / check-out dates, nights, room type, confirmation number, currency, room charge, tax, service charge, food and beverage, other charges, total amount, payment method, source file, and recognition confidence. After confirmation, AutoLedger creates a `HotelStayRecord` and links a normal expense transaction, using the hotel accommodation category by default.
+
+Privacy boundaries:
+
+- The Worker does not log in to user mailboxes and does not store QQ / IMAP / Gmail / Outlook authorization codes.
+- Local email scan only runs after explicit user action, and results stay pending until the user confirms them.
+- The dedicated cloud inbox only processes emails forwarded to the AutoLedger address. It does not scan a user's private mailbox.
+- Cloud PDF candidates are short-lived. After the App downloads / converts a PDF, it should delete the cloud copy when possible.
+- Nothing is posted to the official ledger before user confirmation. Hotel records and linked transactions remain viewable, editable, and deletable in the App.
+
 ## Privacy
 
 AutoLedger is designed as a local-first personal bookkeeping app.
