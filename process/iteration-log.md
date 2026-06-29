@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-287 Personal Pro 设计归档与 v1.6.4 规划）
+更新日期：2026-06-29（ITER-288 v1.6.3 GOAL-2015 release smoke 与版本完成收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-288 v1.6.3 GOAL-2015 release smoke 与版本完成收口
+- 日期：2026-06-29
+- 所属版本：v1.6.3
+- 所属阶段：Hotel C1 / Privacy Review / Release Smoke
+- 类型：文档 / 测试 / 版本收口
+- 目标：完成 `GOAL-2015`，把酒店水单 C1 第一版 App/Core 工程骨架的隐私说明、审核材料、回归 baseline 和版本状态收口。
+- 改动范围：新增 `versions/v1.6.3-review-notes.md` 和 `versions/v1.6.3-regression-baseline.md`；更新 `versions/v1.6.3-plan.md`、根 README 四语路线图、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Swift 业务逻辑、真实 Worker、对象存储、APNs、云候选 API / UI、订阅后端、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
+- 完成内容：`v1.6.3` 标记为 Completed；审核说明明确当前版本不是公开 C1 云服务上线，审核员不需要登录真实邮箱或向真实专属地址发送邮件；隐私边界明确 Worker 不登录用户邮箱、不保存邮箱授权码、不扫描私人邮箱，raw token / raw Message-ID / 敏感身份与支付信息不得进入日志；回归 baseline 记录 C1 cloud inbox Core 合同、deep link 和 App 本地转换入口的验证范围。
+- 未完成内容：真实 Worker inbound email、对象存储、签名下载 URL、过期删除、APNs、云候选 API / UI、专属收件地址管理 UI、订阅后端和端到端测试专属地址仍留后续版本；当前完成口径是 App/Core 第一版骨架和 release smoke 文档。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_deep_link_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，覆盖 CloudKit sync、CloudKit hotel PDF asset、酒店邮箱导入、App Intents、Widget、可靠性、长列表性能、L10N release smoke 和 C1 cloud inbox 合同；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData-v163-release-smoke CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：`v1.6.3` 不是 C1 公共云服务上线版本；若后续启用 Worker，需要单独验证对象存储权限、日志脱敏、PDF 过期删除、用户删除、APNs 隐私文案、订阅 gating 和测试专属地址。
+- 回滚方式：回退新增 v1.6.3 review / regression 文档，以及 `versions/v1.6.3-plan.md`、README 四语路线图、`CHANGELOG.md`、本日志中的状态和记录即可；无代码、schema 或构建配置回滚。
+- 结论：`GOAL-2015` 完成，`v1.6.3` 当前规划范围已收口；可以把后续真实云端收件箱实现放到后续版本或专门 Worker 主线。
+- 下一步建议：按 `versions/v1.6.4-plan.md` 进入 Personal Pro 基础设施，或另开真实 C1 Worker / cloud candidate API 端到端目标。
 
 ### ITER-287 Personal Pro 设计归档与 v1.6.4 规划
 - 日期：2026-06-29
