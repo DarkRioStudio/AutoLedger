@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-288 v1.6.3 GOAL-2015 release smoke 与版本完成收口）
+更新日期：2026-06-29（ITER-289 v1.6.4 GOAL-2200 Free / Pro 边界冻结）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-289 v1.6.4 GOAL-2200 Free / Pro 边界冻结
+- 日期：2026-06-29
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / Access Policy
+- 类型：能力增强 / 架构 / 测试
+- 目标：完成 `GOAL-2200`，将 Personal Pro 的 Free / Pro 边界从产品规划落到平台无关层合同，并固定“到期不锁历史数据”的第一版回归口径。
+- 改动范围：新增 `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/ProAccessPolicy.swift`；更新 `scripts/OfflineRegression.swift` 和 `scripts/run_offline_regression.sh`；更新 `versions/v1.6.4-plan.md`、根 README 四语路线图、`CHANGELOG.md` 和本日志。
+- 未改动范围：未实现 StoreKit 订阅商品、购买、恢复购买、交易监听、Pro 页面、UI 付费墙、邮箱扫描实际 gate、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`；未改动既有 `Support Developer` 赞助内购。
+- 完成内容：新增 `AutoLedgerCapability`，覆盖免费基础能力、P0 Pro 自动化能力和后续 Pro 自动化能力；新增 `ProAccessTier` 区分 `freeCore`、`proAutomationP0`、`proAutomationLater`；新增 `AutoLedgerProAccessPolicy.current`，提供 `isAvailableWithoutPro`、`requiresActiveProInCurrentRelease`、`isPlannedProAutomation`、`remainsAvailableAfterProExpiration` 和 `manualFallbacks`。离线回归固定手动记账、单张截图识别、手动酒店水单导入、历史查看编辑删除、基础导出备份和 `Support Developer` 不被 Pro gate；固定本地邮箱水单扫描、批量候选导入、高级去重和 C1 专属收件箱属于 P0 Pro 自动化；固定高级搜索、订阅异常提醒、月结导出包和高级规则自动应用不进入当前 P0 gate。
+- 未完成内容：`ProEntitlementManager`、`ProFeature` 实际 gate、StoreKit 商品拉取 / 恢复购买、Pro 页面、邮箱授权引导和 App Review 订阅材料仍按后续 GOAL 推进。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh` 通过，新增 ProAccessPolicy 断言随离线回归通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData-v164-goal2200 CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过，仍保留项目既有 Swift warning。
+- 风险与注意事项：当前策略模型是边界合同，不会自行限制 UI；后续接入 `ProFeature` gate 时必须复用该口径，避免把手动 PDF 导入、历史数据查看编辑、基础导出备份或 `Support Developer` 误放进订阅墙。
+- 回滚方式：回退 `ProAccessPolicy.swift`、离线回归接入、`v1.6.4` 计划 / README / CHANGELOG / 本日志即可；无数据迁移、StoreKit 配置或 schema 回滚。
+- 结论：`GOAL-2200` 已完成，`v1.6.4` 从规划进入开发中；下一步可进入 `GOAL-2210` 的独立 `ProEntitlementManager` 第一版。
+- 下一步建议：先实现 StoreKit 独立订阅管理器和本地测试配置，再把邮箱扫描与批量候选导入接入实际 gate。
 
 ### ITER-288 v1.6.3 GOAL-2015 release smoke 与版本完成收口
 - 日期：2026-06-29

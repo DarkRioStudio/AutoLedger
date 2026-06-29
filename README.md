@@ -177,7 +177,7 @@ bash scripts/run_golden_regression.sh
 - App Store `1.4.0` 已发布；内部 `v1.5.1` 是该发布线的最终收口版本，`v1.5.0` 作为实现基线并入发布。
 - `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；真实 Worker / APNs / 云候选 API 顺延，C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
-- `v1.6.4` 进入规划阶段，聚焦 Personal Pro 订阅基础设施、Free / Pro 边界、邮箱自动化 gate 和 StoreKit / App Review 准备。
+- `v1.6.4` 已进入开发阶段，`GOAL-2200` 完成 Free / Pro 边界冻结，新增平台无关 Pro 访问策略合同；后续继续推进 StoreKit、Pro 页面、邮箱自动化 gate 和审核材料。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -198,7 +198,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.1 | **1.5.0** | ✅ 已完成 | 酒店水单识别与酒店消费归档、多账本基础能力、新一轮多语言支持、日文支持、跨平台 App Icon 重绘、iOS 27 可拉伸布局阶段一；商店不区分内部小版本 |
 | v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker / APNs / 云候选 API 后延 |
-| v1.6.4 | **1.5.0 默认沿用** | 🧭 规划中 | Personal Pro 订阅基础：`ProEntitlementManager`、`ProFeature` gate、Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导和到期不锁历史数据 |
+| v1.6.4 | **1.5.0 默认沿用** | 🚧 开发中 | Personal Pro 订阅基础：Free / Pro 边界已冻结并落地 `AutoLedgerProAccessPolicy`；后续推进 `ProEntitlementManager`、`ProFeature` gate、Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导和到期不锁历史数据 |
 
 ## License
 

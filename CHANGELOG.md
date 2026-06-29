@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.6.4）
+- [2026-06-29 +0800] 完成 `GOAL-2200` Personal Pro Free / Pro 边界冻结：新增 `AutoLedgerProAccessPolicy` 平台无关合同，使用 `AutoLedgerCapability` 与 `ProAccessTier` 明确免费基础能力、当前 P0 Pro 自动化能力和后续 Pro 自动化能力；离线回归固定手动记账、单张截图识别、手动酒店水单导入、酒店消费历史查看、基础订阅管理、基础月报、基础 Widget / Share Extension、基础导出备份、历史数据查看编辑删除和 `Support Developer` 赞助入口不应被 Pro 锁住，同时固定本地邮箱水单扫描、批量候选导入、高级去重和 C1 专属收件箱属于当前 Pro 自动化 gate。`v1.6.4` 计划和根 README 四语路线图同步进入开发中。本轮不实现 StoreKit 商品、订阅购买 / 恢复、Pro 页面、UI gate、邮箱扫描 gate、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-29 +0800] 新增 `docs/autoledger-personal-pro-design.md`，归档个人 Pro 订阅设计说明，明确 AutoLedger Pro 应定位为“自动化省时间订阅”，而不是封锁既有基础能力；新增 `versions/v1.6.4-plan.md`，规划 Personal Pro 基础设施、`ProEntitlementManager`、`ProFeature` gate、Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导重构、Pro 到期不锁历史数据和 StoreKit / App Review 验收标准。同步更新 `docs/README.md` 索引和根 README 四语路线图。本轮只更新文档，不实现 StoreKit、订阅商品、付费墙、业务逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 
 ### 新增（v1.6.3）

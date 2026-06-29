@@ -42,6 +42,7 @@ struct OfflineRegression {
         verifyHotelFolioDebugTrace(reporter: reporter)
         verifyHotelFolioEmailImportPlanning(reporter: reporter)
         verifyHotelFolioCloudInboxPlanning(reporter: reporter)
+        verifyProAccessPolicy(reporter: reporter)
         try verifyHotelFolioEmailDeduplication(reporter: reporter)
         verifyHotelStayReviewForm(reporter: reporter)
         verifyHotelStayLedgerPosting(reporter: reporter)
@@ -684,6 +685,62 @@ struct OfflineRegression {
         reporter.check(draft?.sourceEmailAttachmentHash == candidate.attachmentHash, "HotelCloudFolioDraftFactory preserves attachment hash")
         reporter.check(draft?.status == .textExtracted, "HotelCloudFolioDraftFactory keeps cloud draft before model parse")
 
+    }
+
+    private static func verifyProAccessPolicy(reporter: RegressionReporter) {
+        let policy = AutoLedgerProAccessPolicy.current
+        let freeCore = Set(policy.freeCoreCapabilities)
+        let p0Pro = Set(policy.p0ProAutomationCapabilities)
+        let laterPro = Set(policy.laterProAutomationCapabilities)
+
+        let expectedFreeCore: Set<AutoLedgerCapability> = [
+            .manualTransactionEntry,
+            .singleReceiptScan,
+            .manualHotelFolioImport,
+            .hotelStayArchiveAccess,
+            .basicSubscriptionManagement,
+            .basicMonthlyReport,
+            .basicWidgetAndShareExtension,
+            .basicDataExportAndBackup,
+            .historyViewEditDelete,
+            .supportDeveloperDonation
+        ]
+        let expectedP0Pro: Set<AutoLedgerCapability> = [
+            .localEmailFolioScan,
+            .batchCandidateImport,
+            .advancedDeduplication,
+            .cloudFolioInbox
+        ]
+        let expectedLaterPro: Set<AutoLedgerCapability> = [
+            .advancedSearch,
+            .subscriptionAnomalyDetection,
+            .monthlyExportPackage,
+            .advancedRuleAutomation
+        ]
+
+        reporter.check(freeCore == expectedFreeCore, "ProAccessPolicy freezes free core capabilities")
+        reporter.check(p0Pro == expectedP0Pro, "ProAccessPolicy freezes v1.6.4 P0 Pro automation gates")
+        reporter.check(laterPro == expectedLaterPro, "ProAccessPolicy keeps P1 Pro features out of current gates")
+        reporter.check(policy.isAvailableWithoutPro(.manualTransactionEntry), "ProAccessPolicy keeps manual transactions free")
+        reporter.check(policy.isAvailableWithoutPro(.manualHotelFolioImport), "ProAccessPolicy keeps manual hotel PDF import free")
+        reporter.check(policy.isAvailableWithoutPro(.historyViewEditDelete), "ProAccessPolicy keeps historical data editable without Pro")
+        reporter.check(policy.isAvailableWithoutPro(.basicDataExportAndBackup), "ProAccessPolicy keeps basic export and backup free")
+        reporter.check(policy.isAvailableWithoutPro(.supportDeveloperDonation), "ProAccessPolicy keeps Support Developer independent from Pro")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.localEmailFolioScan), "ProAccessPolicy gates local email folio scan as P0 automation")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.batchCandidateImport), "ProAccessPolicy gates batch candidate import as P0 automation")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.advancedDeduplication), "ProAccessPolicy gates advanced deduplication as P0 automation")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.cloudFolioInbox), "ProAccessPolicy gates cloud folio inbox as P0 automation")
+        reporter.check(!policy.requiresActiveProInCurrentRelease(.advancedSearch), "ProAccessPolicy does not gate P1 advanced search in current release")
+        reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
+        reporter.check(policy.remainsAvailableAfterProExpiration(.hotelStayArchiveAccess), "ProAccessPolicy keeps hotel archive access after expiration")
+        reporter.check(
+            policy.manualFallbacks(for: .localEmailFolioScan).contains(.manualHotelFolioImport),
+            "ProAccessPolicy keeps manual hotel PDF import as email scan fallback"
+        )
+        reporter.check(
+            policy.manualFallbacks(for: .monthlyExportPackage).contains(.basicDataExportAndBackup),
+            "ProAccessPolicy keeps basic export as monthly package fallback"
+        )
     }
 
     private static func verifyHotelFolioEmailDeduplication(reporter: RegressionReporter) throws {

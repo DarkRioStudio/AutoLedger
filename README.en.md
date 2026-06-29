@@ -155,7 +155,7 @@ Current repository status:
 - App Store `1.4.0` has been released through the internal `v1.5.1` closeout; `v1.5.0` remains the implementation baseline included in that release.
 - `v1.6.2` is complete. It closed SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, Japanese release-material review, and the GOAL-1960 release-smoke baseline.
 - `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. The real Worker, APNs, and cloud-candidate API remain deferred; C2 Worker login to user mailboxes stays personal-use / future experimental only.
-- `v1.6.4` is planned around Personal Pro foundations: Free / Pro boundaries, StoreKit entitlement infrastructure, email-automation gates, and review-ready subscription wording.
+- `v1.6.4` is now in development. `GOAL-2200` has frozen the Free / Pro boundary through a platform-neutral Pro access policy contract; StoreKit, the Pro page, email-automation gates, and review material follow next.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -166,7 +166,7 @@ Current repository status:
 | v1.6.1 | 1.5.0 | Completed | Hotel folio recognition and archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, and iOS 27 resizable-layout phase 1; the store version stays on ASC 1.5.0 for internal patch lines |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, Japanese release-material review, and GOAL-1960 release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline; real Worker / APNs / cloud-candidate API are deferred |
-| v1.6.4 | 1.5.0 by default | Planned | Personal Pro subscription foundations: `ProEntitlementManager`, `ProFeature` gates, Pro page, restore purchases, email automation gates, onboarding, and no data lockout after expiry |
+| v1.6.4 | 1.5.0 by default | In development | Personal Pro foundations: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; next are `ProEntitlementManager`, `ProFeature` gates, Pro page, restore purchases, email automation gates, onboarding, and no data lockout after expiry |
 
 ## License
 
