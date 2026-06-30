@@ -48,6 +48,7 @@ struct ProSubscriptionSnapshot: Identifiable, Equatable {
     let productID: String
     let purchaseDate: Date
     let expirationDate: Date?
+    let signedTransactionInfo: String?
 
     var id: String { productID }
 }
@@ -72,7 +73,7 @@ final class ProEntitlementManager: ObservableObject {
 
     private init(
         policy: AutoLedgerProAccessPolicy = .current,
-        serverEntitlementVerifier: any ServerEntitlementVerifying = UnavailableServerEntitlementVerifier()
+        serverEntitlementVerifier: any ServerEntitlementVerifying = CloudFolioInboxEntitlementVerifier()
     ) {
         self.policy = policy
         self.serverEntitlementVerifier = serverEntitlementVerifier
@@ -149,7 +150,8 @@ final class ProEntitlementManager: ObservableObject {
                 ProSubscriptionSnapshot(
                     productID: transaction.productID,
                     purchaseDate: transaction.purchaseDate,
-                    expirationDate: transaction.expirationDate
+                    expirationDate: transaction.expirationDate,
+                    signedTransactionInfo: verification.jwsRepresentation
                 )
             )
         }

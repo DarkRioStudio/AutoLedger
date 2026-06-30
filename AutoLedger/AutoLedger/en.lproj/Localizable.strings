@@ -1215,8 +1215,9 @@
 "hotel_stay.cloud_inbox.pro.description" = "Forward hotel or OTA folios to your dedicated address. New folios appear here, and you still review them before saving to your ledger.";
 "hotel_stay.cloud_inbox.pro.trial_title" = "Claim your dedicated folio address first";
 "hotel_stay.cloud_inbox.pro.trial_description" = "You can claim an address, copy it, and preview received hotel folios first. Importing folios into your ledger prompts for Pro.";
+"hotel_stay.cloud_inbox.pro.required_description" = "Cloud inbox is a Pro automation that also needs server-side subscription verification. Manual PDF import and local email scanning remain available.";
 "hotel_stay.cloud_inbox.pro.server_verification_required" = "Server verification required";
-"hotel_stay.cloud_inbox.pro.server_verification_description" = "The cloud inbox needs Pro plus server-side entitlement verification. This build cannot claim new cloud inbox tokens until that backend is connected.";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "The cloud inbox needs Pro plus server-side entitlement verification. If verification is temporarily unavailable, use manual PDF import or local email scanning.";
 "hotel_stay.cloud_inbox.claim_address" = "Claim Address";
 "hotel_stay.cloud_inbox.claiming_address" = "Claiming Address";
 "hotel_stay.cloud_inbox.address" = "Inbox address";
@@ -1224,6 +1225,11 @@
 "hotel_stay.cloud_inbox.copy_address" = "Copy Address";
 "hotel_stay.cloud_inbox.section.address" = "Dedicated Folio Address";
 "hotel_stay.cloud_inbox.address_footer" = "Forward hotel or OTA folio emails to this address, or set up auto-forwarding in your own mailbox. AutoLedger does not log in to your email account.";
+"hotel_stay.cloud_inbox.address_footer_unavailable" = "New cloud inbox addresses require Pro and server-side verification. Existing manual import paths are unaffected.";
+"hotel_stay.cloud_inbox.section.fallback" = "Available Import Paths";
+"hotel_stay.cloud_inbox.fallback.manual_pdf" = "Manual hotel folio PDF import remains available.";
+"hotel_stay.cloud_inbox.fallback.local_email" = "Local email folio scanning remains available and uses local Keychain storage.";
+"hotel_stay.cloud_inbox.fallback.footer" = "These paths still create reviewable drafts and do not require cloud token claim.";
 "hotel_stay.cloud_inbox.section.candidates" = "Folios to Import";
 "hotel_stay.cloud_inbox.refresh" = "Refresh Folios";
 "hotel_stay.cloud_inbox.refreshing" = "Refreshing";

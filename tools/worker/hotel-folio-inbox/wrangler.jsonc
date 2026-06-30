@@ -13,6 +13,8 @@
     "CANDIDATE_RETENTION_DAYS": "7",
     "ALLOW_UNVERIFIED_TOKEN_CLAIM": "true",
     "UNVERIFIED_TOKEN_TTL_DAYS": "7",
+    "APP_STORE_BUNDLE_ID": "top.darkrio326.AutoLedger",
+    "APP_STORE_SERVER_ENVIRONMENT": "sandbox",
     "APNS_TOPIC": "top.darkrio326.AutoLedger"
   },
   "r2_buckets": [
@@ -61,6 +63,8 @@
         "CANDIDATE_RETENTION_DAYS": "7",
         "ALLOW_UNVERIFIED_TOKEN_CLAIM": "true",
         "UNVERIFIED_TOKEN_TTL_DAYS": "7",
+        "APP_STORE_BUNDLE_ID": "top.darkrio326.AutoLedger",
+        "APP_STORE_SERVER_ENVIRONMENT": "sandbox",
         "APNS_TOPIC": "top.darkrio326.AutoLedger"
       },
       "r2_buckets": [
@@ -104,6 +108,8 @@
       "vars": {
         "PUBLIC_CANDIDATE_API_ORIGIN": "https://folio.getautoledger.app",
         "CANDIDATE_RETENTION_DAYS": "7",
+        "APP_STORE_BUNDLE_ID": "top.darkrio326.AutoLedger",
+        "APP_STORE_SERVER_ENVIRONMENT": "production",
         "APNS_TOPIC": "top.darkrio326.AutoLedger"
       },
       "r2_buckets": [

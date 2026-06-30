@@ -51,23 +51,26 @@ Content-Type: application/json
 }
 ```
 
-The Worker returns the raw token once, stores only its SHA-256 hash in D1, and marks any previous active token for the same `client:<clientID>` user as `rotated`:
+The Worker returns the raw token once, stores only its SHA-256 hash in D1, and marks any previous active token for the same resolved service user as `rotated`. Development bootstrap users resolve to `client:<clientID>`; production App Store users resolve to `appstore:<sha256-original-transaction-id>`:
 
 ```json
 {
   "token": "<raw-token>",
   "inboxEmail": "folio+<raw-token>@getautoledger.app",
   "tokenHash": "<sha256-normalized-token>",
-  "userID": "client:<clientID>",
-  "status": "active"
+  "userID": "appstore:<sha256-original-transaction-id>",
+  "status": "active",
+  "proExpiresAt": "<verified-subscription-expiry>"
 }
 ```
 
-Unauthenticated bootstrap claim is limited to dev/staging and must be explicitly enabled with `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Production does not enable this variable by default. When disabled, `POST /v1/cloud-hotel-folio-token` returns `403` with `error: "server_entitlement_required"` and does not create a token.
+Unauthenticated bootstrap claim is limited to dev/staging and must be explicitly enabled with `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Production does not enable this variable by default. When disabled, `POST /v1/cloud-hotel-folio-token` requires App Store subscription verification; failed verification returns `403` with `error: "server_entitlement_required"` and does not create a token.
 
-Bootstrap tokens receive a short `pro_expires_at` value controlled by `UNVERIFIED_TOKEN_TTL_DAYS` and capped at 30 days. Production token claim must connect a server-issued entitlement token, App Store receipt / transaction verification, or equivalent backend before inserting `pro_inbox_tokens`.
+Bootstrap tokens receive a short `pro_expires_at` value controlled by `UNVERIFIED_TOKEN_TTL_DAYS` and capped at 30 days. Production token claim uses App Store Server API verification before inserting `pro_inbox_tokens`.
 
-Future entitlement backends can pass a short-lived signed credential through `Authorization: Bearer <server-issued-entitlement-token>` or `X-AutoLedger-Entitlement: <signed-token>`. The current Worker only reserves this interface shape; it does not claim to validate those credentials yet.
+Current production P0 uses StoreKit's signed transaction JWS from the App. The Worker decodes the transaction ID, calls App Store Server API `GET /inApps/v1/transactions/{transactionId}`, then validates bundle ID, Pro product ID, revocation, and expiration before creating an inbox token.
+
+Future entitlement backends can add a separate short-lived signed credential flow if needed. The current Worker does not accept a signed entitlement header for token claim; production authorization is the App Store Server API transaction check.
 
 ## APNs Device Registration
 
@@ -134,6 +137,16 @@ npx wrangler secret put APNS_PRIVATE_KEY
 
 `APNS_TOPIC` is a non-secret Worker var and defaults to `top.darkrio326.AutoLedger`.
 
+Configure App Store Server API secrets; do not commit these values:
+
+```bash
+npx wrangler secret put APP_STORE_CONNECT_ISSUER_ID --env production
+npx wrangler secret put APP_STORE_CONNECT_KEY_ID --env production
+npx wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY --env production
+```
+
+`APP_STORE_BUNDLE_ID` and `APP_STORE_SERVER_ENVIRONMENT` are non-secret Worker vars. Production uses `APP_STORE_SERVER_ENVIRONMENT=production`; dev/staging use `sandbox`.
+
 For dev/staging bootstrap only:
 
 ```jsonc
@@ -141,7 +154,7 @@ For dev/staging bootstrap only:
 "UNVERIFIED_TOKEN_TTL_DAYS": "7"
 ```
 
-Do not enable unauthenticated token claim in production. Production should use server-side entitlement verification and should set `pro_inbox_tokens.pro_expires_at` from the verified subscription state.
+Do not enable unauthenticated token claim in production. Production uses App Store Server API verification and sets `pro_inbox_tokens.pro_expires_at` from the verified subscription expiration.
 
 ## Current Cloudflare Deployment
 
@@ -174,7 +187,7 @@ Email Routing:
 
 Still required before production cloud inbox token claim and push notifications work:
 
-- Connect App Store / server-side Pro entitlement verification for `POST /v1/cloud-hotel-folio-token`.
+- Configure App Store Server API secrets for `POST /v1/cloud-hotel-folio-token` production verification.
 - Configure `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` Worker secrets.
 - Provision active `pro_inbox_tokens` rows only after entitlement verification, with `status = active` and a meaningful `pro_expires_at`.
 
@@ -183,11 +196,23 @@ Still required before production cloud inbox token claim and push notifications 
 Token claim is server-entitlement gated in production. Dev/staging bootstrap claim is only available when `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Candidate listing, PDF download, status update, and APNs device registration still require the raw inbox token in `Authorization: Bearer <token>`.
 
 ```http
+POST /v1/pro-entitlements/verify
 POST /v1/cloud-hotel-folio-token
 GET /v1/cloud-hotel-folio-candidates
 GET /v1/cloud-hotel-folio-candidates/{id}/pdf
 POST /v1/cloud-hotel-folio-candidates/{id}/status
 POST /v1/cloud-hotel-folio-devices
+```
+
+Production token claim body:
+
+```json
+{
+  "clientID": "<locally-stored-client-id>",
+  "platform": "ios",
+  "environment": "production",
+  "signedTransactionInfo": "<StoreKit signed transaction JWS>"
+}
 ```
 
 Supported status updates:

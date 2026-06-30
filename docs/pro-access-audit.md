@@ -12,7 +12,7 @@ This audit records the current Pro entitlement boundary after the source-availab
 - `isProActive` is still derived from verified StoreKit current entitlements or the DEBUG-only `autoLedgerProDevelopmentOverride`.
 - `canUse(_:)` remains a synchronous UI compatibility gate. It is not a security boundary and now refuses non-local boundaries such as `cloudFolioInbox`.
 - `resolveAccess(_:)` is the richer async entry point. It distinguishes free features, local Pro purchase requirements, planned features, server verification requirements, and server verification failures.
-- `cloudFolioInbox` now routes through server verification. The current verifier is intentionally unavailable, so the App does not pretend local StoreKit state is enough to claim a cloud inbox token.
+- `cloudFolioInbox` now routes through server verification. The App sends the current StoreKit signed transaction JWS to the Worker verifier; local StoreKit state alone is not enough to claim a production cloud inbox token.
 
 Risk: public source can be forked and local client checks can be modified. This only gates UI and local user experience; it must not authorize server-cost functions.
 
@@ -42,7 +42,7 @@ Risk: fine for UI, purchase messaging, and local allowance. Not sufficient for W
 
 ### `canUse(_:)` Callers
 
-- `HotelFolioInboxImportView` no longer relies on `canUse(.cloudFolioInbox)` for cloud token claim. It uses `resolveAccess(_:)`.
+- `HotelFolioInboxImportView` no longer relies on `canUse(.cloudFolioInbox)` for cloud token claim. It uses `resolveAccess(_:)`, shows manual PDF / local email fallback when verification is unavailable, and sends the signed transaction JWS when claiming a token.
 - `HotelFolioEmailImportView` uses `canUse(.localEmailFolioScan)` for the local email scan/allowance experience.
 - `IPadCleaningPreviewWorkspaceView` uses `canUse(.advancedDeduplication)` for local data cleaning and deduplication UI.
 
@@ -70,13 +70,15 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 
 ### `tools/worker/hotel-folio-inbox/src/index.ts`
 
+- `POST /v1/pro-entitlements/verify` validates a StoreKit signed transaction JWS through App Store Server API and returns allowed / denied plus expiry.
 - `POST /v1/cloud-hotel-folio-token` is no longer open by default.
-- If `ALLOW_UNVERIFIED_TOKEN_CLAIM` is missing or false, token claim returns `403` with `error: "server_entitlement_required"` and does not create a token.
+- If `ALLOW_UNVERIFIED_TOKEN_CLAIM` is missing or false, token claim requires a StoreKit signed transaction JWS, validates it through App Store Server API, and returns `403` with `error: "server_entitlement_required"` when validation fails.
 - Dev/staging bootstrap claims insert `pro_expires_at` with a short TTL capped at 30 days.
+- Production claims set `pro_expires_at` from the verified subscription expiry and bind `user_id` to a SHA-256 hash of the App Store original transaction ID.
 - `loadActiveToken` continues to require `status = active` and rejects expired `pro_expires_at`, which is the right direction for server-side gating.
-- A future signed entitlement header shape is reserved through `Authorization: Bearer <server-issued-entitlement-token>` or `X-AutoLedger-Entitlement`.
+- The current production authorization path is App Store Server API transaction verification. A separate short-lived signed entitlement token can be added later, but is not accepted by the current token claim route.
 
-Risk: full App Store server receipt / transaction verification is still not implemented. Production must keep unauthenticated bootstrap disabled.
+Risk: App Store Server API secrets must be configured in Cloudflare before production token claim works. Production must keep unauthenticated bootstrap disabled.
 
 ### `tools/worker/hotel-folio-inbox/migrations/0001_hotel_folio_inbox.sql`
 
@@ -90,6 +92,7 @@ Risk: the column is nullable for compatibility, so production provisioning must 
 
 - Dev and staging explicitly enable `ALLOW_UNVERIFIED_TOKEN_CLAIM=true` with `UNVERIFIED_TOKEN_TTL_DAYS=7`.
 - Production omits `ALLOW_UNVERIFIED_TOKEN_CLAIM`, so default behavior is disabled.
+- Production declares non-secret `APP_STORE_BUNDLE_ID` and `APP_STORE_SERVER_ENVIRONMENT=production`; App Store Connect issuer, key ID, and private key must be configured as Worker secrets.
 - APNs runtime secrets are referenced by name only and should be configured with `wrangler secret`.
 
 ## Security Boundary Summary

@@ -51,6 +51,10 @@ struct HotelFolioInboxImportView: View {
         cloudInboxAccess.allowsAccess
     }
 
+    private var shouldShowProPlans: Bool {
+        cloudInboxAccess == .requiresPurchase
+    }
+
     private var cloudInboxEntitlementTitleKey: LocalizedStringKey {
         switch cloudInboxAccess {
         case .allowed, .freeFeature:
@@ -67,7 +71,7 @@ struct HotelFolioInboxImportView: View {
         case .allowed, .freeFeature:
             return "hotel_stay.cloud_inbox.pro.description"
         case .requiresPurchase:
-            return "hotel_stay.cloud_inbox.pro.trial_description"
+            return "hotel_stay.cloud_inbox.pro.required_description"
         case .plannedButUnavailable, .requiresServerVerification, .serverVerificationFailed:
             return "hotel_stay.cloud_inbox.pro.server_verification_description"
         }
@@ -81,6 +85,9 @@ struct HotelFolioInboxImportView: View {
         NavigationStack {
             Form {
                 entitlementSection
+                if !canUseCloudInbox {
+                    fallbackSection
+                }
                 addressSection
                 candidateSection
             }
@@ -141,7 +148,7 @@ struct HotelFolioInboxImportView: View {
                         .foregroundStyle(canUseCloudInbox ? AppTheme.accent : .orange)
                 }
 
-                if !canUseCloudInbox {
+                if shouldShowProPlans {
                     Button {
                         isPresentingProSheet = true
                     } label: {
@@ -201,7 +208,22 @@ struct HotelFolioInboxImportView: View {
         } header: {
             Text("hotel_stay.cloud_inbox.section.address")
         } footer: {
-            Text("hotel_stay.cloud_inbox.address_footer")
+            Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.address_footer" : "hotel_stay.cloud_inbox.address_footer_unavailable")
+        }
+    }
+
+    private var fallbackSection: some View {
+        Section {
+            Label("hotel_stay.cloud_inbox.fallback.manual_pdf", systemImage: "doc.badge.plus")
+                .font(.footnote)
+                .foregroundStyle(AppTheme.mutedInk)
+            Label("hotel_stay.cloud_inbox.fallback.local_email", systemImage: "envelope.badge")
+                .font(.footnote)
+                .foregroundStyle(AppTheme.mutedInk)
+        } header: {
+            Text("hotel_stay.cloud_inbox.section.fallback")
+        } footer: {
+            Text("hotel_stay.cloud_inbox.fallback.footer")
         }
     }
 
@@ -349,7 +371,10 @@ struct HotelFolioInboxImportView: View {
         defer { isClaimingAddress = false }
 
         do {
-            let claim = try await client.claimInboxToken(settings: settings)
+            let claim = try await client.claimInboxToken(
+                settings: settings,
+                signedTransactionInfo: proEntitlement.primaryActiveSubscription?.signedTransactionInfo
+            )
             let normalizedToken = HotelCloudFolioInboxAddress(token: claim.token).normalizedToken
             guard !normalizedToken.isEmpty else {
                 throw HotelFolioInboxClientError.invalidTokenClaimResponse

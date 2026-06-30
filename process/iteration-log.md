@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-304 v1.6.4 Pro 权益安全边界与开源发布风险控制）
+更新日期：2026-06-30（ITER-305 v1.6.4 云端收件箱体验与 entitlement P0）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-305 v1.6.4 云端收件箱体验与 entitlement P0
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / Cloud Inbox / Server Entitlement
+- 类型：能力增强 / 安全 / UI / 文档 / 测试
+- 目标：在不影响手动 PDF 和本地邮箱扫描的前提下，让云端水单收件箱在服务端 entitlement 未配置或校验失败时有自然 fallback，并补上生产 token claim 的最小 App Store Server API 授权链路。
+- 改动范围：更新 `ProEntitlementManager`、`ServerEntitlementVerifier`、`HotelFolioInboxClient` 和 `HotelFolioInboxImportView`；补齐四语 cloud inbox 文案；更新 Worker `src/index.ts`、tests、`wrangler.jsonc` 和 README；更新 `docs/pro-access-audit.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅 UI、手动酒店 PDF 导入、本地邮箱扫描免费月度额度、邮箱授权保存、酒店水单解析流水线、SQLite / CloudKit schema、APNs secrets、Cloudflare 生产部署、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：App 侧保存 StoreKit verified transaction 的 `jwsRepresentation`，云端水单 capability 通过 Worker `/v1/pro-entitlements/verify` 校验；未订阅时只展示 Pro 方案入口，服务端未配置或校验失败时展示服务端校验说明和手动 PDF / 本地邮箱扫描 fallback，领取/刷新云端地址保持禁用但不影响本地入口。token claim 发送同一 signed transaction JWS，Worker 生产默认调用 App Store Server API `GET /inApps/v1/transactions/{transactionId}`，校验 Bundle ID、Pro 商品、撤销状态和订阅到期后才创建 token；token `pro_expires_at` 来自服务端验证结果，`user_id` 使用原始交易号 hash，避免直接落库 Apple 原始 transaction id。`wrangler.jsonc` 增加 App Store bundle/environment 非密变量，README 记录 production secrets 配置方式。
+- 未完成内容：生产 Cloudflare secrets 尚未由本轮写入；生产 Worker 尚未部署；订阅续期 / 退款 / 到期后的既有 token 停用或续期同步、运营面板和 APNs secrets 仍需后续上线配置或定时校验补强。
+- 测试情况：执行 Worker `npm run check`，typecheck 通过、Vitest 19 tests passed；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 `git diff --check` 通过。
+- 风险与注意事项：App Store Server API production 需要配置 `APP_STORE_CONNECT_ISSUER_ID`、`APP_STORE_CONNECT_KEY_ID`、`APP_STORE_CONNECT_PRIVATE_KEY` 和 production environment；未配置时生产 token claim 会继续返回 `server_entitlement_required`，这是安全默认而不是 App 本地导入阻断。dev/staging 若依赖 bootstrap，仍需显式设置 `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`，并避免带入 production。
+- 回滚方式：如生产 App Store Server API 临时不可用，可回退 `CloudFolioInboxEntitlementVerifier` 默认接入、token claim signed transaction 参数和 Worker App Store 校验分支，恢复上一轮的默认禁止领取状态；手动 PDF、本地邮箱扫描和已保存酒店数据不受本轮回滚影响。
+- 结论：本轮完成云端水单收件箱的 App fallback 体验和生产 token claim 的最小服务端授权链路；剩余上线项集中在 Cloudflare production secrets / deploy 和 token 生命周期运维同步。
+- 下一步建议：在 Cloudflare production 写入 App Store Connect secrets 后部署 Worker，使用 ASC sandbox / TestFlight 订阅 JWS 做一次真实 token claim smoke，并补退款 / 到期 token 停用策略。
 
 ### ITER-304 v1.6.4 Pro 权益安全边界与开源发布风险控制
 - 日期：2026-06-30

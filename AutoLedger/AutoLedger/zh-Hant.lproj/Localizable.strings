@@ -1218,8 +1218,9 @@
 "hotel_stay.cloud_inbox.pro.description" = "把飯店或 OTA 帳單轉寄到專屬地址，收到後會出現在這裡。儲存到正式帳本前仍需要你確認。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "先領取你的專屬水單地址";
 "hotel_stay.cloud_inbox.pro.trial_description" = "你可以先領取地址、複製地址並查看收到的飯店水單。把水單匯入帳本前會提示開通 Pro。";
+"hotel_stay.cloud_inbox.pro.required_description" = "雲端收件箱屬於 Pro 自動化，並且需要服務端訂閱權益驗證。手動 PDF 匯入和本機郵箱掃描仍可使用。";
 "hotel_stay.cloud_inbox.pro.server_verification_required" = "需要服務端權益驗證";
-"hotel_stay.cloud_inbox.pro.server_verification_description" = "雲端收件箱需要 Pro，並且必須完成服務端訂閱權益驗證。當前版本 / 環境未接入該後端，暫不能領取新的雲端收件箱 token。";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "雲端收件箱需要 Pro 和服務端訂閱權益驗證。如果驗證暫時不可用，可以繼續使用手動 PDF 匯入或本機郵箱掃描。";
 "hotel_stay.cloud_inbox.claim_address" = "領取地址";
 "hotel_stay.cloud_inbox.claiming_address" = "正在領取專屬地址";
 "hotel_stay.cloud_inbox.address" = "專屬地址";
@@ -1227,6 +1228,11 @@
 "hotel_stay.cloud_inbox.copy_address" = "複製地址";
 "hotel_stay.cloud_inbox.section.address" = "專屬水單地址";
 "hotel_stay.cloud_inbox.address_footer" = "把飯店或 OTA 的帳單郵件轉寄到這個地址；也可以在自己的信箱裡設定自動轉寄。AutoLedger 不會登入你的信箱。";
+"hotel_stay.cloud_inbox.address_footer_unavailable" = "領取新的雲端收件箱地址需要 Pro 和服務端驗證；既有手動匯入路徑不受影響。";
+"hotel_stay.cloud_inbox.section.fallback" = "仍可使用的匯入方式";
+"hotel_stay.cloud_inbox.fallback.manual_pdf" = "手動飯店水單 PDF 匯入仍可使用。";
+"hotel_stay.cloud_inbox.fallback.local_email" = "本機郵箱水單掃描仍可使用，授權碼仍保存在本機 Keychain。";
+"hotel_stay.cloud_inbox.fallback.footer" = "這些路徑仍會生成待複核草稿，不需要領取雲端 token。";
 "hotel_stay.cloud_inbox.section.candidates" = "待匯入水單";
 "hotel_stay.cloud_inbox.refresh" = "重新整理水單";
 "hotel_stay.cloud_inbox.refreshing" = "正在重新整理";

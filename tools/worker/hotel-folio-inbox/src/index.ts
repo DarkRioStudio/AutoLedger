@@ -65,6 +65,37 @@ type APNSRuntimeConfig = {
   privateKey: string;
 };
 
+type AppStoreServerEnvironment = "production" | "sandbox";
+
+type AppStoreServerAPIConfig = {
+  issuerID: string;
+  keyID: string;
+  bundleID: string;
+  privateKey: string;
+  environment: AppStoreServerEnvironment;
+};
+
+type AppStoreTransactionPayload = {
+  transactionId?: string;
+  transactionID?: string;
+  originalTransactionId?: string;
+  originalTransactionID?: string;
+  productId?: string;
+  productID?: string;
+  bundleId?: string;
+  bundleID?: string;
+  expiresDate?: number | string | null;
+  revocationDate?: number | string | null;
+};
+
+type EntitlementVerificationResult = {
+  allowed: boolean;
+  reason?: string;
+  expiresAt?: string;
+  originalTransactionID?: string;
+  productID?: string;
+};
+
 type CloudHotelFolioCandidateDTO = {
   id: string;
   sourceType: "cloudWorker";
@@ -123,6 +154,10 @@ const inboxLocalPart = "folio";
 const inboxDomain = "getautoledger.app";
 const inboxTokenAlphabet = "abcdefghijklmnopqrstuvwxyz23456789";
 const inboxTokenLength = 26;
+const proProductIDs = new Set([
+  "top.darkrio326.AutoLedger.pro.monthly",
+  "top.darkrio326.AutoLedger.pro.yearly"
+]);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -155,6 +190,10 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
 
   if (request.method === "POST" && url.pathname === "/v1/cloud-hotel-folio-token") {
     return claimInboxToken(request, env);
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/pro-entitlements/verify") {
+    return verifyProEntitlement(request, env);
   }
 
   const auth = await authenticateRequest(request, env);
@@ -351,29 +390,52 @@ function generateInboxToken(): string {
 }
 
 async function claimInboxToken(request: Request, env: Env): Promise<Response> {
-  const entitlementHeader = request.headers.get("authorization") ?? request.headers.get("x-autoledger-entitlement") ?? "";
+  const body = await request.json().catch(() => ({})) as Partial<{
+    clientID: string;
+    platform: string;
+    environment: string;
+    signedTransactionInfo: string;
+  }>;
+  let serverEntitlement: EntitlementVerificationResult | null = null;
   if (!allowsUnverifiedTokenClaim(env)) {
+    serverEntitlement = await verifyAppStoreEntitlement(env, body.signedTransactionInfo);
+    if (serverEntitlement.allowed !== true) {
+      return json(
+        {
+          error: "server_entitlement_required",
+          reason: serverEntitlement.reason ?? "server_entitlement_denied",
+          message: "Cloud folio inbox token claim requires server-side Pro entitlement verification."
+        },
+        env,
+        403
+      );
+    }
+  }
+
+  if (allowsUnverifiedTokenClaim(env) && !body.signedTransactionInfo) {
+    serverEntitlement = null;
+  } else if (!serverEntitlement) {
+    serverEntitlement = await verifyAppStoreEntitlement(env, body.signedTransactionInfo);
+  }
+
+  if (body.signedTransactionInfo && serverEntitlement?.allowed !== true) {
     return json(
       {
         error: "server_entitlement_required",
-        message: entitlementHeader
-          ? "Server-issued entitlement token verification is not connected yet."
-          : "Cloud folio inbox token claim requires server-side Pro entitlement verification."
+        reason: serverEntitlement?.reason ?? "server_entitlement_denied",
+        message: "Cloud folio inbox token claim requires server-side Pro entitlement verification."
       },
       env,
       403
     );
   }
 
-  const body = await request.json().catch(() => ({})) as Partial<{
-    clientID: string;
-    platform: string;
-    environment: string;
-  }>;
   const clientID = normalizeClientID(body.clientID ?? "") || crypto.randomUUID().toLowerCase();
-  const userID = `client:${clientID}`;
+  const userID = serverEntitlement?.originalTransactionID
+    ? await appStoreUserID(serverEntitlement.originalTransactionID)
+    : `client:${clientID}`;
   const now = new Date().toISOString();
-  const proExpiresAt = unverifiedTokenExpirationDate(env, new Date()).toISOString();
+  const proExpiresAt = serverEntitlement?.expiresAt ?? unverifiedTokenExpirationDate(env, new Date()).toISOString();
   const token = generateInboxToken();
   const tokenHash = await sha256Hex(token);
   const inboxEmail = inboxEmailForToken(token);
@@ -406,6 +468,185 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     proExpiresAt
   };
   return json(payload, env, 201);
+}
+
+async function verifyProEntitlement(request: Request, env: Env): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as Partial<{
+    capability: string;
+    signedTransactionInfo: string;
+  }>;
+  if (body.capability !== "cloudFolioInbox") {
+    return json({ allowed: false, reason: "unsupported_capability" }, env);
+  }
+  const result = await verifyAppStoreEntitlement(env, body.signedTransactionInfo);
+  return json({ allowed: result.allowed, reason: result.reason, expiresAt: result.expiresAt }, env);
+}
+
+async function verifyAppStoreEntitlement(env: Env, signedTransactionInfo: string | undefined): Promise<EntitlementVerificationResult> {
+  const trimmedJWS = signedTransactionInfo?.trim() ?? "";
+  if (!trimmedJWS) {
+    return { allowed: false, reason: "missing_signed_transaction" };
+  }
+
+  const config = appStoreServerAPIConfig(env);
+  if (!config) {
+    return { allowed: false, reason: "app_store_server_api_unconfigured" };
+  }
+
+  const clientPayload = decodeJWSPayload<AppStoreTransactionPayload>(trimmedJWS);
+  if (!clientPayload) {
+    return { allowed: false, reason: "invalid_signed_transaction" };
+  }
+  const transactionID = transactionPayloadValue(clientPayload, "transactionId", "transactionID");
+  if (!transactionID) {
+    return { allowed: false, reason: "missing_transaction_id" };
+  }
+
+  const jwt = await appStoreServerJWT(config);
+  const response = await fetch(`${appStoreServerAPIHost(config.environment)}/inApps/v1/transactions/${encodeURIComponent(transactionID)}`, {
+    headers: {
+      authorization: `Bearer ${jwt}`,
+      accept: "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    return {
+      allowed: false,
+      reason: `app_store_server_api_status_${response.status}`
+    };
+  }
+
+  const body = await response.json().catch(() => ({})) as Partial<{ signedTransactionInfo: string }>;
+  const serverPayload = decodeJWSPayload<AppStoreTransactionPayload>(body.signedTransactionInfo ?? "");
+  if (!serverPayload) {
+    return { allowed: false, reason: "invalid_app_store_response" };
+  }
+  return validateAppStoreTransactionPayload(config, serverPayload);
+}
+
+function validateAppStoreTransactionPayload(
+  config: Pick<AppStoreServerAPIConfig, "bundleID">,
+  payload: AppStoreTransactionPayload,
+  now: Date = new Date()
+): EntitlementVerificationResult {
+  const bundleID = transactionPayloadValue(payload, "bundleId", "bundleID");
+  if (bundleID !== config.bundleID) {
+    return { allowed: false, reason: "bundle_id_mismatch" };
+  }
+
+  const productID = transactionPayloadValue(payload, "productId", "productID");
+  if (!productID || !proProductIDs.has(productID)) {
+    return { allowed: false, reason: "unsupported_product" };
+  }
+
+  if (payload.revocationDate !== undefined && payload.revocationDate !== null) {
+    return { allowed: false, reason: "transaction_revoked" };
+  }
+
+  const expiresAt = appleDate(payload.expiresDate);
+  if (!expiresAt) {
+    return { allowed: false, reason: "missing_expiration" };
+  }
+  if (expiresAt.getTime() <= now.getTime()) {
+    return {
+      allowed: false,
+      reason: "subscription_expired",
+      expiresAt: expiresAt.toISOString(),
+      productID
+    };
+  }
+
+  const originalTransactionID = transactionPayloadValue(payload, "originalTransactionId", "originalTransactionID") ?? undefined;
+  return {
+    allowed: true,
+    expiresAt: expiresAt.toISOString(),
+    originalTransactionID,
+    productID
+  };
+}
+
+function appStoreServerAPIConfig(env: Env): AppStoreServerAPIConfig | null {
+  const runtime = env as Env & {
+    APP_STORE_CONNECT_ISSUER_ID?: string;
+    APP_STORE_CONNECT_KEY_ID?: string;
+    APP_STORE_CONNECT_PRIVATE_KEY?: string;
+    APP_STORE_BUNDLE_ID?: string;
+    APP_STORE_SERVER_ENVIRONMENT?: string;
+  };
+  const issuerID = runtime.APP_STORE_CONNECT_ISSUER_ID?.trim() ?? "";
+  const keyID = runtime.APP_STORE_CONNECT_KEY_ID?.trim() ?? "";
+  const privateKey = runtime.APP_STORE_CONNECT_PRIVATE_KEY?.trim() ?? "";
+  const bundleID = runtime.APP_STORE_BUNDLE_ID?.trim() || "top.darkrio326.AutoLedger";
+  const environment = runtime.APP_STORE_SERVER_ENVIRONMENT?.trim() === "sandbox" ? "sandbox" : "production";
+  if (!issuerID || !keyID || !privateKey || !bundleID) {
+    return null;
+  }
+  return { issuerID, keyID, privateKey, bundleID, environment };
+}
+
+async function appStoreServerJWT(config: AppStoreServerAPIConfig): Promise<string> {
+  const key = await importPKCS8(config.privateKey.replace(/\\n/g, "\n"), "ES256");
+  return new SignJWT({ bid: config.bundleID })
+    .setProtectedHeader({ alg: "ES256", kid: config.keyID, typ: "JWT" })
+    .setIssuer(config.issuerID)
+    .setAudience("appstoreconnect-v1")
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(key);
+}
+
+function appStoreServerAPIHost(environment: AppStoreServerEnvironment): string {
+  return environment === "sandbox"
+    ? "https://api.storekit-sandbox.itunes.apple.com"
+    : "https://api.storekit.itunes.apple.com";
+}
+
+function decodeJWSPayload<T>(jws: string): T | null {
+  const payload = jws.split(".")[1];
+  if (!payload) {
+    return null;
+  }
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const jsonText = atob(padded);
+    return JSON.parse(jsonText) as T;
+  } catch {
+    return null;
+  }
+}
+
+function transactionPayloadValue<T extends string>(
+  payload: AppStoreTransactionPayload,
+  primary: keyof AppStoreTransactionPayload,
+  fallback: keyof AppStoreTransactionPayload
+): T | null {
+  const value = payload[primary] ?? payload[fallback];
+  return typeof value === "string" && value.trim() ? value.trim() as T : null;
+}
+
+function appleDate(value: number | string | null | undefined): Date | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Date(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return new Date(numeric);
+    }
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) {
+      return new Date(parsed);
+    }
+  }
+  return null;
+}
+
+async function appStoreUserID(originalTransactionID: string): Promise<string> {
+  const normalized = normalizeClientID(originalTransactionID);
+  const stableValue = normalized || originalTransactionID.trim();
+  return `appstore:${await sha256Hex(stableValue)}`;
 }
 
 function allowsUnverifiedTokenClaim(env: Env): boolean {
@@ -1281,5 +1522,9 @@ export const testInternals = {
   retentionDate,
   allowsUnverifiedTokenClaim,
   unverifiedTokenExpirationDate,
+  decodeJWSPayload,
+  validateAppStoreTransactionPayload,
+  appStoreServerAPIHost,
+  appStoreUserID,
   sha256Hex
 };

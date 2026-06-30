@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { testInternals } from "../src/index";
 
+function unsignedJWS(payload: Record<string, unknown>): string {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `header.${encoded}.signature`;
+}
+
 describe("hotel folio inbox worker contract", () => {
   it("accepts only AutoLedger folio plus-token addresses", () => {
     expect(testInternals.parseInboxAddress("folio+abc_123@getautoledger.app")).toEqual({
@@ -44,6 +49,59 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.unverifiedTokenExpirationDate({ UNVERIFIED_TOKEN_TTL_DAYS: "365" } as never, now).toISOString()).toBe(
       "2026-07-30T00:00:00.000Z"
     );
+  });
+
+  it("decodes StoreKit signed transaction payloads for server-side checks", () => {
+    const payload = {
+      transactionId: "2000000000000001",
+      originalTransactionId: "1000000000000001",
+      bundleId: "top.darkrio326.AutoLedger",
+      productId: "top.darkrio326.AutoLedger.pro.yearly",
+      expiresDate: 1790726400000
+    };
+    expect(testInternals.decodeJWSPayload(unsignedJWS(payload))).toMatchObject(payload);
+    expect(testInternals.decodeJWSPayload("not-a-jws")).toBeNull();
+  });
+
+  it("validates App Store transaction payload boundaries", () => {
+    const now = new Date("2026-06-30T00:00:00.000Z");
+    const valid = {
+      transactionId: "2000000000000001",
+      originalTransactionId: "1000000000000001",
+      bundleId: "top.darkrio326.AutoLedger",
+      productId: "top.darkrio326.AutoLedger.pro.monthly",
+      expiresDate: "1790726400000"
+    };
+    expect(testInternals.validateAppStoreTransactionPayload({ bundleID: "top.darkrio326.AutoLedger" }, valid, now)).toMatchObject({
+      allowed: true,
+      originalTransactionID: "1000000000000001",
+      productID: "top.darkrio326.AutoLedger.pro.monthly"
+    });
+    expect(testInternals.validateAppStoreTransactionPayload({ bundleID: "top.darkrio326.AutoLedger" }, {
+      ...valid,
+      bundleId: "com.example.other"
+    }, now)).toMatchObject({ allowed: false, reason: "bundle_id_mismatch" });
+    expect(testInternals.validateAppStoreTransactionPayload({ bundleID: "top.darkrio326.AutoLedger" }, {
+      ...valid,
+      productId: "top.darkrio326.AutoLedger.tip.small"
+    }, now)).toMatchObject({ allowed: false, reason: "unsupported_product" });
+    expect(testInternals.validateAppStoreTransactionPayload({ bundleID: "top.darkrio326.AutoLedger" }, {
+      ...valid,
+      expiresDate: "2026-01-01T00:00:00.000Z"
+    }, now)).toMatchObject({ allowed: false, reason: "subscription_expired" });
+  });
+
+  it("hashes App Store transaction identifiers before using them as Worker user IDs", async () => {
+    const originalTransactionID = "1000000000000001";
+    const userID = await testInternals.appStoreUserID(originalTransactionID);
+
+    expect(userID).toMatch(/^appstore:[a-f0-9]{64}$/);
+    expect(userID).not.toContain(originalTransactionID);
+  });
+
+  it("selects the correct App Store Server API host", () => {
+    expect(testInternals.appStoreServerAPIHost("production")).toBe("https://api.storekit.itunes.apple.com");
+    expect(testInternals.appStoreServerAPIHost("sandbox")).toBe("https://api.storekit-sandbox.itunes.apple.com");
   });
 
   it("accepts Swift UUID path casing for candidate detail endpoints", () => {

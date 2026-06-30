@@ -1215,8 +1215,9 @@
 "hotel_stay.cloud_inbox.pro.description" = "把酒店或 OTA 账单转发到专属地址，收到后会出现在这里。保存到正式账本前仍需要你确认。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "先领取你的专属水单地址";
 "hotel_stay.cloud_inbox.pro.trial_description" = "你可以先领取地址、复制地址并查看收到的酒店水单。把水单导入到账本前会提示开通 Pro。";
+"hotel_stay.cloud_inbox.pro.required_description" = "云端收件箱属于 Pro 自动化，并且需要服务端订阅权益验证。手动 PDF 导入和本地邮箱扫描仍可使用。";
 "hotel_stay.cloud_inbox.pro.server_verification_required" = "需要服务端权益验证";
-"hotel_stay.cloud_inbox.pro.server_verification_description" = "云端收件箱需要 Pro，并且必须完成服务端订阅权益验证。当前版本/环境未接入该后端，暂不能领取新的云端收件箱 token。";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "云端收件箱需要 Pro 和服务端订阅权益验证。如果验证暂时不可用，可以继续使用手动 PDF 导入或本地邮箱扫描。";
 "hotel_stay.cloud_inbox.claim_address" = "领取地址";
 "hotel_stay.cloud_inbox.claiming_address" = "正在领取专属地址";
 "hotel_stay.cloud_inbox.address" = "专属地址";
@@ -1224,6 +1225,11 @@
 "hotel_stay.cloud_inbox.copy_address" = "复制地址";
 "hotel_stay.cloud_inbox.section.address" = "专属水单地址";
 "hotel_stay.cloud_inbox.address_footer" = "把酒店或 OTA 的账单邮件转发到这个地址；也可以在自己的邮箱里设置自动转发。AutoLedger 不会登录你的邮箱。";
+"hotel_stay.cloud_inbox.address_footer_unavailable" = "领取新的云端收件箱地址需要 Pro 和服务端验证；现有手动导入路径不受影响。";
+"hotel_stay.cloud_inbox.section.fallback" = "仍可使用的导入方式";
+"hotel_stay.cloud_inbox.fallback.manual_pdf" = "手动酒店水单 PDF 导入仍可使用。";
+"hotel_stay.cloud_inbox.fallback.local_email" = "本地邮箱水单扫描仍可使用，授权码仍保存在本机 Keychain。";
+"hotel_stay.cloud_inbox.fallback.footer" = "这些路径仍会生成待复核草稿，不需要领取云端 token。";
 "hotel_stay.cloud_inbox.section.candidates" = "待导入水单";
 "hotel_stay.cloud_inbox.refresh" = "刷新水单";
 "hotel_stay.cloud_inbox.refreshing" = "正在刷新";

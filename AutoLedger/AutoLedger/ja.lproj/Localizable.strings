@@ -1215,8 +1215,9 @@
 "hotel_stay.cloud_inbox.pro.description" = "ホテルまたは OTA の明細を専用アドレスへ転送すると、ここに表示されます。正式に帳簿へ保存する前に、必ず確認できます。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "まず専用明細アドレスを取得しましょう";
 "hotel_stay.cloud_inbox.pro.trial_description" = "先にアドレスを取得してコピーし、届いたホテル明細を確認できます。帳簿へ取り込む前に Pro の案内を表示します。";
+"hotel_stay.cloud_inbox.pro.required_description" = "クラウド受信箱は Pro 自動化で、サーバー側のサブスクリプション確認も必要です。手動 PDF 取り込みとローカルメールスキャンは引き続き使えます。";
 "hotel_stay.cloud_inbox.pro.server_verification_required" = "サーバー側の権利確認が必要です";
-"hotel_stay.cloud_inbox.pro.server_verification_description" = "クラウド受信箱には Pro とサーバー側のサブスクリプション確認が必要です。このビルド / 環境ではバックエンド未接続のため、新しいクラウド受信箱 token は取得できません。";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "クラウド受信箱には Pro とサーバー側のサブスクリプション確認が必要です。確認が一時的に利用できない場合は、手動 PDF 取り込みまたはローカルメールスキャンを使えます。";
 "hotel_stay.cloud_inbox.claim_address" = "アドレスを取得";
 "hotel_stay.cloud_inbox.claiming_address" = "専用アドレスを取得中";
 "hotel_stay.cloud_inbox.address" = "専用アドレス";
@@ -1224,6 +1225,11 @@
 "hotel_stay.cloud_inbox.copy_address" = "アドレスをコピー";
 "hotel_stay.cloud_inbox.section.address" = "専用明細アドレス";
 "hotel_stay.cloud_inbox.address_footer" = "ホテルまたは OTA の明細メールをこのアドレスへ転送できます。自分のメール側で自動転送を設定することもできます。AutoLedger がメールアカウントへログインすることはありません。";
+"hotel_stay.cloud_inbox.address_footer_unavailable" = "新しいクラウド受信箱アドレスの取得には Pro とサーバー側の確認が必要です。既存の手動取り込み経路には影響しません。";
+"hotel_stay.cloud_inbox.section.fallback" = "利用できる取り込み方法";
+"hotel_stay.cloud_inbox.fallback.manual_pdf" = "手動のホテル明細 PDF 取り込みは引き続き利用できます。";
+"hotel_stay.cloud_inbox.fallback.local_email" = "ローカルメール明細スキャンは引き続き利用でき、認証コードはローカル Keychain に保存されます。";
+"hotel_stay.cloud_inbox.fallback.footer" = "これらの経路では確認可能な下書きを作成でき、クラウド token の取得は不要です。";
 "hotel_stay.cloud_inbox.section.candidates" = "取り込み待ち明細";
 "hotel_stay.cloud_inbox.refresh" = "明細を更新";
 "hotel_stay.cloud_inbox.refreshing" = "更新中";

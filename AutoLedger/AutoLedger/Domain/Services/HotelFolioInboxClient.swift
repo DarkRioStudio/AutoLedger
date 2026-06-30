@@ -164,6 +164,7 @@ struct HotelFolioInboxClient: Sendable {
         var clientID: String
         var platform: String
         var environment: String
+        var signedTransactionInfo: String?
     }
 
     private let session: URLSession
@@ -178,8 +179,11 @@ struct HotelFolioInboxClient: Sendable {
         self.encoder.dateEncodingStrategy = .iso8601
     }
 
-    func claimInboxToken(settings: HotelFolioInboxSettings) async throws -> HotelFolioInboxTokenClaim {
-        var request = try makeBaseRequest(
+    func claimInboxToken(
+        settings: HotelFolioInboxSettings,
+        signedTransactionInfo: String?
+    ) async throws -> HotelFolioInboxTokenClaim {
+        var request = try Self.makeBaseRequest(
             path: "/v1/cloud-hotel-folio-token",
             endpoint: settings.endpoint
         )
@@ -188,7 +192,8 @@ struct HotelFolioInboxClient: Sendable {
         request.httpBody = try encoder.encode(TokenClaimPayload(
             clientID: HotelFolioInboxSettings.currentClientID,
             platform: Self.currentPlatform,
-            environment: Self.currentPushEnvironment
+            environment: Self.currentPushEnvironment,
+            signedTransactionInfo: signedTransactionInfo
         ))
 
         let data = try await data(for: request)
@@ -271,12 +276,12 @@ struct HotelFolioInboxClient: Sendable {
         guard !settings.normalizedToken.isEmpty else {
             throw HotelFolioInboxClientError.missingToken
         }
-        var request = try makeBaseRequest(path: path, endpoint: settings.endpoint)
+        var request = try Self.makeBaseRequest(path: path, endpoint: settings.endpoint)
         request.setValue("Bearer \(settings.normalizedToken)", forHTTPHeaderField: "Authorization")
         return request
     }
 
-    private func makeBaseRequest(path: String, endpoint: String) throws -> URLRequest {
+    static func makeBaseRequest(path: String, endpoint: String) throws -> URLRequest {
         guard let baseURL = URL(string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             throw HotelFolioInboxClientError.invalidEndpoint
         }
@@ -322,7 +327,7 @@ struct HotelFolioInboxClient: Sendable {
         throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO8601 date: \(value)")
     }
 
-    nonisolated private static var currentPushEnvironment: String {
+    nonisolated static var currentPushEnvironment: String {
         #if DEBUG
         "development"
         #else
@@ -330,7 +335,7 @@ struct HotelFolioInboxClient: Sendable {
         #endif
     }
 
-    nonisolated private static var currentPlatform: String {
+    nonisolated static var currentPlatform: String {
         #if targetEnvironment(macCatalyst)
         "mac_catalyst"
         #elseif os(iOS)
