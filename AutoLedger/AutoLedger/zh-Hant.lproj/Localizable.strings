@@ -400,6 +400,7 @@
 "common.delete" = "刪除";
 "common.done" = "完成";
 "common.edit" = "編輯";
+"common.collapse" = "收起";
 "common.more_actions" = "更多操作";
 "common.none" = "暫無";
 "common.import_status" = "匯入結果";
@@ -462,20 +463,28 @@
 "inbox.quick_setup.step2.detail" = "前往「設定 -> 操作按鈕 -> 捷徑」，選擇剛才新增的「一鍵記帳」。";
 "inbox.quick_setup.open_settings" = "開啟系統設定";
 "inbox.quick_setup.step3.title" = "長按操作按鈕即可記帳";
-"inbox.quick_setup.step3.detail" = "截圖支付頁面後長按操作按鈕，自動識別並記入帳本。";
+"inbox.quick_setup.step3.detail" = "在支付結果頁面長按操作按鈕，捷徑會自動截圖、識別並記入帳本。";
 "inbox.quick_setup.device_hint" = "僅支援 iPhone 15 Pro 及以上帶操作按鈕的機型。
 ";
 "inbox.quick_setup.clipboard_hint" = "你也可以複製支付截圖後回到 App，自動讀取剪貼板記帳（需在設定中開啟）。";
 "inbox.quick_setup.enabled" = "一鍵記帳已開啟";
 "inbox.quick_setup.enabled.detail" = "已透過捷徑記錄 %d 筆帳單";
+"inbox.capture.flow.screenshot" = "自動截圖";
+"inbox.capture.flow.action" = "長按";
+"inbox.capture.flow.ledger" = "記帳";
 "inbox.upcoming_subscriptions.title" = "即將扣費";
 "inbox.upcoming_subscriptions.range" = "未來 7 天";
 "inbox.import.title" = "支付帳單匯入";
 "inbox.import.subtitle" = "選擇支付截圖或拍照，自動識別金額和商家並記入帳本。";
 "inbox.import.processing" = "識別中...";
 "inbox.import.photo" = "從相簿選取";
+"inbox.import.photo_short" = "相簿截圖";
+"inbox.import.photo_short_detail" = "支付截圖匯入";
 "inbox.import.camera" = "拍照識別";
+"inbox.import.scan_receipt" = "票據掃描";
+"inbox.import.scan_receipt_detail" = "即時拍照識別";
 "inbox.import.clipboard" = "從剪貼板貼上";
+"inbox.import.camera_unavailable" = "目前裝置無法使用相機。";
 "inbox.import.hint" = "支援微信/支付寶等支付截圖，可從相簿選取、拍照或直接貼上。
 ";
 "inbox.recent_ocr" = "最近 OCR 文字";

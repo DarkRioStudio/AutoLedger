@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-302 v1.6.4 邮箱水单免费月度额度）
+更新日期：2026-06-30（ITER-303 v1.6.4 记账首页 Open Design 首屏 polish）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-303 v1.6.4 记账首页 Open Design 首屏 polish
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / SDK Polish
+- 类型：UI / 文档 / 测试
+- 目标：把记账 tab 首屏从偏干的入口堆叠，调整为更有产品感的一键记账捕捉中心，同时保留相册截图和票据扫描两个高频入口。
+- 改动范围：更新 `InboxView` 首页结构、`AppTheme` 标题滚动阈值支持、四语本地化、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志；通过 `codex mcp add` 安装 `open-design` MCP 配置。
+- 未改动范围：未修改截图 OCR、票据扫描、剪贴板导入、语音记账、快捷指令、交易保存、SQLite / CloudKit schema、StoreKit 商品、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：首页改为“一键记账”主卡，展示长按 -> 自动截图 -> 记账流程、本月支出和 Top 商户轻统计；相册截图和票据扫描保持同一行按钮并完整露出；语音记账、手动记账、相册、相机和剪贴板入口统一进入右上角更多菜单；一键记账步骤默认折叠，点击主卡 chevron 后展开为纵向整行操作；记账页内容增加最大宽度约束，避免 iPad / 宽窗口横向摊开；`open-design` Codex MCP 已写入全局配置，当前会话不热加载新工具。
+- 未完成内容：Open Design daemon 源仓库当前是 partial checkout，`od` wrapper 仍依赖尚未构建的 daemon `dist/cli.js`；后续如需直接调用 Open Design MCP 工具，需要先启动 / 构建 Open Design daemon 或使用桌面版服务。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；执行 iOS generic Debug build 通过；执行 iOS 27 iPhone 17 Simulator Debug build / install / launch 通过；最终截图 `/tmp/autoledger-open-design-iphone-final.png` 检查主卡、两个导入按钮和底部 tab 无遮挡。
+- 风险与注意事项：截图中的本月支出 / Top 商户会随本机账本数据变化；新安装无快捷指令记录时主卡默认折叠，用户需要点击 chevron 才展开快捷指令设置步骤。
+- 回滚方式：回退 `InboxView` 的主卡 / 快捷入口 / toolbar menu 调整、`AppTheme` 标题阈值参数、四语新增文案、布局门禁脚本和文档记录即可；业务导入链路不受影响。
+- 结论：记账首页首屏已从功能堆叠调整为更完整的捕捉中心，满足“首屏聚焦一键记账、相册截图和票据扫描同排、语音入口隐藏到更多菜单”的当前目标。
+- 下一步建议：用真实 TestFlight 数据再看一张有快捷指令记录和真实月度统计的截图，确认主卡轻统计在非空数据下仍不挤压。
 
 ### ITER-302 v1.6.4 邮箱水单免费月度额度
 - 日期：2026-06-30

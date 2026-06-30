@@ -241,6 +241,7 @@ private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
 
 private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
     let title: LocalizedStringKey
+    let toolbarRevealOffset: CGFloat
     @State private var showsToolbarTitle = false
 
     func body(content: Content) -> some View {
@@ -248,7 +249,7 @@ private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
             .coordinateSpace(name: AutoLedgerTitleScrollCoordinateSpace.name)
             .onPreferenceChange(AutoLedgerPageTitleOffsetPreferenceKey.self) { minY in
                 guard minY.isFinite else { return }
-                showsToolbarTitle = minY < -12
+                showsToolbarTitle = minY < toolbarRevealOffset
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -303,8 +304,8 @@ extension View {
         modifier(AutoLedgerSolidNavigationBarChromeModifier())
     }
 
-    func autoLedgerContentTitleNavigation(_ title: LocalizedStringKey) -> some View {
-        modifier(AutoLedgerContentTitleNavigationModifier(title: title))
+    func autoLedgerContentTitleNavigation(_ title: LocalizedStringKey, toolbarRevealOffset: CGFloat = -12) -> some View {
+        modifier(AutoLedgerContentTitleNavigationModifier(title: title, toolbarRevealOffset: toolbarRevealOffset))
     }
 
     @ViewBuilder

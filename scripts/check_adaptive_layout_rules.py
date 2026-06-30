@@ -81,7 +81,9 @@ REQUIRED_SNIPPETS = {
         "GridItem(.adaptive",
         "LazyVGrid",
         "AutoLedgerPageTitle(\"tab.inbox\")",
-        ".autoLedgerContentTitleNavigation(\"tab.inbox\")",
+        ".autoLedgerContentTitleNavigation(\"tab.inbox\", toolbarRevealOffset: -56)",
+        "quickEntryActionMenu",
+        "quickImportButtonRow",
         "autoLedgerSolidNavigationBarChrome",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
@@ -109,6 +111,7 @@ REQUIRED_SNIPPETS = {
 FORBIDDEN_FILE_SNIPPETS = {
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "private var pageTitle",
+        "VoiceLedgerQuickEntryView()",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "private var pageTitle",
