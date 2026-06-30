@@ -47,6 +47,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
 
 struct IPadWorkspaceView: View {
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @State private var selection: IPadWorkspaceSection
     @State private var sidebarSelection: IPadWorkspaceSection?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -91,6 +92,7 @@ struct IPadWorkspaceView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .tint(AppTheme.accent)
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
         .onAppear {
             consumeQuickLedgerPendingNavigationIfNeeded()
         }
@@ -2632,6 +2634,7 @@ private struct IPadBatchImportWorkspaceView: View {
 struct HotelStayWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @State private var showsPDFImporter = false
     @State private var showsEmailImporter = false
     @State private var showsCloudInboxImporter = false
@@ -2744,6 +2747,7 @@ struct HotelStayWorkspaceView: View {
         .onChange(of: store.hotelStayDrafts.map(\.id)) { _, _ in
             consumePendingDraftReviewIfNeeded()
         }
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 
     @MainActor

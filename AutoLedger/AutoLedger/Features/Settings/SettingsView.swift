@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @State private var versionTapCount = 0
     @State private var showDebugUnlocked = false
     @State private var showFeedbackComposer = false
@@ -262,6 +263,7 @@ struct SettingsView: View {
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
             .autoLedgerContentTitleNavigation("settings.title")
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
                 case .appearance:

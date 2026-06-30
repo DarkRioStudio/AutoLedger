@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-317 标题与主题下拉回归修复）
+更新日期：2026-06-30（ITER-318 主题实时刷新修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-318 主题实时刷新修复
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Theme Refresh / Tab Chrome
+- 类型：Bugfix / 测试
+- 目标：修复外观主题切换后多数 tab 仍保持旧配色，必须关闭并重新打开 App 才完整生效的问题。
+- 改动范围：更新 `AutoLedgerApp.swift`、`AppTheme.swift`、`HomeView.swift`、`InboxView.swift`、`LedgerView.swift`、`ReportView.swift`、`SettingsView.swift`、`iPadWorkspaceView.swift`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 未改动范围：未修改主题 preset 配方、主题选择 UI、StoreKit、Pro entitlement、识别 / 记账 / 同步业务逻辑、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：根视图把主题 preset、外观模式和 Pro 自定义色组合为 `themeRefreshID` 后注入 `autoLedgerThemeRefreshID` environment；`HomeView`、记账、账本、月报、设置、酒店消费工作区和 iPad 工作区读取该环境值并触发主题动效更新；通用背景、页面标题、卡片、Hero、选中行和导航栏 chrome modifier 也读取同一个刷新值，避免页面继续停留在切换前的静态 `AppTheme.*` 颜色。自适应布局门禁新增根注入、主题环境 key 和各主 tab 刷新依赖检查，避免回归为只在外观页或首页局部刷新。
+- 未完成内容：本轮未增加新的可见主题，也未重新导出全平台截图矩阵；Xcode-beta 当前缺少 `SimulatorKit.framework` / `Simulator.app`，XcodeBuildMCP runtime UI snapshot 无法使用，手动点击级验证改用 `simctl` 截图和 App 运行态偏好变化验证。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；通过 XcodeBuildMCP 确认 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，随后执行 `build_run_sim` 通过并启动 `top.darkrio326.AutoLedger`。iPhone 17 Simulator 运行态截图验证：App 未终止时将 `appThemePreset` 从 fresh 改为 classic 后，首页背景、主卡渐变、票据扫描图标实时变色，截图保存为 `/tmp/autoledger-theme-before.png` 和 `/tmp/autoledger-theme-after-defaults.png`；通过 pending deep link 进入账本 tab 后，账本页保持 classic 背景，截图保存为 `/tmp/autoledger-theme-ledger-clean.png`。
+- 风险与注意事项：本轮通过 environment 依赖触发 SwiftUI 重算，不使用 `.id(...)` 重建 tab，因此不会主动清空导航栈；如果未来新增独立页面直接大量使用 `AppTheme.*` 且不套通用 chrome，应继续读取 `autoLedgerThemeRefreshID` 或复用现有 modifier。
+- 回滚方式：回退上述 Swift 文件、自适应布局门禁、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已修复主题切换必须重启才完整生效的问题，并在 iPhone 17 Simulator 运行态确认首页实时换色和账本 tab 新主题背景。
+- 下一步建议：继续处理月报分类 raw key `hotel` 显示，以及月报卡片中 `快速记一笔` 按钮辨识度不足的问题。
 
 ### ITER-317 标题与主题下拉回归修复
 - 日期：2026-06-30

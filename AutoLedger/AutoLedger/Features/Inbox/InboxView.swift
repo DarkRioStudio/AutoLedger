@@ -7,6 +7,7 @@ struct InboxView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject private var store: LedgerStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImportingPhoto = false
     @State private var isImportingClipboard = false
@@ -68,6 +69,7 @@ struct InboxView: View {
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
             .autoLedgerContentTitleNavigation("tab.inbox")
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }

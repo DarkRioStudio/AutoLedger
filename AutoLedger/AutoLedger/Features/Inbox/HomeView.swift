@@ -8,11 +8,13 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
 
     var body: some View {
         adaptiveTabs
             .tint(AppTheme.accent)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .onAppear {
                 consumeQuickLedgerPendingNavigationIfNeeded()
             }

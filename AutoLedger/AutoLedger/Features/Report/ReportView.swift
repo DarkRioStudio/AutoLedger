@@ -7,6 +7,7 @@ struct ReportView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @AppStorage("monthlyAnomalyThresholdPercent") private var anomalyThresholdPercent = 150.0
     @ScaledMetric(relativeTo: .largeTitle) private var totalAmountFontSize: CGFloat = 36
     @ScaledMetric(relativeTo: .caption) private var rankBadgeSize: CGFloat = 26
@@ -80,6 +81,7 @@ struct ReportView: View {
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
             .autoLedgerContentTitleNavigation("tab.report")
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {

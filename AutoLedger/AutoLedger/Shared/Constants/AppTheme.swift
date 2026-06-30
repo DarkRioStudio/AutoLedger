@@ -616,7 +616,20 @@ enum AppTheme {
     }
 }
 
+private struct AutoLedgerThemeRefreshIDKey: EnvironmentKey {
+    static let defaultValue = AppThemePreset.current.rawValue
+}
+
+extension EnvironmentValues {
+    var autoLedgerThemeRefreshID: String {
+        get { self[AutoLedgerThemeRefreshIDKey.self] }
+        set { self[AutoLedgerThemeRefreshIDKey.self] = newValue }
+    }
+}
+
 private struct AutoLedgerSurfaceBackground: View {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+
     var body: some View {
         ZStack {
             AppTheme.screenGradient
@@ -638,7 +651,7 @@ private struct AutoLedgerSurfaceBackground: View {
                 .opacity(0.18)
         }
         .ignoresSafeArea()
-        .autoLedgerMotion(AppMotion.theme, value: AppThemePreset.current.rawValue)
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
@@ -655,6 +668,7 @@ private struct AutoLedgerPageTitleOffsetPreferenceKey: PreferenceKey {
 }
 
 struct AutoLedgerPageTitle: View {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     let title: LocalizedStringKey
 
     init(_ title: LocalizedStringKey) {
@@ -669,6 +683,7 @@ struct AutoLedgerPageTitle: View {
             .minimumScaleFactor(0.76)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .background {
                 GeometryReader { proxy in
                     Color.clear.preference(
@@ -692,11 +707,14 @@ private struct AutoLedgerReadableContentModifier: ViewModifier {
 }
 
 private struct AutoLedgerScreenChromeModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+
     func body(content: Content) -> some View {
         content
             .background {
                 AutoLedgerSurfaceBackground()
             }
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
@@ -709,6 +727,7 @@ private struct AutoLedgerListChromeModifier: ViewModifier {
 }
 
 private struct AutoLedgerSelectableRowBackground: View {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     let isSelected: Bool
 
     var body: some View {
@@ -729,11 +748,13 @@ private struct AutoLedgerSelectableRowBackground: View {
             }
         }
         .padding(.vertical, 2)
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
         .autoLedgerMotion(AppMotion.quick, value: isSelected)
     }
 }
 
 private struct AutoLedgerCardSurfaceModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
@@ -752,10 +773,12 @@ private struct AutoLedgerCardSurfaceModifier: ViewModifier {
                     .blendMode(.plusLighter)
             }
             .shadow(color: AppTheme.softShadow, radius: 18, x: 0, y: 10)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
 private struct AutoLedgerHeroSurfaceModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
@@ -769,6 +792,7 @@ private struct AutoLedgerHeroSurfaceModifier: ViewModifier {
                     .stroke(Color.white.opacity(0.24), lineWidth: 1)
             }
             .shadow(color: AppTheme.softShadow.opacity(1.35), radius: 22, x: 0, y: 12)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
@@ -786,22 +810,29 @@ private struct AutoLedgerFormChromeModifier: ViewModifier {
 }
 
 private struct AutoLedgerNavigationBarChromeModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+
     func body(content: Content) -> some View {
         content
             .toolbarBackground(.regularMaterial, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
 private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+
     func body(content: Content) -> some View {
         content
             .toolbarBackground(.regularMaterial, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
 
 private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     let title: LocalizedStringKey
     let toolbarRevealOffset: CGFloat
     @State private var showsToolbarTitle = false
@@ -809,6 +840,7 @@ private struct AutoLedgerContentTitleNavigationModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .coordinateSpace(name: AutoLedgerTitleScrollCoordinateSpace.name)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .onPreferenceChange(AutoLedgerPageTitleOffsetPreferenceKey.self) { minY in
                 guard minY.isFinite else { return }
                 showsToolbarTitle = minY < toolbarRevealOffset

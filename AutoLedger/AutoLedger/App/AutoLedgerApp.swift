@@ -106,6 +106,7 @@ private struct AutoLedgerRootView: View {
         sizedRootContent
             .environmentObject(store)
             .environmentObject(navigationState)
+            .environment(\.autoLedgerThemeRefreshID, themeRefreshID)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },

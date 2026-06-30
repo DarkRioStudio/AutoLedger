@@ -34,6 +34,7 @@ private enum LedgerFilter: String, CaseIterable {
 struct LedgerView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     private let onOpenLedgerSettings: (() -> Void)?
@@ -103,6 +104,7 @@ struct LedgerView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .autoLedgerNavigationBarChrome()
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
         .sheet(isPresented: $navigationState.isPresentingNewTransaction) {
             TransactionEditorView(
                 transaction: Transaction(
