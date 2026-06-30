@@ -14,16 +14,6 @@ struct AppearanceSettingsView: View {
         return AppThemePreset.selectableCases.contains(preset) ? preset : .fresh
     }
 
-    private var themeSelection: Binding<String> {
-        Binding(
-            get: { selectedPreset.rawValue },
-            set: { rawValue in
-                guard let preset = AppThemePreset(rawValue: rawValue) else { return }
-                selectTheme(preset)
-            }
-        )
-    }
-
     private var canUseCustomTheme: Bool {
         proEntitlement.isProActive
     }
@@ -158,38 +148,71 @@ struct AppearanceSettingsView: View {
     }
 
     private var themeMenuCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("appearance.theme_picker")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.ink)
+        Menu {
+            ForEach(AppThemePreset.selectableCases) { preset in
+                Button {
+                    selectTheme(preset)
+                } label: {
+                    if preset == selectedPreset {
+                        Label(preset.localizedTitleKey, systemImage: "checkmark")
+                    } else {
+                        Text(preset.localizedTitleKey)
+                    }
+                }
+            }
+        } label: {
+            themeDropdownLabel
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("appearance.theme_picker"))
+        .accessibilityValue(Text(selectedPreset.localizedTitleKey))
+        .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
+    }
 
+    private var themeDropdownLabel: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("appearance.theme_picker")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+
+                HStack(spacing: 8) {
                     Text(selectedPreset.localizedTitleKey)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.mutedInk)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppTheme.accent)
+
+                    if selectedPreset.isCustom {
+                        Text("appearance.custom.pro_badge")
+                            .font(.caption.weight(.black))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule(style: .continuous).fill(AppTheme.accent))
+                    }
                 }
 
-                Spacer(minLength: 12)
-
-                AppearanceThemeSwatches(colors: selectedPreset.previewColors, swatchSize: 24)
+                Text(selectedPreset.localizedSubtitleKey)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Picker("appearance.theme_picker", selection: themeSelection) {
-                ForEach(AppThemePreset.selectableCases) { preset in
-                    Text(preset.localizedTitleKey)
-                        .tag(preset.rawValue)
-                }
-            }
-            .pickerStyle(.menu)
-            .tint(AppTheme.accent)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(Text("appearance.theme_picker"))
+
+            VStack(alignment: .trailing, spacing: 14) {
+                AppearanceThemeSwatches(colors: selectedPreset.previewColors, swatchSize: 22)
+
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.callout.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 34, height: 34)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .autoLedgerCardSurface(cornerRadius: 22)
-        .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
     }
 
     private var appearanceModeCard: some View {

@@ -20,6 +20,8 @@ struct SettingsView: View {
         NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    AutoLedgerPageTitle("settings.title")
+
                     NavigationLink {
                         AutoLedgerProView()
                     } label: {
@@ -259,7 +261,7 @@ struct SettingsView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .navigationTitle("settings.title")
+            .autoLedgerContentTitleNavigation("settings.title")
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
                 case .appearance:

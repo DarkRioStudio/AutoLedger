@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-316 v1.6.4 UI 细节与发布证据口径收口）
+更新日期：2026-06-30（ITER-317 标题与主题下拉回归修复）
 
 ## 记录规则
 
@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-317 标题与主题下拉回归修复
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Tab Chrome / Appearance
+- 类型：Bugfix / 测试
+- 目标：修复 TestFlight 截图中记账 tab 和设置 tab 顶部标题再次消失的问题，并调整外观主题下拉，让主题选择成为整张卡片可点击的大号下拉。
+- 改动范围：更新 `InboxView.swift`、`SettingsView.swift`、`AppearanceSettingsView.swift`、`AppTheme.swift`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 未改动范围：未修改账本 / 酒店消费 / 月报业务逻辑，未修改 StoreKit、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：确认标题回归根因是 ITER-316 为了统一样式移除了 `AutoLedgerPageTitle`，只保留系统 `.navigationTitle`，但当前自定义背景和 safe area 顶部结构下，大标题没有稳定渲染。`InboxView` 与 `SettingsView` 已恢复内容区 `AutoLedgerPageTitle`，并继续使用 `autoLedgerContentTitleNavigation` 在滚动后显示导航栏 inline 标题。外观主题从 4 个可见项调整为 6 个可见项：`fresh`、`classic`、`graphite`、`ledgerInk`、`harbor`、`custom`，隐藏 `nightFolio` / `sunrise` 以控制数量；主题选择从小号 `Picker` 改为整张卡片可点击的 `Menu`，卡片内展示当前主题名称、说明、色块和下拉指示。自适应布局门禁改为要求这两个页面必须同时包含内容区标题和滚动标题 modifier，并要求主题选择保留 6 个可见项和整卡下拉。
+- 未完成内容：本轮未重新导出 TestFlight 真机截图；视觉确认仍建议在下一版 TestFlight 中看记账 / 设置两个 tab 的顶部标题，以及外观页主题整卡下拉是否符合手感。
+- 测试情况：修改门禁后执行 `python3 scripts/check_adaptive_layout_rules.py`，先后预期失败并命中 `InboxView.swift` / `SettingsView.swift` 缺少 `AutoLedgerPageTitle` / `autoLedgerContentTitleNavigation`，以及主题数量和小号 `Picker` 不符合要求；恢复页面标题并改造主题整卡下拉后再次执行通过。
+- 风险与注意事项：内容区标题恢复后，顶部会重新占据一行大标题高度，这是当前 `ReportView` / `AppearanceSettingsView` 已采用的稳定模式；滚动后的导航栏标题仍由同一 modifier 控制，不依赖系统大标题渲染。旧的 `nightFolio` / `sunrise` 偏好仍保留 enum 兼容，但因不在可见选择集合中会回落到默认主题。
+- 回滚方式：回退 `InboxView.swift`、`SettingsView.swift`、`AppearanceSettingsView.swift`、`AppTheme.swift`、自适应布局门禁、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已修复记账与设置 tab 标题消失回归，并将主题选择改为 6 选项整卡下拉，同时用静态门禁固定该结构。
+- 下一步建议：下一次 TestFlight 安装后，优先截图检查记账 / 设置 / 月报三个 ScrollView tab 的初始顶部标题和滚动后 inline 标题，再检查外观页整卡下拉和主题切换预览。
+
 ### ITER-316 v1.6.4 UI 细节与发布证据口径收口
 - 日期：2026-06-30
 - 所属版本：v1.6.4
@@ -52,7 +68,7 @@
 - 目标：承接用户反馈继续落实 `v1.6.4`，修复账单编辑、设置 Pro 卡、多账本、订阅管理、标题样式和当前版本说明等细节，并把 APNs / 云收件箱 / 订阅真实 smoke 的发布证据口径更新到最新状态。
 - 改动范围：更新 `TransactionEditorView.swift`、`SettingsView.swift`、`LedgerProfileManagementView.swift`、`SubscriptionListView.swift`、`InboxView.swift`、四语 `Localizable.strings`、`scripts/check_adaptive_layout_rules.py`、`versions/v1.6.4-plan.md`、`versions/v1.6.4-regression-baseline.md`、README 四语路线图、CHANGELOG 和本日志；前置批次已提交为 `c3c2114d 收口 v1.6.4 回归基线与主题切换`。
 - 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅核心流程、Worker runtime 代码、SQLite / CloudKit schema、酒店水单解析管线、云端 API 合同、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
-- 完成内容：账单编辑页右上角保存 / 更多操作从彩色圆形 icon-only 按钮改回常规 `Label` 样式，与酒店消费详情编辑按钮对齐；“酒店消费详情”四语标题改为“编辑消费详情”；设置页 AutoLedger Pro 高亮卡把月付 / 年付价格移动到独立左对齐栈，避免“首发年付”被 CTA 挤压；多账本管理为默认本地账本补显式重命名按钮；订阅管理右上角 `+` 改为菜单，支持手动新增订阅和上传订阅邮件截图，隐藏暂未稳定的“扫描历史账单自动识别订阅”入口，并让空状态按钮图标和底色跟随主题色；记账 tab 和设置 tab 改用系统导航标题，和账本 tab 样式对齐。设置页当前版本 / 后续计划文案扩展为当前 `v1.6.4` 实际状态。Cloudflare production 已通过 `wrangler secret list --env production` 验证存在 `APP_STORE_CONNECT_ISSUER_ID`、`APP_STORE_CONNECT_KEY_ID`、`APP_STORE_CONNECT_PRIVATE_KEY`、`APNS_KEY_ID`、`APNS_TEAM_ID`、`APNS_PRIVATE_KEY` 六个 secret 名称，未读取 secret 值；按用户 2026-06-30 补充，2026-06-29 人工 smoke 已测通订阅开通、APNs 推送、Worker 云收件箱、云候选转酒店消费并最终入账，价格和宽限期已配置，剩余项收缩为订阅元数据、审核材料、生命周期截图和证据归档。
+- 完成内容：账单编辑页右上角保存 / 更多操作从彩色圆形 icon-only 按钮改回常规 `Label` 样式，与酒店消费详情编辑按钮对齐；“酒店消费详情”四语标题改为“编辑消费详情”；设置页 AutoLedger Pro 高亮卡把月付 / 年付价格移动到独立左对齐栈，避免“首发年付”被 CTA 挤压；多账本管理为默认本地账本补显式重命名按钮；订阅管理右上角 `+` 改为菜单，支持手动新增订阅和上传订阅邮件截图，隐藏暂未稳定的“扫描历史账单自动识别订阅”入口，并让空状态按钮图标和底色跟随主题色；记账 tab 和设置 tab 当时改为系统导航标题，后续在 ITER-317 中修正为稳定内容区标题。设置页当前版本 / 后续计划文案扩展为当前 `v1.6.4` 实际状态。Cloudflare production 已通过 `wrangler secret list --env production` 验证存在 `APP_STORE_CONNECT_ISSUER_ID`、`APP_STORE_CONNECT_KEY_ID`、`APP_STORE_CONNECT_PRIVATE_KEY`、`APNS_KEY_ID`、`APNS_TEAM_ID`、`APNS_PRIVATE_KEY` 六个 secret 名称，未读取 secret 值；按用户 2026-06-30 补充，2026-06-29 人工 smoke 已测通订阅开通、APNs 推送、Worker 云收件箱、云候选转酒店消费并最终入账，价格和宽限期已配置，剩余项收缩为订阅元数据、审核材料、生命周期截图和证据归档。
 - 未完成内容：本轮未补 App Store Connect 订阅元数据；未归档 2026-06-29 人工 smoke 的设备截图 / 日志片段；未补完整恢复、取消、过期、宽限期、账单重试和管理订阅截图；未做真机多主题 / 多字号截图矩阵。
 - 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行四语 `plutil -lint` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 确认 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T09-02-54-101Z_pid47757_e5d0fe23.log`，本次 build diagnostics 未返回 warning / error。
 - 风险与注意事项：2026-06-29 端到端 smoke 是用户侧人工证据，不来自本机自动门禁；发布归档前仍建议保存设备截图、Cloudflare / APNs 日志片段和订阅状态截图。隐藏历史扫描订阅入口只是 UI 暂停，底层 `detectAndUpsertSubscriptions()` 保留给后续修复，不影响已有订阅列表和手动新增订阅。
