@@ -1,0 +1,100 @@
+# Pro Access Audit
+
+Date: 2026-06-30
+
+This audit records the current Pro entitlement boundary after the source-available and Worker token-claim hardening pass. The goal is to keep local Free / Pro UX intact while making clear that server-cost features require server-side verification.
+
+## App Side
+
+### `AutoLedger/AutoLedger/Domain/Services/ProEntitlementManager.swift`
+
+- Owns StoreKit product IDs `top.darkrio326.AutoLedger.pro.monthly` and `top.darkrio326.AutoLedger.pro.yearly`.
+- `isProActive` is still derived from verified StoreKit current entitlements or the DEBUG-only `autoLedgerProDevelopmentOverride`.
+- `canUse(_:)` remains a synchronous UI compatibility gate. It is not a security boundary and now refuses non-local boundaries such as `cloudFolioInbox`.
+- `resolveAccess(_:)` is the richer async entry point. It distinguishes free features, local Pro purchase requirements, planned features, server verification requirements, and server verification failures.
+- `cloudFolioInbox` now routes through server verification. The current verifier is intentionally unavailable, so the App does not pretend local StoreKit state is enough to claim a cloud inbox token.
+
+Risk: public source can be forked and local client checks can be modified. This only gates UI and local user experience; it must not authorize server-cost functions.
+
+### `AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Models/ProAccessPolicy.swift`
+
+- Defines `AutoLedgerCapability`, `ProAccessTier`, and `AutoLedgerProAccessPolicy`.
+- Free/core capabilities remain free: `manualTransactionEntry`, `singleReceiptScan`, `manualHotelFolioImport`, `hotelStayArchiveAccess`, basic subscription/report/widget/export/backup, history edit/delete, and support donation.
+- Current P0 Pro capabilities remain `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
+- New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
+- `cloudFolioInbox` is `serverVerified`; local email scan, batch import, and advanced deduplication are still `localUIGate`.
+
+Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
+
+### `AutoLedger/AutoLedger/Features/Settings/SupportAutoLedgerView.swift`
+
+- Shows current Pro subscription status, products, restore purchases, and manage subscription entry points.
+- Reads `isProActive` for subscription presentation and button disabling.
+- This is correct as purchase UI state, not as server authorization.
+
+### `isProActive` Callers
+
+- `ProEntitlementManager.restorePurchases()` uses it to select success/empty restore messaging.
+- `SupportAutoLedgerView` uses it for status display and purchase button disabling.
+- `LocalEmailFolioImportAllowanceState` receives local Pro status for local monthly import allowance logic.
+
+Risk: fine for UI, purchase messaging, and local allowance. Not sufficient for Worker token claim, APNs, future unified model parsing, hosted quotas, or any server-cost path.
+
+### `canUse(_:)` Callers
+
+- `HotelFolioInboxImportView` no longer relies on `canUse(.cloudFolioInbox)` for cloud token claim. It uses `resolveAccess(_:)`.
+- `HotelFolioEmailImportView` uses `canUse(.localEmailFolioScan)` for the local email scan/allowance experience.
+- `IPadCleaningPreviewWorkspaceView` uses `canUse(.advancedDeduplication)` for local data cleaning and deduplication UI.
+
+Risk: local UI gates can be bypassed in forks. The impact for local features is limited to local experience; server-cost features must not depend on this.
+
+### `requiresPro(_:)` Callers
+
+- No current App call sites were found outside `ProEntitlementManager`.
+
+### Direct `AutoLedgerCapability` Usage
+
+- Policy definitions and regression references use all capabilities.
+- Version docs and iteration logs reference `cloudFolioInbox` and P0 Pro gates.
+- UI call sites currently use `localEmailFolioScan`, `advancedDeduplication`, and `cloudFolioInbox`.
+
+## Worker Side
+
+### `tools/worker/hotel-folio-inbox/README.md`
+
+- Documents that App-side Pro state is UI only.
+- Documents `ALLOW_UNVERIFIED_TOKEN_CLAIM` as dev/staging-only.
+- Documents that production token claim needs server-side entitlement / receipt verification.
+- Documents `pro_inbox_tokens.pro_expires_at` as the service-side expiry gate.
+- Documents APNs secrets as `wrangler secret` values that must not be committed.
+
+### `tools/worker/hotel-folio-inbox/src/index.ts`
+
+- `POST /v1/cloud-hotel-folio-token` is no longer open by default.
+- If `ALLOW_UNVERIFIED_TOKEN_CLAIM` is missing or false, token claim returns `403` with `error: "server_entitlement_required"` and does not create a token.
+- Dev/staging bootstrap claims insert `pro_expires_at` with a short TTL capped at 30 days.
+- `loadActiveToken` continues to require `status = active` and rejects expired `pro_expires_at`, which is the right direction for server-side gating.
+- A future signed entitlement header shape is reserved through `Authorization: Bearer <server-issued-entitlement-token>` or `X-AutoLedger-Entitlement`.
+
+Risk: full App Store server receipt / transaction verification is still not implemented. Production must keep unauthenticated bootstrap disabled.
+
+### `tools/worker/hotel-folio-inbox/migrations/0001_hotel_folio_inbox.sql`
+
+- `pro_inbox_tokens` includes `status` and `pro_expires_at`.
+- Indexing supports status/expiry checks.
+- The schema can support server-side subscription expiry enforcement without migration.
+
+Risk: the column is nullable for compatibility, so production provisioning must set meaningful values.
+
+### `tools/worker/hotel-folio-inbox/wrangler.jsonc`
+
+- Dev and staging explicitly enable `ALLOW_UNVERIFIED_TOKEN_CLAIM=true` with `UNVERIFIED_TOKEN_TTL_DAYS=7`.
+- Production omits `ALLOW_UNVERIFIED_TOKEN_CLAIM`, so default behavior is disabled.
+- APNs runtime secrets are referenced by name only and should be configured with `wrangler secret`.
+
+## Security Boundary Summary
+
+- Client StoreKit state is appropriate for local UI gates and purchase presentation.
+- Public source means client gates can be forked and changed.
+- Bypassing local gates affects local user experience only.
+- Cloud inbox, Worker APIs, APNs, future hosted model parsing, quotas, and other server-cost features must rely on server-side entitlement verification and service-side token state.

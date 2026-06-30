@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>本地優先的個人自動化帳本 + 飯店水單歸檔工具</strong><br/>
-  AutoLedger 是一個本地優先的個人自動化帳本。它可以從截圖、收據、語音、剪貼簿、捷徑和飯店水單 PDF 中擷取消費資訊，生成可複核的帳本記錄。基礎記帳長期免費；Pro 只解鎖郵件水單、批次候選、專屬收件箱等節省時間的自動化能力。
+AutoLedger 是一個本地優先的個人自動化帳本。它可以從截圖、收據、語音、剪貼簿、捷徑和飯店水單 PDF 中擷取消費資訊，生成可複核的帳本記錄。基礎記帳長期免費；Pro 只解鎖郵件水單、批次候選、專屬收件箱等節省時間的自動化能力。
 </p>
 
 <p align="center">
@@ -17,6 +17,12 @@
   <a href="README.en.md">English</a> ·
   <a href="README.ja.md">日本語</a>
 </p>
+
+## License / Commercial Use
+
+AutoLedger 採用 source-available 非商業授權，可供學習、個人研究、安全審查與貢獻參考。未經書面許可，不允許商業使用、換皮發布、SaaS / 托管服務、再分發，或將修改版 App 上架到 App Store、Google Play、Steam、Microsoft Store、微信小程式或其他公開應用市場。
+
+不得移除、繞過或篡改 Pro / IAP / 訂閱門禁後分發。AutoLedger 名稱、圖示、截圖、官網素材、App Store 素材、付費牆 artwork 和 README 圖片不隨源碼授權；詳見 [LICENSE](LICENSE) 與 [docs/brand-assets-notice.md](docs/brand-assets-notice.md)。
 
 ## 定位 / Why AutoLedger
 
@@ -196,4 +202,4 @@ bash scripts/run_golden_regression.sh
 
 ## License
 
-原始碼使用 MIT License。AutoLedger 名稱、App 圖示、App Store 截圖、行銷素材與品牌素材不包含在 MIT License 授權範圍內，相關權利由作者保留。
+原始碼採用 source-available 非商業授權。程式碼可供學習、研究和貢獻參考，但未經書面許可，不允許商業使用、換皮發布、上架修改版 App、SaaS 化、托管服務或繞過 Pro / IAP / 訂閱門禁後分發。AutoLedger 名稱、App 圖示、App Store 截圖、行銷素材與品牌素材不隨源碼授權，相關權利由作者保留。

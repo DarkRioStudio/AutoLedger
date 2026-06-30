@@ -1218,6 +1218,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "把飯店或 OTA 帳單轉寄到專屬地址，收到後會出現在這裡。儲存到正式帳本前仍需要你確認。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "先領取你的專屬水單地址";
 "hotel_stay.cloud_inbox.pro.trial_description" = "你可以先領取地址、複製地址並查看收到的飯店水單。把水單匯入帳本前會提示開通 Pro。";
+"hotel_stay.cloud_inbox.pro.server_verification_required" = "需要服務端權益驗證";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "雲端收件箱需要 Pro，並且必須完成服務端訂閱權益驗證。當前版本 / 環境未接入該後端，暫不能領取新的雲端收件箱 token。";
 "hotel_stay.cloud_inbox.claim_address" = "領取地址";
 "hotel_stay.cloud_inbox.claiming_address" = "正在領取專屬地址";
 "hotel_stay.cloud_inbox.address" = "專屬地址";
@@ -1235,6 +1237,7 @@
 "hotel_stay.cloud_inbox.status.address_claimed" = "已領取你的專屬水單地址。";
 "hotel_stay.cloud_inbox.status.address_copied" = "專屬水單地址已複製。";
 "hotel_stay.cloud_inbox.status.pro_required" = "匯入專屬水單收件箱裡的水單需要 AutoLedger Pro。";
+"hotel_stay.cloud_inbox.status.server_verification_required" = "雲端收件箱 token 領取需要 Pro 和服務端權益驗證；目前環境尚未配置。";
 "hotel_stay.cloud_inbox.status.no_results" = "這裡還沒有收到飯店水單。";
 "hotel_stay.cloud_inbox.status.results_format" = "收到 %d 份飯店水單。";
 "hotel_stay.cloud_inbox.status.downloading_format" = "正在下載 %@。";

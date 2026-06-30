@@ -29,6 +29,23 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.normalizeClientID("")).toBe("");
   });
 
+  it("keeps unauthenticated token claim disabled unless explicitly enabled", () => {
+    expect(testInternals.allowsUnverifiedTokenClaim({ ALLOW_UNVERIFIED_TOKEN_CLAIM: "true" } as never)).toBe(true);
+    expect(testInternals.allowsUnverifiedTokenClaim({ ALLOW_UNVERIFIED_TOKEN_CLAIM: "1" } as never)).toBe(true);
+    expect(testInternals.allowsUnverifiedTokenClaim({ ALLOW_UNVERIFIED_TOKEN_CLAIM: "false" } as never)).toBe(false);
+    expect(testInternals.allowsUnverifiedTokenClaim({} as never)).toBe(false);
+  });
+
+  it("limits unverified token bootstrap to a short expiry window", () => {
+    const now = new Date("2026-06-30T00:00:00.000Z");
+    expect(testInternals.unverifiedTokenExpirationDate({ UNVERIFIED_TOKEN_TTL_DAYS: "7" } as never, now).toISOString()).toBe(
+      "2026-07-07T00:00:00.000Z"
+    );
+    expect(testInternals.unverifiedTokenExpirationDate({ UNVERIFIED_TOKEN_TTL_DAYS: "365" } as never, now).toISOString()).toBe(
+      "2026-07-30T00:00:00.000Z"
+    );
+  });
+
   it("accepts Swift UUID path casing for candidate detail endpoints", () => {
     expect(testInternals.normalizeCandidateID(" 9A91F1E2-0A3F-414E-8B6C-99236F58AAF9 ")).toBe(
       "9a91f1e2-0a3f-414e-8b6c-99236f58aaf9"

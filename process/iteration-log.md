@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-303 v1.6.4 记账首页 Open Design 首屏 polish）
+更新日期：2026-06-30（ITER-304 v1.6.4 Pro 权益安全边界与开源发布风险控制）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-304 v1.6.4 Pro 权益安全边界与开源发布风险控制
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / Cloud Inbox / Governance
+- 类型：能力增强 / 安全 / 文档 / 治理 / 测试
+- 目标：在不重写现有 IAP 的前提下，明确客户端 Pro gate 与服务端安全边界，收紧云端水单 token claim，并降低 public repo + 宽松许可证带来的换皮发布风险。
+- 改动范围：更新 `AutoLedgerProAccessPolicy`、`ProEntitlementManager`、新增 `ServerEntitlementVerifier`，调整云端水单收件箱 UI 提示和四语文案；更新 Worker token claim、wrangler vars、Worker tests / README；替换根 `LICENSE`，更新 README 四语许可说明；新增 `docs/pro-access-audit.md`、`docs/brand-assets-notice.md`；补充外部酒店解析 debug 响应脱敏；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅流程、手动记账、单张截图、手动酒店水单导入、酒店历史查看、SQLite / CloudKit schema、APNs secrets、真实 App Store receipt 后端、Cloudflare 生产部署、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：新增 `ProSecurityBoundary`，将本地邮箱扫描、批量候选导入和高级去重归为 `localUIGate`，将 `cloudFolioInbox` 归为 `serverVerified`，将高级搜索、订阅异常检测、月结导出包和高级规则自动化归为 `planned`；`ProEntitlementManager.resolveAccess(_:)` 返回 free / allowed / requires purchase / planned / requires server verification / verification failed 等状态，旧 `canUse(_:)` 保留为同步 UI gate 且不再允许云端能力；云端水单收件箱在服务端 verifier 未接入时禁用领取 token 并显示服务端校验提示。Worker token claim 默认关闭，未开启时返回 `403 server_entitlement_required` 且不创建 token；dev/staging 显式 `ALLOW_UNVERIFIED_TOKEN_CLAIM=true` 时写入短期 `pro_expires_at`，TTL 默认 7 天并封顶 30 天。根许可证从 MIT 改为 source-available 非商业许可证，README 四语声明未授权不得换皮上架 / 商业使用 / 绕过 Pro gate 后分发，品牌资产不随源码授权。密钥扫描未发现真实 secret；外部解析 API key 仍走 Keychain / 环境变量，酒店外部解析 debug 响应新增 Authorization / api key / token 脱敏。
+- 未完成内容：完整 App Store Server API / receipt / transaction 后端未实现；生产 Worker 尚未部署本轮配置；生产 `pro_inbox_tokens` 的续期 / 停用同步、运营面板和 APNs secrets 配置仍需后续完成；`npm install` 报告现有依赖审计问题 1 moderate / 3 high，未在本轮升级依赖以避免破坏 Worker。
+- 测试情况：执行 `npm install && npm run check`，Worker typecheck 通过、Vitest 15 tests passed；执行 `xcodebuild -project AutoLedger/AutoLedger.xcodeproj ... build` 失败于主 App SwiftDriver，符合当前工程必须使用 `.xcworkspace` 的约束；改用 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` 通过；执行 `git diff --check` 通过；执行密钥关键词扫描，未发现真实密钥，命中项为文档、变量名、placeholder、token hash / 配置说明和代码中的 Keychain / Header 使用。
+- 风险与注意事项：本轮把云端 token claim 从“可裸领”改为默认禁止，因此未接入服务端 entitlement 的生产环境不能再由 App 领取新 token；已有 token 仍由 Worker 的 `status` 和 `pro_expires_at` 决定是否可用。dev/staging 仍显式允许 bootstrap，需避免把该变量带到 production。旧 MIT commit 的既有授权不能被本 commit 自动撤回，许可证防护从本 commit 起生效。
+- 回滚方式：若需要临时恢复旧云端领取，可回退 Worker `ALLOW_UNVERIFIED_TOKEN_CLAIM` gate / `pro_expires_at` TTL 改动和 App `cloudFolioInbox` server verification UI；若需要恢复 MIT，可回退 `LICENSE` 与 README / brand notice / audit 文档。本轮未改 StoreKit 购买链路和核心免费功能。
+- 结论：本轮完成 Pro 权益安全边界、Worker token claim 安全默认关闭、source-available 许可和品牌资产声明的最小闭环；当前剩余硬依赖是服务端 entitlement 后端与 Cloudflare 生产配置。
+- 下一步建议：实现 App Store Server API / signed entitlement token 后端，把生产 Worker `POST /v1/cloud-hotel-folio-token` 接到真实订阅验证；在 Cloudflare production 确认不设置 `ALLOW_UNVERIFIED_TOKEN_CLAIM`，并补 `pro_expires_at` 续期 / 停用同步。
 
 ### ITER-303 v1.6.4 记账首页 Open Design 首屏 polish
 - 日期：2026-06-30

@@ -92,6 +92,7 @@ type InboxTokenClaimDTO = {
   tokenHash: string;
   userID: string;
   status: "active";
+  proExpiresAt: string;
 };
 
 type NotificationPayload = {
@@ -350,6 +351,20 @@ function generateInboxToken(): string {
 }
 
 async function claimInboxToken(request: Request, env: Env): Promise<Response> {
+  const entitlementHeader = request.headers.get("authorization") ?? request.headers.get("x-autoledger-entitlement") ?? "";
+  if (!allowsUnverifiedTokenClaim(env)) {
+    return json(
+      {
+        error: "server_entitlement_required",
+        message: entitlementHeader
+          ? "Server-issued entitlement token verification is not connected yet."
+          : "Cloud folio inbox token claim requires server-side Pro entitlement verification."
+      },
+      env,
+      403
+    );
+  }
+
   const body = await request.json().catch(() => ({})) as Partial<{
     clientID: string;
     platform: string;
@@ -358,6 +373,7 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
   const clientID = normalizeClientID(body.clientID ?? "") || crypto.randomUUID().toLowerCase();
   const userID = `client:${clientID}`;
   const now = new Date().toISOString();
+  const proExpiresAt = unverifiedTokenExpirationDate(env, new Date()).toISOString();
   const token = generateInboxToken();
   const tokenHash = await sha256Hex(token);
   const inboxEmail = inboxEmailForToken(token);
@@ -367,7 +383,7 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
         token_hash, user_id, inbox_email, status, pro_expires_at, created_at, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(tokenHash, userID, inboxEmail, "active", null, now, now)
+    .bind(tokenHash, userID, inboxEmail, "active", proExpiresAt, now, now)
     .run();
 
   await env.DB.prepare(
@@ -386,9 +402,22 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     inboxEmail,
     tokenHash,
     userID,
-    status: "active"
+    status: "active",
+    proExpiresAt
   };
   return json(payload, env, 201);
+}
+
+function allowsUnverifiedTokenClaim(env: Env): boolean {
+  const runtime = env as Env & { ALLOW_UNVERIFIED_TOKEN_CLAIM?: string };
+  return ["1", "true", "yes", "on"].includes((runtime.ALLOW_UNVERIFIED_TOKEN_CLAIM ?? "").trim().toLowerCase());
+}
+
+function unverifiedTokenExpirationDate(env: Env, now: Date = new Date()): Date {
+  const runtime = env as Env & { UNVERIFIED_TOKEN_TTL_DAYS?: string };
+  const parsed = Number.parseInt(runtime.UNVERIFIED_TOKEN_TTL_DAYS ?? "7", 10);
+  const days = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 30) : 7;
+  return new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 async function loadActiveToken(env: Env, tokenHash: string): Promise<TokenRow | null> {
@@ -1250,5 +1279,7 @@ export const testInternals = {
   makeAPNSNotificationBody,
   notificationPayloadFromQueueBody,
   retentionDate,
+  allowsUnverifiedTokenClaim,
+  unverifiedTokenExpirationDate,
   sha256Hex
 };

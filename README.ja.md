@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>ローカルファーストの個人向け自動化家計簿 + ホテル明細アーカイブ</strong><br/>
-  AutoLedger はローカルファーストの個人向け自動化家計簿です。スクリーンショット、レシート、音声入力、クリップボード、ショートカット、ホテル明細 PDF から支出情報を抽出し、確認可能な帳簿記録に変換します。基本的な記帳機能は継続して無料で利用でき、Pro はメール明細、候補の一括処理、専用明細受信箱など、時間を節約する自動化機能のみを解放します。
+AutoLedger はローカルファーストの個人向け自動化家計簿です。スクリーンショット、レシート、音声入力、クリップボード、ショートカット、ホテル明細 PDF から支出情報を抽出し、確認可能な帳簿記録に変換します。基本的な記帳機能は継続して無料で利用でき、Pro はメール明細、候補の一括処理、専用明細受信箱など、時間を節約する自動化機能のみを解放します。
 </p>
 
 <p align="center">
@@ -17,6 +17,12 @@
   <a href="README.en.md">English</a> ·
   <a href="README.ja.md">日本語</a>
 </p>
+
+## License / Commercial Use
+
+AutoLedger は source-available の非商用ライセンスで公開されています。学習、個人研究、セキュリティレビュー、貢献のために参照できます。書面による許可なく、商用利用、ホワイトラベル公開、SaaS / ホスト型再配布、または改変版 App を App Store、Google Play、Steam、Microsoft Store、WeChat Mini Programs などの公開マーケットへ公開することはできません。
+
+Pro / IAP / サブスクリプションのゲートを削除、回避、改ざんして配布することはできません。AutoLedger の名称、アイコン、スクリーンショット、Web サイト素材、App Store 素材、ペイウォール artwork、README 画像はソースコードには含まれません。詳しくは [LICENSE](LICENSE) と [docs/brand-assets-notice.md](docs/brand-assets-notice.md) を参照してください。
 
 ## 位置づけ / Why AutoLedger
 
@@ -196,4 +202,4 @@ bash scripts/run_golden_regression.sh
 
 ## License
 
-Source code is released under the MIT License. The AutoLedger name, app icon, App Store screenshots, marketing materials, and brand assets are not included in the MIT license and are reserved by the author.
+Source code is released under a source-available non-commercial license. The code may be used for learning, research, and contributions, but unauthorized commercial use, white-label publishing, marketplace redistribution, hosted services, or distribution after bypassing Pro / IAP / subscription gates is not permitted. The AutoLedger name, app icon, App Store screenshots, marketing materials, and brand assets are not licensed with the source code and are reserved by the author.

@@ -1,25 +1,65 @@
-MIT License
+AutoLedger Source-Available Non-Commercial License
+Version 1.0
 
-Copyright (c) 2026 darkrio Studio
+Copyright (c) 2026 darkrio Studio. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This license applies to the AutoLedger source code and documentation in this
+repository from this commit forward, unless a file states a different license.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Permitted Uses
 
-The AutoLedger name, app icon, App Store screenshots, marketing materials, and
-brand assets are not included in the MIT license and are reserved by the
-author.
+You may read, inspect, run locally, and study the source code for personal
+learning, research, security review, and non-commercial evaluation. You may
+submit issues, pull requests, patches, and other contributions to this
+repository.
+
+2. Restrictions
+
+Without prior written permission from darkrio Studio, you may not:
+
+- use AutoLedger or a modified or derivative version for commercial purposes;
+- publish, distribute, sublicense, sell, rent, lease, white-label, or otherwise
+  make available AutoLedger or a modified or derivative version;
+- publish AutoLedger or a modified or derivative version to App Store, Google
+  Play, Microsoft Store, Steam, WeChat Mini Programs, or any other public app
+  marketplace;
+- offer AutoLedger or a modified or derivative version as SaaS, a hosted
+  service, a managed service, or a bundled commercial product;
+- remove, bypass, disable, tamper with, or misrepresent Pro, IAP, subscription,
+  entitlement, licensing, or paywall controls and then distribute the result;
+- use this repository to create a substantially similar commercial competing
+  app or service.
+
+3. Brand And Assets
+
+The AutoLedger name, logos, app icons, screenshots, App Store materials,
+marketing copy, website assets, paywall artwork, README images, generated
+screenshot pipeline outputs, and other brand assets are not licensed with the
+source code. They may not be used for forks, derivative apps, white-label apps,
+marketplace listings, advertising, or public redistribution without prior
+written permission.
+
+4. Contributions
+
+By submitting a contribution, you grant darkrio Studio a perpetual,
+worldwide, royalty-free license to use, reproduce, modify, publish, distribute,
+and sublicense your contribution as part of AutoLedger. You confirm that you
+have the right to submit the contribution.
+
+5. Earlier MIT Versions
+
+Earlier commits that were published under the MIT License remain governed by
+the license text that applied to those commits. This license change does not
+automatically revoke rights already granted for those earlier MIT-licensed
+commits. From this commit forward, this repository is licensed under this
+source-available non-commercial license.
+
+6. No Warranty
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.

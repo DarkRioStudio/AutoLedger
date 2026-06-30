@@ -29,6 +29,12 @@ public enum ProAccessTier: String, Codable, Equatable, Sendable {
     case proAutomationLater
 }
 
+public enum ProSecurityBoundary: String, Codable, Equatable, Sendable {
+    case localUIGate
+    case serverVerified
+    case planned
+}
+
 public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
     public static let current = AutoLedgerProAccessPolicy()
 
@@ -80,6 +86,34 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
 
     public func requiresActiveProInCurrentRelease(_ capability: AutoLedgerCapability) -> Bool {
         tier(for: capability) == .proAutomationP0
+    }
+
+    public func securityBoundary(for capability: AutoLedgerCapability) -> ProSecurityBoundary {
+        switch capability {
+        case .manualTransactionEntry,
+             .singleReceiptScan,
+             .manualHotelFolioImport,
+             .hotelStayArchiveAccess,
+             .basicSubscriptionManagement,
+             .basicMonthlyReport,
+             .basicWidgetAndShareExtension,
+             .basicDataExportAndBackup,
+             .historyViewEditDelete,
+             .supportDeveloperDonation,
+             .localEmailFolioScan,
+             .batchCandidateImport,
+             .advancedDeduplication:
+            return .localUIGate
+
+        case .cloudFolioInbox:
+            return .serverVerified
+
+        case .advancedSearch,
+             .subscriptionAnomalyDetection,
+             .monthlyExportPackage,
+             .advancedRuleAutomation:
+            return .planned
+        }
     }
 
     public func isPlannedProAutomation(_ capability: AutoLedgerCapability) -> Bool {

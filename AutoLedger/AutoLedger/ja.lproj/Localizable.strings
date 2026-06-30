@@ -1215,6 +1215,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "ホテルまたは OTA の明細を専用アドレスへ転送すると、ここに表示されます。正式に帳簿へ保存する前に、必ず確認できます。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "まず専用明細アドレスを取得しましょう";
 "hotel_stay.cloud_inbox.pro.trial_description" = "先にアドレスを取得してコピーし、届いたホテル明細を確認できます。帳簿へ取り込む前に Pro の案内を表示します。";
+"hotel_stay.cloud_inbox.pro.server_verification_required" = "サーバー側の権利確認が必要です";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "クラウド受信箱には Pro とサーバー側のサブスクリプション確認が必要です。このビルド / 環境ではバックエンド未接続のため、新しいクラウド受信箱 token は取得できません。";
 "hotel_stay.cloud_inbox.claim_address" = "アドレスを取得";
 "hotel_stay.cloud_inbox.claiming_address" = "専用アドレスを取得中";
 "hotel_stay.cloud_inbox.address" = "専用アドレス";
@@ -1232,6 +1234,7 @@
 "hotel_stay.cloud_inbox.status.address_claimed" = "専用明細アドレスを取得しました。";
 "hotel_stay.cloud_inbox.status.address_copied" = "専用明細アドレスをコピーしました。";
 "hotel_stay.cloud_inbox.status.pro_required" = "専用受信箱の明細を取り込むには AutoLedger Pro が必要です。";
+"hotel_stay.cloud_inbox.status.server_verification_required" = "クラウド受信箱 token の取得には Pro とサーバー側の確認が必要です。この環境はまだ設定されていません。";
 "hotel_stay.cloud_inbox.status.no_results" = "ホテル明細はまだ届いていません。";
 "hotel_stay.cloud_inbox.status.results_format" = "%d 件のホテル明細が届いています。";
 "hotel_stay.cloud_inbox.status.downloading_format" = "%@ をダウンロード中。";

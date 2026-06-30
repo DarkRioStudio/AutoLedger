@@ -24,10 +24,16 @@
   <a href="https://app.darkrio326.top/autoledger/"><img src="https://img.shields.io/badge/官网-app.darkrio326.top-orange?logo=safari&logoColor=white" alt="官网" /></a>
   <img src="https://img.shields.io/badge/platform-iOS_17+-blue?logo=apple" alt="Platform" />
   <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+  <img src="https://img.shields.io/badge/license-Source_Available-orange" alt="License" />
 </p>
 
 ---
+
+## License / Commercial Use
+
+AutoLedger is source-available for learning, personal research, security review, and contributions. Commercial use, white-label publishing, SaaS / hosted redistribution, or republishing a modified app to App Store, Google Play, Steam, Microsoft Store, WeChat Mini Programs, or other public marketplaces requires prior written permission.
+
+You may not remove, bypass, or tamper with Pro / IAP / subscription gates and distribute the result. AutoLedger 名称、图标、截图、官网素材、App Store 素材、付费墙 artwork 和 README 图片不随源码授权；详见 [LICENSE](LICENSE) 与 [docs/brand-assets-notice.md](docs/brand-assets-notice.md)。
 
 ## 定位 / Why AutoLedger
 
@@ -246,6 +252,6 @@ bash scripts/run_golden_regression.sh
 
 ## License
 
-源码使用 MIT License，详见 [LICENSE](LICENSE)。
+源码采用 source-available 非商业许可证，详见 [LICENSE](LICENSE)。代码可供学习、研究和贡献参考，但未经书面许可，不允许商业使用、换皮发布、上架修改版 App、SaaS 化、托管服务或绕过 Pro / IAP / 订阅门禁后分发。
 
-AutoLedger 名称、App 图标、App Store 截图、营销素材与品牌素材不包含在 MIT License 授权范围内，相关权利由作者保留。
+AutoLedger 名称、App 图标、App Store 截图、营销素材与品牌素材不随源码授权，相关权利由作者保留。

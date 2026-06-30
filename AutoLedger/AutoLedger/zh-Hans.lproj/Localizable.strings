@@ -1215,6 +1215,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "把酒店或 OTA 账单转发到专属地址，收到后会出现在这里。保存到正式账本前仍需要你确认。";
 "hotel_stay.cloud_inbox.pro.trial_title" = "先领取你的专属水单地址";
 "hotel_stay.cloud_inbox.pro.trial_description" = "你可以先领取地址、复制地址并查看收到的酒店水单。把水单导入到账本前会提示开通 Pro。";
+"hotel_stay.cloud_inbox.pro.server_verification_required" = "需要服务端权益验证";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "云端收件箱需要 Pro，并且必须完成服务端订阅权益验证。当前版本/环境未接入该后端，暂不能领取新的云端收件箱 token。";
 "hotel_stay.cloud_inbox.claim_address" = "领取地址";
 "hotel_stay.cloud_inbox.claiming_address" = "正在领取专属地址";
 "hotel_stay.cloud_inbox.address" = "专属地址";
@@ -1232,6 +1234,7 @@
 "hotel_stay.cloud_inbox.status.address_claimed" = "已领取你的专属水单地址。";
 "hotel_stay.cloud_inbox.status.address_copied" = "专属水单地址已复制。";
 "hotel_stay.cloud_inbox.status.pro_required" = "导入专属水单收件箱里的水单需要 AutoLedger Pro。";
+"hotel_stay.cloud_inbox.status.server_verification_required" = "云端收件箱 token 领取需要 Pro 和服务端权益验证；当前环境尚未配置。";
 "hotel_stay.cloud_inbox.status.no_results" = "这里还没有收到酒店水单。";
 "hotel_stay.cloud_inbox.status.results_format" = "收到 %d 份酒店水单。";
 "hotel_stay.cloud_inbox.status.downloading_format" = "正在下载 %@。";

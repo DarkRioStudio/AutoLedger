@@ -20,6 +20,24 @@ enum ProEntitlementLoadState: Equatable {
     case failed(String)
 }
 
+enum ProAccessResolution: Equatable {
+    case allowed
+    case freeFeature
+    case requiresPurchase
+    case plannedButUnavailable
+    case requiresServerVerification
+    case serverVerificationFailed(String)
+
+    var allowsAccess: Bool {
+        switch self {
+        case .allowed, .freeFeature:
+            return true
+        case .requiresPurchase, .plannedButUnavailable, .requiresServerVerification, .serverVerificationFailed:
+            return false
+        }
+    }
+}
+
 struct ProPurchaseNotice: Identifiable, Equatable {
     let id = UUID()
     let title: String
@@ -49,10 +67,15 @@ final class ProEntitlementManager: ObservableObject {
     @Published var notice: ProPurchaseNotice?
 
     private let policy: AutoLedgerProAccessPolicy
+    private let serverEntitlementVerifier: any ServerEntitlementVerifying
     private var transactionUpdatesTask: Task<Void, Never>?
 
-    private init(policy: AutoLedgerProAccessPolicy = .current) {
+    private init(
+        policy: AutoLedgerProAccessPolicy = .current,
+        serverEntitlementVerifier: any ServerEntitlementVerifying = UnavailableServerEntitlementVerifier()
+    ) {
         self.policy = policy
+        self.serverEntitlementVerifier = serverEntitlementVerifier
     }
 
     var isProActive: Bool {
@@ -230,8 +253,12 @@ final class ProEntitlementManager: ObservableObject {
     }
 
     func canUse(_ capability: AutoLedgerCapability) -> Bool {
+        // Synchronous compatibility gate for existing UI. This is not a security boundary for server-backed features.
         if policy.isAvailableWithoutPro(capability) {
             return true
+        }
+        if policy.securityBoundary(for: capability) != .localUIGate {
+            return false
         }
         if policy.requiresActiveProInCurrentRelease(capability) {
             return isProActive
@@ -241,6 +268,40 @@ final class ProEntitlementManager: ObservableObject {
 
     func requiresPro(_ capability: AutoLedgerCapability) -> Bool {
         policy.requiresActiveProInCurrentRelease(capability)
+    }
+
+    func resolveAccess(_ capability: AutoLedgerCapability) async -> ProAccessResolution {
+        if policy.isAvailableWithoutPro(capability) {
+            return .freeFeature
+        }
+
+        switch policy.securityBoundary(for: capability) {
+        case .localUIGate:
+            guard policy.requiresActiveProInCurrentRelease(capability) else {
+                return .plannedButUnavailable
+            }
+            return isProActive ? .allowed : .requiresPurchase
+
+        case .serverVerified:
+            guard isProActive else {
+                return .requiresPurchase
+            }
+            do {
+                let result = try await serverEntitlementVerifier.verifyAccess(
+                    capability: capability,
+                    localSubscriptionSnapshot: primaryActiveSubscription
+                )
+                if result.allowed {
+                    return .allowed
+                }
+                return .serverVerificationFailed(result.reason ?? "server_entitlement_denied")
+            } catch {
+                return .serverVerificationFailed(error.localizedDescription)
+            }
+
+        case .planned:
+            return .plannedButUnavailable
+        }
     }
 
     private func productSortOrder(_ productID: String) -> Int {

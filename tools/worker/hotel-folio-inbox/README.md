@@ -34,9 +34,9 @@ The service-side gate is the `pro_inbox_tokens` D1 table:
 
 - `token_hash`: SHA-256 of the normalized inbox token.
 - `status`: must be `active`.
-- `pro_expires_at`: optional ISO timestamp. Expired values reject new inbound email and API requests.
+- `pro_expires_at`: required for bootstrap/dev claims and recommended for all production tokens. Expired values reject new inbound email and API requests.
 
-The App-side gate should use `AutoLedgerCapability.cloudFolioInbox`.
+The App-side gate should use `AutoLedgerCapability.cloudFolioInbox` for UI state only. Local Pro state is not Worker authorization. Production token claim must be backed by server-side entitlement / receipt verification.
 
 The App can claim or rotate a dedicated inbox address through the Worker:
 
@@ -63,7 +63,11 @@ The Worker returns the raw token once, stores only its SHA-256 hash in D1, and m
 }
 ```
 
-Until a subscription backend is connected, this endpoint is the bootstrap provisioning path. The App still gates the UI with Pro entitlement locally; a future service-side subscription check can be added before inserting `pro_inbox_tokens`.
+Unauthenticated bootstrap claim is limited to dev/staging and must be explicitly enabled with `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Production does not enable this variable by default. When disabled, `POST /v1/cloud-hotel-folio-token` returns `403` with `error: "server_entitlement_required"` and does not create a token.
+
+Bootstrap tokens receive a short `pro_expires_at` value controlled by `UNVERIFIED_TOKEN_TTL_DAYS` and capped at 30 days. Production token claim must connect a server-issued entitlement token, App Store receipt / transaction verification, or equivalent backend before inserting `pro_inbox_tokens`.
+
+Future entitlement backends can pass a short-lived signed credential through `Authorization: Bearer <server-issued-entitlement-token>` or `X-AutoLedger-Entitlement: <signed-token>`. The current Worker only reserves this interface shape; it does not claim to validate those credentials yet.
 
 ## APNs Device Registration
 
@@ -110,7 +114,7 @@ npx wrangler d1 execute autoledger-hotel-folio-inbox-dev \
   --file migrations/0001_hotel_folio_inbox.sql
 ```
 
-Use `POST /v1/cloud-hotel-folio-token` from the App or curl to provision a development token. Manual `pro_inbox_tokens` inserts are only needed for direct database debugging.
+Use `POST /v1/cloud-hotel-folio-token` from the App or curl to provision a development or staging token only when `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Manual `pro_inbox_tokens` inserts are only needed for direct database debugging.
 
 Create queues and object/database resources in Cloudflare before deployment, then replace placeholder D1 IDs in `wrangler.jsonc`:
 
@@ -129,6 +133,15 @@ npx wrangler secret put APNS_PRIVATE_KEY
 ```
 
 `APNS_TOPIC` is a non-secret Worker var and defaults to `top.darkrio326.AutoLedger`.
+
+For dev/staging bootstrap only:
+
+```jsonc
+"ALLOW_UNVERIFIED_TOKEN_CLAIM": "true",
+"UNVERIFIED_TOKEN_TTL_DAYS": "7"
+```
+
+Do not enable unauthenticated token claim in production. Production should use server-side entitlement verification and should set `pro_inbox_tokens.pro_expires_at` from the verified subscription state.
 
 ## Current Cloudflare Deployment
 
@@ -159,14 +172,15 @@ Email Routing:
 - Catch-all remains disabled and drops unmatched mail.
 - If a forwarded message has no PDF attachment, the Worker stores a short-lived `email-body-folio.pdf` generated from the message body so the App can use the same PDFKit review pipeline.
 
-Still required before push notifications work:
+Still required before production cloud inbox token claim and push notifications work:
 
+- Connect App Store / server-side Pro entitlement verification for `POST /v1/cloud-hotel-folio-token`.
 - Configure `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` Worker secrets.
-- Use the App cloud inbox screen to claim a dedicated address and provision an active `pro_inbox_tokens` row.
+- Provision active `pro_inbox_tokens` rows only after entitlement verification, with `status = active` and a meaningful `pro_expires_at`.
 
 ## API
 
-Token claim is unauthenticated bootstrap. All candidate API calls require the raw inbox token in `Authorization: Bearer <token>`.
+Token claim is server-entitlement gated in production. Dev/staging bootstrap claim is only available when `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Candidate listing, PDF download, status update, and APNs device registration still require the raw inbox token in `Authorization: Bearer <token>`.
 
 ```http
 POST /v1/cloud-hotel-folio-token

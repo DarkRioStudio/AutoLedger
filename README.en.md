@@ -4,6 +4,12 @@
 
 AutoLedger is a local-first personal automated ledger. It extracts expense information from screenshots, receipts, voice input, the clipboard, Shortcuts, and hotel folio PDFs, then turns it into reviewable ledger entries. Core bookkeeping stays free; Pro only unlocks time-saving automation such as email folios, batch candidates, and a dedicated folio inbox.
 
+## License / Commercial Use
+
+AutoLedger is source-available for learning, personal research, security review, and contributions. Commercial use, white-label publishing, SaaS / hosted redistribution, or republishing a modified app to App Store, Google Play, Steam, Microsoft Store, WeChat Mini Programs, or other public marketplaces requires prior written permission.
+
+You may not remove, bypass, or tamper with Pro / IAP / subscription gates and distribute the result. The AutoLedger name, icon, screenshots, website assets, App Store materials, paywall artwork, and README images are not licensed with the source code. See [LICENSE](LICENSE) and [docs/brand-assets-notice.md](docs/brand-assets-notice.md).
+
 ## Why AutoLedger
 
 AutoLedger is not just another manual bookkeeping app. It focuses on reducing repetitive input and organizing messy expense materials such as screenshots, receipts, subscriptions, and hotel folios.
@@ -219,6 +225,6 @@ Current repository status:
 
 ## License
 
-Source code is released under the MIT License.
+Source code is released under a source-available non-commercial license. See [LICENSE](LICENSE). Code may be used for learning, research, and contributions, but unauthorized commercial use, white-label publishing, marketplace redistribution, hosted services, or distribution after bypassing Pro / IAP / subscription gates is not permitted.
 
-The AutoLedger name, app icon, App Store screenshots, marketing materials, and brand assets are not included in the MIT license and are reserved by the author.
+The AutoLedger name, app icon, App Store screenshots, marketing materials, and brand assets are not licensed with the source code and are reserved by the author.

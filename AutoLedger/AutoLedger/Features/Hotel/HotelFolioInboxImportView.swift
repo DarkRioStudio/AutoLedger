@@ -22,6 +22,7 @@ struct HotelFolioInboxImportView: View {
     @State private var isRefreshing = false
     @State private var isImporting = false
     @State private var isPresentingProSheet = false
+    @State private var cloudInboxAccess: ProAccessResolution = .requiresServerVerification
 
     private let client = HotelFolioInboxClient()
 
@@ -43,7 +44,33 @@ struct HotelFolioInboxImportView: View {
     }
 
     private var canUseCloudInbox: Bool {
-        proEntitlement.canUse(.cloudFolioInbox)
+        cloudInboxAccess.allowsAccess
+    }
+
+    private var canClaimCloudInboxAddress: Bool {
+        cloudInboxAccess.allowsAccess
+    }
+
+    private var cloudInboxEntitlementTitleKey: LocalizedStringKey {
+        switch cloudInboxAccess {
+        case .allowed, .freeFeature:
+            return "hotel_stay.cloud_inbox.pro.active"
+        case .requiresPurchase:
+            return "hotel_stay.cloud_inbox.pro.required"
+        case .plannedButUnavailable, .requiresServerVerification, .serverVerificationFailed:
+            return "hotel_stay.cloud_inbox.pro.server_verification_required"
+        }
+    }
+
+    private var cloudInboxEntitlementDescriptionKey: LocalizedStringKey {
+        switch cloudInboxAccess {
+        case .allowed, .freeFeature:
+            return "hotel_stay.cloud_inbox.pro.description"
+        case .requiresPurchase:
+            return "hotel_stay.cloud_inbox.pro.trial_description"
+        case .plannedButUnavailable, .requiresServerVerification, .serverVerificationFailed:
+            return "hotel_stay.cloud_inbox.pro.server_verification_description"
+        }
     }
 
     private var selectedCandidates: [CloudHotelFolioCandidate] {
@@ -78,6 +105,7 @@ struct HotelFolioInboxImportView: View {
         .task {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()
+            await refreshCloudInboxAccess()
             await registerRemoteDeviceTokenIfAvailable()
             if settings.canRequest {
                 await refreshCandidates()
@@ -102,9 +130,9 @@ struct HotelFolioInboxImportView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.pro.active" : "hotel_stay.cloud_inbox.pro.trial_title")
+                        Text(cloudInboxEntitlementTitleKey)
                             .font(.body.weight(.semibold))
-                        Text(canUseCloudInbox ? "hotel_stay.cloud_inbox.pro.description" : "hotel_stay.cloud_inbox.pro.trial_description")
+                        Text(cloudInboxEntitlementDescriptionKey)
                             .font(.footnote)
                             .foregroundStyle(AppTheme.mutedInk)
                     }
@@ -154,7 +182,7 @@ struct HotelFolioInboxImportView: View {
                     systemImage: "envelope.badge",
                     isPrimary: true,
                     isLoading: isClaimingAddress,
-                    isDisabled: isClaimingAddress || isRefreshing || isImporting
+                    isDisabled: !canClaimCloudInboxAddress || isClaimingAddress || isRefreshing || isImporting
                 ) {
                     Task {
                         await claimInboxAddress()
@@ -309,6 +337,11 @@ struct HotelFolioInboxImportView: View {
     @MainActor
     private func claimInboxAddress() async {
         guard !isClaimingAddress, !isRefreshing, !isImporting else { return }
+        await refreshCloudInboxAccess()
+        guard canClaimCloudInboxAddress else {
+            statusMessage = String(localized: "hotel_stay.cloud_inbox.status.server_verification_required")
+            return
+        }
 
         isClaimingAddress = true
         statusMessage = String(localized: "hotel_stay.cloud_inbox.claiming_address")
@@ -335,6 +368,11 @@ struct HotelFolioInboxImportView: View {
             statusMessage = error.localizedDescription
             recordCloudInboxDebug("云端酒店水单收件箱领取地址失败：\(error.localizedDescription)")
         }
+    }
+
+    @MainActor
+    private func refreshCloudInboxAccess() async {
+        cloudInboxAccess = await proEntitlement.resolveAccess(.cloudFolioInbox)
     }
 
     private func copyInboxAddress() {

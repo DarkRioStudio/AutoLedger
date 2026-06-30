@@ -126,11 +126,12 @@ struct HotelFolioExternalParseClient: Sendable {
         }
         let latencyMs = Int(Date().timeIntervalSince(start) * 1_000)
         let responseBody = String(data: data, encoding: .utf8) ?? ""
+        let debugResponseBody = Self.redactedDebugText(responseBody)
         guard let httpResponse = response as? HTTPURLResponse else {
             try fail(
                 HotelFolioExternalParseClientError.invalidHTTPResponse,
                 providerID: providerID,
-                responseBody: responseBody,
+                responseBody: debugResponseBody,
                 latencyMs: latencyMs
             )
         }
@@ -138,7 +139,7 @@ struct HotelFolioExternalParseClient: Sendable {
             try fail(
                 HotelFolioExternalParseClientError.httpStatus(httpResponse.statusCode),
                 providerID: providerID,
-                responseBody: responseBody,
+                responseBody: debugResponseBody,
                 latencyMs: latencyMs
             )
         }
@@ -147,13 +148,13 @@ struct HotelFolioExternalParseClient: Sendable {
         do {
             parsedPayload = try codec.decodeParsedPayload(from: data)
         } catch {
-            try fail(error, providerID: providerID, responseBody: responseBody, latencyMs: latencyMs)
+            try fail(error, providerID: providerID, responseBody: debugResponseBody, latencyMs: latencyMs)
         }
 
         debugRecords.append(
             HotelFolioDebugTraceBuilder.makeLLMResponseRecord(
                 draft: draft,
-                responseBody: responseBody,
+                responseBody: debugResponseBody,
                 httpStatus: httpResponse.statusCode,
                 providerID: providerID,
                 model: modelName,
@@ -180,9 +181,28 @@ struct HotelFolioExternalParseClient: Sendable {
         do {
             parsedDraft = try pipeline.apply(parsedPayload, to: draft)
         } catch {
-            try fail(error, providerID: providerID, responseBody: responseBody, latencyMs: latencyMs)
+            try fail(error, providerID: providerID, responseBody: debugResponseBody, latencyMs: latencyMs)
         }
         return HotelFolioExternalParseResult(draft: parsedDraft, debugRecords: debugRecords)
+    }
+
+    private static func redactedDebugText(_ value: String) -> String {
+        value
+            .replacingOccurrences(
+                of: #"(?i)(authorization\s*[:=]\s*bearer\s+)[^\s",}]+"#,
+                with: "$1[redacted]",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"(?i)(api[_-]?key\s*["']?\s*[:=]\s*["']?)[^"',}\s]+"#,
+                with: "$1[redacted]",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"(?i)(token\s*["']?\s*[:=]\s*["']?)[^"',}\s]+"#,
+                with: "$1[redacted]",
+                options: .regularExpression
+            )
     }
 
     private func localizedErrorMessage(_ error: Error) -> String {

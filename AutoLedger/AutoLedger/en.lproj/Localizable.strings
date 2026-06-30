@@ -1215,6 +1215,8 @@
 "hotel_stay.cloud_inbox.pro.description" = "Forward hotel or OTA folios to your dedicated address. New folios appear here, and you still review them before saving to your ledger.";
 "hotel_stay.cloud_inbox.pro.trial_title" = "Claim your dedicated folio address first";
 "hotel_stay.cloud_inbox.pro.trial_description" = "You can claim an address, copy it, and preview received hotel folios first. Importing folios into your ledger prompts for Pro.";
+"hotel_stay.cloud_inbox.pro.server_verification_required" = "Server verification required";
+"hotel_stay.cloud_inbox.pro.server_verification_description" = "The cloud inbox needs Pro plus server-side entitlement verification. This build cannot claim new cloud inbox tokens until that backend is connected.";
 "hotel_stay.cloud_inbox.claim_address" = "Claim Address";
 "hotel_stay.cloud_inbox.claiming_address" = "Claiming Address";
 "hotel_stay.cloud_inbox.address" = "Inbox address";
@@ -1232,6 +1234,7 @@
 "hotel_stay.cloud_inbox.status.address_claimed" = "Your dedicated folio address is ready.";
 "hotel_stay.cloud_inbox.status.address_copied" = "Dedicated folio address copied.";
 "hotel_stay.cloud_inbox.status.pro_required" = "Importing folios from the dedicated inbox requires AutoLedger Pro.";
+"hotel_stay.cloud_inbox.status.server_verification_required" = "Cloud inbox token claim requires Pro and server-side verification. This environment is not configured yet.";
 "hotel_stay.cloud_inbox.status.no_results" = "No hotel folios have arrived yet.";
 "hotel_stay.cloud_inbox.status.results_format" = "%d hotel folios received.";
 "hotel_stay.cloud_inbox.status.downloading_format" = "Downloading %@.";
