@@ -307,24 +307,33 @@ struct SettingsView: View {
                     .foregroundStyle(.white.opacity(0.88))
                     .fixedSize(horizontal: false, vertical: true)
 
-                Label("pro.hero.price_line", systemImage: "tag.fill")
+                HStack(alignment: .center, spacing: 12) {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("pro.hero.price_monthly")
+                            Text("pro.hero.price_yearly")
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    } icon: {
+                        Image(systemName: "tag.fill")
+                    }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.84))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack {
-                    Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Label("pro.cta.view_plans", systemImage: "arrow.right.circle.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color(red: 0.14, green: 0.16, blue: 0.15))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
                         .background(
                             Capsule(style: .continuous)
                                 .fill(.white.opacity(0.92))
                         )
+                        .layoutPriority(1)
                 }
             }
 

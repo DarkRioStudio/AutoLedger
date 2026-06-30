@@ -771,6 +771,8 @@
 "pro.hero.title" = "自動整理，少花時間";
 "pro.hero.subtitle" = "把郵件水單、批次匯入、重複記錄和月度整理交給 AutoLedger，儲存前仍由你確認。";
 "pro.hero.price_line" = "月付 $2.99，首發年付 $19.99。";
+"pro.hero.price_monthly" = "月付 $2.99";
+"pro.hero.price_yearly" = "首發年付 $19.99";
 "pro.preview.title" = "Pro 幫你節省時間";
 "pro.preview.saved_time" = "少點幾步";
 "pro.preview.month" = "本月支出";

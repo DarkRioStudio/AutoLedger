@@ -768,6 +768,8 @@
 "pro.hero.title" = "Organize automatically. Spend less time.";
 "pro.hero.subtitle" = "Let AutoLedger handle email folios, batch imports, duplicates, and monthly cleanup while you still review before saving.";
 "pro.hero.price_line" = "Monthly US$2.99. Launch annual US$19.99.";
+"pro.hero.price_monthly" = "Monthly US$2.99";
+"pro.hero.price_yearly" = "Launch annual US$19.99";
 "pro.preview.title" = "Pro saves time";
 "pro.preview.saved_time" = "Fewer taps";
 "pro.preview.month" = "Monthly Spend";

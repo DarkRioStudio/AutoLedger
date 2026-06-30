@@ -768,6 +768,8 @@
 "pro.hero.title" = "自動で整理し、時間を節約";
 "pro.hero.subtitle" = "メール明細、一括取り込み、重複記録、月次整理を AutoLedger に任せつつ、保存前には必ず確認できます。";
 "pro.hero.price_line" = "月額 US$2.99、年額ローンチ価格 US$19.99。";
+"pro.hero.price_monthly" = "月額 US$2.99";
+"pro.hero.price_yearly" = "年額ローンチ価格 US$19.99";
 "pro.preview.title" = "Pro で時間を節約";
 "pro.preview.saved_time" = "少ない操作";
 "pro.preview.month" = "今月の支出";

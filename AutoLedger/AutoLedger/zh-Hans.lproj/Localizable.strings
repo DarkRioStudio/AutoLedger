@@ -768,6 +768,8 @@
 "pro.hero.title" = "自动整理，少花时间";
 "pro.hero.subtitle" = "把邮箱水单、批量导入、重复记录和月度整理交给 AutoLedger，保存前仍由你确认。";
 "pro.hero.price_line" = "月付 $2.99，首发年付 $19.99。";
+"pro.hero.price_monthly" = "月付 $2.99";
+"pro.hero.price_yearly" = "首发年付 $19.99";
 "pro.preview.title" = "Pro 帮你节省时间";
 "pro.preview.saved_time" = "少点几步";
 "pro.preview.month" = "本月支出";

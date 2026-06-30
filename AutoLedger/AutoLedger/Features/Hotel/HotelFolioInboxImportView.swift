@@ -242,8 +242,10 @@ struct HotelFolioInboxImportView: View {
             }
 
             if candidates.isEmpty {
-                Text("hotel_stay.cloud_inbox.no_results")
-                    .foregroundStyle(AppTheme.mutedInk)
+                if statusMessage == nil {
+                    Text("hotel_stay.cloud_inbox.no_results")
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
             } else {
                 selectionToolbar
 
