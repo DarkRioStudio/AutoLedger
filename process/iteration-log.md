@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-309 Motion 基础设施与主题切换微动效）
+更新日期：2026-06-30（ITER-313 外观主题配方与 Pro 自定义外观）
 
 ## 记录规则
 
@@ -43,6 +43,70 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-313 外观主题配方与 Pro 自定义外观
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System / Pro UI
+- 类型：UI / 能力增强 / 文案 / 文档 / 测试
+- 目标：在不再启动新 OpenDesign 生成的前提下，使用已经生成的 `theme-palettes.html` 主题配方扩展 App 外观选择，修正外观页客户-facing 文案，并为 Pro 用户补充自定义外观主题入口。
+- 改动范围：更新 `AppTheme.swift` 的主题 preset、配色 token 和自定义主题存储；更新 `AutoLedgerApp.swift` 注册自定义主题默认值与主题刷新动效；重写 `AppearanceSettingsView.swift` 的主题网格、外观模式和 Pro 自定义色控制；更新 `SupportAutoLedgerView.swift` Pro 功能展示；补齐四语外观 / Pro 文案；更新 UI 静态门禁脚本、CHANGELOG 和本日志。
+- 未改动范围：未启动新的 OpenDesign run；未修改导入、记账、酒店水单、月报统计、CloudKit / SQLite schema、Cloudflare Worker、StoreKit 商品 ID / 价格、购买 / 恢复 / 管理订阅流程、既有 Pro 自动化 gate、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：外观页现在展示 `fresh` / `classic` / `graphite` / `ledgerInk` / `nightFolio` / `harbor` / `sunrise` / `custom` 多套主题；`fresh` 使用隐私薄荷配方，`graphite` 改为更明显的冷灰蓝工作台配方，`ledgerInk` 和 `nightFolio` 采用 OpenDesign 生成的新配方。每套 preset 都继续提供 light / dark token 并支持跟随系统。设置入口描述改为“多套App视觉风格，随时切换你喜欢的样式”，外观模式不再展示说明文字。Pro 用户可在自定义主题里选择表面色、强调色和辅助色；未订阅用户看到客户-facing 的 Pro 自定义外观说明和查看 Pro 入口。
+- 未完成内容：未导出所有主题 × 浅色 / 深色截图矩阵；自定义外观偏好仍只保存在本机 `UserDefaults`，不参与多设备同步。
+- 测试情况：执行 `plutil -lint` 检查四语 `Localizable.strings` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run 通过。构建仍有既有 Swift 6 actor isolation / Gemma deprecated / CloudKit deprecated 等 warning，无新增 error。
+- 风险与注意事项：自定义主题使用用户选择的颜色推导浅深色 token，极端颜色组合仍可能需要后续截图目检；当前 Pro 自定义外观是本机 UI 权益，不影响基础主题 preset，也不锁定免费用户已有记账能力。
+- 回滚方式：回退 `AppThemePreset` 新增主题 / `AppThemeCustomTheme`、`AppearanceSettingsView.swift` 的自定义外观区域、四语 `appearance.custom.*` / `pro.feature.appearance.*` 文案和本轮门禁脚本修改即可恢复到上一版多主题选择。
+- 结论：本轮已把 OpenDesign 生成的多主题配方落地到 App，并把自定义外观作为 Pro 视觉权益补齐。
+- 下一步建议：进入发布截图前，基于 screenshot mode 增加主题参数，批量导出默认主题、石墨、墨青账本、午夜票夹和自定义主题的浅深色对照图。
+
+### ITER-312 Pro 路线图与 v1.7.0 规划预告
+- 日期：2026-06-30
+- 所属版本：v1.6.4 / v1.7.0
+- 所属阶段：Personal Pro / Roadmap
+- 类型：UI / 文案 / 文档 / 规划
+- 目标：根据本轮决策，将当前 Pro 页面继续限定在酒店消费与邮箱自动化模块；把其他待实现的 Pro 能力先在 Pro 路线图预告，并明确放到 `v1.7.0 / ASC 1.6.0` 实现。
+- 改动范围：更新 `AutoLedgerProView` 新增 Pro 路线图区；补齐四语 `pro.roadmap.*` 与 `pro.feature.rules.*` 文案；更新 `versions/v1.6.4-plan.md`、新增 `versions/v1.7.0-plan.md`；同步 README 四语路线图、CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、价格、购买 / 恢复 / 管理订阅流程、`ProEntitlementManager`、Pro gate、邮箱扫描 / 云端收件箱业务逻辑、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Pro 页面当前权益仍聚焦本地邮箱扫描、专属水单收件箱、批量候选和高级去重；高级搜索、订阅异常提醒、月结导出包和高级规则自动应用移动到独立路线图区，并用 `v1.7.0 / ASC 1.6.0` 与 `v1.7.0` badge 明确区分当前可用能力。`v1.6.4` 计划文档把 `GOAL-2220` 至 `GOAL-2223` 改为顺延项；`v1.7.0` 计划文档建立对应 GOAL-2300 至 GOAL-2350 队列和免费能力边界。
+- 未完成内容：未实现 `v1.7.0` 高级搜索、订阅异常提醒、月结导出包或高级规则自动应用；未做 ASC 1.6.0 审核材料和截图矩阵。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run 通过，并以 `--screenshot-mode --screenshot-scene pro_subscription --screenshot-free-pro` 截图检查 Pro 首屏文案正常。构建仍有既有 Swift 6 actor isolation / Gemma deprecated / CloudKit deprecated 等 warning，无新增 error。
+- 风险与注意事项：路线图区是预告展示，不接入功能入口或 gate；后续实现 `v1.7.0` 时需要避免把基础搜索、基础订阅、基础导出或历史数据查看误放入 Pro gate。
+- 回滚方式：回退 `AutoLedgerProView` 的 `roadmapSection` / `roadmapItems`、四语 `pro.roadmap.*` / `pro.feature.rules.*` 文案、`versions/v1.7.0-plan.md` 和 README / `v1.6.4` 计划中的路线图描述即可恢复到仅展示当前 Pro 权益。
+- 结论：本轮已把非酒店模块 Pro 能力从当前交付面移入路线图预告，并建立 `v1.7.0 / ASC 1.6.0` 的承接计划。
+- 下一步建议：在 `v1.7.0` 开始前，先冻结高级搜索、订阅异常、月结包和高级规则的 Free / Pro gate 合同，再分别进入实现。
+
+### ITER-311 Pro 页面展示文案收敛
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / StoreKit UI
+- 类型：UI / 文案 / 文档 / 测试
+- 目标：对比当前 Pro 页面展示文案后，选择一个更贴近当前可交付边界的方向推进：从宽泛“省时间工具清单”收敛为“免费记账不变，Pro 自动整理”。
+- 改动范围：更新 `AutoLedgerProView` 功能卡清单；更新简体中文、繁体中文、英文和日文 `pro.*` / `settings.pro.subtitle` 文案；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、价格、购买 / 恢复 / 管理订阅流程、`ProEntitlementManager`、Pro gate、邮箱扫描 / 云端收件箱业务逻辑、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：设计对比后选择当前 P0 自动化能力优先方案；Pro 首屏标题改为强调免费基础能力不变、Pro 负责自动整理；功能卡从“本地邮箱 / 批量 / 去重 / 高级搜索 / 订阅异常 / 月结包”收敛为“本地邮箱扫描 / 专属水单收件箱 / 批量候选 / 高级去重”；状态卡、订阅商品说明和设置页 Pro 入口同步改为当前能力口径；四语文案补齐 `pro.feature.cloud_inbox.*`。
+- 未完成内容：未做真实 ASC sandbox 购买态截图矩阵；未处理后续路线图能力的独立“Coming soon”展示。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run 通过，并以 `--screenshot-mode --screenshot-scene pro_subscription --screenshot-free-pro` 截图检查 Pro 首屏文案无明显遮挡；执行 `bash scripts/run_offline_regression.sh` 通过。
+- 风险与注意事项：未使用的后续路线图本地化 key 仍保留在 strings 中，避免本轮扩大删除范围；Pro 页面不再把高级搜索、订阅异常和月结包作为当前展示卖点，后续若这些能力实际 gate 落地，可再单独恢复或加路线图区。
+- 回滚方式：回退 `AutoLedgerProView` 的 `featureItems` 列表和四语 `pro.*` / `settings.pro.subtitle` 文案即可恢复上一版 Pro 页面展示；购买与权益逻辑不受影响。
+- 结论：本轮完成 Pro 页面展示文案收敛，当前页面更贴合 `v1.6.4` P0 Pro 自动化边界。
+- 下一步建议：继续用 StoreKit / TestFlight 验证未订阅、已订阅、恢复购买和过期状态下 Pro 页面与各 Pro gate 入口的真实文案一致性。
+
+### ITER-310 ScrollView Tab 顶部 chrome 与标题阈值修复
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System
+- 类型：Bugfix / UI / 文档 / 测试
+- 目标：修复用户反馈的记账、月报、设置三个 tab 顶部出现白色样式缺失块，以及记账 / 设置自绘页面标题消失时机与账本、酒店消费 tab 不一致的问题。
+- 改动范围：更新 `AppTheme.swift` 的导航栏 chrome 和自绘页面标题阈值；更新 `InboxView.swift` 移除记账 tab 的 `toolbarRevealOffset: -56` 特殊值；更新 `scripts/check_adaptive_layout_rules.py` 固化新规则；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改导入、记账、酒店水单、月报统计、设置项、主题 preset、Pro gate、StoreKit、SQLite / CloudKit schema、Cloudflare Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`autoLedgerSolidNavigationBarChrome` 从单色 `AppTheme.canvas` 改为与账本 / 酒店消费 split/list 页面一致的 `.regularMaterial` 导航栏背景，避免 ScrollView tab 顶部被单色白块覆盖；`autoLedgerContentTitleNavigation` 默认阈值从 `-12` 调整为 `0`，让 inline 标题在页面大标题抵达顶部边缘时再切换；记账 tab 不再使用 `-56` 特殊阈值，改走统一默认逻辑；自适应布局门禁同步要求新调用并禁止旧阈值。
+- 未完成内容：本轮未新增自动截图矩阵；视觉修正仍建议用 iPhone Simulator 在记账、月报、设置三个 tab 顶部和滚动临界点人工目检。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run 通过。构建仍有既有 Swift 6 actor isolation / Gemma deprecated / CloudKit deprecated 等 warning，无新增 error。
+- 风险与注意事项：`autoLedgerSolidNavigationBarChrome` 是共享 modifier，除主 tab 外也会影响少量使用该 modifier 的导入 / 外观设置页面；由于目标是统一到账本 / 酒店消费的 material 语义，行为风险集中在视觉层。
+- 回滚方式：回退 `autoLedgerSolidNavigationBarChrome` 的 `.regularMaterial`、`autoLedgerContentTitleNavigation` 默认阈值和 `InboxView` 调用即可恢复上一版表现。
+- 结论：本轮将 ScrollView tab 顶部 chrome 和标题切换时机对齐到账本 / 酒店消费 tab 的系统感。
+- 下一步建议：验证通过后，用 Simulator 截记账、月报、设置顶部静止和滚动临界两组图，确认无白块且标题切换自然。
 
 ### ITER-309 Motion 基础设施与主题切换微动效
 - 日期：2026-06-30

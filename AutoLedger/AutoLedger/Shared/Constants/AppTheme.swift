@@ -5,10 +5,19 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
     case fresh
     case classic
     case graphite
+    case ledgerInk
+    case nightFolio
+    case harbor
+    case sunrise
+    case custom
 
     static let userDefaultsKey = "appThemePreset"
 
     var id: String { rawValue }
+
+    var isCustom: Bool {
+        self == .custom
+    }
 
     var localizedTitleKey: LocalizedStringKey {
         switch self {
@@ -18,6 +27,16 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
             return "appearance.theme.classic"
         case .graphite:
             return "appearance.theme.graphite"
+        case .ledgerInk:
+            return "appearance.theme.ledger_ink"
+        case .nightFolio:
+            return "appearance.theme.night_folio"
+        case .harbor:
+            return "appearance.theme.harbor"
+        case .sunrise:
+            return "appearance.theme.sunrise"
+        case .custom:
+            return "appearance.theme.custom"
         }
     }
 
@@ -29,7 +48,26 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
             return "appearance.theme.classic.subtitle"
         case .graphite:
             return "appearance.theme.graphite.subtitle"
+        case .ledgerInk:
+            return "appearance.theme.ledger_ink.subtitle"
+        case .nightFolio:
+            return "appearance.theme.night_folio.subtitle"
+        case .harbor:
+            return "appearance.theme.harbor.subtitle"
+        case .sunrise:
+            return "appearance.theme.sunrise.subtitle"
+        case .custom:
+            return "appearance.theme.custom.subtitle"
         }
+    }
+
+    var previewColors: [Color] {
+        [
+            Color(uiColor: palette.canvasLight),
+            Color(uiColor: palette.cardLight),
+            palette.accent,
+            palette.accentSecondary
+        ]
     }
 
     static var current: AppThemePreset {
@@ -37,38 +75,46 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
         return rawValue.flatMap(AppThemePreset.init(rawValue:)) ?? .fresh
     }
 
+    private static func uiColor(_ hex: String, alpha: CGFloat = 1) -> UIColor {
+        (UIColor(hexRGB: hex) ?? .systemTeal).withAlphaComponent(alpha)
+    }
+
+    private static func color(_ hex: String) -> Color {
+        Color(uiColor: uiColor(hex))
+    }
+
     fileprivate var palette: AppThemePalette {
         switch self {
         case .fresh:
             return AppThemePalette(
-                canvasLight: UIColor(red: 0.945, green: 0.965, blue: 0.955, alpha: 1),
-                canvasDark: UIColor(red: 0.055, green: 0.075, blue: 0.068, alpha: 1),
-                cardLight: UIColor(white: 1, alpha: 0.92),
-                cardDark: UIColor(red: 0.125, green: 0.145, blue: 0.135, alpha: 0.96),
-                cardStrokeLight: UIColor(red: 0.55, green: 0.64, blue: 0.60, alpha: 0.26),
-                cardStrokeDark: UIColor(white: 1, alpha: 0.10),
-                shadowLight: UIColor(red: 0.07, green: 0.18, blue: 0.15, alpha: 0.12),
-                shadowDark: UIColor(white: 0, alpha: 0.42),
-                inkLight: UIColor(red: 0.105, green: 0.150, blue: 0.135, alpha: 1),
-                inkDark: UIColor(red: 0.925, green: 0.950, blue: 0.935, alpha: 1),
-                mutedInkLight: UIColor(red: 0.375, green: 0.455, blue: 0.430, alpha: 1),
-                mutedInkDark: UIColor(red: 0.630, green: 0.690, blue: 0.665, alpha: 1),
-                accent: Color(red: 0.055, green: 0.435, blue: 0.345),
-                accentSecondary: Color(red: 0.125, green: 0.385, blue: 0.700),
+                canvasLight: Self.uiColor("F6FAF7"),
+                canvasDark: Self.uiColor("0E1714"),
+                cardLight: Self.uiColor("FFFFFF", alpha: 0.94),
+                cardDark: Self.uiColor("13211C", alpha: 0.97),
+                cardStrokeLight: Self.uiColor("D7E8DF", alpha: 0.88),
+                cardStrokeDark: Self.uiColor("294038", alpha: 0.88),
+                shadowLight: Self.uiColor("133427", alpha: 0.13),
+                shadowDark: Self.uiColor("000000", alpha: 0.40),
+                inkLight: Self.uiColor("14231D"),
+                inkDark: Self.uiColor("EDF7F2"),
+                mutedInkLight: Self.uiColor("62746D"),
+                mutedInkDark: Self.uiColor("9DAEA7"),
+                accent: Self.color("1F7D56"),
+                accentSecondary: Self.color("3D7891"),
                 heroColors: [
-                    Color(red: 0.045, green: 0.380, blue: 0.320),
-                    Color(red: 0.110, green: 0.405, blue: 0.705),
-                    Color(red: 0.770, green: 0.515, blue: 0.245)
+                    Self.color("1F7D56"),
+                    Self.color("3D7891"),
+                    Self.color("317B68")
                 ],
                 screenLight: [
-                    UIColor(red: 0.960, green: 0.980, blue: 0.970, alpha: 1),
-                    UIColor(red: 0.920, green: 0.955, blue: 0.965, alpha: 1),
-                    UIColor(red: 0.945, green: 0.955, blue: 0.930, alpha: 1)
+                    Self.uiColor("F2F8F5"),
+                    Self.uiColor("F6FAF7"),
+                    Self.uiColor("EAF5EF")
                 ],
                 screenDark: [
-                    UIColor(red: 0.045, green: 0.060, blue: 0.058, alpha: 1),
-                    UIColor(red: 0.070, green: 0.080, blue: 0.085, alpha: 1),
-                    UIColor(red: 0.055, green: 0.065, blue: 0.060, alpha: 1)
+                    Self.uiColor("0B1713"),
+                    Self.uiColor("0E1714"),
+                    Self.uiColor("10201A")
                 ]
             )
         case .classic:
@@ -102,37 +148,198 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
             )
         case .graphite:
             return AppThemePalette(
-                canvasLight: UIColor(red: 0.930, green: 0.940, blue: 0.945, alpha: 1),
-                canvasDark: UIColor(red: 0.050, green: 0.055, blue: 0.065, alpha: 1),
-                cardLight: UIColor(white: 1, alpha: 0.93),
-                cardDark: UIColor(red: 0.105, green: 0.115, blue: 0.130, alpha: 0.97),
-                cardStrokeLight: UIColor(red: 0.520, green: 0.555, blue: 0.590, alpha: 0.25),
-                cardStrokeDark: UIColor(white: 1, alpha: 0.10),
-                shadowLight: UIColor(red: 0.060, green: 0.075, blue: 0.095, alpha: 0.13),
-                shadowDark: UIColor(white: 0, alpha: 0.45),
-                inkLight: UIColor(red: 0.105, green: 0.120, blue: 0.145, alpha: 1),
-                inkDark: UIColor(red: 0.925, green: 0.935, blue: 0.950, alpha: 1),
-                mutedInkLight: UIColor(red: 0.385, green: 0.420, blue: 0.465, alpha: 1),
-                mutedInkDark: UIColor(red: 0.620, green: 0.655, blue: 0.705, alpha: 1),
-                accent: Color(red: 0.165, green: 0.360, blue: 0.690),
-                accentSecondary: Color(red: 0.080, green: 0.485, blue: 0.405),
+                canvasLight: Self.uiColor("F3F6F8"),
+                canvasDark: Self.uiColor("0E141A"),
+                cardLight: Self.uiColor("FFFFFF", alpha: 0.94),
+                cardDark: Self.uiColor("151B22", alpha: 0.97),
+                cardStrokeLight: Self.uiColor("D6E0E8", alpha: 0.90),
+                cardStrokeDark: Self.uiColor("2B3641", alpha: 0.92),
+                shadowLight: Self.uiColor("13202B", alpha: 0.14),
+                shadowDark: Self.uiColor("000000", alpha: 0.42),
+                inkLight: Self.uiColor("14202A"),
+                inkDark: Self.uiColor("EDF4FA"),
+                mutedInkLight: Self.uiColor("667683"),
+                mutedInkDark: Self.uiColor("9EADB9"),
+                accent: Self.color("2F7A8A"),
+                accentSecondary: Self.color("406C92"),
                 heroColors: [
-                    Color(red: 0.070, green: 0.130, blue: 0.220),
-                    Color(red: 0.175, green: 0.380, blue: 0.700),
-                    Color(red: 0.080, green: 0.485, blue: 0.405)
+                    Self.color("244C5A"),
+                    Self.color("406C92"),
+                    Self.color("2F7A8A")
                 ],
                 screenLight: [
-                    UIColor(red: 0.965, green: 0.970, blue: 0.975, alpha: 1),
-                    UIColor(red: 0.925, green: 0.940, blue: 0.955, alpha: 1),
-                    UIColor(red: 0.940, green: 0.950, blue: 0.945, alpha: 1)
+                    Self.uiColor("EEF3F7"),
+                    Self.uiColor("F3F6F8"),
+                    Self.uiColor("E7EEF4")
                 ],
                 screenDark: [
-                    UIColor(red: 0.040, green: 0.045, blue: 0.055, alpha: 1),
-                    UIColor(red: 0.070, green: 0.080, blue: 0.095, alpha: 1),
-                    UIColor(red: 0.050, green: 0.065, blue: 0.070, alpha: 1)
+                    Self.uiColor("0C1117"),
+                    Self.uiColor("0E141A"),
+                    Self.uiColor("121A22")
                 ]
             )
+        case .ledgerInk:
+            return AppThemePalette(
+                canvasLight: Self.uiColor("F5F8F7"),
+                canvasDark: Self.uiColor("0D1516"),
+                cardLight: Self.uiColor("FFFFFF", alpha: 0.94),
+                cardDark: Self.uiColor("121F20", alpha: 0.97),
+                cardStrokeLight: Self.uiColor("D7E5E4", alpha: 0.90),
+                cardStrokeDark: Self.uiColor("283C3E", alpha: 0.90),
+                shadowLight: Self.uiColor("0D292B", alpha: 0.13),
+                shadowDark: Self.uiColor("000000", alpha: 0.40),
+                inkLight: Self.uiColor("112426"),
+                inkDark: Self.uiColor("ECF6F6"),
+                mutedInkLight: Self.uiColor("5F7475"),
+                mutedInkDark: Self.uiColor("9AAFAF"),
+                accent: Self.color("11766E"),
+                accentSecondary: Self.color("4B697A"),
+                heroColors: [
+                    Self.color("11766E"),
+                    Self.color("4B697A"),
+                    Self.color("2D746F")
+                ],
+                screenLight: [
+                    Self.uiColor("F4F8F8"),
+                    Self.uiColor("F5F8F7"),
+                    Self.uiColor("EAF3F2")
+                ],
+                screenDark: [
+                    Self.uiColor("0B1516"),
+                    Self.uiColor("0D1516"),
+                    Self.uiColor("121F20")
+                ]
+            )
+        case .nightFolio:
+            return AppThemePalette(
+                canvasLight: Self.uiColor("F6F7FA"),
+                canvasDark: Self.uiColor("0B1020"),
+                cardLight: Self.uiColor("FFFFFF", alpha: 0.94),
+                cardDark: Self.uiColor("121A2B", alpha: 0.97),
+                cardStrokeLight: Self.uiColor("DAE1EA", alpha: 0.90),
+                cardStrokeDark: Self.uiColor("293449", alpha: 0.92),
+                shadowLight: Self.uiColor("0C1A2E", alpha: 0.14),
+                shadowDark: Self.uiColor("000000", alpha: 0.44),
+                inkLight: Self.uiColor("111E2E"),
+                inkDark: Self.uiColor("EEF3FA"),
+                mutedInkLight: Self.uiColor("617085"),
+                mutedInkDark: Self.uiColor("A0ABBA"),
+                accent: Self.color("2C6FAE"),
+                accentSecondary: Self.color("A06D2A"),
+                heroColors: [
+                    Self.color("0B1020"),
+                    Self.color("2C6FAE"),
+                    Self.color("A06D2A")
+                ],
+                screenLight: [
+                    Self.uiColor("F5F7FA"),
+                    Self.uiColor("F6F7FA"),
+                    Self.uiColor("EAEFF6")
+                ],
+                screenDark: [
+                    Self.uiColor("0B1020"),
+                    Self.uiColor("11172A"),
+                    Self.uiColor("151D30")
+                ]
+            )
+        case .harbor:
+            return AppThemePalette(
+                canvasLight: UIColor(red: 0.925, green: 0.960, blue: 0.965, alpha: 1),
+                canvasDark: UIColor(red: 0.025, green: 0.070, blue: 0.090, alpha: 1),
+                cardLight: UIColor(red: 0.985, green: 0.995, blue: 0.995, alpha: 0.95),
+                cardDark: UIColor(red: 0.055, green: 0.115, blue: 0.135, alpha: 0.98),
+                cardStrokeLight: UIColor(red: 0.355, green: 0.600, blue: 0.650, alpha: 0.26),
+                cardStrokeDark: UIColor(red: 0.620, green: 0.850, blue: 0.880, alpha: 0.13),
+                shadowLight: UIColor(red: 0.025, green: 0.145, blue: 0.170, alpha: 0.13),
+                shadowDark: UIColor(white: 0, alpha: 0.50),
+                inkLight: UIColor(red: 0.060, green: 0.140, blue: 0.160, alpha: 1),
+                inkDark: UIColor(red: 0.890, green: 0.955, blue: 0.960, alpha: 1),
+                mutedInkLight: UIColor(red: 0.330, green: 0.475, blue: 0.500, alpha: 1),
+                mutedInkDark: UIColor(red: 0.570, green: 0.735, blue: 0.755, alpha: 1),
+                accent: Color(red: 0.000, green: 0.520, blue: 0.570),
+                accentSecondary: Color(red: 0.070, green: 0.345, blue: 0.700),
+                heroColors: [
+                    Color(red: 0.000, green: 0.315, blue: 0.360),
+                    Color(red: 0.050, green: 0.345, blue: 0.700),
+                    Color(red: 0.000, green: 0.620, blue: 0.600)
+                ],
+                screenLight: [
+                    UIColor(red: 0.950, green: 0.985, blue: 0.985, alpha: 1),
+                    UIColor(red: 0.910, green: 0.955, blue: 0.965, alpha: 1),
+                    UIColor(red: 0.935, green: 0.960, blue: 0.950, alpha: 1)
+                ],
+                screenDark: [
+                    UIColor(red: 0.020, green: 0.055, blue: 0.070, alpha: 1),
+                    UIColor(red: 0.030, green: 0.085, blue: 0.105, alpha: 1),
+                    UIColor(red: 0.025, green: 0.070, blue: 0.090, alpha: 1)
+                ]
+            )
+        case .sunrise:
+            return AppThemePalette(
+                canvasLight: UIColor(red: 0.990, green: 0.955, blue: 0.910, alpha: 1),
+                canvasDark: UIColor(red: 0.105, green: 0.060, blue: 0.075, alpha: 1),
+                cardLight: UIColor(red: 1.000, green: 0.990, blue: 0.970, alpha: 0.95),
+                cardDark: UIColor(red: 0.170, green: 0.095, blue: 0.110, alpha: 0.98),
+                cardStrokeLight: UIColor(red: 0.880, green: 0.560, blue: 0.330, alpha: 0.28),
+                cardStrokeDark: UIColor(red: 0.980, green: 0.640, blue: 0.420, alpha: 0.14),
+                shadowLight: UIColor(red: 0.420, green: 0.165, blue: 0.070, alpha: 0.12),
+                shadowDark: UIColor(white: 0, alpha: 0.48),
+                inkLight: UIColor(red: 0.210, green: 0.105, blue: 0.085, alpha: 1),
+                inkDark: UIColor(red: 0.970, green: 0.910, blue: 0.865, alpha: 1),
+                mutedInkLight: UIColor(red: 0.520, green: 0.360, blue: 0.295, alpha: 1),
+                mutedInkDark: UIColor(red: 0.780, green: 0.620, blue: 0.560, alpha: 1),
+                accent: Color(red: 0.820, green: 0.360, blue: 0.180),
+                accentSecondary: Color(red: 0.520, green: 0.235, blue: 0.540),
+                heroColors: [
+                    Color(red: 0.760, green: 0.300, blue: 0.170),
+                    Color(red: 0.520, green: 0.235, blue: 0.540),
+                    Color(red: 0.950, green: 0.660, blue: 0.260)
+                ],
+                screenLight: [
+                    UIColor(red: 1.000, green: 0.965, blue: 0.925, alpha: 1),
+                    UIColor(red: 0.985, green: 0.930, blue: 0.890, alpha: 1),
+                    UIColor(red: 0.975, green: 0.945, blue: 0.955, alpha: 1)
+                ],
+                screenDark: [
+                    UIColor(red: 0.085, green: 0.045, blue: 0.060, alpha: 1),
+                    UIColor(red: 0.125, green: 0.065, blue: 0.090, alpha: 1),
+                    UIColor(red: 0.095, green: 0.055, blue: 0.080, alpha: 1)
+                ]
+            )
+        case .custom:
+            return AppThemeCustomTheme.palette
         }
+    }
+}
+
+enum AppThemeCustomTheme {
+    static let surfaceHexKey = "appCustomThemeSurfaceHex"
+    static let accentHexKey = "appCustomThemeAccentHex"
+    static let secondaryHexKey = "appCustomThemeSecondaryHex"
+
+    static let defaultSurfaceHex = "EAF4F0"
+    static let defaultAccentHex = "0E6F59"
+    static let defaultSecondaryHex = "2F63B7"
+
+    static func color(hex: String, fallback: String) -> Color {
+        Color(uiColor: uiColor(hex: hex, fallback: fallback))
+    }
+
+    static func uiColor(hex: String, fallback: String) -> UIColor {
+        UIColor(hexRGB: normalizedHex(hex, fallback: fallback)) ?? UIColor(hexRGB: fallback) ?? .systemTeal
+    }
+
+    static func hexString(from color: Color, fallback: String) -> String {
+        UIColor(color)
+            .resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+            .hexRGBString ?? fallback
+    }
+
+    static func normalizedHex(_ rawValue: String, fallback: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hex = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+        guard hex.count == 6, Int(hex, radix: 16) != nil else { return fallback }
+        return hex.uppercased()
     }
 }
 
@@ -206,6 +413,106 @@ private struct AppThemePalette {
     let heroColors: [Color]
     let screenLight: [UIColor]
     let screenDark: [UIColor]
+}
+
+fileprivate extension AppThemeCustomTheme {
+    static var palette: AppThemePalette {
+        let surface = uiColor(
+            hex: UserDefaults.standard.string(forKey: surfaceHexKey) ?? defaultSurfaceHex,
+            fallback: defaultSurfaceHex
+        )
+        let accentUIColor = uiColor(
+            hex: UserDefaults.standard.string(forKey: accentHexKey) ?? defaultAccentHex,
+            fallback: defaultAccentHex
+        )
+        let secondaryUIColor = uiColor(
+            hex: UserDefaults.standard.string(forKey: secondaryHexKey) ?? defaultSecondaryHex,
+            fallback: defaultSecondaryHex
+        )
+
+        return AppThemePalette(
+            canvasLight: surface.blended(towards: .white, amount: 0.78),
+            canvasDark: surface.blended(towards: .black, amount: 0.88),
+            cardLight: surface.blended(towards: .white, amount: 0.92).withAlphaComponent(0.96),
+            cardDark: surface.blended(towards: .black, amount: 0.76).withAlphaComponent(0.98),
+            cardStrokeLight: accentUIColor.blended(towards: surface, amount: 0.42).withAlphaComponent(0.28),
+            cardStrokeDark: secondaryUIColor.blended(towards: .white, amount: 0.25).withAlphaComponent(0.16),
+            shadowLight: accentUIColor.blended(towards: .black, amount: 0.50).withAlphaComponent(0.13),
+            shadowDark: UIColor(white: 0, alpha: 0.50),
+            inkLight: surface.blended(towards: .black, amount: 0.78),
+            inkDark: surface.blended(towards: .white, amount: 0.84),
+            mutedInkLight: surface.blended(towards: .black, amount: 0.52),
+            mutedInkDark: surface.blended(towards: .white, amount: 0.58),
+            accent: Color(uiColor: accentUIColor),
+            accentSecondary: Color(uiColor: secondaryUIColor),
+            heroColors: [
+                Color(uiColor: accentUIColor.blended(towards: .black, amount: 0.20)),
+                Color(uiColor: secondaryUIColor),
+                Color(uiColor: surface.blended(towards: accentUIColor, amount: 0.55))
+            ],
+            screenLight: [
+                surface.blended(towards: .white, amount: 0.86),
+                surface.blended(towards: .white, amount: 0.70),
+                secondaryUIColor.blended(towards: .white, amount: 0.88)
+            ],
+            screenDark: [
+                surface.blended(towards: .black, amount: 0.92),
+                accentUIColor.blended(towards: .black, amount: 0.84),
+                secondaryUIColor.blended(towards: .black, amount: 0.86)
+            ]
+        )
+    }
+}
+
+fileprivate extension UIColor {
+    convenience init?(hexRGB: String) {
+        let normalized = hexRGB.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        guard normalized.count == 6, let value = Int(normalized, radix: 16) else {
+            return nil
+        }
+
+        let red = CGFloat((value >> 16) & 0xFF) / 255
+        let green = CGFloat((value >> 8) & 0xFF) / 255
+        let blue = CGFloat(value & 0xFF) / 255
+        self.init(red: red, green: green, blue: blue, alpha: 1)
+    }
+
+    func blended(towards target: UIColor, amount: CGFloat) -> UIColor {
+        let clampedAmount = min(max(amount, 0), 1)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        var targetRed: CGFloat = 0
+        var targetGreen: CGFloat = 0
+        var targetBlue: CGFloat = 0
+        var targetAlpha: CGFloat = 0
+
+        getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        target.getRed(&targetRed, green: &targetGreen, blue: &targetBlue, alpha: &targetAlpha)
+
+        return UIColor(
+            red: red + (targetRed - red) * clampedAmount,
+            green: green + (targetGreen - green) * clampedAmount,
+            blue: blue + (targetBlue - blue) * clampedAmount,
+            alpha: alpha + (targetAlpha - alpha) * clampedAmount
+        )
+    }
+
+    var hexRGBString: String? {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return nil }
+
+        return String(
+            format: "%02X%02X%02X",
+            Int(round(red * 255)),
+            Int(round(green * 255)),
+            Int(round(blue * 255))
+        )
+    }
 }
 
 enum AppTheme {

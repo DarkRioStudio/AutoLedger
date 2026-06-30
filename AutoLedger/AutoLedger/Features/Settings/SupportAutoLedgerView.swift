@@ -16,6 +16,7 @@ struct AutoLedgerProView: View {
                 subscriptionActionsCard
 
                 featureGrid
+                roadmapSection
                 assurancePanel
                 productSection
                 boundaryCard
@@ -137,6 +138,37 @@ struct AutoLedgerProView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 146), spacing: 12)], spacing: 12) {
                 ForEach(featureItems) { item in
                     ProFeatureCard(item: item)
+                }
+            }
+        }
+    }
+
+    private var roadmapSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("pro.roadmap.title")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Spacer(minLength: 8)
+
+                Text("pro.roadmap.badge")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(gold)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(gold.opacity(0.12)))
+            }
+
+            Text("pro.roadmap.subtitle")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 158), spacing: 12)], spacing: 12) {
+                ForEach(roadmapItems) { item in
+                    ProRoadmapCard(item: item, badge: "pro.roadmap.item_badge")
                 }
             }
         }
@@ -564,6 +596,13 @@ struct AutoLedgerProView: View {
                 colors: [Color.blue, Color.cyan]
             ),
             ProFeatureItem(
+                id: "cloudInbox",
+                icon: "tray.full.fill",
+                title: "pro.feature.cloud_inbox.title",
+                body: "pro.feature.cloud_inbox.body",
+                colors: [AppTheme.accent, Color.teal]
+            ),
+            ProFeatureItem(
                 id: "batch",
                 icon: "doc.on.doc.fill",
                 title: "pro.feature.batch.title",
@@ -576,27 +615,39 @@ struct AutoLedgerProView: View {
                 title: "pro.feature.dedupe.title",
                 body: "pro.feature.dedupe.body",
                 colors: [Color.orange, gold]
-            ),
-            ProFeatureItem(
+            )
+        ]
+    }
+
+    private var roadmapItems: [ProRoadmapItem] {
+        [
+            ProRoadmapItem(
                 id: "search",
                 icon: "magnifyingglass",
                 title: "pro.feature.search.title",
                 body: "pro.feature.search.body",
-                colors: [Color.green, AppTheme.accent]
+                tint: AppTheme.accent
             ),
-            ProFeatureItem(
+            ProRoadmapItem(
                 id: "alerts",
                 icon: "bell.fill",
                 title: "pro.feature.alerts.title",
                 body: "pro.feature.alerts.body",
-                colors: [Color.teal, Color.cyan]
+                tint: Color.teal
             ),
-            ProFeatureItem(
+            ProRoadmapItem(
                 id: "export",
                 icon: "square.and.arrow.down.fill",
                 title: "pro.feature.export.title",
                 body: "pro.feature.export.body",
-                colors: [Color.indigo, Color.blue]
+                tint: Color.indigo
+            ),
+            ProRoadmapItem(
+                id: "rules",
+                icon: "wand.and.sparkles",
+                title: "pro.feature.rules.title",
+                body: "pro.feature.rules.body",
+                tint: gold
             )
         ]
     }
@@ -675,6 +726,14 @@ private struct ProFeatureItem: Identifiable {
     let title: LocalizedStringKey
     let body: LocalizedStringKey
     let colors: [Color]
+}
+
+private struct ProRoadmapItem: Identifiable {
+    let id: String
+    let icon: String
+    let title: LocalizedStringKey
+    let body: LocalizedStringKey
+    let tint: Color
 }
 
 private struct ProAssuranceItem: Identifiable {
@@ -810,6 +869,57 @@ private struct ProPreviewTaskRow: View {
             Text(count)
                 .font(.caption.weight(.black).monospacedDigit())
                 .foregroundStyle(AppTheme.mutedInk)
+        }
+    }
+}
+
+private struct ProRoadmapCard: View {
+    let item: ProRoadmapItem
+    let badge: LocalizedStringKey
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: item.icon)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(item.tint)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(item.tint.opacity(0.12))
+                    )
+
+                Spacer(minLength: 8)
+
+                Text(badge)
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(item.tint)
+                    .lineLimit(1)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(item.tint.opacity(0.10)))
+            }
+
+            Text(item.title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.88)
+
+            Text(item.body)
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 146, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(item.tint.opacity(0.16), lineWidth: 1)
         }
     }
 }

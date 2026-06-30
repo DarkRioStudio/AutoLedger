@@ -48,6 +48,19 @@ REQUIRED_SNIPPETS = {
         "autoLedgerContentTitleNavigation",
         "AutoLedgerPageTitle",
         ".regularMaterial",
+        "case harbor",
+        "case sunrise",
+        "case ledgerInk",
+        "case nightFolio",
+        "case custom",
+        "AppThemeCustomTheme",
+    ],
+    APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [
+        "LazyVGrid",
+        "AppearanceThemeOptionCard",
+        "AppearanceCustomThemeLockedCard",
+        "ColorPicker",
+        "AutoLedgerProView()",
     ],
     APP / "Features" / "Ledger" / "LedgerView.swift": [
         "NavigationSplitView",
@@ -85,7 +98,7 @@ REQUIRED_SNIPPETS = {
         "photoImportButton",
         "receiptScanButton",
         "AutoLedgerPageTitle(\"tab.inbox\")",
-        ".autoLedgerContentTitleNavigation(\"tab.inbox\", toolbarRevealOffset: -56)",
+        ".autoLedgerContentTitleNavigation(\"tab.inbox\")",
         "quickEntryActionMenu",
         "quickImportButtonRow",
         "autoLedgerSolidNavigationBarChrome",
@@ -116,12 +129,16 @@ FORBIDDEN_FILE_SNIPPETS = {
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "private var pageTitle",
         "VoiceLedgerQuickEntryView()",
+        "toolbarRevealOffset: -56",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "private var pageTitle",
     ],
     APP / "Features" / "Settings" / "SettingsView.swift": [
         "private var pageTitle",
+    ],
+    APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [
+        "appearance.mode.subtitle",
     ],
 }
 

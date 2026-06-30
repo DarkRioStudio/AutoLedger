@@ -14,6 +14,9 @@ struct AutoLedgerApp: App {
     @UIApplicationDelegateAdaptor(AutoLedgerAppDelegate.self) private var appDelegate
     @AppStorage(AppThemePreset.userDefaultsKey) private var themeRawValue = AppThemePreset.fresh.rawValue
     @AppStorage(AppColorSchemePreference.userDefaultsKey) private var colorSchemePreferenceRawValue = AppColorSchemePreference.system.rawValue
+    @AppStorage(AppThemeCustomTheme.surfaceHexKey) private var customThemeSurfaceHex = AppThemeCustomTheme.defaultSurfaceHex
+    @AppStorage(AppThemeCustomTheme.accentHexKey) private var customThemeAccentHex = AppThemeCustomTheme.defaultAccentHex
+    @AppStorage(AppThemeCustomTheme.secondaryHexKey) private var customThemeSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
 
     init() {
         // 注册默认设置
@@ -21,7 +24,10 @@ struct AutoLedgerApp: App {
             "subscriptionReminder": true,
             "monthlyAnomalyThresholdPercent": 150.0,
             AppThemePreset.userDefaultsKey: AppThemePreset.fresh.rawValue,
-            AppColorSchemePreference.userDefaultsKey: AppColorSchemePreference.system.rawValue
+            AppColorSchemePreference.userDefaultsKey: AppColorSchemePreference.system.rawValue,
+            AppThemeCustomTheme.surfaceHexKey: AppThemeCustomTheme.defaultSurfaceHex,
+            AppThemeCustomTheme.accentHexKey: AppThemeCustomTheme.defaultAccentHex,
+            AppThemeCustomTheme.secondaryHexKey: AppThemeCustomTheme.defaultSecondaryHex
         ])
 
         ClipboardImportIntent.handler = {
@@ -54,6 +60,9 @@ struct AutoLedgerApp: App {
             )
             .autoLedgerMotion(AppMotion.theme, value: themeRawValue)
             .autoLedgerMotion(AppMotion.theme, value: colorSchemePreferenceRawValue)
+            .autoLedgerMotion(AppMotion.theme, value: customThemeSurfaceHex)
+            .autoLedgerMotion(AppMotion.theme, value: customThemeAccentHex)
+            .autoLedgerMotion(AppMotion.theme, value: customThemeSecondaryHex)
         }
         #if targetEnvironment(macCatalyst)
         .commands {
