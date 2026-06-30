@@ -67,7 +67,7 @@ struct InboxView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .autoLedgerContentTitleNavigation("tab.inbox", toolbarRevealOffset: -56)
+            .autoLedgerContentTitleNavigation("tab.inbox")
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }

@@ -451,7 +451,7 @@ private struct AutoLedgerNavigationBarChromeModifier: ViewModifier {
 private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .toolbarBackground(AppTheme.canvas, for: .navigationBar)
+            .toolbarBackground(.regularMaterial, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
     }
 }
@@ -532,7 +532,7 @@ extension View {
         modifier(AutoLedgerSolidNavigationBarChromeModifier())
     }
 
-    func autoLedgerContentTitleNavigation(_ title: LocalizedStringKey, toolbarRevealOffset: CGFloat = -12) -> some View {
+    func autoLedgerContentTitleNavigation(_ title: LocalizedStringKey, toolbarRevealOffset: CGFloat = 0) -> some View {
         modifier(AutoLedgerContentTitleNavigationModifier(title: title, toolbarRevealOffset: toolbarRevealOffset))
     }
 
