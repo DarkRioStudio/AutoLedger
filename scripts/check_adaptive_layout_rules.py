@@ -21,6 +21,8 @@ REQUIRED_SNIPPETS = {
     APP / "App" / "AutoLedgerApp.swift": [
         "@StateObject private var navigationState",
         ".environmentObject(navigationState)",
+        "themeRefreshID",
+        ".autoLedgerMotion(AppMotion.theme, value: themeRefreshID)",
     ],
     APP / "App" / "AutoLedgerNavigationState.swift": [
         "final class AutoLedgerNavigationState",
@@ -53,11 +55,15 @@ REQUIRED_SNIPPETS = {
         "case ledgerInk",
         "case nightFolio",
         "case custom",
+        "static let selectableCases: [AppThemePreset] = [.fresh, .classic, .graphite, .custom]",
         "AppThemeCustomTheme",
     ],
     APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [
-        "LazyVGrid",
-        "AppearanceThemeOptionCard",
+        "themeMenuCard",
+        "Picker(\"appearance.theme_picker\", selection: themeSelection)",
+        ".pickerStyle(.menu)",
+        "ForEach(AppThemePreset.selectableCases)",
+        "AppearancePreviewCard(preset: selectedPreset)",
         "AppearanceCustomThemeLockedCard",
         "ColorPicker",
         "AutoLedgerProView()",
@@ -139,6 +145,8 @@ FORBIDDEN_FILE_SNIPPETS = {
     ],
     APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [
         "appearance.mode.subtitle",
+        "themePickerGrid",
+        "AppearanceThemeOptionCard",
     ],
 }
 

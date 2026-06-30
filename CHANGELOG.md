@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.6.4）
+- [2026-06-30 +0800] 建立 `v1.6.4` 回归基线与发布证据清单：新增 `versions/v1.6.4-regression-baseline.md`，把 Personal Pro / 本地邮箱 / 云端专属收件箱 / StoreKit / Worker 的本地自动门禁、专项断言、人工证据边界和当前阻断项拆开记录；同步更新 `v1.6.4` 计划和 README 四语路线图，将当前状态从“开发中”推进到“收口中”，并明确 production APNs secrets、App Store Server API secrets、ASC sandbox 购买、审核材料和 TestFlight 端到端验证仍需外部环境收口。
 - [2026-06-29 +0800] 新增 `GOAL-2218` 本地 IMAP 水单候选召回规则重审规划：明确本地邮箱扫描不能把近期全部附件邮件直接展示为候选，应先做日期 / 主题 / 附件 hint / header fetch / MIME metadata 打分；PDF 附件与水单主题优先，无附件但主题包含 `folio` / `账单` / `电子账单` 的邮件也应进入正文水单候选并复用正文转 PDF -> PDFKit -> 酒店水单复核链路。同步补充自动与人工验收标准。本轮只更新版本规划文档，不修改 App / Worker 代码。
 - [2026-06-29 +0800] 酒店水单识别链路新增币种代码归一化和邮件正文水单兜底：`HotelFolioParsePipeline`、复核表单、正式酒店记录编辑和关联账本流水统一将 `人民币` / `美元` / `日元` / 符号等解析结果落成 `CNY` / `USD` / `JPY` 等英文币种代码，和现有编辑 Picker 保持一致；本地 IMAP 与云端专属收件箱在邮件无 PDF 附件但正文命中水单关键词时，会生成 `email-body-folio.pdf` 并继续复用 PDFKit -> 酒店水单复核流程。生产 Worker 已部署 `cf316422-b71f-4e2b-be5a-5ccc205a6e6c`，支持真实 `folio+<token>@getautoledger.app` 正文水单候选。
 - [2026-06-29 +0800] 补齐酒店水单专属收件箱 token 自动领取闭环：Worker 新增 `POST /v1/cloud-hotel-folio-token` bootstrap provisioning API，App 使用本机稳定 client id 自动领取 / 轮换 `folio+<token>@getautoledger.app` 专属地址；Worker 只保存 token hash 并将同一 client 旧 active token 标记为 rotated，raw token 只返回一次并由 App 存入本机 Keychain。酒店云收件箱页面新增“领取/轮换专属地址”按钮，领取成功后自动请求通知权限并尝试登记 APNs device token；四语文案、Worker README、`v1.6.4` 计划和迭代日志同步更新。APNs secrets、服务端订阅 entitlement 校验、token 停用 / 到期同步和运营面板仍属于后续配置 / 后端收口。
@@ -33,6 +34,7 @@
 - [2026-06-29 +0800] 设置页将 `AutoLedger Pro` 入口移到页面最上方，改为独立高亮渐变卡片展示，并从“支持”分组移除重复入口；卡片继续跳转现有 `AutoLedgerProView`，不修改 StoreKit 商品、订阅状态逻辑或购买流程。已通过 iOS 27 iPhone 17 Simulator Debug 构建和 screenshot mode 设置页截图检查。
 
 ### 修复（v1.6.4）
+- [2026-06-30 +0800] 修复“外观与主题”切换后界面配色与预览不明显变化的问题：主题入口从 8 个卡片网格收敛为下拉式 `Picker`，当前可选项仅保留隐私薄荷、经典、石墨工作台和 Pro 自定义；旧的隐藏 preset 保留代码兼容但会归一回默认主题。外观预览卡现在直接使用选中 preset 的画布、卡片、描边、文字和强调色渲染样张，App 根视图也观察主题 / 外观模式 / 自定义色偏好并触发主题刷新。同步更新自适应布局门禁，禁止回退到主题网格或未绑定 preset 的预览。
 - [2026-06-30 +0800] 修复记账、月报、设置等 ScrollView tab 顶部导航栏出现单色白块，以及自绘页面标题滚动消失时机与账本 / 酒店消费 tab 不一致的问题：`autoLedgerSolidNavigationBarChrome` 改为使用与 split/list 页面一致的 regular material 导航栏背景，`autoLedgerContentTitleNavigation` 默认阈值调整为页面标题抵达顶部边缘时再切换 inline 标题，并移除记账 tab 的 `-56` 特殊阈值；自适应布局静态门禁同步禁止旧阈值回归。本轮只调整 UI chrome，不修改记账、识别、同步、Pro gate、StoreKit、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-29 +0800] 修复酒店消费列表长中文酒店名挤压金额，以及云端水单收件箱刷新仍显示已处理候选的问题：酒店名超过 8 个汉字时允许两行展示，金额保持更高布局优先级；云端候选列表只返回 / 展示仍可处理的 `stored`、`notified` 状态，`downloaded`、`converted`、`failed`、`deleted`、`expired` 不再作为待导入候选出现。生产 Worker 已部署 `3f1ff627-f5d0-4df1-bbe9-b612c2573350`。
 - [2026-06-29 +0800] 完成酒店水单专属收件箱 Cloudflare 侧资源部署：创建 dev / staging / production 三套 R2 bucket、D1 database 和 APNs Queue，执行 D1 schema migration，部署 `autoledger-hotel-folio-inbox`、`autoledger-hotel-folio-inbox-staging`、`autoledger-hotel-folio-inbox-production` 三个 Worker，绑定 `folio.getautoledger.app` 与 `staging-folio.getautoledger.app` 自定义域，并创建 `folio@getautoledger.app -> autoledger-hotel-folio-inbox-production` Email Routing 规则。现有 `autoledger-models`、`ebc-audio-*` 等资源未改动。APNs secrets 仍需后续配置。

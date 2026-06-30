@@ -9,10 +9,19 @@ struct AppearanceSettingsView: View {
     @AppStorage(AppThemeCustomTheme.secondaryHexKey) private var customSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
     @State private var isPresentingProSheet = false
 
-    private let themeColumns = [GridItem(.adaptive(minimum: 146), spacing: 12)]
-
     private var selectedPreset: AppThemePreset {
-        AppThemePreset(rawValue: selectedThemeRawValue) ?? .fresh
+        let preset = AppThemePreset(rawValue: selectedThemeRawValue) ?? .fresh
+        return AppThemePreset.selectableCases.contains(preset) ? preset : .fresh
+    }
+
+    private var themeSelection: Binding<String> {
+        Binding(
+            get: { selectedPreset.rawValue },
+            set: { rawValue in
+                guard let preset = AppThemePreset(rawValue: rawValue) else { return }
+                selectTheme(preset)
+            }
+        )
     }
 
     private var canUseCustomTheme: Bool {
@@ -75,7 +84,7 @@ struct AppearanceSettingsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 AutoLedgerPageTitle("appearance.title")
 
-                themePickerGrid
+                themeMenuCard
                 appearanceModeCard
                 selectedThemeCard
 
@@ -95,7 +104,7 @@ struct AppearanceSettingsView: View {
                     }
                 }
 
-                AppearancePreviewCard()
+                AppearancePreviewCard(preset: selectedPreset)
                     .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
                     .autoLedgerMotion(AppMotion.theme, value: selectedColorSchemeRawValue)
                     .autoLedgerMotion(AppMotion.theme, value: customSurfaceHex)
@@ -126,10 +135,13 @@ struct AppearanceSettingsView: View {
             await proEntitlement.refreshEntitlements()
         }
         .onAppear {
-            enforceCustomThemeAccess()
+            enforceThemeAvailability()
+        }
+        .onChange(of: selectedThemeRawValue) { _, _ in
+            enforceThemeAvailability()
         }
         .onChange(of: proEntitlement.isProActive) { _, _ in
-            enforceCustomThemeAccess()
+            enforceThemeAvailability()
         }
         .sheet(isPresented: $isPresentingProSheet) {
             NavigationStack {
@@ -145,27 +157,39 @@ struct AppearanceSettingsView: View {
         }
     }
 
-    private var themePickerGrid: some View {
+    private var themeMenuCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("appearance.theme_picker")
-                .font(.headline)
-                .foregroundStyle(AppTheme.ink)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("appearance.theme_picker")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
 
-            LazyVGrid(columns: themeColumns, spacing: 12) {
-                ForEach(AppThemePreset.allCases) { preset in
-                    Button {
-                        selectTheme(preset)
-                    } label: {
-                        AppearanceThemeOptionCard(
-                            preset: preset,
-                            isSelected: selectedPreset == preset,
-                            isLocked: preset.isCustom && !canUseCustomTheme
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    Text(selectedPreset.localizedTitleKey)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                Spacer(minLength: 12)
+
+                AppearanceThemeSwatches(colors: selectedPreset.previewColors, swatchSize: 24)
+            }
+
+            Picker("appearance.theme_picker", selection: themeSelection) {
+                ForEach(AppThemePreset.selectableCases) { preset in
+                    Text(preset.localizedTitleKey)
+                        .tag(preset.rawValue)
                 }
             }
+            .pickerStyle(.menu)
+            .tint(AppTheme.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityLabel(Text("appearance.theme_picker"))
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .autoLedgerCardSurface(cornerRadius: 22)
+        .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
     }
 
     private var appearanceModeCard: some View {
@@ -223,6 +247,11 @@ struct AppearanceSettingsView: View {
     }
 
     private func selectTheme(_ preset: AppThemePreset) {
+        guard AppThemePreset.selectableCases.contains(preset) else {
+            selectedThemeRawValue = AppThemePreset.fresh.rawValue
+            return
+        }
+
         if preset.isCustom && !canUseCustomTheme {
             isPresentingProSheet = true
             return
@@ -231,8 +260,15 @@ struct AppearanceSettingsView: View {
         selectedThemeRawValue = preset.rawValue
     }
 
-    private func enforceCustomThemeAccess() {
-        guard selectedPreset.isCustom, !canUseCustomTheme else { return }
+    private func enforceThemeAvailability() {
+        let storedPreset = AppThemePreset(rawValue: selectedThemeRawValue) ?? .fresh
+
+        guard AppThemePreset.selectableCases.contains(storedPreset) else {
+            selectedThemeRawValue = AppThemePreset.fresh.rawValue
+            return
+        }
+
+        guard storedPreset.isCustom, !canUseCustomTheme else { return }
         selectedThemeRawValue = AppThemePreset.fresh.rawValue
     }
 
@@ -240,56 +276,6 @@ struct AppearanceSettingsView: View {
         customSurfaceHex = AppThemeCustomTheme.defaultSurfaceHex
         customAccentHex = AppThemeCustomTheme.defaultAccentHex
         customSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
-    }
-}
-
-private struct AppearanceThemeOptionCard: View {
-    let preset: AppThemePreset
-    let isSelected: Bool
-    let isLocked: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 8) {
-                AppearanceThemeSwatches(colors: preset.previewColors, swatchSize: 20)
-
-                Spacer(minLength: 6)
-
-                if isLocked {
-                    Image(systemName: "crown.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(AppTheme.accent)
-                } else if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.callout.weight(.bold))
-                        .foregroundStyle(AppTheme.accent)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(preset.localizedTitleKey)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(AppTheme.ink)
-                    .lineLimit(1)
-
-                Text(preset.localizedSubtitleKey)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.mutedInk)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.86)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 126, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(isSelected ? AppTheme.accent.opacity(0.14) : AppTheme.card)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isSelected ? AppTheme.accent.opacity(0.72) : AppTheme.cardStroke, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -422,6 +408,8 @@ private struct AppearanceCustomThemeLockedCard: View {
 }
 
 private struct AppearancePreviewCard: View {
+    let preset: AppThemePreset
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 14) {
@@ -431,67 +419,80 @@ private struct AppearancePreviewCard: View {
                     .frame(width: 42, height: 42)
                     .background(
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(AppTheme.accent)
+                            .fill(preset.previewAccent)
                     )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("appearance.preview.title")
                         .font(.headline)
-                        .foregroundStyle(AppTheme.ink)
+                        .foregroundStyle(preset.previewInk)
 
                     Text("appearance.preview.subtitle")
                         .font(.subheadline)
-                        .foregroundStyle(AppTheme.mutedInk)
+                        .foregroundStyle(preset.previewMutedInk)
                 }
 
                 Spacer()
             }
 
             HStack(spacing: 10) {
-                AppearancePreviewMetric(title: "appearance.preview.month", value: "$1,428")
-                AppearancePreviewMetric(title: "appearance.preview.queue", value: "4")
+                AppearancePreviewMetric(title: "appearance.preview.month", value: "$1,428", preset: preset)
+                AppearancePreviewMetric(title: "appearance.preview.queue", value: "4", preset: preset)
             }
 
             VStack(spacing: 0) {
-                AppearancePreviewRow(icon: "cup.and.saucer.fill", title: "Blue Bottle", subtitle: "Food & drink", amount: "-$6.80")
-                Divider().overlay(AppTheme.cardStroke)
-                AppearancePreviewRow(icon: "building.2.fill", title: "Conference hotel", subtitle: "Travel", amount: "-$284.12")
+                AppearancePreviewRow(icon: "cup.and.saucer.fill", title: "Blue Bottle", subtitle: "Food & drink", amount: "-$6.80", preset: preset)
+                Divider().overlay(preset.previewCardStroke)
+                AppearancePreviewRow(icon: "building.2.fill", title: "Conference hotel", subtitle: "Travel", amount: "-$284.12", preset: preset)
             }
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(AppTheme.card.opacity(0.72))
+                    .fill(preset.previewCard.opacity(0.78))
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(AppTheme.cardStroke, lineWidth: 1)
+                    .stroke(preset.previewCardStroke, lineWidth: 1)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .autoLedgerCardSurface(cornerRadius: 22)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(preset.previewCanvas)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(preset.previewCardStroke, lineWidth: 1)
+        }
+        .shadow(color: preset.previewAccent.opacity(0.14), radius: 18, x: 0, y: 10)
     }
 }
 
 private struct AppearancePreviewMetric: View {
     let title: LocalizedStringKey
     let value: String
+    let preset: AppThemePreset
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.mutedInk)
+                .foregroundStyle(preset.previewMutedInk)
 
             Text(value)
                 .font(.title3.monospacedDigit().weight(.bold))
-                .foregroundStyle(AppTheme.ink)
+                .foregroundStyle(preset.previewInk)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppTheme.accent.opacity(0.10))
+                .fill(preset.previewAccent.opacity(0.12))
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(preset.previewCardStroke.opacity(0.8), lineWidth: 1)
+        }
     }
 }
 
@@ -500,33 +501,34 @@ private struct AppearancePreviewRow: View {
     let title: String
     let subtitle: String
     let amount: String
+    let preset: AppThemePreset
 
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(preset.previewAccent)
                 .frame(width: 32, height: 32)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(AppTheme.accent.opacity(0.12))
+                        .fill(preset.previewAccent.opacity(0.12))
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.ink)
+                    .foregroundStyle(preset.previewInk)
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(AppTheme.mutedInk)
+                    .foregroundStyle(preset.previewMutedInk)
             }
 
             Spacer()
 
             Text(amount)
                 .font(.subheadline.monospacedDigit().weight(.bold))
-                .foregroundStyle(AppTheme.ink)
+                .foregroundStyle(preset.previewInk)
         }
         .padding(12)
     }

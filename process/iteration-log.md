@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-313 外观主题配方与 Pro 自定义外观）
+更新日期：2026-06-30（ITER-315 外观主题切换与预览收敛）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-315 外观主题切换与预览收敛
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System / Settings
+- 类型：Bugfix / UI / 测试
+- 目标：修复“外观与主题”切换后界面配色没有明显变化、主题预览也不随选择变化的问题，并按反馈把主题选择从多卡片网格收敛为下拉选择。
+- 改动范围：更新 `AppThemePreset` 的可见选择集合和预览色 token；更新 `AppearanceSettingsView.swift` 的主题入口、选择绑定、Pro 自定义访问兜底和预览卡渲染；更新 `AutoLedgerApp.swift` 根视图主题刷新信号；更新 `scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 未改动范围：未删除旧主题 enum / 本地化文案以保留已写入偏好的兼容路径；未修改 StoreKit 商品、Pro entitlement、识别 / 记账 / 同步业务逻辑、SQLite / CloudKit schema、Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：主题设置入口改为 `.pickerStyle(.menu)` 的下拉式 `Picker`；可见选项收敛为 `fresh` / `classic` / `graphite` / `custom`，旧的 `ledgerInk` / `nightFolio` / `harbor` / `sunrise` 保留代码兼容但不会再出现在设置页，读取到这些旧值时回落到 `fresh`。外观预览卡改为直接接收 `selectedPreset`，并用该 preset 的画布、卡片、描边、文字与强调色渲染小账本样张；App 根视图观察主题、外观模式与自定义色偏好，触发已有 `AppTheme.*` 颜色重新求值且不重建 `LedgerStore` / 导航状态。自适应布局门禁新增规则，禁止回退到主题网格或未绑定 preset 的预览。
+- 未完成内容：本轮未做真机 / 模拟器手动点击截图矩阵，也未导出所有主题的浅色 / 深色对照图。
+- 测试情况：先修改 `scripts/check_adaptive_layout_rules.py` 后执行 `python3 scripts/check_adaptive_layout_rules.py`，预期失败并命中缺少 `selectableCases`、`themeMenuCard`、菜单式 `Picker`、`AppearancePreviewCard(preset: selectedPreset)` 以及旧 `themePickerGrid` / `AppearanceThemeOptionCard` 残留；实现后再次执行通过。执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；通过 XcodeBuildMCP 确认 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T08-31-40-572Z_pid47757_a9c4fbca.log`；执行 `bash scripts/run_offline_regression.sh` 通过。构建仍有既有 Swift 6 actor isolation / Gemma deprecated / CloudKit deprecated 等 warning，无新增 error。
+- 风险与注意事项：曾选择旧隐藏主题的用户升级后会显示 / 读取为默认 `fresh`，这是本轮“减少可选项”的有意收敛；Pro 自定义主题仍按既有 entitlement gate 控制，未订阅用户选择自定义会保留在 Pro 引导流程。
+- 回滚方式：回退 `AppThemePreset.selectableCases` / 预览色 token、`AppearanceSettingsView.swift` 的 `themeMenuCard` 与 preset 预览、`AutoLedgerRootView.themeRefreshID`、自适应布局门禁、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成外观主题切换的 UI 收敛和预览修复，自动门禁、模拟器构建和离线回归均通过。
+- 下一步建议：发布截图前补一次主题切换的真机 / 模拟器手动录屏或截图矩阵，确认浅色 / 深色下默认、经典、石墨和 Pro 自定义的视觉差异。
+
+### ITER-314 v1.6.4 回归基线与发布证据清单
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Release Smoke / Personal Pro / StoreKit QA
+- 类型：文档 / 治理 / 测试
+- 目标：把 `v1.6.4` 从零散迭代记录推进到可发布收口视角，建立独立回归基线，并把本地自动门禁、ASC / TestFlight / Cloudflare production 外部证据和 `v1.7.0` 顺延项拆开。
+- 改动范围：新增 `versions/v1.6.4-regression-baseline.md`；更新 `versions/v1.6.4-plan.md` 的状态、关联文档和 `GOAL-2219`；更新 README 四语路线图；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 Swift / TypeScript 业务代码、StoreKit 商品 ID / 价格、Worker runtime 逻辑、SQLite / CloudKit schema、Cloudflare production secrets、APNs secrets、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.6.4` baseline 已记录 Personal Pro、Free / Pro 边界、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、云端专属水单收件箱、StoreKit 本地配置、Worker 服务端 entitlement P0 和 Pro 路线图预告的专项回归；同时把不能由 CLI 伪造的外部证据列为人工 / 外部环境边界，包括 ASC sandbox 购买、Review Notes、隐私政策、Cloudflare App Store Server API secrets、APNs secrets、真实 token claim smoke、真实邮箱 provider smoke 和截图矩阵。README 四语路线图不再把 Pro 页面 / 恢复购买 / 邮箱 gate 写成后续未落地项，并修正 `APNs secrets` 的完成口径为 production secrets 待配置。
+- 未完成内容：本轮不配置外部密钥、不访问 App Store Connect、不执行 TestFlight / ASC sandbox 真购买；Cloudflare production App Store Server API secrets、APNs secrets、真实 token claim smoke、Review Notes / 隐私政策链接和截图矩阵继续后续收口。
+- 测试情况：执行 `git diff --check` 通过；执行 `ruby -rjson -e 'JSON.parse(File.read("AutoLedger/AutoLedgerSupport.storekit"))'` 通过并输出 `storekit-json-ok`；执行 StoreKitTest session 加载命令通过并输出 `storekit-session-loaded`，系统打印保存配置 warning 但退出码为 0；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `cd tools/worker/hotel-folio-inbox && npm run check` 通过，typecheck 成功且 Vitest 19 tests passed；执行 `bash scripts/run_golden_regression.sh` 通过，38 cases；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 设置 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T08-20-23-363Z_pid47757_e41db963.log`。构建仍有既有 Swift 6 actor isolation / Gemma deprecated / CloudKit deprecated 等 warning，无 error。
+- 风险与注意事项：当前 `v1.6.4` 仍沿用 ASC / App Store `1.5.0` 版本号；baseline 是发布收口证据，不代表外部账号、生产密钥或真实购买已完成。
+- 回滚方式：删除 `versions/v1.6.4-regression-baseline.md`，回退 `versions/v1.6.4-plan.md` 的 `GOAL-2219` 和文档状态，回退 README 四语路线图、CHANGELOG 和本日志条目即可；无代码或数据迁移需要回滚。
+- 结论：本轮已完成 `v1.6.4` 回归基线与本地自动门禁第一轮收口；发布前剩余项集中在外部账号 / 生产密钥 / 真实购买 / 审核截图材料。
+- 下一步建议：继续配置 Cloudflare production App Store Server API / APNs secrets，并用 ASC sandbox / TestFlight 订阅 JWS 做真实 token claim smoke。
 
 ### ITER-313 外观主题配方与 Pro 自定义外观
 - 日期：2026-06-30

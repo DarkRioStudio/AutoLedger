@@ -84,13 +84,29 @@ private struct AutoLedgerRootView: View {
     @StateObject private var store = LedgerStore()
     @StateObject private var navigationState = AutoLedgerNavigationState()
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(AppThemePreset.userDefaultsKey) private var themeRawValue = AppThemePreset.fresh.rawValue
+    @AppStorage(AppColorSchemePreference.userDefaultsKey) private var colorSchemePreferenceRawValue = AppColorSchemePreference.system.rawValue
+    @AppStorage(AppThemeCustomTheme.surfaceHexKey) private var customThemeSurfaceHex = AppThemeCustomTheme.defaultSurfaceHex
+    @AppStorage(AppThemeCustomTheme.accentHexKey) private var customThemeAccentHex = AppThemeCustomTheme.defaultAccentHex
+    @AppStorage(AppThemeCustomTheme.secondaryHexKey) private var customThemeSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
     @State private var didScheduleLaunchSync = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
+
+    private var themeRefreshID: String {
+        [
+            themeRawValue,
+            colorSchemePreferenceRawValue,
+            customThemeSurfaceHex,
+            customThemeAccentHex,
+            customThemeSecondaryHex
+        ].joined(separator: "|")
+    }
 
     var body: some View {
         sizedRootContent
             .environmentObject(store)
             .environmentObject(navigationState)
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
                 set: { if !$0 { store.detectedICloudBackup = nil } }

@@ -12,6 +12,7 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
     case custom
 
     static let userDefaultsKey = "appThemePreset"
+    static let selectableCases: [AppThemePreset] = [.fresh, .classic, .graphite, .custom]
 
     var id: String { rawValue }
 
@@ -63,16 +64,53 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
 
     var previewColors: [Color] {
         [
-            Color(uiColor: palette.canvasLight),
-            Color(uiColor: palette.cardLight),
-            palette.accent,
-            palette.accentSecondary
+            previewCanvas,
+            previewCard,
+            previewAccent,
+            previewAccentSecondary
         ]
+    }
+
+    var previewCanvas: Color {
+        Color(uiColor: palette.canvasLight)
+    }
+
+    var previewCard: Color {
+        Color(uiColor: palette.cardLight)
+    }
+
+    var previewCardStroke: Color {
+        Color(uiColor: palette.cardStrokeLight)
+    }
+
+    var previewInk: Color {
+        Color(uiColor: palette.inkLight)
+    }
+
+    var previewMutedInk: Color {
+        Color(uiColor: palette.mutedInkLight)
+    }
+
+    var previewAccent: Color {
+        palette.accent
+    }
+
+    var previewAccentSecondary: Color {
+        palette.accentSecondary
+    }
+
+    var previewHeroGradient: LinearGradient {
+        LinearGradient(
+            colors: palette.heroColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     static var current: AppThemePreset {
         let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey)
-        return rawValue.flatMap(AppThemePreset.init(rawValue:)) ?? .fresh
+        let preset = rawValue.flatMap(AppThemePreset.init(rawValue:)) ?? .fresh
+        return selectableCases.contains(preset) ? preset : .fresh
     }
 
     private static func uiColor(_ hex: String, alpha: CGFloat = 1) -> UIColor {
