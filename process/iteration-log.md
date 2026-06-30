@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-305 v1.6.4 云端收件箱体验与 entitlement P0）
+更新日期：2026-06-30（ITER-309 Motion 基础设施与主题切换微动效）
 
 ## 记录规则
 
@@ -43,6 +43,70 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-309 Motion 基础设施与主题切换微动效
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System
+- 类型：UI / 能力增强 / 文档 / 测试
+- 目标：回答“App 需要音频和动画吗”后的落地选择：不新增自定义音频，先补一套克制、统一、可关闭的动效基础设施，用于增强产品感而不打扰记账工具场景。
+- 改动范围：更新 `AppTheme.swift`，新增 `AppMotion` quick / standard / theme / emphasis token、`autoLedgerMotion` modifier 和减少动态效果支持；更新根 App 主题 / 外观模式过渡；更新外观页主题 / 模式切换、预览卡片和系统 selection 触觉反馈；更新 CHANGELOG 和本日志。
+- 未改动范围：未新增音频资源、提示音或后台播放能力；未修改导入、记账、酒店水单、批量候选、Pro gate、StoreKit、购买 / 恢复 / 管理订阅流程、SQLite / CloudKit schema、Cloudflare Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`autoLedgerMotion` 读取 `accessibilityReduceMotion`，当用户开启减少动态效果时自动禁用 SwiftUI animation；主题切换、外观模式切换、背景渐变、设置页标题显隐和 selected row 背景使用统一动效节奏；外观页切换主题 / 模式时使用系统 selection sensory feedback，避免自定义音频打扰用户。
+- 未完成内容：本轮未为导入识别进度、保存成功、账单插入 / 删除和扫描状态建立完整 motion matrix；未做三主题 × 浅色 / 深色的录屏或截图矩阵。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run，结果 SUCCEEDED，构建警告为既有 Swift 6 actor / Gemma deprecated / CloudKit deprecated 等警告。
+- 风险与注意事项：动效集中在主题和共享 UI chrome，行为风险低；`sensoryFeedback` 使用系统 selection feedback，不引入音频文件。后续若扩展到导入 / 保存状态，应继续尊重减少动态效果，并避免让记账流程依赖动画完成。
+- 回滚方式：回退 `AppMotion` / `autoLedgerMotion`、根 App theme animation、外观页 transition / sensory feedback 和本轮文档即可恢复到无共享 motion token 状态；业务数据不受影响。
+- 结论：AutoLedger 当前更适合微动画和触觉反馈，而不是自定义音频；本轮已建立最小可复用 motion 基础。
+- 下一步建议：后续页面级 polish 可优先补导入识别、保存成功、账单行变更和 Pro gate 展开的状态动效。
+
+### ITER-308 多主题与浅深色外观模式
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System
+- 类型：UI / 能力增强 / 文档 / 测试
+- 目标：在保留 OpenDesign polish 方向的同时，不把 App 固定为唯一视觉；支持保留多套 App 样式主题，并确保每套主题都支持 iOS 浅色、深色和跟随系统。
+- 改动范围：更新 `AppTheme.swift`，新增 `AppThemePreset` 和 `AppColorSchemePreference`；更新 App 入口默认值和根视图外观模式；设置页新增“外观与主题”入口；新增 `AppearanceSettingsView`，支持主题选择、外观模式选择、色板和账单预览；补齐四语文案；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改导入、记账、酒店水单、批量候选、Pro gate、StoreKit、购买 / 恢复 / 管理订阅流程、SQLite / CloudKit schema、Cloudflare Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`fresh` 保留本轮 OpenDesign 清爽产品感；`classic` 保留上一版暖米色 AutoLedger 风格；`graphite` 预留偏专业工作台的冷灰蓝风格。三套主题均提供 light / dark palette，现有 `AppTheme.canvas/card/ink/mutedInk/accent/accentSecondary/heroGradient/screenGradient` 调用名保持不变。外观模式新增 `system/light/dark`，通过根 View `.preferredColorScheme` 生效；默认值为 `fresh + system`。
+- 未完成内容：本轮未增加截图模式专用主题场景；外观页已可在模拟器构建运行，但尚未逐一导出三主题 × 三模式的截图矩阵。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build-run，结果 SUCCEEDED，新增外观页已编入 target；构建警告为既有 Swift 6 actor / Gemma deprecated / CloudKit deprecated 等警告。
+- 风险与注意事项：主题偏好和外观模式均保存到本机 `UserDefaults`，不参与 iCloud 同步，不影响账本数据。若未来需要把主题同步到多设备，需要单独评估配置同步合同。
+- 回滚方式：回退 `AppearanceSettingsView.swift`、设置页外观入口、`AppThemePreset` / `AppColorSchemePreference`、App 默认值和四语 `appearance.*` 文案即可恢复到单主题 token 模式；业务数据不受影响。
+- 结论：AutoLedger 现在可以保留多套 App 主题，并且每套主题都支持 iOS 浅色 / 深色 token 与跟随系统外观。
+- 下一步建议：如果进入发布截图阶段，可基于 screenshot mode 增加主题 / 外观参数，批量导出 `fresh` 与 `classic` 的浅色、深色对照图用于人工目检。
+
+### ITER-307 OpenDesign MCP 全局视觉 token polish
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Design System
+- 类型：UI / 设计 / 工具链 / 文档
+- 目标：按“使用 OpenDesign MCP 做一轮整体 UI polish，美化 UI、增强产品感”的要求，先修复本机 OpenDesign MCP 可用性，再用 OD 生成 AutoLedger 视觉参考，并将可回滚的全局主题 token 落到 SwiftUI `AppTheme`。
+- 改动范围：修复本机 OpenDesign daemon 启动链路；新增 OD 项目 `autoledger-ui-polish` 并生成 `index.html` 视觉参考；更新 `AutoLedger/AutoLedger/Shared/Constants/AppTheme.swift` 的 canvas、card、cardStroke、softShadow、ink、mutedInk、accent、accentSecondary、screenGradient、heroGradient、surface background、card / hero surface；更新 CHANGELOG 和本日志。
+- 未改动范围：未修改导入、记账、酒店水单、批量候选、Pro gate、StoreKit、购买 / 恢复 / 管理订阅流程、SQLite / CloudKit schema、Cloudflare Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`；未覆盖已有未提交的 `InboxView`、`SupportAutoLedgerView`、`iPadWorkspaceView`、本地化、脚本和 Pro audit 改动。
+- 完成内容：OpenDesign 不能使用的原因已定位并修复：全局 `pnpm 11.7.0` 不满足 OpenDesign `pnpm@10.33.2`，Node `25.9.0` 不满足 `~24`，且 `tools-dev` 默认随机端口而 MCP 固定访问 `127.0.0.1:7456`。本轮安装 / 切换 Node `24.18.0`，用 `npx pnpm@10.33.2` 重建依赖和 `better-sqlite3`，并以 `--daemon-port 7456 --web-port 7457` 启动 OD。OD 生成的设计参考位于 `http://127.0.0.1:7456/api/projects/autoledger-ui-polish/raw/index.html`，Studio 位于 `http://127.0.0.1:7457/projects/autoledger-ui-polish/conversations/3f3cf378-9eed-4e26-9b07-e3cd62305917/files/index.html`。SwiftUI 侧按 OD 方向从暖米色体系调整为 fresh neutral + deep ink + green / restrained blue + 少量暖色高光，统一卡片、背景和 Hero 表面产品感。
+- 未完成内容：OD 内部 render wrapper 命令在当前 daemon build 中不可用，OD 子 agent 未能完成工具内 rendered screenshot check；本轮只完成静态 HTML 检查和 SwiftUI 构建级验证，不包含真机 / 模拟器截图目检。
+- 测试情况：OD 子 agent 对 `index.html` 完成静态检查：HTML parse、viewport、`data-od-id`、无 filler marker、无 `scrollIntoView` 均通过；本轮 Codex 执行 `git diff --check` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；通过 XcodeBuildMCP 执行 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator Debug build，结果 SUCCEEDED；执行 `bash scripts/run_offline_regression.sh` 通过。
+- 风险与注意事项：本轮是全局主题 token polish，覆盖面广但行为风险低；视觉观感仍需后续通过模拟器截图或 TestFlight 人工目检确认。OpenDesign daemon 依赖 Node 24 / pnpm 10.33.2 / 7456 固定端口，后续若再次“用不上 OD”，优先检查这三项。
+- 回滚方式：回退 `AppTheme.swift` 中本轮主题 token、背景、card / hero surface 修改即可恢复上一版暖色主题；OD 项目 `autoledger-ui-polish` 可保留为参考，不影响 App 编译或运行。
+- 结论：本轮 OpenDesign MCP 已恢复可用，并完成一轮可落地的全局视觉 token polish。
+- 下一步建议：基于 OD 参考继续做页面级 polish 时，优先处理 Inbox quick capture、Ledger row anatomy、Report cards 和 iPad inspector，避免一次性改动业务流。
+
+### ITER-306 v1.6.4 UI polish 与批量候选 Pro Gate
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / App UI / Automation Gate
+- 类型：能力增强 / UI / 文档 / 测试
+- 目标：按 Pro 文案继续推进实际 Pro 功能边界，补上已定义为 P0 的“批量候选导入”门禁，同时收尾记账首页和 Pro 页面两个 UI polish 点。
+- 改动范围：更新 `InboxView`、`SupportAutoLedgerView`、`IPadWorkspaceView`、四语本地化、`docs/pro-access-audit.md`、`scripts/check_accessibility_smoke.py`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅流程、手动记账、单张截图识别、手动酒店水单导入、邮箱水单扫描、云端收件箱 Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、Cloudflare secrets、Cloudflare Worker 部署或 `MARKETING_VERSION`；本轮未提交、未推送，避免触发 ASC 构建。
+- 完成内容：记账 tab 一键记账折叠态下，“相册截图”和“票据扫描”改为一行一个按钮；一键记账展开态保持一行两个按钮。`AutoLedgerProView` 首行移除“专享 / Member / 特典”标识，并给 `AutoLedger` 品牌文字增加单行缩放保护，避免折行。`IPadBatchImportWorkspaceView` 接入 `ProEntitlementManager.canUse(.batchCandidateImport)`，gate 新的多文件批量导入、拖放导入、Mac 导入文件命令、重试和识别执行；未订阅时展示“批量候选是 Pro 自动化”提示并打开 Pro 页。已有候选队列、候选复核、历史数据、CSV / JSON 数据交换、单张截图识别和手动酒店水单导入保持可用。
+- 未完成内容：当前 Codex 会话没有暴露可直接调用的 OpenDesign MCP 工具，因此未能通过 OpenDesign 工具自动审阅全 App；本轮按现有 SwiftUI 组件、截图模式和静态门禁完成本地 polish。真实 StoreKit 沙盒订阅状态下的批量候选门禁切换仍需后续 TestFlight / Sandbox smoke。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `git diff --check` 通过；执行 `.xcworkspace` iOS generic Debug build 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行 iPad Pro 13 Simulator Debug build / install / launch 通过，截图 `/tmp/autoledger-pro-gate-workspace-review-ipad.png` 检查批量候选免费态 Pro 提示、队列和详情占位无遮挡；执行 iPhone 17 Simulator screenshot mode，截图 `/tmp/autoledger-pro-gate-quick-capture-iphone-2.png` 检查折叠态“相册截图 / 票据扫描”一行一个按钮，截图 `/tmp/autoledger-pro-gate-pro-iphone.png` 检查 Pro 页无“专享”且 `AutoLedger` 不折行。
+- 风险与注意事项：`batchCandidateImport` 是客户端 `localUIGate`，用于本地自动化体验边界，不应被视为服务端安全授权；服务端成本能力仍只通过 `cloudFolioInbox` 的 server-verified path 授权。批量候选门禁只阻止新的批量自动化处理，不锁既有候选和历史账本。
+- 回滚方式：回退 `IPadBatchImportWorkspaceView` 中的 batch Pro gate / Pro sheet / gate banner，四语 `ipad.batch_import.pro.*` 文案、Pro audit 和静态门禁脚本即可恢复旧批量导入行为；回退 `InboxView` 与 `SupportAutoLedgerView` 可恢复上一版首页按钮布局和 Pro 页头部。
+- 结论：本轮完成 UI polish 和批量候选 P0 Pro gate；免费路径仍保留单张识别、手动酒店水单导入、既有候选复核和历史数据访问。
+- 下一步建议：完成本轮 build / smoke 后，用 ASC sandbox 或 TestFlight 验证未订阅、已订阅、恢复购买和订阅过期四种状态下批量候选入口的按钮、提示和执行行为。
 
 ### ITER-305 v1.6.4 云端收件箱体验与 entitlement P0
 - 日期：2026-06-30

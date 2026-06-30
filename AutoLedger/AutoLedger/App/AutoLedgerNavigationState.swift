@@ -4,6 +4,7 @@ import Foundation
 import SwiftUI
 
 enum SettingsNavigationTarget: Hashable {
+    case appearance
     case ledgerProfiles
     case subscriptions
 }

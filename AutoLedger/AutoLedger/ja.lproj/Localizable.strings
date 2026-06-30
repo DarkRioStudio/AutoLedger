@@ -735,6 +735,7 @@
 "category_management.alert.placeholder" = "カテゴリ名";
 
 "settings.title" = "設定";
+"settings.section.appearance" = "外観";
 "settings.section.ledger_sync" = "台帳と同期";
 "settings.section.recognition" = "記録と認識";
 "settings.section.rules" = "ルールと分類";
@@ -759,6 +760,8 @@
 "settings.ai_model.subtitle" = "オンデバイスモデルを選択し、Gemma ダウンロードを管理";
 "settings.external_assist.title" = "外部アシスト";
 "settings.external_assist.subtitle" = "難しい加盟店認識向けの任意の匿名化クラウド支援";
+"settings.appearance.title" = "外観とテーマ";
+"settings.appearance.subtitle" = "複数のアプリスタイルを保持し、いつでも現在の見た目を切り替え";
 "settings.analysis.title" = "支出分析";
 "settings.analysis.subtitle" = "月次異常支出検出のしきい値を調整";
 "settings.data_management.title" = "データ管理";
@@ -778,6 +781,30 @@
 "settings.privacy.link" = "プライバシーポリシーを見る";
 "settings.release_status.title" = "次に予定";
 "settings.release_status.body" = "次は専用明細受信箱、購入の復元、複数端末同期をさらに改善します。";
+
+"appearance.title" = "外観とテーマ";
+"appearance.theme_picker" = "テーマ";
+"appearance.mode.title" = "外観モード";
+"appearance.mode_picker" = "外観モード";
+"appearance.mode.system" = "システム";
+"appearance.mode.light" = "ライト";
+"appearance.mode.dark" = "ダーク";
+"appearance.mode.subtitle" = "すべてのテーマにライト/ダーク配色があります。システムを選ぶと iOS の外観に自動で追従します。";
+"appearance.theme.fresh" = "Fresh";
+"appearance.theme.classic" = "Classic";
+"appearance.theme.graphite" = "Graphite";
+"appearance.theme.fresh.subtitle" = "OpenDesign polish の方向性: ミストグリーンの面、濃いインク色の文字、控えめなブルーアクセントで、既定のプロダクト感に向きます。";
+"appearance.theme.classic.subtitle" = "以前の温かみのある AutoLedger スタイルを保持し、日常の記帳に合う柔らかい印象です。";
+"appearance.theme.graphite.subtitle" = "ダークモードや高密度の台帳確認に向く、冷静でプロ向けのグレーブルー配色です。";
+"appearance.swatch.canvas" = "背景";
+"appearance.swatch.card" = "カード";
+"appearance.swatch.accent" = "主色";
+"appearance.swatch.secondary" = "補助色";
+"appearance.preview.title" = "テーマプレビュー";
+"appearance.preview.subtitle" = "選択中テーマでカード、文字、指標、台帳行をプレビューします。";
+"appearance.preview.month" = "今月";
+"appearance.preview.queue" = "確認待ち";
+"appearance.footer" = "テーマはこの端末の画面表示だけを変更します。台帳データ、認識結果、同期内容は変わりません。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "ホテル明細や多くの支出記録を扱う場合、Pro はメール明細、一括処理、専用明細受信箱、重複整理で手間を減らします。日常の記帳と過去データは引き続き利用できます。";

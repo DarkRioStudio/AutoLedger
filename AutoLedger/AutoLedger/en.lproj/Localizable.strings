@@ -735,6 +735,7 @@
 "category_management.alert.placeholder" = "Category name";
 
 "settings.title" = "Settings";
+"settings.section.appearance" = "Appearance";
 "settings.section.ledger_sync" = "Ledger & Sync";
 "settings.section.recognition" = "Capture & Recognition";
 "settings.section.rules" = "Rules & Classification";
@@ -759,6 +760,8 @@
 "settings.ai_model.subtitle" = "Choose an on-device model and manage Gemma downloads";
 "settings.external_assist.title" = "External Assist";
 "settings.external_assist.subtitle" = "Optional redacted cloud help for difficult merchant recognition";
+"settings.appearance.title" = "Appearance & Theme";
+"settings.appearance.subtitle" = "Keep multiple app styles and switch the current look anytime";
 "settings.analysis.title" = "Spending Analysis";
 "settings.analysis.subtitle" = "Adjust the monthly abnormal spending detection threshold";
 "settings.data_management.title" = "Data Management";
@@ -778,6 +781,30 @@
 "settings.privacy.link" = "View Privacy Policy";
 "settings.release_status.title" = "Coming Next";
 "settings.release_status.body" = "Next, we will keep improving the dedicated folio inbox, purchase restore, and cross-device sync.";
+
+"appearance.title" = "Appearance & Theme";
+"appearance.theme_picker" = "Theme";
+"appearance.mode.title" = "Appearance Mode";
+"appearance.mode_picker" = "Appearance Mode";
+"appearance.mode.system" = "System";
+"appearance.mode.light" = "Light";
+"appearance.mode.dark" = "Dark";
+"appearance.mode.subtitle" = "Every theme includes light and dark palettes. System follows the current iOS appearance automatically.";
+"appearance.theme.fresh" = "Fresh";
+"appearance.theme.classic" = "Classic";
+"appearance.theme.graphite" = "Graphite";
+"appearance.theme.fresh.subtitle" = "The OpenDesign polish direction: mist green surfaces, deep ink text, and restrained blue accents for the default product feel.";
+"appearance.theme.classic.subtitle" = "Keeps the earlier warm AutoLedger style with a softer day-to-day bookkeeping feel.";
+"appearance.theme.graphite.subtitle" = "A cooler professional workspace palette for dark mode and dense ledger review.";
+"appearance.swatch.canvas" = "Canvas";
+"appearance.swatch.card" = "Card";
+"appearance.swatch.accent" = "Accent";
+"appearance.swatch.secondary" = "Secondary";
+"appearance.preview.title" = "Theme Preview";
+"appearance.preview.subtitle" = "Preview cards, text, metrics, and ledger rows with the selected theme.";
+"appearance.preview.month" = "Month";
+"appearance.preview.queue" = "Queue";
+"appearance.footer" = "Themes only change the local interface style. Ledger data, recognition, and sync remain unchanged.";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "If you handle hotel folios or many expense records, Pro helps remove repetitive work: email folios, batch handling, a dedicated folio inbox, and smarter duplicate cleanup. Everyday bookkeeping and your history stay accessible.";

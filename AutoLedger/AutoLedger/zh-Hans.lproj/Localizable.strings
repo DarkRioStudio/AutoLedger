@@ -735,6 +735,7 @@
 "category_management.alert.placeholder" = "分类名称";
 
 "settings.title" = "设置";
+"settings.section.appearance" = "外观";
 "settings.section.ledger_sync" = "账本与同步";
 "settings.section.recognition" = "记账与识别";
 "settings.section.rules" = "规则与归类";
@@ -759,6 +760,8 @@
 "settings.ai_model.subtitle" = "选择端侧大模型，管理 Gemma 模型下载";
 "settings.external_assist.title" = "外部辅助识别";
 "settings.external_assist.subtitle" = "可选开启脱敏云端辅助，改善疑难商户识别";
+"settings.appearance.title" = "外观与主题";
+"settings.appearance.subtitle" = "保留多套 App 视觉风格，随时切换当前样式";
 "settings.analysis.title" = "消费分析";
 "settings.analysis.subtitle" = "调整月报异常消费检测阈值";
 "settings.data_management.title" = "数据管理";
@@ -778,6 +781,30 @@
 "settings.privacy.link" = "查看隐私策略";
 "settings.release_status.title" = "后续计划";
 "settings.release_status.body" = "接下来会继续完善专属水单收件箱、订阅恢复和跨设备同步。";
+
+"appearance.title" = "外观与主题";
+"appearance.theme_picker" = "主题";
+"appearance.mode.title" = "外观模式";
+"appearance.mode_picker" = "外观模式";
+"appearance.mode.system" = "跟随系统";
+"appearance.mode.light" = "浅色";
+"appearance.mode.dark" = "深色";
+"appearance.mode.subtitle" = "每套主题都内置浅色与深色配色；选择跟随系统时会自动响应 iOS 外观。";
+"appearance.theme.fresh" = "清爽";
+"appearance.theme.classic" = "经典";
+"appearance.theme.graphite" = "石墨";
+"appearance.theme.fresh.subtitle" = "OpenDesign polish 方向：雾绿背景、深墨绿文字、蓝色辅助强调，适合默认产品感。";
+"appearance.theme.classic.subtitle" = "保留早期暖米色 AutoLedger 风格，视觉更温和，适合偏生活化记账。";
+"appearance.theme.graphite.subtitle" = "偏专业工作台的冷灰蓝风格，适合深色模式和高密度账本检查。";
+"appearance.swatch.canvas" = "背景";
+"appearance.swatch.card" = "卡片";
+"appearance.swatch.accent" = "主色";
+"appearance.swatch.secondary" = "辅色";
+"appearance.preview.title" = "主题预览";
+"appearance.preview.subtitle" = "预览当前主题下的卡片、文字、统计和账单行。";
+"appearance.preview.month" = "本月支出";
+"appearance.preview.queue" = "待确认";
+"appearance.footer" = "主题只影响本机界面观感，不会改变账本数据、识别结果或同步内容。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "如果你经常处理酒店水单或大量账单，Pro 可以帮你少做重复操作：邮箱水单、批量处理、专属水单收件箱和高级去重。日常记账和历史数据不会被锁住。";

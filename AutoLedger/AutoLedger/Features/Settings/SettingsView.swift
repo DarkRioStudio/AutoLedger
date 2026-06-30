@@ -29,6 +29,18 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    settingsSection(title: "settings.section.appearance") {
+                        NavigationLink(value: SettingsNavigationTarget.appearance) {
+                            settingsRow(
+                                icon: "paintpalette.fill",
+                                iconColor: AppTheme.accentSecondary,
+                                title: "settings.appearance.title",
+                                subtitle: "settings.appearance.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     settingsSection(title: "settings.section.ledger_sync") {
                         NavigationLink(value: SettingsNavigationTarget.ledgerProfiles) {
                             settingsRow(
@@ -252,6 +264,8 @@ struct SettingsView: View {
             .autoLedgerContentTitleNavigation("settings.title")
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
+                case .appearance:
+                    AppearanceSettingsView()
                 case .ledgerProfiles:
                     LedgerProfileManagementView()
                         .environmentObject(store)
