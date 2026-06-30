@@ -54,19 +54,17 @@ struct AutoLedgerProView: View {
                 Text("AutoLedger")
                     .font(.title3.weight(.black))
                     .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                    .layoutPriority(1)
 
                 Text("pro.hero.badge")
                     .font(.subheadline.weight(.black))
                     .foregroundStyle(.white)
+                    .lineLimit(1)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Capsule(style: .continuous).fill(gold))
-
-                Spacer(minLength: 8)
-
-                Label("pro.hero.crown", systemImage: "crown.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(gold)
             }
 
             VStack(alignment: .leading, spacing: 10) {

@@ -67,6 +67,9 @@ REQUIRED_SNIPPETS = {
         "case .ledger:",
         "LedgerView {",
         "openLedgerProfilesFromSharedLedger",
+        "canUseBatchCandidateImport",
+        "batchProGateBanner",
+        "requestBatchFileImport",
     ],
     APP / "Features" / "Settings" / "SubscriptionListView.swift": [
         "NavigationSplitView",
@@ -78,8 +81,9 @@ REQUIRED_SNIPPETS = {
         "autoLedgerFormChrome",
     ],
     APP / "Features" / "Inbox" / "InboxView.swift": [
-        "GridItem(.adaptive",
-        "LazyVGrid",
+        "if isQuickSetupExpanded",
+        "photoImportButton",
+        "receiptScanButton",
         "AutoLedgerPageTitle(\"tab.inbox\")",
         ".autoLedgerContentTitleNavigation(\"tab.inbox\", toolbarRevealOffset: -56)",
         "quickEntryActionMenu",

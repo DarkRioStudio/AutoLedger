@@ -44,6 +44,7 @@ Risk: fine for UI, purchase messaging, and local allowance. Not sufficient for W
 
 - `HotelFolioInboxImportView` no longer relies on `canUse(.cloudFolioInbox)` for cloud token claim. It uses `resolveAccess(_:)`, shows manual PDF / local email fallback when verification is unavailable, and sends the signed transaction JWS when claiming a token.
 - `HotelFolioEmailImportView` uses `canUse(.localEmailFolioScan)` for the local email scan/allowance experience.
+- `IPadBatchImportWorkspaceView` uses `canUse(.batchCandidateImport)` to gate new multi-file batch import, drag-and-drop import, Mac import-file commands, retry, and recognition execution; existing candidates and queue review remain reachable.
 - `IPadCleaningPreviewWorkspaceView` uses `canUse(.advancedDeduplication)` for local data cleaning and deduplication UI.
 
 Risk: local UI gates can be bypassed in forks. The impact for local features is limited to local experience; server-cost features must not depend on this.
@@ -56,7 +57,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 
 - Policy definitions and regression references use all capabilities.
 - Version docs and iteration logs reference `cloudFolioInbox` and P0 Pro gates.
-- UI call sites currently use `localEmailFolioScan`, `advancedDeduplication`, and `cloudFolioInbox`.
+- UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
 
 ## Worker Side
 

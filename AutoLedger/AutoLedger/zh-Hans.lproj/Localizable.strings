@@ -66,6 +66,10 @@
 "ipad.batch_import.importing_files" = "正在导入";
 "ipad.batch_import.files_imported_summary" = "已加入 %d 个文件到识别队列。";
 "ipad.batch_import.files_failed_format" = "文件导入失败：%@";
+"ipad.batch_import.pro.title" = "批量候选是 Pro 自动化";
+"ipad.batch_import.pro.body" = "Pro 可以一次处理多份附件，先进入待确认，再由你选择入账。";
+"ipad.batch_import.pro.free_note" = "免费版仍可继续单张截图识别、手动导入酒店水单、查看和处理已有候选。";
+"ipad.batch_import.pro.required_summary" = "批量候选导入需要 AutoLedger Pro；单张识别和手动酒店水单导入仍可用。";
 "mac.import.drop.title" = "拖拽文件到这里";
 "mac.import.drop.subtitle" = "支持从 Finder 拖入图片、PDF 或文本文件；导入后先进入识别队列。";
 "mac.import.drop.no_files" = "未能读取拖入的文件。";

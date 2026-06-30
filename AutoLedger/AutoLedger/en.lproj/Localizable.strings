@@ -66,6 +66,10 @@
 "ipad.batch_import.importing_files" = "Importing";
 "ipad.batch_import.files_imported_summary" = "Added %d files to the recognition queue.";
 "ipad.batch_import.files_failed_format" = "File import failed: %@";
+"ipad.batch_import.pro.title" = "Batch candidates are Pro automation";
+"ipad.batch_import.pro.body" = "Pro can process multiple attachments at once, queue them for review, and let you decide what reaches the ledger.";
+"ipad.batch_import.pro.free_note" = "Free users can still use single receipt scans, manual hotel folio import, and review existing candidates.";
+"ipad.batch_import.pro.required_summary" = "Batch candidate import requires AutoLedger Pro; single scans and manual hotel folio import remain available.";
 "mac.import.drop.title" = "Drop files here";
 "mac.import.drop.subtitle" = "Drop images, PDFs, or text files from Finder. Imported files enter the recognition queue first.";
 "mac.import.drop.no_files" = "No dropped files could be read.";

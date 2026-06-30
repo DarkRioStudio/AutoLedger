@@ -23,7 +23,9 @@ ALLOWED_DYNAMIC_TYPE_PATHS = {
 REQUIRED_SNIPPETS = {
     APP / "Features" / "Inbox" / "InboxView.swift": [
         "@Environment(\\.accessibilityReduceMotion)",
-        "GridItem(.adaptive",
+        "if isQuickSetupExpanded",
+        "photoImportButton",
+        "receiptScanButton",
         "accessibilityLabel",
         "accessibilityHint",
     ],
@@ -51,6 +53,13 @@ REQUIRED_SNIPPETS = {
         ".accessibilityElement(children: .ignore)",
         "accessibilityValue(summary)",
         "autoLedgerFormChrome",
+    ],
+    APP / "Features" / "iPad" / "iPadWorkspaceView.swift": [
+        "canUseBatchCandidateImport",
+        "batchProGateBanner",
+        "requestBatchFileImport",
+        "presentBatchProGate",
+        "AutoLedgerProView()",
     ],
     APP / "Shared" / "Components" / "MetricCard.swift": [
         ".lineLimit(1)",

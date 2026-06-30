@@ -66,6 +66,10 @@
 "ipad.batch_import.importing_files" = "インポート中";
 "ipad.batch_import.files_imported_summary" = "%d 件のファイルを認識キューに追加しました。";
 "ipad.batch_import.files_failed_format" = "ファイルのインポートに失敗しました: %@";
+"ipad.batch_import.pro.title" = "一括候補は Pro 自動化です";
+"ipad.batch_import.pro.body" = "Pro では複数の添付をまとめて処理し、レビュー待ちに入れてから台帳へ保存するものを選べます。";
+"ipad.batch_import.pro.free_note" = "無料版でも単体スキャン、手動のホテル明細インポート、既存候補の確認は引き続き使えます。";
+"ipad.batch_import.pro.required_summary" = "一括候補インポートには AutoLedger Pro が必要です。単体スキャンと手動のホテル明細インポートは引き続き使えます。";
 "mac.import.drop.title" = "ここにファイルをドロップ";
 "mac.import.drop.subtitle" = "Finder から画像、PDF、テキストファイルをドロップします。インポートしたファイルはまず認識キューに入ります。";
 "mac.import.drop.no_files" = "読み取れるドロップファイルがありませんでした。";

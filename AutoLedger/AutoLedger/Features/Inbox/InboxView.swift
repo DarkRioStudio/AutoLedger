@@ -19,10 +19,6 @@ struct InboxView: View {
     @State private var isPresentingVoiceEntry = false
 
     private let ocrService = OCRService()
-    private let quickImportColumns = [
-        GridItem(.adaptive(minimum: 156), spacing: 12, alignment: .top)
-    ]
-
     private var hasShortcutEntries: Bool {
         let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
         return store.visibleTransactions.contains { $0.note == shortcutNote }
@@ -493,35 +489,52 @@ struct InboxView: View {
     }
 
     private var quickImportButtonRow: some View {
-        LazyVGrid(columns: quickImportColumns, alignment: .leading, spacing: 12) {
-            PhotosPicker(
-                selection: $selectedPhoto,
-                matching: .images,
-                preferredItemEncoding: .automatic
-            ) {
-                quickImportButtonLabel(
-                    title: isImportingPhoto ? String(localized: "inbox.import.processing") : localized("inbox.import.photo_short", fallback: "相册截图"),
-                    subtitle: localized("inbox.import.photo_short_detail", fallback: "支付截图导入"),
-                    systemImage: isImportingPhoto ? nil : "photo.on.rectangle",
-                    isLoading: isImportingPhoto,
-                    tint: AppTheme.accent
-                )
+        Group {
+            if isQuickSetupExpanded {
+                HStack(spacing: 12) {
+                    photoImportButton
+                    receiptScanButton
+                }
+            } else {
+                VStack(spacing: 12) {
+                    photoImportButton
+                    receiptScanButton
+                }
             }
-            .buttonStyle(.plain)
-
-            Button {
-                startCameraImport()
-            } label: {
-                quickImportButtonLabel(
-                    title: isImportingCamera ? String(localized: "inbox.import.processing") : localized("inbox.import.scan_receipt", fallback: "票据扫描"),
-                    subtitle: localized("inbox.import.scan_receipt_detail", fallback: "实时拍照识别"),
-                    systemImage: isImportingCamera ? nil : "doc.viewfinder",
-                    isLoading: isImportingCamera,
-                    tint: AppTheme.accentSecondary
-                )
-            }
-            .buttonStyle(.plain)
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: isQuickSetupExpanded)
+    }
+
+    private var photoImportButton: some View {
+        PhotosPicker(
+            selection: $selectedPhoto,
+            matching: .images,
+            preferredItemEncoding: .automatic
+        ) {
+            quickImportButtonLabel(
+                title: isImportingPhoto ? String(localized: "inbox.import.processing") : localized("inbox.import.photo_short", fallback: "相册截图"),
+                subtitle: localized("inbox.import.photo_short_detail", fallback: "支付截图导入"),
+                systemImage: isImportingPhoto ? nil : "photo.on.rectangle",
+                isLoading: isImportingPhoto,
+                tint: AppTheme.accent
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var receiptScanButton: some View {
+        Button {
+            startCameraImport()
+        } label: {
+            quickImportButtonLabel(
+                title: isImportingCamera ? String(localized: "inbox.import.processing") : localized("inbox.import.scan_receipt", fallback: "票据扫描"),
+                subtitle: localized("inbox.import.scan_receipt_detail", fallback: "实时拍照识别"),
+                systemImage: isImportingCamera ? nil : "doc.viewfinder",
+                isLoading: isImportingCamera,
+                tint: AppTheme.accentSecondary
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func quickImportButtonLabel(

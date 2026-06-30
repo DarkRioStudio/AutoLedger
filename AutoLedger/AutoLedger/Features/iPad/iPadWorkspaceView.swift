@@ -405,11 +405,13 @@ private enum IPadBatchImportFilter: String, CaseIterable, Identifiable {
 private enum IPadBatchImportSheet: Identifiable {
     case camera
     case voice
+    case pro
 
     var id: String {
         switch self {
         case .camera: return "camera"
         case .voice: return "voice"
+        case .pro: return "pro"
         }
     }
 }
@@ -963,6 +965,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
 
 private struct IPadBatchImportWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     @State private var filter: IPadBatchImportFilter
     @State private var selectedItemID: UUID?
     @State private var activeSheet: IPadBatchImportSheet?
@@ -1016,6 +1019,17 @@ private struct IPadBatchImportWorkspaceView: View {
         ]
     }
 
+    private var canUseBatchCandidateImport: Bool {
+        proEntitlement.canUse(.batchCandidateImport)
+    }
+
+    private var batchFileImportButtonTitleKey: LocalizedStringKey {
+        if isImportingFiles {
+            return "ipad.batch_import.importing_files"
+        }
+        return canUseBatchCandidateImport ? "ipad.batch_import.import_files" : "pro.cta.view_plans"
+    }
+
     private var items: [BatchImportQueueItem] {
         queueSnapshot.items
             .filter(filter.matches)
@@ -1062,6 +1076,9 @@ private struct IPadBatchImportWorkspaceView: View {
                     if showsMacDropImportTarget {
                         dropImportTarget
                     }
+                    if !canUseBatchCandidateImport {
+                        batchProGateBanner
+                    }
                     filterBar
 
                     HStack(alignment: .top, spacing: 18) {
@@ -1082,6 +1099,17 @@ private struct IPadBatchImportWorkspaceView: View {
                     CameraPicker(imageData: $capturedImageData)
                 case .voice:
                     VoiceLedgerConfirmView()
+                case .pro:
+                    NavigationStack {
+                        AutoLedgerProView()
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button("common.close") {
+                                        activeSheet = nil
+                                    }
+                                }
+                            }
+                    }
                 }
             }
             .fileImporter(
@@ -1140,6 +1168,10 @@ private struct IPadBatchImportWorkspaceView: View {
                 syncCandidateDraft()
                 handleMacBatchCommandIfNeeded()
             }
+            .task {
+                await proEntitlement.loadProducts()
+                await proEntitlement.refreshEntitlements()
+            }
             .onChange(of: filter) { _, _ in
                 selectedItemID = items.first?.id
                 syncCandidateDraft()
@@ -1171,7 +1203,7 @@ private struct IPadBatchImportWorkspaceView: View {
         switch command {
         case .importFiles:
             _ = AutoLedgerMacCommandCenter.shared.consume(command)
-            showsFileImporter = true
+            requestBatchFileImport()
         case .importCSV:
             _ = AutoLedgerMacCommandCenter.shared.consume(command)
             showsCSVImporter = true
@@ -1222,6 +1254,10 @@ private struct IPadBatchImportWorkspaceView: View {
         .contentShape(Rectangle())
         .onDrop(of: supportedDropTypeIdentifiers, isTargeted: $isDropTargeted) { providers in
             guard !providers.isEmpty else { return false }
+            guard canUseBatchCandidateImport else {
+                presentBatchProGate()
+                return false
+            }
             Task {
                 await importDroppedProviders(providers)
             }
@@ -1245,12 +1281,15 @@ private struct IPadBatchImportWorkspaceView: View {
             if !showsImportActions {
                 HStack(spacing: 12) {
                     Button {
-                        showsFileImporter = true
+                        requestBatchFileImport()
                     } label: {
                         if isImportingFiles {
                             ProgressView()
                         } else {
-                            Label("ipad.batch_import.import_files", systemImage: "folder.badge.plus")
+                            Label(
+                                batchFileImportButtonTitleKey,
+                                systemImage: canUseBatchCandidateImport ? "folder.badge.plus" : "sparkles"
+                            )
                                 .fontWeight(.semibold)
                         }
                     }
@@ -1259,7 +1298,7 @@ private struct IPadBatchImportWorkspaceView: View {
                     .disabled(isImportingFiles)
 
                     Button {
-                        recognizeQueuedItems()
+                        requestBatchRecognition()
                     } label: {
                         if isRecognizing {
                             ProgressView()
@@ -1363,12 +1402,16 @@ private struct IPadBatchImportWorkspaceView: View {
                 VStack(spacing: 10) {
                     compactQueueSummary
 
+                    if !canUseBatchCandidateImport {
+                        batchProInlineNote
+                    }
+
                     Button {
-                        showsFileImporter = true
+                        requestBatchFileImport()
                     } label: {
                         importActionButtonLabel(
-                            titleKey: isImportingFiles ? "ipad.batch_import.importing_files" : "ipad.batch_import.import_files",
-                            systemImage: "folder.badge.plus",
+                            titleKey: batchFileImportButtonTitleKey,
+                            systemImage: canUseBatchCandidateImport ? "folder.badge.plus" : "sparkles",
                             isLoading: isImportingFiles
                         )
                     }
@@ -1390,6 +1433,62 @@ private struct IPadBatchImportWorkspaceView: View {
                 }
             }
         }
+    }
+
+    private var batchProGateBanner: some View {
+        HStack(alignment: .center, spacing: 14) {
+            Image(systemName: "sparkles")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Color(red: 0.33, green: 0.35, blue: 0.78))
+                .frame(width: 42, height: 42)
+                .background(Color(red: 0.33, green: 0.35, blue: 0.78).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ipad.batch_import.pro.title")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Text("ipad.batch_import.pro.free_note")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 12)
+
+            Button {
+                presentBatchProGate()
+            } label: {
+                Label("pro.cta.view_plans", systemImage: "sparkles")
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(red: 0.33, green: 0.35, blue: 0.78))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.card.opacity(0.92))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var batchProInlineNote: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("ipad.batch_import.pro.title")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Text("ipad.batch_import.pro.body")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } icon: {
+            Image(systemName: "sparkles")
+                .foregroundStyle(Color(red: 0.33, green: 0.35, blue: 0.78))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var macDataExchangeActions: some View {
@@ -1856,11 +1955,36 @@ private struct IPadBatchImportWorkspaceView: View {
         }
     }
 
+    private func requestBatchFileImport() {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
+        showsFileImporter = true
+    }
+
+    private func requestBatchRecognition() {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
+        recognizeQueuedItems()
+    }
+
+    private func presentBatchProGate() {
+        lastRecognitionSummary = String(localized: "ipad.batch_import.pro.required_summary")
+        activeSheet = .pro
+    }
+
     private func recognizeQueuedItems() {
         runRecognition(itemIDs: nil)
     }
 
     private func retry(_ item: BatchImportQueueItem) {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
         updateQueueItem(item.retryRequested())
         runRecognition(itemIDs: [item.id])
     }
@@ -1887,6 +2011,10 @@ private struct IPadBatchImportWorkspaceView: View {
     }
 
     private func runRecognition(itemIDs: Set<UUID>?) {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
         guard !isRecognizing else { return }
         isRecognizing = true
         let executor = BatchImportRecognitionExecutor()
@@ -2167,6 +2295,10 @@ private struct IPadBatchImportWorkspaceView: View {
     }
 
     private func importSelectedFiles(_ result: Result<[URL], Error>) async {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
         isImportingFiles = true
         defer { isImportingFiles = false }
 
@@ -2182,6 +2314,10 @@ private struct IPadBatchImportWorkspaceView: View {
     }
 
     private func importDroppedProviders(_ providers: [NSItemProvider]) async {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
         guard !isImportingFiles else { return }
         isImportingFiles = true
         defer { isImportingFiles = false }
@@ -2202,6 +2338,10 @@ private struct IPadBatchImportWorkspaceView: View {
     }
 
     private func importFileURLs(_ urls: [URL], successSummaryKey: String) async {
+        guard canUseBatchCandidateImport else {
+            presentBatchProGate()
+            return
+        }
         guard !urls.isEmpty else { return }
 
         let batchID = UUID()
