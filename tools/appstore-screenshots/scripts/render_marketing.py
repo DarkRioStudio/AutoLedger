@@ -382,30 +382,59 @@ def render_shot(config: dict, platform: str, locale: str, shot: dict) -> bool:
     return True
 
 
-def iter_platform_shots(config: dict) -> list[tuple[str, list[dict]]]:
+def iter_platform_shots(config: dict, platform_filters: set[str]) -> list[tuple[str, list[dict]]]:
     items: list[tuple[str, list[dict]]] = []
     for platform, platform_def in PLATFORM_DEFS.items():
+        if platform_filters and platform not in platform_filters:
+            continue
         shots = config.get(platform_def["shotsKey"], [])
         if shots:
             items.append((platform, shots))
     return items
 
 
+def parse_args(argv: list[str]) -> tuple[set[str], set[str]]:
+    locales: set[str] = set()
+    platforms: set[str] = set()
+    index = 0
+    while index < len(argv):
+        arg = argv[index]
+        if arg == "--platform":
+            if index + 1 >= len(argv):
+                raise SystemExit("--platform requires a value")
+            platform = argv[index + 1]
+            if platform not in PLATFORM_DEFS:
+                raise SystemExit(f"unknown platform: {platform}")
+            platforms.add(platform)
+            index += 2
+            continue
+        if arg.startswith("--platform="):
+            platform = arg.split("=", 1)[1]
+            if platform not in PLATFORM_DEFS:
+                raise SystemExit(f"unknown platform: {platform}")
+            platforms.add(platform)
+            index += 1
+            continue
+        locales.add(arg)
+        index += 1
+    return locales, platforms
+
+
 def main() -> int:
     config = load_config()
-    filters = set(sys.argv[1:])
+    locale_filters, platform_filters = parse_args(sys.argv[1:])
     rendered = 0
     attempted = 0
     for locale in config["locales"]:
-        if filters and locale not in filters:
+        if locale_filters and locale not in locale_filters:
             continue
-        for platform, shots in iter_platform_shots(config):
+        for platform, shots in iter_platform_shots(config, platform_filters):
             for shot in shots:
                 attempted += 1
                 if render_shot(config, platform, locale, shot):
                     rendered += 1
     if rendered == 0 and attempted:
-        print("error: no iPhone / iPad / Mac raw screenshots were found; cannot render marketing images", file=sys.stderr)
+        print("error: no raw screenshots were found for the requested marketing render", file=sys.stderr)
         return 1
     return 0
 

@@ -861,9 +861,9 @@
 "pro.feature.rules.title" = "Advanced Rules";
 "pro.feature.rules.body" = "Apply merchant aliases, category corrections, and low-confidence review queues across past and future records.";
 "pro.roadmap.title" = "Pro Roadmap Preview";
-"pro.roadmap.subtitle" = "These are not part of the current v1.6.4 delivery; they are planned for v1.7.0 (ASC 1.6.0) as broader Pro automation.";
-"pro.roadmap.badge" = "v1.7.0 / ASC 1.6.0";
-"pro.roadmap.item_badge" = "v1.7.0";
+"pro.roadmap.subtitle" = "These are not part of the current public release; they are planned for version 1.6.0 as broader Pro automation.";
+"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "Clear safety boundaries";
 "pro.assurance.local.title" = "Local-first";
 "pro.assurance.local.body" = "Ledger data stays device-first, and email credentials are not uploaded.";
@@ -1253,6 +1253,7 @@
 "ledger_profiles.add" = "New Ledger";
 "ledger_profiles.add.title" = "New Ledger";
 "ledger_profiles.rename.title" = "Rename Ledger";
+"ledger_profiles.edit.title" = "Edit Ledger";
 "ledger_profiles.name.placeholder" = "Ledger name";
 "ledger_profiles.currency.placeholder" = "Default currency (optional)";
 "ledger_profiles.currency.none" = "No currency";
@@ -1260,6 +1261,7 @@
 "ledger_profiles.badge.default_write" = "Default Write";
 "ledger_profiles.badge.archived" = "Archived";
 "ledger_profiles.action.rename" = "Rename";
+"ledger_profiles.action.edit" = "Edit";
 "ledger_profiles.action.set_default" = "Set Default";
 "ledger_profiles.action.set_default_write" = "Set Default Write";
 "ledger_profiles.action.archive" = "Archive";

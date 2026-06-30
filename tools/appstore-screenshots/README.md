@@ -154,6 +154,8 @@ output/
 ## Configuration
 
 Edit `config/screenshots.json` to change schemes, bundle IDs, device candidates, target sizes, locales, scenes, and marketing copy.
+The `capture.themePreset` and `capture.colorScheme` fields are passed into iPhone screenshot mode so the exported language set does not depend on the simulator's last selected appearance.
+Platform-specific export scripts pass `--platform` into `render_marketing.py`, so `--ios-only` renders only iPhone store images and does not warn about missing iPad, Mac, Apple TV, or visionOS raw captures.
 
 Detected defaults in this project:
 
@@ -175,6 +177,8 @@ The iOS app supports screenshot mode:
 --screenshot-mode
 --screenshot-platform ios
 --screenshot-scene preview|ocr_bill|quick_capture|voice_entry|watch_ecosystem|import_methods|auto_extract|review_edit|monthly_report|settings_management
+--screenshot-theme classic
+--screenshot-color-scheme light
 ```
 
 To add a scene:

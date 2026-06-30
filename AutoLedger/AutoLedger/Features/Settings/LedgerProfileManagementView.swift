@@ -9,6 +9,7 @@ struct LedgerProfileManagementView: View {
     @State private var newLedgerCurrency = ""
     @State private var profilePendingRename: LedgerProfile?
     @State private var renameLedgerName = ""
+    @State private var renameLedgerCurrency = ""
     let allowsSelection: Bool
     let showsDoneButton: Bool
 
@@ -69,9 +70,9 @@ struct LedgerProfileManagementView: View {
                             }
 
                             Button {
-                                beginRename(profile)
+                                beginEdit(profile)
                             } label: {
-                                Label("ledger_profiles.action.rename", systemImage: "pencil")
+                                Label("ledger_profiles.action.edit", systemImage: "square.and.pencil")
                             }
                             .tint(AppTheme.accentSecondary)
 
@@ -143,23 +144,26 @@ struct LedgerProfileManagementView: View {
             }
         }
         .alert(
-            "ledger_profiles.rename.title",
+            "ledger_profiles.edit.title",
             isPresented: Binding(
                 get: { profilePendingRename != nil },
-                set: { if !$0 { profilePendingRename = nil } }
+                set: { if !$0 { clearEditForm() } }
             )
         ) {
             TextField("ledger_profiles.name.placeholder", text: $renameLedgerName)
+            TextField("ledger_profiles.currency.placeholder", text: $renameLedgerCurrency)
             Button("common.cancel", role: .cancel) {
-                profilePendingRename = nil
-                renameLedgerName = ""
+                clearEditForm()
             }
             Button("common.save") {
                 if let profilePendingRename {
-                    store.renameLedgerProfile(profilePendingRename, name: renameLedgerName)
+                    store.updateLedgerProfile(
+                        profilePendingRename,
+                        name: renameLedgerName,
+                        currency: renameLedgerCurrency
+                    )
                 }
-                profilePendingRename = nil
-                renameLedgerName = ""
+                clearEditForm()
             }
         }
     }
@@ -213,9 +217,9 @@ struct LedgerProfileManagementView: View {
 
     private func profileRenameButton(_ profile: LedgerProfile) -> some View {
         Button {
-            beginRename(profile)
+            beginEdit(profile)
         } label: {
-            Image(systemName: "pencil")
+            Image(systemName: "square.and.pencil")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(AppTheme.accent)
                 .frame(width: 30, height: 30)
@@ -223,7 +227,7 @@ struct LedgerProfileManagementView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("ledger_profiles.action.rename"))
+        .accessibilityLabel(Text("ledger_profiles.action.edit"))
         .accessibilityValue(Text(profile.name))
     }
 
@@ -237,14 +241,21 @@ struct LedgerProfileManagementView: View {
             .clipShape(Capsule())
     }
 
-    private func beginRename(_ profile: LedgerProfile) {
+    private func beginEdit(_ profile: LedgerProfile) {
         profilePendingRename = profile
         renameLedgerName = profile.name
+        renameLedgerCurrency = profile.currency ?? ""
     }
 
     private func clearAddForm() {
         newLedgerName = ""
         newLedgerCurrency = ""
+    }
+
+    private func clearEditForm() {
+        profilePendingRename = nil
+        renameLedgerName = ""
+        renameLedgerCurrency = ""
     }
 
     private func color(for profile: LedgerProfile) -> Color {

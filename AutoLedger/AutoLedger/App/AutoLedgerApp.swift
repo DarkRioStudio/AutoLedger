@@ -29,6 +29,7 @@ struct AutoLedgerApp: App {
             AppThemeCustomTheme.accentHexKey: AppThemeCustomTheme.defaultAccentHex,
             AppThemeCustomTheme.secondaryHexKey: AppThemeCustomTheme.defaultSecondaryHex
         ])
+        ScreenshotModeConfig.installRuntimeOverrides()
 
         ClipboardImportIntent.handler = {
             LedgerStore.shared?.attemptClipboardImport(force: true)

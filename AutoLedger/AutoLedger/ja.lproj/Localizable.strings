@@ -861,9 +861,9 @@
 "pro.feature.rules.title" = "高度なルール";
 "pro.feature.rules.body" = "店舗エイリアス、カテゴリ修正、低信頼度レビューを過去と今後の記録へまとめて適用します。";
 "pro.roadmap.title" = "Pro ロードマップ予告";
-"pro.roadmap.subtitle" = "以下の機能は現在の v1.6.4 には含まれません。v1.7.0（ASC 1.6.0）で Pro 自動化の拡張として実装予定です。";
-"pro.roadmap.badge" = "v1.7.0 / ASC 1.6.0";
-"pro.roadmap.item_badge" = "v1.7.0";
+"pro.roadmap.subtitle" = "以下の機能は現在の公開版には含まれません。バージョン 1.6.0 で Pro 自動化の拡張として実装予定です。";
+"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安心して使える設計";
 "pro.assurance.local.title" = "ローカル優先";
 "pro.assurance.local.body" = "帳簿データは端末優先で扱い、メール認証情報はアップロードしません。";
@@ -1253,6 +1253,7 @@
 "ledger_profiles.add" = "台帳を追加";
 "ledger_profiles.add.title" = "台帳を追加";
 "ledger_profiles.rename.title" = "台帳名を変更";
+"ledger_profiles.edit.title" = "台帳を編集";
 "ledger_profiles.name.placeholder" = "台帳名";
 "ledger_profiles.currency.placeholder" = "既定通貨（任意）";
 "ledger_profiles.currency.none" = "通貨未設定";
@@ -1260,6 +1261,7 @@
 "ledger_profiles.badge.default_write" = "既定の書き込み先";
 "ledger_profiles.badge.archived" = "アーカイブ済み";
 "ledger_profiles.action.rename" = "名前変更";
+"ledger_profiles.action.edit" = "編集";
 "ledger_profiles.action.set_default" = "既定に設定";
 "ledger_profiles.action.set_default_write" = "既定の書き込み先に設定";
 "ledger_profiles.action.archive" = "アーカイブ";

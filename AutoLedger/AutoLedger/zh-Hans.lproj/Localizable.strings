@@ -861,9 +861,9 @@
 "pro.feature.rules.title" = "高级规则";
 "pro.feature.rules.body" = "将商户别名、分类修正规则和低置信度结果集中应用到历史与未来记录。";
 "pro.roadmap.title" = "Pro 路线图预告";
-"pro.roadmap.subtitle" = "下面能力不属于当前 v1.6.4 交付；计划在 v1.7.0（ASC 1.6.0）作为 Pro 自动化扩展实现。";
-"pro.roadmap.badge" = "v1.7.0 / ASC 1.6.0";
-"pro.roadmap.item_badge" = "v1.7.0";
+"pro.roadmap.subtitle" = "下面能力不属于当前公开版本；计划在后续版本 1.6.0 作为 Pro 自动化扩展实现。";
+"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安全边界清楚";
 "pro.assurance.local.title" = "本机优先";
 "pro.assurance.local.body" = "账本数据优先留在设备上，邮箱授权不上传云端。";
@@ -1253,6 +1253,7 @@
 "ledger_profiles.add" = "新增账本";
 "ledger_profiles.add.title" = "新增账本";
 "ledger_profiles.rename.title" = "重命名账本";
+"ledger_profiles.edit.title" = "编辑账本";
 "ledger_profiles.name.placeholder" = "账本名称";
 "ledger_profiles.currency.placeholder" = "默认币种（可选）";
 "ledger_profiles.currency.none" = "未设置币种";
@@ -1260,6 +1261,7 @@
 "ledger_profiles.badge.default_write" = "默认写入";
 "ledger_profiles.badge.archived" = "已归档";
 "ledger_profiles.action.rename" = "重命名";
+"ledger_profiles.action.edit" = "编辑";
 "ledger_profiles.action.set_default" = "设为默认";
 "ledger_profiles.action.set_default_write" = "设为默认写入";
 "ledger_profiles.action.archive" = "归档";

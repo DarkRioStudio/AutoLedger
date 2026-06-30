@@ -59,6 +59,31 @@ enum ScreenshotModeConfig {
         ProcessInfo.processInfo.arguments.contains("--screenshot-free-pro")
     }
 
+    static func installRuntimeOverrides() {
+        guard isEnabled else { return }
+
+        if let themePreset {
+            UserDefaults.standard.set(themePreset.rawValue, forKey: AppThemePreset.userDefaultsKey)
+        }
+
+        if let colorSchemePreference {
+            UserDefaults.standard.set(
+                colorSchemePreference.rawValue,
+                forKey: AppColorSchemePreference.userDefaultsKey
+            )
+        }
+    }
+
+    private static var themePreset: AppThemePreset? {
+        guard let rawValue = argumentValue(after: "--screenshot-theme") else { return nil }
+        return AppThemePreset(rawValue: rawValue)
+    }
+
+    private static var colorSchemePreference: AppColorSchemePreference? {
+        guard let rawValue = argumentValue(after: "--screenshot-color-scheme") else { return nil }
+        return AppColorSchemePreference(rawValue: rawValue)
+    }
+
     private static func argumentValue(after key: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: key),

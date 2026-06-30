@@ -213,13 +213,14 @@ private struct ScreenshotOCRBillHost: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(copy.text("支付截图识别", "支付截圖識別", "Screenshot recognition"))
+                        Text(copy.text("支付截图识别", "支付截圖識別", "Screenshot recognition", "スクリーンショット認識"))
                             .font(.title2.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
                         Text(copy.text(
                             "支付截图、小票和剪贴板文字都能整理成待保存账单。",
                             "支付截圖、小票和剪貼簿文字都能整理成待儲存帳單。",
-                            "Payment screenshots, receipts, and copied text become ready-to-save records."
+                            "Payment screenshots, receipts, and copied text become ready-to-save records.",
+                            "支払いスクリーンショット、レシート、コピーした文字を保存前の記録に整理します。"
                         ))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -228,7 +229,7 @@ private struct ScreenshotOCRBillHost: View {
 
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Text(copy.text("支付成功", "支付成功", "Payment complete"))
+                            Text(copy.text("支付成功", "支付成功", "Payment complete", "支払い完了"))
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(AppTheme.ink)
                             Spacer()
@@ -239,9 +240,9 @@ private struct ScreenshotOCRBillHost: View {
 
                         Divider()
 
-                        ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: "Demo Coffee")
-                        ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41"))
-                        ScreenshotVoiceField(label: copy.text("来源", "來源", "Source"), value: copy.text("支付截图", "支付截圖", "Screenshot"))
+                        ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant", "加盟店"), value: "Demo Coffee")
+                        ScreenshotVoiceField(label: copy.text("时间", "時間", "Time", "時刻"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41", "今日 09:41"))
+                        ScreenshotVoiceField(label: copy.text("来源", "來源", "Source", "ソース"), value: copy.text("支付截图", "支付截圖", "Screenshot", "スクリーンショット"))
                     }
                     .padding(18)
                     .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -250,7 +251,7 @@ private struct ScreenshotOCRBillHost: View {
                         Image(systemName: "arrow.down.circle.fill")
                             .font(.title2.weight(.bold))
                             .foregroundStyle(AppTheme.accent)
-                        Text(copy.text("自动生成待保存账单", "自動產生待儲存帳單", "Record ready to save"))
+                        Text(copy.text("自动生成待保存账单", "自動產生待儲存帳單", "Record ready to save", "保存前の記録を自動作成"))
                             .font(.headline)
                             .foregroundStyle(AppTheme.ink)
                         Spacer()
@@ -259,7 +260,7 @@ private struct ScreenshotOCRBillHost: View {
 
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Label(copy.text("已识别", "已識別", "Recognized"), systemImage: "sparkles")
+                            Label(copy.text("已识别", "已識別", "Recognized", "認識済み"), systemImage: "sparkles")
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.accent)
                             Spacer()
@@ -269,9 +270,9 @@ private struct ScreenshotOCRBillHost: View {
                         }
 
                         VStack(spacing: 10) {
-                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: "Demo Coffee")
-                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category"), value: copy.text("餐饮", "餐飲", "Dining"))
-                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41"))
+                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant", "加盟店"), value: "Demo Coffee")
+                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category", "カテゴリ"), value: copy.text("餐饮", "餐飲", "Dining", "食事"))
+                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time", "時刻"), value: copy.text("今天 09:41", "今天 09:41", "Today 09:41", "今日 09:41"))
                         }
                     }
                     .padding(18)
@@ -317,13 +318,14 @@ private struct ScreenshotWatchEcosystemHost: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(copy.text("腕上快速记账", "腕上快速記帳", "Wrist-first logging"))
+                        Text(copy.text("腕上快速记账", "腕上快速記帳", "Wrist-first logging", "手首からすばやく記録"))
                             .font(.title2.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
                         Text(copy.text(
                             "在 Apple Watch 上随手记录，回到 iPhone 继续查看和编辑。",
                             "在 Apple Watch 上隨手記錄，回到 iPhone 繼續查看和編輯。",
-                            "Start from Apple Watch, then review and edit on iPhone."
+                            "Start from Apple Watch, then review and edit on iPhone.",
+                            "Apple Watch で記録し、iPhone で確認と編集を続けられます。"
                         ))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -335,14 +337,14 @@ private struct ScreenshotWatchEcosystemHost: View {
                             Image(systemName: "applewatch")
                                 .font(.system(size: 38, weight: .semibold))
                                 .foregroundStyle(.white)
-                            Text(copy.text("今日支出", "今日支出", "Today"))
+                            Text(copy.text("今日支出", "今日支出", "Today", "今日"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.75))
                             Text("¥52.26")
                                 .font(.title2.weight(.black))
                                 .foregroundStyle(.white)
                                 .monospacedDigit()
-                            Text(copy.text("2 笔", "2 筆", "2 records"))
+                            Text(copy.text("2 笔", "2 筆", "2 records", "2 件"))
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.white.opacity(0.7))
                         }
@@ -354,10 +356,15 @@ private struct ScreenshotWatchEcosystemHost: View {
                         )
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Label(copy.text("抬腕记一笔", "抬腕記一筆", "Quick add"), systemImage: "plus.circle.fill")
+                            Label(copy.text("抬腕记一笔", "抬腕記一筆", "Quick add", "クイック追加"), systemImage: "plus.circle.fill")
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.accent)
-                            Text(copy.text("金额和最近账单会同步回 iPhone。", "金額和最近帳單會同步回 iPhone。", "Amounts and recent records sync back to iPhone."))
+                            Text(copy.text(
+                                "金额和最近账单会同步回 iPhone。",
+                                "金額和最近帳單會同步回 iPhone。",
+                                "Amounts and recent records sync back to iPhone.",
+                                "金額と最近の記録は iPhone に同期されます。"
+                            ))
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.mutedInk)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -366,7 +373,7 @@ private struct ScreenshotWatchEcosystemHost: View {
                                     Text("Demo Coffee")
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(AppTheme.ink)
-                                    Text(copy.text("刚刚同步", "剛剛同步", "Synced just now"))
+                                    Text(copy.text("刚刚同步", "剛剛同步", "Synced just now", "同期したばかり"))
                                         .font(.caption2)
                                         .foregroundStyle(AppTheme.mutedInk)
                                 }
@@ -384,11 +391,11 @@ private struct ScreenshotWatchEcosystemHost: View {
                     .background(AppTheme.card.opacity(0.75), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Label(copy.text("iPhone 继续整理", "iPhone 繼續整理", "Continue on iPhone"), systemImage: "iphone")
+                        Label(copy.text("iPhone 继续整理", "iPhone 繼續整理", "Continue on iPhone", "iPhone で続ける"), systemImage: "iphone")
                             .font(.headline)
                             .foregroundStyle(AppTheme.ink)
-                        ScreenshotVoiceField(label: copy.text("最近", "最近", "Latest"), value: "Demo Coffee ¥18.00")
-                        ScreenshotVoiceField(label: copy.text("同步", "同步", "Sync"), value: copy.text("已完成", "已完成", "Done"))
+                        ScreenshotVoiceField(label: copy.text("最近", "最近", "Latest", "最新"), value: "Demo Coffee ¥18.00")
+                        ScreenshotVoiceField(label: copy.text("同步", "同步", "Sync", "同期"), value: copy.text("已完成", "已完成", "Done", "完了"))
                     }
                     .padding(18)
                     .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -424,13 +431,13 @@ private struct ScreenshotImportMethodsHost: View {
                     ImportMethodRow(
                         icon: "photo.on.rectangle",
                         title: String(localized: "inbox.import.photo"),
-                        subtitle: copy.text("读取支付截图和相册收据", "讀取支付截圖和相簿收據", "Read payment screenshots and saved receipts"),
+                        subtitle: copy.text("读取支付截图和相册收据", "讀取支付截圖和相簿收據", "Read payment screenshots and saved receipts", "支払いスクリーンショットと保存済みレシートを読み取ります"),
                         tint: AppTheme.accent
                     )
                     ImportMethodRow(
                         icon: "camera.fill",
                         title: String(localized: "inbox.import.camera"),
-                        subtitle: copy.text("现场拍摄纸质小票", "現場拍攝紙本收據", "Capture paper receipts on the spot"),
+                        subtitle: copy.text("现场拍摄纸质小票", "現場拍攝紙本收據", "Capture paper receipts on the spot", "紙のレシートをその場で撮影できます"),
                         tint: AppTheme.accent
                     )
                     ImportMethodRow(
@@ -460,13 +467,14 @@ private struct ScreenshotVoiceEntryHost: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(copy.text("一句话记账", "一句話記帳", "Voice entry"))
+                        Text(copy.text("一句话记账", "一句話記帳", "Voice entry", "一言で記録"))
                             .font(.title2.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
                         Text(copy.text(
                             "输入一句“午饭 28 元”，自动整理成待保存账单。",
                             "輸入一句「午餐 28 元」，自動整理成待儲存帳單。",
-                            "Enter a simple sentence and get a ready-to-save record."
+                            "Enter a simple sentence and get a ready-to-save record.",
+                            "「ランチ 28 元」のような一言から保存前の記録を作成します。"
                         ))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -478,7 +486,7 @@ private struct ScreenshotVoiceEntryHost: View {
                             Image(systemName: "waveform")
                                 .font(.title3.weight(.semibold))
                                 .foregroundStyle(AppTheme.accentSecondary)
-                            Text(copy.text("午饭 28 元", "午餐 28 元", "Lunch 28 yuan"))
+                            Text(copy.text("午饭 28 元", "午餐 28 元", "Lunch 28 yuan", "ランチ 28 元"))
                                 .font(.title3.weight(.bold))
                                 .foregroundStyle(AppTheme.ink)
                             Spacer()
@@ -486,7 +494,8 @@ private struct ScreenshotVoiceEntryHost: View {
                         Text(copy.text(
                             "像说一句话一样输入，AutoLedger 会准备好待保存账单。",
                             "像說一句話一樣輸入，AutoLedger 會準備好待儲存帳單。",
-                            "Type or say a short sentence and get a ready-to-save record."
+                            "Type or say a short sentence and get a ready-to-save record.",
+                            "短い文を入力するだけで、AutoLedger が保存前の記録を用意します。"
                         ))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -496,7 +505,7 @@ private struct ScreenshotVoiceEntryHost: View {
 
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Label(copy.text("已生成账单", "已產生帳單", "Record ready"), systemImage: "checkmark.circle.fill")
+                            Label(copy.text("已生成账单", "已產生帳單", "Record ready", "記録を作成済み"), systemImage: "checkmark.circle.fill")
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.accent)
                             Spacer()
@@ -506,9 +515,9 @@ private struct ScreenshotVoiceEntryHost: View {
                         }
 
                         VStack(spacing: 10) {
-                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant"), value: copy.text("午饭", "午餐", "Lunch"))
-                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category"), value: copy.text("餐饮", "餐飲", "Dining"))
-                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time"), value: copy.text("今天 12:20", "今天 12:20", "Today 12:20"))
+                            ScreenshotVoiceField(label: copy.text("商户", "商家", "Merchant", "加盟店"), value: copy.text("午饭", "午餐", "Lunch", "ランチ"))
+                            ScreenshotVoiceField(label: copy.text("分类", "分類", "Category", "カテゴリ"), value: copy.text("餐饮", "餐飲", "Dining", "食事"))
+                            ScreenshotVoiceField(label: copy.text("时间", "時間", "Time", "時刻"), value: copy.text("今天 12:20", "今天 12:20", "Today 12:20", "今日 12:20"))
                         }
                     }
                     .padding(18)
@@ -580,16 +589,21 @@ private struct ScreenshotCopy {
         if locale.hasPrefix("en") {
             return ScreenshotCopy(languageCode: "en")
         }
+        if locale.hasPrefix("ja") {
+            return ScreenshotCopy(languageCode: "ja")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return ScreenshotCopy(languageCode: "zh-Hant")
         }
         return ScreenshotCopy(languageCode: "zh-Hans")
     }
 
-    func text(_ zhHans: String, _ zhHant: String, _ en: String) -> String {
+    func text(_ zhHans: String, _ zhHant: String, _ en: String, _ ja: String? = nil) -> String {
         switch languageCode {
         case "en":
             en
+        case "ja":
+            ja ?? en
         case "zh-Hant":
             zhHant
         default:
@@ -600,15 +614,14 @@ private struct ScreenshotCopy {
 
 private enum ScreenshotFixtures {
     static let baseDate: Date = {
-        var components = DateComponents()
-        components.calendar = Calendar(identifier: .gregorian)
-        components.timeZone = TimeZone(secondsFromGMT: 0)
-        components.year = 2026
-        components.month = 5
-        components.day = 8
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        var components = calendar.dateComponents([.year, .month], from: Date())
+        components.calendar = calendar
+        components.day = 18
         components.hour = 10
         components.minute = 24
-        return components.date ?? Date(timeIntervalSince1970: 1_778_203_440)
+        return components.date ?? Date(timeIntervalSince1970: 1_780_196_640)
     }()
 
     static let transactions: [Transaction] = [

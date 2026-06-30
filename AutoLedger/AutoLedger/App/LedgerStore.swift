@@ -338,15 +338,27 @@ final class LedgerStore: ObservableObject {
     }
 
     func renameLedgerProfile(_ profile: LedgerProfile, name: String) {
+        updateLedgerProfile(profile, name: name, currency: profile.currency)
+    }
+
+    func updateLedgerProfile(_ profile: LedgerProfile, name: String, currency: String?) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
         let updatedAt = Date()
+        let normalizedCurrency = currency?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        let updatedProfile = profile.replacing(
+            name: trimmedName,
+            currency: normalizedCurrency?.isEmpty == true ? nil : normalizedCurrency,
+            updatedAt: updatedAt
+        )
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
-            try? sqlStore.renameLedgerProfile(id: profile.id, name: trimmedName, updatedAt: updatedAt)
+            try? sqlStore.saveLedgerProfile(updatedProfile)
             reloadLedgerProfiles()
         } else {
-            replaceLedgerProfile(profile.replacing(name: trimmedName, updatedAt: updatedAt))
+            replaceLedgerProfile(updatedProfile)
         }
         recordLedgerProfileConfigurationChanged()
     }
@@ -2449,6 +2461,7 @@ private extension Transaction {
 private extension LedgerProfile {
     func replacing(
         name: String? = nil,
+        currency: String?? = nil,
         isDefault: Bool? = nil,
         archivedAt: Date?? = nil,
         updatedAt: Date? = nil
@@ -2458,7 +2471,7 @@ private extension LedgerProfile {
             name: name ?? self.name,
             iconName: iconName,
             colorName: colorName,
-            currency: currency,
+            currency: currency ?? self.currency,
             isDefault: isDefault ?? self.isDefault,
             sortOrder: sortOrder,
             archivedAt: archivedAt ?? self.archivedAt,

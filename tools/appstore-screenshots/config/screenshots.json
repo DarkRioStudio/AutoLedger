@@ -102,7 +102,9 @@
   },
   "capture": {
     "derivedDataPath": "tools/appstore-screenshots/.derivedData",
-    "stabilizeSeconds": 2
+    "stabilizeSeconds": 2,
+    "themePreset": "classic",
+    "colorScheme": "light"
   },
   "locales": {
     "zh-Hans": {

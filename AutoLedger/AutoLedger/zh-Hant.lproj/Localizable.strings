@@ -864,9 +864,9 @@
 "pro.feature.rules.title" = "進階規則";
 "pro.feature.rules.body" = "將商戶別名、分類修正規則和低信心結果集中套用到歷史與未來記錄。";
 "pro.roadmap.title" = "Pro 路線圖預告";
-"pro.roadmap.subtitle" = "以下能力不屬於目前 v1.6.4 交付；計畫在 v1.7.0（ASC 1.6.0）作為 Pro 自動化擴展實現。";
-"pro.roadmap.badge" = "v1.7.0 / ASC 1.6.0";
-"pro.roadmap.item_badge" = "v1.7.0";
+"pro.roadmap.subtitle" = "以下能力不屬於目前公開版本；計畫在後續版本 1.6.0 作為 Pro 自動化擴展實現。";
+"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安全邊界清楚";
 "pro.assurance.local.title" = "本機優先";
 "pro.assurance.local.body" = "帳本資料優先留在裝置上，信箱授權不上傳雲端。";
@@ -1256,6 +1256,7 @@
 "ledger_profiles.add" = "新增帳本";
 "ledger_profiles.add.title" = "新增帳本";
 "ledger_profiles.rename.title" = "重新命名帳本";
+"ledger_profiles.edit.title" = "編輯帳本";
 "ledger_profiles.name.placeholder" = "帳本名稱";
 "ledger_profiles.currency.placeholder" = "預設幣種（可選）";
 "ledger_profiles.currency.none" = "未設定幣種";
@@ -1263,6 +1264,7 @@
 "ledger_profiles.badge.default_write" = "預設寫入";
 "ledger_profiles.badge.archived" = "已歸檔";
 "ledger_profiles.action.rename" = "重新命名";
+"ledger_profiles.action.edit" = "編輯";
 "ledger_profiles.action.set_default" = "設為預設";
 "ledger_profiles.action.set_default_write" = "設為預設寫入";
 "ledger_profiles.action.archive" = "歸檔";

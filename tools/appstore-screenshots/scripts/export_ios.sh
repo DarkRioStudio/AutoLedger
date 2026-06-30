@@ -19,16 +19,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-IFS=$'\t' read -r WORKSPACE SCHEME BUNDLE_ID DERIVED_REL WAIT_SECONDS APP_NAME < <(
+IFS=$'\t' read -r WORKSPACE SCHEME BUNDLE_ID DERIVED_REL WAIT_SECONDS THEME_PRESET COLOR_SCHEME APP_NAME < <(
   python3 - "$CONFIG" <<'PY'
 import json, sys
 cfg = json.load(open(sys.argv[1], encoding="utf-8"))
+capture = cfg.get("capture", {})
 print(
     cfg["app"]["workspace"],
     cfg["app"]["ios"]["scheme"],
     cfg["app"]["ios"]["bundleId"],
-    cfg.get("capture", {}).get("derivedDataPath", "tools/appstore-screenshots/.derivedData"),
-    cfg.get("capture", {}).get("stabilizeSeconds", 2),
+    capture.get("derivedDataPath", "tools/appstore-screenshots/.derivedData"),
+    capture.get("stabilizeSeconds", 2),
+    capture.get("themePreset", "classic"),
+    capture.get("colorScheme", "light"),
     cfg["app"]["name"],
     sep="\t",
 )
@@ -66,6 +69,7 @@ echo "workspace: $WORKSPACE"
 echo "scheme: $SCHEME"
 echo "bundle id: $BUNDLE_ID"
 echo "device: $DEVICE_NAME ($DEVICE_UDID)"
+echo "theme: $THEME_PRESET / $COLOR_SCHEME"
 
 xcodebuild \
   -workspace "$WORKSPACE_PATH" \
@@ -146,6 +150,8 @@ capture_ios_screenshot() {
       --screenshot-mode \
       --screenshot-platform ios \
       --screenshot-scene "$scene" \
+      --screenshot-theme "$THEME_PRESET" \
+      --screenshot-color-scheme "$COLOR_SCHEME" \
       -AppleLanguages "$apple_lang" \
       -AppleLocale "$apple_locale" \
       -UIPreferredContentSizeCategoryName UICTContentSizeCategoryL >/dev/null
@@ -183,4 +189,4 @@ for locale, locale_cfg in cfg["locales"].items():
 PY
 )
 
-python3 "$SCRIPT_DIR/render_marketing.py" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"}
+python3 "$SCRIPT_DIR/render_marketing.py" --platform ios ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"}

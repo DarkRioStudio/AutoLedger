@@ -5,6 +5,7 @@ import SwiftUI
 struct AutoLedgerProView: View {
     @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     private let gold = Color(red: 0.82, green: 0.58, blue: 0.12)
 
     var body: some View {
@@ -96,7 +97,7 @@ struct AutoLedgerProView: View {
                     LinearGradient(
                         colors: [
                             AppTheme.card,
-                            Color(red: 1.00, green: 0.97, blue: 0.87).opacity(0.90)
+                            heroWarmOverlayFill
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -470,7 +471,7 @@ struct AutoLedgerProView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(isRecommended ? Color(red: 1.0, green: 0.97, blue: 0.86).opacity(0.95) : AppTheme.card)
+                    .fill(isRecommended ? recommendedProductCardFill : AppTheme.card)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -478,7 +479,8 @@ struct AutoLedgerProView: View {
             }
         }
         .buttonStyle(.plain)
-        .disabled(proEntitlement.purchasingProductID != nil || proEntitlement.isProActive)
+        .disabled(proEntitlement.purchasingProductID != nil)
+        .allowsHitTesting(!proEntitlement.isProActive && proEntitlement.purchasingProductID == nil)
         .accessibilityHint("pro.purchase.accessibility_hint")
     }
 
@@ -718,6 +720,18 @@ struct AutoLedgerProView: View {
             "pro.product.choose"
         }
     }
+
+    private var heroWarmOverlayFill: Color {
+        colorScheme == .dark
+            ? gold.opacity(0.18)
+            : Color(red: 1.00, green: 0.97, blue: 0.87).opacity(0.90)
+    }
+
+    private var recommendedProductCardFill: Color {
+        colorScheme == .dark
+            ? gold.opacity(0.18)
+            : Color(red: 1.0, green: 0.97, blue: 0.86).opacity(0.95)
+    }
 }
 
 private struct ProFeatureItem: Identifiable {
@@ -753,6 +767,7 @@ private struct ProStatusPresentation {
 }
 
 private struct ProDashboardPreview: View {
+    @Environment(\.colorScheme) private var colorScheme
     let gold: Color
 
     var body: some View {
@@ -779,24 +794,28 @@ private struct ProDashboardPreview: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("pro.preview.month")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.80))
+                        .foregroundStyle(metricSecondaryText)
                     Text("¥8,952")
                         .font(.system(size: 28, weight: .black, design: .rounded).monospacedDigit())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(metricPrimaryText)
                     Text("pro.preview.records")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.70))
+                        .foregroundStyle(metricTertiaryText)
                 }
 
                 Spacer(minLength: 8)
 
-                ProMiniDonut(gold: gold)
+                ProMiniDonut(
+                    gold: gold,
+                    centerFill: metricPanelFill,
+                    trackFill: metricTrackFill
+                )
                     .frame(width: 72, height: 72)
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(AppTheme.ink)
+                    .fill(metricPanelFill)
             )
 
             VStack(spacing: 10) {
@@ -808,22 +827,56 @@ private struct ProDashboardPreview: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.72))
+                .fill(previewCardFill)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.58), lineWidth: 1)
+                .stroke(previewCardStroke, lineWidth: 1)
         }
+    }
+
+    private var previewCardFill: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.08)
+            : Color.white.opacity(0.72)
+    }
+
+    private var previewCardStroke: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.16)
+            : Color.white.opacity(0.58)
+    }
+
+    private var metricPanelFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : AppTheme.ink
+    }
+
+    private var metricPrimaryText: Color {
+        colorScheme == .dark ? AppTheme.ink : .white
+    }
+
+    private var metricSecondaryText: Color {
+        colorScheme == .dark ? AppTheme.mutedInk : .white.opacity(0.80)
+    }
+
+    private var metricTertiaryText: Color {
+        colorScheme == .dark ? AppTheme.mutedInk.opacity(0.82) : .white.opacity(0.70)
+    }
+
+    private var metricTrackFill: Color {
+        colorScheme == .dark ? AppTheme.mutedInk.opacity(0.28) : .white.opacity(0.16)
     }
 }
 
 private struct ProMiniDonut: View {
     let gold: Color
+    let centerFill: Color
+    let trackFill: Color
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.16), lineWidth: 13)
+                .stroke(trackFill, lineWidth: 13)
             Circle()
                 .trim(from: 0, to: 0.34)
                 .stroke(Color.cyan, style: StrokeStyle(lineWidth: 13, lineCap: .round))
@@ -837,7 +890,7 @@ private struct ProMiniDonut: View {
                 .stroke(Color.orange, style: StrokeStyle(lineWidth: 13, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Circle()
-                .fill(AppTheme.ink)
+                .fill(centerFill)
                 .frame(width: 36, height: 36)
         }
     }

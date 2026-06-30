@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-319 月报 Widget 分类与 CTA 修复）
+更新日期：2026-06-30（ITER-320 Pro 展示与 iPhone 截图管线调整）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-320 Pro 展示与 iPhone 截图管线调整
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Pro Subscription / Screenshot Pipeline
+- 类型：Bugfix / UI / 工具 / 测试
+- 目标：按当前工程现状收口 Pro 订阅页展示、多账本币种编辑，并让 iPhone 全语言截图管线固定经典主题。
+- 改动范围：更新 `AutoLedgerProView`、`LedgerProfileManagementView`、`LedgerStore`、`ScreenshotModeConfig`、`ScreenshotHostView`、`AutoLedgerApp`、四语 `Localizable.strings`、`tools/appstore-screenshots` 配置 / 脚本 / README、CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、订阅购买 / 恢复 / 管理核心流程、Pro entitlement server verifier、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Pro 路线图文案移除开发用 `v1.6.4` / `v1.7.0` 和 `ASC` 字样，用户侧只显示公开版本 `1.6.0`；Pro 深色模式下推荐年付卡和预览面板改用深色友好的填充与文字颜色，已订阅时商品卡不再被 SwiftUI disabled opacity 整体压暗；多账本编辑入口从仅重命名升级为编辑名称和默认币种，并通过 `saveLedgerProfile` 持久化币种；iPhone 截图配置新增 `themePreset=classic`、`colorScheme=light`，`export_ios.sh` 启动截图模式时传入 `--screenshot-theme` 与 `--screenshot-color-scheme`，App 仅在 `--screenshot-mode` 下写入对应偏好。截图 fixture 的月报样例日期改为当前月份，避免商店图出现空账本；自绘 iPhone 截图场景补齐日文 copy；`render_marketing.py` 新增 `--platform` 过滤，各平台导出脚本只渲染自己的平台。
+- 未完成内容：设置页版本说明里的后续计划仍保留 `v1.7.0` 研发口径，本轮仅按要求收口 Pro 订阅页文案；本轮未重新导出 iPad / Mac / Apple TV / visionOS 全语言截图。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；执行 `python3 -m json.tool tools/appstore-screenshots/config/screenshots.json` 与各截图 shell 脚本 `bash -n` 通过；通过 XcodeBuildMCP 执行 iPhone 17 Simulator `build_sim -quiet` 通过，最新 status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T13-24-00-491Z_pid28622_8085b568.log`；执行 `bash tools/appstore-screenshots/scripts/export.sh --ios-only` 通过，脚本打印 `theme: classic / light`，生成 zh-Hans / zh-Hant / en / ja 共 24 张 iPhone 商店图，尺寸均为 `1242x2688`；执行 `python3 tools/appstore-screenshots/scripts/render_marketing.py --platform ios` 通过且不再出现其它平台缺图 warning；目检 zh-Hans 月报 raw 图确认有本月数据，目检 ja OCR raw 图确认自绘场景已显示日文。
+- 风险与注意事项：输出目录未被 git 跟踪；四语言 iPhone 图已生成在 `tools/appstore-screenshots/output/store/ios/`，正式上传前仍建议打开 `tools/appstore-screenshots/output/preview.html` 做逐张目检。
+- 回滚方式：回退上述 Swift 文件、四语本地化、截图工具配置 / 脚本 / README、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成 Pro 订阅页用户展示收口、深色模式可读性修正、多账本币种编辑和 iPhone 经典主题截图管线调整，静态门禁、模拟器编译和四语言 iPhone 经典主题导出均通过。
+- 下一步建议：打开 `tools/appstore-screenshots/output/preview.html` 逐张目检后，将 `output/store/ios/{zh-Hans,zh-Hant,en,ja}` 的 24 张图用于 iPhone 端 ASC 截图补齐。
 
 ### ITER-319 月报 Widget 分类与 CTA 修复
 - 日期：2026-06-30

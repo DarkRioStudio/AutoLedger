@@ -176,4 +176,4 @@ for locale, locale_cfg in cfg["locales"].items():
 PY
 )
 
-python3 "$SCRIPT_DIR/render_marketing.py" ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"}
+python3 "$SCRIPT_DIR/render_marketing.py" --platform visionos ${LOCALE_FILTERS[@]+"${LOCALE_FILTERS[@]}"}
