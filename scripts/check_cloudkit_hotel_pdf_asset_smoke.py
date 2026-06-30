@@ -30,6 +30,10 @@ REQUIRED_LEDGER_STORE_SNIPPETS = [
     "mergeHotelStayDraftPreservingLocalPDF",
 ]
 
+FORBIDDEN_LEDGER_STORE_SNIPPETS = [
+    "酒店 PDF 附件暂未被 CloudKit 接收",
+]
+
 REQUIRED_SCHEMA_SNIPPETS = [
     'public static let sourcePDFAsset = "sourcePDFAsset"',
 ]
@@ -79,6 +83,10 @@ def main() -> int:
     for snippet in REQUIRED_LEDGER_STORE_SNIPPETS:
         if snippet not in ledger_store:
             failures.append(f"missing hotel PDF pull merge snippet: {snippet}")
+
+    for snippet in FORBIDDEN_LEDGER_STORE_SNIPPETS:
+        if snippet in ledger_store:
+            failures.append(f"hotel PDF asset fallback should not be user-visible: {snippet}")
 
     for snippet in REQUIRED_SCHEMA_SNIPPETS:
         if snippet not in schema:

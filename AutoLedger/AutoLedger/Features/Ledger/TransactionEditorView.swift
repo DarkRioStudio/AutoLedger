@@ -157,10 +157,14 @@ struct TransactionEditorView: View {
                     Button {
                         prepareSave()
                     } label: {
-                        Label("common.save", systemImage: "checkmark")
+                        Label("common.save", systemImage: "checkmark.circle.fill")
                             .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel(Text("common.save"))
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.regular)
+                    .tint(AppTheme.accent)
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 

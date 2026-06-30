@@ -107,6 +107,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
     public let customCategories: [String]
     public let customSources: [String]
     public let merchantAliases: [String: String]
+    public let merchantAliasDeletedKeys: [String]
     public let ledgerProfiles: [LedgerProfile]
     public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
@@ -121,6 +122,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         customCategories: [String],
         customSources: [String],
         merchantAliases: [String: String],
+        merchantAliasDeletedKeys: [String] = [],
         ledgerProfiles: [LedgerProfile] = [],
         defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
@@ -134,6 +136,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         self.customCategories = customCategories
         self.customSources = customSources
         self.merchantAliases = merchantAliases
+        self.merchantAliasDeletedKeys = Self.normalizedMerchantAliasDeletedKeys(merchantAliasDeletedKeys)
         self.ledgerProfiles = ledgerProfiles
         self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
@@ -149,6 +152,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         case customCategories
         case customSources
         case merchantAliases
+        case merchantAliasDeletedKeys
         case ledgerProfiles
         case defaultWriteLedgerID
         case subscriptionMetadata
@@ -165,10 +169,18 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         customCategories = try container.decode([String].self, forKey: .customCategories)
         customSources = try container.decode([String].self, forKey: .customSources)
         merchantAliases = try container.decode([String: String].self, forKey: .merchantAliases)
+        merchantAliasDeletedKeys = Self.normalizedMerchantAliasDeletedKeys(
+            try container.decodeIfPresent([String].self, forKey: .merchantAliasDeletedKeys) ?? []
+        )
         ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
         defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
+    }
+
+    private static func normalizedMerchantAliasDeletedKeys(_ keys: [String]) -> [String] {
+        Array(Set(keys.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
+            .sorted()
     }
 }
 
@@ -192,6 +204,8 @@ public enum LedgerConfigurationSyncPolicy {
             profiles: ledgerProfiles
         )
 
+        let merchantAliasDeletedKeys = mergeStrings(local.merchantAliasDeletedKeys, remote.merchantAliasDeletedKeys)
+
         return LedgerConfigurationSyncPayload(
             recordName: remote.recordName,
             updatedAt: updatedAt ?? remote.updatedAt,
@@ -200,7 +214,12 @@ public enum LedgerConfigurationSyncPolicy {
             categoryCorrections: mergeCategoryCorrections(local.categoryCorrections, remote.categoryCorrections),
             customCategories: mergeStrings(local.customCategories, remote.customCategories),
             customSources: mergeStrings(local.customSources, remote.customSources),
-            merchantAliases: mergeDictionaries(local.merchantAliases, remote.merchantAliases),
+            merchantAliases: mergeMerchantAliases(
+                local.merchantAliases,
+                remote.merchantAliases,
+                deletedKeys: merchantAliasDeletedKeys
+            ),
+            merchantAliasDeletedKeys: merchantAliasDeletedKeys,
             ledgerProfiles: ledgerProfiles,
             defaultWriteLedgerID: defaultWriteLedgerID,
             subscriptionMetadata: BackupSubscriptionMetadata(
@@ -223,6 +242,7 @@ public enum LedgerConfigurationSyncPolicy {
             lhs.customCategories != rhs.customCategories ||
             lhs.customSources != rhs.customSources ||
             lhs.merchantAliases != rhs.merchantAliases ||
+            lhs.merchantAliasDeletedKeys != rhs.merchantAliasDeletedKeys ||
             lhs.ledgerProfiles != rhs.ledgerProfiles ||
             lhs.defaultWriteLedgerID != rhs.defaultWriteLedgerID ||
             lhs.subscriptionMetadata != rhs.subscriptionMetadata
@@ -371,6 +391,22 @@ public enum LedgerConfigurationSyncPolicy {
         }
         return merged
     }
+
+    private static func mergeMerchantAliases(
+        _ local: [String: String],
+        _ remote: [String: String],
+        deletedKeys: [String]
+    ) -> [String: String] {
+        let deleted = Set(deletedKeys)
+        var merged = local
+        for (key, value) in remote where !deleted.contains(key) {
+            merged[key] = value
+        }
+        for key in deleted {
+            merged.removeValue(forKey: key)
+        }
+        return merged
+    }
 }
 
 public extension LedgerConfigurationSyncPayload {
@@ -380,6 +416,7 @@ public extension LedgerConfigurationSyncPayload {
             !customCategories.isEmpty ||
             !customSources.isEmpty ||
             !merchantAliases.isEmpty ||
+            !merchantAliasDeletedKeys.isEmpty ||
             ledgerProfiles.contains { profile in
                 profile.id != TodaySpendingSummary.defaultLedgerID ||
                     profile.name != TodaySpendingSummary.defaultLedgerName ||

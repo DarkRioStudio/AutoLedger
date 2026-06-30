@@ -62,6 +62,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var isShowingAllLedgers = false
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
+    @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
@@ -76,6 +77,7 @@ final class LedgerStore: ObservableObject {
     private var pendingCloudKitPushTask: Task<Void, Never>?
     private var didRunLaunchCloudKitSync = false
     private var recentlyEditedTransactionIDs: [UUID: Date] = [:]
+    private var merchantAliasDeletedKeys: Set<String> = []
     private var lastDataCleaningUndoSnapshot: DataCleaningUndoSnapshot?
     private let iCloudBackupService = ICloudBackupService()
 
@@ -94,6 +96,7 @@ final class LedgerStore: ObservableObject {
         self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
         self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
         self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
+        self.ledgerSyncConflictRecords = LedgerStore.loadInitialLedgerSyncConflictRecords(using: transactionStore)
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         let storedCustomCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         let normalizedCustomCategories = Self.normalizedCustomCategories(storedCustomCategories)
@@ -102,6 +105,7 @@ final class LedgerStore: ObservableObject {
             UserDefaults.standard.set(normalizedCustomCategories, forKey: "customCategories")
         }
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
+        self.merchantAliasDeletedKeys = Self.loadMerchantAliasDeletedKeys()
         let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
         self.ledgerProfiles = initialLedgerProfiles
         self.selectedLedgerID = LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
@@ -251,6 +255,9 @@ final class LedgerStore: ObservableObject {
 
     func recordMerchantAlias(original: String, alias: String) {
         merchantAliases[original] = alias
+        merchantAliasDeletedKeys.remove(original)
+        merchantAliasDeletedKeys.remove(original.trimmingCharacters(in: .whitespacesAndNewlines))
+        persistMerchantAliasDeletedKeys()
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             try? sqlStore.saveMerchantAlias(original: original, alias: alias)
         }
@@ -280,10 +287,15 @@ final class LedgerStore: ObservableObject {
     func deleteMerchantAliases(for originals: [String]) {
         for original in originals {
             merchantAliases.removeValue(forKey: original)
+            let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedOriginal.isEmpty {
+                merchantAliasDeletedKeys.insert(trimmedOriginal)
+            }
             if let sqlStore = transactionStore as? SQLiteTransactionStore {
                 try? sqlStore.deleteMerchantAlias(original: original)
             }
         }
+        persistMerchantAliasDeletedKeys()
         saveMerchantAliases()
     }
 
@@ -605,6 +617,7 @@ final class LedgerStore: ObservableObject {
         merchantAliases     = (try? sqlStore.loadMerchantAliases())          ?? merchantAliases
         hotelStayRecords    = (try? sqlStore.loadHotelStayRecords())         ?? hotelStayRecords
         hotelStayDrafts     = (try? sqlStore.loadHotelStayDrafts())          ?? hotelStayDrafts
+        ledgerSyncConflictRecords = (try? sqlStore.loadConflictedTransactionSyncRecords()) ?? ledgerSyncConflictRecords
         ledgerProfiles      = (try? sqlStore.loadLedgerProfiles(includeArchived: true)) ?? ledgerProfiles
         if ledgerProfiles.isEmpty {
             ledgerProfiles = [LedgerProfile.defaultLocal()]
@@ -2129,6 +2142,11 @@ final class LedgerStore: ObservableObject {
         return (try? sqlStore.loadHotelStayDrafts()) ?? []
     }
 
+    private static func loadInitialLedgerSyncConflictRecords(using store: TransactionStore?) -> [TransactionSyncRecord] {
+        guard let sqlStore = store as? SQLiteTransactionStore else { return [] }
+        return (try? sqlStore.loadConflictedTransactionSyncRecords()) ?? []
+    }
+
     // MARK: - Subscriptions
 
     /// 新增或更新订阅（去重：同商户 + 同周期命中时更新，否则新增）
@@ -2284,6 +2302,14 @@ final class LedgerStore: ObservableObject {
             UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey),
             from: profiles
         )
+    }
+
+    private static func loadMerchantAliasDeletedKeys() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: Self.merchantAliasDeletedKeysKey) ?? [])
+    }
+
+    private func persistMerchantAliasDeletedKeys() {
+        UserDefaults.standard.set(merchantAliasDeletedKeys.sorted(), forKey: Self.merchantAliasDeletedKeysKey)
     }
 
     private static func resolvedDefaultWriteLedgerID(_ candidate: String?, from profiles: [LedgerProfile]) -> String {
@@ -2461,6 +2487,7 @@ extension LedgerStore {
     private static let pendingIntentLedgerCloudPushKey = "pendingIntentLedgerCloudPush"
     private static let hotelStayRecordTombstonesKey = "hotelStayRecordCloudTombstones"
     private static let hotelStayDraftTombstonesKey = "hotelStayDraftCloudTombstones"
+    private static let merchantAliasDeletedKeysKey = "merchantAliasDeletedKeys"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
     private static var appGroupDefaults: UserDefaults? {
@@ -2772,6 +2799,63 @@ extension LedgerStore {
         }
     }
 
+    @discardableResult
+    func keepLocalVersionForLedgerSyncConflict(transactionID: UUID) -> Bool {
+        guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
+            updateLedgerCloudSyncStatus("同步冲突暂时无法处理：当前账本不是 SQLite 本地账本。")
+            return false
+        }
+
+        do {
+            let beforeMetadata = try sqlStore.loadTransactionSyncMetadata(transactionID: transactionID)
+            try sqlStore.resolveTransactionSyncConflictKeepingLocal(transactionID: transactionID)
+            let afterMetadata = try sqlStore.loadTransactionSyncMetadata(transactionID: transactionID)
+            markRecentlyEdited(transactionID)
+            refreshFromSQLiteStore(sqlStore)
+            reloadWidgets()
+            clearCloudKitPushCheckpoint()
+            updateLedgerCloudSyncStatus(
+                "已保留本机账单并清除同步冲突：\(shortID(transactionID))，before=\(syncMetadataSummary(beforeMetadata))，after=\(syncMetadataSummary(afterMetadata))"
+            )
+            scheduleCloudKitPushAfterLocalLedgerChange()
+            return true
+        } catch {
+            updateLedgerCloudSyncStatus("同步冲突处理失败：\(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    func keepLocalVersionsForAllLedgerSyncConflicts() -> Int {
+        guard let sqlStore = transactionStore as? SQLiteTransactionStore else {
+            updateLedgerCloudSyncStatus("同步冲突暂时无法处理：当前账本不是 SQLite 本地账本。")
+            return 0
+        }
+
+        let conflictIDs = ledgerSyncConflictRecords.map(\.transaction.id)
+        guard !conflictIDs.isEmpty else { return 0 }
+
+        var resolvedCount = 0
+        do {
+            for transactionID in conflictIDs {
+                try sqlStore.resolveTransactionSyncConflictKeepingLocal(transactionID: transactionID)
+                markRecentlyEdited(transactionID)
+                resolvedCount += 1
+            }
+            refreshFromSQLiteStore(sqlStore)
+            reloadWidgets()
+            clearCloudKitPushCheckpoint()
+            updateLedgerCloudSyncStatus("已保留本机版本并清除 \(resolvedCount) 条同步冲突。")
+            scheduleCloudKitPushAfterLocalLedgerChange()
+            return resolvedCount
+        } catch {
+            refreshFromSQLiteStore(sqlStore)
+            updateLedgerCloudSyncStatus("同步冲突批量处理失败：已处理 \(resolvedCount) 条，错误：\(error.localizedDescription)")
+            scheduleCloudKitPushAfterLocalLedgerChange()
+            return resolvedCount
+        }
+    }
+
     func pushPendingIntentLedgerSaveIfNeeded(reason: String = "检测到外部入口账单待推送，开始同步到 iCloud。") async {
         guard hasPendingExternalLedgerCloudPush else { return }
         let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: reason)
@@ -2873,11 +2957,6 @@ extension LedgerStore {
             records: hotelPushPayloads.records,
             drafts: hotelPushPayloads.drafts
         )
-        if !hotelPushResult.assetFallbackRecordNames.isEmpty {
-            updateLedgerCloudSyncStatus(
-                "酒店 PDF 附件暂未被 CloudKit 接收，已先同步结构化酒店数据；下次同步会继续重试 \(hotelPushResult.assetFallbackRecordNames.count) 个 PDF。"
-            )
-        }
         let manifestSaved = try await pushSyncManifest(
             sqlStore: sqlStore,
             adapter: adapter,
@@ -3210,6 +3289,7 @@ extension LedgerStore {
         customCategories = Self.normalizedCustomCategories(merged.customCategories)
         customSources = merged.customSources
         merchantAliases = merged.merchantAliases
+        merchantAliasDeletedKeys = Set(merged.merchantAliasDeletedKeys)
         reloadLedgerProfiles()
         defaultWriteLedgerID = Self.resolvedDefaultWriteLedgerID(merged.defaultWriteLedgerID, from: ledgerProfiles)
         saveDefaultWriteLedger()
@@ -3218,6 +3298,7 @@ extension LedgerStore {
         UserDefaults.standard.set(customCategories, forKey: "customCategories")
         UserDefaults.standard.set(customSources, forKey: "customSources")
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        persistMerchantAliasDeletedKeys()
         UserDefaults.standard.set(merged.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
         UserDefaults.standard.set(merged.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
         UserDefaults.standard.set(merged.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
@@ -3255,6 +3336,7 @@ extension LedgerStore {
             customCategories: customCategories,
             customSources: customSources,
             merchantAliases: merchantAliases,
+            merchantAliasDeletedKeys: merchantAliasDeletedKeys.sorted(),
             ledgerProfiles: ledgerProfiles.sorted {
                 if $0.sortOrder == $1.sortOrder {
                     if $0.createdAt == $1.createdAt {

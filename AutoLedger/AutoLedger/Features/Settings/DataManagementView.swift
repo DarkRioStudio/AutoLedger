@@ -165,6 +165,8 @@ struct DataManagementView: View {
                     .tint(AppTheme.accent)
             }
 
+            cloudKitConflictSection
+
             if !store.ledgerCloudSyncLog.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("data_management.cloudkit_log")
@@ -201,6 +203,104 @@ struct DataManagementView: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(AppTheme.card))
+    }
+
+    @ViewBuilder
+    private var cloudKitConflictSection: some View {
+        let conflicts = store.ledgerSyncConflictRecords
+        if !conflicts.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("待处理同步冲突")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text("这些账单在多台设备上同时改动。当前先支持保留本机版本，然后继续同步。")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                    Spacer(minLength: 12)
+                    Text("\(conflicts.count)")
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppTheme.accent))
+                }
+
+                ForEach(Array(conflicts.prefix(4)), id: \.transaction.id) { record in
+                    cloudKitConflictRow(record)
+                }
+
+                if conflicts.count > 4 {
+                    Text("还有 \(conflicts.count - 4) 条冲突未展开。")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                Button {
+                    let resolved = store.keepLocalVersionsForAllLedgerSyncConflicts()
+                    statusMessage = resolved > 0
+                        ? "已保留本机版本并清除 \(resolved) 条同步冲突。"
+                        : "没有需要处理的同步冲突。"
+                } label: {
+                    Label("全部保留本机版本", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 12))
+                .tint(AppTheme.accent)
+                .disabled(store.isLedgerCloudSyncRunning)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(AppTheme.canvas.opacity(0.74)))
+        }
+    }
+
+    private func cloudKitConflictRow(_ record: TransactionSyncRecord) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.transaction.merchant)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+
+                HStack(spacing: 8) {
+                    Text(AppFormatters.currency(record.transaction.amount))
+                        .font(.caption.weight(.semibold))
+                    Text(AppFormatters.exportDateTime(record.transaction.occurredAt))
+                        .font(.caption)
+                    Text(record.transaction.categoryTitle)
+                        .font(.caption)
+                }
+                .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                if store.keepLocalVersionForLedgerSyncConflict(transactionID: record.transaction.id) {
+                    statusMessage = "已保留本机版本：\(record.transaction.merchant)"
+                } else {
+                    statusMessage = store.ledgerCloudSyncStatus
+                }
+            } label: {
+                Label("保留本机", systemImage: "checkmark")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .controlSize(.small)
+            .tint(AppTheme.accent)
+            .disabled(store.isLedgerCloudSyncRunning)
+            .accessibilityLabel("保留本机版本")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppTheme.card.opacity(0.72)))
     }
 
     private var manualBackupCard: some View {

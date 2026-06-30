@@ -3423,6 +3423,7 @@ struct OfflineRegression {
             customCategories: ["咖啡", "通勤"],
             customSources: ["快捷指令"],
             merchantAliases: ["Demo Cafe": "Demo Coffee"],
+            merchantAliasDeletedKeys: ["Retired Shop"],
             ledgerProfiles: [
                 LedgerProfile.defaultLocal(createdAt: Date(timeIntervalSince1970: 1_780_000_000)),
                 LedgerProfile(
@@ -3448,6 +3449,7 @@ struct OfflineRegression {
             customCategories: [],
             customSources: [],
             merchantAliases: [:],
+            merchantAliasDeletedKeys: [],
             ledgerProfiles: [],
             defaultWriteLedgerID: nil,
             subscriptionMetadata: BackupSubscriptionMetadata(),
@@ -3468,7 +3470,10 @@ struct OfflineRegression {
             ],
             customCategories: ["餐饮"],
             customSources: ["相册"],
-            merchantAliases: ["Example Shop": "Example Market"],
+            merchantAliases: [
+                "Example Shop": "Example Market",
+                "Retired Shop": "Old Alias"
+            ],
             ledgerProfiles: [
                 LedgerProfile(
                     id: "remote-wallet",
@@ -3498,7 +3503,11 @@ struct OfflineRegression {
         reporter.check(
             merged.merchantAliases["Demo Cafe"] == "Demo Coffee" &&
                 merged.merchantAliases["Example Shop"] == "Example Market",
-            "LedgerConfigurationSyncPolicy merges merchant aliases"
+            "LedgerConfigurationSyncPolicy merges active merchant aliases"
+        )
+        reporter.check(
+            merged.merchantAliases["Retired Shop"] == nil,
+            "LedgerConfigurationSyncPolicy keeps deleted merchant aliases from returning"
         )
         reporter.check(
             Set(merged.ledgerProfiles.map(\.id)) == Set([TodaySpendingSummary.defaultLedgerID, "local-wallet", "remote-wallet"]),
@@ -3541,6 +3550,10 @@ struct OfflineRegression {
         reporter.check(
             legacyConfiguration?.ledgerProfiles == [] && legacyConfiguration?.defaultWriteLedgerID == nil,
             "LedgerConfigurationSyncPayload decodes legacy payload without ledger profiles"
+        )
+        reporter.check(
+            legacyConfiguration?.merchantAliasDeletedKeys == [],
+            "LedgerConfigurationSyncPayload decodes legacy payload without merchant alias tombstones"
         )
     }
 
@@ -4299,6 +4312,33 @@ struct OfflineRegression {
         let conflictMetadata = try store.loadTransactionSyncMetadata(transactionID: conflictID)
         reporter.check(conflictOutcome == .conflictPendingReview, "SQLite remote sync flags same-revision divergent conflict")
         reporter.check(conflictMetadata?.conflictState == .conflictPendingReview, "SQLite remote sync stores conflict state")
+        let pendingConflicts = try store.loadConflictedTransactionSyncRecords()
+        reporter.check(
+            pendingConflicts.contains { $0.transaction.id == conflictID },
+            "SQLite exposes pending sync conflicts for App review"
+        )
+
+        try store.resolveTransactionSyncConflictKeepingLocal(transactionID: conflictID)
+        let resolvedConflictMetadata = try store.loadTransactionSyncMetadata(transactionID: conflictID)
+        let resolvedConflictRecord = try store.loadTransactionSyncRecords(includeDeleted: true)
+            .first { $0.transaction.id == conflictID }
+        reporter.check(
+            resolvedConflictRecord?.transaction == conflictLocal,
+            "SQLite conflict resolver preserves local transaction values"
+        )
+        reporter.check(
+            resolvedConflictMetadata?.conflictState == .clean,
+            "SQLite conflict resolver clears pending review state"
+        )
+        reporter.check(
+            resolvedConflictMetadata?.syncRevision == (conflictMetadata?.syncRevision ?? -1) + 1,
+            "SQLite conflict resolver increments sync revision for next push"
+        )
+        let remainingConflicts = try store.loadConflictedTransactionSyncRecords()
+        reporter.check(
+            !remainingConflicts.contains { $0.transaction.id == conflictID },
+            "SQLite conflict resolver removes conflict from review list"
+        )
 
         let localEditID = UUID(uuidString: "00000000-0000-0000-0000-000000151503") ?? UUID()
         let localMetroOriginal = Transaction(

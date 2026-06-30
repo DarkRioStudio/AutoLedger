@@ -257,7 +257,7 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
-                .autoLedgerReadableContent(maxWidth: 760, alignment: .leading)
+                .autoLedgerReadableContent(maxWidth: 760)
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()

@@ -1236,6 +1236,38 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         try loadTransactionSyncRecords(includeDeleted: true).first { $0.transaction.id == transactionID }?.metadata
     }
 
+    public func loadConflictedTransactionSyncRecords() throws -> [TransactionSyncRecord] {
+        try loadTransactionSyncRecords(includeDeleted: true)
+            .filter { $0.metadata.conflictState == .conflictPendingReview }
+    }
+
+    public func resolveTransactionSyncConflictKeepingLocal(transactionID: UUID) throws {
+        let sql = """
+        UPDATE transactions
+        SET updated_at = ?,
+            sync_revision = sync_revision + 1,
+            sync_device_id = ?,
+            sync_conflict_state = ?
+        WHERE id = ? AND sync_conflict_state = ?;
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, Self.storageFormatter.string(from: .now), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, syncDeviceID, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 3, SyncConflictState.clean.rawValue, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 4, transactionID.uuidString, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, SyncConflictState.conflictPendingReview.rawValue, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
     public func loadTransactionSyncRecords(includeDeleted: Bool = true) throws -> [TransactionSyncRecord] {
         let deletedFilter = includeDeleted ? "" : "WHERE deleted_at IS NULL"
         let sql = """
