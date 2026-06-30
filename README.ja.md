@@ -189,6 +189,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
 - `v1.6.4` は開発段階に入りました。`GOAL-2200` で Free / Pro 境界を固定し、プラットフォーム非依存の Pro access policy contract を追加しました。C1 Cloudflare Worker、D1/R2/Queue、token 取得 / ローテーション API、APNs secrets、クラウド候補 API、App 側 PDFKit ローカル変換入口は実装済みです。次は Pro ページ、購入復元、メール自動化 gate、レビュー資料、TestFlight end-to-end 検証を進めます。
+- `v1.7.0` は ASC / App Store `1.6.0` として計画しています。Pro をホテル明細の自動化から台帳全体の効率化へ広げ、高度な検索、サブスク異常通知、月次エクスポートパッケージ、高度なルール自動化を実装予定です。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -199,6 +200,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | In development | Personal Pro foundation: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, the C1 Cloudflare Worker, D1/R2/Queue, token claim / rotation, APNs secrets, cloud-candidate API, and App-side PDFKit conversion have landed; next are Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation |
+| v1.7.0 | 1.6.0 | Planned | Pro automation expansion: advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation while basic search, subscriptions, export, and history remain free |
 
 ## License
 

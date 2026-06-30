@@ -228,6 +228,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已进入开发阶段，`GOAL-2200` 完成 Free / Pro 边界冻结，新增平台无关 Pro 访问策略合同；C1 专属收件箱代码主链路已结合 Pro gate 接续落地，包括 Cloudflare Email Routing Worker、D1 / R2 / Queue、token 领取 / 轮换 API、APNs secrets、云候选 API 和 App 侧云候选下载 / PDFKit 本地转换入口。后续继续推进 Pro 页面、恢复购买、邮箱自动化 gate、审核材料和 TestFlight 端到端验证。
+- `v1.7.0` 规划为 ASC / App Store `1.6.0`：把 Pro 从酒店水单自动化扩展到全账本效率层，计划实现高级搜索、订阅异常提醒、月结导出包和高级规则自动应用。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -249,6 +250,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | 🚧 开发中 | Personal Pro 订阅基础：Free / Pro 边界已冻结；`ProEntitlementManager` 第一版、C1 专属收件箱 Cloudflare Worker、D1/R2/Queue、token 领取 / 轮换、APNs secrets、云候选 API、App 云候选下载与 PDFKit 本地转换入口已落地；后续推进 Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导、审核材料和 TestFlight 端到端验证 |
+| v1.7.0 | **1.6.0** | 📝 规划中 | Pro 自动化扩展：高级搜索、订阅异常提醒、月结导出包和高级规则自动应用；免费基础搜索、基础订阅、基础导出和历史数据继续可用 |
 
 ## License
 

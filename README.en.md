@@ -211,6 +211,7 @@ Current repository status:
 - `v1.6.2` is complete. It closed SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, Japanese release-material review, and the GOAL-1960 release-smoke baseline.
 - `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. C2 Worker login to user mailboxes stays personal-use / future experimental only.
 - `v1.6.4` is now in development. `GOAL-2200` has frozen the Free / Pro boundary through a platform-neutral Pro access policy contract; the C1 Cloudflare Worker, D1/R2/Queue resources, token claim / rotation API, APNs secrets, cloud-candidate API, and App-side PDFKit local conversion entry have landed. The next work is the Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation.
+- `v1.7.0` is planned as ASC / App Store `1.6.0`: Pro expands from hotel folio automation to broader ledger efficiency, including advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -222,6 +223,7 @@ Current repository status:
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, Japanese release-material review, and GOAL-1960 release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | In development | Personal Pro foundations: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, the C1 Cloudflare Worker, D1/R2/Queue, token claim / rotation, APNs secrets, cloud-candidate API, and App-side PDFKit conversion have landed; next are Pro page, purchase restore, email automation gates, review material, and TestFlight end-to-end validation |
+| v1.7.0 | 1.6.0 | Planned | Pro automation expansion: advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation while basic search, subscriptions, export, and history remain free |
 
 ## License
 
