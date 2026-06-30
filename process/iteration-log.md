@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-318 主题实时刷新修复）
+更新日期：2026-06-30（ITER-319 月报 Widget 分类与 CTA 修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-319 月报 Widget 分类与 CTA 修复
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Widget UI / Monthly Report
+- 类型：Bugfix / UI / 测试
+- 目标：修复用户截图中月报 Widget 的 Top 分类显示 raw `hotel`，并增强右上角 `快速记一笔` 入口的按钮辨识度。
+- 改动范围：更新 `AutoLedgerWidgets.swift`、CHANGELOG 和本日志。
+- 未改动范围：未修改主 App 月报页、账本数据、分类 schema、SQLite / CloudKit schema、StoreKit、Pro entitlement、Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Widget 分类标题映射从只识别少量内建 raw value，扩展为先 trim/lowercase 后归一化，补齐 `hotel`、`hotels`、`lodging`、`accommodation`、`住宿`、`酒店住宿`、`酒店`、`ホテル`、`宿泊` 等酒店住宿别名，避免月报 Widget 直接展示 raw key。月报 Widget 右上角 `快速记一笔` 从小号文字胶囊改为带实心 `+` 圆标、chevron、描边和轻阴影的 CTA，保持尺寸克制但更像可点击按钮。
+- 未完成内容：本轮未在真实桌面 Widget 面板中截图复核，因为当前可用验证路径是 XcodeBuildMCP / simctl；正式截图前仍建议在真机或系统 Widget 预览里目检中 / 英 / 日三语文案和截断情况。
+- 测试情况：执行 `git diff --check` 通过；通过 XcodeBuildMCP 重新设置 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T12-28-15-057Z_pid28622_0ee4c5ae.log`，本次 diagnostics 无 warning / error。
+- 风险与注意事项：Widget 侧是独立 SQLite 读取与本地化映射，不能自动复用 Core 的 `TransactionCategory.title`；后续新增分类 raw value 时需要同步补 Widget 显示映射，或再做共享展示层抽取。
+- 回滚方式：回退 `AutoLedgerWidgets.swift`、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已修复月报 Widget 的 `hotel` raw key 暴露，并提升 `快速记一笔` 入口的按钮感，模拟器 Debug build 通过。
+- 下一步建议：TestFlight 或真机 Widget 刷新后，优先截图确认 Top 分类显示“酒店”，并看 `快速记一笔` 在当前壁纸背景上是否足够醒目。
 
 ### ITER-318 主题实时刷新修复
 - 日期：2026-06-30

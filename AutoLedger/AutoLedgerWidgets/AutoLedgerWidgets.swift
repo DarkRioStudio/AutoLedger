@@ -369,15 +369,26 @@ private enum WidgetLedgerStore {
     }
 
     private static func categoryTitle(_ rawValue: String) -> String {
-        switch rawValue {
-        case "groceries": return WidgetCopy.localized(zh: "日用杂货", ja: "日用品", en: "Groceries")
-        case "dining": return WidgetCopy.localized(zh: "餐饮", ja: "飲食", en: "Dining")
-        case "transport": return WidgetCopy.localized(zh: "出行", ja: "交通", en: "Transport")
-        case "shopping": return WidgetCopy.localized(zh: "购物", ja: "買い物", en: "Shopping")
-        case "digital": return WidgetCopy.localized(zh: "数字服务", ja: "デジタル", en: "Digital")
-        case "utilities": return WidgetCopy.localized(zh: "生活缴费", ja: "公共料金", en: "Utilities")
-        case "entertainment": return WidgetCopy.localized(zh: "娱乐", ja: "エンタメ", en: "Entertainment")
-        case "other": return WidgetCopy.localized(zh: "其他", ja: "その他", en: "Other")
+        let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch normalized {
+        case "groceries", "grocery", "超市":
+            return WidgetCopy.localized(zh: "日用杂货", ja: "日用品", en: "Groceries")
+        case "dining", "food", "meal", "restaurant", "餐饮", "餐飲", "吃饭", "吃飯":
+            return WidgetCopy.localized(zh: "餐饮", ja: "飲食", en: "Dining")
+        case "transport", "transportation", "transit", "交通", "出行":
+            return WidgetCopy.localized(zh: "出行", ja: "交通", en: "Transport")
+        case "hotel", "hotels", "lodging", "accommodation", "accommodations", "酒店", "酒店住宿", "住宿", "宾馆", "賓館", "飯店", "旅馆", "旅館", "ホテル", "宿泊", "宿泊費":
+            return WidgetCopy.localized(zh: "酒店", ja: "ホテル", en: "Hotel")
+        case "shopping", "购物", "購物":
+            return WidgetCopy.localized(zh: "购物", ja: "買い物", en: "Shopping")
+        case "digital", "subscription", "订阅", "訂閱":
+            return WidgetCopy.localized(zh: "数字服务", ja: "デジタル", en: "Digital")
+        case "utilities", "utility", "生活缴费", "生活繳費":
+            return WidgetCopy.localized(zh: "生活缴费", ja: "公共料金", en: "Utilities")
+        case "entertainment", "娱乐", "娛樂":
+            return WidgetCopy.localized(zh: "娱乐", ja: "エンタメ", en: "Entertainment")
+        case "other":
+            return WidgetCopy.localized(zh: "其他", ja: "その他", en: "Other")
         default: return rawValue
         }
     }
@@ -772,19 +783,7 @@ private struct MonthlyReportWidgetView: View {
                         Spacer(minLength: 6)
 
                         VStack(alignment: .trailing, spacing: 5) {
-                            Link(destination: WidgetDeepLink.quickAddURL) {
-                                Label(WidgetCopy.quickAddTitle, systemImage: "plus.circle.fill")
-                                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.74)
-                            }
-                            .foregroundStyle(Color(red: 0.10, green: 0.45, blue: 0.36))
-                            .padding(.horizontal, compact ? 7 : 8)
-                            .padding(.vertical, compact ? 4 : 5)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color(red: 0.87, green: 0.97, blue: 0.91).opacity(0.95))
-                            )
+                            quickAddButton(compact: compact)
 
                             Text(shortUpdateTime(entry.metrics.updatedAt, isStale: entry.metrics.isSnapshotStale))
                                 .font(.system(size: compact ? 9 : 10, weight: .medium))
@@ -862,6 +861,44 @@ private struct MonthlyReportWidgetView: View {
                 endPoint: .bottomTrailing
             )
         }
+    }
+
+    private func quickAddButton(compact: Bool) -> some View {
+        Link(destination: WidgetDeepLink.quickAddURL) {
+            HStack(spacing: compact ? 4 : 5) {
+                Image(systemName: "plus")
+                    .font(.system(size: compact ? 8 : 9, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .frame(width: compact ? 16 : 18, height: compact ? 16 : 18)
+                    .background(
+                        Circle()
+                            .fill(Color(red: 0.10, green: 0.45, blue: 0.36))
+                    )
+
+                Text(WidgetCopy.quickAddTitle)
+                    .font(.system(size: compact ? 10 : 11, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: compact ? 7 : 8, weight: .bold))
+                    .opacity(0.78)
+            }
+            .foregroundStyle(Color(red: 0.08, green: 0.36, blue: 0.29))
+            .padding(.leading, compact ? 6 : 7)
+            .padding(.trailing, compact ? 7 : 8)
+            .padding(.vertical, compact ? 5 : 6)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(red: 0.86, green: 0.98, blue: 0.91).opacity(0.98))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color(red: 0.43, green: 0.74, blue: 0.58).opacity(0.34), lineWidth: 1)
+                    )
+                    .shadow(color: Color(red: 0.09, green: 0.35, blue: 0.28).opacity(0.18), radius: 8, x: 0, y: 3)
+            )
+        }
+        .accessibilityLabel(WidgetCopy.quickAddTitle)
     }
 
     private var topCategorySummary: String {
