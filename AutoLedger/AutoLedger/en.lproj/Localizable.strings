@@ -263,7 +263,7 @@
 "hotel_stay.source.share_extension" = "Share Extension";
 "hotel_stay.status.posted" = "Linked";
 "hotel_stay.status.missing_transaction" = "Not Linked";
-"hotel_stay.detail.title" = "Hotel Stay Detail";
+"hotel_stay.detail.title" = "Edit Stay Details";
 "hotel_stay.detail.empty.title" = "Select a Hotel Stay";
 "hotel_stay.detail.empty.description" = "Choose a hotel folio from the list or open a specific record with a deep link.";
 "hotel_stay.detail.identity" = "Hotel";
@@ -775,12 +775,12 @@
 "settings.support.title" = "Support AutoLedger";
 "settings.support.subtitle" = "Optional support for independent development; no features are unlocked";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "This version makes screenshots, receipts, hotel folios, and cross-device ledgers easier to manage.";
+"settings.version.body" = "This version focuses on the first AutoLedger Pro automations: local email folio scanning, the dedicated folio inbox, batch candidate import, and advanced deduplication now have clear entitlement boundaries. Core bookkeeping, single screenshot recognition, manual hotel folio import, multiple ledgers, and historical data editing remain free. Appearance themes, restore-purchase entry points, and release regression evidence are also in place.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "AutoLedger keeps core ledger work local-first; visit the privacy policy for the full details.";
 "settings.privacy.link" = "View Privacy Policy";
 "settings.release_status.title" = "Coming Next";
-"settings.release_status.body" = "Next, we will keep improving the dedicated folio inbox, purchase restore, and cross-device sync.";
+"settings.release_status.body" = "Cloudflare production secret names for App Store Server API and APNs are confirmed, and manual smoke has passed subscription activation, APNs push, and dedicated inbox to ledger posting. Next we will complete subscription metadata, lifecycle screenshots, Review Notes, privacy policy links, and review screenshots; v1.7.0 then moves to advanced search, subscription anomaly alerts, month-end export packs, and automatic rule application.";
 
 "appearance.title" = "Appearance & Theme";
 "appearance.theme_picker" = "Theme";

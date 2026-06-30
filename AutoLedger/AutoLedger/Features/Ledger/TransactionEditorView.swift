@@ -157,14 +157,9 @@ struct TransactionEditorView: View {
                     Button {
                         prepareSave()
                     } label: {
-                        Label("common.save", systemImage: "checkmark.circle.fill")
-                            .labelStyle(.iconOnly)
+                        Label("common.save", systemImage: "checkmark")
                     }
                     .accessibilityLabel(Text("common.save"))
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.regular)
-                    .tint(AppTheme.accent)
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
@@ -269,7 +264,6 @@ struct TransactionEditorView: View {
             }
         } label: {
             Label("common.more_actions", systemImage: "ellipsis.circle")
-                .labelStyle(.iconOnly)
         }
         .accessibilityLabel(Text("common.more_actions"))
     }

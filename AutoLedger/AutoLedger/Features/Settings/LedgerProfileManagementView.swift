@@ -200,6 +200,8 @@ struct LedgerProfileManagementView: View {
 
             Spacer()
 
+            profileRenameButton(profile)
+
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(AppTheme.accent)
@@ -207,6 +209,22 @@ struct LedgerProfileManagementView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func profileRenameButton(_ profile: LedgerProfile) -> some View {
+        Button {
+            beginRename(profile)
+        } label: {
+            Image(systemName: "pencil")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 30, height: 30)
+                .background(AppTheme.accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("ledger_profiles.action.rename"))
+        .accessibilityValue(Text(profile.name))
     }
 
     private func statusBadge(_ title: LocalizedStringKey) -> some View {

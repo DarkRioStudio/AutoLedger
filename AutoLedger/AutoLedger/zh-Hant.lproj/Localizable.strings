@@ -263,7 +263,7 @@
 "hotel_stay.source.share_extension" = "分享延伸";
 "hotel_stay.status.posted" = "已關聯流水";
 "hotel_stay.status.missing_transaction" = "未關聯流水";
-"hotel_stay.detail.title" = "酒店消費詳情";
+"hotel_stay.detail.title" = "編輯消費詳情";
 "hotel_stay.detail.empty.title" = "選擇一筆酒店消費";
 "hotel_stay.detail.empty.description" = "從列表中選擇酒店水單，或透過深層連結開啟指定記錄。";
 "hotel_stay.detail.identity" = "酒店";
@@ -778,12 +778,12 @@
 "settings.support.title" = "支持 AutoLedger";
 "settings.support.subtitle" = "自願支持獨立開發，不解鎖額外功能";
 "settings.version.title" = "目前版本";
-"settings.version.body" = "本版本讓截圖、收據、飯店水單和跨裝置帳本更好整理。";
+"settings.version.body" = "目前版本聚焦 AutoLedger Pro 的首批自動化：本地郵件水單掃描、專屬水單收件箱、批量候選匯入和進階去重都已接入權限邊界。基礎記帳、單張截圖識別、手動飯店水單匯入、多帳本和歷史資料編輯仍保持免費可用。外觀主題、恢復購買入口和發布前回歸證據也已補齊。";
 "settings.privacy.title" = "隱私政策";
 "settings.privacy.body" = "AutoLedger 以本機優先處理帳本資料；完整說明請前往隱私權政策網站。";
 "settings.privacy.link" = "查看隱私政策";
 "settings.release_status.title" = "後續計畫";
-"settings.release_status.body" = "接下來會繼續完善專屬水單收件箱、訂閱恢復與跨裝置同步。";
+"settings.release_status.body" = "Cloudflare production 的 App Store Server API / APNs secret 名稱已確認，訂閱開通、APNs 推送和專屬收件箱到入帳的人工 smoke 已通過。下一步補齊訂閱元資料、生命週期截圖、Review Notes、隱私政策連結和審核截圖材料；v1.7.0 再推進進階搜尋、訂閱異常提醒、月結匯出包與自動規則套用。";
 
 "appearance.title" = "外觀與主題";
 "appearance.theme_picker" = "主題";

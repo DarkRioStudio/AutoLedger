@@ -32,8 +32,6 @@ struct InboxView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    AutoLedgerPageTitle("tab.inbox")
-
                     captureCommandCenter
 
                     quickImportButtonRow
@@ -67,7 +65,7 @@ struct InboxView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .autoLedgerContentTitleNavigation("tab.inbox")
+            .navigationTitle("tab.inbox")
             .sheet(isPresented: $showMerchantSheet) {
                 merchantSheet
             }

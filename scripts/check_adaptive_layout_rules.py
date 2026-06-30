@@ -96,6 +96,10 @@ REQUIRED_SNIPPETS = {
         "navigationState.subscriptionEditor",
         "ToolbarItem(placement: .primaryAction)",
         "Menu",
+        "subscriptionToolbarMenu",
+        "isPresented: $isPresentingPhotoPicker",
+        "uploadSubscriptionScreenshot()",
+        "SubscriptionThemedIconButton",
         "autoLedgerListChrome",
         "autoLedgerFormChrome",
     ],
@@ -103,8 +107,7 @@ REQUIRED_SNIPPETS = {
         "if isQuickSetupExpanded",
         "photoImportButton",
         "receiptScanButton",
-        "AutoLedgerPageTitle(\"tab.inbox\")",
-        ".autoLedgerContentTitleNavigation(\"tab.inbox\")",
+        ".navigationTitle(\"tab.inbox\")",
         "quickEntryActionMenu",
         "quickImportButtonRow",
         "autoLedgerSolidNavigationBarChrome",
@@ -119,9 +122,28 @@ REQUIRED_SNIPPETS = {
     APP / "Features" / "Settings" / "SettingsView.swift": [
         "$navigationState.settingsPath",
         "autoLedgerReadableContent(maxWidth: 760",
-        "AutoLedgerPageTitle(\"settings.title\")",
-        ".autoLedgerContentTitleNavigation(\"settings.title\")",
+        ".navigationTitle(\"settings.title\")",
         "autoLedgerSolidNavigationBarChrome",
+        "private var proPriceStack",
+    ],
+    APP / "Features" / "Ledger" / "TransactionEditorView.swift": [
+        "Label(\"common.save\", systemImage: \"checkmark\")",
+        "transactionActionMenu",
+    ],
+    APP / "Features" / "Settings" / "LedgerProfileManagementView.swift": [
+        "profileRenameButton(profile)",
+    ],
+    APP / "zh-Hans.lproj" / "Localizable.strings": [
+        "\"hotel_stay.detail.title\" = \"编辑消费详情\"",
+    ],
+    APP / "zh-Hant.lproj" / "Localizable.strings": [
+        "\"hotel_stay.detail.title\" = \"編輯消費詳情\"",
+    ],
+    APP / "en.lproj" / "Localizable.strings": [
+        "\"hotel_stay.detail.title\" = \"Edit Stay Details\"",
+    ],
+    APP / "ja.lproj" / "Localizable.strings": [
+        "\"hotel_stay.detail.title\" = \"滞在明細を編集\"",
     ],
     APP / "Features" / "Hotel" / "HotelFolioEmailImportView.swift": [
         ".navigationTitle(\"hotel_stay.email.title\")",
@@ -136,17 +158,33 @@ FORBIDDEN_FILE_SNIPPETS = {
         "private var pageTitle",
         "VoiceLedgerQuickEntryView()",
         "toolbarRevealOffset: -56",
+        "AutoLedgerPageTitle(\"tab.inbox\")",
+        ".autoLedgerContentTitleNavigation(\"tab.inbox\")",
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "private var pageTitle",
     ],
     APP / "Features" / "Settings" / "SettingsView.swift": [
         "private var pageTitle",
+        "AutoLedgerPageTitle(\"settings.title\")",
+        ".autoLedgerContentTitleNavigation(\"settings.title\")",
     ],
     APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [
         "appearance.mode.subtitle",
         "themePickerGrid",
         "AppearanceThemeOptionCard",
+    ],
+    APP / "Features" / "Ledger" / "TransactionEditorView.swift": [
+        "Label(\"common.save\", systemImage: \"checkmark.circle.fill\")",
+        ".buttonBorderShape(.circle)",
+        ".labelStyle(.iconOnly)",
+    ],
+    APP / "Features" / "Settings" / "SubscriptionListView.swift": [
+        "subscriptions.scan_history_help",
+        "store.detectAndUpsertSubscriptions()",
+    ],
+    APP / "zh-Hans.lproj" / "Localizable.strings": [
+        "\"hotel_stay.detail.title\" = \"酒店消费详情\"",
     ],
 }
 

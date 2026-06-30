@@ -7,6 +7,7 @@ struct SubscriptionListView: View {
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
 
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isPresentingPhotoPicker = false
     @State private var isImporting = false
     @State private var annualPriceOverrides: [String: Double] = [:]
     @State private var subscriptionNotes: [String: String] = [:]
@@ -24,27 +25,15 @@ struct SubscriptionListView: View {
         .autoLedgerNavigationBarChrome()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    navigationState.subscriptionEditor = .create
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .help(String(localized: "subscriptions.add_help"))
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        store.detectAndUpsertSubscriptions()
-                    } label: {
-                        Label("subscriptions.scan_history_help", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                } label: {
-                    Label("common.more_actions", systemImage: "ellipsis.circle")
-                        .labelStyle(.iconOnly)
-                }
+                subscriptionToolbarMenu
             }
         }
+        .photosPicker(
+            isPresented: $isPresentingPhotoPicker,
+            selection: $selectedPhoto,
+            matching: .images,
+            preferredItemEncoding: .automatic
+        )
         .sheet(item: $navigationState.subscriptionEditor) { presentation in
             SubscriptionEditView(
                 subscription: presentation.subscription,
@@ -71,6 +60,10 @@ struct SubscriptionListView: View {
                   !visibleIDs.contains(selectedSubscriptionID) else { return }
             navigationState.selectedSubscriptionID = nil
         }
+        .task(id: selectedPhoto) {
+            guard let item = selectedPhoto else { return }
+            await importPickedPhoto(item)
+        }
     }
 
     // MARK: - Upcoming
@@ -82,6 +75,27 @@ struct SubscriptionListView: View {
     private var selectedSubscription: Subscription? {
         guard let selectedSubscriptionID = navigationState.selectedSubscriptionID else { return nil }
         return scopedSubscriptions.first { $0.id == selectedSubscriptionID }
+    }
+
+    private var subscriptionToolbarMenu: some View {
+        Menu {
+            Button {
+                navigationState.subscriptionEditor = .create
+            } label: {
+                Label("subscriptions.add", systemImage: "plus.circle")
+            }
+
+            Button {
+                uploadSubscriptionScreenshot()
+            } label: {
+                Label("subscriptions.upload_renewal_screenshot", systemImage: "envelope.open.fill")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .fontWeight(.semibold)
+        }
+        .accessibilityLabel(Text("subscriptions.add"))
+        .help(String(localized: "subscriptions.add_help"))
     }
 
     private var subscriptionList: some View {
@@ -594,39 +608,23 @@ struct SubscriptionListView: View {
                 .foregroundStyle(AppTheme.mutedInk)
                 .multilineTextAlignment(.center)
 
-            Button {
-                navigationState.subscriptionEditor = .create
-            } label: {
-                Label("subscriptions.add", systemImage: "plus.circle.fill")
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
-
-            PhotosPicker(
-                selection: $selectedPhoto,
-                matching: .images,
-                preferredItemEncoding: .automatic
+            SubscriptionThemedIconButton(
+                titleKey: "subscriptions.add",
+                systemImage: "plus.circle.fill",
+                tint: AppTheme.accent,
+                style: .wide
             ) {
-                HStack {
-                    if isImporting {
-                        ProgressView().tint(.white)
-                    } else {
-                        Image(systemName: "envelope.open.fill")
-                    }
-                    Text(isImporting ? String(localized: "inbox.import.processing") : String(localized: "subscriptions.upload_renewal_screenshot"))
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                navigationState.subscriptionEditor = .create
             }
-            .buttonStyle(.borderedProminent)
-            .tint(AppTheme.accent)
-            .task(id: selectedPhoto) {
-                guard let item = selectedPhoto else { return }
-                await importPickedPhoto(item)
+
+            SubscriptionThemedIconButton(
+                titleKey: isImporting ? "inbox.import.processing" : "subscriptions.upload_renewal_screenshot",
+                systemImage: isImporting ? "hourglass" : "envelope.open.fill",
+                tint: AppTheme.accentSecondary,
+                style: .wide,
+                isDisabled: isImporting
+            ) {
+                uploadSubscriptionScreenshot()
             }
         }
         .padding(24)
@@ -743,6 +741,11 @@ struct SubscriptionListView: View {
         store.updateSubscriptionStatus(sub, status: status)
     }
 
+    private func uploadSubscriptionScreenshot() {
+        guard !isImporting else { return }
+        isPresentingPhotoPicker = true
+    }
+
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
         isImporting = true
         defer {
@@ -756,6 +759,47 @@ struct SubscriptionListView: View {
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
         }
+    }
+}
+
+private struct SubscriptionThemedIconButton: View {
+    enum ButtonStyleVariant {
+        case compact
+        case wide
+    }
+
+    let titleKey: LocalizedStringKey
+    let systemImage: String
+    let tint: Color
+    var style: ButtonStyleVariant = .compact
+    var role: ButtonRole?
+    var isDisabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: role) {
+            action()
+        } label: {
+            switch style {
+            case .compact:
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.bold))
+                    .frame(width: 28, height: 28)
+            case .wide:
+                Label(titleKey, systemImage: systemImage)
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(style == .wide ? .white : tint)
+        .background(
+            RoundedRectangle(cornerRadius: style == .wide ? 16 : 10, style: .continuous)
+                .fill(style == .wide ? tint : tint.opacity(0.12))
+        )
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.72 : 1)
     }
 }
 

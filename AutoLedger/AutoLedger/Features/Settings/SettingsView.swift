@@ -20,8 +20,6 @@ struct SettingsView: View {
         NavigationStack(path: $navigationState.settingsPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    AutoLedgerPageTitle("settings.title")
-
                     NavigationLink {
                         AutoLedgerProView()
                     } label: {
@@ -261,7 +259,7 @@ struct SettingsView: View {
             }
             .autoLedgerScreenChrome()
             .autoLedgerSolidNavigationBarChrome()
-            .autoLedgerContentTitleNavigation("settings.title")
+            .navigationTitle("settings.title")
             .navigationDestination(for: SettingsNavigationTarget.self) { target in
                 switch target {
                 case .appearance:
@@ -321,34 +319,19 @@ struct SettingsView: View {
                     .foregroundStyle(.white.opacity(0.88))
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(alignment: .center, spacing: 12) {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("pro.hero.price_monthly")
-                            Text("pro.hero.price_yearly")
-                        }
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                    } icon: {
-                        Image(systemName: "tag.fill")
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.84))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                proPriceStack
 
-                    Label("pro.cta.view_plans", systemImage: "arrow.right.circle.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color(red: 0.14, green: 0.16, blue: 0.15))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.86)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(.white.opacity(0.92))
-                        )
-                        .layoutPriority(1)
-                }
+                Label("pro.cta.view_plans", systemImage: "arrow.right.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color(red: 0.14, green: 0.16, blue: 0.15))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.86)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(.white.opacity(0.92))
+                    )
             }
 
             Image(systemName: "chevron.right")
@@ -378,6 +361,26 @@ struct SettingsView: View {
         }
         .shadow(color: AppTheme.softShadow.opacity(1.6), radius: 18, x: 0, y: 10)
         .accessibilityElement(children: .combine)
+    }
+
+    private var proPriceStack: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "tag.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.84))
+                .frame(width: 14, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("pro.hero.price_monthly")
+                Text("pro.hero.price_yearly")
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.84))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(2)
+        }
     }
 
     private func settingsSection<Content: View>(

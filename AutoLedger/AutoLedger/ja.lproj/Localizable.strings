@@ -263,7 +263,7 @@
 "hotel_stay.source.share_extension" = "共有拡張";
 "hotel_stay.status.posted" = "取引にリンク済み";
 "hotel_stay.status.missing_transaction" = "取引未リンク";
-"hotel_stay.detail.title" = "ホテル滞在詳細";
+"hotel_stay.detail.title" = "滞在明細を編集";
 "hotel_stay.detail.empty.title" = "ホテル滞在を選択";
 "hotel_stay.detail.empty.description" = "一覧からホテル明細を選択するか、ディープリンクで指定の記録を開きます。";
 "hotel_stay.detail.identity" = "ホテル";
@@ -775,12 +775,12 @@
 "settings.support.title" = "AutoLedger をサポート";
 "settings.support.subtitle" = "個人開発への任意サポートです。機能のロック解除はありません";
 "settings.version.title" = "現在のバージョン";
-"settings.version.body" = "このバージョンでは、スクリーンショット、レシート、ホテル明細、複数端末の帳簿をより扱いやすくしました。";
+"settings.version.body" = "このバージョンでは、AutoLedger Pro の最初の自動化に注力しました。ローカルメール明細スキャン、専用明細受信箱、一括候補インポート、高度な重複整理に明確な権限境界を入れています。基本の記帳、1 件ずつのスクリーンショット認識、手動のホテル明細インポート、複数帳簿、履歴データ編集は引き続き無料で使えます。外観テーマ、購入復元入口、リリース前の回帰証跡も整えました。";
 "settings.privacy.title" = "プライバシー";
 "settings.privacy.body" = "AutoLedger は帳簿データをローカルファーストで扱います。詳しくはプライバシーポリシーをご確認ください。";
 "settings.privacy.link" = "プライバシーポリシーを見る";
 "settings.release_status.title" = "次に予定";
-"settings.release_status.body" = "次は専用明細受信箱、購入の復元、複数端末同期をさらに改善します。";
+"settings.release_status.body" = "Cloudflare production の App Store Server API / APNs secret 名称は確認済みで、サブスクリプション有効化、APNs push、専用受信箱から台帳登録までの手動 smoke も通過しています。次はサブスクリプション metadata、ライフサイクル screenshot、Review Notes、プライバシーポリシー link、審査用 screenshot を整えます。v1.7.0 では高度な検索、サブスクリプション異常通知、月末エクスポートパック、自動ルール適用へ進みます。";
 
 "appearance.title" = "外観とテーマ";
 "appearance.theme_picker" = "テーマ";

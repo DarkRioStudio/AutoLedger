@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-315 外观主题切换与预览收敛）
+更新日期：2026-06-30（ITER-316 v1.6.4 UI 细节与发布证据口径收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-316 v1.6.4 UI 细节与发布证据口径收口
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：App UI / Release Smoke / Personal Pro
+- 类型：Bugfix / 文档 / 测试
+- 目标：承接用户反馈继续落实 `v1.6.4`，修复账单编辑、设置 Pro 卡、多账本、订阅管理、标题样式和当前版本说明等细节，并把 APNs / 云收件箱 / 订阅真实 smoke 的发布证据口径更新到最新状态。
+- 改动范围：更新 `TransactionEditorView.swift`、`SettingsView.swift`、`LedgerProfileManagementView.swift`、`SubscriptionListView.swift`、`InboxView.swift`、四语 `Localizable.strings`、`scripts/check_adaptive_layout_rules.py`、`versions/v1.6.4-plan.md`、`versions/v1.6.4-regression-baseline.md`、README 四语路线图、CHANGELOG 和本日志；前置批次已提交为 `c3c2114d 收口 v1.6.4 回归基线与主题切换`。
+- 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅核心流程、Worker runtime 代码、SQLite / CloudKit schema、酒店水单解析管线、云端 API 合同、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：账单编辑页右上角保存 / 更多操作从彩色圆形 icon-only 按钮改回常规 `Label` 样式，与酒店消费详情编辑按钮对齐；“酒店消费详情”四语标题改为“编辑消费详情”；设置页 AutoLedger Pro 高亮卡把月付 / 年付价格移动到独立左对齐栈，避免“首发年付”被 CTA 挤压；多账本管理为默认本地账本补显式重命名按钮；订阅管理右上角 `+` 改为菜单，支持手动新增订阅和上传订阅邮件截图，隐藏暂未稳定的“扫描历史账单自动识别订阅”入口，并让空状态按钮图标和底色跟随主题色；记账 tab 和设置 tab 改用系统导航标题，和账本 tab 样式对齐。设置页当前版本 / 后续计划文案扩展为当前 `v1.6.4` 实际状态。Cloudflare production 已通过 `wrangler secret list --env production` 验证存在 `APP_STORE_CONNECT_ISSUER_ID`、`APP_STORE_CONNECT_KEY_ID`、`APP_STORE_CONNECT_PRIVATE_KEY`、`APNS_KEY_ID`、`APNS_TEAM_ID`、`APNS_PRIVATE_KEY` 六个 secret 名称，未读取 secret 值；按用户 2026-06-30 补充，2026-06-29 人工 smoke 已测通订阅开通、APNs 推送、Worker 云收件箱、云候选转酒店消费并最终入账，价格和宽限期已配置，剩余项收缩为订阅元数据、审核材料、生命周期截图和证据归档。
+- 未完成内容：本轮未补 App Store Connect 订阅元数据；未归档 2026-06-29 人工 smoke 的设备截图 / 日志片段；未补完整恢复、取消、过期、宽限期、账单重试和管理订阅截图；未做真机多主题 / 多字号截图矩阵。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行四语 `plutil -lint` 通过；执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 确认 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator defaults 后执行 `build_sim` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-06-30T09-02-54-101Z_pid47757_e5d0fe23.log`，本次 build diagnostics 未返回 warning / error。
+- 风险与注意事项：2026-06-29 端到端 smoke 是用户侧人工证据，不来自本机自动门禁；发布归档前仍建议保存设备截图、Cloudflare / APNs 日志片段和订阅状态截图。隐藏历史扫描订阅入口只是 UI 暂停，底层 `detectAndUpsertSubscriptions()` 保留给后续修复，不影响已有订阅列表和手动新增订阅。
+- 回滚方式：回退上述 Swift UI 文件、四语本地化、自适应布局门禁、README / 版本计划 / 回归基线 / CHANGELOG / 本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成用户反馈的 `v1.6.4` UI 细节修复、设置页版本说明扩展和发布证据口径收缩；本地静态门禁、离线回归和 iOS Simulator 编译均通过。
+- 下一步建议：补齐 App Store Connect 订阅元数据和商品本地化，归档 2026-06-29 云收件箱端到端 smoke 证据，再补订阅生命周期截图与 Review Notes / 隐私政策链接。
 
 ### ITER-315 外观主题切换与预览收敛
 - 日期：2026-06-30
