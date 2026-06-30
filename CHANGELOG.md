@@ -15,6 +15,7 @@
 - [2026-06-29 +0800] 补齐酒店水单专属收件箱 token 自动领取闭环：Worker 新增 `POST /v1/cloud-hotel-folio-token` bootstrap provisioning API，App 使用本机稳定 client id 自动领取 / 轮换 `folio+<token>@getautoledger.app` 专属地址；Worker 只保存 token hash 并将同一 client 旧 active token 标记为 rotated，raw token 只返回一次并由 App 存入本机 Keychain。酒店云收件箱页面新增“领取/轮换专属地址”按钮，领取成功后自动请求通知权限并尝试登记 APNs device token；四语文案、Worker README、`v1.6.4` 计划和迭代日志同步更新。APNs secrets、服务端订阅 entitlement 校验、token 停用 / 到期同步和运营面板仍属于后续配置 / 后端收口。
 
 ### 变更（v1.6.4）
+- [2026-06-30 +0800] 调整本地邮箱水单导入的 Free / Pro 边界：免费用户可继续进入邮箱配置、执行手动扫描并预览候选水单；成功导入本地邮箱水单每月免费 1 次，失败导入和仅预览不消耗额度；AutoLedger Pro 保持无限邮箱水单导入。同步补齐四语文案、平台无关额度合同、离线回归和 `v1.6.4` 版本计划说明。
 - [2026-06-29 +0800] 收口 `GOAL-2211` Pro 自动化 gate：iPad / Mac 数据清洗与疑似重复处理工作区接入 `ProEntitlementManager.canUse(.advancedDeduplication)`，未订阅时展示 Pro 自动化说明和查看方案入口；免费用户仍可继续查看、编辑和删除所有历史账单。截图模式新增免费 Pro 状态覆盖，并避免通知权限弹窗遮挡回归截图。
 - [2026-06-29 +0800] 完成 `GOAL-2214` 邮箱授权引导重构第一版：邮箱水单导入页在配置表单前新增公众化导入说明、隐私边界、保存前复核说明和 provider 专属授权码 / 应用专用密码提示，覆盖 QQ、网易 163 / 126、Gmail、Outlook / Hotmail、iCloud Mail、Yahoo Mail 和自定义 IMAP；四语文案同步补齐。既有本地 Keychain 保存、Pro gate、手动扫描、候选列表和批量导入逻辑不变。
 - [2026-06-29 +0800] 推进 `GOAL-2216` StoreKit 与审核材料第一段：`AutoLedgerSupport.storekit` 新增 `AutoLedger Pro` subscription group，补齐 `top.darkrio326.AutoLedger.pro.monthly` 月付 `$2.99` 和 `top.darkrio326.AutoLedger.pro.yearly` 首发年付 `$19.99` 本地订阅商品及四语展示名 / 说明；`docs/iap-support.md` 从旧的 Support Developer 文档更新为 Support Developer consumables + AutoLedger Pro subscriptions 双轨说明，明确基础记账长期免费、Pro 只 gate 自动化入口、云候选不会自动入账。订阅生命周期截图、隐私政策链接和真实 ASC 沙盒购买继续后续收口。

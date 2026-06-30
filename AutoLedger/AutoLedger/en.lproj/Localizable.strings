@@ -200,6 +200,10 @@
 "hotel_stay.email.pro.active_description" = "AutoLedger filters candidates by folio signals. You still review before saving.";
 "hotel_stay.email.pro.required" = "AutoLedger Pro required";
 "hotel_stay.email.pro.description" = "You can save local email settings first. Scanning email folios and importing batch candidates are time-saving Pro automation.";
+"hotel_stay.email.pro.free_available" = "One free email folio import this month";
+"hotel_stay.email.pro.free_available_description_format" = "Scanning and candidate preview remain available. A successful import uses this month's free allowance. %d left.";
+"hotel_stay.email.pro.free_used" = "Free email import used this month";
+"hotel_stay.email.pro.free_used_description" = "You can still scan and preview candidates. Importing more folios requires AutoLedger Pro, or wait for next month's allowance.";
 "hotel_stay.email.candidate_reason.pdf_folio" = "PDF attachment + folio subject";
 "hotel_stay.email.candidate_reason.pdf_hotel" = "PDF attachment + hotel signal";
 "hotel_stay.email.candidate_reason.body_subject" = "No attachment + folio subject";
@@ -210,6 +214,7 @@
 "hotel_stay.email.selected_count_format" = "%d folio files selected.";
 "hotel_stay.email.status.credential_cleared" = "Local email credential deleted.";
 "hotel_stay.email.status.saved" = "Email settings saved.";
+"hotel_stay.email.status.free_quota_used" = "This month's free email folio import has been used. AutoLedger Pro is required to import more.";
 "hotel_stay.email.status.scanning" = "Connecting to email and reading candidate folio messages.";
 "hotel_stay.email.status.connecting" = "Connecting to the IMAP server.";
 "hotel_stay.email.status.authenticating" = "Signing in to email.";

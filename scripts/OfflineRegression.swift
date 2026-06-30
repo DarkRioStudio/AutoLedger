@@ -865,6 +865,23 @@ struct OfflineRegression {
             policy.manualFallbacks(for: .monthlyExportPackage).contains(.basicDataExportAndBackup),
             "ProAccessPolicy keeps basic export as monthly package fallback"
         )
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let june = Date(timeIntervalSince1970: 1_780_291_200)
+        let july = Date(timeIntervalSince1970: 1_782_883_200)
+        let freshAllowance = LocalEmailFolioImportAllowanceState.fresh(for: june, calendar: calendar)
+        reporter.check(freshAllowance.remainingFreeImports == 1, "LocalEmailFolioImportAllowance starts with one free monthly import")
+        reporter.check(freshAllowance.allowsImport(isProActive: false), "LocalEmailFolioImportAllowance allows the first free import")
+        let afterEmptyImport = freshAllowance.consumingSuccessfulImport(isProActive: false, importedDraftCount: 0, at: june, calendar: calendar)
+        reporter.check(afterEmptyImport.remainingFreeImports == 1, "LocalEmailFolioImportAllowance does not consume quota when no draft imports")
+        let afterFreeImport = freshAllowance.consumingSuccessfulImport(isProActive: false, importedDraftCount: 2, at: june, calendar: calendar)
+        reporter.check(afterFreeImport.remainingFreeImports == 0, "LocalEmailFolioImportAllowance consumes one quota per successful batch import")
+        reporter.check(!afterFreeImport.allowsImport(isProActive: false), "LocalEmailFolioImportAllowance blocks second free import in same month")
+        reporter.check(afterFreeImport.allowsImport(isProActive: true), "LocalEmailFolioImportAllowance never blocks active Pro")
+        let afterProImport = freshAllowance.consumingSuccessfulImport(isProActive: true, importedDraftCount: 2, at: june, calendar: calendar)
+        reporter.check(afterProImport.remainingFreeImports == 1, "LocalEmailFolioImportAllowance does not consume free quota for Pro imports")
+        reporter.check(afterFreeImport.normalized(for: july, calendar: calendar).remainingFreeImports == 1, "LocalEmailFolioImportAllowance resets free quota in a new month")
     }
 
     private static func verifyHotelFolioEmailDeduplication(reporter: RegressionReporter) throws {

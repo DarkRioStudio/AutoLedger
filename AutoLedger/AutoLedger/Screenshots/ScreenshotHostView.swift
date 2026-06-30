@@ -96,6 +96,9 @@ private struct ScreenshotEmailFolioImportHost: View {
 
     init() {
         ScreenshotFixtures.installUserDefaults()
+        if ScreenshotModeConfig.usesFreeProState {
+            UserDefaults.standard.set(false, forKey: "autoLedgerProDevelopmentOverride")
+        }
         _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
     }
 

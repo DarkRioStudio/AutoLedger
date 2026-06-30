@@ -200,6 +200,10 @@
 "hotel_stay.email.pro.active_description" = "明細の手がかりで候補メールを絞り込み、保存前に確認できます。";
 "hotel_stay.email.pro.required" = "AutoLedger Pro が必要です";
 "hotel_stay.email.pro.description" = "ローカルメール設定は先に保存できます。メール明細のスキャンと候補の一括取り込みは、時間を節約する Pro 自動化機能です。";
+"hotel_stay.email.pro.free_available" = "今月は 1 回無料で取り込めます";
+"hotel_stay.email.pro.free_available_description_format" = "スキャンと候補プレビューは利用できます。取り込みに成功すると今月の無料枠を消費します。残り %d 回。";
+"hotel_stay.email.pro.free_used" = "今月の無料取り込み枠は使用済みです";
+"hotel_stay.email.pro.free_used_description" = "スキャンと候補の確認は引き続き可能です。追加の取り込みには AutoLedger Pro が必要です。来月に無料枠が更新されます。";
 "hotel_stay.email.candidate_reason.pdf_folio" = "PDF 添付 + 明細件名";
 "hotel_stay.email.candidate_reason.pdf_hotel" = "PDF 添付 + ホテルの手がかり";
 "hotel_stay.email.candidate_reason.body_subject" = "添付なし + 明細件名";
@@ -210,6 +214,7 @@
 "hotel_stay.email.selected_count_format" = "%d 件の明細ファイルを選択済み。";
 "hotel_stay.email.status.credential_cleared" = "ローカルのメール認証コードを削除しました。";
 "hotel_stay.email.status.saved" = "メール設定を保存しました。";
+"hotel_stay.email.status.free_quota_used" = "今月の無料メール明細取り込み枠は使用済みです。追加の取り込みには AutoLedger Pro が必要です。";
 "hotel_stay.email.status.scanning" = "メールに接続し、候補のホテル明細メールを読み取っています。";
 "hotel_stay.email.status.connecting" = "IMAP サーバーに接続しています。";
 "hotel_stay.email.status.authenticating" = "メールにログインしています。";

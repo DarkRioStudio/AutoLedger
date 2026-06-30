@@ -1,6 +1,30 @@
 import AutoLedgerCore
 import SwiftUI
 
+private enum HotelFolioEmailImportAllowanceStore {
+    private static let storageKey = "hotelFolioEmailImportAllowanceState"
+
+    static func current() -> LocalEmailFolioImportAllowanceState {
+        let decoded: LocalEmailFolioImportAllowanceState?
+        if let data = UserDefaults.standard.data(forKey: storageKey) {
+            decoded = try? JSONDecoder().decode(LocalEmailFolioImportAllowanceState.self, from: data)
+        } else {
+            decoded = nil
+        }
+        let state = decoded ?? .fresh()
+        let normalized = state.normalized()
+        if normalized != state {
+            save(normalized)
+        }
+        return normalized
+    }
+
+    static func save(_ state: LocalEmailFolioImportAllowanceState) {
+        guard let data = try? JSONEncoder().encode(state.normalized()) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+}
+
 struct HotelFolioEmailImportView: View {
     private static let phoneSearchDays = 30
     private static let phoneMaxMessages = 100
@@ -25,6 +49,7 @@ struct HotelFolioEmailImportView: View {
     @State private var isScanning = false
     @State private var isImportingSelection = false
     @State private var isPresentingProSheet = false
+    @State private var importAllowanceState: LocalEmailFolioImportAllowanceState
 
     init(
         targetLedgerID: String?,
@@ -39,6 +64,7 @@ struct HotelFolioEmailImportView: View {
         _searchDaysText = State(initialValue: String(current.searchDays))
         _maxMessagesText = State(initialValue: String(current.maxMessages))
         _hasStoredCredential = State(initialValue: HotelEmailCredentialStore.hasStoredCredential(for: current.emailAddress))
+        _importAllowanceState = State(initialValue: HotelFolioEmailImportAllowanceStore.current())
     }
 
     var body: some View {
@@ -94,8 +120,43 @@ struct HotelFolioEmailImportView: View {
         }
     }
 
-    private var canUseLocalEmailScan: Bool {
+    private var hasUnlimitedLocalEmailImport: Bool {
         proEntitlement.canUse(.localEmailFolioScan)
+    }
+
+    private var normalizedImportAllowance: LocalEmailFolioImportAllowanceState {
+        importAllowanceState.normalized()
+    }
+
+    private var remainingFreeLocalEmailImports: Int {
+        normalizedImportAllowance.remainingFreeImports
+    }
+
+    private var canImportSelectedEmailFolio: Bool {
+        normalizedImportAllowance.allowsImport(isProActive: hasUnlimitedLocalEmailImport)
+    }
+
+    private var emailImportEntitlementTitle: String {
+        if hasUnlimitedLocalEmailImport {
+            return String(localized: "hotel_stay.email.pro.active")
+        }
+        if remainingFreeLocalEmailImports > 0 {
+            return String(localized: "hotel_stay.email.pro.free_available")
+        }
+        return String(localized: "hotel_stay.email.pro.free_used")
+    }
+
+    private var emailImportEntitlementDescription: String {
+        if hasUnlimitedLocalEmailImport {
+            return String(localized: "hotel_stay.email.pro.active_description")
+        }
+        if remainingFreeLocalEmailImports > 0 {
+            return String(
+                format: String(localized: "hotel_stay.email.pro.free_available_description_format"),
+                remainingFreeLocalEmailImports
+            )
+        }
+        return String(localized: "hotel_stay.email.pro.free_used_description")
     }
 
     private var introSection: some View {
@@ -315,18 +376,18 @@ struct HotelFolioEmailImportView: View {
         Section {
             Label {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(canUseLocalEmailScan ? "hotel_stay.email.pro.active" : "hotel_stay.email.pro.required")
+                    Text(emailImportEntitlementTitle)
                         .font(.body.weight(.semibold))
-                    Text(canUseLocalEmailScan ? "hotel_stay.email.pro.active_description" : "hotel_stay.email.pro.description")
+                    Text(emailImportEntitlementDescription)
                         .font(.footnote)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
             } icon: {
-                Image(systemName: canUseLocalEmailScan ? "checkmark.seal.fill" : "sparkles")
-                    .foregroundStyle(canUseLocalEmailScan ? AppTheme.accent : .orange)
+                Image(systemName: hasUnlimitedLocalEmailImport ? "checkmark.seal.fill" : (remainingFreeLocalEmailImports > 0 ? "1.circle.fill" : "sparkles"))
+                    .foregroundStyle(hasUnlimitedLocalEmailImport || remainingFreeLocalEmailImports > 0 ? AppTheme.accent : .orange)
             }
 
-            if !canUseLocalEmailScan {
+            if !hasUnlimitedLocalEmailImport {
                 Button {
                     isPresentingProSheet = true
                 } label: {
@@ -342,23 +403,17 @@ struct HotelFolioEmailImportView: View {
     private var scanSection: some View {
         Section {
             Button {
-                if canUseLocalEmailScan {
-                    Task {
-                        await scanMailbox()
-                    }
-                } else {
-                    isPresentingProSheet = true
+                Task {
+                    await scanMailbox()
                 }
             } label: {
                 HStack {
                     if isScanning {
                         ProgressView()
-                    } else if canUseLocalEmailScan {
-                        Image(systemName: "envelope.badge")
                     } else {
-                        Image(systemName: "sparkles")
+                        Image(systemName: "envelope.badge")
                     }
-                    Text(isScanning ? "hotel_stay.email.scanning" : (canUseLocalEmailScan ? "hotel_stay.email.scan" : "pro.cta.view_plans"))
+                    Text(isScanning ? "hotel_stay.email.scanning" : "hotel_stay.email.scan")
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -444,11 +499,12 @@ struct HotelFolioEmailImportView: View {
                 }
 
                 Button {
-                    if canUseLocalEmailScan {
+                    if canImportSelectedEmailFolio {
                         Task {
                             await importSelectedAttachments()
                         }
                     } else {
+                        statusMessage = String(localized: "hotel_stay.email.status.free_quota_used")
                         isPresentingProSheet = true
                     }
                 } label: {
@@ -456,10 +512,12 @@ struct HotelFolioEmailImportView: View {
                         if isImportingSelection {
                             ProgressView()
                                 .controlSize(.small)
-                        } else {
+                        } else if canImportSelectedEmailFolio {
                             Image(systemName: "tray.and.arrow.down")
+                        } else {
+                            Image(systemName: "sparkles")
                         }
-                        Text(isImportingSelection ? "hotel_stay.email.importing_selected" : "hotel_stay.email.import_selected")
+                        Text(isImportingSelection ? "hotel_stay.email.importing_selected" : (canImportSelectedEmailFolio ? "hotel_stay.email.import_selected" : "pro.cta.view_plans"))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -594,6 +652,11 @@ struct HotelFolioEmailImportView: View {
             statusMessage = String(localized: "hotel_stay.email.status.no_selection")
             return
         }
+        guard canImportSelectedEmailFolio else {
+            statusMessage = String(localized: "hotel_stay.email.status.free_quota_used")
+            isPresentingProSheet = true
+            return
+        }
         isImportingSelection = true
         statusMessage = String(localized: "hotel_stay.email.importing_selected")
         recordEmailScanDebug("邮箱水单批量导入：开始 · selected=\(selection.count)")
@@ -631,6 +694,15 @@ struct HotelFolioEmailImportView: View {
             message = String(format: String(localized: "hotel_stay.email.status.import_partial_format"), drafts.count, failures.count)
         }
         statusMessage = message
+        if !hasUnlimitedLocalEmailImport, !drafts.isEmpty {
+            let updatedAllowance = normalizedImportAllowance.consumingSuccessfulImport(
+                isProActive: false,
+                importedDraftCount: drafts.count
+            )
+            importAllowanceState = updatedAllowance
+            HotelFolioEmailImportAllowanceStore.save(updatedAllowance)
+            recordEmailScanDebug("邮箱水单批量导入：已使用本月免费额度 · remaining=\(updatedAllowance.remainingFreeImports)")
+        }
         recordEmailScanDebug("邮箱水单批量导入：完成 · drafts=\(drafts.count) · failures=\(failures.count)")
         onDraftsReady(drafts)
         dismiss()
@@ -676,12 +748,25 @@ struct HotelFolioEmailImportView: View {
     }
 
     private func importAttachment(_ attachment: HotelFolioEmailAttachment, from message: HotelFolioEmailMessage) async {
+        guard canImportSelectedEmailFolio else {
+            statusMessage = String(localized: "hotel_stay.email.status.free_quota_used")
+            isPresentingProSheet = true
+            return
+        }
         do {
             let draft = try HotelFolioEmailAttachmentImporter().makeDraft(
                 message: message,
                 attachment: attachment,
                 targetLedgerID: targetLedgerID
             )
+            if !hasUnlimitedLocalEmailImport {
+                let updatedAllowance = normalizedImportAllowance.consumingSuccessfulImport(
+                    isProActive: false,
+                    importedDraftCount: 1
+                )
+                importAllowanceState = updatedAllowance
+                HotelFolioEmailImportAllowanceStore.save(updatedAllowance)
+            }
             onDraftsReady([draft])
             dismiss()
         } catch {

@@ -1,3 +1,5 @@
+import Foundation
+
 public enum AutoLedgerCapability: String, CaseIterable, Codable, Equatable, Sendable {
     case manualTransactionEntry
     case singleReceiptScan
@@ -114,5 +116,59 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .supportDeveloperDonation:
             return []
         }
+    }
+}
+
+public struct LocalEmailFolioImportAllowanceState: Codable, Equatable, Sendable {
+    public static let freeImportLimitPerMonth = 1
+
+    public var periodIdentifier: String
+    public var successfulImportCount: Int
+
+    public init(periodIdentifier: String, successfulImportCount: Int = 0) {
+        self.periodIdentifier = periodIdentifier
+        self.successfulImportCount = max(0, successfulImportCount)
+    }
+
+    public var remainingFreeImports: Int {
+        max(0, Self.freeImportLimitPerMonth - successfulImportCount)
+    }
+
+    public static func fresh(for date: Date = Date(), calendar: Calendar = .current) -> Self {
+        LocalEmailFolioImportAllowanceState(periodIdentifier: periodIdentifier(for: date, calendar: calendar))
+    }
+
+    public static func periodIdentifier(for date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 1
+        return String(format: "%04d-%02d", year, month)
+    }
+
+    public func normalized(for date: Date = Date(), calendar: Calendar = .current) -> Self {
+        let currentPeriod = Self.periodIdentifier(for: date, calendar: calendar)
+        guard periodIdentifier == currentPeriod else {
+            return .fresh(for: date, calendar: calendar)
+        }
+        return LocalEmailFolioImportAllowanceState(
+            periodIdentifier: periodIdentifier,
+            successfulImportCount: successfulImportCount
+        )
+    }
+
+    public func allowsImport(isProActive: Bool, at date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        isProActive || normalized(for: date, calendar: calendar).remainingFreeImports > 0
+    }
+
+    public func consumingSuccessfulImport(
+        isProActive: Bool,
+        importedDraftCount: Int,
+        at date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> Self {
+        var state = normalized(for: date, calendar: calendar)
+        guard !isProActive, importedDraftCount > 0 else { return state }
+        state.successfulImportCount += 1
+        return state
     }
 }

@@ -200,6 +200,10 @@
 "hotel_stay.email.pro.active_description" = "會依水單線索篩選候選郵件，儲存前仍需要你確認。";
 "hotel_stay.email.pro.required" = "需要 AutoLedger Pro";
 "hotel_stay.email.pro.description" = "可以先儲存本機郵箱配置；掃描郵箱水單、批次候選匯入屬於節省時間的 Pro 自動化能力。";
+"hotel_stay.email.pro.free_available" = "本月可免費匯入一次";
+"hotel_stay.email.pro.free_available_description_format" = "掃描和候選預覽可繼續使用；成功匯入後會消耗本月免費額度。剩餘 %d 次。";
+"hotel_stay.email.pro.free_used" = "本月免費匯入額度已用完";
+"hotel_stay.email.pro.free_used_description" = "仍可掃描和查看候選；繼續匯入需要 AutoLedger Pro，或等下個月額度刷新。";
 "hotel_stay.email.candidate_reason.pdf_folio" = "PDF 附件 + 水單主旨";
 "hotel_stay.email.candidate_reason.pdf_hotel" = "PDF 附件 + 飯店線索";
 "hotel_stay.email.candidate_reason.body_subject" = "無附件 + 水單主旨";
@@ -210,6 +214,7 @@
 "hotel_stay.email.selected_count_format" = "已選擇 %d 個水單檔案。";
 "hotel_stay.email.status.credential_cleared" = "已刪除本機郵箱授權碼。";
 "hotel_stay.email.status.saved" = "郵箱配置已儲存。";
+"hotel_stay.email.status.free_quota_used" = "本月免費郵件水單匯入額度已用完，繼續匯入需要 AutoLedger Pro。";
 "hotel_stay.email.status.scanning" = "正在連接郵箱並讀取候選水單郵件。";
 "hotel_stay.email.status.connecting" = "正在連接 IMAP 伺服器。";
 "hotel_stay.email.status.authenticating" = "正在登入郵箱。";

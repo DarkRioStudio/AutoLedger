@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-29（ITER-301 v1.6.4 数据清洗 Pro Gate）
+更新日期：2026-06-30（ITER-302 v1.6.4 邮箱水单免费月度额度）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-302 v1.6.4 邮箱水单免费月度额度
+- 日期：2026-06-30
+- 所属版本：v1.6.4
+- 所属阶段：Personal Pro / Hotel Email
+- 类型：能力增强 / UI / 文档 / 测试
+- 目标：调整本地邮箱水单导入的 Free / Pro 边界，让免费用户可以真实测试邮箱水单端到端流程，同时把无限导入继续作为 AutoLedger Pro 自动化能力。
+- 改动范围：更新 `AutoLedgerProAccessPolicy` 平台无关额度合同、`HotelFolioEmailImportView` 邮箱导入页 gate、四语本地化、邮箱导入截图模式免费态覆盖、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：未修改 IMAP 登录 / mailbox 选择 / MIME 解析 / 候选召回规则 / PDFKit / 酒店水单解析 / SQLite / CloudKit schema、StoreKit 商品、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：免费用户可继续进入邮箱配置、手动扫描并预览候选水单；成功生成待确认酒店水单草稿后，每月消耗 1 次免费本地邮箱导入额度；失败导入、连接测试、扫描和候选预览不消耗额度；额度按自然月自动刷新；Pro 用户不限制本地邮箱导入次数。额度状态本地保存，已用完时导入按钮转为查看 Pro，并提示仍可手动扫描 / 预览候选。
+- 未完成内容：真实 ASC 沙盒订阅状态下的额度 UI 切换仍需 TestFlight / Sandbox 继续 smoke；多设备间免费额度同步当前不作为本轮目标，避免把本地邮箱导入额度变成云端用户账户系统。
+- 测试情况：先在离线回归中加入 `LocalEmailFolioImportAllowanceState` 断言，确认 RED 失败为缺少类型；实现后执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；执行主 App iOS generic Debug build 通过；执行 iOS 27 iPhone 17 Simulator Debug build 通过；安装并以 `email_folio_import --screenshot-free-pro` screenshot mode 启动，截图 `/tmp/autoledger-email-folio-free-quota-ipad-fresh.png` 检查“本月可免费导入一次”、`查看 Pro`、`扫描邮箱水单` 无明显遮挡 / 重叠 / 折行。
+- 风险与注意事项：额度保存在本机 `UserDefaults`，卸载重装会重置；这是当前免费试用口径的轻量实现，不替代未来订阅后端或账户系统。导入成功后才消耗额度，避免邮箱服务异常让用户损失试用机会。
+- 回滚方式：回退 `LocalEmailFolioImportAllowanceState`、邮箱导入页额度 gate / 本地存储、四语新增文案、截图模式免费态覆盖和版本文档记录即可；既有邮箱候选召回、手动 PDF 导入和 Pro 页面不受影响。
+- 结论：本地邮箱水单导入已从“免费直接被 Pro 阻断”调整为“免费每月 1 次成功导入、Pro 不限”，可以支持 TestFlight 真实体验后再触发订阅转化。
+- 下一步建议：结合真实沙盒订阅验证未订阅、已订阅、恢复购买和订阅过期四种状态下邮箱导入页的按钮 / 文案 / 额度显示。
 
 ### ITER-301 v1.6.4 数据清洗 Pro Gate
 - 日期：2026-06-29
