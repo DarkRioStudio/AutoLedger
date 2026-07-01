@@ -3,6 +3,7 @@ import SwiftUI
 
 struct LedgerProfileManagementView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @EnvironmentObject private var store: LedgerStore
     @State private var showAddAlert = false
     @State private var newLedgerName = ""
@@ -44,10 +45,13 @@ struct LedgerProfileManagementView: View {
                             .tag(profile.id)
                     }
                 }
+                .tint(AppTheme.accent)
+                .listRowBackground(AppTheme.card)
 
                 Text("ledger_profiles.default_write.description")
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
+                    .listRowBackground(AppTheme.card)
             } header: {
                 Text("ledger_profiles.default_write.section")
             }
@@ -60,6 +64,7 @@ struct LedgerProfileManagementView: View {
                             guard allowsSelection else { return }
                             store.selectLedgerProfile(profile)
                         }
+                        .listRowBackground(AppTheme.card)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if profile.id != TodaySpendingSummary.defaultLedgerID {
                                 Button(role: .destructive) {
@@ -103,12 +108,17 @@ struct LedgerProfileManagementView: View {
                 Section {
                     ForEach(archivedProfiles) { profile in
                         ledgerRow(profile)
+                            .listRowBackground(AppTheme.card)
                     }
                 } header: {
                     Text("ledger_profiles.archived")
                 }
             }
         }
+        .autoLedgerListChrome()
+        .autoLedgerNavigationBarChrome()
+        .tint(AppTheme.accent)
+        .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
         .navigationTitle("ledger_profiles.title")
         .toolbar {
             if showsDoneButton {

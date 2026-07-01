@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-321 Watch 同步与自定义主题预览修复）
+更新日期：2026-07-01（ITER-322 Mac 工作台导航与多账本主题修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-322 Mac 工作台导航与多账本主题修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：Mac Catalyst / App UI Theme
+- 类型：Bugfix / UI / 测试
+- 目标：修复 Mac Catalyst 首次打开设置页标题被遮挡、多账本管理未复用主题色、分析页标题与月份箭头重合，以及 TestFlight Mac 偶发 SwiftUI Navigation 崩溃的风险点。
+- 改动范围：更新 `SettingsView`、`IPadWorkspaceView`、`LedgerProfileManagementView`、CHANGELOG 和本日志；读取本机 TestFlight 崩溃日志并纳入判断。
+- 未改动范围：未修改账单 SQLite / CloudKit schema、StoreKit 商品和订阅逻辑、Worker、APNs 配置、截图导出脚本、App Group identifier、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`SettingsView` 支持传入内容顶部间距，Mac Catalyst 工作台打开设置页时使用更大的顶部 padding，避免 `AutoLedgerPageTitle` 被窗口顶部 chrome 遮住；工作台详情列移除全局随机 `.id(UUID())` 重建，只在离开设置页时重置设置子导航栈，降低 SwiftUI split detail 导航状态频繁重建导致的 `NavigationColumnState.boundPathChange` 崩溃风险；多账本管理接入 `autoLedgerListChrome()`、`autoLedgerNavigationBarChrome()`、`AppTheme.accent` tint、主题刷新动画和卡片行背景，iOS / Mac 均跟随当前主题色；分析页月份切换按钮从导航栏 toolbar 移入标题卡片，避免 Mac 上导航标题与左右箭头重叠。
+- 未完成内容：本轮没有重签 / 安装新的 Mac TestFlight 包，也没有通过 Mac UI 自动化复现崩溃前后的同一路径；Catalyst compile-only 仍打印既有 MediaPipe Catalyst slice warning 和 Swift 6 warning，需要在正式 Mac TestFlight 上再次人工走设置、账本、酒店消费、分析四个 tab。
+- 测试情况：本机确认 `~/Library/Logs/DiagnosticReports/Retired/AutoLedger-2026-07-01-085114.ips` 和 `AutoLedger-2026-07-01-085329.ips` 存在，均为 `EXC_BREAKPOINT / SIGTRAP`，faulting thread 为 `com.apple.main-thread`，顶部栈为 `swift_unexpectedError -> SwiftUI.NavigationColumnState.boundPathChange`；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；通过 XcodeBuildMCP 执行 iPhone 17 Simulator `build_sim -quiet` 通过，随后执行 `build_run_sim -quiet` 通过并成功截图 `/var/folders/k4/xvd6k70j3397km1slbw4y6v40000gn/T/screenshot_optimized_efdd33d6-18d6-4c5c-aca8-c3ab57b058c5.jpg`；运行日志未出现 `EXC_`、`SIGTRAP` 或 `NavigationColumnState` 崩溃字样；执行 Mac Catalyst compile-only 命令 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' -configuration Debug build CODE_SIGNING_ALLOWED=NO -quiet` 以 exit code 0 结束。
+- 风险与注意事项：TestFlight Mac 崩溃日志来自 release 包，缺少可直接落回 Swift 文件的完整符号，但两份日志的 SwiftUI Navigation 栈一致，和工作台 detail column 强制重建的风险点匹配。XcodeBuildMCP 的 runtime UI snapshot 当前因本机 `/Applications/Xcode-beta.app/Contents/Developer/Library/PrivateFrameworks/SimulatorKit.framework` 缺失而失败，未能自动点进设置里的多账本页面；已用 build/run/screenshot 和日志检索替代。
+- 回滚方式：回退上述三个 Swift 文件、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成 Mac 工作台设置标题遮挡、分析标题冲突、多账本主题接入和 SwiftUI Navigation 崩溃风险点修复，iPhone 模拟器 build/run 与 Mac Catalyst compile-only 已通过。
+- 下一步建议：下一版 TestFlight Mac 安装后，优先从首次启动进入设置，再连续切换账本、酒店消费、分析、设置并打开多账本管理，确认标题不遮挡、tab 不消失、主题色即时生效且不再产生新的 `AutoLedger-*.ips`。
 
 ### ITER-321 Watch 同步与自定义主题预览修复
 - 日期：2026-07-01

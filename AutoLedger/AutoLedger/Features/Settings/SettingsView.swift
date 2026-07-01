@@ -5,9 +5,14 @@ struct SettingsView: View {
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+    private let topContentPadding: CGFloat
     @State private var versionTapCount = 0
     @State private var showDebugUnlocked = false
     @State private var showFeedbackComposer = false
+
+    init(topContentPadding: CGFloat = 20) {
+        self.topContentPadding = topContentPadding
+    }
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -257,7 +262,8 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 20)
+                .padding(.top, topContentPadding)
+                .padding(.bottom, 20)
                 .autoLedgerReadableContent(maxWidth: 760)
             }
             .autoLedgerScreenChrome()

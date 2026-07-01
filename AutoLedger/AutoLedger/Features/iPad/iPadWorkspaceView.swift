@@ -52,7 +52,6 @@ struct IPadWorkspaceView: View {
     @State private var sidebarSelection: IPadWorkspaceSection?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var settingsResetID = UUID()
-    @State private var detailResetID = UUID()
 
     init(initialSection: IPadWorkspaceSection = .overview) {
         _selection = State(initialValue: initialSection)
@@ -88,7 +87,6 @@ struct IPadWorkspaceView: View {
             .tint(AppTheme.accent)
         } detail: {
             detailView
-                .id(detailResetID)
         }
         .navigationSplitViewStyle(.balanced)
         .tint(AppTheme.accent)
@@ -149,7 +147,7 @@ struct IPadWorkspaceView: View {
         case .cleaning:
             IPadCleaningPreviewWorkspaceView()
         case .settings:
-            SettingsView()
+            SettingsView(topContentPadding: workspaceSettingsTopPadding)
                 .id(settingsResetID)
         }
     }
@@ -165,7 +163,14 @@ struct IPadWorkspaceView: View {
         if oldSection == .settings {
             settingsResetID = UUID()
         }
-        detailResetID = UUID()
+    }
+
+    private var workspaceSettingsTopPadding: CGFloat {
+        #if targetEnvironment(macCatalyst)
+        return 72
+        #else
+        return 20
+        #endif
     }
 
     private func openLedgerProfilesFromSharedLedger() {
@@ -2920,44 +2925,25 @@ private struct IPadReportWorkspaceView: View {
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("ipad.workspace.reports")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        stepMonth(by: -1)
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .fontWeight(.semibold)
-                    }
-                    .accessibilityLabel(Text("ledger.filter.previous_month"))
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        stepMonth(by: 1)
-                    } label: {
-                        Image(systemName: "chevron.right")
-                            .fontWeight(.semibold)
-                    }
-                    .disabled(isCurrentMonth)
-                    .opacity(isCurrentMonth ? 0.35 : 1)
-                    .accessibilityLabel(Text("ledger.filter.next_month"))
-                }
-            }
         }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("ipad.analysis.title")
                     .font(.largeTitle.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
                 Text(snapshot.monthLabel)
                     .font(.headline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
+
+            monthStepper
 
             Text(AppFormatters.currency(snapshot.totalExpense))
                 .font(.system(size: 42, weight: .bold, design: .rounded))
@@ -2969,6 +2955,41 @@ private struct IPadReportWorkspaceView: View {
         .padding(22)
         .background(AppTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var monthStepper: some View {
+        HStack(spacing: 8) {
+            monthStepButton(
+                systemImage: "chevron.left",
+                accessibilityLabel: "ledger.filter.previous_month",
+                action: { stepMonth(by: -1) }
+            )
+
+            monthStepButton(
+                systemImage: "chevron.right",
+                accessibilityLabel: "ledger.filter.next_month",
+                action: { stepMonth(by: 1) }
+            )
+            .disabled(isCurrentMonth)
+            .opacity(isCurrentMonth ? 0.35 : 1)
+        }
+    }
+
+    private func monthStepButton(
+        systemImage: String,
+        accessibilityLabel: LocalizedStringKey,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 42, height: 42)
+                .background(AppTheme.accent.opacity(0.12))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(accessibilityLabel))
     }
 
     private var metricGrid: some View {
