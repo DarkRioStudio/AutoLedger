@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-338 Pro 恢复购买后云端收件箱状态刷新修复）
+更新日期：2026-07-01（ITER-339 外观主题自定义选项 Pro 标识与免费 gate）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-339 外观主题自定义选项 Pro 标识与免费 gate
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App UI Polish / Pro Gate
+- 类型：Bugfix / UI
+- 目标：让外观与主题下拉菜单里的“自定义”明确展示 Pro 标签，并保证免费版本不能直接选择自定义主题。
+- 改动范围：更新 `AppearanceSettingsView.swift` 的主题下拉菜单 label 和 `scripts/check_adaptive_layout_rules.py` 静态门禁；同步更新 CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 StoreKit 商品、订阅购买 / 恢复逻辑、主题 preset raw value、用户主题偏好、AppTheme 配色、SQLite / CloudKit schema、Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：主题下拉中 `custom` 选项改为复合菜单项：已选中时保留 checkmark，免费状态下显示锁图标，且“自定义”旁展示 `Pro` badge；点击免费状态下的自定义项只打开 `AutoLedgerProView`，不会写入 `AppThemePreset.custom`。既有 `selectTheme(_:)` 和 `enforceThemeAvailability()` 保留，继续防止免费用户或 Pro 到期后停留在自定义主题。
+- 未完成内容：本轮未做运行态截图目检；该改动已通过编译覆盖 SwiftUI `Menu` label 语法，但不同系统版本中 `Menu` 对复合 label 的视觉细节仍建议 TestFlight 手动看一眼。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过，结尾为 `BUILD SUCCEEDED`；执行 `bash scripts/run_offline_regression.sh` 通过。
+- 风险与注意事项：免费用户仍能看到“自定义 Pro”项，这是为了明确该能力存在但未解锁；点击后不会改主题，只展示 Pro 页。若未来把更多主题纳入 Pro，需要把同样的锁定逻辑从 `isCustom` 扩展为 capability 判断。
+- 回滚方式：回退 `AppearanceSettingsView.swift`、`scripts/check_adaptive_layout_rules.py` 和本轮文档记录即可；无数据或后端回滚。
+- 结论：本轮完成，自定义主题下拉项已有 Pro 标识，免费版本不可直接选用自定义主题。
+- 下一步建议：用免费状态 TestFlight 打开外观与主题，确认菜单中“自定义 Pro”带锁且点击进入 Pro 页面；用已订阅状态确认仍可选择并编辑自定义颜色。
 
 ### ITER-338 Pro 恢复购买后云端收件箱状态刷新修复
 - 日期：2026-07-01

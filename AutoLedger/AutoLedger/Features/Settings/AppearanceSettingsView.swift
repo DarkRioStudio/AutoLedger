@@ -166,11 +166,7 @@ struct AppearanceSettingsView: View {
                 Button {
                     selectTheme(preset)
                 } label: {
-                    if preset == selectedPreset {
-                        Label(preset.localizedTitleKey, systemImage: "checkmark")
-                    } else {
-                        Text(preset.localizedTitleKey)
-                    }
+                    themeMenuItemLabel(for: preset)
                 }
             }
         } label: {
@@ -180,6 +176,40 @@ struct AppearanceSettingsView: View {
         .accessibilityLabel(Text("appearance.theme_picker"))
         .accessibilityValue(Text(selectedPreset.localizedTitleKey))
         .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
+    }
+
+    @ViewBuilder
+    private func themeMenuItemLabel(for preset: AppThemePreset) -> some View {
+        let isLockedCustomTheme = preset.isCustom && !canUseCustomTheme
+
+        if preset == selectedPreset {
+            Label {
+                themeMenuItemTitle(for: preset, isLocked: isLockedCustomTheme)
+            } icon: {
+                Image(systemName: "checkmark")
+            }
+        } else if isLockedCustomTheme {
+            Label {
+                themeMenuItemTitle(for: preset, isLocked: true)
+            } icon: {
+                Image(systemName: "lock.fill")
+            }
+        } else {
+            themeMenuItemTitle(for: preset, isLocked: false)
+        }
+    }
+
+    private func themeMenuItemTitle(for preset: AppThemePreset, isLocked: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text(preset.localizedTitleKey)
+
+            if preset.isCustom {
+                Text("appearance.custom.pro_badge")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(AppTheme.accent)
+            }
+        }
+        .foregroundStyle(isLocked ? AppTheme.mutedInk : AppTheme.ink)
     }
 
     private var themeDropdownLabel: some View {
