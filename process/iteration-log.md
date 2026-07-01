@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-323 截图管线酒店消费与 Pro 路线图修复）
+更新日期：2026-07-01（ITER-324 外观主题下拉短名称与排序）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-324 外观主题下拉短名称与排序
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App UI Theme
+- 类型：UI / Bugfix
+- 目标：将外观与主题页的主题下拉改成更短、更稳定的展示名称，并让经典主题排在第一位。
+- 改动范围：更新 `AppThemePreset.selectableCases`、简中 / 繁中 / 英文 / 日文 `appearance.theme.*` 标题、CHANGELOG 和本日志。
+- 未改动范围：未修改 `AppThemePreset` raw value、具体主题 palette、外观模式、自定义主题颜色存储、Pro gate、StoreKit、账本数据、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：主题下拉当前可选顺序固定为 `经典 / 薄荷 / 石墨 / 墨青 / 海湾 / 自定义`；简中标题完全按该短名称展示，繁中 / 英文 / 日文同步改为短标题。`nightFolio` 和 `sunrise` palette 仍保留在代码中，但不出现在当前 `selectableCases` 下拉列表。
+- 未完成内容：本轮未重新跑模拟器截图；视觉验证留到下一轮需要进入外观页时一起做。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；执行关键词检查确认 `隐私薄荷 / 石墨工作台 / 墨青账本` 不再作为当前简中主题标题出现。
+- 风险与注意事项：已保存为 `fresh / graphite / ledgerInk` 的用户偏好仍会按原 raw value 命中，只是 UI 展示名变短；当前默认主题仍保持既有逻辑，没有强制把已有用户切到经典。
+- 回滚方式：回退 `AppTheme.swift`、四语 `Localizable.strings`、CHANGELOG 和本日志即可；无数据迁移。
+- 结论：主题下拉展示已收敛为六个短名称，并按经典优先排序。
+- 下一步建议：下一次运行模拟器时顺手目检外观页下拉、主题预览卡和首页主题即时刷新。
 
 ### ITER-323 截图管线酒店消费与 Pro 路线图修复
 - 日期：2026-07-01

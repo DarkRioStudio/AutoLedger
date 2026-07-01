@@ -12,7 +12,7 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
     case custom
 
     static let userDefaultsKey = "appThemePreset"
-    static let selectableCases: [AppThemePreset] = [.fresh, .classic, .graphite, .ledgerInk, .harbor, .custom]
+    static let selectableCases: [AppThemePreset] = [.classic, .fresh, .graphite, .ledgerInk, .harbor, .custom]
 
     var id: String { rawValue }
 

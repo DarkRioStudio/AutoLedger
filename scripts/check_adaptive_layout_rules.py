@@ -61,7 +61,7 @@ REQUIRED_SNIPPETS = {
         "case ledgerInk",
         "case nightFolio",
         "case custom",
-        "static let selectableCases: [AppThemePreset] = [.fresh, .classic, .graphite, .ledgerInk, .harbor, .custom]",
+        "static let selectableCases: [AppThemePreset] = [.classic, .fresh, .graphite, .ledgerInk, .harbor, .custom]",
         "AppThemeCustomTheme",
     ],
     APP / "Features" / "Settings" / "AppearanceSettingsView.swift": [

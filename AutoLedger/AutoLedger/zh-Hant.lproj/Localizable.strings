@@ -792,10 +792,10 @@
 "appearance.mode.system" = "跟隨系統";
 "appearance.mode.light" = "淺色";
 "appearance.mode.dark" = "深色";
-"appearance.theme.fresh" = "隱私薄荷";
+"appearance.theme.fresh" = "薄荷";
 "appearance.theme.classic" = "經典";
-"appearance.theme.graphite" = "石墨工作台";
-"appearance.theme.ledger_ink" = "墨青帳本";
+"appearance.theme.graphite" = "石墨";
+"appearance.theme.ledger_ink" = "墨青";
 "appearance.theme.night_folio" = "午夜票夾";
 "appearance.theme.harbor" = "海灣";
 "appearance.theme.sunrise" = "晨光";

@@ -789,10 +789,10 @@
 "appearance.mode.system" = "System";
 "appearance.mode.light" = "Light";
 "appearance.mode.dark" = "Dark";
-"appearance.theme.fresh" = "Private Mint";
+"appearance.theme.fresh" = "Mint";
 "appearance.theme.classic" = "Classic";
-"appearance.theme.graphite" = "Graphite Desk";
-"appearance.theme.ledger_ink" = "Ledger Ink";
+"appearance.theme.graphite" = "Graphite";
+"appearance.theme.ledger_ink" = "Ink";
 "appearance.theme.night_folio" = "Night Folio";
 "appearance.theme.harbor" = "Harbor";
 "appearance.theme.sunrise" = "Sunrise";
