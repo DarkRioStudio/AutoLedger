@@ -71,7 +71,10 @@ struct ContentView: View {
             Button {
                 privacyMode.toggle()
             } label: {
-                Label(privacyMode ? "显示金额" : "隐藏金额", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
+                Label(
+                    privacyMode ? VisionDashboardCopy.current.showAmounts : VisionDashboardCopy.current.hideAmounts,
+                    systemImage: privacyMode ? "eye.slash.fill" : "eye.fill"
+                )
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
@@ -83,7 +86,7 @@ struct ContentView: View {
             Button {
                 Task { await load() }
             } label: {
-                Label("刷新", systemImage: "arrow.clockwise")
+                Label(VisionDashboardCopy.current.refresh, systemImage: "arrow.clockwise")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
@@ -269,10 +272,85 @@ private enum VisionScreenshotScene {
 
     var title: String {
         switch self {
-        case .dashboard: return "月度支出空间看板"
-        case .categories: return "分类支出卡片"
-        case .timeline: return "年度消费时间线"
+        case .dashboard: return VisionDashboardCopy.current.text("月度支出空间看板", "月度支出空間看板", "Spatial monthly dashboard", "空間月次ダッシュボード")
+        case .categories: return VisionDashboardCopy.current.text("分类支出卡片", "分類支出卡片", "Category cards", "カテゴリカード")
+        case .timeline: return VisionDashboardCopy.current.text("年度消费时间线", "年度消費時間線", "Yearly spending timeline", "年間支出タイムライン")
         }
+    }
+}
+
+private struct VisionDashboardCopy {
+    let languageCode: String
+
+    static var current: VisionDashboardCopy {
+        let locale = (ProcessInfo.processInfo.argumentValue(after: "-AppleLocale")
+            ?? Locale.preferredLanguages.first
+            ?? "zh-Hans").lowercased()
+        if locale.hasPrefix("en") {
+            return VisionDashboardCopy(languageCode: "en")
+        }
+        if locale.hasPrefix("ja") {
+            return VisionDashboardCopy(languageCode: "ja")
+        }
+        if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
+            return VisionDashboardCopy(languageCode: "zh-Hant")
+        }
+        return VisionDashboardCopy(languageCode: "zh-Hans")
+    }
+
+    var localeIdentifier: String {
+        switch languageCode {
+        case "en": return "en_US"
+        case "ja": return "ja_JP"
+        case "zh-Hant": return "zh_TW"
+        default: return "zh_CN"
+        }
+    }
+
+    var showAmounts: String { text("显示金额", "顯示金額", "Show amounts", "金額を表示") }
+    var hideAmounts: String { text("隐藏金额", "隱藏金額", "Hide amounts", "金額を非表示") }
+    var refresh: String { text("刷新", "重新整理", "Refresh", "更新") }
+    var hidden: String { text("已隐藏", "已隱藏", "Hidden", "非表示") }
+    var loadingTitle: String { text("正在读取本机正式账本", "正在讀取本機正式帳本", "Loading saved ledger data", "保存済み台帳を読み込み中") }
+    var emptyTitle: String { text("暂无可展示的账本数据", "暫無可展示的帳本資料", "No ledger data to show yet", "表示できる台帳データはまだありません") }
+    var emptySubtitle: String { text("visionOS 首版只读展示本机正式账本，不读取候选账单、OCR 原文或截图。", "visionOS 首版唯讀展示本機正式帳本，不讀取候選帳單、OCR 原文或截圖。", "The visionOS app shows read-only saved ledger data, not candidates, OCR text, or screenshots.", "visionOS では候補、OCR テキスト、スクリーンショットではなく、保存済み台帳を読み取り専用で表示します。") }
+    var unavailableTitle: String { text("账本暂时不可用", "帳本暫時不可用", "Ledger temporarily unavailable", "台帳を一時的に利用できません") }
+    var reload: String { text("重新读取", "重新讀取", "Reload", "再読み込み") }
+    var retry: String { text("重试", "重試", "Retry", "再試行") }
+
+    func text(_ zhHans: String, _ zhHant: String, _ en: String, _ ja: String) -> String {
+        switch languageCode {
+        case "en": return en
+        case "ja": return ja
+        case "zh-Hant": return zhHant
+        default: return zhHans
+        }
+    }
+
+    func categoryTitle(_ category: TransactionCategory?) -> String {
+        guard let category else {
+            return text("暂无", "暫無", "None", "なし")
+        }
+        switch category {
+        case .groceries: return text("日用杂货", "日用雜貨", "Groceries", "食料品")
+        case .dining: return text("餐饮", "餐飲", "Dining", "外食")
+        case .transport: return text("出行", "出行", "Transport", "交通")
+        case .hotel: return text("酒店", "酒店", "Hotel", "ホテル")
+        case .shopping: return text("购物", "購物", "Shopping", "買い物")
+        case .digital: return text("数字服务", "數位服務", "Digital", "デジタル")
+        case .utilities: return text("生活缴费", "生活繳費", "Utilities", "公共料金")
+        case .entertainment: return text("娱乐", "娛樂", "Entertainment", "エンタメ")
+        case .other: return text("其他", "其他", "Other", "その他")
+        }
+    }
+
+    func checkTime(_ date: Date) -> String {
+        text(
+            "检查时间 \(VisionFormatters.time.string(from: date))",
+            "檢查時間 \(VisionFormatters.time.string(from: date))",
+            "Checked at \(VisionFormatters.time.string(from: date))",
+            "確認時刻 \(VisionFormatters.time.string(from: date))"
+        )
     }
 }
 
@@ -288,15 +366,23 @@ private extension ProcessInfo {
 private enum VisionDashboardSimulatorData {
     static func transactions(referenceDate: Date) -> [LedgerTransaction] {
         let calendar = Calendar.autoupdatingCurrent
-        let specs: [(String, Double, Int, String, String)] = [
-            ("Demo Coffee", 18.00, 0, "餐饮", "截图识别"),
-            ("Example Market", 86.50, 0, "购物", "剪贴板"),
-            ("地铁：Example Station → Example Airport", 4.00, 1, "出行", "快捷指令"),
-            ("Sample Cinema", 45.00, 2, "娱乐", "手动录入"),
-            ("Sample Books", 39.00, 4, "学习", "截图识别"),
-            ("Mobile Carrier", 50.00, 8, "通讯", "自动导入"),
-            ("Lunch Bistro", 28.00, 12, "餐饮", "语音记账"),
-            ("Takeout Sample", 32.00, 16, "餐饮", "分享导入")
+        let copy = VisionDashboardCopy.current
+        let transitMerchant = copy.text(
+            "地铁：Example Station → Example Airport",
+            "地鐵：Example Station → Example Airport",
+            "Metro: Example Station → Example Airport",
+            "地下鉄：Example Station → Example Airport"
+        )
+        let specs: [(String, Double, Int, TransactionCategory, ReceiptSource)] = [
+            ("Sample Harbor Hotel", 369.39, 0, .hotel, .manual),
+            ("Demo Coffee", 18.00, 0, .dining, .wechat),
+            ("Example Market", 86.50, 0, .shopping, .unionPay),
+            (transitMerchant, 4.00, 1, .transport, .alipay),
+            ("Sample Cinema", 45.00, 2, .entertainment, .manual),
+            ("Sample Books", 39.00, 4, .shopping, .manual),
+            ("Mobile Carrier", 50.00, 8, .utilities, .manual),
+            ("Lunch Bistro", 28.00, 12, .dining, .voice),
+            ("Takeout Sample", 32.00, 16, .dining, .manual)
         ]
 
         return specs.enumerated().map { index, spec in
@@ -305,9 +391,9 @@ private enum VisionDashboardSimulatorData {
                 merchant: spec.0,
                 amount: spec.1,
                 occurredAt: calendar.date(byAdding: .day, value: -spec.2, to: referenceDate) ?? referenceDate,
-                categoryLabel: spec.3,
-                sourceLabel: spec.4,
-                note: "visionOS 模拟器演示数据"
+                categoryLabel: spec.3.rawValue,
+                sourceLabel: spec.4.rawValue,
+                note: copy.text("visionOS 模拟器演示数据", "visionOS 模擬器展示資料", "visionOS simulator demo data", "visionOS シミュレーターデモデータ")
             )
         }
     }
@@ -387,8 +473,8 @@ private struct VisionLedgerDashboardSnapshot {
         }
 
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月"
+        formatter.locale = VisionFormatters.locale
+        formatter.setLocalizedDateFormatFromTemplate("MMM")
 
         let metrics = (0..<12).reversed().compactMap { offset -> VisionMonthMetric? in
             guard
@@ -458,10 +544,10 @@ private struct VisionMonthlyBoard: View {
             VStack(alignment: .leading, spacing: 24) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(snapshot.monthlySnapshot.monthLabel)
+                        Text(VisionFormatters.month.string(from: snapshot.generatedAt))
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.64))
-                        Text(privacyMode ? "已隐藏" : VisionFormatters.currency(snapshot.monthlySnapshot.totalExpense))
+                        Text(privacyMode ? VisionDashboardCopy.current.hidden : VisionFormatters.currency(snapshot.monthlySnapshot.totalExpense))
                             .font(.system(size: 72, weight: .black, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.55)
@@ -471,7 +557,7 @@ private struct VisionMonthlyBoard: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 8) {
-                        Text("正式账本")
+                        Text(VisionDashboardCopy.current.text("正式账本", "正式帳本", "Saved ledger", "保存済み台帳"))
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.55))
                         Text(VisionFormatters.time.string(from: snapshot.generatedAt))
@@ -481,14 +567,14 @@ private struct VisionMonthlyBoard: View {
                 }
 
                 HStack(spacing: 16) {
-                    VisionMetricTile(title: "今日支出", value: privacyMode ? "***" : VisionFormatters.currency(snapshot.todaySummary.totalExpense), iconName: "sun.max.fill", tint: .yellow)
-                    VisionMetricTile(title: "本月笔数", value: "\(snapshot.monthlySnapshot.transactionCount)", iconName: "list.bullet.rectangle.fill", tint: .cyan)
-                    VisionMetricTile(title: "年度累计", value: privacyMode ? "***" : VisionFormatters.currency(snapshot.yearlyTotal), iconName: "sparkles", tint: .purple)
+                    VisionMetricTile(title: VisionDashboardCopy.current.text("今日支出", "今日支出", "Today", "今日"), value: privacyMode ? "***" : VisionFormatters.currency(snapshot.todaySummary.totalExpense), iconName: "sun.max.fill", tint: .yellow)
+                    VisionMetricTile(title: VisionDashboardCopy.current.text("本月笔数", "本月筆數", "Records", "記録数"), value: "\(snapshot.monthlySnapshot.transactionCount)", iconName: "list.bullet.rectangle.fill", tint: .cyan)
+                    VisionMetricTile(title: VisionDashboardCopy.current.text("年度累计", "年度累計", "Year total", "年間合計"), value: privacyMode ? "***" : VisionFormatters.currency(snapshot.yearlyTotal), iconName: "sparkles", tint: .purple)
                 }
 
                 HStack(spacing: 14) {
-                    VisionSignalPill(title: "Top 商户", value: privacyMode ? "已隐藏" : snapshot.monthlySnapshot.topMerchant, iconName: "storefront.fill")
-                    VisionSignalPill(title: "日均", value: privacyMode ? "***" : VisionFormatters.currency(snapshot.averageDailyExpense), iconName: "calendar")
+                    VisionSignalPill(title: VisionDashboardCopy.current.text("Top 商户", "Top 商家", "Top merchant", "上位加盟店"), value: privacyMode ? VisionDashboardCopy.current.hidden : snapshot.monthlySnapshot.topMerchant, iconName: "storefront.fill")
+                    VisionSignalPill(title: VisionDashboardCopy.current.text("日均", "日均", "Daily avg.", "日平均"), value: privacyMode ? "***" : VisionFormatters.currency(snapshot.averageDailyExpense), iconName: "calendar")
                 }
             }
         }
@@ -502,12 +588,12 @@ private struct VisionCategoryCloud: View {
     var body: some View {
         VisionGlassPanel {
             VStack(alignment: .leading, spacing: 18) {
-                Text("分类支出卡片")
+                Text(VisionDashboardCopy.current.text("分类支出卡片", "分類支出卡片", "Category cards", "カテゴリカード"))
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
                 if snapshot.monthlySnapshot.categoryBreakdown.isEmpty {
-                    VisionMutedText("暂无分类数据")
+                    VisionMutedText(VisionDashboardCopy.current.text("暂无分类数据", "暫無分類資料", "No category data yet", "カテゴリデータはまだありません"))
                 } else {
                     ForEach(Array(snapshot.monthlySnapshot.categoryBreakdown.prefix(5).enumerated()), id: \.element.id) { index, metric in
                         VisionCategoryFloatingCard(
@@ -532,11 +618,11 @@ private struct VisionYearTimelineWall: View {
         VisionGlassPanel {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Text("年度消费时间线墙")
+                    Text(VisionDashboardCopy.current.text("年度消费时间线墙", "年度消費時間線牆", "Yearly spending timeline", "年間支出タイムライン"))
                         .font(.system(size: 30, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                     Spacer()
-                    Text("最近 12 个月")
+                    Text(VisionDashboardCopy.current.text("最近 12 个月", "最近 12 個月", "Last 12 months", "直近 12 か月"))
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.52))
                 }
@@ -559,12 +645,12 @@ private struct VisionRecentRail: View {
     var body: some View {
         VisionGlassPanel {
             VStack(alignment: .leading, spacing: 16) {
-                Text("最近账单悬浮列表")
+                Text(VisionDashboardCopy.current.text("最近账单悬浮列表", "最近帳單懸浮列表", "Recent records", "最近の記録"))
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
                 if snapshot.recentTransactions.isEmpty || privacyMode {
-                    VisionMutedText(privacyMode ? "最近账单已隐藏" : "暂无最近账单")
+                    VisionMutedText(privacyMode ? VisionDashboardCopy.current.text("最近账单已隐藏", "最近帳單已隱藏", "Recent records hidden", "最近の記録は非表示です") : VisionDashboardCopy.current.text("暂无最近账单", "暫無最近帳單", "No recent records yet", "最近の記録はまだありません"))
                 } else {
                     ForEach(snapshot.recentTransactions.prefix(5)) { transaction in
                         VisionRecentTransactionRow(transaction: transaction)
@@ -647,7 +733,7 @@ private struct VisionCategoryFloatingCard: View {
                 Image(systemName: metric.iconName)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(tint)
-                Text(metric.title)
+                Text(VisionDashboardCopy.current.categoryTitle(metric.category))
                     .font(.system(size: 22, weight: .black, design: .rounded))
                     .lineLimit(1)
                     .foregroundStyle(.white)
@@ -707,9 +793,7 @@ private struct VisionTimelineColumn: View {
     }
 
     private var compactAmount: String {
-        metric.total >= 10_000
-            ? String(format: "%.1f万", metric.total / 10_000)
-            : String(format: "%.0f", metric.total)
+        VisionFormatters.compactCurrency(metric.total)
     }
 }
 
@@ -752,7 +836,7 @@ private struct VisionLoadingView: View {
             VStack(spacing: 18) {
                 ProgressView()
                     .controlSize(.large)
-                Text("正在读取本机正式账本")
+                Text(VisionDashboardCopy.current.loadingTitle)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.72))
             }
@@ -771,17 +855,17 @@ private struct VisionEmptyLedgerView: View {
                 Image(systemName: "sparkles.rectangle.stack")
                     .font(.system(size: 52, weight: .bold))
                     .foregroundStyle(.green)
-                Text("暂无可展示的账本数据")
+                Text(VisionDashboardCopy.current.emptyTitle)
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                Text("visionOS 首版只读展示本机正式账本，不读取候选账单、OCR 原文或截图。")
+                Text(VisionDashboardCopy.current.emptySubtitle)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.58))
                     .multilineTextAlignment(.center)
-                Text("检查时间 \(VisionFormatters.time.string(from: updatedAt))")
+                Text(VisionDashboardCopy.current.checkTime(updatedAt))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.42))
-                Button("重新读取", action: retry)
+                Button(VisionDashboardCopy.current.reload, action: retry)
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
             }
@@ -800,14 +884,14 @@ private struct VisionUnavailableView: View {
                 Image(systemName: "exclamationmark.icloud.fill")
                     .font(.system(size: 50, weight: .bold))
                     .foregroundStyle(.orange)
-                Text("账本暂时不可用")
+                Text(VisionDashboardCopy.current.unavailableTitle)
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                 Text(message)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.58))
                     .multilineTextAlignment(.center)
-                Button("重试", action: retry)
+                Button(VisionDashboardCopy.current.retry, action: retry)
                     .buttonStyle(.borderedProminent)
                     .tint(.orange)
             }
@@ -874,9 +958,20 @@ private enum VisionDashboardTheme {
 }
 
 private enum VisionFormatters {
+    static var locale: Locale {
+        Locale(identifier: VisionDashboardCopy.current.localeIdentifier)
+    }
+
+    static let month: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
+        return formatter
+    }()
+
     static let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = locale
         formatter.numberStyle = .currency
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
@@ -885,20 +980,32 @@ private enum VisionFormatters {
 
     static let shortDate: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月d日 HH:mm"
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("MMMd HH:mm")
         return formatter
     }()
 
     static let time: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = locale
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
 
     static func currency(_ value: Double) -> String {
         currencyFormatter.string(from: NSNumber(value: value)) ?? String(format: "¥%.2f", value)
+    }
+
+    static func compactCurrency(_ value: Double) -> String {
+        if value >= 10_000 {
+            switch VisionDashboardCopy.current.languageCode {
+            case "en":
+                return "¥" + String(format: "%.1fK", value / 1_000)
+            default:
+                return "¥" + String(format: "%.1f万", value / 10_000)
+            }
+        }
+        return "¥" + String(format: "%.0f", value)
     }
 }
 

@@ -924,6 +924,29 @@ final class LedgerStore: ObservableObject {
         return true
     }
 
+    #if DEBUG
+    func installScreenshotHotelStayFixtures(
+        records: [HotelStayRecord],
+        drafts: [HotelStayDraft],
+        transactions fixtureTransactions: [Transaction]
+    ) {
+        let recordIDs = Set(records.map(\.id))
+        hotelStayRecords.removeAll { recordIDs.contains($0.id) }
+        hotelStayRecords.insert(contentsOf: records, at: 0)
+        sortHotelStayRecords()
+
+        let draftIDs = Set(drafts.map(\.id))
+        hotelStayDrafts.removeAll { draftIDs.contains($0.id) }
+        hotelStayDrafts.insert(contentsOf: drafts, at: 0)
+        sortHotelStayDrafts()
+
+        let transactionIDs = Set(fixtureTransactions.map(\.id))
+        transactions.removeAll { transactionIDs.contains($0.id) }
+        transactions.insert(contentsOf: fixtureTransactions, at: 0)
+        sortTransactions()
+    }
+    #endif
+
     @discardableResult
     func rejectHotelStayDraft(_ draft: HotelStayDraft) -> Bool {
         var rejectedDraft = draft

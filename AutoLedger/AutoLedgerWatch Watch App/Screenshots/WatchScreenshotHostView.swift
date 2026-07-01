@@ -32,16 +32,21 @@ private struct WatchScreenshotCopy {
         if locale.hasPrefix("en") {
             return WatchScreenshotCopy(languageCode: "en")
         }
+        if locale.hasPrefix("ja") {
+            return WatchScreenshotCopy(languageCode: "ja")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return WatchScreenshotCopy(languageCode: "zh-Hant")
         }
         return WatchScreenshotCopy(languageCode: "zh-Hans")
     }
 
-    func text(_ zhHans: String, _ zhHant: String, _ en: String) -> String {
+    func text(_ zhHans: String, _ zhHant: String, _ en: String, _ ja: String? = nil) -> String {
         switch languageCode {
         case "en":
             en
+        case "ja":
+            ja ?? en
         case "zh-Hant":
             zhHant
         default:
@@ -81,24 +86,24 @@ private enum WatchScreenshotFixtures {
         return viewModel
     }
 
-    static func quickAddViewModel() -> WatchLedgerViewModel {
+    static func quickAddViewModel(copy: WatchScreenshotCopy = .current) -> WatchLedgerViewModel {
         let viewModel = WatchLedgerViewModel()
         viewModel.quickAddCategoryRaw = TransactionCategory.dining.rawValue
         viewModel.quickAddAmountText = "28.00"
-        viewModel.quickAddMerchant = "午饭"
-        viewModel.customCategories = ["咖啡"]
+        viewModel.quickAddMerchant = copy.text("午饭", "午餐", "Lunch", "ランチ")
+        viewModel.customCategories = [copy.text("咖啡", "咖啡", "Coffee", "コーヒー")]
         return viewModel
     }
 }
 
 private struct WatchQuickAddScreenshot: View {
-    @State private var viewModel = WatchScreenshotFixtures.quickAddViewModel()
+    @State private var viewModel = WatchScreenshotFixtures.quickAddViewModel(copy: .current)
 
     var body: some View {
         NavigationStack {
             QuickAddView()
                 .environment(viewModel)
-                .navigationTitle(copy.text("快速记账", "快速記帳", "Quick Add"))
+                .navigationTitle(copy.text("快速记账", "快速記帳", "Quick Add", "クイック記録"))
                 .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -150,17 +155,22 @@ private struct WatchComplicationScreenshot: View {
                     Image(systemName: "applewatch")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.green)
-                    Text(copy.text("表盘可见", "錶盤可見", "Face"))
+                    Text(copy.text("表盘可见", "錶盤可見", "Face", "文字盤"))
                         .font(.headline)
                         .lineLimit(2)
-                    Text(copy.text("今日支出", "今日支出", "Today"))
+                    Text(copy.text("今日支出", "今日支出", "Today", "今日"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Text(copy.text("把今日支出和快速入口放到表盘上。", "把今日支出和快速入口放到錶盤上。", "Keep today's spending and quick access on the watch face."))
+            Text(copy.text(
+                "把今日支出和快速入口放到表盘上。",
+                "把今日支出和快速入口放到錶盤上。",
+                "Keep today's spending and quick access on the watch face.",
+                "今日の支出とクイックアクセスを文字盤に置けます。"
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -183,11 +193,16 @@ private struct WatchSyncScreenshot: View {
                             .font(.system(size: 34, weight: .semibold))
                             .foregroundStyle(.green)
                             .frame(maxWidth: .infinity)
-                        Text(copy.text("与 iPhone 保持同步", "與 iPhone 保持同步", "Syncs with iPhone"))
+                        Text(copy.text("与 iPhone 保持同步", "與 iPhone 保持同步", "Syncs with iPhone", "iPhone と同期"))
                             .font(.headline)
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
-                        Text(copy.text("手机端继续编辑和查看统计", "手機端繼續編輯和查看統計", "Continue editing and reviewing reports on iPhone"))
+                        Text(copy.text(
+                            "手机端继续编辑和查看统计",
+                            "手機端繼續編輯和查看統計",
+                            "Continue editing and reviewing reports on iPhone",
+                            "iPhone で編集とレポート確認を続けられます"
+                        ))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -197,13 +212,13 @@ private struct WatchSyncScreenshot: View {
                     .frame(maxWidth: .infinity)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    WatchField(label: copy.text("待同步", "待同步", "Pending"), value: "1", icon: "arrow.triangle.2.circlepath")
-                    WatchField(label: copy.text("最近更新", "最近更新", "Latest"), value: "10:24", icon: "clock.badge.checkmark")
+                    WatchField(label: copy.text("待同步", "待同步", "Pending", "同期待ち"), value: "1", icon: "arrow.triangle.2.circlepath")
+                    WatchField(label: copy.text("最近更新", "最近更新", "Latest", "最新更新"), value: "10:24", icon: "clock.badge.checkmark")
                 }
                 .padding(.horizontal, 4)
             }
             .scrollIndicators(.hidden)
-            .navigationTitle(copy.text("同步", "同步", "Sync"))
+            .navigationTitle(copy.text("同步", "同步", "Sync", "同期"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-336 商户别名删除 tombstone 同步修复）
+更新日期：2026-07-01（ITER-337 全平台商店截图本地化与酒店样例重导出）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-337 全平台商店截图本地化与酒店样例重导出
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：Release Screenshot Pipeline
+- 类型：Bugfix / 截图 / 测试
+- 目标：修复 iPad / Mac 酒店消费商店截图缺少样例数据，以及 tvOS、visionOS、Watch 非中文截图仍出现中文或未完全本地化的问题，并在程序侧确认后重新导出全平台四语截图。
+- 改动范围：更新 `LedgerStore` 的 DEBUG 截图样例注入入口、`ScreenshotHostView` 的截图 store 构造和酒店样例数据、`AutoLedgerTV/ContentView.swift`、`AutoLedgerVision/ContentView.swift`、`AutoLedgerWatch Watch App/Screenshots/WatchScreenshotHostView.swift`、CHANGELOG 和本日志；重新生成 `tools/appstore-screenshots/output/` 下 ignored 的 raw / store / preview 产物。
+- 未改动范围：本轮未修改生产 StoreKit 商品、订阅权益逻辑、Worker、APNs、SQLite / CloudKit schema、真实用户数据、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`；截图输出目录仍不进入普通 Git 历史。
+- 完成内容：截图模式创建 `LedgerStore` 时会在 DEBUG 下安装酒店正式记录、待确认水单和关联酒店交易，iPad / Mac 酒店工作台不再截到空态；酒店截图样例统一为 `Sample Harbor Hotel` / `Sample Bay Hotel` 等脱敏英文数据。tvOS 和 visionOS 截图 host 新增四语 copy、分类显示、日期 / 指标格式和酒店样例交易；Watch 截图 host 补齐日文文案、示例商户与分类名称。重新执行 `bash tools/appstore-screenshots/scripts/export.sh`，生成 iPhone、iPad、Mac、Watch、tvOS、visionOS 的简中 / 繁中 / 英文 / 日文截图，并重建 `preview.html`。
+- 未完成内容：模拟器系统状态栏的日期语言仍由当前模拟器系统语言决定；例如 iPad 英文成品中的页面和 App 文案已是英文，但状态栏日期仍可能显示为中文格式。若后续 ASC 明确要求系统状态栏也随语言切换，需要为截图管线新增按 locale 切换 / 重启模拟器系统语言，或在截图模式隐藏 / 替换系统状态栏。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash tools/appstore-screenshots/scripts/export.sh` 成功，`output/store` 和 `output/raw` 均为 120 张，平台 / 语言矩阵为 iPhone 8×4、iPad 6×4、Mac 5×4、Watch 4×4、tvOS 4×4、visionOS 3×4；抽看 `ipad/en/05_workspace_hotel.png` 确认酒店样例数据存在，抽看 `tvos/ja/00_tvos_overview.png`、`visionos/ja/00_vision_dashboard.png`、`watch/ja/00_watch_quick_add.png` 确认非中文平台截图本地化生效；执行 `bash scripts/run_offline_regression.sh` 通过。全量导出期间各平台 Debug 构建均成功，仍保留既有 Logger `nonisolated(unsafe)`、Swift 6 actor isolation、CloudKit deprecation 和 Gemma LiteRT deprecation warnings。
+- 风险与注意事项：酒店样例注入入口只在 DEBUG 下可用，正式 App 数据流不受影响；tvOS / visionOS 本轮使用截图 host 内部 copy，后续如果正式产品页扩展新字段，需要同步补四语 copy，避免截图模式再次落回中文默认值。截图输出 ignored，提交代码后仍需通过本机产物或独立 artifact 交付 ASC。
+- 回滚方式：回退本轮 Swift 和文档改动，再重新运行截图导出即可恢复旧截图行为；无数据迁移、CloudKit 或 StoreKit 回滚。
+- 结论：本轮完成，酒店消费截图不再空态，tvOS / visionOS / Watch 非中文截图已按当前四语管线重新导出并通过数量与抽样验证。
+- 下一步建议：上传 ASC 前用 `tools/appstore-screenshots/output/preview.html` 做一次人工总览；如果决定把商店截图成品留档到 GitHub，建议打包 `output/store/` 作为 Release artifact，而不是提交整个 ignored 输出目录。
 
 ### ITER-336 商户别名删除 tombstone 同步修复
 - 日期：2026-07-01

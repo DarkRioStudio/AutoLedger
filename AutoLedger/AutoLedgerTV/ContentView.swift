@@ -68,7 +68,7 @@ struct ContentView: View {
                 Text("AutoLedger")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
-                Text("家庭大屏只读账本")
+                Text(TVDashboardCopy.current.heroSubtitle)
                     .font(.system(size: 50, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
@@ -78,7 +78,10 @@ struct ContentView: View {
             Button {
                 privacyMode.toggle()
             } label: {
-                Label(privacyMode ? "显示金额" : "隐藏金额", systemImage: privacyMode ? "eye.slash.fill" : "eye.fill")
+                Label(
+                    privacyMode ? TVDashboardCopy.current.showAmounts : TVDashboardCopy.current.hideAmounts,
+                    systemImage: privacyMode ? "eye.slash.fill" : "eye.fill"
+                )
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
@@ -89,7 +92,7 @@ struct ContentView: View {
             Button {
                 store.load()
             } label: {
-                Label("刷新", systemImage: "arrow.clockwise")
+                Label(TVDashboardCopy.current.refresh, systemImage: "arrow.clockwise")
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 26)
@@ -148,10 +151,10 @@ private enum TVDashboardPage: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .overview: return "总览"
-        case .categories: return "分类"
-        case .trend: return "趋势"
-        case .summary: return "摘要"
+        case .overview: return TVDashboardCopy.current.overview
+        case .categories: return TVDashboardCopy.current.categories
+        case .trend: return TVDashboardCopy.current.trend
+        case .summary: return TVDashboardCopy.current.summary
         }
     }
 
@@ -179,6 +182,105 @@ private enum TVDashboardPage: String, CaseIterable, Hashable, Identifiable {
         case "summary": return .summary
         default: return .overview
         }
+    }
+}
+
+private struct TVDashboardCopy {
+    let languageCode: String
+
+    static var current: TVDashboardCopy {
+        let locale = (ProcessInfo.processInfo.argumentValue(after: "-AppleLocale")
+            ?? Locale.preferredLanguages.first
+            ?? "zh-Hans").lowercased()
+        if locale.hasPrefix("en") {
+            return TVDashboardCopy(languageCode: "en")
+        }
+        if locale.hasPrefix("ja") {
+            return TVDashboardCopy(languageCode: "ja")
+        }
+        if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
+            return TVDashboardCopy(languageCode: "zh-Hant")
+        }
+        return TVDashboardCopy(languageCode: "zh-Hans")
+    }
+
+    var localeIdentifier: String {
+        switch languageCode {
+        case "en": return "en_US"
+        case "ja": return "ja_JP"
+        case "zh-Hant": return "zh_TW"
+        default: return "zh_CN"
+        }
+    }
+
+    var heroSubtitle: String { text("家庭大屏只读账本", "家庭大螢幕只讀帳本", "Read-only ledger for Apple TV", "Apple TV の読み取り専用台帳") }
+    var showAmounts: String { text("显示金额", "顯示金額", "Show amounts", "金額を表示") }
+    var hideAmounts: String { text("隐藏金额", "隱藏金額", "Hide amounts", "金額を非表示") }
+    var refresh: String { text("刷新", "重新整理", "Refresh", "更新") }
+    var overview: String { text("总览", "總覽", "Overview", "概要") }
+    var categories: String { text("分类", "分類", "Categories", "カテゴリ") }
+    var trend: String { text("趋势", "趨勢", "Trends", "推移") }
+    var summary: String { text("摘要", "摘要", "Summary", "サマリー") }
+    var hidden: String { text("已隐藏", "已隱藏", "Hidden", "非表示") }
+    var none: String { text("暂无", "暫無", "None", "なし") }
+    var loadingTitle: String { text("正在读取账本快照", "正在讀取帳本快照", "Loading ledger snapshot", "台帳スナップショットを読み込み中") }
+    var loadingSubtitle: String { text("tvOS 首版只展示正式账本的只读数据。", "tvOS 首版只展示正式帳本的唯讀資料。", "The tvOS app shows read-only saved ledger data.", "tvOS では保存済み台帳を読み取り専用で表示します。") }
+    var emptyTitle: String { text("等待账本数据", "等待帳本資料", "Waiting for ledger data", "台帳データを待機中") }
+    var emptySubtitle: String { text("当前 Apple TV 本机还没有可展示的正式账单。后续接入 iCloud 只读快照后，这里会显示同步后的月度看板。", "目前 Apple TV 本機還沒有可展示的正式帳單。接入 iCloud 唯讀快照後，這裡會顯示同步後的月度看板。", "This Apple TV does not have saved ledger data to show yet. Once an iCloud read-only snapshot is available, the monthly dashboard appears here.", "この Apple TV には表示できる保存済み台帳がまだありません。iCloud の読み取り専用スナップショットが利用可能になると、月次ダッシュボードが表示されます。") }
+    var unavailableTitle: String { text("账本快照不可用", "帳本快照不可用", "Ledger snapshot unavailable", "台帳スナップショットを利用できません") }
+    var retry: String { text("重试", "重試", "Retry", "再試行") }
+    var reload: String { text("重新读取", "重新讀取", "Reload", "再読み込み") }
+
+    func text(_ zhHans: String, _ zhHant: String, _ en: String, _ ja: String) -> String {
+        switch languageCode {
+        case "en": return en
+        case "ja": return ja
+        case "zh-Hant": return zhHant
+        default: return zhHans
+        }
+    }
+
+    func categoryTitle(_ category: TransactionCategory?) -> String {
+        guard let category else { return none }
+        switch category {
+        case .groceries: return text("日用杂货", "日用雜貨", "Groceries", "食料品")
+        case .dining: return text("餐饮", "餐飲", "Dining", "外食")
+        case .transport: return text("出行", "出行", "Transport", "交通")
+        case .hotel: return text("酒店", "酒店", "Hotel", "ホテル")
+        case .shopping: return text("购物", "購物", "Shopping", "買い物")
+        case .digital: return text("数字服务", "數位服務", "Digital", "デジタル")
+        case .utilities: return text("生活缴费", "生活繳費", "Utilities", "公共料金")
+        case .entertainment: return text("娱乐", "娛樂", "Entertainment", "エンタメ")
+        case .other: return text("其他", "其他", "Other", "その他")
+        }
+    }
+
+    func recordsCount(_ count: Int) -> String {
+        switch languageCode {
+        case "en": return "\(count) records"
+        case "ja": return "\(count) 件"
+        case "zh-Hant": return "\(count) 筆"
+        default: return "\(count) 笔"
+        }
+    }
+
+    func checkTime(_ date: Date) -> String {
+        text(
+            "检查时间 \(TVFormatters.time.string(from: date))",
+            "檢查時間 \(TVFormatters.time.string(from: date))",
+            "Checked at \(TVFormatters.time.string(from: date))",
+            "確認時刻 \(TVFormatters.time.string(from: date))"
+        )
+    }
+
+    func monthDelta(_ delta: Double) -> String {
+        if abs(delta) < 0.01 {
+            return text("与上月基本持平", "與上月大致持平", "About the same as last month", "先月とほぼ同じ")
+        }
+        if delta > 0 {
+            return text("较上月多 ", "較上月多 ", "Up ", "先月より ") + TVFormatters.currency(abs(delta))
+        }
+        return text("较上月少 ", "較上月少 ", "Down ", "先月より少ない ") + TVFormatters.currency(abs(delta))
     }
 }
 
@@ -292,15 +394,23 @@ private final class TVLedgerDashboardStore: ObservableObject {
 private enum TVDashboardSimulatorData {
     static func transactions(referenceDate: Date) -> [LedgerTransaction] {
         let calendar = Calendar.autoupdatingCurrent
-        let specs: [(String, Double, Int, String, String)] = [
-            ("Demo Coffee", 18.00, 0, "餐饮", "截图识别"),
-            ("Example Market", 86.50, 0, "购物", "剪贴板"),
-            ("地铁：Example Station → Example Airport", 4.00, 1, "出行", "快捷指令"),
-            ("Sample Cinema", 45.00, 2, "娱乐", "手动录入"),
-            ("Sample Books", 39.00, 4, "学习", "截图识别"),
-            ("Mobile Carrier", 50.00, 8, "通讯", "自动导入"),
-            ("Lunch Bistro", 28.00, 12, "餐饮", "语音记账"),
-            ("Takeout Sample", 32.00, 16, "餐饮", "分享导入")
+        let copy = TVDashboardCopy.current
+        let transitMerchant = copy.text(
+            "地铁：Example Station → Example Airport",
+            "地鐵：Example Station → Example Airport",
+            "Metro: Example Station → Example Airport",
+            "地下鉄：Example Station → Example Airport"
+        )
+        let specs: [(String, Double, Int, TransactionCategory, ReceiptSource)] = [
+            ("Sample Harbor Hotel", 369.39, 0, .hotel, .manual),
+            ("Demo Coffee", 18.00, 0, .dining, .wechat),
+            ("Example Market", 86.50, 0, .shopping, .unionPay),
+            (transitMerchant, 4.00, 1, .transport, .alipay),
+            ("Sample Cinema", 45.00, 2, .entertainment, .manual),
+            ("Sample Books", 39.00, 4, .shopping, .manual),
+            ("Mobile Carrier", 50.00, 8, .utilities, .manual),
+            ("Lunch Bistro", 28.00, 12, .dining, .voice),
+            ("Takeout Sample", 32.00, 16, .dining, .manual)
         ]
 
         return specs.enumerated().map { index, spec in
@@ -309,9 +419,9 @@ private enum TVDashboardSimulatorData {
                 merchant: spec.0,
                 amount: spec.1,
                 occurredAt: calendar.date(byAdding: .day, value: -spec.2, to: referenceDate) ?? referenceDate,
-                categoryLabel: spec.3,
-                sourceLabel: spec.4,
-                note: "tvOS 模拟器演示数据"
+                categoryLabel: spec.3.rawValue,
+                sourceLabel: spec.4.rawValue,
+                note: copy.text("tvOS 模拟器演示数据", "tvOS 模擬器展示資料", "tvOS simulator demo data", "tvOS シミュレーターデモデータ")
             )
         }
     }
@@ -419,7 +529,7 @@ private enum TVDashboardCloudTransactionClient {
             merchant: merchant,
             amount: amountNumber.doubleValue,
             occurredAt: occurredAt,
-            categoryLabel: (record[CloudLedgerSyncSchema.Field.category] as? String) ?? "其他",
+            categoryLabel: (record[CloudLedgerSyncSchema.Field.category] as? String) ?? TransactionCategory.other.rawValue,
             sourceLabel: (record[CloudLedgerSyncSchema.Field.source] as? String) ?? "iCloud",
             note: (record[CloudLedgerSyncSchema.Field.note] as? String) ?? ""
         )
@@ -588,7 +698,7 @@ private struct TVOverviewPage: View {
             VStack(alignment: .leading, spacing: 20) {
                 TVPanel {
                     VStack(alignment: .leading, spacing: 18) {
-                        Text(snapshot.monthlySnapshot.monthLabel)
+                        Text(TVFormatters.month.string(from: snapshot.generatedAt))
                             .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.7))
                         Text(privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense))
@@ -604,9 +714,9 @@ private struct TVOverviewPage: View {
                 .frame(height: 250)
 
                 HStack(spacing: 22) {
-                    TVMetricCard(title: "今日支出", value: privacyMode ? "***" : TVFormatters.currency(snapshot.todaySummary.totalExpense), iconName: "sun.max.fill", tint: .yellow)
-                    TVMetricCard(title: "本月笔数", value: "\(snapshot.monthlySnapshot.transactionCount)", iconName: "list.bullet.rectangle.fill", tint: .cyan)
-                    TVMetricCard(title: "日均支出", value: privacyMode ? "***" : TVFormatters.currency(snapshot.averageDailyExpense), iconName: "calendar", tint: .green)
+                    TVMetricCard(title: TVDashboardCopy.current.text("今日支出", "今日支出", "Today", "今日"), value: privacyMode ? "***" : TVFormatters.currency(snapshot.todaySummary.totalExpense), iconName: "sun.max.fill", tint: .yellow)
+                    TVMetricCard(title: TVDashboardCopy.current.text("本月笔数", "本月筆數", "Records", "記録数"), value: "\(snapshot.monthlySnapshot.transactionCount)", iconName: "list.bullet.rectangle.fill", tint: .cyan)
+                    TVMetricCard(title: TVDashboardCopy.current.text("日均支出", "日均支出", "Daily avg.", "日平均"), value: privacyMode ? "***" : TVFormatters.currency(snapshot.averageDailyExpense), iconName: "calendar", tint: .green)
                 }
                 .frame(height: 220)
 
@@ -632,10 +742,9 @@ private struct TVOverviewPage: View {
     private var monthDeltaText: String {
         let delta = snapshot.monthOverMonthDelta
         if abs(delta) < 0.01 {
-            return "与上月基本持平"
+            return TVDashboardCopy.current.monthDelta(delta)
         }
-        let prefix = delta > 0 ? "较上月多 " : "较上月少 "
-        return prefix + TVFormatters.currency(abs(delta))
+        return TVDashboardCopy.current.monthDelta(delta)
     }
 }
 
@@ -647,10 +756,15 @@ private struct TVCategoryPage: View {
         HStack(spacing: TVDashboardLayout.columnSpacing) {
             TVPanel {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("本月分类占比")
+                    Text(TVDashboardCopy.current.text("本月分类占比", "本月分類占比", "This month's categories", "今月のカテゴリ"))
                         .font(.system(size: 42, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
-                    Text("按正式账单金额排序，最多展示前 6 类。")
+                    Text(TVDashboardCopy.current.text(
+                        "按正式账单金额排序，最多展示前 6 类。",
+                        "依正式帳單金額排序，最多展示前 6 類。",
+                        "Sorted by saved ledger amount, showing up to six categories.",
+                        "保存済み台帳の金額順に最大 6 件まで表示します。"
+                    ))
                         .font(.system(size: 25, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.62))
 
@@ -668,9 +782,9 @@ private struct TVCategoryPage: View {
             }
 
             VStack(spacing: TVDashboardLayout.rowSpacing) {
-                TVMetricCard(title: "Top 分类", value: snapshot.monthlySnapshot.categoryBreakdown.first?.title ?? "暂无", iconName: "chart.pie.fill", tint: .orange)
-                TVMetricCard(title: "分类数量", value: "\(snapshot.monthlySnapshot.categoryBreakdown.count)", iconName: "square.grid.2x2.fill", tint: .green)
-                TVMetricCard(title: "本月总额", value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "yensign.circle.fill", tint: .cyan)
+                TVMetricCard(title: TVDashboardCopy.current.text("Top 分类", "Top 分類", "Top category", "上位カテゴリ"), value: TVDashboardCopy.current.categoryTitle(snapshot.monthlySnapshot.categoryBreakdown.first?.category), iconName: "chart.pie.fill", tint: .orange)
+                TVMetricCard(title: TVDashboardCopy.current.text("分类数量", "分類數量", "Categories", "カテゴリ数"), value: "\(snapshot.monthlySnapshot.categoryBreakdown.count)", iconName: "square.grid.2x2.fill", tint: .green)
+                TVMetricCard(title: TVDashboardCopy.current.text("本月总额", "本月總額", "Monthly total", "今月の合計"), value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "yensign.circle.fill", tint: .cyan)
             }
             .frame(width: TVDashboardLayout.rightColumnWidth)
         }
@@ -695,10 +809,15 @@ private struct TVTrendPage: View {
         HStack(spacing: TVDashboardLayout.columnSpacing) {
             TVPanel {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("最近 7 天趋势")
+                    Text(TVDashboardCopy.current.text("最近 7 天趋势", "最近 7 天趨勢", "Last 7 days", "直近 7 日"))
                         .font(.system(size: 42, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
-                    Text("只读展示正式账单，不包含候选账单和调试记录。")
+                    Text(TVDashboardCopy.current.text(
+                        "只读展示正式账单，不包含候选账单和调试记录。",
+                        "唯讀展示正式帳單，不包含候選帳單和除錯記錄。",
+                        "Read-only saved records, without candidates or debug entries.",
+                        "候補やデバッグ記録を除いた保存済み記録を表示します。"
+                    ))
                         .font(.system(size: 25, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.62))
 
@@ -713,7 +832,7 @@ private struct TVTrendPage: View {
 
             TVPanel {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("近 6 个月")
+                    Text(TVDashboardCopy.current.text("近 6 个月", "近 6 個月", "Last 6 months", "直近 6 か月"))
                         .font(.system(size: 36, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                     ForEach(snapshot.monthlySnapshot.monthlyTrend) { metric in
@@ -740,9 +859,9 @@ private struct TVSummaryPage: View {
     var body: some View {
         HStack(spacing: TVDashboardLayout.columnSpacing) {
             VStack(spacing: TVDashboardLayout.rowSpacing) {
-                TVMetricCard(title: "年度累计", value: privacyMode ? "***" : TVFormatters.currency(snapshot.yearlyTotal), iconName: "sparkles", tint: .yellow)
-                TVMetricCard(title: "本月累计", value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "calendar.badge.clock", tint: .green)
-                TVMetricCard(title: "Top 商户", value: privacyMode ? "已隐藏" : snapshot.monthlySnapshot.topMerchant, iconName: "storefront.fill", tint: .orange)
+                TVMetricCard(title: TVDashboardCopy.current.text("年度累计", "年度累計", "Year total", "年間合計"), value: privacyMode ? "***" : TVFormatters.currency(snapshot.yearlyTotal), iconName: "sparkles", tint: .yellow)
+                TVMetricCard(title: TVDashboardCopy.current.text("本月累计", "本月累計", "Month total", "月間合計"), value: privacyMode ? "***" : TVFormatters.currency(snapshot.monthlySnapshot.totalExpense), iconName: "calendar.badge.clock", tint: .green)
+                TVMetricCard(title: TVDashboardCopy.current.text("Top 商户", "Top 商家", "Top merchant", "上位加盟店"), value: privacyMode ? TVDashboardCopy.current.hidden : snapshot.monthlySnapshot.topMerchant, iconName: "storefront.fill", tint: .orange)
             }
             .frame(width: TVDashboardLayout.rightColumnWidth)
 
@@ -766,12 +885,12 @@ private struct TVTopCategoryPanel: View {
     var body: some View {
         TVPanel {
             VStack(alignment: .leading, spacing: 18) {
-                Text("分类结构")
+                Text(TVDashboardCopy.current.text("分类结构", "分類結構", "Category mix", "カテゴリ構成"))
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
                 if snapshot.monthlySnapshot.categoryBreakdown.isEmpty {
-                    TVMutedText("暂无分类数据")
+                    TVMutedText(TVDashboardCopy.current.text("暂无分类数据", "暫無分類資料", "No category data yet", "カテゴリデータはまだありません"))
                 } else {
                     ForEach(snapshot.monthlySnapshot.categoryBreakdown.prefix(4)) { metric in
                         TVCategoryBarRow(
@@ -793,12 +912,12 @@ private struct TVTopMerchantPanel: View {
     var body: some View {
         TVPanel {
             VStack(alignment: .leading, spacing: 20) {
-                Text("常用商户")
+                Text(TVDashboardCopy.current.text("常用商户", "常用商家", "Frequent merchants", "よく使う加盟店"))
                     .font(.system(size: 36, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
                 if snapshot.monthlySnapshot.topMerchantMetrics.isEmpty || privacyMode {
-                    TVMutedText(privacyMode ? "商户信息已隐藏" : "暂无商户数据")
+                    TVMutedText(privacyMode ? TVDashboardCopy.current.text("商户信息已隐藏", "商家資訊已隱藏", "Merchant details hidden", "加盟店情報は非表示です") : TVDashboardCopy.current.text("暂无商户数据", "暫無商家資料", "No merchant data yet", "加盟店データはまだありません"))
                 } else {
                     ForEach(Array(snapshot.monthlySnapshot.topMerchantMetrics.prefix(6).enumerated()), id: \.element.id) { index, metric in
                         HStack(spacing: 16) {
@@ -811,7 +930,7 @@ private struct TVTopMerchantPanel: View {
                                     .font(.system(size: 27, weight: .bold, design: .rounded))
                                     .lineLimit(1)
                                     .foregroundStyle(.white)
-                                Text("\(metric.transactionCount) 笔")
+                                Text(TVDashboardCopy.current.recordsCount(metric.transactionCount))
                                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.5))
                             }
@@ -836,12 +955,12 @@ private struct TVRecentPanel: View {
     var body: some View {
         TVPanel {
             VStack(alignment: .leading, spacing: 18) {
-                Text("最近账单")
+                Text(TVDashboardCopy.current.text("最近账单", "最近帳單", "Recent records", "最近の記録"))
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
                 if transactions.isEmpty || privacyMode {
-                    TVMutedText(privacyMode ? "最近账单已隐藏" : "暂无最近账单")
+                    TVMutedText(privacyMode ? TVDashboardCopy.current.text("最近账单已隐藏", "最近帳單已隱藏", "Recent records hidden", "最近の記録は非表示です") : TVDashboardCopy.current.text("暂无最近账单", "暫無最近帳單", "No recent records yet", "最近の記録はまだありません"))
                 } else {
                     ForEach(transactions.prefix(4)) { transaction in
                         HStack(spacing: 16) {
@@ -912,7 +1031,7 @@ private struct TVCategoryBarRow: View {
                         .frame(width: 32)
                 }
 
-                Label(metric.title, systemImage: metric.iconName)
+                Label(TVDashboardCopy.current.categoryTitle(metric.category), systemImage: metric.iconName)
                     .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -977,7 +1096,7 @@ private struct TVMonthlyTrendRow: View {
                         .frame(width: max(18, proxy.size.width * monthRatio))
                 }
                 .frame(height: 12)
-                Text("\(metric.transactionCount) 笔")
+                Text(TVDashboardCopy.current.recordsCount(metric.transactionCount))
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.45))
             }
@@ -998,10 +1117,10 @@ private struct TVLoadingView: View {
         VStack(spacing: 22) {
             ProgressView()
                 .scaleEffect(1.4)
-            Text("正在读取账本快照")
+            Text(TVDashboardCopy.current.loadingTitle)
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
-            Text("tvOS 首版只展示正式账本的只读数据。")
+            Text(TVDashboardCopy.current.loadingSubtitle)
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.55))
         }
@@ -1018,18 +1137,18 @@ private struct TVEmptyLedgerView: View {
                 Image(systemName: "icloud.and.arrow.down")
                     .font(.system(size: 72, weight: .bold))
                     .foregroundStyle(.green)
-                Text("等待账本数据")
+                Text(TVDashboardCopy.current.emptyTitle)
                     .font(.system(size: 48, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                Text("当前 Apple TV 本机还没有可展示的正式账单。后续接入 iCloud 只读快照后，这里会显示同步后的月度看板。")
+                Text(TVDashboardCopy.current.emptySubtitle)
                     .font(.system(size: 27, weight: .semibold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white.opacity(0.62))
                     .frame(maxWidth: 760)
-                Text("检查时间 \(TVFormatters.time.string(from: updatedAt))")
+                Text(TVDashboardCopy.current.checkTime(updatedAt))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.45))
-                Button("重新读取", action: retry)
+                Button(TVDashboardCopy.current.reload, action: retry)
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
@@ -1050,7 +1169,7 @@ private struct TVUnavailableView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 72, weight: .bold))
                     .foregroundStyle(.orange)
-                Text("账本快照不可用")
+                Text(TVDashboardCopy.current.unavailableTitle)
                     .font(.system(size: 48, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                 Text(message)
@@ -1058,7 +1177,7 @@ private struct TVUnavailableView: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white.opacity(0.62))
                     .frame(maxWidth: 800)
-                Button("重试", action: retry)
+                Button(TVDashboardCopy.current.retry, action: retry)
                     .buttonStyle(.borderedProminent)
                     .tint(.orange)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
@@ -1156,23 +1275,34 @@ private enum TVDashboardTheme {
 }
 
 private enum TVFormatters {
+    static var locale: Locale {
+        Locale(identifier: TVDashboardCopy.current.localeIdentifier)
+    }
+
+    static let month: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
+        return formatter
+    }()
+
     static let shortDate: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月d日 HH:mm"
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("MMMd HH:mm")
         return formatter
     }()
 
     static let time: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = locale
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
 
     static let weekday: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = locale
         formatter.dateFormat = "E"
         return formatter
     }()
@@ -1183,7 +1313,12 @@ private enum TVFormatters {
 
     static func compactCurrency(_ value: Double) -> String {
         if value >= 10_000 {
-            return "¥" + String(format: "%.1f万", value / 10_000)
+            switch TVDashboardCopy.current.languageCode {
+            case "en":
+                return "¥" + String(format: "%.1fK", value / 1_000)
+            default:
+                return "¥" + String(format: "%.1f万", value / 10_000)
+            }
         }
         if value >= 1_000 {
             return "¥" + String(format: "%.0f", value)

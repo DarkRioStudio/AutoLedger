@@ -103,7 +103,7 @@ private struct ScreenshotEmailFolioImportHost: View {
         if ScreenshotModeConfig.usesFreeProState {
             UserDefaults.standard.set(false, forKey: "autoLedgerProDevelopmentOverride")
         }
-        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
     }
 
     var body: some View {
@@ -118,7 +118,7 @@ private struct ScreenshotCloudFolioInboxHost: View {
 
     init() {
         ScreenshotFixtures.installUserDefaults()
-        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
     }
 
     var body: some View {
@@ -177,7 +177,7 @@ private struct ScreenshotAppPage: View {
     init(scene: Scene) {
         self.scene = scene
         ScreenshotFixtures.installUserDefaults()
-        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
     }
 
     var body: some View {
@@ -204,7 +204,7 @@ private struct ScreenshotTransactionEditorHost: View {
 
     init() {
         ScreenshotFixtures.installUserDefaults()
-        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
     }
 
     var body: some View {
@@ -308,7 +308,7 @@ private struct ScreenshotWorkspaceHost: View {
         if ScreenshotModeConfig.usesFreeProState {
             UserDefaults.standard.set(false, forKey: "autoLedgerProDevelopmentOverride")
         }
-        _store = StateObject(wrappedValue: LedgerStore(transactionStore: ScreenshotTransactionStore()))
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
     }
 
     var body: some View {
@@ -621,6 +621,18 @@ private struct ScreenshotCopy {
     }
 }
 
+private func makeScreenshotLedgerStore() -> LedgerStore {
+    let store = LedgerStore(transactionStore: ScreenshotTransactionStore())
+    #if DEBUG
+    store.installScreenshotHotelStayFixtures(
+        records: ScreenshotHotelStayFixtures.records,
+        drafts: ScreenshotHotelStayFixtures.drafts,
+        transactions: ScreenshotHotelStayFixtures.transactions
+    )
+    #endif
+    return store
+}
+
 private enum ScreenshotFixtures {
     static let baseDate: Date = {
         var calendar = Calendar(identifier: .gregorian)
@@ -663,15 +675,15 @@ private enum ScreenshotHotelStayFixtures {
             id: stayID,
             ledgerID: TodaySpendingSummary.defaultLedgerID,
             linkedTransactionID: transactionID,
-            hotelName: "示例城市酒店",
-            hotelGroup: "示例酒店集团",
+            hotelName: "Sample Harbor Hotel",
+            hotelGroup: "Sample Hospitality",
             hotelBrand: "Sample Stay",
-            city: "示例市",
-            country: "示例国家",
+            city: "Shanghai",
+            country: "China",
             checkInDate: "2026-06-22",
             checkOutDate: "2026-06-23",
             nights: 1,
-            roomType: "示例景观大床房",
+            roomType: "Harbor View King",
             confirmationNumber: "SAMPLE-20260623",
             currency: "CNY",
             roomCharge: 325,
@@ -684,12 +696,12 @@ private enum ScreenshotHotelStayFixtures {
             sourceType: .manualPDF,
             sourceFileName: "sample-city-hotel-folio.pdf",
             localizedData: HotelStayLocalizedData(
-                hotelName: "示例城市酒店",
+                hotelName: "Sample Harbor Hotel",
                 brand: "Sample Stay",
-                group: "示例酒店集团",
-                city: "示例市",
-                country: "示例国家",
-                roomType: "示例景观大床房",
+                group: "Sample Hospitality",
+                city: "Shanghai",
+                country: "China",
+                roomType: "Harbor View King",
                 currency: "CNY",
                 roomCharge: 325,
                 taxAmount: 28.5,
@@ -710,7 +722,7 @@ private enum ScreenshotHotelStayFixtures {
             sourceType: .cloudWorker,
             targetLedgerID: TodaySpendingSummary.defaultLedgerID,
             sourceFileName: "sample-harbor-hotel-folio.pdf",
-            sourceEmailSubject: "示例海湾酒店的电子账单",
+            sourceEmailSubject: "Your Sample Harbor Hotel folio",
             sourceEmailFrom: "folio@getautoledger.app",
             rawText: "Sample Harbor Hotel\nTotal CNY 1280.00",
             parsedPayload: HotelFolioParsedPayload(
@@ -736,12 +748,12 @@ private enum ScreenshotHotelStayFixtures {
                 rawTextExcerpt: "Sample Harbor Hotel Total CNY 1280.00"
             ),
             localizedData: HotelStayLocalizedData(
-                hotelName: "示例海湾酒店",
+                hotelName: "Sample Bay Hotel",
                 brand: "Sample Stay",
-                group: "示例酒店集团",
-                city: "示例市",
-                country: "示例国家",
-                roomType: "示例海景大床房",
+                group: "Sample Hospitality",
+                city: "Singapore",
+                country: "Singapore",
+                roomType: "Bay View King",
                 currency: "CNY",
                 roomCharge: 1120,
                 taxAmount: 120,
@@ -759,19 +771,19 @@ private enum ScreenshotHotelStayFixtures {
     static let transactions = [
         Transaction(
             id: transactionID,
-            merchant: "示例城市酒店",
+            merchant: "Sample Harbor Hotel",
             amount: 369.39,
             occurredAt: AppFormatters.parseFlexibleDate("2026-06-23 16:00") ?? ScreenshotFixtures.baseDate,
             categoryLabel: TransactionCategory.hotel.rawValue,
             sourceLabel: ReceiptSource.manual.rawValue,
-            note: "入住：2026-06-22；退房：2026-06-23；订单号：SAMPLE-20260623",
+            note: "Check-in: 2026-06-22; check-out: 2026-06-23; confirmation: SAMPLE-20260623",
             hotelStayRecordID: stayID
         )
     ]
 }
 
 private final class ScreenshotTransactionStore: TransactionStore, @unchecked Sendable {
-    private var transactions = ScreenshotFixtures.transactions
+    private var transactions = ScreenshotFixtures.transactions + ScreenshotHotelStayFixtures.transactions
 
     func loadTransactions() throws -> [Transaction] {
         transactions
