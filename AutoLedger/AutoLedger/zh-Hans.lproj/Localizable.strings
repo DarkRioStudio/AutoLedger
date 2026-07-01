@@ -775,12 +775,12 @@
 "settings.support.title" = "支持 AutoLedger";
 "settings.support.subtitle" = "自愿支持独立开发，不解锁额外功能";
 "settings.version.title" = "当前版本";
-"settings.version.body" = "当前版本聚焦 AutoLedger Pro 的首批自动化：本地邮箱水单扫描、专属水单收件箱、批量候选导入和高级去重都已接入权限边界。基础记账、单张截图识别、手动酒店水单导入、多账本和历史数据编辑仍保持免费可用。外观主题、恢复购买入口和发布前回归证据也已补齐。";
+"settings.version.body" = "这个版本加入了 AutoLedger Pro 的第一批自动化能力：邮箱水单、专属收件箱、批量候选和重复账单提醒都会先进入待确认，确认后再入账。日常记账、截图识别、手动导入酒店水单、多账本和历史数据编辑仍可免费使用。";
 "settings.privacy.title" = "隐私策略";
 "settings.privacy.body" = "AutoLedger 本地优先处理账本数据；完整说明请访问隐私策略网站。";
 "settings.privacy.link" = "查看隐私策略";
 "settings.release_status.title" = "后续计划";
-"settings.release_status.body" = "Cloudflare production 的 App Store Server API / APNs secret 名称已确认，订阅开通、APNs 推送和专属收件箱到入账的人工 smoke 已通过。下一步补齐订阅元数据、生命周期截图、Review Notes、隐私政策链接和审核截图材料；v1.7.0 再推进高级搜索、订阅异常提醒、月结导出包与自动规则应用。";
+"settings.release_status.body" = "接下来会继续打磨 Pro 订阅体验和酒店水单流程，让开通、恢复购买、收件箱候选和确认入账更顺手。后续版本会加入更强的搜索、订阅异常提醒、月结导出和自动规则整理。";
 
 "appearance.title" = "外观与主题";
 "appearance.theme_picker" = "主题";

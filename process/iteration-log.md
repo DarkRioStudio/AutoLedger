@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-324 外观主题下拉短名称与排序）
+更新日期：2026-07-01（ITER-325 设置页版本说明用户化）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-325 设置页版本说明用户化
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App UI Copy / Release Metadata
+- 类型：UI / 文案
+- 目标：将设置页“当前版本”和“后续计划”两段说明从工程发布口径改为终端用户能理解的产品口吻。
+- 改动范围：更新简中 / 繁中 / 英文 / 日文 `settings.version.body` 和 `settings.release_status.body`，同步更新 CHANGELOG 和本日志。
+- 未改动范围：未修改设置页结构、Pro gate、StoreKit、订阅商品、Worker、APNs、账本数据、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：当前版本说明改为解释 Pro 第一批自动化会先进入待确认、确认后再入账，并明确日常记账、截图识别、手动酒店 PDF、多账本和历史数据编辑仍可免费使用；后续计划改为说明会继续打磨 Pro 订阅体验和酒店水单流程，再加入搜索、订阅异常提醒、月结导出和自动规则整理。四语文案不再向终端用户展示 Cloudflare、APNs secret、Review Notes、审核截图等内部发布材料词汇。
+- 未完成内容：本轮未重新跑模拟器截图；后续如更新 ASC 截图，可顺手目检设置页文本换行。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行关键词检查确认四语设置页版本说明不再包含 `Cloudflare`、`APNs`、`secret`、`Review Notes`、`smoke`、`metadata`、`审核截图` 等内部词；执行 `git diff --check` 通过。
+- 风险与注意事项：文案仍保留后续功能方向，但仅作为用户可理解的计划描述，不承诺具体发布时间。
+- 回滚方式：回退四语 `Localizable.strings`、CHANGELOG 和本日志即可；无数据迁移。
+- 结论：设置页版本说明已改为终端用户口吻。
+- 下一步建议：下一次截图导出时检查设置页卡片高度和多语言换行。
 
 ### ITER-324 外观主题下拉短名称与排序
 - 日期：2026-07-01

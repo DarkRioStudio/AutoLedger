@@ -17,6 +17,7 @@
 - [2026-06-29 +0800] 补齐酒店水单专属收件箱 token 自动领取闭环：Worker 新增 `POST /v1/cloud-hotel-folio-token` bootstrap provisioning API，App 使用本机稳定 client id 自动领取 / 轮换 `folio+<token>@getautoledger.app` 专属地址；Worker 只保存 token hash 并将同一 client 旧 active token 标记为 rotated，raw token 只返回一次并由 App 存入本机 Keychain。酒店云收件箱页面新增“领取/轮换专属地址”按钮，领取成功后自动请求通知权限并尝试登记 APNs device token；四语文案、Worker README、`v1.6.4` 计划和迭代日志同步更新。APNs secrets、服务端订阅 entitlement 校验、token 停用 / 到期同步和运营面板仍属于后续配置 / 后端收口。
 
 ### 变更（v1.6.4）
+- [2026-07-01 +0800] 将设置页“当前版本”和“后续计划”说明改为面向终端用户的四语文案：当前版本说明聚焦 Pro 自动化会先进入待确认、确认后再入账，并明确日常记账、截图识别、手动酒店 PDF、多账本和历史编辑仍可免费使用；后续计划改为打磨 Pro 订阅体验与酒店水单流程，并预告搜索、订阅异常提醒、月结导出和自动规则整理。不再在用户设置页展示 Cloudflare、APNs secret、Review Notes、审核截图等内部发布材料词汇。
 - [2026-07-01 +0800] 收短外观主题下拉展示名并固定排序：主题选择顺序调整为 `经典 / 薄荷 / 石墨 / 墨青 / 海湾 / 自定义`，简中 / 繁中 / 英文 / 日文标题同步使用短名称；`nightFolio` 和 `sunrise` 主题 palette 保留为内部资源，但不进入当前可选下拉列表。底层 `AppThemePreset` raw value、用户已保存主题偏好、主题配色、外观模式、Pro 自定义外观和账本数据均未改动。
 - [2026-06-30 +0800] 将非酒店模块 Pro 能力改为路线图预告并顺延到 `v1.7.0 / ASC 1.6.0`：`AutoLedger Pro` 页面在当前酒店 / 邮箱自动化权益后新增独立路线图区，标注高级搜索、订阅异常提醒、月结导出包和高级规则自动应用为后续 Pro 自动化扩展，不再暗示属于当前 `v1.6.4` 可用功能。新增 `versions/v1.7.0-plan.md`，并同步更新 `versions/v1.6.4-plan.md`、README 四语路线图和四语本地化；StoreKit 商品、购买 / 恢复 / 管理订阅、Pro gate、Worker 和数据 schema 均未改动。
 - [2026-06-30 +0800] 收敛 `AutoLedger Pro` 页面展示文案：对比当前页的“省时间工具清单”与实际 P0 Pro 自动化边界后，选择推进“免费记账不变，Pro 自动整理”方案；Pro 首屏、状态卡、设置页入口和四语本地化改为突出本地邮箱扫描、专属水单收件箱、批量候选和高级去重，功能卡不再前置展示高级搜索、订阅异常、月结包等后续路线图能力。StoreKit 商品、购买 / 恢复 / 管理订阅、Pro gate、Worker 和数据 schema 均未改动。

@@ -775,12 +775,12 @@
 "settings.support.title" = "Support AutoLedger";
 "settings.support.subtitle" = "Optional support for independent development; no features are unlocked";
 "settings.version.title" = "Current Version";
-"settings.version.body" = "This version focuses on the first AutoLedger Pro automations: local email folio scanning, the dedicated folio inbox, batch candidate import, and advanced deduplication now have clear entitlement boundaries. Core bookkeeping, single screenshot recognition, manual hotel folio import, multiple ledgers, and historical data editing remain free. Appearance themes, restore-purchase entry points, and release regression evidence are also in place.";
+"settings.version.body" = "This version adds the first AutoLedger Pro automations: email folios, a dedicated folio inbox, batch candidates, and duplicate alerts all go to review first, then save only after you confirm. Everyday bookkeeping, screenshot recognition, manual hotel PDF import, multiple ledgers, and editing history remain free.";
 "settings.privacy.title" = "Privacy";
 "settings.privacy.body" = "AutoLedger keeps core ledger work local-first; visit the privacy policy for the full details.";
 "settings.privacy.link" = "View Privacy Policy";
 "settings.release_status.title" = "Coming Next";
-"settings.release_status.body" = "Cloudflare production secret names for App Store Server API and APNs are confirmed, and manual smoke has passed subscription activation, APNs push, and dedicated inbox to ledger posting. Next we will complete subscription metadata, lifecycle screenshots, Review Notes, privacy policy links, and review screenshots; v1.7.0 then moves to advanced search, subscription anomaly alerts, month-end export packs, and automatic rule application.";
+"settings.release_status.body" = "Next we will keep polishing the Pro subscription experience and hotel folio workflow, so subscribing, restoring purchases, reviewing inbox candidates, and saving confirmed records feel smoother. Later releases will add stronger search, subscription anomaly alerts, month-end exports, and smarter rules automation.";
 
 "appearance.title" = "Appearance & Theme";
 "appearance.theme_picker" = "Theme";
