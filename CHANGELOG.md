@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.6.4）
+- [2026-07-01 +0800] 扩展 `v1.7.0 / ASC 1.6.0` 版本规划：把首页“票据扫描”从当前拍照后 OCR 识别规划为默认实时 OCR 扫描；支持实时扫描的 iPhone 进入取景框实时识别，识别结果仍进入待确认账单，不自动入账；不支持实时扫描、无相机、权限拒绝、Mac Catalyst 或系统报告不可用时，回退到现有拍照识别照片 / 相册导入路径。该能力明确为免费基础体验，不进入 Pro gate；原高级搜索、订阅异常提醒、月结导出包和高级规则自动应用继续作为 `v1.7.0` Pro 自动化扩展。本轮只更新规划文档和 README，不修改 App 代码、StoreKit、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - [2026-06-30 +0800] 更新 `v1.6.4` 发布证据口径：Cloudflare production 已通过 `wrangler secret list --env production` 验证存在 App Store Server API / APNs 相关 secret 名称，且 2026-06-29 用户侧人工 smoke 已测通订阅开通、APNs 推送、Worker 云收件箱、云候选转酒店消费并最终入账。`versions/v1.6.4-regression-baseline.md`、`versions/v1.6.4-plan.md`、README 四语路线图和设置页版本说明同步收缩剩余项为订阅元数据、审核材料、生命周期截图和 smoke 证据归档。
 - [2026-06-30 +0800] 建立 `v1.6.4` 回归基线与发布证据清单：新增 `versions/v1.6.4-regression-baseline.md`，把 Personal Pro / 本地邮箱 / 云端专属收件箱 / StoreKit / Worker 的本地自动门禁、专项断言、人工证据边界和当前阻断项拆开记录；同步更新 `v1.6.4` 计划和 README 四语路线图，将当前状态从“开发中”推进到“收口中”，并明确 production secret 名称、真实订阅购买、审核材料和 TestFlight 端到端验证需要外部环境证据支撑。
 - [2026-06-29 +0800] 新增 `GOAL-2218` 本地 IMAP 水单候选召回规则重审规划：明确本地邮箱扫描不能把近期全部附件邮件直接展示为候选，应先做日期 / 主题 / 附件 hint / header fetch / MIME metadata 打分；PDF 附件与水单主题优先，无附件但主题包含 `folio` / `账单` / `电子账单` 的邮件也应进入正文水单候选并复用正文转 PDF -> PDFKit -> 酒店水单复核链路。同步补充自动与人工验收标准。本轮只更新版本规划文档，不修改 App / Worker 代码。

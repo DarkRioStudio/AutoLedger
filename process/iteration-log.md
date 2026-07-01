@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-326 语音入口与编辑操作统一）
+更新日期：2026-07-01（ITER-327 v1.7.0 实时 OCR 票据扫描规划）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-327 v1.7.0 实时 OCR 票据扫描规划
+- 日期：2026-07-01
+- 所属版本：v1.7.0
+- 所属阶段：Planning
+- 类型：文档 / 规划
+- 目标：将首页“票据扫描”从当前拍照后识别规划为 v1.7.0 的实时 OCR 扫描体验，并明确不支持实时扫描时回退到拍照识别照片 / 相册导入。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、README 路线图、CHANGELOG 和本日志。
+- 未改动范围：本轮不修改 `InboxView`、`CameraPicker`、`OCRService`、`LedgerTextInterpreter`、StoreKit、Worker、APNs、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` 计划新增 P0“首页实时 OCR 票据扫描”主线，规定首页“票据扫描”优先进入实时 OCR 取景框，识别文本经短时间稳定后进入既有待确认账单流程；实时扫描不可用、相机权限拒绝、无相机、Mac Catalyst、模拟器能力缺失或系统报告不可用时，回退到当前拍照识别照片 / 相册导入路径。该能力明确属于免费基础体验，不进入 Pro gate；原高级搜索、订阅异常提醒、月结导出包和高级规则自动应用仍作为 v1.7.0 Pro 自动化扩展保留。
+- 未完成内容：尚未实现 `LiveReceiptScannerView`、实时 OCR capability 探测、VisionKit 集成或真机扫描 smoke；这些属于 v1.7.0 实施阶段。
+- 测试情况：执行 `git diff --check` 通过；执行关键词检索确认 `versions/v1.7.0-plan.md`、README、CHANGELOG 和本日志均已覆盖“实时 OCR”“不支持时回退拍照识别照片 / 相册导入”“不进入 Pro gate”和 `GOAL-2305`。
+- 风险与注意事项：实时 OCR 依赖系统实时扫描能力、相机权限、设备性能和光线环境，计划中保留现有拍照 / 相册路径作为稳定 fallback；扫描结果仍需用户确认，避免误识别自动入账。
+- 回滚方式：回退上述四个文档文件即可；无代码、数据或 schema 回滚。
+- 结论：本轮完成，`v1.7.0` 已明确新增首页实时 OCR 票据扫描主线，并保留原 Pro 自动化扩展范围。
+- 下一步建议：实现阶段先做 capability wrapper 和 fallback sheet，再接实时 OCR 文本稳定 / 去抖与待确认账单流。
 
 ### ITER-326 语音入口与编辑操作统一
 - 日期：2026-07-01
