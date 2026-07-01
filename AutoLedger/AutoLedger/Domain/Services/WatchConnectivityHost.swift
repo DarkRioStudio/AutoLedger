@@ -7,7 +7,7 @@ import WatchConnectivity
 /// 职责：
 /// 1. 接收来自 Apple Watch 的 `addTransaction` 消息，直接构建 `Transaction` 并写入 `LedgerStore`。
 /// 2. 响应 Watch 的 `fetchRecent` 请求，返回今日支出摘要与最近 20 条账单。
-/// 3. 在 App 进入前台时主动向 Watch 推送 `syncTransactions` 消息。
+/// 3. 在 App 进入前台或账单变化时发布最新 `syncTransactions` 快照。
 @MainActor
 final class WatchConnectivityHost: NSObject {
 
@@ -16,6 +16,9 @@ final class WatchConnectivityHost: NSObject {
     private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
+
+    private var lastApplicationContextDigest: String?
+    private var lastQueuedBackgroundDigest: String?
 
     // MARK: - Init
 
@@ -28,19 +31,18 @@ final class WatchConnectivityHost: NSObject {
 
     // MARK: - Public API
 
-    /// App 进入前台或账单变化时调用：将最近 20 条账单同步给 Watch。
-    func pushRecentTransactionsIfReachable() {
-        guard canPushSnapshotToWatch else { return }
+    /// App 进入前台或账单变化时调用：发布最近 20 条账单给 Watch。
+    func publishLatestLedgerSnapshot() {
+        guard canPublishSnapshotToWatch else { return }
         recordFallbackSnapshotUpdatedAtIfNeeded()
-        let payload = makeSyncPayload()
 
-        do {
-            try WCSession.default.updateApplicationContext(payload)
-        } catch {
-            // sendMessage below still covers the foreground reachable case.
-        }
+        var payload = makeSyncPayload()
+        let digest = makeSnapshotDigest(from: payload)
+        payload["syncID"] = digest
+        payload["sentAt"] = Date().timeIntervalSince1970
 
-        queueBackgroundSnapshotTransfer(payload)
+        publishApplicationContext(payload, digest: digest)
+        queueBackgroundSnapshotTransfer(payload, digest: digest)
 
         guard WCSession.default.isReachable else { return }
         WCSession.default.sendMessage(
@@ -50,9 +52,14 @@ final class WatchConnectivityHost: NSObject {
         )
     }
 
+    /// 兼容旧调用名：当前实现不只依赖 reachable，也会排队后台快照。
+    func pushRecentTransactionsIfReachable() {
+        publishLatestLedgerSnapshot()
+    }
+
     // MARK: - Private helpers
 
-    private var canPushSnapshotToWatch: Bool {
+    private var canPublishSnapshotToWatch: Bool {
         guard WCSession.isSupported(),
               WCSession.default.activationState == .activated else {
             return false
@@ -66,6 +73,16 @@ final class WatchConnectivityHost: NSObject {
         #endif
 
         return true
+    }
+
+    private func publishApplicationContext(_ payload: [String: Any], digest: String) {
+        guard digest != lastApplicationContextDigest else { return }
+        do {
+            try WCSession.default.updateApplicationContext(payload)
+            lastApplicationContextDigest = digest
+        } catch {
+            // Foreground reachable sendMessage and background userInfo still cover the next delivery chance.
+        }
     }
 
     /// 将 Transaction 序列化为 Watch 侧 WatchTransaction.init?(from:) 可反序列化的字典。
@@ -108,12 +125,40 @@ final class WatchConnectivityHost: NSObject {
     }
 
     private func makeSyncPayload() -> [String: Any] {
-        [
+        let todaySummary = makeTodaySummaryPayload()
+        return [
             "action": "syncTransactions",
             "transactions": makeRecentPayload(),
-            "todaySummary": makeTodaySummaryPayload(),
+            "todaySummary": todaySummary,
+            "snapshotUpdatedAt": todaySummary["updatedAt"] as? Double ?? Date().timeIntervalSince1970,
             "customCategories": currentCustomCategories()
         ]
+    }
+
+    private func makeSnapshotDigest(from payload: [String: Any]) -> String {
+        let transactions = payload["transactions"] as? [[String: Any]] ?? []
+        let transactionDigest = transactions.map { transaction in
+            [
+                transaction["occurredAt"] as? Double ?? 0,
+                transaction["amount"] as? Double ?? 0,
+                transaction["merchant"] as? String ?? "",
+                transaction["category"] as? String ?? "",
+                transaction["source"] as? String ?? "",
+                transaction["note"] as? String ?? ""
+            ].map { String(describing: $0) }.joined(separator: ",")
+        }.joined(separator: "|")
+
+        let todaySummary = payload["todaySummary"] as? [String: Any] ?? [:]
+        let categories = (payload["customCategories"] as? [String] ?? []).joined(separator: "|")
+        return [
+            String(describing: payload["snapshotUpdatedAt"] as? Double ?? 0),
+            String(describing: todaySummary["totalExpense"] as? Double ?? 0),
+            String(describing: todaySummary["transactionCount"] as? Int ?? 0),
+            todaySummary["ledgerName"] as? String ?? "",
+            todaySummary["recentDisplayName"] as? String ?? "",
+            categories,
+            transactionDigest
+        ].joined(separator: "#")
     }
 
     private func currentTransactions() -> [Transaction] {
@@ -161,8 +206,13 @@ final class WatchConnectivityHost: NSObject {
         defaults?.set(UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey), forKey: Self.ledgerCloudSyncEnabledKey)
     }
 
-    private func queueBackgroundSnapshotTransfer(_ payload: [String: Any]) {
+    private func queueBackgroundSnapshotTransfer(_ payload: [String: Any], digest: String) {
+        guard digest != lastQueuedBackgroundDigest else { return }
+        WCSession.default.outstandingUserInfoTransfers
+            .filter { ($0.userInfo["action"] as? String) == "syncTransactions" }
+            .forEach { $0.cancel() }
         _ = WCSession.default.transferUserInfo(payload)
+        lastQueuedBackgroundDigest = digest
         guard WCSession.default.remainingComplicationUserInfoTransfers > 0 else { return }
         _ = WCSession.default.transferCurrentComplicationUserInfo(payload)
     }
@@ -193,7 +243,7 @@ final class WatchConnectivityHost: NSObject {
             note: note.isEmpty ? "[Watch]" : "[Watch] \(note)"
         )
         LedgerStore.shared?.addTransaction(transaction)
-        pushRecentTransactionsIfReachable()
+        publishLatestLedgerSnapshot()
     }
 }
 
@@ -205,7 +255,7 @@ extension WatchConnectivityHost: WCSessionDelegate {
                              activationDidCompleteWith activationState: WCSessionActivationState,
                              error: (any Error)?) {
         Task { @MainActor in
-            self.pushRecentTransactionsIfReachable()
+            self.publishLatestLedgerSnapshot()
         }
     }
 
@@ -219,7 +269,7 @@ extension WatchConnectivityHost: WCSessionDelegate {
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         guard session.isReachable else { return }
         Task { @MainActor in
-            self.pushRecentTransactionsIfReachable()
+            self.publishLatestLedgerSnapshot()
         }
     }
 
@@ -254,7 +304,7 @@ extension WatchConnectivityHost: WCSessionDelegate {
         guard let action = userInfo["action"] as? String else { return }
         if action == "fetchRecent" {
             Task { @MainActor in
-                self.pushRecentTransactionsIfReachable()
+                self.publishLatestLedgerSnapshot()
             }
         }
     }

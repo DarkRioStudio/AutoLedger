@@ -72,7 +72,7 @@ struct ImportLedgerJSONIntent: AppIntent {
         NotificationService.markIntentLedgerSaveNeedsCloudPush()
         Task { @MainActor in
             QuickLedgerNavigationState.shared.markOpenLedgerPending()
-            WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+            WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
             NotificationCenter.default.post(name: NotificationService.quickLedgerOpenLedgerEvent, object: nil)
         }

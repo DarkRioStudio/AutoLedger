@@ -124,7 +124,7 @@ struct AddTransactionIntent: AppIntent {
         WidgetCenter.shared.reloadAllTimelines()
         NotificationService.markIntentLedgerSaveNeedsCloudPush()
         await MainActor.run {
-            WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+            WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
         }
         addTxLogger.info("[AddTx] 已记录：\(merchantForSave) ¥\(amount)")

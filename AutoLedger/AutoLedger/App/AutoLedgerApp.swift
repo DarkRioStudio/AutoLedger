@@ -38,7 +38,7 @@ struct AutoLedgerApp: App {
         if !ScreenshotModeConfig.isEnabled {
             // 激活 WatchConnectivity 会话（Watch 端连接前预备）
             LedgerStore.watchSyncHandler = {
-                WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+                WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             }
             _ = WatchConnectivityHost.shared
         }
@@ -161,7 +161,7 @@ private struct AutoLedgerRootView: View {
                     Task {
                         await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
                     }
-                    WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+                    WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
                     if store.isLocalDataEmptyForRestore {
                         store.detectICloudBackupForRestore()
                     }

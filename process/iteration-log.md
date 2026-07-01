@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-06-30（ITER-320 Pro 展示与 iPhone 截图管线调整）
+更新日期：2026-07-01（ITER-321 Watch 同步与自定义主题预览修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-321 Watch 同步与自定义主题预览修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：Watch Sync / App UI Theme
+- 类型：Bugfix / 测试
+- 目标：修复 Watch 端数据仍依赖打开手表 App 才刷新，以及 iPhone 自定义主题三段颜色变化后主题预览不实时生效的问题。
+- 改动范围：更新 `WatchConnectivityHost`、`WatchSessionManager`、Watch 同步调用点、`AppTheme`、`AppearanceSettingsView`、自适应布局门禁、离线回归时间敏感断言、CHANGELOG 和本日志。
+- 未改动范围：未修改账单 SQLite / CloudKit schema、StoreKit 商品和订阅逻辑、Worker、APNs 配置、Watch UI 布局、App Group identifier、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：iPhone 侧新增 `publishLatestLedgerSnapshot()` 作为 Watch 数据发布入口，账单变化、App 回前台、App Intent 入账和 Watch fetch 请求都会生成同一份 `syncTransactions` 快照；快照写入 `snapshotUpdatedAt` / `syncID`，并同时走 application context、前台 `sendMessage`、后台 `transferUserInfo` 和 complication transfer。后台传输会取消未完成的旧 `syncTransactions` 队列并按快照指纹去重，减少旧数据晚到。Watch 侧激活后先应用 `receivedApplicationContext`，并按 `snapshotUpdatedAt` 丢弃比当前内存态更旧的 payload，避免 Watch App / Widget 快照回滚。外观页自定义主题预览改为显式接收表面色、强调色、辅助色，主题下拉色块、当前主题卡和预览卡都通过同一组实时颜色渲染。离线回归中 `LocalEmailFolioImportAllowance` 的同月免费额度断言固定测试日期，避免跨月日期导致误判。
+- 未完成内容：本轮未做真机 Apple Watch 后台投递耗时测试；watchOS 后台交付仍受系统调度、蓝牙 / Wi-Fi 状态和 complication 额度影响，TestFlight 真机回归时仍需观察表盘 / Watch App 是否能在不手动打开 App 的情况下收到下一次账单快照。
+- 测试情况：执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_widget_smoke.py` 通过；执行 `git diff --check` 通过；通过 XcodeBuildMCP 设置 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator 后执行 `build_sim -quiet` 通过，status `SUCCEEDED`，build log 位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-07-01T00-56-21-932Z_pid3926_8a508bcd.log`；首次执行 `bash scripts/run_offline_regression.sh` 失败于 2026-07-01 跨月触发的 `LocalEmailFolioImportAllowance blocks second free import in same month` 时间敏感断言，固定测试日期后重新执行 `bash scripts/run_offline_regression.sh` 通过。
+- 风险与注意事项：后台 WatchConnectivity 传输只能保证排队和最终交付机会，无法强制 watchOS 立即唤醒；实际刷新速度需以真机 TestFlight 和当前 Watch / iPhone 连接状态为准。自定义主题预览现在直接跟随 AppStorage 三段颜色，未来新增自定义色维度时需要同步扩展 `resolvedPreviewStyle` 和门禁脚本。
+- 回滚方式：回退上述 Swift 文件、`scripts/OfflineRegression.swift`、自适应布局门禁、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成 Watch 最新账单快照发布链路加固、自定义主题预览实时刷新和 7 月 1 日离线回归时间抖动修复，静态门禁、离线回归和模拟器 Debug build 均通过。
+- 下一步建议：TestFlight 真机安装后，先在 iPhone 新增一笔账单并保持 Watch App 未手动打开，观察表盘 complication / Watch 首页快照是否在系统后台调度后更新；随后在外观页选择自定义主题，连续改三段颜色确认下拉色块和预览卡即时变化。
 
 ### ITER-320 Pro 展示与 iPhone 截图管线调整
 - 日期：2026-06-30

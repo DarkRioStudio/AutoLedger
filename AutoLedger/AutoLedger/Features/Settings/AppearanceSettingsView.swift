@@ -18,6 +18,14 @@ struct AppearanceSettingsView: View {
         proEntitlement.isProActive
     }
 
+    private var selectedPreviewColors: [Color] {
+        selectedPreset.resolvedPreviewColors(
+            customSurfaceHex: customSurfaceHex,
+            customAccentHex: customAccentHex,
+            customSecondaryHex: customSecondaryHex
+        )
+    }
+
     private var customSurfaceColor: Binding<Color> {
         Binding(
             get: {
@@ -94,7 +102,12 @@ struct AppearanceSettingsView: View {
                     }
                 }
 
-                AppearancePreviewCard(preset: selectedPreset)
+                AppearancePreviewCard(
+                    preset: selectedPreset,
+                    customSurfaceHex: customSurfaceHex,
+                    customAccentHex: customAccentHex,
+                    customSecondaryHex: customSecondaryHex
+                )
                     .autoLedgerMotion(AppMotion.theme, value: selectedThemeRawValue)
                     .autoLedgerMotion(AppMotion.theme, value: selectedColorSchemeRawValue)
                     .autoLedgerMotion(AppMotion.theme, value: customSurfaceHex)
@@ -200,7 +213,7 @@ struct AppearanceSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 14) {
-                AppearanceThemeSwatches(colors: selectedPreset.previewColors, swatchSize: 22)
+                AppearanceThemeSwatches(colors: selectedPreviewColors, swatchSize: 22)
 
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.callout.weight(.bold))
@@ -259,7 +272,7 @@ struct AppearanceSettingsView: View {
                 .foregroundStyle(AppTheme.mutedInk)
                 .fixedSize(horizontal: false, vertical: true)
 
-            AppearanceThemeSwatches(colors: selectedPreset.previewColors)
+            AppearanceThemeSwatches(colors: selectedPreviewColors)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -432,8 +445,21 @@ private struct AppearanceCustomThemeLockedCard: View {
 
 private struct AppearancePreviewCard: View {
     let preset: AppThemePreset
+    let customSurfaceHex: String
+    let customAccentHex: String
+    let customSecondaryHex: String
+
+    private var previewStyle: AppThemePreviewStyle {
+        preset.resolvedPreviewStyle(
+            customSurfaceHex: customSurfaceHex,
+            customAccentHex: customAccentHex,
+            customSecondaryHex: customSecondaryHex
+        )
+    }
 
     var body: some View {
+        let style = previewStyle
+
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 14) {
                 Image(systemName: "bolt.fill")
@@ -442,79 +468,79 @@ private struct AppearancePreviewCard: View {
                     .frame(width: 42, height: 42)
                     .background(
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(preset.previewAccent)
+                            .fill(style.accent)
                     )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("appearance.preview.title")
                         .font(.headline)
-                        .foregroundStyle(preset.previewInk)
+                        .foregroundStyle(style.ink)
 
                     Text("appearance.preview.subtitle")
                         .font(.subheadline)
-                        .foregroundStyle(preset.previewMutedInk)
+                        .foregroundStyle(style.mutedInk)
                 }
 
                 Spacer()
             }
 
             HStack(spacing: 10) {
-                AppearancePreviewMetric(title: "appearance.preview.month", value: "$1,428", preset: preset)
-                AppearancePreviewMetric(title: "appearance.preview.queue", value: "4", preset: preset)
+                AppearancePreviewMetric(title: "appearance.preview.month", value: "$1,428", style: style)
+                AppearancePreviewMetric(title: "appearance.preview.queue", value: "4", style: style)
             }
 
             VStack(spacing: 0) {
-                AppearancePreviewRow(icon: "cup.and.saucer.fill", title: "Blue Bottle", subtitle: "Food & drink", amount: "-$6.80", preset: preset)
-                Divider().overlay(preset.previewCardStroke)
-                AppearancePreviewRow(icon: "building.2.fill", title: "Conference hotel", subtitle: "Travel", amount: "-$284.12", preset: preset)
+                AppearancePreviewRow(icon: "cup.and.saucer.fill", title: "Blue Bottle", subtitle: "Food & drink", amount: "-$6.80", style: style)
+                Divider().overlay(style.cardStroke)
+                AppearancePreviewRow(icon: "building.2.fill", title: "Conference hotel", subtitle: "Travel", amount: "-$284.12", style: style)
             }
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(preset.previewCard.opacity(0.78))
+                    .fill(style.card.opacity(0.78))
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(preset.previewCardStroke, lineWidth: 1)
+                    .stroke(style.cardStroke, lineWidth: 1)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(preset.previewCanvas)
+                .fill(style.canvas)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(preset.previewCardStroke, lineWidth: 1)
+                .stroke(style.cardStroke, lineWidth: 1)
         }
-        .shadow(color: preset.previewAccent.opacity(0.14), radius: 18, x: 0, y: 10)
+        .shadow(color: style.accent.opacity(0.14), radius: 18, x: 0, y: 10)
     }
 }
 
 private struct AppearancePreviewMetric: View {
     let title: LocalizedStringKey
     let value: String
-    let preset: AppThemePreset
+    let style: AppThemePreviewStyle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(preset.previewMutedInk)
+                .foregroundStyle(style.mutedInk)
 
             Text(value)
                 .font(.title3.monospacedDigit().weight(.bold))
-                .foregroundStyle(preset.previewInk)
+                .foregroundStyle(style.ink)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(preset.previewAccent.opacity(0.12))
+                .fill(style.accent.opacity(0.12))
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(preset.previewCardStroke.opacity(0.8), lineWidth: 1)
+                .stroke(style.cardStroke.opacity(0.8), lineWidth: 1)
         }
     }
 }
@@ -524,34 +550,34 @@ private struct AppearancePreviewRow: View {
     let title: String
     let subtitle: String
     let amount: String
-    let preset: AppThemePreset
+    let style: AppThemePreviewStyle
 
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.callout.weight(.semibold))
-                .foregroundStyle(preset.previewAccent)
+                .foregroundStyle(style.accent)
                 .frame(width: 32, height: 32)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(preset.previewAccent.opacity(0.12))
+                        .fill(style.accent.opacity(0.12))
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(preset.previewInk)
+                    .foregroundStyle(style.ink)
 
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(preset.previewMutedInk)
+                    .foregroundStyle(style.mutedInk)
             }
 
             Spacer()
 
             Text(amount)
                 .font(.subheadline.monospacedDigit().weight(.bold))
-                .foregroundStyle(preset.previewInk)
+                .foregroundStyle(style.ink)
         }
         .padding(12)
     }

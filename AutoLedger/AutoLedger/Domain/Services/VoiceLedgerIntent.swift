@@ -106,7 +106,7 @@ struct VoiceLedgerIntent: AppIntent {
         NotificationService.markIntentLedgerSaveNeedsCloudPush()
 
         await MainActor.run {
-            WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+            WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
         }
 

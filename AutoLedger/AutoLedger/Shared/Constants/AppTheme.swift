@@ -107,6 +107,51 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
         )
     }
 
+    func resolvedPreviewColors(customSurfaceHex: String,
+                               customAccentHex: String,
+                               customSecondaryHex: String) -> [Color] {
+        let palette = resolvedPreviewPalette(
+            customSurfaceHex: customSurfaceHex,
+            customAccentHex: customAccentHex,
+            customSecondaryHex: customSecondaryHex
+        )
+        return [
+            Color(uiColor: palette.canvasLight),
+            Color(uiColor: palette.cardLight),
+            palette.accent,
+            palette.accentSecondary
+        ]
+    }
+
+    func resolvedPreviewStyle(customSurfaceHex: String,
+                              customAccentHex: String,
+                              customSecondaryHex: String) -> AppThemePreviewStyle {
+        let palette = resolvedPreviewPalette(
+            customSurfaceHex: customSurfaceHex,
+            customAccentHex: customAccentHex,
+            customSecondaryHex: customSecondaryHex
+        )
+        return AppThemePreviewStyle(
+            canvas: Color(uiColor: palette.canvasLight),
+            card: Color(uiColor: palette.cardLight),
+            cardStroke: Color(uiColor: palette.cardStrokeLight),
+            ink: Color(uiColor: palette.inkLight),
+            mutedInk: Color(uiColor: palette.mutedInkLight),
+            accent: palette.accent
+        )
+    }
+
+    private func resolvedPreviewPalette(customSurfaceHex: String,
+                                        customAccentHex: String,
+                                        customSecondaryHex: String) -> AppThemePalette {
+        guard isCustom else { return palette }
+        return AppThemeCustomTheme.palette(
+            surfaceHex: customSurfaceHex,
+            accentHex: customAccentHex,
+            secondaryHex: customSecondaryHex
+        )
+    }
+
     static var current: AppThemePreset {
         let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey)
         let preset = rawValue.flatMap(AppThemePreset.init(rawValue:)) ?? .fresh
@@ -350,6 +395,15 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
     }
 }
 
+struct AppThemePreviewStyle {
+    let canvas: Color
+    let card: Color
+    let cardStroke: Color
+    let ink: Color
+    let mutedInk: Color
+    let accent: Color
+}
+
 enum AppThemeCustomTheme {
     static let surfaceHexKey = "appCustomThemeSurfaceHex"
     static let accentHexKey = "appCustomThemeAccentHex"
@@ -455,18 +509,17 @@ private struct AppThemePalette {
 
 fileprivate extension AppThemeCustomTheme {
     static var palette: AppThemePalette {
-        let surface = uiColor(
-            hex: UserDefaults.standard.string(forKey: surfaceHexKey) ?? defaultSurfaceHex,
-            fallback: defaultSurfaceHex
+        palette(
+            surfaceHex: UserDefaults.standard.string(forKey: surfaceHexKey) ?? defaultSurfaceHex,
+            accentHex: UserDefaults.standard.string(forKey: accentHexKey) ?? defaultAccentHex,
+            secondaryHex: UserDefaults.standard.string(forKey: secondaryHexKey) ?? defaultSecondaryHex
         )
-        let accentUIColor = uiColor(
-            hex: UserDefaults.standard.string(forKey: accentHexKey) ?? defaultAccentHex,
-            fallback: defaultAccentHex
-        )
-        let secondaryUIColor = uiColor(
-            hex: UserDefaults.standard.string(forKey: secondaryHexKey) ?? defaultSecondaryHex,
-            fallback: defaultSecondaryHex
-        )
+    }
+
+    static func palette(surfaceHex: String, accentHex: String, secondaryHex: String) -> AppThemePalette {
+        let surface = uiColor(hex: surfaceHex, fallback: defaultSurfaceHex)
+        let accentUIColor = uiColor(hex: accentHex, fallback: defaultAccentHex)
+        let secondaryUIColor = uiColor(hex: secondaryHex, fallback: defaultSecondaryHex)
 
         return AppThemePalette(
             canvasLight: surface.blended(towards: .white, amount: 0.78),

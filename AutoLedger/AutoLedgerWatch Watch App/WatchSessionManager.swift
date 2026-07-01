@@ -190,6 +190,7 @@ final class WatchSessionManager: NSObject {
     // MARK: - Private
 
     private func handleRecentTransactionsReply(_ reply: [String: Any]) {
+        guard shouldApplySyncPayload(reply) else { return }
         guard let list = reply["transactions"] as? [[String: Any]] else { return }
         recentTransactions = list.compactMap { WatchTransaction(from: $0) }
         todaySummary = makeTodaySummary(from: reply)
@@ -199,6 +200,7 @@ final class WatchSessionManager: NSObject {
     }
 
     private func handleSyncPayload(_ payload: [String: Any]) {
+        guard shouldApplySyncPayload(payload) else { return }
         if let list = payload["transactions"] as? [[String: Any]] {
             recentTransactions = list.compactMap { WatchTransaction(from: $0) }
         }
@@ -214,6 +216,28 @@ final class WatchSessionManager: NSObject {
             return summary
         }
         return WatchTodaySummary.fallback(from: recentTransactions)
+    }
+
+    private func applyReceivedApplicationContextIfAvailable(from session: WCSession = .default) {
+        guard !session.receivedApplicationContext.isEmpty,
+              (session.receivedApplicationContext["action"] as? String) == "syncTransactions" else { return }
+        handleSyncPayload(session.receivedApplicationContext)
+    }
+
+    private func shouldApplySyncPayload(_ payload: [String: Any]) -> Bool {
+        guard let incomingUpdatedAt = snapshotUpdatedAt(from: payload),
+              let currentUpdatedAt = todaySummary.updatedAt else { return true }
+        return incomingUpdatedAt.timeIntervalSince(currentUpdatedAt) >= -0.5
+    }
+
+    private func snapshotUpdatedAt(from payload: [String: Any]) -> Date? {
+        if let timestamp = payload["snapshotUpdatedAt"] as? Double {
+            return Date(timeIntervalSince1970: timestamp)
+        }
+
+        guard let summary = payload["todaySummary"] as? [String: Any],
+              let timestamp = summary["updatedAt"] as? Double else { return nil }
+        return Date(timeIntervalSince1970: timestamp)
     }
 
     private func enqueueBackgroundFetchRequest(force: Bool) {
@@ -264,6 +288,7 @@ extension WatchSessionManager: WCSessionDelegate {
                              error: (any Error)?) {
         Task { @MainActor in
             self.isReachable = session.isReachable
+            self.applyReceivedApplicationContextIfAvailable(from: session)
             if session.isReachable {
                 self.retryPending()
                 self.requestRecentTransactions()

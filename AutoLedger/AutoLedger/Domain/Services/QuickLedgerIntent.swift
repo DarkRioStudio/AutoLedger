@@ -204,7 +204,7 @@ struct QuickLedgerIntent: AppIntent {
 
         // 通知 App 内 LedgerStore 刷新（Intent 直写 SQLite，绕过了 LedgerStore）
         await MainActor.run {
-            WatchConnectivityHost.shared.pushRecentTransactionsIfReachable()
+            WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
         }
 
