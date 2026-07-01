@@ -1257,7 +1257,9 @@
 "ledger_profiles.rename.title" = "重新命名帳本";
 "ledger_profiles.edit.title" = "編輯帳本";
 "ledger_profiles.name.placeholder" = "帳本名稱";
-"ledger_profiles.currency.placeholder" = "預設幣種（可選）";
+"ledger_profiles.currency.placeholder" = "預設幣種";
+"ledger_profiles.currency.label" = "預設幣種";
+"ledger_profiles.currency.description" = "後續匯入不同幣種消費時，會優先按這個幣種準備換算。";
 "ledger_profiles.currency.none" = "未設定幣種";
 "ledger_profiles.badge.default" = "預設";
 "ledger_profiles.badge.default_write" = "預設寫入";

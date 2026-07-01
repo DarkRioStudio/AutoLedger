@@ -785,8 +785,12 @@ struct HotelStayDetailView: View {
             editableTextField("hotel_stay.review.hotel_name", text: $form.hotelName)
             editableTextField("hotel_stay.review.brand", text: $form.hotelBrand)
             editableTextField("hotel_stay.review.group", text: $form.hotelGroup)
-            editableOptionField("hotel_stay.review.city", text: $form.city, options: form.cityOptions)
-            editableOptionField("hotel_stay.review.country", text: $form.country, options: form.countryOptions)
+            editableOptionField("hotel_stay.review.country", text: $form.country, options: form.countryOptions) { selectedCountry in
+                form.applyCountrySelection(selectedCountry)
+            }
+            editableOptionField("hotel_stay.review.city", text: $form.city, options: form.cityOptions) { selectedCity in
+                form.applyCitySelection(selectedCity)
+            }
         }
     }
 
@@ -976,7 +980,8 @@ struct HotelStayDetailView: View {
     private func editableOptionField(
         _ titleKey: LocalizedStringKey,
         text: Binding<String>,
-        options: [String]
+        options: [String],
+        onSelect: ((String) -> Void)? = nil
     ) -> some View {
         LabeledContent(titleKey) {
             HStack(spacing: 8) {
@@ -988,7 +993,11 @@ struct HotelStayDetailView: View {
                 Menu {
                     ForEach(options, id: \.self) { option in
                         Button(option) {
-                            text.wrappedValue = option
+                            if let onSelect {
+                                onSelect(option)
+                            } else {
+                                text.wrappedValue = option
+                            }
                         }
                     }
                 } label: {
@@ -1145,6 +1154,10 @@ private struct HotelStayRecordEditForm: Equatable {
         transactionAmountText = Self.amountText(linkedTransaction?.amount ?? record.localizedData?.totalAmount ?? record.totalAmount)
         transactionOccurredAt = linkedTransaction?.occurredAt ?? Self.defaultTransactionDate(checkOutDate: record.checkOutDate, fallback: record.updatedAt)
         transactionNote = linkedTransaction?.note ?? ""
+
+        let localizedLocation = HotelStayLocationCatalog.localizedLocation(city: city, country: country)
+        city = localizedLocation.city
+        country = localizedLocation.country
     }
 
     var isValid: Bool {
@@ -1162,15 +1175,40 @@ private struct HotelStayRecordEditForm: Equatable {
     }
 
     var cityOptions: [String] {
-        Self.uniqueOptions([city] + Self.commonCityOptions)
+        let selectedCountry = HotelStayLocationCatalog.country(matching: country)
+        return Self.uniqueOptions([city] + HotelStayLocationCatalog.cityOptions(for: selectedCountry))
     }
 
     var countryOptions: [String] {
-        Self.uniqueOptions([country] + Self.commonCountryOptions)
+        Self.uniqueOptions([country] + HotelStayLocationCatalog.countryOptions())
     }
 
     var currencyOptions: [String] {
         Self.uniqueOptions([currency] + Self.commonCurrencyOptions)
+    }
+
+    mutating func applyCountrySelection(_ selectedCountry: String) {
+        let previousCountry = HotelStayLocationCatalog.country(matching: country)
+        let nextCountry = HotelStayLocationCatalog.country(matching: selectedCountry)
+        country = nextCountry?.localizedName ?? selectedCountry
+
+        guard previousCountry?.code != nextCountry?.code else { return }
+        guard !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard let nextCountry else {
+            city = HotelStayLocationCatalog.localizedCityName(matching: city) ?? city
+            return
+        }
+
+        if let cityInNextCountry = nextCountry.localizedCityName(matching: city) {
+            city = cityInNextCountry
+        } else {
+            city = ""
+        }
+    }
+
+    mutating func applyCitySelection(_ selectedCity: String) {
+        let selectedCountry = HotelStayLocationCatalog.country(matching: country)
+        city = HotelStayLocationCatalog.localizedCityName(matching: selectedCity, country: selectedCountry) ?? selectedCity
     }
 
     mutating func updateNightsFromDates() {
@@ -1278,18 +1316,6 @@ private struct HotelStayRecordEditForm: Equatable {
             .filter { seen.insert($0).inserted }
     }
 
-    private static let commonCityOptions = [
-        "北京", "上海", "广州", "深圳", "重庆", "成都", "杭州", "南京", "天津", "西安",
-        "香港", "澳门", "台北", "东京", "大阪", "京都", "首尔", "曼谷", "新加坡",
-        "New York", "Los Angeles", "San Francisco", "London", "Paris", "Berlin"
-    ]
-
-    private static let commonCountryOptions = [
-        "中国", "中国香港", "中国澳门", "中国台湾", "日本", "韩国", "新加坡", "泰国",
-        "美国", "英国", "法国", "德国", "澳大利亚", "加拿大", "United States",
-        "United Kingdom", "Japan", "Singapore"
-    ]
-
     private static let commonCurrencyOptions = [
         "CNY", "USD", "JPY", "EUR", "GBP", "HKD", "MOP", "TWD", "SGD", "KRW",
         "THB", "MYR", "AUD", "CAD"
@@ -1346,6 +1372,294 @@ private struct HotelStayRecordEditForm: Equatable {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private enum HotelStayLocationCatalog {
+    struct Country: Sendable {
+        let code: String
+        let aliases: [String]
+        let cities: [City]
+
+        nonisolated var localizedName: String {
+            Locale.current.localizedString(forRegionCode: code) ?? aliases.first ?? code
+        }
+
+        nonisolated func matches(_ value: String) -> Bool {
+            let normalizedValue = HotelStayLocationCatalog.normalized(value)
+            guard !normalizedValue.isEmpty else { return false }
+            return ([code, localizedName] + aliases)
+                .map(HotelStayLocationCatalog.normalized)
+                .contains(normalizedValue)
+        }
+
+        nonisolated func localizedCityName(matching value: String) -> String? {
+            cities.first { $0.matches(value) }?.localizedName
+        }
+    }
+
+    struct City: Sendable {
+        let english: String
+        let zhHans: String
+        let zhHant: String
+        let ja: String
+        let aliases: [String]
+
+        nonisolated var localizedName: String {
+            switch HotelStayLocationCatalog.languageKey {
+            case "zh-Hant":
+                return zhHant
+            case "zh-Hans":
+                return zhHans
+            case "ja":
+                return ja
+            default:
+                return english
+            }
+        }
+
+        nonisolated func matches(_ value: String) -> Bool {
+            let normalizedValue = HotelStayLocationCatalog.normalized(value)
+            guard !normalizedValue.isEmpty else { return false }
+            return ([english, zhHans, zhHant, ja, localizedName] + aliases)
+                .map(HotelStayLocationCatalog.normalized)
+                .contains(normalizedValue)
+        }
+    }
+
+    nonisolated static func localizedLocation(city: String, country: String) -> (city: String, country: String) {
+        let matchedCountry = self.country(matching: country) ?? self.country(containingCity: city)
+        let localizedCountry = matchedCountry?.localizedName ?? country.trimmingCharacters(in: .whitespacesAndNewlines)
+        let localizedCity = localizedCityName(matching: city, country: matchedCountry)
+            ?? localizedCityName(matching: city)
+            ?? city.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (localizedCity, localizedCountry)
+    }
+
+    nonisolated static func countryOptions() -> [String] {
+        countries.map(\.localizedName)
+    }
+
+    nonisolated static func cityOptions(for country: Country?) -> [String] {
+        if let country {
+            return country.cities.map(\.localizedName)
+        }
+        return fallbackCities.map(\.localizedName)
+    }
+
+    nonisolated static func country(matching value: String) -> Country? {
+        countries.first { $0.matches(value) }
+    }
+
+    nonisolated static func localizedCityName(matching value: String, country: Country? = nil) -> String? {
+        if let country, let city = country.localizedCityName(matching: value) {
+            return city
+        }
+        return countries.lazy.compactMap { $0.localizedCityName(matching: value) }.first
+    }
+
+    nonisolated private static func country(containingCity value: String) -> Country? {
+        countries.first { country in
+            country.cities.contains { $0.matches(value) }
+        }
+    }
+
+    nonisolated private static var languageKey: String {
+        let identifier = Locale.current.identifier.lowercased()
+        if identifier.hasPrefix("ja") {
+            return "ja"
+        }
+        if identifier.contains("hant") || identifier.contains("_tw") || identifier.contains("_hk") || identifier.contains("_mo") {
+            return "zh-Hant"
+        }
+        if identifier.hasPrefix("zh") {
+            return "zh-Hans"
+        }
+        return "en"
+    }
+
+    nonisolated private static func normalized(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "·", with: "")
+            .lowercased()
+    }
+
+    nonisolated private static func city(
+        _ english: String,
+        zhHans: String,
+        zhHant: String? = nil,
+        ja: String? = nil,
+        aliases: [String] = []
+    ) -> City {
+        City(
+            english: english,
+            zhHans: zhHans,
+            zhHant: zhHant ?? zhHans,
+            ja: ja ?? english,
+            aliases: aliases
+        )
+    }
+
+    nonisolated private static func country(_ code: String, aliases: [String], cities: [City]) -> Country {
+        Country(code: code, aliases: aliases, cities: cities)
+    }
+
+    nonisolated private static let countries: [Country] = [
+        country("CN", aliases: ["中国", "中國", "China", "Mainland China", "PRC"], cities: [
+            city("Beijing", zhHans: "北京", ja: "北京"),
+            city("Shanghai", zhHans: "上海", ja: "上海"),
+            city("Guangzhou", zhHans: "广州", zhHant: "廣州", ja: "広州"),
+            city("Shenzhen", zhHans: "深圳", ja: "深セン"),
+            city("Chongqing", zhHans: "重庆", zhHant: "重慶", ja: "重慶"),
+            city("Chengdu", zhHans: "成都", ja: "成都"),
+            city("Hangzhou", zhHans: "杭州", ja: "杭州"),
+            city("Nanjing", zhHans: "南京", ja: "南京"),
+            city("Tianjin", zhHans: "天津", ja: "天津"),
+            city("Xi'an", zhHans: "西安", ja: "西安", aliases: ["Xian"]),
+            city("Wuhan", zhHans: "武汉", zhHant: "武漢", ja: "武漢"),
+            city("Suzhou", zhHans: "苏州", zhHant: "蘇州", ja: "蘇州"),
+            city("Qingdao", zhHans: "青岛", zhHant: "青島", ja: "青島"),
+            city("Xiamen", zhHans: "厦门", zhHant: "廈門", ja: "厦門"),
+            city("Sanya", zhHans: "三亚", zhHant: "三亞", ja: "三亜")
+        ]),
+        country("HK", aliases: ["香港", "中国香港", "中國香港", "Hong Kong"], cities: [
+            city("Hong Kong", zhHans: "香港", ja: "香港")
+        ]),
+        country("MO", aliases: ["澳门", "澳門", "中国澳门", "中國澳門", "Macau", "Macao"], cities: [
+            city("Macau", zhHans: "澳门", zhHant: "澳門", ja: "マカオ", aliases: ["Macao"])
+        ]),
+        country("TW", aliases: ["台湾", "台灣", "中国台湾", "中國台灣", "Taiwan"], cities: [
+            city("Taipei", zhHans: "台北", ja: "台北"),
+            city("Taichung", zhHans: "台中", ja: "台中"),
+            city("Kaohsiung", zhHans: "高雄", ja: "高雄"),
+            city("Tainan", zhHans: "台南", ja: "台南")
+        ]),
+        country("JP", aliases: ["日本", "Japan"], cities: [
+            city("Tokyo", zhHans: "东京", zhHant: "東京", ja: "東京"),
+            city("Osaka", zhHans: "大阪", ja: "大阪"),
+            city("Kyoto", zhHans: "京都", ja: "京都"),
+            city("Yokohama", zhHans: "横滨", zhHant: "橫濱", ja: "横浜"),
+            city("Nagoya", zhHans: "名古屋", ja: "名古屋"),
+            city("Fukuoka", zhHans: "福冈", zhHant: "福岡", ja: "福岡"),
+            city("Sapporo", zhHans: "札幌", ja: "札幌"),
+            city("Naha", zhHans: "那霸", zhHant: "那霸", ja: "那覇")
+        ]),
+        country("KR", aliases: ["韩国", "韓國", "South Korea", "Korea", "대한민국"], cities: [
+            city("Seoul", zhHans: "首尔", zhHant: "首爾", ja: "ソウル"),
+            city("Busan", zhHans: "釜山", ja: "釜山"),
+            city("Incheon", zhHans: "仁川", ja: "仁川"),
+            city("Jeju", zhHans: "济州", zhHant: "濟州", ja: "済州"),
+            city("Daegu", zhHans: "大邱", ja: "大邱")
+        ]),
+        country("SG", aliases: ["新加坡", "Singapore"], cities: [
+            city("Singapore", zhHans: "新加坡", ja: "シンガポール")
+        ]),
+        country("TH", aliases: ["泰国", "泰國", "Thailand"], cities: [
+            city("Bangkok", zhHans: "曼谷", ja: "バンコク"),
+            city("Phuket", zhHans: "普吉", ja: "プーケット"),
+            city("Chiang Mai", zhHans: "清迈", zhHant: "清邁", ja: "チェンマイ"),
+            city("Pattaya", zhHans: "芭提雅", ja: "パタヤ")
+        ]),
+        country("MY", aliases: ["马来西亚", "馬來西亞", "Malaysia"], cities: [
+            city("Kuala Lumpur", zhHans: "吉隆坡", ja: "クアラルンプール"),
+            city("Penang", zhHans: "槟城", zhHant: "檳城", ja: "ペナン"),
+            city("Johor Bahru", zhHans: "新山", ja: "ジョホールバル"),
+            city("Kota Kinabalu", zhHans: "亚庇", zhHant: "亞庇", ja: "コタキナバル")
+        ]),
+        country("ID", aliases: ["印度尼西亚", "印尼", "印度尼西亞", "Indonesia"], cities: [
+            city("Jakarta", zhHans: "雅加达", zhHant: "雅加達", ja: "ジャカルタ"),
+            city("Bali", zhHans: "巴厘岛", zhHant: "峇里島", ja: "バリ"),
+            city("Surabaya", zhHans: "泗水", ja: "スラバヤ")
+        ]),
+        country("VN", aliases: ["越南", "Vietnam"], cities: [
+            city("Ho Chi Minh City", zhHans: "胡志明市", ja: "ホーチミン"),
+            city("Hanoi", zhHans: "河内", zhHant: "河內", ja: "ハノイ"),
+            city("Da Nang", zhHans: "岘港", zhHant: "峴港", ja: "ダナン")
+        ]),
+        country("PH", aliases: ["菲律宾", "菲律賓", "Philippines"], cities: [
+            city("Manila", zhHans: "马尼拉", zhHant: "馬尼拉", ja: "マニラ"),
+            city("Cebu", zhHans: "宿务", zhHant: "宿霧", ja: "セブ")
+        ]),
+        country("US", aliases: ["美国", "美國", "United States", "United States of America", "USA", "US"], cities: [
+            city("New York", zhHans: "纽约", zhHant: "紐約", ja: "ニューヨーク", aliases: ["NYC"]),
+            city("Los Angeles", zhHans: "洛杉矶", zhHant: "洛杉磯", ja: "ロサンゼルス"),
+            city("San Francisco", zhHans: "旧金山", zhHant: "舊金山", ja: "サンフランシスコ"),
+            city("Las Vegas", zhHans: "拉斯维加斯", zhHant: "拉斯維加斯", ja: "ラスベガス"),
+            city("Seattle", zhHans: "西雅图", zhHant: "西雅圖", ja: "シアトル"),
+            city("Chicago", zhHans: "芝加哥", ja: "シカゴ"),
+            city("Boston", zhHans: "波士顿", zhHant: "波士頓", ja: "ボストン"),
+            city("Washington", zhHans: "华盛顿", zhHant: "華盛頓", ja: "ワシントン", aliases: ["Washington DC", "Washington, DC"]),
+            city("Miami", zhHans: "迈阿密", zhHant: "邁阿密", ja: "マイアミ"),
+            city("Orlando", zhHans: "奥兰多", zhHant: "奧蘭多", ja: "オーランド")
+        ]),
+        country("GB", aliases: ["英国", "英國", "United Kingdom", "UK", "Great Britain"], cities: [
+            city("London", zhHans: "伦敦", zhHant: "倫敦", ja: "ロンドン"),
+            city("Manchester", zhHans: "曼彻斯特", zhHant: "曼徹斯特", ja: "マンチェスター"),
+            city("Edinburgh", zhHans: "爱丁堡", zhHant: "愛丁堡", ja: "エディンバラ"),
+            city("Birmingham", zhHans: "伯明翰", ja: "バーミンガム")
+        ]),
+        country("FR", aliases: ["法国", "法國", "France"], cities: [
+            city("Paris", zhHans: "巴黎", ja: "パリ"),
+            city("Nice", zhHans: "尼斯", ja: "ニース"),
+            city("Lyon", zhHans: "里昂", ja: "リヨン"),
+            city("Marseille", zhHans: "马赛", zhHant: "馬賽", ja: "マルセイユ")
+        ]),
+        country("DE", aliases: ["德国", "德國", "Germany"], cities: [
+            city("Berlin", zhHans: "柏林", ja: "ベルリン"),
+            city("Munich", zhHans: "慕尼黑", ja: "ミュンヘン"),
+            city("Frankfurt", zhHans: "法兰克福", zhHant: "法蘭克福", ja: "フランクフルト"),
+            city("Hamburg", zhHans: "汉堡", zhHant: "漢堡", ja: "ハンブルク")
+        ]),
+        country("IT", aliases: ["意大利", "義大利", "Italy"], cities: [
+            city("Rome", zhHans: "罗马", zhHant: "羅馬", ja: "ローマ"),
+            city("Milan", zhHans: "米兰", zhHant: "米蘭", ja: "ミラノ"),
+            city("Venice", zhHans: "威尼斯", ja: "ベネチア"),
+            city("Florence", zhHans: "佛罗伦萨", zhHant: "佛羅倫斯", ja: "フィレンツェ")
+        ]),
+        country("ES", aliases: ["西班牙", "Spain"], cities: [
+            city("Madrid", zhHans: "马德里", zhHant: "馬德里", ja: "マドリード"),
+            city("Barcelona", zhHans: "巴塞罗那", zhHant: "巴塞隆納", ja: "バルセロナ"),
+            city("Seville", zhHans: "塞维利亚", zhHant: "塞維利亞", ja: "セビリア"),
+            city("Valencia", zhHans: "瓦伦西亚", zhHant: "瓦倫西亞", ja: "バレンシア")
+        ]),
+        country("NL", aliases: ["荷兰", "荷蘭", "Netherlands"], cities: [
+            city("Amsterdam", zhHans: "阿姆斯特丹", ja: "アムステルダム"),
+            city("Rotterdam", zhHans: "鹿特丹", ja: "ロッテルダム")
+        ]),
+        country("CH", aliases: ["瑞士", "Switzerland"], cities: [
+            city("Zurich", zhHans: "苏黎世", zhHant: "蘇黎世", ja: "チューリッヒ"),
+            city("Geneva", zhHans: "日内瓦", zhHant: "日內瓦", ja: "ジュネーブ"),
+            city("Lucerne", zhHans: "卢塞恩", zhHant: "琉森", ja: "ルツェルン")
+        ]),
+        country("AT", aliases: ["奥地利", "奧地利", "Austria"], cities: [
+            city("Vienna", zhHans: "维也纳", zhHant: "維也納", ja: "ウィーン"),
+            city("Salzburg", zhHans: "萨尔茨堡", zhHant: "薩爾斯堡", ja: "ザルツブルク")
+        ]),
+        country("AU", aliases: ["澳大利亚", "澳洲", "澳大利亞", "Australia"], cities: [
+            city("Sydney", zhHans: "悉尼", zhHant: "雪梨", ja: "シドニー"),
+            city("Melbourne", zhHans: "墨尔本", zhHant: "墨爾本", ja: "メルボルン"),
+            city("Brisbane", zhHans: "布里斯班", ja: "ブリスベン"),
+            city("Perth", zhHans: "珀斯", ja: "パース")
+        ]),
+        country("CA", aliases: ["加拿大", "Canada"], cities: [
+            city("Toronto", zhHans: "多伦多", zhHant: "多倫多", ja: "トロント"),
+            city("Vancouver", zhHans: "温哥华", zhHant: "溫哥華", ja: "バンクーバー"),
+            city("Montreal", zhHans: "蒙特利尔", zhHant: "蒙特婁", ja: "モントリオール"),
+            city("Calgary", zhHans: "卡尔加里", zhHant: "卡加利", ja: "カルガリー")
+        ]),
+        country("AE", aliases: ["阿联酋", "阿聯酋", "United Arab Emirates", "UAE"], cities: [
+            city("Dubai", zhHans: "迪拜", ja: "ドバイ"),
+            city("Abu Dhabi", zhHans: "阿布扎比", zhHant: "阿布達比", ja: "アブダビ")
+        ])
+    ]
+
+    nonisolated private static var fallbackCities: [City] {
+        countries.flatMap(\.cities).prefix(32).map { $0 }
     }
 }
 

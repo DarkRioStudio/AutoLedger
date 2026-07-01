@@ -1254,7 +1254,9 @@
 "ledger_profiles.rename.title" = "重命名账本";
 "ledger_profiles.edit.title" = "编辑账本";
 "ledger_profiles.name.placeholder" = "账本名称";
-"ledger_profiles.currency.placeholder" = "默认币种（可选）";
+"ledger_profiles.currency.placeholder" = "默认币种";
+"ledger_profiles.currency.label" = "默认币种";
+"ledger_profiles.currency.description" = "后续导入不同币种消费时，会优先按这个币种准备换算。";
 "ledger_profiles.currency.none" = "未设置币种";
 "ledger_profiles.badge.default" = "默认";
 "ledger_profiles.badge.default_write" = "默认写入";

@@ -5,12 +5,7 @@ struct LedgerProfileManagementView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @EnvironmentObject private var store: LedgerStore
-    @State private var showAddAlert = false
-    @State private var newLedgerName = ""
-    @State private var newLedgerCurrency = ""
-    @State private var profilePendingRename: LedgerProfile?
-    @State private var renameLedgerName = ""
-    @State private var renameLedgerCurrency = ""
+    @State private var editorMode: LedgerProfileEditorMode?
     let allowsSelection: Bool
     let showsDoneButton: Bool
 
@@ -131,49 +126,25 @@ struct LedgerProfileManagementView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showAddAlert = true
+                    editorMode = .add
                 } label: {
                     Label("ledger_profiles.add", systemImage: "plus")
                 }
             }
         }
-        .alert("ledger_profiles.add.title", isPresented: $showAddAlert) {
-            TextField("ledger_profiles.name.placeholder", text: $newLedgerName)
-            TextField("ledger_profiles.currency.placeholder", text: $newLedgerCurrency)
-            Button("common.cancel", role: .cancel) {
-                clearAddForm()
-            }
-            Button("common.add") {
-                store.createLedgerProfile(
-                    name: newLedgerName,
-                    iconName: "wallet.pass",
-                    colorName: "accent",
-                    currency: newLedgerCurrency
-                )
-                clearAddForm()
-            }
-        }
-        .alert(
-            "ledger_profiles.edit.title",
-            isPresented: Binding(
-                get: { profilePendingRename != nil },
-                set: { if !$0 { clearEditForm() } }
-            )
-        ) {
-            TextField("ledger_profiles.name.placeholder", text: $renameLedgerName)
-            TextField("ledger_profiles.currency.placeholder", text: $renameLedgerCurrency)
-            Button("common.cancel", role: .cancel) {
-                clearEditForm()
-            }
-            Button("common.save") {
-                if let profilePendingRename {
-                    store.updateLedgerProfile(
-                        profilePendingRename,
-                        name: renameLedgerName,
-                        currency: renameLedgerCurrency
+        .sheet(item: $editorMode) { mode in
+            LedgerProfileEditorSheet(mode: mode) { name, currency in
+                switch mode {
+                case .add:
+                    store.createLedgerProfile(
+                        name: name,
+                        iconName: "wallet.pass",
+                        colorName: "accent",
+                        currency: currency
                     )
+                case .edit(let profile):
+                    store.updateLedgerProfile(profile, name: name, currency: currency)
                 }
-                clearEditForm()
             }
         }
     }
@@ -190,10 +161,11 @@ struct LedgerProfileManagementView: View {
                     .foregroundStyle(AppTheme.ink)
 
                 HStack(spacing: 6) {
-                    if let currency = profile.currency, !currency.isEmpty {
+                    let currency = profile.currency?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let currency, !currency.isEmpty {
                         Text(currency)
                     } else {
-                        Text("ledger_profiles.currency.none")
+                        Text(LedgerCurrencyOption.defaultCode)
                     }
 
                     if profile.isDefault {
@@ -252,20 +224,7 @@ struct LedgerProfileManagementView: View {
     }
 
     private func beginEdit(_ profile: LedgerProfile) {
-        profilePendingRename = profile
-        renameLedgerName = profile.name
-        renameLedgerCurrency = profile.currency ?? ""
-    }
-
-    private func clearAddForm() {
-        newLedgerName = ""
-        newLedgerCurrency = ""
-    }
-
-    private func clearEditForm() {
-        profilePendingRename = nil
-        renameLedgerName = ""
-        renameLedgerCurrency = ""
+        editorMode = .edit(profile)
     }
 
     private func color(for profile: LedgerProfile) -> Color {
@@ -279,6 +238,163 @@ struct LedgerProfileManagementView: View {
         default:
             return AppTheme.accent
         }
+    }
+}
+
+private enum LedgerProfileEditorMode: Identifiable {
+    case add
+    case edit(LedgerProfile)
+
+    var id: String {
+        switch self {
+        case .add:
+            return "add"
+        case .edit(let profile):
+            return profile.id
+        }
+    }
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .add:
+            return "ledger_profiles.add.title"
+        case .edit:
+            return "ledger_profiles.edit.title"
+        }
+    }
+
+    var saveTitleKey: LocalizedStringKey {
+        switch self {
+        case .add:
+            return "common.add"
+        case .edit:
+            return "common.save"
+        }
+    }
+
+    var initialName: String {
+        switch self {
+        case .add:
+            return ""
+        case .edit(let profile):
+            return profile.name
+        }
+    }
+
+    var initialCurrency: String {
+        switch self {
+        case .add:
+            return LedgerCurrencyOption.defaultCode
+        case .edit(let profile):
+            return LedgerCurrencyOption.supportedCode(matching: profile.currency)
+        }
+    }
+}
+
+private struct LedgerProfileEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+    let mode: LedgerProfileEditorMode
+    let onSave: (String, String) -> Void
+    @State private var ledgerName: String
+    @State private var selectedCurrency: String
+
+    init(mode: LedgerProfileEditorMode, onSave: @escaping (String, String) -> Void) {
+        self.mode = mode
+        self.onSave = onSave
+        _ledgerName = State(initialValue: mode.initialName)
+        _selectedCurrency = State(initialValue: mode.initialCurrency)
+    }
+
+    private var canSave: Bool {
+        !ledgerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("ledger_profiles.name.placeholder", text: $ledgerName)
+                        .textInputAutocapitalization(.words)
+                    Picker("ledger_profiles.currency.label", selection: $selectedCurrency) {
+                        ForEach(LedgerCurrencyOption.common) { option in
+                            Text(option.localizedTitle)
+                                .tag(option.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } footer: {
+                    Text("ledger_profiles.currency.description")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.screenGradient.ignoresSafeArea())
+            .navigationTitle(mode.titleKey)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("common.cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(mode.saveTitleKey) {
+                        onSave(ledgerName, selectedCurrency)
+                        dismiss()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .tint(AppTheme.accent)
+            .autoLedgerNavigationBarChrome()
+            .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+private struct LedgerCurrencyOption: Identifiable {
+    static let defaultCode = "CNY"
+
+    let code: String
+    let symbol: String
+
+    var id: String { code }
+
+    var localizedTitle: String {
+        let name = Locale.current.localizedString(forCurrencyCode: code) ?? code
+        return "\(code) · \(symbol) · \(name)"
+    }
+
+    static let common: [LedgerCurrencyOption] = [
+        .init(code: "CNY", symbol: "¥"),
+        .init(code: "USD", symbol: "$"),
+        .init(code: "EUR", symbol: "€"),
+        .init(code: "JPY", symbol: "¥"),
+        .init(code: "GBP", symbol: "£"),
+        .init(code: "HKD", symbol: "HK$"),
+        .init(code: "MOP", symbol: "MOP$"),
+        .init(code: "TWD", symbol: "NT$"),
+        .init(code: "SGD", symbol: "S$"),
+        .init(code: "KRW", symbol: "₩"),
+        .init(code: "THB", symbol: "฿"),
+        .init(code: "MYR", symbol: "RM"),
+        .init(code: "IDR", symbol: "Rp"),
+        .init(code: "PHP", symbol: "₱"),
+        .init(code: "VND", symbol: "₫"),
+        .init(code: "AUD", symbol: "A$"),
+        .init(code: "CAD", symbol: "C$"),
+        .init(code: "CHF", symbol: "CHF"),
+        .init(code: "NZD", symbol: "NZ$"),
+        .init(code: "AED", symbol: "د.إ")
+    ]
+
+    static func supportedCode(matching value: String?) -> String {
+        let normalized = value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        return common.contains { $0.code == normalized } ? normalized : defaultCode
     }
 }
 

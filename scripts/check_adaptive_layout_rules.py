@@ -132,8 +132,8 @@ REQUIRED_SNIPPETS = {
     ],
     APP / "Features" / "Report" / "ReportView.swift": [
         "@Environment(\\.autoLedgerThemeRefreshID)",
-        "GridItem(.adaptive",
-        "LazyVGrid",
+        "summaryPillMinHeight",
+        "HStack(alignment: .top, spacing: 12)",
         "AutoLedgerPageTitle(\"tab.report\")",
         ".autoLedgerContentTitleNavigation(\"tab.report\")",
         ".autoLedgerMotion(AppMotion.theme, value: themeRefreshID)",
@@ -155,6 +155,9 @@ REQUIRED_SNIPPETS = {
     ],
     APP / "Features" / "Settings" / "LedgerProfileManagementView.swift": [
         "profileRenameButton(profile)",
+        ".sheet(item: $editorMode)",
+        "Picker(\"ledger_profiles.currency.label\"",
+        "LedgerCurrencyOption.common",
     ],
     APP / "zh-Hans.lproj" / "Localizable.strings": [
         "\"hotel_stay.detail.title\" = \"编辑消费详情\"",

@@ -12,7 +12,7 @@ struct VoiceLedgerConfirmView: View {
     @State private var category: TransactionCategory = .other
     @State private var occurredAt = Date()
     @State private var result: VoiceLedgerParseResult?
-    @State private var message = String(localized: "voice_ledger_example")
+    @State private var message = ""
     @State private var isRecordingVoice = false
     @State private var finishRecordingTask: Task<Void, Never>?
     @State private var parseTask: Task<Void, Never>?
@@ -39,7 +39,9 @@ struct VoiceLedgerConfirmView: View {
                 } header: {
                     Text(String(localized: "voice_ledger_title"))
                 } footer: {
-                    Text(message)
+                    if !message.isEmpty {
+                        Text(message)
+                    }
                 }
 
                 Section(String(localized: "voice_ledger_review_required")) {
@@ -78,7 +80,7 @@ struct VoiceLedgerConfirmView: View {
             }
             .onAppear {
                 if inputText.isEmpty {
-                    message = String(localized: "voice_ledger_example")
+                    message = ""
                 }
             }
             .onChange(of: inputText) { _, _ in
@@ -143,7 +145,7 @@ struct VoiceLedgerConfirmView: View {
             category = .other
             occurredAt = .now
             if !isRecordingVoice {
-                message = String(localized: "voice_ledger_example")
+                message = ""
             }
             return
         }
@@ -226,7 +228,7 @@ struct VoiceLedgerConfirmView: View {
         case .unsupportedIncomeOrTransfer:
             return String(localized: "voice_ledger_income_not_supported")
         case .emptyInput:
-            return String(localized: "voice_ledger_example")
+            return ""
         default:
             return String(localized: "voice_ledger_unclear")
         }

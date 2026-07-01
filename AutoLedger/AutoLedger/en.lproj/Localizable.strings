@@ -1254,7 +1254,9 @@
 "ledger_profiles.rename.title" = "Rename Ledger";
 "ledger_profiles.edit.title" = "Edit Ledger";
 "ledger_profiles.name.placeholder" = "Ledger name";
-"ledger_profiles.currency.placeholder" = "Default currency (optional)";
+"ledger_profiles.currency.placeholder" = "Default currency";
+"ledger_profiles.currency.label" = "Default currency";
+"ledger_profiles.currency.description" = "Future foreign-currency entries will use this ledger currency as the conversion target.";
 "ledger_profiles.currency.none" = "No currency";
 "ledger_profiles.badge.default" = "Default";
 "ledger_profiles.badge.default_write" = "Default Write";

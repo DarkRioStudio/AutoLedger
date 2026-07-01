@@ -11,13 +11,11 @@ struct ReportView: View {
     @AppStorage("monthlyAnomalyThresholdPercent") private var anomalyThresholdPercent = 150.0
     @ScaledMetric(relativeTo: .largeTitle) private var totalAmountFontSize: CGFloat = 36
     @ScaledMetric(relativeTo: .caption) private var rankBadgeSize: CGFloat = 26
+    @ScaledMetric(relativeTo: .subheadline) private var summaryPillMinHeight: CGFloat = 68
     @State private var selectedCategoryID: String?
     @State private var selectedMonth: Date = .now
     @State private var selectedTrendLabel: String?
     private let insightService = MonthlyInsightService()
-    private let summaryColumns = [
-        GridItem(.adaptive(minimum: 88), spacing: 12, alignment: .top)
-    ]
 
     private var isCurrentMonth: Bool {
         AppFormatters.calendar.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
@@ -153,7 +151,7 @@ struct ReportView: View {
                     .minimumScaleFactor(0.62)
             }
 
-            LazyVGrid(columns: summaryColumns, alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 summaryPill(titleKey: "report.summary.transactions", value: transactionCountText(snapshot.transactionCount))
                 summaryPill(titleKey: "report.summary.top1", value: snapshot.topMerchant)
                 summaryPill(
@@ -182,7 +180,7 @@ struct ReportView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: summaryPillMinHeight, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(.white.opacity(0.14))

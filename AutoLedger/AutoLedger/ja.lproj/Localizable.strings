@@ -1254,7 +1254,9 @@
 "ledger_profiles.rename.title" = "台帳名を変更";
 "ledger_profiles.edit.title" = "台帳を編集";
 "ledger_profiles.name.placeholder" = "台帳名";
-"ledger_profiles.currency.placeholder" = "既定通貨（任意）";
+"ledger_profiles.currency.placeholder" = "既定通貨";
+"ledger_profiles.currency.label" = "既定通貨";
+"ledger_profiles.currency.description" = "今後、異なる通貨の支出を取り込むとき、この台帳通貨を換算先として使います。";
 "ledger_profiles.currency.none" = "通貨未設定";
 "ledger_profiles.badge.default" = "既定";
 "ledger_profiles.badge.default_write" = "既定の書き込み先";
