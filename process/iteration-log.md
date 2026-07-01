@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-327 v1.7.0 实时 OCR 票据扫描规划）
+更新日期：2026-07-01（ITER-328 Dependabot Wrangler 安全依赖修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-328 Dependabot Wrangler 安全依赖修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：Security / Tooling
+- 类型：Bugfix / 治理
+- 目标：修复 GitHub Dependabot 默认分支 high alert `GHSA-36p8-mvp6-cv38 / CVE-2026-0933`，移除酒店水单 Worker npm 依赖树中的 vulnerable `wrangler`。
+- 改动范围：更新 `tools/worker/hotel-folio-inbox/package.json`、`tools/worker/hotel-folio-inbox/package-lock.json`、CHANGELOG 和本日志。
+- 未改动范围：未修改 Worker 业务代码、`wrangler.jsonc`、D1 migration、Cloudflare 资源 / secret、App Swift 代码、StoreKit、APNs、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：通过 GitHub Dependabot API 确认 alert 来自 `tools/worker/hotel-folio-inbox/package-lock.json` 中 `@cloudflare/vitest-pool-workers` 嵌套的 `wrangler 4.35.0`；将 `@cloudflare/vitest-pool-workers` 升级到 `^0.17.0`、`vitest` 升级到 `^4.1.9`、顶层 `wrangler` 升级到 `^4.106.0`，依赖树收敛为单个 patched `wrangler 4.106.0`，同时更新 lockfile。
+- 未完成内容：本轮未重新部署 Cloudflare Worker；该修复只影响本地 / CI 开发测试工具链，不改变线上 Worker runtime。
+- 测试情况：执行 `npm ls wrangler @cloudflare/vitest-pool-workers vitest` 确认 `@cloudflare/vitest-pool-workers@0.17.0`、`vitest@4.1.9`、`wrangler@4.106.0`；执行 `npm audit --json` 返回 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 19 个 Vitest 用例；执行 `git diff --check` 通过；推送后需要等待 GitHub 重新评估 Dependabot alert 状态。
+- 风险与注意事项：`@cloudflare/vitest-pool-workers` 与 `vitest` 跨 major 升级，后续如果 Cloudflare Workers 测试 API 有行为差异，应优先在 Worker 单测层修正；当前现有 19 个 Worker 合同测试已通过。
+- 回滚方式：回退 Worker `package.json` / `package-lock.json`、CHANGELOG 和本日志即可；若回滚会重新暴露 Dependabot alert。
+- 结论：本地依赖和 Worker 检查已修复，默认分支推送后由 GitHub Dependabot 重新评估 alert 状态。
+- 下一步建议：推送到 `origin/main` 后重新查询 Dependabot alert，确认默认分支关闭或进入 fixed 状态。
 
 ### ITER-327 v1.7.0 实时 OCR 票据扫描规划
 - 日期：2026-07-01
