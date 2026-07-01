@@ -115,6 +115,7 @@ AutoLedger 的介面本地化和帳單識別語言包是兩層獨立能力：
 - **App Store 截圖語言**：截圖管線已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 組織 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 場景文案；日文截圖和商店 metadata 仍需人工審校後再提交。
 - **帳單識別語言包**：`AutoLedgerCore` 內建 `zh-Hans`、`zh-Hant`、`en`、`ja` 識別包，承載帳單關鍵詞、金額格式、日期格式、分層金額標籤、商戶標籤、非商戶排除詞、分類關鍵詞和 OCR 語言提示。
 - **日文帳單識別**：日文包覆蓋 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常見欄位；OCR hint 使用 `ja-JP + en-US`，金額和商戶 / 分類解析已進入離線回歸。
+- **v1.7.0 韓語範圍**：計畫新增韓語 App UI 和 `AutoLedgerCore` `ko` 識別包，覆蓋韓文金額、日期、商戶、分類關鍵詞和 `ko-KR + en-US` OCR hint，並補齊韓語 ASC 文案、截圖和 golden cases；完成前不把 `ko` 寫入目前已支援語言。
 - **擴展原則**：後續語言包以純資料、版本化、可 fallback 的方式擴展；使用者糾錯共享必須 opt-in、脫敏、可撤回，並經審核後才可能進入 reviewed pack。本倉庫目前不實作遠端語言包熱更新或自動上傳。
 
 ## Tech Stack
@@ -189,7 +190,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 適配階段二、酒店郵件匯入、Deep link / Widget / App Intents、資料可靠性、日文發布材料審校和 `GOAL-1960` release smoke。
 - `v1.6.3` 已完成目前範圍：酒店 C1 AutoLedger 專屬收件箱第一版 App/Core 工程骨架、審核說明和回歸 baseline；C2 Worker 登入使用者信箱自動掃描僅保留為個人自用或未來實驗路線。
 - `v1.6.4` 已進入發布收口階段，`GOAL-2200` 完成 Free / Pro 邊界凍結，新增平台無關 Pro 存取策略合同；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API 和 App 端 PDFKit 本地轉換入口已落地。Cloudflare production 的 App Store Server API / APNs secret 名稱已驗證存在；2026-06-29 人工 smoke 已測通訂閱開通、APNs 推送、Worker 雲收件箱、雲端候選轉酒店消費並入帳。訂閱元資料、審核材料、生命週期截圖和證據歸檔繼續收口。
-- `v1.7.0` 規劃為 ASC / App Store `1.6.0`：把 Pro 從酒店水單自動化擴展到全帳本效率層，計畫實作進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用。
+- `v1.7.0` 規劃為 ASC / App Store `1.6.0`：首頁「票據掃描」優先升級為即時 OCR 掃描，不支援時回退拍照識別照片 / 相簿匯入；新增韓語 App UI 和韓語帳單識別包；建設可複用 `common-api`，用於中簡 / 繁中 / 英 / 日 / 韓五語國家城市目錄熱更新、按日期查詢匯率和酒店入住日期歷史天氣摘要；同時把 Pro 從酒店水單自動化擴展到全帳本效率層，計畫實作進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用。
 
 | 內部版本 | App Store | 狀態 | 主要內容 |
 |---|---|---|---|
@@ -200,7 +201,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 預設沿用 | 已完成 | SDK 適配階段二、酒店郵件草稿佇列 / 去重 / 候選批次匯入、Deep link Router、Widget / App Intents 第一段、資料可靠性、日文發布材料審校和 release smoke |
 | v1.6.3 | 1.5.0 預設沿用 | 已完成 | 酒店水單 C1 專屬收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、雲端候選模型、deep link、PDFKit 本地轉換入口、審核說明和回歸 baseline |
 | v1.6.4 | 1.5.0 預設沿用 | 收口中 | Personal Pro 訂閱基礎：Free / Pro 邊界已凍結並落地 `AutoLedgerProAccessPolicy`；`ProEntitlementManager`、Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API 和 App 端 PDFKit 轉換已落地；production secret 名稱已驗證，2026-06-29 人工 smoke 已測通訂閱開通、APNs 推送和雲收件箱到入帳鏈路；訂閱元資料、審核材料、生命週期截圖和證據歸檔繼續收口 |
-| v1.7.0 | 1.6.0 | 規劃中 | Pro 自動化擴展：進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用；基礎搜尋、基礎訂閱、基礎匯出和歷史資料仍保持免費 |
+| v1.7.0 | 1.6.0 | 規劃中 | 首頁即時 OCR 票據掃描：支援時優先即時識別，不支援時回退拍照識別照片 / 相簿匯入；韓語 App UI 與 `ko` 識別包；`common-api` 中簡 / 繁中 / 英 / 日 / 韓五語地點目錄熱更新、按日期匯率和酒店歷史天氣摘要；Pro 自動化擴展：進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用；基礎搜尋、基礎訂閱、基礎匯出和歷史資料仍保持免費 |
 
 ## License
 

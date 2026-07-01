@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-328 Dependabot Wrangler 安全依赖修复）
+更新日期：2026-07-01（ITER-336 商户别名删除 tombstone 同步修复）
 
 ## 记录规则
 
@@ -43,6 +43,135 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-336 商户别名删除 tombstone 同步修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App Sync / Release Closeout
+- 类型：Bugfix / iCloud 同步
+- 目标：修复 iPhone 删除商户别名并强制同步后，Mac 打开 App 默认同步仍显示旧商户别名的问题。
+- 改动范围：更新 `LedgerCloudKitSyncAdapter.swift`、`scripts/check_cloudkit_sync_smoke.py`、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改商户别名 UI、SQLite schema、CloudKit record type 名称、真实 CloudKit 数据、交易同步、酒店同步、StoreKit、Worker、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 根因：`LedgerConfigurationSyncPayload` 已有 `merchantAliasDeletedKeys` 删除墓碑，Core 合并策略也会用 tombstone 阻止旧别名复活；但 CloudKit adapter 在拉取配置时，如果 CKRecord 顶层 `updatedAt` 与 JSON payload 内的 `updatedAt` 不完全一致，会重建 payload 并用 CKRecord 时间覆盖。该重建路径漏传 `payload.merchantAliasDeletedKeys`，因此远端删除墓碑在 Mac 拉取时被清空，Mac 本地旧 alias 又被当作本地配置参与合并并可能回推远端。
+- 完成内容：`mapConfigurationPayload(from:)` 重建 `LedgerConfigurationSyncPayload` 时现在保留 `merchantAliasDeletedKeys: payload.merchantAliasDeletedKeys`；`scripts/check_cloudkit_sync_smoke.py` 新增静态门禁，要求 CloudKit adapter 在配置重建路径保留商户别名删除墓碑。
+- 未完成内容：本轮未直接操作用户 iCloud private database；如果旧 Mac 版本已经把删除墓碑丢失后的旧别名重新推回远端，需要在修复版上再次从 iPhone 删除 / 强制同步一次，让 tombstone 重新写入远端配置。
+- 测试情况：先执行新增的 `python3 scripts/check_cloudkit_sync_smoke.py`，确认修复前失败并提示缺少 `merchantAliasDeletedKeys: payload.merchantAliasDeletedKeys`；修复后再次执行该脚本通过。随后执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 设置 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator 后执行 Debug `build_sim -quiet` 通过。构建仍保留既有 CloudKit adapter deprecation、Logger `nonisolated(unsafe)`、Gemma LiteRT deprecation 和 ProEntitlementManager actor isolation warning。
+- 风险与注意事项：该修复只保证后续拉取不会丢失远端 tombstone；已经被旧版本回推污染的远端配置不会凭空恢复，需要用户在任一保留 tombstone 的设备上再次删除并同步。后续如配置 payload 新增字段，应优先避免在 adapter 中手写全量重建，或继续用静态门禁覆盖关键字段。
+- 回滚方式：回退 `LedgerCloudKitSyncAdapter.swift` 和 `scripts/check_cloudkit_sync_smoke.py` 的本轮改动，并移除 CHANGELOG / 本日志条目；无 schema 或数据迁移回滚。
+- 结论：本轮完成，商户别名删除墓碑在 CloudKit 配置拉取重建路径中不再丢失，后续 iPhone 删除别名后可通过 iCloud 同步阻止 Mac 旧别名复活。
+- 下一步建议：用户侧更新到修复版后，在 iPhone 重新删除目标别名并执行一次强制同步，再打开 Mac 端同步验证；如仍复活，下一步导出两端同步日志和远端配置 payload 时间戳继续查是否有旧客户端回推。
+
+### ITER-335 common-api 五语地点目录边界
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / v1.7.0
+- 所属阶段：Planning / Infrastructure / Localization
+- 类型：文档 / Cloudflare 基础设施规划 / 本地化
+- 目标：把 `common-api` 第一版多语言边界从泛泛的本地化名称收紧为中简、中繁、英文、日文、韩文五语地点目录，避免后续实现时先做四语或单语 fallback。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语路线图、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 App Swift 代码、Cloudflare Worker 代码、地点资源 JSON、汇率或天气 provider、StoreKit、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` `common-api` 规划新增 `manifest.supportedLocales` 边界，地点目录第一版必须覆盖 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko`；国家 / 地区和城市记录需包含五语展示名、稳定 id、国家 / 地区代码、经纬度、时区和 tags。未知 locale fallback 顺序固定为 App 当前语言 -> `en` -> `zh-Hans`，不允许向用户显示 raw id 或空名称。验收、自动回归和人工 smoke 增加五语地点名称检查；`v1.6.4` 计划和 README 四语路线图同步标注 `common-api` 地点目录从第一版开始就是五语资源。
+- 未完成内容：尚未创建真实 `common-api` Worker、manifest 响应、地点目录 JSON、资源校验脚本或 App 端五语显示实现；这些属于 `v1.7.0` 实施阶段。
+- 测试情况：执行 `git diff --check` 通过；执行关键词检索确认 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语、CHANGELOG 和本日志均包含 `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` 或五语地点目录边界。本轮仅文档变更，未运行构建、离线回归、Worker check 或部署命令。
+- 风险与注意事项：五语地点目录会增加首版地点资源整理量；实施时应先做小而可靠的国家 / 大城市 / 旅游酒店城市集合，并用资源校验脚本阻止缺失名称进入发布。地点目录热更新只能更新公共地点元数据，不能远程替换账单识别语言包、Pro gate 或 StoreKit 权益判断。
+- 回滚方式：回退上述文档文件即可移除五语地点目录边界；无代码、资源或 schema 回滚。
+- 结论：本轮完成，`common-api` 第一版地点目录已固定为中简、中繁、英文、日文、韩文五语资源合同。
+- 下一步建议：进入 `v1.7.0` 实施时，先定义地点目录 JSON schema 和校验脚本，再补首批国家 / 城市样例数据与 Worker manifest。
+
+### ITER-334 common-api 汇率规划与账本币种下拉
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / v1.7.0
+- 所属阶段：App UI Polish / Planning / Infrastructure
+- 类型：UI / 文档 / Cloudflare 基础设施规划
+- 目标：把汇率 API 纳入 `v1.7.0` `common-api` 规划，并先把多账本管理中的默认币种编辑从自由文本改为货币下拉，为后续不同币种消费按当前账本默认币种换算入账做准备。
+- 改动范围：更新 `LedgerProfileManagementView`、四语 `Localizable.strings`、`scripts/check_adaptive_layout_rules.py`、`versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语路线图、CHANGELOG 和本日志。
+- 未改动范围：本轮未实现真实汇率请求、金额换算、交易 schema 扩展、原始币种 / 汇率落库、Cloudflare Worker 代码、真实 Cloudflare 资源、StoreKit、SQLite / CloudKit schema migration、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` `common-api` 规划从地点目录 / 酒店历史天气扩展到汇率服务，计划新增按 `base / quote / date` 查询汇率的 rate endpoint，响应包含 provider、rate date、是否使用最近可用工作日、缓存时间和 attribution；AutoLedger 第一版优先只请求汇率并在 App 本地换算金额，避免上传具体消费金额。Provider 方向优先评估 Frankfurter，因其无 API key、开源 / 可自托管，并支持当前和历史汇率；Open Exchange Rates、ExchangeRate-API 等商业源保留为 fallback / SLA 升级。App UI 侧将多账本新增 / 编辑从 alert 文本输入改为 sheet 表单，默认币种使用固定货币下拉，覆盖 CNY、USD、EUR、JPY、GBP、HKD、MOP、TWD、SGD、KRW、THB、MYR、IDR、PHP、VND、AUD、CAD、CHF、NZD、AED；新增账本和旧账本未设置币种时编辑默认选择 `CNY`，列表也以 `CNY` 作为未设置时的显示 fallback。
+- 未完成内容：尚未实现 `common-api` 汇率 Worker、provider adapter、App 端汇率客户端、待确认页换算展示、原始金额 / 原始币种 / 汇率日期 / provider 持久化或正式入账换算；这些属于 `v1.7.0` 实施阶段。
+- 测试情况：执行 `git diff --check` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过，并确认 `LedgerProfileManagementView` 已由门禁要求 `.sheet(item: $editorMode)`、`Picker("ledger_profiles.currency.label"` 和 `LedgerCurrencyOption.common`；执行旧入口检索确认 `showAddAlert`、`newLedgerCurrency`、`renameLedgerCurrency`、账本币种 `TextField` 和新增 / 编辑 alert 均已不存在；执行 `bash scripts/run_offline_regression.sh` 通过；通过 XcodeBuildMCP 使用 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator 执行 `build_sim -quiet` 通过，构建仅保留既有 Logger `nonisolated(unsafe)`、FeedbackService `@preconcurrency`、Gemma LiteRT deprecation 和 ProEntitlementManager actor isolation warning。
+- 风险与注意事项：当前只改变账本编辑 UI 和规划，不改变现有交易金额语义；现有交易仍按原金额展示，不自动换算。后续换算实现时必须保留原始金额 / 原始币种 / 汇率日期 / provider，并在 provider 失败时停止自动换算而不是静默使用错误汇率。汇率只用于个人账本统计准备，不应作为投资、结算、报税或交易依据。
+- 回滚方式：回退上述 Swift、四语本地化、脚本和文档文件即可；无数据迁移或 schema 回滚。
+- 结论：本轮完成，汇率 API 已进入 `v1.7.0 common-api` 规划，多账本默认币种编辑已改为货币下拉，并通过本地门禁、离线回归和 iOS 模拟器构建。
+- 下一步建议：验证通过后，把 `common-api` Worker 第一阶段拆成地点目录、汇率、历史天气三个 provider adapter，并优先确定汇率响应合同和 App 端原始币种保留策略。
+
+### ITER-333 v1.7.0 common-api 与酒店历史天气规划
+- 日期：2026-07-01
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Planning / Infrastructure
+- 类型：文档 / 规划 / Cloudflare 基础设施
+- 目标：把常用国家 / 城市目录热更新和酒店入住日期历史天气摘要纳入 `v1.7.0` 设计，并明确它们通过可复用 `common-api` Worker 承载，而不是混在酒店水单专属收件箱 Worker 或 App 内硬编码中。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语路线图、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 App Swift 代码、Cloudflare Worker 代码、`MyWeatherLine/Api` 源码、真实 Cloudflare 资源、WeatherKit secret、StoreKit、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` 从三条主线扩展为四条主线，新增 `common-api` Cloudflare 基础设施。计划第一版提供 `/v1/manifest`、地点目录静态资源或 `/v1/locations/catalog`、以及 `/v1/weather/hotel-stay-summary`；地点目录只维护常用国家 / 地区、大城市、旅游城市和酒店常见城市，不追求全量世界城市集；App 启动后后台检查 manifest，发现版本更新后静默下载、校验 sha256 并替换本地缓存，失败时继续使用内置 fallback。酒店天气明确使用入住 / 离店日期对应的历史天气摘要，不能用当前城市天气或未来入住天气替代历史账单天气。当前调研确认 WeatherKit 可用 Daily Summary 查询 2021-08-01 之后的每日摘要，适合作为优先 provider；更早历史日期或 provider 不可用时只保留 fallback 适配层和“暂无天气摘要”状态，后续再评估 Open-Meteo Archive、OpenWeather One Call / Daily Aggregation 或 Visual Crossing。
+- 未完成内容：尚未创建 `common-api` Worker、迁移 `MyWeatherLine/Api`、生成地点目录 JSON、实现 App 端 manifest 客户端、实现酒店历史天气 UI 或部署 Cloudflare 资源；这些属于 `v1.7.0` 实施阶段。
+- 测试情况：执行 `git diff --check` 通过；执行关键词检索确认 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语、CHANGELOG 和本日志均包含 `common-api` / manifest / 地点目录 / 历史天气规划。本轮仅文档变更，未运行构建、离线回归、Worker check 或部署命令。
+- 风险与注意事项：WeatherKit Daily Summary 的历史覆盖从 2021-08-01 开始，不能覆盖更早酒店账单；因此 App 必须能展示无天气状态，不能把当前天气或未来天气误挂到历史酒店消费上。地点目录热更新只能更新公共元数据，不能远程替换识别规则、语言包、Pro gate 或 StoreKit 权益判断。天气请求只允许发送经纬度、日期、locale 和单位制，不得上传酒店名、金额、PDF、水单原文、邮箱内容或个人备注。
+- 回滚方式：回退上述文档文件即可移除 `common-api` / 地点目录 / 酒店历史天气规划；无代码、资源或 schema 回滚。
+- 结论：本轮完成，`v1.7.0 / ASC 1.6.0` 已纳入 common-api 基础设施建设和酒店历史天气增强，并保持本地优先、隐私最小化和失败无感边界。
+- 下一步建议：实施阶段先从 `MyWeatherLine/Api` 提取 WeatherKit provider / JWT / cache 到 `common-api` Worker，再做 manifest + 地点目录静态资源，最后接 AutoLedger App 端缓存和酒店详情天气展示。
+
+### ITER-332 一句话记账 / 月报统计 / 酒店地点编辑 polish
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App UI Polish / Hotel Stay Editor
+- 类型：UI / Bugfix / 数据目录
+- 目标：按真机截图反馈去掉一句话记账页多余示例说明，统一月报摘要三块尺寸，并让酒店消费编辑中的国家 / 城市选择按本地化语言和“先国家、后城市”的层级展示。
+- 改动范围：更新 `VoiceLedgerConfirmView`、`ReportView`、`HotelStayArchiveView`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 未改动范围：未修改一句话记账解析规则、语音识别实现、酒店水单解析流水线、酒店记录模型、账单保存业务、SQLite / CloudKit schema、StoreKit、Worker、APNs、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：一句话记账页去掉输入框下方重复的“例如” footer，初始状态只保留输入框 placeholder，识别中 / 失败 / 保存状态仍正常显示；月报主卡中的账单数、TOP1、商户数三块改为等宽 `HStack`，统一最小高度，避免中间 TOP1 块比左右小且文本过早截断；酒店消费编辑页把国家字段移动到城市字段之前，国家选项使用系统 `Locale` 的本地化区域名，城市选项按当前语言展示，并在选择国家后筛选该国家下的常用酒店城市。旧记录中已保存的英文 / 中文国家城市会在打开编辑表单时尽量归一化为当前语言展示。
+- 未完成内容：当前 App 仍使用内置常用旅行 / 酒店城市目录，没有在运行时接入完整全球城市数据库或网络 API；完整国家 / 省州 / 城市数据源适合后续作为生成脚本或离线资源包接入。
+- 测试情况：执行 `git diff --check` 通过；通过 XcodeBuildMCP 设置 `.xcworkspace` / `AutoLedger` / iPhone 17 Simulator 后执行 `build_sim -quiet` 通过；首次执行 `bash scripts/run_offline_regression.sh` 因月报自适应布局静态门禁仍要求旧 `LazyVGrid` 失败，更新门禁为新的等宽摘要块规则后重新执行 `bash scripts/run_offline_regression.sh` 通过；再次执行 `build_sim -quiet` 通过，构建仅保留既有 Swift 6 actor isolation / MediaPipe deprecation / formatter warning。
+- 风险与注意事项：内置城市目录已经比原来扩展，但仍不是全球完整数据；如果后续要支持大范围酒店城市搜索，建议优先走离线可打包的数据源并在构建期生成精简 JSON / SQLite，避免酒店编辑页依赖网络和第三方 API 可用性。若选择 ODbL 数据源，需要处理 attribution 和衍生数据 share-alike 义务。
+- 回滚方式：回退上述三个 Swift 文件、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮完成，A / B / C 三个界面细节已落实，并通过离线回归和 iOS 模拟器构建。
+- 下一步建议：真机 TestFlight 回归时重点打开一句话记账、月报页和酒店消费编辑页，确认中文 / 英文 / 日文环境下国家城市展示一致；若后续要扩充地点库，先定数据源许可证和打包策略。
+
+### ITER-331 v1.7.0 韩语 UI 与识别包规划
+- 日期：2026-07-01
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Planning / Localization
+- 类型：文档 / 规划
+- 目标：将韩语从后续候选语言提升为 v1.7.0 明确版本目标，并把范围固定为韩语 App UI 与 `AutoLedgerCore` 韩语账单识别包两层能力。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语路线图和 Localization & Recognition Packs 说明、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 App Swift 代码、`ko.lproj` 本地化资源、`AutoLedgerCore` 识别代码、golden case 文件、截图配置、ASC 上传材料、StoreKit、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` 计划从两条主线扩展为三条主线：首页实时 OCR、韩语多语言与 Pro 自动化扩展。新增 `1.2 韩语 App 本地化与韩语识别包`，明确后续实现要新增 `ko.lproj`，覆盖主 App、Watch、Widget、Control Widget、Share Extension、App Intents / Shortcuts、截图模式和 ASC 韩语发布材料；`AutoLedgerCore` 新增 `ko` 识别包，覆盖 `₩` / `원` / `KRW` 金额格式、韩文总额 / 支付金额 / 税费 / 折扣标签、商户 / 订单线索、基础分类关键词、`ko-KR + en-US` OCR hint 和韩语 golden cases。GOAL 队列新增 `GOAL-2308`，并把韩语 UI 与识别包明确为免费基础能力，不进入 Pro gate。
+- 未完成内容：尚未实现 `ko.lproj`、韩语识别语言包、韩语 golden cases、韩语 ASC 文案或韩语截图输出；这些属于 v1.7.0 实施阶段。
+- 测试情况：执行 `git diff --check` 通过；执行关键词检索确认 `versions/v1.7.0-plan.md`、`versions/v1.6.4-plan.md`、README 四语和 CHANGELOG 均可检索到韩语 / Korean / `ko.lproj` / `ko` 识别包相关规划，且旧的“承接两条主线”已替换为“承接三条主线”。本轮仅文档变更，未运行构建、离线回归或 golden 回归。
+- 风险与注意事项：当前只是规划收口，不代表 App 已支持韩语；发布或对外文案中不能提前把 `ko` 写成当前已支持语言。后续实现时需要同时补 UI key 覆盖、Core 识别 pack、OCR hint、golden cases、截图 / ASC 元数据和人工母语审校。
+- 回滚方式：回退上述文档文件即可恢复到 `v1.7.0` 仅包含实时 OCR 与 Pro 自动化扩展的规划；无代码、数据或 schema 回滚。
+- 结论：本轮完成，`v1.7.0 / ASC 1.6.0` 已明确纳入韩语 App UI 和韩语识别包，并保持免费基础能力边界。
+- 下一步建议：实施阶段先审计现有 `ja.lproj` 和识别语言包结构，复用同一覆盖门禁新增 `ko.lproj` 与 `ko` recognition pack，再补韩语 golden cases 和 ASC 韩语材料。
+
+### ITER-330 ASC 1.5.0 全平台四语商店截图补齐
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：Release Materials / App Store Screenshots
+- 类型：营销素材 / 渲染 / 测试
+- 目标：补齐所有平台、所有已配置语言的 App Store 商店截图成品，让 ASC 1.5.0 可以进入全平台全语言截图上传阶段。
+- 改动范围：重新导出并重渲染 `tools/appstore-screenshots/output/raw/` 与 `tools/appstore-screenshots/output/store/` 下的 iPhone、iPad、Mac、Apple Watch、tvOS、visionOS 四语截图；更新 `tools/appstore-screenshots/output/preview.html`；同步更新 CHANGELOG 和本日志。
+- 未改动范围：未修改 App Swift 代码、截图配置 JSON、截图导出脚本、App Preview 视频、StoreKit 商品、Worker、APNs、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`；截图输出目录仍为 ignored，不进入普通 Git 历史。
+- 完成内容：根据当前 `screenshots.json` 的四语配置补齐 store 成品矩阵：iPhone 8 张 × 4 语，包含新增 `06_hotel_stays` 与 `07_autoledger_pro`；iPad 6 张 × 4 语，包含 `05_workspace_hotel`；Mac 5 张 × 4 语，包含 `04_mac_hotel`；Watch 4 张 × 4 语；tvOS 4 张 × 4 语；visionOS 3 张 × 4 语。最终 `raw/` 与 `store/` 均为 120 张 PNG，`preview.html` 引用 120 张 store 图全部命中。导出过程中清理了 Mac 简中旧 raw `01_mac_ledger.png`，并在 Mac 简中 `04_mac_hotel` 首次脚本捕获因 LaunchServices 激活偶发失败后，使用同一 Catalyst screenshot-mode 场景直接通过 `CGWindowList` 补抓窗口 raw，再重渲染成 `1440x900` store 图。
+- 未完成内容：本轮未上传 App Store Connect，也未生成日语 / 繁中 App Preview 视频；商店截图成品仍未打包为 GitHub Release artifact 或版本化 zip。
+- 测试情况：执行 `bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant --locale ja`、`--ipad-only --locale zh-Hans --locale zh-Hant --locale en --locale ja`、`--mac-only --locale en --locale zh-Hant --locale ja`、`--watch-only --locale ja`、`--tvos-only --locale en --locale zh-Hant --locale ja`、`--visionos-only --locale en --locale zh-Hant --locale ja` 均完成；额外补抓 Mac 简中 `04_mac_hotel` raw 后执行 `python3 tools/appstore-screenshots/scripts/render_marketing.py --platform mac zh-Hans` 和 `python3 tools/appstore-screenshots/scripts/build_preview.py`。最终严格校验通过：`raw_png_count=120`、`store_png_count=120`、`preview_refs_checked=120`、`final_screenshot_matrix=OK`；尺寸校验通过：iPhone `1242x2688`、iPad `2732x2048`、Mac `1440x900`、Watch `410x502`、tvOS `3840x2160`、visionOS `3840x2160`。
+- 风险与注意事项：Mac Catalyst 窗口捕获仍依赖本机 Accessibility / WindowServer 状态，若后续再全量重跑 Mac 简中可能需要同样等待窗口或直接按窗口层捕获。Watch 黑底图在均值亮度检查中可能被误判为过暗，本轮已目检 `watch/en/03_watch_sync.png`，确认是有效黑底同步页。截图输出目录为 ignored，换机或清理 `output/` 后需要重新导出或从 release artifact 恢复。
+- 回滚方式：删除 `tools/appstore-screenshots/output/raw/`、`tools/appstore-screenshots/output/store/` 和 `preview.html` 中本轮生成物即可回到需要重新导出的状态；回退 CHANGELOG 和本日志即可移除记录。无代码、数据、schema 或配置回滚。
+- 结论：ASC 1.5.0 全平台四语商店截图成品已补齐并通过本地矩阵 / 尺寸 / 预览引用校验，可以进入 ASC 上传和人工最终目检。
+- 下一步建议：上传 ASC 前按平台打开 `tools/appstore-screenshots/output/preview.html` 快速扫一遍标题换行和图像内容；若需要长期留存成品，生成 `asc-1.5.0-store-screenshots.zip` 并作为 GitHub Release artifact 保存。
+
+### ITER-329 ASC 1.5.0 App Preview v002
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：Release Materials / App Preview
+- 类型：文档 / 营销素材 / 渲染
+- 目标：结合当前版本实际功能重做 iPhone App Preview 视频，并将原有视频作为 ASC 1.4.0 素材留存；同时评估商店截图成品是否应随视频一起进入 GitHub。
+- 改动范围：新增 `tools/appstore-screenshots/app-preview/hyperframes-v002` 和 `hyperframes-v002-en` Hyperframes 源工程、ASC 1.5.0 中文 / 英文 MP4、关键帧和 contact sheet；复制原 v001 MP4 / keyframes 到 `tools/appstore-screenshots/app-preview/archive/asc-1.4.0`；更新 App Preview README、中文 / 英文脚本、shotlist、brief、导出要求、CHANGELOG 和本日志。
+- 未改动范围：未修改 App Swift 代码、截图导出脚本、截图 fixture、StoreKit 商品、Worker、APNs、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`hyperframes-v002` / `hyperframes-v002-en` 以 ASC 1.5.0 作为当前宣传视频口径，镜头从 v001 的截图识别 / 语音 / Watch / 月报调整为“待确认账单模型、快速记账、酒店消费、AutoLedger Pro 自动化、月报回看”；视频使用当前 `00_ocr_bill`、`01_voice_entry`、`03_monthly_report`、`06_hotel_stays`、`07_autoledger_pro` 商店图和虚构演示卡片，不包含真实账单或个人数据。最终输出为 `tools/appstore-screenshots/app-preview/hyperframes-v002/renders/app_preview_iphone_zh-Hans_asc1.5.0_v002.mp4` 和 `tools/appstore-screenshots/app-preview/hyperframes-v002-en/renders/app_preview_iphone_en_asc1.5.0_v002.mp4`。商店截图成品评估结果：补齐前 `store/` PNG 为 74 张约 68MB，`raw/` 为 75 张约 142MB；正式补齐后以 ITER-330 的 120 张 store PNG 为准；建议不要把整个 `output/` 目录直接进 Git 历史，优先作为 GitHub Release artifact 或版本化 zip/checksum 留存；如必须入库，仅入 ASC 对应 `store/` 成品，不入 `raw/`。
+- 未完成内容：本轮只生成 zh-Hans 和 en iPhone App Preview；未生成日语 / 繁中视频，也未上传 App Store Connect；未把商店截图成品目录加入 Git。
+- 测试情况：在 `hyperframes-v002` 和 `hyperframes-v002-en` 分别执行 `npm run check` 通过，包含 lint、validate 和 inspect；lint 仅保留 GSAP timeline overlap / Studio edit blocked 提示类 warning，validate 显示 80 个文本元素通过 WCAG AA，inspect 显示 0 layout issues；中文 / 英文分别执行 `npm run render -- --output ... --fps 30 --quality standard` 渲染成功；`ffprobe` 确认两版 MP4 均为 H.264 + AAC、`886x1920`、30fps、22.021029 秒，中文约 5.0MB，英文约 5.3MB；两版均抽取 6 张关键帧并生成 `renders/keyframes/contact_sheet.png`，目检酒店消费、AutoLedger Pro、月报和 final lockup 正常。
+- 风险与注意事项：ASC 上传前仍需人工在 App Store Connect 预览播放器中确认平台接受度、音量和首帧观感；商店截图成品若后续改为入 Git，应避免提交被忽略的整包 `output/`，否则会把 raw 截图和历史多平台生成物长期写进仓库。
+- 回滚方式：删除 `hyperframes-v002`、`hyperframes-v002-en` 和 `archive/asc-1.4.0` 新增归档副本，回退 App Preview 文档、CHANGELOG 和本日志即可；原 `hyperframes-v001` 源工程和原 MP4 仍保留。
+- 结论：ASC 1.5.0 iPhone 中文 / 英文 App Preview v002 已生成并完成本地规格 / 关键帧验证，原 v001 视频已作为 ASC 1.4.0 素材留存；商店截图成品建议走 Release artifact / zip 留存，不建议整体进普通 Git 历史。
+- 下一步建议：在 ASC 上传前用本地播放器完整看一遍两版 MP4；若需要留存商店截图成品，优先生成 `asc-1.5.0-store-screenshots.zip` 并随 GitHub Release 上传。
 
 ### ITER-328 Dependabot Wrangler 安全依赖修复
 - 日期：2026-07-01

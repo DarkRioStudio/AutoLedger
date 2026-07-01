@@ -115,6 +115,7 @@ AutoLedger では UI のローカライズと、レシート / 明細認識用�
 - **App Store screenshot languages**: iPhone、iPad、Mac、Apple Watch、Apple TV、visionOS のスクリーンショット文言は `zh-Hans` / `zh-Hant` / `en` / `ja` で管理されています。日本語スクリーンショットとストア metadata は提出前に人手で確認します。
 - **Recognition language packs**: `AutoLedgerCore` には `zh-Hans`、`zh-Hant`、`en`、`ja` の内蔵パックがあり、レシート関連語、金額形式、日付形式、金額ラベル、店舗ラベル、店舗ではない語の除外、分類キーワード、OCR language hints を扱います。
 - **Japanese receipt recognition**: 日本語パックは `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` などを扱います。OCR hint は `ja-JP + en-US` を優先し、金額 / 店舗 / 分類解析はオフライン回帰に含まれています。
+- **v1.7.0 Korean scope**: 韓国語は App UI ローカライズと `AutoLedgerCore` の `ko` 認識パックとして追加予定です。韓国語の金額、日付、店舗、分類キーワード、`ko-KR + en-US` OCR hint、韓国語 ASC 文言、スクリーンショット、golden cases を対象にします。実装完了までは `ko` を現在対応済み言語として扱いません。
 - **Extension model**: 今後の言語パックは、純データ、バージョン管理、fallback 可能、レビュー可能な形で追加します。ユーザー訂正の共有は opt-in、脱識別、撤回可能で、reviewed pack に入る前に確認が必要です。このリポジトリでは現時点で遠隔 hot update や自動アップロードは実装していません。
 
 ## Tech Stack
@@ -189,7 +190,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
 - `v1.6.4` はリリース closeout 段階です。`GOAL-2200` で Free / Pro 境界を固定し、プラットフォーム非依存の Pro access policy contract を追加しました。Pro ページ、購入復元 / サブスクリプション管理、ローカルメールの月次無料枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit ローカル変換入口は実装済みです。Cloudflare production の App Store Server API / APNs secret 名称は確認済みです。2026-06-29 の手動 smoke では、サブスクリプション有効化、APNs push、Worker cloud inbox、クラウド候補からホテル明細、最終的な台帳登録まで通過しました。サブスクリプション metadata、レビュー資料、ライフサイクル screenshot、証跡の整理は引き続き closeout 対象です。
-- `v1.7.0` は ASC / App Store `1.6.0` として計画しています。Pro をホテル明細の自動化から台帳全体の効率化へ広げ、高度な検索、サブスク異常通知、月次エクスポートパッケージ、高度なルール自動化を実装予定です。
+- `v1.7.0` は ASC / App Store `1.6.0` として計画しています。ホームの「レシートスキャン」はライブ OCR を優先し、非対応環境では写真撮影 / ライブラリ取り込みへ戻します。韓国語 UI と `ko` 認識パックを追加し、再利用可能な `common-api` で `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` の五言語対応国 / 都市カタログ更新、日付別為替レート、ホテル滞在日の過去天気サマリーを扱います。Pro はホテル明細の自動化から台帳全体の効率化へ広げ、高度な検索、サブスク異常通知、月次エクスポートパッケージ、高度なルール自動化を実装予定です。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -200,7 +201,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | In closeout | Personal Pro foundation: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, Pro page, restore / manage subscriptions, local email monthly free allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, and App-side PDFKit conversion have landed; production secret names are verified, and the 2026-06-29 manual smoke passed subscription activation, APNs push, and cloud inbox to ledger posting; subscription metadata, review material, lifecycle screenshots, and evidence archiving remain |
-| v1.7.0 | 1.6.0 | Planned | Pro automation expansion: advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation while basic search, subscriptions, export, and history remain free |
+| v1.7.0 | 1.6.0 | Planned | Live OCR receipt scanning with photo / library fallback; Korean UI localization and `ko` recognition pack; `common-api` five-language (`zh-Hans` / `zh-Hant` / `en` / `ja` / `ko`) location-catalog updates, date-based exchange rates, and hotel historical weather summaries; Pro automation expansion with advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation while basic search, subscriptions, export, and history remain free |
 
 ## License
 
