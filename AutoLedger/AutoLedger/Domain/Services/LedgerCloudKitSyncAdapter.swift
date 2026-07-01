@@ -1346,6 +1346,7 @@ struct LedgerCloudKitSyncAdapter {
                 customCategories: payload.customCategories,
                 customSources: payload.customSources,
                 merchantAliases: payload.merchantAliases,
+                merchantAliasDeletedKeys: payload.merchantAliasDeletedKeys,
                 ledgerProfiles: payload.ledgerProfiles,
                 defaultWriteLedgerID: payload.defaultWriteLedgerID,
                 subscriptionMetadata: payload.subscriptionMetadata,

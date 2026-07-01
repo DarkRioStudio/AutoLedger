@@ -23,6 +23,7 @@ REQUIRED_SNIPPETS = [
     "transactionRecordNames",
     "hotelStayRecordNames",
     "hotelStayDraftRecordNames",
+    "merchantAliasDeletedKeys: payload.merchantAliasDeletedKeys",
 ]
 
 REQUIRED_STORE_SNIPPETS = [
