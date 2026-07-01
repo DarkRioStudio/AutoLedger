@@ -861,8 +861,7 @@
 "pro.feature.rules.title" = "高度なルール";
 "pro.feature.rules.body" = "店舗エイリアス、カテゴリ修正、低信頼度レビューを過去と今後の記録へまとめて適用します。";
 "pro.roadmap.title" = "Pro ロードマップ予告";
-"pro.roadmap.subtitle" = "以下の機能は現在の公開版には含まれません。バージョン 1.6.0 で Pro 自動化の拡張として実装予定です。";
-"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.subtitle" = "以下の機能は現在の公開版には含まれません。今後のバージョンで Pro 自動化の拡張として実装予定です。";
 "pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安心して使える設計";
 "pro.assurance.local.title" = "ローカル優先";

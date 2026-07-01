@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-322 Mac 工作台导航与多账本主题修复）
+更新日期：2026-07-01（ITER-323 截图管线酒店消费与 Pro 路线图修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-323 截图管线酒店消费与 Pro 路线图修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：Screenshot Pipeline / Pro Subscription UI
+- 类型：Bugfix / UI / 工具 / 测试
+- 目标：让截图管线覆盖新功能酒店消费模块和独立 AutoLedger Pro 介绍图，并去掉 Pro 路线图预告中总说明层面的 `1.6.0` 展示。
+- 改动范围：更新 `AutoLedgerProView`、四语 `Localizable.strings`、`ScreenshotHostView`、`tools/appstore-screenshots/config/screenshots.json`、截图 README、CHANGELOG 和本日志。
+- 未改动范围：未修改 StoreKit 商品 ID、订阅购买 / 恢复 / 管理核心流程、Pro entitlement server verifier、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：Pro 路线图预告标题右上角的总 `1.6.0` badge 已移除，四语说明文案改为“计划在后续版本作为 Pro 自动化扩展实现”的语义，不再出现“后续版本 1.6.0 / version 1.6.0 / バージョン 1.6.0”，只保留每个功能块上的 `pro.roadmap.item_badge`；路线图卡片最小高度提高到 170，让四个功能块视觉尺寸统一。截图管线 iPhone `iosShots` 从 6 张扩展到 8 张，新增 `06_hotel_stays` 和 `07_autoledger_pro`；iPad `ipadShots` 新增 `05_workspace_hotel`；Mac `macShots` 新增 `04_mac_hotel`。`ScreenshotHostView` 新增 `workspace_hotel` / `mac_hotel` 到 `.hotelStays` 的映射，Pro 截图 host 固定关闭本机 debug Pro override，避免导出受本机订阅调试状态影响；酒店消费截图 fixture 从 Moxy / Marriott 和真实城市改为 `示例海湾酒店`、`示例城市酒店`、`示例酒店集团`、`SAMPLE-*` 订单号和 `Sample Card`，README 同步 iPhone / iPad / Mac scene 列表。
+- 未完成内容：本轮只导出 zh-Hans iPhone 截图验证新增场景，没有重新导出全语言 / 全平台正式素材；iPad / Mac 酒店消费场景已配置并映射，但仍需后续全平台导出时实际生成和目检。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `python3 -m json.tool tools/appstore-screenshots/config/screenshots.json` 通过；执行截图相关 shell 脚本 `bash -n` 通过；执行 `git diff --check` 通过；通过 XcodeBuildMCP 在 iPhone 17 Simulator 运行 `hotel_stays` screenshot scene 和 `pro_subscription` screenshot scene 均成功，并截图目检；执行 `bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans` 通过，生成 8 张 iPhone store 图，新增 `tools/appstore-screenshots/output/store/ios/zh-Hans/06_hotel_stays.png` 和 `07_autoledger_pro.png` 均为 `1242x2688`，目检新图正常。
+- 风险与注意事项：截图输出目录在 `.gitignore` 下，不随代码提交；正式补 ASC 素材前还需要重新跑全语言 / 全平台导出。Pro 路线图的功能块版本 badge 仍保留为用户要求的功能版本提示，后续若版本口径变化，需要同步 `pro.roadmap.item_badge`。
+- 回滚方式：回退上述 Swift 文件、四语本地化、截图配置 / README、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮已完成截图管线新功能覆盖和 Pro 路线图展示细节修复，zh-Hans iPhone 截图管线已验证新增酒店消费和 Pro 独立图可生成。
+- 下一步建议：后续正式截图阶段执行全语言 / 全平台导出，重点目检 iPad / Mac 的酒店消费工作台和四语 Pro 独立图标题长度。
 
 ### ITER-322 Mac 工作台导航与多账本主题修复
 - 日期：2026-07-01

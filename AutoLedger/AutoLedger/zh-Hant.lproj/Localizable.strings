@@ -864,8 +864,7 @@
 "pro.feature.rules.title" = "進階規則";
 "pro.feature.rules.body" = "將商戶別名、分類修正規則和低信心結果集中套用到歷史與未來記錄。";
 "pro.roadmap.title" = "Pro 路線圖預告";
-"pro.roadmap.subtitle" = "以下能力不屬於目前公開版本；計畫在後續版本 1.6.0 作為 Pro 自動化擴展實現。";
-"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.subtitle" = "以下能力不屬於目前公開版本；計畫在後續版本作為 Pro 自動化擴展實現。";
 "pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安全邊界清楚";
 "pro.assurance.local.title" = "本機優先";

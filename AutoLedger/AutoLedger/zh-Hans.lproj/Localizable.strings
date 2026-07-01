@@ -861,8 +861,7 @@
 "pro.feature.rules.title" = "高级规则";
 "pro.feature.rules.body" = "将商户别名、分类修正规则和低置信度结果集中应用到历史与未来记录。";
 "pro.roadmap.title" = "Pro 路线图预告";
-"pro.roadmap.subtitle" = "下面能力不属于当前公开版本；计划在后续版本 1.6.0 作为 Pro 自动化扩展实现。";
-"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.subtitle" = "下面能力不属于当前公开版本；计划在后续版本作为 Pro 自动化扩展实现。";
 "pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "安全边界清楚";
 "pro.assurance.local.title" = "本机优先";

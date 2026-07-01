@@ -220,6 +220,38 @@
         "en": "Use Action Button, clipboard, photos, and Share Extension",
         "ja": "アクションボタン、クリップボード、写真、共有拡張に対応"
       }
+    },
+    {
+      "id": "06_hotel_stays",
+      "scene": "hotel_stays",
+      "title": {
+        "zh-Hans": "酒店水单，确认后入账",
+        "zh-Hant": "飯店水單，確認後入帳",
+        "en": "Review hotel folios before saving",
+        "ja": "ホテル明細を確認して記録"
+      },
+      "subtitle": {
+        "zh-Hans": "PDF、邮箱水单和专属收件箱候选都先进入复核",
+        "zh-Hant": "PDF、郵件水單和專屬收件箱候選都先進入複核",
+        "en": "PDFs, email folios, and inbox candidates enter review first",
+        "ja": "PDF、メール明細、専用受信箱の候補をまず確認できます"
+      }
+    },
+    {
+      "id": "07_autoledger_pro",
+      "scene": "pro_subscription",
+      "title": {
+        "zh-Hans": "AutoLedger Pro 自动整理",
+        "zh-Hant": "AutoLedger Pro 自動整理",
+        "en": "AutoLedger Pro automates sorting",
+        "ja": "AutoLedger Pro が整理を自動化"
+      },
+      "subtitle": {
+        "zh-Hans": "邮箱水单、专属收件箱、批量候选和去重自动化",
+        "zh-Hant": "郵件水單、專屬收件箱、批次候選和去重自動化",
+        "en": "Email folios, a dedicated inbox, batch candidates, and dedupe",
+        "ja": "メール明細、専用受信箱、一括候補、重複整理に対応"
+      }
     }
   ],
   "ipadShots": [
@@ -302,6 +334,22 @@
         "en": "Keep records local-first and continue across Apple devices.",
         "ja": "ローカル優先で保存し、Apple デバイス間で整理を続けられます。"
       }
+    },
+    {
+      "id": "05_workspace_hotel",
+      "scene": "workspace_hotel",
+      "title": {
+        "zh-Hans": "酒店消费，水单集中复核",
+        "zh-Hant": "飯店消費，水單集中複核",
+        "en": "Hotel folio review on iPad",
+        "ja": "iPad でホテル明細を確認"
+      },
+      "subtitle": {
+        "zh-Hans": "PDF、水单邮件和云收件箱候选可以在大屏上确认后入账。",
+        "zh-Hant": "PDF、水單郵件和雲收件箱候選可以在大螢幕上確認後入帳。",
+        "en": "Review PDFs, email folios, and cloud inbox candidates before saving.",
+        "ja": "PDF、メール明細、クラウド受信箱候補を保存前に確認できます。"
+      }
     }
   ],
   "macShots": [
@@ -367,6 +415,22 @@
         "zh-Hant": "把同步、匯出、備份和偏好設定放在桌面入口中。",
         "en": "Keep sync, export, backup, and preferences in one desktop surface.",
         "ja": "同期、書き出し、バックアップ、設定をデスクトップで管理できます。"
+      }
+    },
+    {
+      "id": "04_mac_hotel",
+      "scene": "mac_hotel",
+      "title": {
+        "zh-Hans": "桌面端复核酒店水单",
+        "zh-Hant": "桌面端複核飯店水單",
+        "en": "Review hotel folios on Mac",
+        "ja": "Mac でホテル明細を確認"
+      },
+      "subtitle": {
+        "zh-Hans": "更大的列表和详情区域适合整理差旅住宿账单。",
+        "zh-Hant": "更大的列表和詳情區域適合整理差旅住宿帳單。",
+        "en": "Use larger lists and details for travel stay expenses.",
+        "ja": "大きな一覧と詳細画面で出張宿泊費を整理できます。"
       }
     }
   ],

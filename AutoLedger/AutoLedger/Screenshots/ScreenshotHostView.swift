@@ -59,6 +59,8 @@ struct ScreenshotHostView: View {
                 .capture
             case "workspace_ledger":
                 .ledger
+            case "workspace_hotel":
+                .hotelStays
             case "workspace_reports":
                 .reports
             case "workspace_review":
@@ -76,6 +78,8 @@ struct ScreenshotHostView: View {
                 .capture
             case "mac_ledger":
                 .ledger
+            case "mac_hotel":
+                .hotelStays
             case "mac_reports":
                 .reports
             case "mac_cleaning":
@@ -145,6 +149,11 @@ private struct ScreenshotHotelStaysHost: View {
 }
 
 private struct ScreenshotProSubscriptionHost: View {
+    init() {
+        ScreenshotFixtures.installUserDefaults()
+        UserDefaults.standard.set(false, forKey: "autoLedgerProDevelopmentOverride")
+    }
+
     var body: some View {
         NavigationStack {
             AutoLedgerProView()
@@ -654,16 +663,16 @@ private enum ScreenshotHotelStayFixtures {
             id: stayID,
             ledgerID: TodaySpendingSummary.defaultLedgerID,
             linkedTransactionID: transactionID,
-            hotelName: "重庆 Moxy 酒店",
-            hotelGroup: "万豪国际集团",
-            hotelBrand: "Moxy",
-            city: "重庆",
-            country: "中国",
+            hotelName: "示例城市酒店",
+            hotelGroup: "示例酒店集团",
+            hotelBrand: "Sample Stay",
+            city: "示例市",
+            country: "示例国家",
             checkInDate: "2026-06-22",
             checkOutDate: "2026-06-23",
             nights: 1,
-            roomType: "城市景观大床房",
-            confirmationNumber: "49046209",
+            roomType: "示例景观大床房",
+            confirmationNumber: "SAMPLE-20260623",
             currency: "CNY",
             roomCharge: 325,
             taxAmount: 28.5,
@@ -671,16 +680,16 @@ private enum ScreenshotHotelStayFixtures {
             foodBeverageAmount: 0,
             otherAmount: 0,
             totalAmount: 369.39,
-            paymentMethod: "Visa",
+            paymentMethod: "Sample Card",
             sourceType: .manualPDF,
-            sourceFileName: "moxy-chongqing-folio.pdf",
+            sourceFileName: "sample-city-hotel-folio.pdf",
             localizedData: HotelStayLocalizedData(
-                hotelName: "重庆 Moxy 酒店",
-                brand: "Moxy",
-                group: "万豪国际集团",
-                city: "重庆",
-                country: "中国",
-                roomType: "城市景观大床房",
+                hotelName: "示例城市酒店",
+                brand: "Sample Stay",
+                group: "示例酒店集团",
+                city: "示例市",
+                country: "示例国家",
+                roomType: "示例景观大床房",
                 currency: "CNY",
                 roomCharge: 325,
                 taxAmount: 28.5,
@@ -688,10 +697,10 @@ private enum ScreenshotHotelStayFixtures {
                 foodBeverageAmount: 0,
                 otherAmount: 0,
                 totalAmount: 369.39,
-                paymentMethod: "Visa"
+                paymentMethod: "Sample Card"
             ),
             confidence: 0.94,
-            rawText: "Moxy Chongqing\nRoom charge CNY 325.00\nTax CNY 28.50\nTotal CNY 369.39"
+            rawText: "Sample City Hotel\nRoom charge CNY 325.00\nTax CNY 28.50\nTotal CNY 369.39"
         )
     ]
 
@@ -700,21 +709,21 @@ private enum ScreenshotHotelStayFixtures {
             id: draftID,
             sourceType: .cloudWorker,
             targetLedgerID: TodaySpendingSummary.defaultLedgerID,
-            sourceFileName: "beihai-marriott-folio.pdf",
-            sourceEmailSubject: "北海万豪度假酒店的电子账单",
+            sourceFileName: "sample-harbor-hotel-folio.pdf",
+            sourceEmailSubject: "示例海湾酒店的电子账单",
             sourceEmailFrom: "folio@getautoledger.app",
-            rawText: "Beihai Marriott Resort\nTotal CNY 1280.00",
+            rawText: "Sample Harbor Hotel\nTotal CNY 1280.00",
             parsedPayload: HotelFolioParsedPayload(
-                hotelName: "Beihai Marriott Resort",
-                brand: "Marriott",
-                group: "Marriott International",
-                city: "Beihai",
-                country: "China",
+                hotelName: "Sample Harbor Hotel",
+                brand: "Sample Stay",
+                group: "Sample Hotel Group",
+                city: "Sample City",
+                country: "Exampleland",
                 checkInDate: "2026-06-20",
                 checkOutDate: "2026-06-22",
                 nights: 2,
-                roomType: "Sea View King",
-                confirmationNumber: "ABC123",
+                roomType: "Sample Bay King",
+                confirmationNumber: "SAMPLE-20260622",
                 currency: "CNY",
                 roomCharge: 1120,
                 tax: 120,
@@ -722,17 +731,17 @@ private enum ScreenshotHotelStayFixtures {
                 foodBeverage: 0,
                 otherCharges: 0,
                 totalAmount: 1280,
-                paymentMethod: "Visa",
+                paymentMethod: "Sample Card",
                 confidence: 0.88,
-                rawTextExcerpt: "Beihai Marriott Resort Total CNY 1280.00"
+                rawTextExcerpt: "Sample Harbor Hotel Total CNY 1280.00"
             ),
             localizedData: HotelStayLocalizedData(
-                hotelName: "北海万豪度假酒店",
-                brand: "万豪",
-                group: "万豪国际集团",
-                city: "北海",
-                country: "中国",
-                roomType: "海景大床房",
+                hotelName: "示例海湾酒店",
+                brand: "Sample Stay",
+                group: "示例酒店集团",
+                city: "示例市",
+                country: "示例国家",
+                roomType: "示例海景大床房",
                 currency: "CNY",
                 roomCharge: 1120,
                 taxAmount: 120,
@@ -740,7 +749,7 @@ private enum ScreenshotHotelStayFixtures {
                 foodBeverageAmount: 0,
                 otherAmount: 0,
                 totalAmount: 1280,
-                paymentMethod: "Visa"
+                paymentMethod: "Sample Card"
             ),
             confidence: 0.88,
             status: .needsReview
@@ -750,12 +759,12 @@ private enum ScreenshotHotelStayFixtures {
     static let transactions = [
         Transaction(
             id: transactionID,
-            merchant: "重庆 Moxy 酒店",
+            merchant: "示例城市酒店",
             amount: 369.39,
             occurredAt: AppFormatters.parseFlexibleDate("2026-06-23 16:00") ?? ScreenshotFixtures.baseDate,
             categoryLabel: TransactionCategory.hotel.rawValue,
             sourceLabel: ReceiptSource.manual.rawValue,
-            note: "入住：2026-06-22；退房：2026-06-23；订单号：49046209",
+            note: "入住：2026-06-22；退房：2026-06-23；订单号：SAMPLE-20260623",
             hotelStayRecordID: stayID
         )
     ]

@@ -152,14 +152,6 @@ struct AutoLedgerProView: View {
                     .foregroundStyle(AppTheme.ink)
 
                 Spacer(minLength: 8)
-
-                Text("pro.roadmap.badge")
-                    .font(.caption2.weight(.black))
-                    .foregroundStyle(gold)
-                    .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule(style: .continuous).fill(gold.opacity(0.12)))
             }
 
             Text("pro.roadmap.subtitle")
@@ -965,7 +957,7 @@ private struct ProRoadmapCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 146, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(AppTheme.card)

@@ -861,8 +861,7 @@
 "pro.feature.rules.title" = "Advanced Rules";
 "pro.feature.rules.body" = "Apply merchant aliases, category corrections, and low-confidence review queues across past and future records.";
 "pro.roadmap.title" = "Pro Roadmap Preview";
-"pro.roadmap.subtitle" = "These are not part of the current public release; they are planned for version 1.6.0 as broader Pro automation.";
-"pro.roadmap.badge" = "1.6.0";
+"pro.roadmap.subtitle" = "These are not part of the current public release; they are planned for a future version as broader Pro automation.";
 "pro.roadmap.item_badge" = "1.6.0";
 "pro.assurance.title" = "Clear safety boundaries";
 "pro.assurance.local.title" = "Local-first";

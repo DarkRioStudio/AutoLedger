@@ -176,7 +176,7 @@ The iOS app supports screenshot mode:
 ```text
 --screenshot-mode
 --screenshot-platform ios
---screenshot-scene preview|ocr_bill|quick_capture|voice_entry|watch_ecosystem|import_methods|auto_extract|review_edit|monthly_report|settings_management
+--screenshot-scene preview|ocr_bill|quick_capture|voice_entry|watch_ecosystem|import_methods|auto_extract|review_edit|monthly_report|settings_management|email_folio_import|cloud_folio_inbox|hotel_stays|pro_subscription
 --screenshot-theme classic
 --screenshot-color-scheme light
 ```
@@ -218,7 +218,7 @@ The iOS app screenshot host also supports iPad workspace scenes:
 ```text
 --screenshot-mode
 --screenshot-platform ipad
---screenshot-scene workspace_review|workspace_capture|workspace_ledger|workspace_reports|workspace_cleaning
+--screenshot-scene workspace_review|workspace_capture|workspace_ledger|workspace_hotel|workspace_reports|workspace_cleaning
 ```
 
 To add a scene:
@@ -235,7 +235,7 @@ Mac Catalyst capture uses the same screenshot workspace host, but launches a loc
 ```text
 --screenshot-mode
 --screenshot-platform mac
---screenshot-scene mac_capture|mac_ledger|mac_reports|mac_cleaning|mac_settings
+--screenshot-scene mac_capture|mac_ledger|mac_hotel|mac_reports|mac_cleaning|mac_settings
 ```
 
 To add a scene:
