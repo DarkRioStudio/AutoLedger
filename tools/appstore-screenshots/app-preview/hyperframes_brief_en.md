@@ -1,8 +1,8 @@
-# Hyperframes Brief - AutoLedger App Preview zh-Hans
+# Hyperframes Brief - AutoLedger App Preview en
 
 ## Goal
 
-Create a 22-second iPhone App Store Preview video for ASC 1.5.0 using real AutoLedger UI screenshots and deterministic keyframes.
+Create a 22-second English iPhone App Store Preview video for ASC 1.5.0 using real AutoLedger UI screenshots and deterministic keyframes.
 
 The video should communicate:
 
@@ -18,46 +18,19 @@ The video should communicate:
 - Real App UI first
 - Calm card slide-ins, local highlights, and soft blur transitions
 - No exaggerated 3D
-- No game trailer style
 - No abstract brand film
 - No invented or unreleased product behavior
-
-## Input Assets
-
-Primary:
-
-- `00_ocr_bill`
-- `01_voice_entry`
-- `03_monthly_report`
-- `06_hotel_stays`
-- `07_autoledger_pro`
-- AutoLedger app icon
-
-Optional:
-
-- Fictional bill cards rendered in HTML
-- Existing quiet App Preview background bed, trimmed for the current timeline
-
-Never use:
-
-- Real payment screenshots
-- Real receipts
-- Real account names
-- Real card numbers
-- Real order numbers
-- Real phone numbers
-- API keys, certificates, profiles, or private keys
 
 ## Recommended Output Files
 
 ```text
-app_preview_iphone_zh-Hans_asc1.5.0_v002.mp4
+app_preview_iphone_en_asc1.5.0_v002.mp4
 ```
 
 ## Recommended Keyframe Folder
 
 ```text
-hyperframes-v002/renders/keyframes/
+hyperframes-v002-en/renders/keyframes/
   preview_00_opening.png
   preview_01_quick_ledger.png
   preview_02_hotel.png
@@ -67,14 +40,6 @@ hyperframes-v002/renders/keyframes/
   contact_sheet.png
 ```
 
-## Motion Notes
-
-- Keep text readable on mobile App Store pages.
-- Use fast but calm pacing.
-- Use one warm background family consistent with screenshots.
-- Highlight only fields visible in the UI.
-- Avoid showing permissions, camera, microphone, network, iCloud, or LLM loading states.
-
 ## Delivery Review Checklist
 
 - Under 30 seconds.
@@ -83,4 +48,3 @@ hyperframes-v002/renders/keyframes/
 - Does not show real private financial data.
 - Does not show debug or test labels.
 - Includes Hotel and AutoLedger Pro as separate current-version moments.
-- Main message is clear within the first 5 seconds.

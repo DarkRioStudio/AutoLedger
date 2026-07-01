@@ -1,15 +1,24 @@
 # App Preview Shotlist - zh-Hans
 
+## Version Scope
+
+This shotlist describes the ASC 1.5.0 App Preview video in `hyperframes-v002`.
+
+The ASC 1.4.0 v001 video is preserved under:
+
+```text
+tools/appstore-screenshots/app-preview/archive/asc-1.4.0
+```
+
 ## Source Scenes
 
 | Shot | Purpose | Screenshot pipeline source |
 | --- | --- | --- |
-| Opening | Pain point and quick setup | `00_ocr_bill` plus optional fictional payment / receipt mock |
-| OCR | Screenshot to ready record | `00_ocr_bill` / `ocr_bill` |
-| Voice | One-sentence quick entry | `01_voice_entry` / `voice_entry` |
-| Watch | Wrist entry and ecosystem continuity | `00_watch_quick_add`, `01_watch_recent`, `03_watch_sync` |
-| Report | Monthly insight close | `03_monthly_report` / `monthly_report` |
-| Shortcuts backup | Optional automation cutaway | `05_shortcuts_import` / `import_methods` |
+| Opening | Review-first bill candidate model | `00_ocr_bill` plus fictional bill cards |
+| Quick Ledger | Screenshot recognition and one-sentence entry | `00_ocr_bill`, `01_voice_entry` |
+| Hotel | Hotel folio / hotel spending module | `06_hotel_stays` |
+| Pro | AutoLedger Pro automation introduction | `07_autoledger_pro` |
+| Report | Monthly insight close | `03_monthly_report` |
 
 ## Detailed Shots
 
@@ -18,71 +27,73 @@
 Source:
 
 - `tools/appstore-screenshots/output/store/ios/zh-Hans/00_ocr_bill.png`
-- Optional fictional payment or receipt mock
+- Fictional cards generated in Hyperframes HTML
 
 Action:
 
-- Stack two or three fictional payment cards.
+- Stack fictional screenshot and hotel folio bill cards.
 - Slide AutoLedger iPhone frame into view.
+- Show the privacy note that the video uses demo data.
 
 Copy:
 
 ```text
-每天花钱，不想手动记？
+账单先整理好，再由你确认
 ```
 
-### Shot 01 - OCR
+### Shot 01 - Quick Ledger
 
 Source:
 
-- `tools/appstore-screenshots/output/raw/ios/zh-Hans/00_ocr_bill.png`
 - `tools/appstore-screenshots/output/store/ios/zh-Hans/00_ocr_bill.png`
-
-Action:
-
-- Highlight amount, merchant, category, and time.
-- Show the generated ledger record.
-
-Copy:
-
-```text
-截图账单，一键识别
-```
-
-### Shot 02 - Voice
-
-Source:
-
 - `tools/appstore-screenshots/output/store/ios/zh-Hans/01_voice_entry.png`
 
 Action:
 
-- Animate the phrase "午饭 28 元".
-- Highlight the ready-to-save record.
+- Present screenshot recognition as the primary frame.
+- Add one-sentence quick entry as a small overlapping frame.
+- Highlight the ready-to-save record and show the phrase `午饭 28 元`.
 
 Copy:
 
 ```text
-说一句话，快速记账
+截图或一句话，都能变成账单
 ```
 
-### Shot 03 - Watch
+### Shot 02 - Hotel Spending
 
 Source:
 
-- `tools/appstore-screenshots/output/store/watch/zh-Hans/00_watch_quick_add.png`
-- `tools/appstore-screenshots/output/store/watch/zh-Hans/01_watch_recent.png`
-- `tools/appstore-screenshots/output/store/watch/zh-Hans/03_watch_sync.png`
+- `tools/appstore-screenshots/output/store/ios/zh-Hans/06_hotel_stays.png`
 
 Action:
 
-- Show Watch quick add.
-- Pair with iPhone recent record or sync message.
+- Show the hotel spending module.
+- Highlight the folio amount detail area.
+- Use a `PDF` callout to describe review-before-ledger behavior.
 
 Copy:
 
 ```text
-抬腕也能记一笔
+酒店水单，整理成消费详情
+```
+
+### Shot 03 - AutoLedger Pro
+
+Source:
+
+- `tools/appstore-screenshots/output/store/ios/zh-Hans/07_autoledger_pro.png`
+
+Action:
+
+- Present the AutoLedger Pro screenshot.
+- Add Pro badge and automation pills for mailbox scanning, dedicated inbox, and batch candidate organization.
+- Highlight that Pro organizes candidates first and does not auto-post without confirmation.
+
+Copy:
+
+```text
+Pro 帮你把候选先整理好
 ```
 
 ### Shot 04 - Report
@@ -93,16 +104,11 @@ Source:
 
 Action:
 
-- Slight zoom on category and monthly totals.
-- Fade to app icon or final screenshot.
+- Slight zoom on monthly report.
+- Close with app icon lockup and “免费记账不变，Pro 自动整理”.
 
 Copy:
 
 ```text
 月报统计，一眼看清
 ```
-
-## Optional Material
-
-- `05_shortcuts_import` can be used as a short automation cutaway if the preview needs one extra beat.
-- Watch face complication screenshots should be manually supplied when available because the current pipeline does not automate real watch face capture.

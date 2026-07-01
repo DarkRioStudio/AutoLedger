@@ -4,7 +4,7 @@
 
 - Vertical iPhone App Preview first.
 - Use large iPhone screenshots as source material.
-- Target a 15-20 second final cut.
+- Target a 15-22 second final cut, and always keep the final video under 30 seconds.
 - Keep the video suitable for silent playback.
 - Keep text overlays short and readable.
 
@@ -12,6 +12,7 @@
 
 - Show real AutoLedger UI experiences only.
 - Do not show App features that are not implemented.
+- For ASC 1.5.0, include the current Hotel and AutoLedger Pro moments when producing the primary iPhone preview.
 - Do not show debug screens, test environment labels, simulator labels, Xcode, terminal output, or internal logs.
 - Do not show permission prompts unless the App Store preview explicitly needs them.
 - Do not trigger or imply live OCR, LLM, network, iCloud, camera, photo library, or microphone access in the production source capture.

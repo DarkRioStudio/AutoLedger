@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=886, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      body {
+        font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        color: #1d2722;
+      }
+
+      #root {
+        position: relative;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene:not(:first-of-type) {
+        opacity: 0;
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        padding: 112px 54px 92px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 34px;
+      }
+
+      .bg-ring {
+        position: absolute;
+        border: 2px solid rgba(47, 134, 95, 0.13);
+        border-radius: 999px;
+        z-index: 0;
+      }
+
+      .bg-ring.one {
+        width: 1060px;
+        height: 1060px;
+        left: -360px;
+        top: -220px;
+      }
+
+      .bg-ring.two {
+        width: 720px;
+        height: 720px;
+        right: -260px;
+        bottom: 140px;
+        border-color: rgba(215, 122, 34, 0.12);
+      }
+
+      .soft-glow {
+        position: absolute;
+        border-radius: 50%;
+        z-index: 0;
+      }
+
+      .soft-glow.green {
+        width: 680px;
+        height: 680px;
+        right: -230px;
+        top: 240px;
+        background: radial-gradient(circle, rgba(47, 134, 95, 0.18), rgba(47, 134, 95, 0));
+      }
+
+      .soft-glow.orange {
+        width: 520px;
+        height: 520px;
+        left: -190px;
+        bottom: 190px;
+        background: radial-gradient(circle, rgba(215, 122, 34, 0.16), rgba(215, 122, 34, 0));
+      }
+
+      .label {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        align-self: flex-start;
+        padding: 12px 20px;
+        border-radius: 999px;
+        color: #2f865f;
+        background: rgba(47, 134, 95, 0.11);
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .label.gold {
+        color: #b66d18;
+        background: rgba(215, 122, 34, 0.14);
+      }
+
+      .label-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #2f865f;
+      }
+
+      .label.gold .label-dot {
+        background: #d77a22;
+      }
+
+      .copy {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        color: #1d2722;
+        font-size: 76px;
+        line-height: 0.98;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        max-width: 760px;
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 720px;
+        color: #62706a;
+        font-size: 31px;
+        line-height: 1.24;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .phone-stage {
+        position: relative;
+        width: 100%;
+        min-height: 1130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .store-frame {
+        position: relative;
+        z-index: 1;
+        width: 540px;
+        height: 1169px;
+        border-radius: 50px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 38px 90px rgba(29, 39, 34, 0.2);
+      }
+
+      .store-frame.large {
+        z-index: 3;
+        width: 590px;
+        height: 1277px;
+      }
+
+      .store-frame.wide {
+        width: 650px;
+        height: 1408px;
+      }
+
+      .store-frame img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .store-frame.left {
+        transform: rotate(-4deg) translateX(-34px);
+      }
+
+      .store-frame.right {
+        transform: rotate(3deg) translateX(56px);
+      }
+
+      .mini-frame {
+        position: absolute;
+        z-index: 6;
+        width: 330px;
+        height: 715px;
+        border-radius: 42px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 28px 70px rgba(29, 39, 34, 0.2);
+        border: 1px solid rgba(47, 134, 95, 0.12);
+      }
+
+      .mini-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .mini-frame.voice {
+        right: 8px;
+        bottom: 96px;
+        transform: rotate(4deg);
+      }
+
+      .receipt-card {
+        position: absolute;
+        z-index: 7;
+        left: 22px;
+        top: 126px;
+        width: 320px;
+        min-height: 210px;
+        padding: 24px;
+        border-radius: 34px;
+        background: #fffdf7;
+        box-shadow: 0 22px 54px rgba(29, 39, 34, 0.14);
+        border: 1px solid rgba(47, 134, 95, 0.12);
+      }
+
+      .receipt-card.secondary {
+        z-index: 2;
+        left: auto;
+        right: 8px;
+        top: 354px;
+        transform: rotate(5deg);
+      }
+
+      .receipt-kicker {
+        color: #62706a;
+        font-size: 21px;
+        font-weight: 800;
+      }
+
+      .receipt-amount {
+        margin-top: 14px;
+        color: #1d2722;
+        font-size: 50px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .receipt-merchant {
+        margin-top: 8px;
+        color: #2f865f;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .highlight {
+        position: absolute;
+        z-index: 8;
+        border-radius: 999px;
+        border: 5px solid #2f865f;
+        box-shadow: 0 10px 38px rgba(47, 134, 95, 0.18);
+        pointer-events: none;
+      }
+
+      .highlight.quick {
+        width: 310px;
+        height: 92px;
+        left: 286px;
+        top: 742px;
+      }
+
+      .highlight.hotel {
+        width: 440px;
+        height: 110px;
+        left: 214px;
+        top: 668px;
+        border-color: #d77a22;
+        box-shadow: 0 10px 38px rgba(215, 122, 34, 0.2);
+      }
+
+      .highlight.pro {
+        width: 450px;
+        height: 96px;
+        left: 218px;
+        top: 826px;
+        border-color: #d77a22;
+        box-shadow: 0 10px 38px rgba(215, 122, 34, 0.22);
+      }
+
+      .callout {
+        position: absolute;
+        z-index: 9;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px 24px;
+        border-radius: 26px;
+        background: #1d2722;
+        color: #fffdf7;
+        font-size: 28px;
+        font-weight: 850;
+        box-shadow: 0 16px 46px rgba(29, 39, 34, 0.22);
+      }
+
+      .callout.quick {
+        right: 22px;
+        top: 654px;
+      }
+
+      .callout.hotel {
+        left: 30px;
+        top: 784px;
+        background: #d77a22;
+      }
+
+      .callout.pro {
+        right: 22px;
+        top: 732px;
+        background: #d77a22;
+      }
+
+      .micro-icon {
+        width: 56px;
+        height: 42px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fffdf7;
+        color: #1d2722;
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .flow-card {
+        position: absolute;
+        left: 42px;
+        bottom: 120px;
+        z-index: 7;
+        width: 430px;
+        padding: 28px 30px;
+        border-radius: 36px;
+        background: #fffdf7;
+        box-shadow: 0 28px 70px rgba(29, 39, 34, 0.18);
+      }
+
+      .flow-line {
+        color: #1d2722;
+        font-size: 39px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .flow-result {
+        margin-top: 18px;
+        color: #62706a;
+        font-size: 24px;
+        line-height: 1.22;
+        font-weight: 750;
+      }
+
+      .pro-badge {
+        position: absolute;
+        z-index: 8;
+        right: 54px;
+        top: 114px;
+        padding: 18px 24px;
+        border-radius: 999px;
+        color: #fffdf7;
+        background: #d77a22;
+        font-size: 30px;
+        font-weight: 900;
+        box-shadow: 0 18px 50px rgba(215, 122, 34, 0.28);
+      }
+
+      .automation-stack {
+        position: absolute;
+        left: 34px;
+        bottom: 84px;
+        z-index: 8;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .automation-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        width: 420px;
+        padding: 17px 22px;
+        border-radius: 24px;
+        background: rgba(255, 253, 247, 0.92);
+        color: #1d2722;
+        font-size: 25px;
+        font-weight: 850;
+        box-shadow: 0 16px 42px rgba(29, 39, 34, 0.13);
+      }
+
+      .automation-pill span {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #1d2722;
+        background: #ddeadf;
+        font-size: 20px;
+        border: 1px solid rgba(47, 134, 95, 0.18);
+      }
+
+      .report-card {
+        position: absolute;
+        left: 50%;
+        top: 210px;
+        width: 640px;
+        height: 920px;
+        transform: translateX(-50%);
+        border-radius: 56px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 34px 88px rgba(29, 39, 34, 0.19);
+      }
+
+      .report-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .final-lockup {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px 24px;
+        align-self: flex-start;
+        border-radius: 36px;
+        background: rgba(255, 253, 247, 0.84);
+        box-shadow: 0 18px 52px rgba(29, 39, 34, 0.13);
+      }
+
+      .final-lockup img {
+        width: 70px;
+        height: 70px;
+        border-radius: 22px;
+      }
+
+      .final-title {
+        color: #1d2722;
+        font-size: 31px;
+        font-weight: 900;
+      }
+
+      .final-subtitle {
+        color: #62706a;
+        font-size: 20px;
+        font-weight: 750;
+      }
+
+      .bottom-note {
+        color: #62706a;
+        font-size: 24px;
+        font-weight: 760;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="22" data-width="886" data-height="1920">
+      <audio
+        id="music-bed"
+        class="clip"
+        data-start="0"
+        data-duration="22"
+        data-track-index="9"
+        data-volume="0.34"
+        src="assets/app_preview_bed_v002.m4a"
+      ></audio>
+
+      <section id="scene-open" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-glow green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>AutoLedger 一键记账</div>
+            <h1>账单先整理好，再由你确认</h1>
+            <p class="subtitle">截图、语音、酒店水单和邮箱候选，都能进入待确认账单。</p>
+          </div>
+          <div class="phone-stage">
+            <div id="open-card-a" class="receipt-card">
+              <div class="receipt-kicker">截图账单</div>
+              <div class="receipt-amount">¥28.00</div>
+              <div class="receipt-merchant">示例午餐</div>
+            </div>
+            <div id="open-card-b" class="receipt-card secondary">
+              <div class="receipt-kicker">酒店水单</div>
+              <div class="receipt-amount">¥1,250</div>
+              <div class="receipt-merchant">示例海湾酒店</div>
+            </div>
+            <div class="store-frame right">
+              <img src="assets/ios_open_bill.png" alt="AutoLedger quick ledger screenshot" />
+            </div>
+          </div>
+          <p class="bottom-note">本视频使用演示数据，不包含真实账单。</p>
+        </div>
+      </section>
+
+      <section id="scene-quick" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="soft-glow orange"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>快速记一笔</div>
+            <h2>截图或一句话，都能变成账单</h2>
+            <p class="subtitle">金额、商户、分类和时间自动整理，保存前依然由你确认。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="store-frame large left">
+              <img src="assets/ios_ocr_bill.png" alt="Screenshot recognition App Store frame" />
+            </div>
+            <div class="mini-frame voice">
+              <img src="assets/ios_voice_entry.png" alt="Voice entry App Store frame" />
+            </div>
+            <div class="highlight quick"></div>
+            <div class="callout quick"><span class="micro-icon">✓</span>待确认后保存</div>
+            <div class="flow-card">
+              <div class="flow-line">“午饭 28 元”</div>
+              <div class="flow-result">识别为：午饭 · 餐饮 · ¥28.00</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-hotel" class="scene">
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-glow green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label gold"><span class="label-dot"></span>酒店消费</div>
+            <h2>酒店水单，整理成消费详情</h2>
+            <p class="subtitle">住宿、餐饮和税费分项展示，可确认后写入正式账本。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="store-frame wide">
+              <img src="assets/ios_hotel_stays.png" alt="Hotel spending module App Store frame" />
+            </div>
+            <div class="highlight hotel"></div>
+            <div class="callout hotel"><span class="micro-icon">PDF</span>水单分项复核</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-pro" class="scene">
+        <div data-layout-ignore class="bg-ring one"></div>
+        <div data-layout-ignore class="soft-glow orange"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label gold"><span class="label-dot"></span>AutoLedger Pro</div>
+            <h2>Pro 帮你把候选先整理好</h2>
+            <p class="subtitle">邮箱水单扫描、专属收件箱和批量候选，让自动化多做一步。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="store-frame wide">
+              <img src="assets/ios_autoledger_pro.png" alt="AutoLedger Pro App Store frame" />
+            </div>
+            <div class="pro-badge">Pro</div>
+            <div class="highlight pro"></div>
+            <div class="callout pro"><span class="micro-icon">↗</span>先整理，后确认</div>
+            <div class="automation-stack">
+              <div class="automation-pill"><span>@</span>邮箱水单扫描</div>
+              <div class="automation-pill"><span>收</span>专属收件箱</div>
+              <div class="automation-pill"><span>批</span>批量候选整理</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-report" class="scene">
+        <div data-layout-ignore class="bg-ring two"></div>
+        <div data-layout-ignore class="soft-glow green"></div>
+        <div class="scene-content">
+          <div class="copy">
+            <div class="label"><span class="label-dot"></span>消费回看</div>
+            <h2>月报统计，一眼看清</h2>
+            <p class="subtitle">分类、趋势和常用商户自动汇总，帮你快速回看本月消费。</p>
+          </div>
+          <div class="phone-stage">
+            <div class="report-card">
+              <img src="assets/ios_monthly_report.png" alt="Monthly spending report App Store frame" />
+            </div>
+          </div>
+          <div class="final-lockup">
+            <img src="assets/app_icon.png" alt="AutoLedger app icon" />
+            <div>
+              <div class="final-title">AutoLedger - 一键记账</div>
+              <div class="final-subtitle">免费记账不变，Pro 自动整理</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to(".bg-ring.one", { rotation: 7, duration: 21, ease: "sine.inOut" }, 0.2);
+      tl.to(".bg-ring.two", { rotation: -8, duration: 21, ease: "sine.inOut" }, 0.2);
+      tl.to(".soft-glow.green", { x: -28, y: 34, scale: 1.04, duration: 21, ease: "sine.inOut" }, 0.2);
+      tl.to(".soft-glow.orange", { x: 24, y: -18, scale: 1.03, duration: 21, ease: "sine.inOut" }, 0.2);
+
+      function enterCopy(scene, t) {
+        tl.from(`${scene} .label`, { y: 22, opacity: 0, duration: 0.42, ease: "power3.out" }, t);
+        tl.from(`${scene} h1, ${scene} h2`, { y: 54, opacity: 0, duration: 0.62, ease: "expo.out" }, t + 0.12);
+        tl.from(`${scene} .subtitle`, { x: -34, opacity: 0, duration: 0.5, ease: "power2.out" }, t + 0.32);
+      }
+
+      function blurTransition(oldScene, newScene, t) {
+        tl.to(oldScene, { filter: "blur(16px)", scale: 1.025, opacity: 0, duration: 0.58, ease: "power2.inOut" }, t);
+        tl.fromTo(
+          newScene,
+          { filter: "blur(14px)", scale: 0.975, opacity: 0 },
+          { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.66, ease: "power2.inOut" },
+          t + 0.06
+        );
+      }
+
+      enterCopy("#scene-open", 0.18);
+      tl.from("#scene-open .store-frame", { x: 90, y: 32, rotation: 7, opacity: 0, duration: 0.78, ease: "power4.out" }, 0.42);
+      tl.from("#open-card-a", { x: -58, y: 26, rotation: -8, opacity: 0, duration: 0.56, ease: "back.out(1.5)" }, 0.72);
+      tl.from("#open-card-b", { x: 48, y: 48, rotation: 12, opacity: 0, duration: 0.5, ease: "power3.out" }, 0.94);
+      tl.from("#scene-open .bottom-note", { y: 18, opacity: 0, duration: 0.42, ease: "sine.out" }, 1.15);
+
+      blurTransition("#scene-open", "#scene-quick", 3.1);
+      enterCopy("#scene-quick", 3.38);
+      tl.from("#scene-quick .store-frame", { x: -24, y: 24, rotation: -8, opacity: 0, duration: 0.7, ease: "power4.out" }, 3.66);
+      tl.from("#scene-quick .mini-frame", { scale: 0.86, x: 52, y: 40, opacity: 0, duration: 0.58, ease: "back.out(1.4)" }, 4.08);
+      tl.from("#scene-quick .flow-card", { y: 42, opacity: 0, duration: 0.52, ease: "power3.out" }, 4.42);
+      tl.from("#scene-quick .highlight", { scale: 0.72, opacity: 0, duration: 0.42, ease: "back.out(1.8)" }, 4.76);
+      tl.from("#scene-quick .callout", { x: 58, opacity: 0, duration: 0.46, ease: "expo.out" }, 4.9);
+
+      blurTransition("#scene-quick", "#scene-hotel", 7.62);
+      enterCopy("#scene-hotel", 7.9);
+      tl.from("#scene-hotel .store-frame", { y: 86, opacity: 0, duration: 0.66, ease: "power4.out" }, 8.18);
+      tl.from("#scene-hotel .highlight", { scaleX: 0.68, opacity: 0, duration: 0.42, ease: "power3.out" }, 8.72);
+      tl.from("#scene-hotel .callout", { x: -52, opacity: 0, duration: 0.44, ease: "expo.out" }, 8.92);
+
+      blurTransition("#scene-hotel", "#scene-pro", 11.96);
+      enterCopy("#scene-pro", 12.24);
+      tl.from("#scene-pro .store-frame", { y: 76, scale: 0.95, opacity: 0, duration: 0.68, ease: "power4.out" }, 12.5);
+      tl.from("#scene-pro .pro-badge", { scale: 0.76, y: -24, opacity: 0, duration: 0.42, ease: "back.out(1.8)" }, 12.96);
+      tl.from("#scene-pro .automation-pill", { x: -46, opacity: 0, duration: 0.44, stagger: 0.12, ease: "power3.out" }, 13.2);
+      tl.from("#scene-pro .highlight", { scale: 0.72, opacity: 0, duration: 0.42, ease: "back.out(1.8)" }, 13.64);
+      tl.from("#scene-pro .callout", { x: 54, opacity: 0, duration: 0.46, ease: "expo.out" }, 13.82);
+
+      blurTransition("#scene-pro", "#scene-report", 16.44);
+      enterCopy("#scene-report", 16.72);
+      tl.from("#scene-report .report-card", { y: 80, scale: 0.94, opacity: 0, duration: 0.68, ease: "power4.out" }, 17);
+      tl.from("#scene-report .final-lockup", { x: -48, opacity: 0, duration: 0.5, ease: "expo.out" }, 19.66);
+      tl.to("#scene-report .final-lockup", { scale: 0.98, opacity: 0.86, duration: 0.44, ease: "power2.in" }, 21.24);
+      tl.to("#scene-report", { opacity: 0, duration: 0.44, ease: "power2.in" }, 21.42);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

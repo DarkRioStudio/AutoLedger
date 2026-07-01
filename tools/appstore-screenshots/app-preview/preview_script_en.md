@@ -1,25 +1,14 @@
-# AutoLedger App Preview Script - zh-Hans
+# AutoLedger App Preview Script - en
 
 ## Version
 
 - Target ASC version: `1.5.0`
-- Source project: `hyperframes-v002`
-- Final video: `app_preview_iphone_zh-Hans_asc1.5.0_v002.mp4`
-- Previous ASC 1.4.0 video remains archived under `archive/asc-1.4.0/`.
+- Source project: `hyperframes-v002-en`
+- Final video: `app_preview_iphone_en_asc1.5.0_v002.mp4`
 
 ## Length
 
 22 seconds. Keep the final video under 30 seconds.
-
-## Style
-
-- Real App UI
-- Light motion
-- Local highlights
-- Short copy
-- No abstract brand film
-- No CG-heavy treatment
-- No features that are not present in the app
 
 ## Storyboard
 
@@ -32,7 +21,7 @@ AutoLedger UI and fictional bill cards stack into view. The opening states the r
 Copy:
 
 ```text
-账单先整理好，再由你确认
+Bills get organized first. You decide.
 ```
 
 ### 3-8s - Quick Ledger
@@ -44,7 +33,7 @@ Screenshot recognition and one-sentence entry appear together. The highlight poi
 Copy:
 
 ```text
-截图或一句话，都能变成账单
+Screenshots or one sentence become bills
 ```
 
 ### 8-12s - Hotel Spending
@@ -56,7 +45,7 @@ The hotel spending screenshot appears with a folio detail highlight. The callout
 Copy:
 
 ```text
-酒店水单，整理成消费详情
+Hotel folios become expense details
 ```
 
 ### 12-16.5s - AutoLedger Pro
@@ -68,7 +57,7 @@ The AutoLedger Pro screenshot appears with mailbox scanning, dedicated inbox, an
 Copy:
 
 ```text
-Pro 帮你把候选先整理好
+Pro organizes candidates first
 ```
 
 ### 16.5-22s - Monthly Report
@@ -80,7 +69,7 @@ The monthly report screenshot closes the loop and fades into the app lockup.
 Copy:
 
 ```text
-月报统计，一眼看清
+Monthly report, clear at a glance
 ```
 
 ## Notes
