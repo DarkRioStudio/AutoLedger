@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-337 全平台商店截图本地化与酒店样例重导出）
+更新日期：2026-07-01（ITER-338 Pro 恢复购买后云端收件箱状态刷新修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-338 Pro 恢复购买后云端收件箱状态刷新修复
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：Pro Entitlement / Cloud Folio Inbox
+- 类型：Bugfix
+- 目标：修复用户在 Pro 页面恢复购买后，云端酒店水单收件箱仍停留在“需要验证”或旧 access 状态的问题；同时让一个平台开通 / 恢复 Pro 后，其他平台在回到前台时尽快刷新 StoreKit entitlement。
+- 改动范围：更新 `AutoLedgerApp.swift` 的前台激活逻辑，以及 `HotelFolioInboxImportView.swift` 的 Pro 状态监听、购买页关闭刷新和云端收件箱本地 access 展示。
+- 未改动范围：本轮未修改 StoreKit 商品 ID、订阅组、购买 / 恢复购买 API、Worker API、服务端 App Store Server API 校验、APNs、SQLite / CloudKit schema、真实用户数据、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：App 回到前台时会调用 `ProEntitlementManager.refreshEntitlements()`，让跨设备 / 跨平台订阅状态在重新激活 App 时刷新；云端水单收件箱页监听 `activeProductIDs`、`activeSubscriptions` 和 Pro sheet 关闭事件，恢复购买后会重新刷新 access 并尝试登记远程推送 token。页面展示上，已开通 Pro 时不再把 `/v1/pro-entitlements/verify` 的预检查失败直接显示成未解锁，收件箱入口按本地 App Store entitlement 显示为可用；领取专属地址时仍会把当前 StoreKit signed transaction JWS 传给 Worker，由 Worker 做最终服务端校验。
+- 未完成内容：本轮没有改 Worker 的真实生产配置。如果领取地址时 Worker 返回 `app_store_server_api_unconfigured`、`missing_signed_transaction` 或其它 403，仍需要检查 Cloudflare production secret / App Store Server API 环境 / ASC 订阅状态；客户端不会绕过服务端发 token。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，结尾为 `Offline regression passed.`；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过，结尾为 `BUILD SUCCEEDED`。XcodeBuildMCP 本轮先检查过 session defaults，但当前未配置 workspace / scheme / simulator，且暴露工具里没有设置入口，因此按项目规范回退到 `.xcworkspace` 命令验证。
+- 风险与注意事项：本轮将“本地 Pro 是否已生效”和“Worker 是否最终允许领取 token”分开处理，体验上避免恢复购买后 UI 卡在旧提示，安全边界仍在 Worker token claim。若某平台的 StoreKit current entitlement 本身还未同步，用户仍可能需要进入 Pro 页面手动恢复购买；App 回到前台刷新只能拉取当前设备已可见的 App Store entitlement。
+- 回滚方式：回退 `AutoLedgerApp.swift` 和 `HotelFolioInboxImportView.swift` 的本轮改动，并移除 CHANGELOG / 本日志条目；无数据迁移或后端回滚。
+- 结论：本轮完成，恢复购买后的云端水单收件箱会跟随 Pro entitlement 变化实时刷新，跨平台打开 App 时也会主动刷新本地 Pro 状态。
+- 下一步建议：用 TestFlight 在 iPhone 开通 / 恢复 Pro 后，切到 iPad / Mac 前台打开云端水单收件箱验证入口状态；如果领取地址仍返回 403，把错误 reason 带回来，下一步查 Worker production App Store Server API 配置。
 
 ### ITER-337 全平台商店截图本地化与酒店样例重导出
 - 日期：2026-07-01

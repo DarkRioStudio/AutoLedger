@@ -43,20 +43,37 @@ struct HotelFolioInboxImportView: View {
         HotelFolioInboxSettings(endpoint: endpoint, token: token)
     }
 
+    private var hasLocalCloudInboxEntitlement: Bool {
+        proEntitlement.isProActive
+    }
+
+    private var effectiveCloudInboxAccess: ProAccessResolution {
+        guard hasLocalCloudInboxEntitlement else {
+            return cloudInboxAccess
+        }
+
+        switch cloudInboxAccess {
+        case .requiresPurchase, .requiresServerVerification, .serverVerificationFailed:
+            return .allowed
+        case .allowed, .freeFeature, .plannedButUnavailable:
+            return cloudInboxAccess
+        }
+    }
+
     private var canUseCloudInbox: Bool {
-        cloudInboxAccess.allowsAccess
+        effectiveCloudInboxAccess.allowsAccess
     }
 
     private var canClaimCloudInboxAddress: Bool {
-        cloudInboxAccess.allowsAccess
+        effectiveCloudInboxAccess.allowsAccess
     }
 
     private var shouldShowProPlans: Bool {
-        cloudInboxAccess == .requiresPurchase
+        !hasLocalCloudInboxEntitlement && effectiveCloudInboxAccess == .requiresPurchase
     }
 
     private var cloudInboxEntitlementTitleKey: LocalizedStringKey {
-        switch cloudInboxAccess {
+        switch effectiveCloudInboxAccess {
         case .allowed, .freeFeature:
             return "hotel_stay.cloud_inbox.pro.active"
         case .requiresPurchase:
@@ -67,7 +84,7 @@ struct HotelFolioInboxImportView: View {
     }
 
     private var cloudInboxEntitlementDescriptionKey: LocalizedStringKey {
-        switch cloudInboxAccess {
+        switch effectiveCloudInboxAccess {
         case .allowed, .freeFeature:
             return "hotel_stay.cloud_inbox.pro.description"
         case .requiresPurchase:
@@ -110,12 +127,29 @@ struct HotelFolioInboxImportView: View {
             }
         }
         .task {
-            await proEntitlement.loadProducts()
-            await proEntitlement.refreshEntitlements()
-            await refreshCloudInboxAccess()
+            await refreshProAndCloudInboxAccess()
             await registerRemoteDeviceTokenIfAvailable()
             if settings.canRequest {
                 await refreshCandidates()
+            }
+        }
+        .onChange(of: proEntitlement.activeProductIDs) { _, _ in
+            Task {
+                await refreshCloudInboxAccess()
+                await registerRemoteDeviceTokenIfAvailable()
+            }
+        }
+        .onChange(of: proEntitlement.activeSubscriptions) { _, _ in
+            Task {
+                await refreshCloudInboxAccess()
+                await registerRemoteDeviceTokenIfAvailable()
+            }
+        }
+        .onChange(of: isPresentingProSheet) { _, isPresented in
+            guard !isPresented else { return }
+            Task {
+                await refreshProAndCloudInboxAccess()
+                await registerRemoteDeviceTokenIfAvailable()
             }
         }
         .sheet(isPresented: $isPresentingProSheet) {
@@ -398,6 +432,13 @@ struct HotelFolioInboxImportView: View {
     @MainActor
     private func refreshCloudInboxAccess() async {
         cloudInboxAccess = await proEntitlement.resolveAccess(.cloudFolioInbox)
+    }
+
+    @MainActor
+    private func refreshProAndCloudInboxAccess() async {
+        await proEntitlement.loadProducts()
+        await proEntitlement.refreshEntitlements()
+        await refreshCloudInboxAccess()
     }
 
     private func copyInboxAddress() {

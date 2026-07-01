@@ -157,6 +157,9 @@ private struct AutoLedgerRootView: View {
                 if newPhase == .active {
                     consumeStructuredJSONHandoffIfNeeded()
                     store.refreshFromStore()
+                    Task {
+                        await ProEntitlementManager.shared.refreshEntitlements()
+                    }
                     scheduleLaunchCloudSyncIfNeeded()
                     Task {
                         await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
