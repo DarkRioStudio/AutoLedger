@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-344 ASC 1.5.0 macOS 复审修复）
+更新日期：2026-07-02（ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复
+- 日期：2026-07-02
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：App Review Follow-up
+- 类型：Bugfix / 审核材料
+- 目标：处理 ASC 1.5.0 iOS / iPadOS 复审反馈中自动续期订阅购买流程缺少可见 EULA 链接的问题。
+- 改动范围：更新 `AutoLedgerProView` 的订阅选择区、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 StoreKit 商品 ID / 价格 / 订阅组、购买 / 恢复 / 管理订阅逻辑、Pro entitlement、Worker、CloudKit / SQLite schema、Cloudflare 配置、Xcode Cloud workflow、signing、entitlements、`MARKETING_VERSION` 或 build number。
+- 完成内容：`AutoLedger Pro` 页面的隐私政策和 Apple 标准 EULA 链接从商品区后方移动到“选择订阅”购买流程内，位于月付 / 年付商品卡之前；月付 / 年付商品卡从整卡点击改为信息卡 + 独立购买按钮，避免条款链接与购买按钮形成嵌套交互，同时让审核录屏能在点击购买前直接看到标题、周期、价格、取消说明、隐私政策和使用条款。
+- 未完成内容：未在本轮通过 ASC API 重新提交或回复 Resolution Center；需要等待新 binary 产出后选择构建并附录屏说明。
+- 测试情况：执行四语 `plutil -lint` 通过；执行 `git diff --check` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 与 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 通过。构建仍保留既有 Swift 6 / MediaPipe deprecation 等 warning，本轮未新增处理。
+- 风险与注意事项：购买按钮从整卡点击改为底部独立 CTA 后，用户必须点击明确的“选择月度 / 选择年度”按钮才会触发 App Store 订阅确认；这是为了让条款链接保持可点击，也更利于审核确认订阅信息。
+- 回滚方式：回退 `SupportAutoLedgerView.swift`、`CHANGELOG.md` 和本条日志即可；不涉及远端订阅商品、用户 entitlement 或账本数据回滚。
+- 结论：本轮完成，订阅购买流程内已直接展示可点击隐私政策和 EULA 链接，并通过 iOS / Mac Catalyst 构建验证。
+- 下一步建议：验证通过后推送新 commit，等待 Xcode Cloud 生成 1.5.0 新构建；在 iOS / macOS 审核备注中附上 Pro 页录屏并说明 EULA 链接位于 Settings > AutoLedger Pro > Choose a plan。
 
 ### ITER-344 ASC 1.5.0 macOS 复审修复
 - 日期：2026-07-02

@@ -22,7 +22,6 @@ struct AutoLedgerProView: View {
                 roadmapSection
                 assurancePanel
                 productSection
-                legalLinksCard
                 boundaryCard
             }
             .padding(.horizontal, 20)
@@ -417,6 +416,8 @@ struct AutoLedgerProView: View {
                 .foregroundStyle(gold)
                 .fixedSize(horizontal: false, vertical: true)
 
+            purchaseFlowLegalLinks
+
             switch proEntitlement.loadState {
             case .idle, .loading:
                 loadingCard
@@ -427,7 +428,7 @@ struct AutoLedgerProView: View {
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 12)], spacing: 12) {
                         ForEach(proEntitlement.products, id: \.id) { product in
-                            productButton(for: product)
+                            productCard(for: product)
                         }
                     }
                 }
@@ -438,7 +439,7 @@ struct AutoLedgerProView: View {
         }
     }
 
-    private var legalLinksCard: some View {
+    private var purchaseFlowLegalLinks: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("pro.legal.title")
                 .font(.headline)
@@ -461,12 +462,16 @@ struct AutoLedgerProView: View {
                 }
             }
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.card)
+                .fill(AppTheme.accent.opacity(0.08))
         )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(AppTheme.accent.opacity(0.16), lineWidth: 1)
+        }
     }
 
     private func legalLinkButton(
@@ -489,71 +494,71 @@ struct AutoLedgerProView: View {
         .buttonStyle(.plain)
     }
 
-    private func productButton(for product: Product) -> some View {
+    private func productCard(for product: Product) -> some View {
         let isPurchasing = proEntitlement.purchasingProductID == product.id
         let isRecommended = AutoLedgerProProduct(rawValue: product.id) == .yearly
+        let isPurchaseDisabled = proEntitlement.isProActive || proEntitlement.purchasingProductID != nil
 
-        return Button {
-            Task { await proEntitlement.purchase(product) }
-        } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(productTitle(for: product))
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(AppTheme.ink)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(productTitle(for: product))
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
 
-                        Text(productDescription(for: product))
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.mutedInk)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Spacer(minLength: 8)
-
-                    if isRecommended {
-                        Text("pro.product.recommended")
-                            .font(.caption2.weight(.black))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule(style: .continuous).fill(gold))
-                    }
-                }
-
-                Text(product.displayPrice)
-                    .font(.system(size: 30, weight: .black, design: .rounded).monospacedDigit())
-                    .foregroundStyle(isRecommended ? gold : AppTheme.ink)
-
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(AppTheme.accent)
-                    Text("pro.product.cancel_anytime")
-                        .font(.caption.weight(.semibold))
+                    Text(productDescription(for: product))
+                        .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
+                Spacer(minLength: 8)
+
+                if isRecommended {
+                    Text("pro.product.recommended")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule(style: .continuous).fill(gold))
+                }
+            }
+
+            Text(product.displayPrice)
+                .font(.system(size: 30, weight: .black, design: .rounded).monospacedDigit())
+                .foregroundStyle(isRecommended ? gold : AppTheme.ink)
+
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(AppTheme.accent)
+                Text("pro.product.cancel_anytime")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Button {
+                Task { await proEntitlement.purchase(product) }
+            } label: {
                 purchaseCallToAction(
                     titleKey: productActionTitle(for: product),
                     isRecommended: isRecommended,
                     isPurchasing: isPurchasing
                 )
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(isRecommended ? recommendedProductCardFill : AppTheme.card)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(isRecommended ? gold.opacity(0.62) : AppTheme.mutedInk.opacity(0.12), lineWidth: 1)
-            }
+            .buttonStyle(.plain)
+            .disabled(isPurchaseDisabled)
+            .accessibilityHint("pro.purchase.accessibility_hint")
         }
-        .buttonStyle(.plain)
-        .disabled(proEntitlement.purchasingProductID != nil)
-        .allowsHitTesting(!proEntitlement.isProActive && proEntitlement.purchasingProductID == nil)
-        .accessibilityHint("pro.purchase.accessibility_hint")
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(isRecommended ? recommendedProductCardFill : AppTheme.card)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(isRecommended ? gold.opacity(0.62) : AppTheme.mutedInk.opacity(0.12), lineWidth: 1)
+        }
     }
 
     private func purchaseCallToAction(
