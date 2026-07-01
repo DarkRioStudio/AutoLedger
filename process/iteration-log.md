@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-339 外观主题自定义选项 Pro 标识与免费 gate）
+更新日期：2026-07-01（ITER-340 App Store Server Notifications 顺延到 v1.7.0）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-340 App Store Server Notifications 顺延到 v1.7.0
+- 日期：2026-07-01
+- 所属版本：v1.6.4 / v1.7.0
+- 所属阶段：Release Planning / Entitlement Infrastructure
+- 类型：文档 / 治理
+- 目标：把 App Store Server Notifications 写入 `v1.7.0 / ASC 1.6.0` 计划，并明确当前 `ASC 1.5.0` 提审不配置服务器通知。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`versions/v1.6.4-regression-baseline.md`、`versions/v1.6.4-plan.md`、`README.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 代码、Worker 代码、App Store Connect 配置、StoreKit 商品、Cloudflare secret、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图素材、App Preview 或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` 计划新增 Pro 服务端订阅生命周期章节，明确后续接收并验签 Apple V2 `signedPayload`，用 `notificationUUID` 幂等处理续费、过期、退款、撤销、账单重试和宽限期，并联动服务端 Pro entitlement 与云收件箱 token 状态；`v1.6.4` 回归基线同步记录当前 ASC 1.5.0 不配置 App Store Server Notifications，主动生命周期同步顺延到 `v1.7.0`，当前版本继续依赖端上 StoreKit entitlement、Worker 按需 JWS 核验和 token 过期控制。
+- 未完成内容：本轮没有实现通知 endpoint、JWS 证书链验签、Notification History 补偿任务、D1 entitlement 表或 ASC URL 配置。
+- 测试情况：文档变更后执行 `git diff --check` 通过；未运行 Xcode / Worker 构建，因为本轮只改规划与发布基线。
+- 风险与注意事项：当前 ASC 1.5.0 没有服务器通知时，云端订阅状态不会主动收到续费 / 退款 / 撤销事件；安全边界仍依赖领取 token 时的服务端 JWS 核验和 token `pro_expires_at`，并不会让历史数据被锁。若 App Review 对订阅生命周期材料提出要求，需要补 Review Notes 或截图，不在本轮临时接 ASSN。
+- 回滚方式：回退本轮六个文档文件即可；无代码、数据或远端配置回滚。
+- 结论：本轮完成，App Store Server Notifications 已作为 `v1.7.0 / ASC 1.6.0` 基础设施规划项，当前 `ASC 1.5.0` 可继续按现有版本提审口径推进。
+- 下一步建议：ASC 1.5.0 提审前优先复核订阅组元数据、隐私政策链接、英文审核备注、订阅截图 / 录屏和全平台截图素材；`v1.7.0` 开始时先冻结 entitlement Worker schema 和 notification idempotency 合同。
 
 ### ITER-339 外观主题自定义选项 Pro 标识与免费 gate
 - 日期：2026-07-01
