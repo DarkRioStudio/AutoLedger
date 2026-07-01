@@ -874,6 +874,10 @@
 "pro.pricing.title" = "プランを選択";
 "pro.pricing.subtitle_format" = "月額 %@、年額のローンチ価格は %@ です。";
 "pro.pricing.launch_note" = "今後、新規購読者向けの価格は変更される場合があります。既存の購読者には、可能な限り現在の更新価格を維持します。";
+"pro.legal.title" = "サブスクリプション規約";
+"pro.legal.body" = "購読前にプライバシーポリシーと Apple 標準利用規約を確認できます。";
+"pro.legal.privacy" = "プライバシーポリシー";
+"pro.legal.terms" = "利用規約（EULA）";
 "pro.active.title" = "Pro が有効です";
 "pro.active.body" = "ローカルメールスキャン、専用明細受信箱、一括候補、高度な重複整理を利用できます。";
 "pro.status.active.title" = "Pro が有効です";

@@ -1345,7 +1345,7 @@ private struct IPadBatchImportWorkspaceView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(AppTheme.accent)
 
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    if isCameraImportAvailable {
                         Button {
                             activeSheet = .camera
                         } label: {
@@ -2895,6 +2895,16 @@ struct HotelStayWorkspaceView: View {
         navigationState.isPresentingHotelCloudInbox = false
         pendingCloudCandidateID = candidateID
         showsCloudInboxImporter = true
+    }
+}
+
+private extension IPadBatchImportWorkspaceView {
+    var isCameraImportAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+        #endif
     }
 }
 

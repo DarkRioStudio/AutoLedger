@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-343 v1.7.0 计划推进执行版）
+更新日期：2026-07-02（ITER-344 ASC 1.5.0 macOS 复审修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-344 ASC 1.5.0 macOS 复审修复
+- 日期：2026-07-02
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：App Review Follow-up
+- 类型：Bugfix / 审核材料
+- 目标：处理 ASC 1.5.0 macOS 复审反馈中的 entitlement、Mac 相机入口、App 内 EULA 链接和订阅推广图重复问题。
+- 改动范围：更新主 App target Mac sandbox build settings、`InboxView`、`IPadBatchImportWorkspaceView`、`AutoLedgerProView`、`SettingsView`、四语 `Localizable.strings`、CHANGELOG、本日志，并新增月付 / 年付 1024 订阅推广图版本资产。
+- 未改动范围：本轮未修改 StoreKit 商品 ID / 价格 / 订阅组、购买 / 恢复 / 管理订阅逻辑、Worker、CloudKit / SQLite schema、Cloudflare 配置、Xcode Cloud workflow、`MARKETING_VERSION` 或 build number。
+- 完成内容：Mac Catalyst 不再展示或触发相机导入入口，避免审核设备点击 camera / receipt scan 后没有 modal；主 App Mac sandbox 不再申请 `com.apple.security.assets.pictures.read-only` 和 `com.apple.security.files.downloads.read-write`，签名产物只保留 `com.apple.security.files.user-selected.read-write`；Pro 购买页新增四语“订阅条款”卡片，提供隐私政策和 Apple 标准 EULA 链接；设置页隐私链接同步到 `https://getautoledger.app/privacy`；新增 `versions/assets/asc-subscription/autoledger-pro-monthly-1024.png` 与 `autoledger-pro-yearly-1024.png`，用于替换重复的 ASC promoted IAP 图。
+- 未完成内容：ASC API 读取确认两个订阅的 `subscriptionImages` checksum 仍是重复的旧图；由于月付 / 年付订阅商品当前为 `IN_REVIEW`，ASC API 拒绝删除或新建 `subscriptionImages`，需要在 ASC 可编辑状态下手动替换，或 Developer Reject 后连同新 binary 一起重新提交。
+- 测试情况：执行四语 `plutil -lint` 与 entitlements plist lint 通过；执行 Mac Catalyst build settings 检查，确认 `ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER` / `ENABLE_FILE_ACCESS_PICTURE_FOLDER` 不再出现；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 通过；对签名后的 Debug Mac Catalyst app 执行 `codesign -d --entitlements :-`，确认 Apple 点名的两个 entitlement 已移除；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过。
+- 风险与注意事项：Mac Catalyst 不再提供相机导入入口，Mac 用户仍可通过相册 / 文件选择 / 剪贴板 / 酒店 PDF 导入完成识别；iPhone / iPad 相机入口仍保留真实相机可用性判断。订阅推广图远端替换需要 ASC 进入可编辑状态后人工完成，API 在 `IN_REVIEW` 状态下不可改。
+- 回滚方式：如需恢复 Mac 相机入口，可回退 `InboxView` / `iPadWorkspaceView` 的 `targetEnvironment(macCatalyst)` gate；如需恢复文件夹 entitlement，可重新添加 `ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER` 与 `ENABLE_FILE_ACCESS_PICTURE_FOLDER` build setting；EULA 链接与版本资产回滚不影响用户数据。
+- 结论：App 侧复审问题已修复并通过本地构建；剩余动作是上传新 binary，并在 ASC 可编辑状态下替换月付 / 年付 promoted IAP 图后回复审核。
+- 下一步建议：Developer Reject 当前 macOS submission，等待 Xcode Cloud 产出新 build 后选择新构建；在 ASC 订阅商品页面分别上传 `versions/assets/asc-subscription/autoledger-pro-monthly-1024.png` 和 `versions/assets/asc-subscription/autoledger-pro-yearly-1024.png`，再在 Resolution Center 回复修复说明。
 
 ### ITER-343 v1.7.0 计划推进执行版
 - 日期：2026-07-01

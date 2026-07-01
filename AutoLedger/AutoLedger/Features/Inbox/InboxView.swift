@@ -492,7 +492,7 @@ struct InboxView: View {
 
     private var quickImportButtonRow: some View {
         Group {
-            if isQuickSetupExpanded {
+            if isQuickSetupExpanded && isCameraImportAvailable {
                 HStack(spacing: 12) {
                     photoImportButton
                     receiptScanButton
@@ -500,7 +500,9 @@ struct InboxView: View {
             } else {
                 VStack(spacing: 12) {
                     photoImportButton
-                    receiptScanButton
+                    if isCameraImportAvailable {
+                        receiptScanButton
+                    }
                 }
             }
         }
@@ -604,10 +606,12 @@ struct InboxView: View {
                 Label("inbox.import.photo_short", systemImage: "photo.on.rectangle")
             }
 
-            Button {
-                startCameraImport()
-            } label: {
-                Label("inbox.import.scan_receipt", systemImage: "doc.viewfinder")
+            if isCameraImportAvailable {
+                Button {
+                    startCameraImport()
+                } label: {
+                    Label("inbox.import.scan_receipt", systemImage: "doc.viewfinder")
+                }
             }
 
             Button {
@@ -993,7 +997,7 @@ struct InboxView: View {
     }
 
     private func startCameraImport() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+        guard isCameraImportAvailable else {
             store.setImportError(localized("inbox.import.camera_unavailable", fallback: "Camera is unavailable on this device."), imageSource: .camera)
             return
         }
@@ -1002,6 +1006,14 @@ struct InboxView: View {
 }
 
 private extension InboxView {
+    var isCameraImportAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIImagePickerController.isSourceTypeAvailable(.camera)
+        #endif
+    }
+
     func localized(_ key: String, fallback: String) -> String {
         let value = NSLocalizedString(key, comment: "")
         return value == key ? fallback : value

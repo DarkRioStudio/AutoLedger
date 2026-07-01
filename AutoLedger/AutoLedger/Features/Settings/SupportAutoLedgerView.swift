@@ -7,6 +7,8 @@ struct AutoLedgerProView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     private let gold = Color(red: 0.82, green: 0.58, blue: 0.12)
+    private let privacyPolicyURL = URL(string: "https://getautoledger.app/privacy")!
+    private let termsOfUseURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
 
     var body: some View {
         ScrollView {
@@ -20,6 +22,7 @@ struct AutoLedgerProView: View {
                 roadmapSection
                 assurancePanel
                 productSection
+                legalLinksCard
                 boundaryCard
             }
             .padding(.horizontal, 20)
@@ -433,6 +436,57 @@ struct AutoLedgerProView: View {
                 subscriptionUnavailableCard(message)
             }
         }
+    }
+
+    private var legalLinksCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("pro.legal.title")
+                .font(.headline)
+                .foregroundStyle(AppTheme.ink)
+
+            Text("pro.legal.body")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    legalLinkButton(titleKey: "pro.legal.privacy", systemImage: "lock.shield.fill", destination: privacyPolicyURL)
+                    legalLinkButton(titleKey: "pro.legal.terms", systemImage: "doc.text.fill", destination: termsOfUseURL)
+                }
+
+                VStack(spacing: 10) {
+                    legalLinkButton(titleKey: "pro.legal.privacy", systemImage: "lock.shield.fill", destination: privacyPolicyURL)
+                    legalLinkButton(titleKey: "pro.legal.terms", systemImage: "doc.text.fill", destination: termsOfUseURL)
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(AppTheme.card)
+        )
+    }
+
+    private func legalLinkButton(
+        titleKey: LocalizedStringKey,
+        systemImage: String,
+        destination: URL
+    ) -> some View {
+        Link(destination: destination) {
+            Label(titleKey, systemImage: systemImage)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.accent.opacity(0.10))
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private func productButton(for product: Product) -> some View {

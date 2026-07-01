@@ -874,6 +874,10 @@
 "pro.pricing.title" = "选择订阅";
 "pro.pricing.subtitle_format" = "月付 %@，年付首发价 %@。";
 "pro.pricing.launch_note" = "后续新订阅用户价格可能调整；已订阅用户将尽量保留当前续订价格。";
+"pro.legal.title" = "订阅条款";
+"pro.legal.body" = "订阅前可查看隐私政策和 Apple 标准使用条款。";
+"pro.legal.privacy" = "隐私政策";
+"pro.legal.terms" = "使用条款（EULA）";
 "pro.active.title" = "Pro 已启用";
 "pro.active.body" = "本地邮箱扫描、专属水单收件箱、批量候选和高级去重已经可用。";
 "pro.status.active.title" = "Pro 已启用";

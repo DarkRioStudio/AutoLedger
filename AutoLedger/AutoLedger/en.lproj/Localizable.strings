@@ -874,6 +874,10 @@
 "pro.pricing.title" = "Choose a plan";
 "pro.pricing.subtitle_format" = "Monthly: %@. Launch annual price: %@.";
 "pro.pricing.launch_note" = "Future pricing for new subscribers may change; existing subscribers will be kept on their current renewal price whenever possible.";
+"pro.legal.title" = "Subscription terms";
+"pro.legal.body" = "Review the privacy policy and Apple standard Terms of Use before subscribing.";
+"pro.legal.privacy" = "Privacy Policy";
+"pro.legal.terms" = "Terms of Use (EULA)";
 "pro.active.title" = "Pro is active";
 "pro.active.body" = "Local email scanning, the dedicated folio inbox, batch candidates, and advanced dedupe are available.";
 "pro.status.active.title" = "Pro is active";

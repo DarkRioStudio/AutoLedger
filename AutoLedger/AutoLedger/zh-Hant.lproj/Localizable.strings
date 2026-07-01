@@ -877,6 +877,10 @@
 "pro.pricing.title" = "選擇訂閱";
 "pro.pricing.subtitle_format" = "月付 %@，年付首發價 %@。";
 "pro.pricing.launch_note" = "後續新訂閱用戶價格可能調整；已訂閱用戶將盡量保留目前續訂價格。";
+"pro.legal.title" = "訂閱條款";
+"pro.legal.body" = "訂閱前可查看隱私政策和 Apple 標準使用條款。";
+"pro.legal.privacy" = "隱私政策";
+"pro.legal.terms" = "使用條款（EULA）";
 "pro.active.title" = "Pro 已啟用";
 "pro.active.body" = "本機郵件掃描、專屬水單收件箱、批次候選和進階去重已可使用。";
 "pro.status.active.title" = "Pro 已啟用";

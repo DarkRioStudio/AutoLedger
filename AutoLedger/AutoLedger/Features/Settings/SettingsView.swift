@@ -20,7 +20,7 @@ struct SettingsView: View {
     }
 
     private var privacyPolicyURL: URL {
-        URL(string: "https://app.darkrio326.top/autoledger/privacy")!
+        URL(string: "https://getautoledger.app/privacy")!
     }
 
     var body: some View {
