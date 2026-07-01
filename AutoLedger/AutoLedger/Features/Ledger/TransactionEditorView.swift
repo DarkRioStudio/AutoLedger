@@ -153,7 +153,7 @@ struct TransactionEditorView: View {
                     }
                 }
 
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
                     Button {
                         prepareSave()
                     } label: {
@@ -161,10 +161,8 @@ struct TransactionEditorView: View {
                     }
                     .accessibilityLabel(Text("common.save"))
                     .disabled(isSaving || parsedAmount <= 0 || merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
 
-                if showsTransactionActionMenu {
-                    ToolbarItem(placement: .secondaryAction) {
+                    if showsTransactionActionMenu {
                         transactionActionMenu
                     }
                 }
@@ -263,7 +261,7 @@ struct TransactionEditorView: View {
                 }
             }
         } label: {
-            Label("common.more_actions", systemImage: "ellipsis.circle")
+            Image(systemName: "ellipsis")
         }
         .accessibilityLabel(Text("common.more_actions"))
     }

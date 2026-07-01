@@ -698,26 +698,19 @@ struct HotelStayDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .autoLedgerNavigationBarChrome()
         .toolbar {
-            if onUpdateRecord != nil {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        saveEdits()
-                    } label: {
-                        Label("common.save", systemImage: "checkmark")
-                    }
-                    .disabled(!form.isValid)
-                }
-            }
-            if onDeleteRecord != nil {
-                ToolbarItem(placement: .secondaryAction) {
-                    Menu {
-                        Button(role: .destructive) {
-                            showsDeleteConfirmation = true
+            if onUpdateRecord != nil || onDeleteRecord != nil {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if onUpdateRecord != nil {
+                        Button {
+                            saveEdits()
                         } label: {
-                            Label("hotel_stay.delete.button", systemImage: "trash")
+                            Label("common.save", systemImage: "checkmark")
                         }
-                    } label: {
-                        Label("common.more_actions", systemImage: "ellipsis.circle")
+                        .disabled(!form.isValid)
+                    }
+
+                    if onDeleteRecord != nil {
+                        deleteActionMenu
                     }
                 }
             }
@@ -1046,6 +1039,19 @@ struct HotelStayDetailView: View {
                 .background(AppTheme.canvas.opacity(0.7))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
+    }
+
+    private var deleteActionMenu: some View {
+        Menu {
+            Button(role: .destructive) {
+                showsDeleteConfirmation = true
+            } label: {
+                Label("hotel_stay.delete.button", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .accessibilityLabel(Text("common.more_actions"))
     }
 
     private func saveEdits() {

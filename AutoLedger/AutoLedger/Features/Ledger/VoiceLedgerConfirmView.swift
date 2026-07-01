@@ -4,6 +4,7 @@ import SwiftUI
 struct VoiceLedgerConfirmView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: LedgerStore
+    @StateObject private var speechRecognizer = VoiceSpeechRecognizer()
 
     @State private var inputText = ""
     @State private var merchant = ""
@@ -12,6 +13,8 @@ struct VoiceLedgerConfirmView: View {
     @State private var occurredAt = Date()
     @State private var result: VoiceLedgerParseResult?
     @State private var message = String(localized: "voice_ledger_example")
+    @State private var isRecordingVoice = false
+    @State private var finishRecordingTask: Task<Void, Never>?
     @State private var parseTask: Task<Void, Never>?
 
     private var amount: Double? {
@@ -26,6 +29,10 @@ struct VoiceLedgerConfirmView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    voiceInputControl
+                }
+
                 Section {
                     TextField(String(localized: "voice_ledger_input_placeholder"), text: $inputText, axis: .vertical)
                         .lineLimit(2...4)
@@ -77,10 +84,53 @@ struct VoiceLedgerConfirmView: View {
             .onChange(of: inputText) { _, _ in
                 parseInput()
             }
+            .onChange(of: speechRecognizer.transcript) { _, newValue in
+                guard !newValue.isEmpty else { return }
+                inputText = newValue
+            }
+            .onChange(of: speechRecognizer.state) { _, newValue in
+                updateSpeechMessage(for: newValue)
+            }
             .onDisappear {
+                finishRecordingTask?.cancel()
                 parseTask?.cancel()
+                speechRecognizer.cancel()
             }
         }
+    }
+
+    private var voiceInputControl: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(isRecordingVoice ? AppTheme.accentSecondary : AppTheme.accent)
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: isRecordingVoice ? "stop.fill" : "mic.fill")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isRecordingVoice ? String(localized: "voice_ledger_release_to_finish") : String(localized: "voice_ledger_hold_to_record"))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Text("voice_ledger_home_subtitle")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in beginVoiceRecording() }
+                .onEnded { _ in finishVoiceRecording() }
+        )
+        .accessibilityLabel(Text(String(localized: "voice_ledger_hold_to_record")))
     }
 
     private func parseInput() {
@@ -92,7 +142,9 @@ struct VoiceLedgerConfirmView: View {
             amountText = ""
             category = .other
             occurredAt = .now
-            message = String(localized: "voice_ledger_example")
+            if !isRecordingVoice {
+                message = String(localized: "voice_ledger_example")
+            }
             return
         }
 
@@ -101,6 +153,36 @@ struct VoiceLedgerConfirmView: View {
             let parsed = await store.interpretVoiceText(currentText)
             guard !Task.isCancelled, currentText == inputText else { return }
             applyParsedResult(parsed)
+        }
+    }
+
+    private func beginVoiceRecording() {
+        guard !isRecordingVoice else { return }
+        finishRecordingTask?.cancel()
+        isRecordingVoice = true
+        inputText = ""
+        merchant = ""
+        amountText = ""
+        category = .other
+        occurredAt = .now
+        result = nil
+        message = String(localized: "voice_ledger_listening")
+        speechRecognizer.start()
+    }
+
+    private func finishVoiceRecording() {
+        guard isRecordingVoice else { return }
+        isRecordingVoice = false
+        speechRecognizer.stop()
+        message = String(localized: "voice_ledger_processing")
+        finishRecordingTask?.cancel()
+        finishRecordingTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                message = String(localized: "voice_ledger_empty_result")
+            } else {
+                parseInput()
+            }
         }
     }
 
@@ -147,6 +229,19 @@ struct VoiceLedgerConfirmView: View {
             return String(localized: "voice_ledger_example")
         default:
             return String(localized: "voice_ledger_unclear")
+        }
+    }
+
+    private func updateSpeechMessage(for state: VoiceSpeechRecognizer.RecognitionState) {
+        switch state {
+        case .idle:
+            break
+        case .requestingPermission:
+            message = String(localized: "voice_ledger_requesting_permission")
+        case .listening:
+            message = String(localized: "voice_ledger_listening")
+        case .unavailable(let reason):
+            message = reason
         }
     }
 }

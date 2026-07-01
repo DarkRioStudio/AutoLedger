@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-325 设置页版本说明用户化）
+更新日期：2026-07-01（ITER-326 语音入口与编辑操作统一）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-326 语音入口与编辑操作统一
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：App UI Polish
+- 类型：UI / Bugfix
+- 目标：恢复一句话记账页的语音入口，并将账本账单编辑与酒店消费详情编辑的顶部操作体验统一。
+- 改动范围：更新 `VoiceLedgerConfirmView`、`TransactionEditorView`、`HotelStayArchiveView`、CHANGELOG 和本日志。
+- 未改动范围：未修改语音解析规则、账单保存业务、酒店消费数据模型、SQLite / CloudKit schema、StoreKit、Worker、APNs、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：一句话记账页新增按住说话入口，复用既有 `VoiceSpeechRecognizer`，语音识别结果回填到一句话文本，并继续走原来的解析、复核和保存流程；账本账单编辑页的保存按钮和省略号菜单收进同一个顶部 primary action 按钮组，样式与酒店消费详情的浅色操作按钮保持一致；酒店消费详情页右上角保留保存和省略号删除菜单，但删除入口直接出现，不再经过“更多操作”二级菜单。
+- 未完成内容：本轮未重新导出 App Store 截图，也未在真机上重新授权麦克风 / 语音识别权限；若权限首次弹窗文案需要审核，仍需 TestFlight 真机目检。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `python3 scripts/check_accessibility_smoke.py` 通过；执行 `git diff --check` 通过；执行旧交互模式检索确认目标文件不再包含 `ToolbarItem(placement: .secondaryAction)`、`Label("common.more_actions"`、`ellipsis.circle` 或中文“更多操作”二级入口；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO -quiet` 通过，构建只输出既有 Swift 6 actor isolation / MediaPipe deprecated / formatter warning。
+- 风险与注意事项：语音入口复用系统语音识别权限和原有一句话解析链路，首次使用仍受系统权限、设备语言和网络 / 离线识别能力影响；本轮只把入口恢复到一句话记账页，不把语音识别结果自动入账。
+- 回滚方式：回退上述三个 Swift 文件、CHANGELOG 和本日志即可；无数据迁移或 schema 回滚。
+- 结论：本轮完成，语音入口已回到一句话记账页，两个编辑页顶部操作已统一为同组浅色按钮并移除二级“更多操作”层级。
+- 下一步建议：下一版 TestFlight 真机验证时，重点点开一句话记账页首次授权语音 / 麦克风，再检查账单编辑与酒店消费编辑右上角按钮组的视觉一致性。
 
 ### ITER-325 设置页版本说明用户化
 - 日期：2026-07-01
