@@ -102,6 +102,14 @@ final class ProEntitlementManager: ObservableObject {
         }.first
     }
 
+    func product(for proProduct: AutoLedgerProProduct) -> Product? {
+        products.first { $0.id == proProduct.rawValue }
+    }
+
+    func displayPrice(for proProduct: AutoLedgerProProduct) -> String? {
+        product(for: proProduct)?.displayPrice
+    }
+
     func startTransactionListener() {
         guard transactionUpdatesTask == nil else { return }
         transactionUpdatesTask = Task { [weak self] in

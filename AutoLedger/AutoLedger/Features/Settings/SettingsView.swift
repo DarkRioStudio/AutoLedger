@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     private let topContentPadding: CGFloat
     @State private var versionTapCount = 0
     @State private var showDebugUnlocked = false
@@ -286,6 +287,10 @@ struct SettingsView: View {
                 FeedbackComposerView()
                     .environmentObject(store)
             }
+            .task {
+                guard proEntitlement.products.isEmpty else { return }
+                await proEntitlement.loadProducts()
+            }
         }
     }
 
@@ -381,8 +386,8 @@ struct SettingsView: View {
                 .frame(width: 14, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("pro.hero.price_monthly")
-                Text("pro.hero.price_yearly")
+                Text(settingsPriceLine(for: .monthly))
+                Text(settingsPriceLine(for: .yearly))
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(.white.opacity(0.84))
@@ -390,6 +395,19 @@ struct SettingsView: View {
             .minimumScaleFactor(0.78)
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(2)
+        }
+    }
+
+    private func settingsPriceLine(for proProduct: AutoLedgerProProduct) -> String {
+        guard let price = proEntitlement.displayPrice(for: proProduct) else {
+            return String(localized: "pro.price.loading_short")
+        }
+
+        switch proProduct {
+        case .monthly:
+            return String(format: String(localized: "pro.hero.price_monthly_format"), price)
+        case .yearly:
+            return String(format: String(localized: "pro.hero.price_yearly_format"), price)
         }
     }
 

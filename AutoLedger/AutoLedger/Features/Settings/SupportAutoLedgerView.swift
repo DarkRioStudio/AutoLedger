@@ -81,7 +81,7 @@ struct AutoLedgerProView: View {
                     .foregroundStyle(AppTheme.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Label("pro.hero.price_line", systemImage: "tag.fill")
+                Label(heroPriceLineText, systemImage: "tag.fill")
                     .font(.footnote.weight(.bold))
                     .foregroundStyle(gold)
                     .fixedSize(horizontal: false, vertical: true)
@@ -370,6 +370,32 @@ struct AutoLedgerProView: View {
         )
     }
 
+    private var heroPriceLineText: String {
+        guard let monthlyPrice = proEntitlement.displayPrice(for: .monthly),
+              let yearlyPrice = proEntitlement.displayPrice(for: .yearly) else {
+            return String(localized: "pro.price.loading")
+        }
+
+        return String(
+            format: String(localized: "pro.hero.price_line_format"),
+            monthlyPrice,
+            yearlyPrice
+        )
+    }
+
+    private var pricingSubtitleText: String {
+        guard let monthlyPrice = proEntitlement.displayPrice(for: .monthly),
+              let yearlyPrice = proEntitlement.displayPrice(for: .yearly) else {
+            return String(localized: "pro.price.loading")
+        }
+
+        return String(
+            format: String(localized: "pro.pricing.subtitle_format"),
+            monthlyPrice,
+            yearlyPrice
+        )
+    }
+
     @ViewBuilder
     private var productSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -378,7 +404,7 @@ struct AutoLedgerProView: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
-                Text("pro.pricing.subtitle")
+                Text(pricingSubtitleText)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
             }
@@ -694,9 +720,15 @@ struct AutoLedgerProView: View {
     private func productDescription(for product: Product) -> String {
         switch AutoLedgerProProduct(rawValue: product.id) {
         case .monthly:
-            String(localized: "pro.product.monthly.description")
+            String(
+                format: String(localized: "pro.product.monthly.description_format"),
+                product.displayPrice
+            )
         case .yearly:
-            String(localized: "pro.product.yearly.description")
+            String(
+                format: String(localized: "pro.product.yearly.description_format"),
+                product.displayPrice
+            )
         case .none:
             product.description
         }

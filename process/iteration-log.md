@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-01（ITER-340 App Store Server Notifications 顺延到 v1.7.0）
+更新日期：2026-07-01（ITER-343 v1.7.0 计划推进执行版）
 
 ## 记录规则
 
@@ -43,6 +43,54 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-343 v1.7.0 计划推进执行版
+- 日期：2026-07-01
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Planning / Execution Readiness
+- 类型：文档 / 治理
+- 目标：把 `v1.7.0-plan.md` 从草稿计划推进为可执行版本，明确后续 GOAL 的启动顺序、门禁和回滚要求。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 功能代码、Worker、ASC 线上配置、截图成品、StoreKit 商品、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0-plan.md` 的文档状态从 `Draft` 改为 `执行版 / Execution Ready`；新增执行版总控，固定先做 `GOAL-2300` Free / Pro 与隐私边界冻结，再优先推进 ASC metadata-as-code 和 `common-api` 基础设施，随后进入 App Store Server Notifications、实时 OCR、韩语 UI / 识别包、Pro 自动化能力和 ASC 1.6.0 审核材料；补充每个 GOAL 必须独立回归、独立提交、可回滚，以及 ASC dry-run、Worker secret 不入库、common-api 最小数据字段和 Pro gate 变更审计要求。
+- 未完成内容：本轮没有执行任何 `v1.7.0` 功能实现，也没有创建新 Worker、修改 ASC 远端数据、运行截图导出或提交审核。
+- 测试情况：执行 `git diff --check` 通过；执行 `rg -n "文档状态：Draft" versions/v1.7.0-plan.md` 确认不再保留 Draft 状态。未运行 Xcode 构建或离线回归，因为本轮新增改动仅为文档；同一提交中的 Pro 价格展示代码此前已通过本地化 lint、覆盖检查、固定价格检索、`git diff --check` 和 `.xcworkspace` iOS generic build。
+- 风险与注意事项：执行版只是固定工作顺序和门禁，不代表 `v1.7.0` 功能已经落地；对外文案仍应以当前 ASC 1.5.0 已实现能力为准。
+- 回滚方式：回退本轮三个文档文件即可恢复到草稿状态；无 App、Worker、ASC 或用户数据回滚。
+- 结论：本轮完成，`v1.7.0 / ASC 1.6.0` 已进入执行版，可按 GOAL 队列拆分开工。
+- 下一步建议：下一轮进入 `v1.7.0` 时先执行 `GOAL-2300`，冻结 Free / Pro、隐私和跨端权益边界，再启动 `GOAL-2312` ASC audit 与 `GOAL-2309` common-api 合同。
+
+### ITER-342 Pro 订阅价格展示改用 StoreKit displayPrice
+- 日期：2026-07-01
+- 所属版本：v1.6.4
+- 所属阶段：ASC 1.5.0 Release Polish
+- 类型：Bugfix
+- 目标：移除 Pro 订阅页和设置页入口中用户可见的固定美元价格展示，改为使用 App Store / StoreKit 返回的本地化商店价格。
+- 改动范围：更新 `ProEntitlementManager`、`SettingsView`、`AutoLedgerProView` 和四语 `Localizable.strings` 的 Pro 价格文案。
+- 未改动范围：本轮未修改 StoreKit 商品配置、ASC 订阅价格、购买 / 恢复 / 管理订阅流程、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`ProEntitlementManager` 新增按 `AutoLedgerProProduct` 查询 `Product` 与 `displayPrice` 的 helper；设置页 AutoLedger Pro 高亮卡在进入设置时加载商品，并用 `displayPrice` 格式化月付 / 年付价格行；Pro 详情页 hero 价格行、订阅区副标题和商品说明改为运行时填入 `Product.displayPrice`；四语价格文案从固定 `$2.99` / `$19.99` 改为 `%@` 模板，并补充价格加载态。
+- 未完成内容：未新增商店价格缓存、离线 fallback 价格或 ASC price schedule 同步；商品未加载时只显示加载态，不展示旧固定价格。
+- 测试情况：执行 `plutil -lint AutoLedger/AutoLedger/*.lproj/Localizable.strings` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行 `rg` 确认 App target / TV / Vision / Widget / Extension 用户可见资源中不再包含 `$2.99`、`$19.99`、`US$2.99`、`US$19.99`，仅 `AutoLedgerSupport.storekit` 保留本地测试价格；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过。
+- 风险与注意事项：设置页初次进入时如果 StoreKit 商品尚未返回，会短暂显示“价格加载中”；这是为了避免继续展示错误固定价格。实际购买按钮仍以 StoreKit 商品卡和系统订阅 sheet 为准。
+- 回滚方式：回退本轮 Swift 与四语本地化改动即可恢复旧固定价格展示；不涉及远端价格、订阅商品或用户数据回滚。
+- 结论：本轮完成，Pro 订阅价格展示已改为商店本地化价格源。
+- 下一步建议：若后续需要在截图模式中完全固定演示价格，可在截图配置中显式注入 mock StoreKit 商品，而不是在生产文案里写死金额。
+
+### ITER-341 ASC metadata-as-code 纳入 v1.7.0
+- 日期：2026-07-01
+- 所属版本：v1.7.0
+- 所属阶段：Release Automation / ASC Metadata
+- 类型：文档 / 治理
+- 目标：把 ASC 商店信息、推广文本、描述、新增功能、隐私文本、订阅本地化、截图和 App Preview 自动化纳入 `v1.7.0 / ASC 1.6.0` 计划，降低多平台多语言发布维护成本。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、`README.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 代码、截图脚本、截图成品、App Preview 视频、App Store Connect 线上配置、App Privacy 问卷、StoreKit 商品、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
+- 完成内容：`v1.7.0` 计划新增 ASC 发布材料自动化主线和 `GOAL-2312`，明确后续建立 `tools/asc-metadata/`，用 repo 内 YAML / JSON 管理 `appInfoLocalizations`、`appStoreVersionLocalizations`、订阅 / IAP 本地化、截图 manifest 和 App Preview manifest；第一版提供 `audit`、`dry-run` 和显式 `--apply`，用于发现 stale locale、缺失隐私文本、缺失版本元数据、缺失截图 / 视频和订阅描述重复维护问题。
+- 未完成内容：本轮没有实现 App Store Connect API 客户端、JWT 生成、metadata schema、截图上传、App Preview 上传、订阅本地化同步或自动提审；没有尝试绕过当前 ASC 1.5.0 的 Apple TV 隐私政策校验。
+- 测试情况：文档变更后执行 `git diff --check` 通过；未运行 Xcode / Worker 构建，因为本轮只改规划与发布说明。
+- 风险与注意事项：官方 App Store Connect API 能覆盖 App 信息、版本本地化、截图、App Preview、IAP 和订阅本地化，但 App Privacy nutrition label 问卷本体官方 API 覆盖不完整；第一版不做无人值守自动提审，发布前仍保留人工确认。真实 API key / p8 只能放本机安全位置或 CI secret，不进入 repo。
+- 回滚方式：回退本轮四个文档文件即可；无代码、数据、ASC 远端配置或构建产物回滚。
+- 结论：本轮完成，ASC metadata-as-code 已纳入 `v1.7.0 / ASC 1.6.0`，后续可从 audit 脚本开始，先解决多语言残留和提交前缺失项可见性。
+- 下一步建议：等待当前 ASC 1.5.0 提审问题收口后，优先实现 `audit_metadata.py` 读取真实 ASC locale / privacy / subscription / screenshot 状态，确认是否存在 `en-GB` stale localization。
 
 ### ITER-340 App Store Server Notifications 顺延到 v1.7.0
 - 日期：2026-07-01
