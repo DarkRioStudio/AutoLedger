@@ -91,6 +91,147 @@ describe("hotel folio inbox worker contract", () => {
     }, now)).toMatchObject({ allowed: false, reason: "subscription_expired" });
   });
 
+  it("keeps App Store Server Notifications disabled until verifier mode is explicit", () => {
+    const payload = {
+      notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
+      notificationType: "DID_RENEW",
+      data: {}
+    };
+    const signedPayload = unsignedJWS(payload);
+
+    expect(testInternals.decodeAppStoreServerNotificationPayload({} as never, signedPayload)).toMatchObject({
+      ok: false,
+      status: 503,
+      code: "app_store_notification_verifier_unconfigured"
+    });
+    expect(testInternals.decodeAppStoreServerNotificationPayload({
+      ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS: "true"
+    } as never, signedPayload)).toMatchObject({
+      ok: true,
+      payload
+    });
+  });
+
+  it("prepares App Store Server Notification scopes without storing raw transaction IDs", async () => {
+    const transaction = {
+      transactionId: "2000000000000001",
+      originalTransactionId: "1000000000000001",
+      bundleId: "top.darkrio326.AutoLedger",
+      productId: "top.darkrio326.AutoLedger.pro.yearly",
+      expiresDate: 1790726400000
+    };
+    const notification = {
+      notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
+      notificationType: "DID_RENEW",
+      version: "2.0",
+      signedDate: 1782864000000,
+      data: {
+        bundleId: "top.darkrio326.AutoLedger",
+        environment: "Sandbox",
+        signedTransactionInfo: unsignedJWS(transaction)
+      }
+    };
+
+    const prepared = await testInternals.prepareAppStoreNotification(
+      { bundleID: "top.darkrio326.AutoLedger", environment: "sandbox" },
+      unsignedJWS(notification),
+      notification
+    );
+
+    expect(prepared).toMatchObject({
+      ok: true,
+      scope: {
+        notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
+        notificationType: "DID_RENEW",
+        userID: expect.stringMatching(/^appstore:[a-f0-9]{64}$/),
+        originalTransactionIDHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        productID: "top.darkrio326.AutoLedger.pro.yearly",
+        expiresAt: "2026-09-30T00:00:00.000Z"
+      }
+    });
+    if (!prepared.ok) {
+      throw new Error("notification should prepare");
+    }
+    expect(JSON.stringify(prepared.scope)).not.toContain("1000000000000001");
+    expect(prepared.scope.rawPayloadHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("rejects App Store Server Notifications for the wrong environment or product", async () => {
+    const transaction = {
+      transactionId: "2000000000000001",
+      originalTransactionId: "1000000000000001",
+      bundleId: "top.darkrio326.AutoLedger",
+      productId: "top.darkrio326.AutoLedger.tip.small",
+      expiresDate: 1790726400000
+    };
+    const notification = {
+      notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
+      notificationType: "DID_RENEW",
+      data: {
+        bundleId: "top.darkrio326.AutoLedger",
+        environment: "Production",
+        signedTransactionInfo: unsignedJWS(transaction)
+      }
+    };
+
+    const environmentMismatch = await testInternals.prepareAppStoreNotification(
+      { bundleID: "top.darkrio326.AutoLedger", environment: "sandbox" },
+      unsignedJWS(notification),
+      notification
+    );
+    expect(environmentMismatch).toMatchObject({ ok: false, code: "environment_mismatch" });
+
+    const unsupportedProduct = await testInternals.prepareAppStoreNotification(
+      { bundleID: "top.darkrio326.AutoLedger", environment: "production" },
+      unsignedJWS(notification),
+      notification
+    );
+    expect(unsupportedProduct).toMatchObject({ ok: false, code: "unsupported_product" });
+  });
+
+  it("maps App Store notification lifecycle events to service entitlement states", () => {
+    const now = new Date("2026-07-01T00:00:00.000Z");
+    const activeTransaction = {
+      bundleId: "top.darkrio326.AutoLedger",
+      productId: "top.darkrio326.AutoLedger.pro.monthly",
+      originalTransactionId: "1000000000000001",
+      expiresDate: "2026-08-01T00:00:00.000Z"
+    };
+    const expiredTransaction = {
+      ...activeTransaction,
+      expiresDate: "2026-06-01T00:00:00.000Z"
+    };
+
+    expect(testInternals.appStoreEntitlementStateForNotification("DID_RENEW", null, activeTransaction, null, now)).toMatchObject({
+      status: "active",
+      active: true,
+      expiresAt: "2026-08-01T00:00:00.000Z"
+    });
+    expect(testInternals.appStoreEntitlementStateForNotification("DID_FAIL_TO_RENEW", null, activeTransaction, {
+      gracePeriodExpiresDate: "2026-07-07T00:00:00.000Z"
+    }, now)).toMatchObject({
+      status: "grace_period",
+      active: true,
+      expiresAt: "2026-07-07T00:00:00.000Z"
+    });
+    expect(testInternals.appStoreEntitlementStateForNotification("DID_FAIL_TO_RENEW", null, expiredTransaction, null, now)).toMatchObject({
+      status: "billing_retry",
+      active: false
+    });
+    expect(testInternals.appStoreEntitlementStateForNotification("EXPIRED", null, expiredTransaction, null, now)).toMatchObject({
+      status: "expired",
+      active: false
+    });
+    expect(testInternals.appStoreEntitlementStateForNotification("REFUND", null, activeTransaction, null, now)).toMatchObject({
+      status: "refunded",
+      active: false
+    });
+    expect(testInternals.appStoreEntitlementStateForNotification("REVOKE", null, activeTransaction, null, now)).toMatchObject({
+      status: "revoked",
+      active: false
+    });
+  });
+
   it("hashes App Store transaction identifiers before using them as Worker user IDs", async () => {
     const originalTransactionID = "1000000000000001";
     const userID = await testInternals.appStoreUserID(originalTransactionID);

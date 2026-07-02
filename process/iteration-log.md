@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-363 Common API 汇率缓存）
+更新日期：2026-07-02（ITER-364 App Store Server Notifications 服务端合同）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-364 App Store Server Notifications 服务端合同
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Entitlement / Cloud Inbox / App Store Server Notifications
+- 类型：能力增强 / 基础设施 / 回归
+- 目标：为 Pro 服务端订阅生命周期建立第一段可验证合同，让 App Store Server Notifications V2 可以幂等落库，并把续费、宽限期、账单重试、过期、退款和撤销映射到服务端 entitlement 与云收件箱 token 生命周期；当前不配置 ASC URL。
+- 改动范围：更新 `tools/worker/hotel-folio-inbox/src/index.ts`、`wrangler.jsonc`、新增 `migrations/0002_app_store_notifications.sql`、更新 Worker README、Worker 单元测试、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App Swift 代码、StoreKit 商品、ASC 线上配置、App Store Connect Server Notifications URL、common-api Worker、云收件箱现有候选 PDF / APNs 逻辑、R2 对象、线上 D1 数据、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`hotel-folio-inbox` Worker 新增 `POST /v1/app-store/notifications`。该 endpoint 读取 Apple `signedPayload`，开发 / staging 可在显式 `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS=true` 下解码 V2 payload，用 `notificationUUID` 向 `app_store_notification_events` 做 `INSERT OR IGNORE` 幂等落库；解析 `signedTransactionInfo` / `signedRenewalInfo` 后校验 bundle id、environment 和 Pro product id，并用 raw original transaction id 的 SHA-256 派生 `appstore:<hash>` 服务端 user id。新增 `app_store_entitlements` 保存当前服务端权益状态；active / grace period 会延长或恢复活跃云收件箱 token，billing retry / expired / refunded / revoked 会停用新的云端自动化请求。事件表只保存通知元数据、哈希和处理状态，不保存 raw signedPayload、raw original transaction id、酒店内容、PDF、邮箱正文或账本数据。
+- 未完成内容：生产未启用 App Store signedPayload 证书链验签；生产未开启未验签通知解码；未在 App Store Connect 配置 Server Notifications URL；未执行线上 D1 迁移；未实现 Notification History 补偿任务；未做 sandbox 真通知端到端 smoke。
+- 测试情况：执行 `npm run check` 于 `tools/worker/hotel-folio-inbox`，结果 PASS，包含 `wrangler types`、`tsc --noEmit` 和 23 个 Vitest 合同测试；新增测试覆盖未配置验签时拒收、开发显式开关解码、通知 scope 不保留 raw original transaction id、environment / product 校验，以及 DID_RENEW、DID_FAIL_TO_RENEW、EXPIRED、REFUND、REVOKE 到 entitlement 状态的映射。
+- 风险与注意事项：当前 endpoint 的生产默认状态是安全拒收未验签通知；开发 / staging 的未验签开关只能用于合同测试，不能用于生产。后续实现 Apple 证书链验签前，不应把 ASC Server Notifications URL 指向生产 Worker。
+- 回滚方式：回退 `src/index.ts` 中 `/v1/app-store/notifications` 路由、ASSN helper 和 token 更新逻辑；回退 `wrangler.jsonc` 的 dev / staging 测试开关；不执行或回滚 `0002_app_store_notifications.sql` 迁移；删除 README / 版本文档 / CHANGELOG / 测试中的 ASSN 第一段描述。
+- 结论：本轮完成 ASSN 服务端生命周期第一段合同和本地回归，具备后续接 Apple signedPayload 证书链验签、D1 线上迁移和 sandbox 通知测试的基础。
+- 下一步建议：下一轮优先补生产可用的 Apple signedPayload 证书链验签；通过后再执行 staging D1 迁移、配置 ASC sandbox URL，并用真实 sandbox 订阅通知做端到端 smoke。
 
 ### ITER-363 Common API 汇率缓存
 - 日期：2026-07-02

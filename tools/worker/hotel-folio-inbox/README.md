@@ -96,6 +96,22 @@ The Worker stores the token against the service-side `user_id` resolved from `pr
 
 They do not include hotel name, amount, order number, attachment filename, or inbox token hash.
 
+## App Store Server Notifications
+
+`POST /v1/app-store/notifications` is reserved for App Store Server Notifications V2. The endpoint accepts Apple's `signedPayload`, decodes the notification contract, writes an idempotent event row keyed by `notificationUUID`, updates `app_store_entitlements`, and adjusts active cloud-inbox tokens for the matching `appstore:<sha256-original-transaction-id>` service user.
+
+Stored notification data is intentionally minimal:
+
+- notification UUID, type, subtype, version, environment, bundle id, product id, transaction id
+- SHA-256 hash of the original transaction id
+- derived service user id
+- entitlement status, expiry, processing status, failure reason
+- SHA-256 hash of the raw signed payload
+
+The Worker does not store the raw `signedPayload`, raw original transaction id, user email, hotel folio contents, PDF files, hotel names, or ledger data in the App Store notification tables.
+
+Production must keep `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS` unset. The current development/staging flag exists only to test the database contract before Apple certificate-chain verification is enabled and before App Store Connect is configured with the notification URL.
+
 ## Setup
 
 Install dependencies:
@@ -115,6 +131,9 @@ Create the D1 schema:
 ```bash
 npx wrangler d1 execute autoledger-hotel-folio-inbox-dev \
   --file migrations/0001_hotel_folio_inbox.sql
+
+npx wrangler d1 execute autoledger-hotel-folio-inbox-dev \
+  --file migrations/0002_app_store_notifications.sql
 ```
 
 Use `POST /v1/cloud-hotel-folio-token` from the App or curl to provision a development or staging token only when `ALLOW_UNVERIFIED_TOKEN_CLAIM=true`. Manual `pro_inbox_tokens` inserts are only needed for direct database debugging.
@@ -151,10 +170,11 @@ For dev/staging bootstrap only:
 
 ```jsonc
 "ALLOW_UNVERIFIED_TOKEN_CLAIM": "true",
+"ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS": "true",
 "UNVERIFIED_TOKEN_TTL_DAYS": "7"
 ```
 
-Do not enable unauthenticated token claim in production. Production uses App Store Server API verification and sets `pro_inbox_tokens.pro_expires_at` from the verified subscription expiration.
+Do not enable unauthenticated token claim or unsigned App Store notification decoding in production. Production uses App Store Server API verification for token claim and must only receive App Store notification payloads after certificate-chain verification is enabled.
 
 ## Current Cloudflare Deployment
 
@@ -197,6 +217,7 @@ Token claim is server-entitlement gated in production. Dev/staging bootstrap cla
 
 ```http
 POST /v1/pro-entitlements/verify
+POST /v1/app-store/notifications
 POST /v1/cloud-hotel-folio-token
 GET /v1/cloud-hotel-folio-candidates
 GET /v1/cloud-hotel-folio-candidates/{id}/pdf
@@ -212,6 +233,14 @@ Production token claim body:
   "platform": "ios",
   "environment": "production",
   "signedTransactionInfo": "<StoreKit signed transaction JWS>"
+}
+```
+
+App Store Server Notification body:
+
+```json
+{
+  "signedPayload": "<App Store Server Notification V2 signedPayload>"
 }
 ```
 

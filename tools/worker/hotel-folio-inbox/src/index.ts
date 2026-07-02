@@ -88,6 +88,63 @@ type AppStoreTransactionPayload = {
   revocationDate?: number | string | null;
 };
 
+type AppStoreRenewalPayload = {
+  originalTransactionId?: string;
+  originalTransactionID?: string;
+  productId?: string;
+  productID?: string;
+  autoRenewProductId?: string;
+  autoRenewProductID?: string;
+  autoRenewStatus?: number | string | null;
+  expirationIntent?: number | string | null;
+  gracePeriodExpiresDate?: number | string | null;
+  isInBillingRetryPeriod?: boolean | number | string | null;
+};
+
+type AppStoreNotificationDataPayload = {
+  appAppleId?: number;
+  bundleId?: string;
+  bundleID?: string;
+  bundleVersion?: string;
+  environment?: string;
+  signedTransactionInfo?: string;
+  signedRenewalInfo?: string;
+  status?: number;
+};
+
+type AppStoreNotificationPayload = {
+  notificationType?: string;
+  subtype?: string;
+  notificationUUID?: string;
+  version?: string;
+  signedDate?: number | string;
+  data?: AppStoreNotificationDataPayload;
+};
+
+type AppStoreNotificationScope = {
+  notificationUUID: string;
+  notificationType: string;
+  subtype: string | null;
+  version: string | null;
+  signedDate: string | null;
+  environment: string;
+  bundleID: string | null;
+  appAppleID: string | null;
+  transactionID: string | null;
+  originalTransactionIDHash: string;
+  userID: string;
+  productID: string;
+  expiresAt: string | null;
+  rawPayloadHash: string;
+};
+
+type AppStoreEntitlementState = {
+  status: "active" | "grace_period" | "billing_retry" | "expired" | "revoked" | "refunded" | "ignored";
+  active: boolean;
+  expiresAt: string | null;
+  reason: string;
+};
+
 type EntitlementVerificationResult = {
   allowed: boolean;
   reason?: string;
@@ -194,6 +251,10 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
 
   if (request.method === "POST" && url.pathname === "/v1/pro-entitlements/verify") {
     return verifyProEntitlement(request, env);
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/app-store/notifications") {
+    return receiveAppStoreServerNotification(request, env);
   }
 
   const auth = await authenticateRequest(request, env);
@@ -482,6 +543,402 @@ async function verifyProEntitlement(request: Request, env: Env): Promise<Respons
   return json({ allowed: result.allowed, reason: result.reason, expiresAt: result.expiresAt }, env);
 }
 
+async function receiveAppStoreServerNotification(request: Request, env: Env): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as Partial<{ signedPayload: string }>;
+  const signedPayload = typeof body.signedPayload === "string" ? body.signedPayload.trim() : "";
+  if (!signedPayload) {
+    return json({ error: "missing_signed_payload" }, env, 400);
+  }
+
+  const decoded = decodeAppStoreServerNotificationPayload(env, signedPayload);
+  if (!decoded.ok) {
+    return json({ error: decoded.code, message: decoded.message }, env, decoded.status);
+  }
+
+  const config = appStoreRuntimeConfig(env);
+  const prepared = await prepareAppStoreNotification(config, signedPayload, decoded.payload);
+  if (!prepared.ok) {
+    return json({ error: prepared.code, message: prepared.message }, env, prepared.status);
+  }
+
+  const inserted = await insertAppStoreNotificationEvent(env, prepared.scope);
+  if (!inserted) {
+    return json({
+      ok: true,
+      duplicate: true,
+      notificationUUID: prepared.scope.notificationUUID
+    }, env);
+  }
+
+  const state = appStoreEntitlementStateForNotification(
+    prepared.scope.notificationType,
+    prepared.scope.subtype,
+    prepared.transactionPayload,
+    prepared.renewalPayload
+  );
+
+  try {
+    await applyAppStoreEntitlementState(env, prepared.scope, state);
+    await markAppStoreNotificationEvent(env, prepared.scope.notificationUUID, "processed", null, state);
+    return json({
+      ok: true,
+      duplicate: false,
+      notificationUUID: prepared.scope.notificationUUID,
+      userID: prepared.scope.userID,
+      entitlementStatus: state.status,
+      active: state.active,
+      expiresAt: state.expiresAt
+    }, env);
+  } catch (caught) {
+    await markAppStoreNotificationEvent(
+      env,
+      prepared.scope.notificationUUID,
+      "failed",
+      errorMessage(caught),
+      state
+    );
+    return json({ error: "app_store_notification_processing_failed", message: errorMessage(caught) }, env, 500);
+  }
+}
+
+function decodeAppStoreServerNotificationPayload(
+  env: Env,
+  signedPayload: string
+): { ok: true; payload: AppStoreNotificationPayload } | { ok: false; status: number; code: string; message: string } {
+  if (!allowsUnsignedAppStoreNotifications(env)) {
+    return {
+      ok: false,
+      status: 503,
+      code: "app_store_notification_verifier_unconfigured",
+      message: "App Store Server Notifications are disabled until signedPayload certificate-chain verification is configured."
+    };
+  }
+
+  const payload = decodeJWSPayload<AppStoreNotificationPayload>(signedPayload);
+  if (!payload) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload",
+      message: "signedPayload is not a decodable App Store Server Notification V2 JWS."
+    };
+  }
+  return { ok: true, payload };
+}
+
+async function prepareAppStoreNotification(
+  config: Pick<AppStoreServerAPIConfig, "bundleID" | "environment">,
+  signedPayload: string,
+  payload: AppStoreNotificationPayload
+): Promise<
+  | {
+      ok: true;
+      scope: AppStoreNotificationScope;
+      transactionPayload: AppStoreTransactionPayload;
+      renewalPayload: AppStoreRenewalPayload | null;
+    }
+  | { ok: false; status: number; code: string; message: string }
+> {
+  const notificationUUID = stringPayloadValue(payload, "notificationUUID");
+  const notificationType = normalizeAppStoreNotificationType(payload.notificationType);
+  if (!notificationUUID || !notificationType) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_notification_header",
+      message: "notificationUUID and notificationType are required."
+    };
+  }
+
+  const data = payload.data;
+  if (!data) {
+    return { ok: false, status: 400, code: "missing_notification_data", message: "Notification data is required." };
+  }
+
+  const bundleID = stringPayloadValue(data, "bundleId", "bundleID");
+  if (bundleID !== config.bundleID) {
+    return { ok: false, status: 400, code: "bundle_id_mismatch", message: "Notification bundleId does not match this app." };
+  }
+
+  const environment = normalizeAppStoreEnvironment(data.environment);
+  if (environment !== config.environment) {
+    return {
+      ok: false,
+      status: 400,
+      code: "environment_mismatch",
+      message: "Notification environment does not match this Worker environment."
+    };
+  }
+
+  const transactionPayload = decodeJWSPayload<AppStoreTransactionPayload>(data.signedTransactionInfo ?? "");
+  if (!transactionPayload) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_transaction_info",
+      message: "Notification signedTransactionInfo is required and must be decodable."
+    };
+  }
+
+  const transactionScope = await appStoreNotificationTransactionScope(config, transactionPayload);
+  if (!transactionScope.ok) {
+    return { ok: false, status: 400, code: transactionScope.code, message: transactionScope.message };
+  }
+
+  const renewalPayload = data.signedRenewalInfo
+    ? decodeJWSPayload<AppStoreRenewalPayload>(data.signedRenewalInfo)
+    : null;
+  const signedDate = appleDate(payload.signedDate)?.toISOString() ?? null;
+  const rawPayloadHash = await sha256Hex(signedPayload);
+
+  return {
+    ok: true,
+    scope: {
+      notificationUUID,
+      notificationType,
+      subtype: stringPayloadValue(payload, "subtype"),
+      version: stringPayloadValue(payload, "version"),
+      signedDate,
+      environment,
+      bundleID,
+      appAppleID: typeof data.appAppleId === "number" ? String(data.appAppleId) : null,
+      transactionID: transactionScope.transactionID,
+      originalTransactionIDHash: transactionScope.originalTransactionIDHash,
+      userID: transactionScope.userID,
+      productID: transactionScope.productID,
+      expiresAt: transactionScope.expiresAt,
+      rawPayloadHash
+    },
+    transactionPayload,
+    renewalPayload
+  };
+}
+
+async function appStoreNotificationTransactionScope(
+  config: Pick<AppStoreServerAPIConfig, "bundleID">,
+  payload: AppStoreTransactionPayload
+): Promise<
+  | {
+      ok: true;
+      transactionID: string | null;
+      originalTransactionID: string;
+      originalTransactionIDHash: string;
+      userID: string;
+      productID: string;
+      expiresAt: string | null;
+    }
+  | { ok: false; code: string; message: string }
+> {
+  const bundleID = transactionPayloadValue(payload, "bundleId", "bundleID");
+  if (bundleID !== config.bundleID) {
+    return { ok: false, code: "transaction_bundle_id_mismatch", message: "Transaction bundleId does not match this app." };
+  }
+
+  const productID = transactionPayloadValue(payload, "productId", "productID");
+  if (!productID || !proProductIDs.has(productID)) {
+    return { ok: false, code: "unsupported_product", message: "Notification productId is not an AutoLedger Pro subscription." };
+  }
+
+  const originalTransactionID = transactionPayloadValue(payload, "originalTransactionId", "originalTransactionID");
+  if (!originalTransactionID) {
+    return { ok: false, code: "missing_original_transaction_id", message: "originalTransactionId is required." };
+  }
+
+  const originalTransactionIDHash = await sha256Hex(normalizeClientID(originalTransactionID) || originalTransactionID.trim());
+  return {
+    ok: true,
+    transactionID: transactionPayloadValue(payload, "transactionId", "transactionID"),
+    originalTransactionID,
+    originalTransactionIDHash,
+    userID: `appstore:${originalTransactionIDHash}`,
+    productID,
+    expiresAt: appleDate(payload.expiresDate)?.toISOString() ?? null
+  };
+}
+
+function appStoreEntitlementStateForNotification(
+  notificationType: string,
+  subtype: string | null,
+  transactionPayload: AppStoreTransactionPayload,
+  renewalPayload: AppStoreRenewalPayload | null,
+  now: Date = new Date()
+): AppStoreEntitlementState {
+  const type = normalizeAppStoreNotificationType(notificationType) ?? notificationType;
+  const expiresAt = appleDate(transactionPayload.expiresDate);
+  const expiresAtISO = expiresAt?.toISOString() ?? null;
+  const graceExpiresAt = appleDate(renewalPayload?.gracePeriodExpiresDate);
+  const graceExpiresAtISO = graceExpiresAt?.toISOString() ?? null;
+  const revokedAt = appleDate(transactionPayload.revocationDate);
+
+  if (revokedAt || type === "REVOKE") {
+    return { status: "revoked", active: false, expiresAt: revokedAt?.toISOString() ?? expiresAtISO, reason: "transaction_revoked" };
+  }
+  if (type === "REFUND") {
+    return { status: "refunded", active: false, expiresAt: expiresAtISO, reason: "transaction_refunded" };
+  }
+  if (type === "EXPIRED" || type === "GRACE_PERIOD_EXPIRED") {
+    return { status: "expired", active: false, expiresAt: expiresAtISO, reason: "subscription_expired" };
+  }
+  if (type === "DID_FAIL_TO_RENEW") {
+    if (graceExpiresAt && graceExpiresAt.getTime() > now.getTime()) {
+      return { status: "grace_period", active: true, expiresAt: graceExpiresAtISO, reason: "grace_period_active" };
+    }
+    return { status: "billing_retry", active: false, expiresAt: expiresAtISO, reason: "billing_retry_without_grace" };
+  }
+  if (expiresAt && expiresAt.getTime() > now.getTime()) {
+    return { status: "active", active: true, expiresAt: expiresAtISO, reason: "subscription_active" };
+  }
+  if (expiresAt) {
+    return { status: "expired", active: false, expiresAt: expiresAtISO, reason: "transaction_expired" };
+  }
+
+  return {
+    status: "ignored",
+    active: false,
+    expiresAt: null,
+    reason: subtype ? `ignored_${type}_${subtype}` : `ignored_${type}`
+  };
+}
+
+async function insertAppStoreNotificationEvent(env: Env, scope: AppStoreNotificationScope): Promise<boolean> {
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(
+    `INSERT OR IGNORE INTO app_store_notification_events (
+        notification_uuid, environment, bundle_id, app_apple_id, notification_type, subtype,
+        version, signed_date, original_transaction_id_hash, user_id, product_id, transaction_id,
+        transaction_expires_at, entitlement_status, raw_payload_hash, status, failure_reason,
+        received_at, processed_at, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      scope.notificationUUID,
+      scope.environment,
+      scope.bundleID,
+      scope.appAppleID,
+      scope.notificationType,
+      scope.subtype,
+      scope.version,
+      scope.signedDate,
+      scope.originalTransactionIDHash,
+      scope.userID,
+      scope.productID,
+      scope.transactionID,
+      scope.expiresAt,
+      null,
+      scope.rawPayloadHash,
+      "received",
+      null,
+      now,
+      null,
+      now,
+      now
+    )
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+async function applyAppStoreEntitlementState(
+  env: Env,
+  scope: AppStoreNotificationScope,
+  state: AppStoreEntitlementState
+): Promise<void> {
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO app_store_entitlements (
+        user_id, original_transaction_id_hash, environment, bundle_id, product_id, status,
+        expires_at, last_notification_uuid, last_notification_type, last_subtype,
+        last_reason, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+        original_transaction_id_hash = excluded.original_transaction_id_hash,
+        environment = excluded.environment,
+        bundle_id = excluded.bundle_id,
+        product_id = excluded.product_id,
+        status = excluded.status,
+        expires_at = excluded.expires_at,
+        last_notification_uuid = excluded.last_notification_uuid,
+        last_notification_type = excluded.last_notification_type,
+        last_subtype = excluded.last_subtype,
+        last_reason = excluded.last_reason,
+        updated_at = excluded.updated_at`
+  )
+    .bind(
+      scope.userID,
+      scope.originalTransactionIDHash,
+      scope.environment,
+      scope.bundleID,
+      scope.productID,
+      state.status,
+      state.expiresAt,
+      scope.notificationUUID,
+      scope.notificationType,
+      scope.subtype,
+      state.reason,
+      now,
+      now
+    )
+    .run();
+
+  await updateInboxTokensForEntitlementState(env, scope.userID, state, now);
+}
+
+async function updateInboxTokensForEntitlementState(
+  env: Env,
+  userID: string,
+  state: AppStoreEntitlementState,
+  now: string
+): Promise<void> {
+  if (state.status === "ignored") {
+    return;
+  }
+
+  if (state.active) {
+    await env.DB.prepare(
+      `UPDATE pro_inbox_tokens
+          SET status = 'active',
+              pro_expires_at = COALESCE(?, pro_expires_at),
+              updated_at = ?
+        WHERE user_id = ?
+          AND status IN ('active', 'expired', 'billing_retry', 'grace_period')`
+    )
+      .bind(state.expiresAt, now, userID)
+      .run();
+    return;
+  }
+
+  await env.DB.prepare(
+    `UPDATE pro_inbox_tokens
+        SET status = ?,
+            pro_expires_at = COALESCE(?, pro_expires_at),
+            updated_at = ?
+      WHERE user_id = ?
+        AND status = 'active'`
+  )
+    .bind(state.status, state.expiresAt, now, userID)
+    .run();
+}
+
+async function markAppStoreNotificationEvent(
+  env: Env,
+  notificationUUID: string,
+  status: "processed" | "failed",
+  failureReason: string | null,
+  state: AppStoreEntitlementState
+): Promise<void> {
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `UPDATE app_store_notification_events
+        SET status = ?,
+            entitlement_status = ?,
+            failure_reason = ?,
+            processed_at = COALESCE(processed_at, ?),
+            updated_at = ?
+      WHERE notification_uuid = ?`
+  )
+    .bind(status, state.status, failureReason?.slice(0, 500) ?? null, now, now, notificationUUID)
+    .run();
+}
+
 async function verifyAppStoreEntitlement(env: Env, signedTransactionInfo: string | undefined): Promise<EntitlementVerificationResult> {
   const trimmedJWS = signedTransactionInfo?.trim() ?? "";
   if (!trimmedJWS) {
@@ -567,22 +1024,40 @@ function validateAppStoreTransactionPayload(
 }
 
 function appStoreServerAPIConfig(env: Env): AppStoreServerAPIConfig | null {
-  const runtime = env as Env & {
+  const runtime = appStoreRuntimeEnv(env);
+  const issuerID = runtime.APP_STORE_CONNECT_ISSUER_ID?.trim() ?? "";
+  const keyID = runtime.APP_STORE_CONNECT_KEY_ID?.trim() ?? "";
+  const privateKey = runtime.APP_STORE_CONNECT_PRIVATE_KEY?.trim() ?? "";
+  const { bundleID, environment } = appStoreRuntimeConfig(env);
+  if (!issuerID || !keyID || !privateKey || !bundleID) {
+    return null;
+  }
+  return { issuerID, keyID, privateKey, bundleID, environment };
+}
+
+function appStoreRuntimeConfig(env: Env): Pick<AppStoreServerAPIConfig, "bundleID" | "environment"> {
+  const runtime = appStoreRuntimeEnv(env);
+  const bundleID = runtime.APP_STORE_BUNDLE_ID?.trim() || "top.darkrio326.AutoLedger";
+  const environment = runtime.APP_STORE_SERVER_ENVIRONMENT?.trim() === "sandbox" ? "sandbox" : "production";
+  return { bundleID, environment };
+}
+
+function appStoreRuntimeEnv(env: Env): Env & {
+  APP_STORE_CONNECT_ISSUER_ID?: string;
+  APP_STORE_CONNECT_KEY_ID?: string;
+  APP_STORE_CONNECT_PRIVATE_KEY?: string;
+  APP_STORE_BUNDLE_ID?: string;
+  APP_STORE_SERVER_ENVIRONMENT?: string;
+  ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
+} {
+  return env as Env & {
     APP_STORE_CONNECT_ISSUER_ID?: string;
     APP_STORE_CONNECT_KEY_ID?: string;
     APP_STORE_CONNECT_PRIVATE_KEY?: string;
     APP_STORE_BUNDLE_ID?: string;
     APP_STORE_SERVER_ENVIRONMENT?: string;
+    ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
   };
-  const issuerID = runtime.APP_STORE_CONNECT_ISSUER_ID?.trim() ?? "";
-  const keyID = runtime.APP_STORE_CONNECT_KEY_ID?.trim() ?? "";
-  const privateKey = runtime.APP_STORE_CONNECT_PRIVATE_KEY?.trim() ?? "";
-  const bundleID = runtime.APP_STORE_BUNDLE_ID?.trim() || "top.darkrio326.AutoLedger";
-  const environment = runtime.APP_STORE_SERVER_ENVIRONMENT?.trim() === "sandbox" ? "sandbox" : "production";
-  if (!issuerID || !keyID || !privateKey || !bundleID) {
-    return null;
-  }
-  return { issuerID, keyID, privateKey, bundleID, environment };
 }
 
 async function appStoreServerJWT(config: AppStoreServerAPIConfig): Promise<string> {
@@ -626,6 +1101,24 @@ function transactionPayloadValue<T extends string>(
   return typeof value === "string" && value.trim() ? value.trim() as T : null;
 }
 
+function stringPayloadValue<T extends object>(
+  payload: T,
+  primary: keyof T,
+  fallback?: keyof T
+): string | null {
+  const value = payload[primary] ?? (fallback ? payload[fallback] : undefined);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeAppStoreNotificationType(value: string | undefined): string | null {
+  const normalized = value?.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "") ?? "";
+  return normalized || null;
+}
+
+function normalizeAppStoreEnvironment(value: string | undefined): AppStoreServerEnvironment {
+  return value?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production";
+}
+
 function appleDate(value: number | string | null | undefined): Date | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return new Date(value);
@@ -652,6 +1145,13 @@ async function appStoreUserID(originalTransactionID: string): Promise<string> {
 function allowsUnverifiedTokenClaim(env: Env): boolean {
   const runtime = env as Env & { ALLOW_UNVERIFIED_TOKEN_CLAIM?: string };
   return ["1", "true", "yes", "on"].includes((runtime.ALLOW_UNVERIFIED_TOKEN_CLAIM ?? "").trim().toLowerCase());
+}
+
+function allowsUnsignedAppStoreNotifications(env: Env): boolean {
+  const runtime = appStoreRuntimeEnv(env);
+  return ["1", "true", "yes", "on"].includes(
+    (runtime.ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS ?? "").trim().toLowerCase()
+  );
 }
 
 function unverifiedTokenExpirationDate(env: Env, now: Date = new Date()): Date {
@@ -1524,6 +2024,13 @@ export const testInternals = {
   unverifiedTokenExpirationDate,
   decodeJWSPayload,
   validateAppStoreTransactionPayload,
+  decodeAppStoreServerNotificationPayload,
+  prepareAppStoreNotification,
+  appStoreEntitlementStateForNotification,
+  allowsUnsignedAppStoreNotifications,
+  normalizeAppStoreNotificationType,
+  normalizeAppStoreEnvironment,
+  appStoreNotificationTransactionScope,
   appStoreServerAPIHost,
   appStoreUserID,
   sha256Hex
