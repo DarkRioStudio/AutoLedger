@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-361 首页实时 OCR 票据扫描主线）
+更新日期：2026-07-02（ITER-362 OCR 导入确认页）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-362 OCR 导入确认页
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Live OCR / Inbox Capture
+- 类型：能力增强 / UI / 回归
+- 目标：让首页实时 OCR、拍照识别、相册导入和剪贴板图片识别在解析出单笔账单后先进入确认页，用户复核字段后再保存，同时不影响现有快捷方式记账默认逻辑。
+- 改动范围：新增 `ReceiptImportConfirmView`；更新 `LedgerStore.importRecognizedText` 的可选确认参数、确认草稿状态和保存方法；更新 `InboxView` 的 App 内导入入口；补齐主 App 五语确认页文案；更新离线回归、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮不修改 `QuickLedgerIntent`、`VoiceLedgerIntent` 的保存语义，不修改 App 启动剪贴板自动导入、订阅截图识别、iPad 工作台导入、StoreKit、Worker、SQLite / CloudKit schema、ASC、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`LedgerStore.importRecognizedText` 新增默认关闭的 `requiresConfirmation` 参数。只有 `InboxView` 中的实时扫描、拍照识别、相册导入和剪贴板图片导入显式传入 `true`；解析为普通交易后会生成 `ReceiptImportReviewDraft` 并弹出确认页，不会立即写入交易。确认页可编辑商户、金额、币种、来源、分类、时间和备注，并展示 OCR 原文；源币种不同于目标账本币种时复用汇率预估卡片，保存时用可用汇率写入换算后的账本金额并保留原始金额 / 原始币种 / 汇率 metadata。
+- 未完成内容：确认页当前覆盖 App 内首页图片 / OCR 导入，不覆盖 App Intents、订阅识别、非账单失败、订阅识别结果或多笔账单拆分；真实设备上的实时取景 + 确认页串联仍需要 TestFlight smoke 补证据。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行五语 `plutil -lint`，结果 PASS；执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增“确认前不入账、确认保存后写入”的 LedgerStore 断言，并保留 App Intents smoke；执行 `bash scripts/run_golden_regression.sh`，38 个 case PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'id=FE9F7A44-8567-458E-AFE0-5104C8301CF2' build`，结果 PASS。XcodeBuildMCP `build_run_sim` 超过 300s 工具超时，手动 `simctl install` 也长时间无输出后中断，因此本轮未拿到启动后 UI snapshot。
+- 风险与注意事项：新增确认页只通过显式参数启用；默认值为 `false`，因此旧调用如果没有显式接入，不会被强制改成待确认。确认页保存仍复用原 `persistReceipt` 重复检测和调试记录逻辑，重复账单会按已处理返回并清理待确认状态。
+- 回滚方式：回退 `ReceiptImportConfirmView.swift`、`LedgerStore.swift` 中的 `ReceiptImportReviewDraft` / `pendingReceiptReview` / `requiresConfirmation` / `saveReceiptReview` 相关改动、`InboxView` 的 sheet 和显式确认参数、五语 `receipt_confirm.*` 文案，以及离线回归新增断言。
+- 结论：本轮完成，首页 OCR 导入已从“确认 OCR 文本后可能直接入账”推进为“确认字段后保存”，且快捷方式记账仍保持原路径。
+- 下一步建议：真机验证相机权限、实时 OCR 识别、确认页保存、跨币种预估失败重试和重复账单提示；后续再评估订阅识别结果是否也需要独立确认页。
 
 ### ITER-361 首页实时 OCR 票据扫描主线
 - 日期：2026-07-02

@@ -503,6 +503,13 @@
 "live_receipt_scan.unavailable.unsupported" = "当前设备不支持实时 OCR，可继续使用拍照或相册导入。";
 "live_receipt_scan.unavailable.camera_restricted" = "相机权限受限，可改用相册导入。";
 "live_receipt_scan.unavailable.system" = "实时扫描暂时不可用，可继续使用拍照或相册导入。";
+"receipt_confirm.title" = "确认账单";
+"receipt_confirm.section.review" = "识别结果";
+"receipt_confirm.confidence_format" = "置信度：%.2f";
+"receipt_confirm.footer" = "确认商户、金额、币种和分类后再保存。";
+"receipt_confirm.section.ocr_text" = "识别原文";
+"receipt_confirm.pending_summary" = "已识别到账单信息，请确认后保存。";
+"receipt_confirm.multi_receipt_notice" = "检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。";
 "inbox.recent_ocr" = "最近 OCR 文本";
 "inbox.merchant_rankings" = "商户消费排名";
 "inbox.clipboard.empty" = "剪切板中没有图片。";

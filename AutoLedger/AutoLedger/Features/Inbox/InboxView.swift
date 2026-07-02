@@ -86,6 +86,9 @@ struct InboxView: View {
             .fullScreenCover(isPresented: $isPresentingReceiptScanner) {
                 receiptScannerSheet
             }
+            .sheet(item: pendingReceiptReviewBinding) { draft in
+                ReceiptImportConfirmView(draft: draft)
+            }
             .task(id: selectedPhoto) {
                 guard let selectedPhoto else {
                     return
@@ -904,7 +907,7 @@ struct InboxView: View {
 
     private func importLiveScannedText(_ text: String) {
         store.prepareForLiveImport()
-        store.importRecognizedText(text, imageSource: .camera)
+        store.importRecognizedText(text, imageSource: .camera, requiresConfirmation: true)
     }
 
     private func importImageData(_ data: Data, imageSource: ImageSource) async {
@@ -933,7 +936,8 @@ struct InboxView: View {
             store.importRecognizedText(
                 ocrResult.text,
                 imageSource: imageSource,
-                ocrMinConfidence: ocrResult.minimumWordConfidence
+                ocrMinConfidence: ocrResult.minimumWordConfidence,
+                requiresConfirmation: true
             )
         } catch {
             store.setImportError(error.localizedDescription, imageSource: imageSource)
@@ -946,6 +950,17 @@ struct InboxView: View {
             onRecognizedText: importLiveScannedText,
             onFallbackImageData: importImageData,
             onRequestCameraPhoto: requestCameraPhotoFallback
+        )
+    }
+
+    private var pendingReceiptReviewBinding: Binding<ReceiptImportReviewDraft?> {
+        Binding(
+            get: { store.pendingReceiptReview },
+            set: { newValue in
+                if newValue == nil {
+                    store.clearPendingReceiptReview()
+                }
+            }
         )
     }
 
@@ -1023,8 +1038,13 @@ struct InboxView: View {
         }
 
         do {
-            let text = try ocrService.recognizeText(from: data)
-            store.importRecognizedText(text, imageSource: .clipboard)
+            let ocrResult = try ocrService.recognizeTextWithConfidence(from: data)
+            store.importRecognizedText(
+                ocrResult.text,
+                imageSource: .clipboard,
+                ocrMinConfidence: ocrResult.minimumWordConfidence,
+                requiresConfirmation: true
+            )
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .clipboard)
         }

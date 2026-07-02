@@ -506,6 +506,13 @@
 "live_receipt_scan.unavailable.unsupported" = "目前裝置不支援即時 OCR，可繼續使用拍照或相簿匯入。";
 "live_receipt_scan.unavailable.camera_restricted" = "相機權限受限，可改用相簿匯入。";
 "live_receipt_scan.unavailable.system" = "即時掃描暫時不可用，可繼續使用拍照或相簿匯入。";
+"receipt_confirm.title" = "確認帳單";
+"receipt_confirm.section.review" = "識別結果";
+"receipt_confirm.confidence_format" = "置信度：%.2f";
+"receipt_confirm.footer" = "確認商戶、金額、幣種和分類後再儲存。";
+"receipt_confirm.section.ocr_text" = "識別原文";
+"receipt_confirm.pending_summary" = "已識別到帳單資訊，請確認後儲存。";
+"receipt_confirm.multi_receipt_notice" = "偵測到圖片中可能包含多筆帳單，目前僅識別了一筆。建議將每筆帳單單獨截圖後分別匯入。";
 "inbox.recent_ocr" = "最近 OCR 文字";
 "inbox.merchant_rankings" = "商家消費排名";
 "inbox.clipboard.empty" = "剪貼板中沒有圖片。";

@@ -503,6 +503,13 @@
 "live_receipt_scan.unavailable.unsupported" = "このデバイスはリアルタイム OCR に対応していません。カメラまたは写真を使用できます。";
 "live_receipt_scan.unavailable.camera_restricted" = "カメラ権限が制限されています。写真から取り込んでください。";
 "live_receipt_scan.unavailable.system" = "ライブスキャンを一時的に利用できません。カメラまたは写真を使用できます。";
+"receipt_confirm.title" = "レシートを確認";
+"receipt_confirm.section.review" = "認識結果";
+"receipt_confirm.confidence_format" = "信頼度: %.2f";
+"receipt_confirm.footer" = "加盟店、金額、通貨、カテゴリを確認してから保存します。";
+"receipt_confirm.section.ocr_text" = "認識テキスト";
+"receipt_confirm.pending_summary" = "レシート情報を認識しました。確認してから保存してください。";
+"receipt_confirm.multi_receipt_notice" = "画像に複数のレシートが含まれている可能性があります。現在は1件のみ認識しました。1件ずつ読み込むことをおすすめします。";
 "inbox.recent_ocr" = "最近の OCR テキスト";
 "inbox.merchant_rankings" = "加盟店ランキング";
 "inbox.clipboard.empty" = "クリップボードに画像が見つかりません。";

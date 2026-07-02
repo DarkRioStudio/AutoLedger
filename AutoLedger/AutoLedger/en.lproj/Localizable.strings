@@ -503,6 +503,13 @@
 "live_receipt_scan.unavailable.unsupported" = "This device does not support live OCR. You can still use Camera or Photos.";
 "live_receipt_scan.unavailable.camera_restricted" = "Camera access is restricted. Use Photos instead.";
 "live_receipt_scan.unavailable.system" = "Live scanning is temporarily unavailable. You can still use Camera or Photos.";
+"receipt_confirm.title" = "Confirm Receipt";
+"receipt_confirm.section.review" = "Recognition Result";
+"receipt_confirm.confidence_format" = "Confidence: %.2f";
+"receipt_confirm.footer" = "Confirm the merchant, amount, currency, and category before saving.";
+"receipt_confirm.section.ocr_text" = "Recognized Text";
+"receipt_confirm.pending_summary" = "Receipt details were recognized. Confirm before saving.";
+"receipt_confirm.multi_receipt_notice" = "This image may include multiple receipts. Only one was recognized. Import each receipt separately for best results.";
 "inbox.recent_ocr" = "Recent OCR Text";
 "inbox.merchant_rankings" = "Merchant Rankings";
 "inbox.clipboard.empty" = "No image found in the clipboard.";

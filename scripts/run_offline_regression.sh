@@ -128,6 +128,16 @@ enum ExpenseCurrencyPreference {
     static func normalizedRawValue(_ value: String?) -> String { value ?? systemValue }
 }
 
+struct CurrencyConversionPreviewQuote: Equatable {
+    let sourceAmount: Double
+    let sourceCurrencyCode: String
+    let targetCurrencyCode: String
+    let convertedAmount: Double
+    let rate: Double
+    let rateDate: String
+    let provider: String
+}
+
 struct LedgerCurrencyOption: Identifiable, Hashable {
     static let defaultCode = "CNY"
 

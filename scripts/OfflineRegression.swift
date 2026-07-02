@@ -5056,6 +5056,41 @@ struct OfflineRegression {
         备注：离线回归
         """
 
+        do {
+            let reviewStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "receipt-review.sqlite3")
+            let reviewLedger = LedgerStore(transactionStore: reviewStore)
+            reviewLedger.importRecognizedText(
+                rawText,
+                preferredSource: .alipay,
+                imageSource: .photoLibrary,
+                requiresConfirmation: true
+            )
+            try await Task.sleep(nanoseconds: 200_000_000)
+            reporter.check(reviewLedger.transactions.isEmpty, "LedgerStore holds OCR receipt for confirmation before persisting")
+            guard let review = reviewLedger.pendingReceiptReview else {
+                reporter.check(false, "LedgerStore publishes pending OCR receipt review draft")
+                return
+            }
+            reporter.check(abs(review.receipt.amount - 12.50) < 0.01, "Pending OCR receipt review keeps parsed amount")
+            reporter.check(review.receipt.merchant.contains("离线回归咖啡"), "Pending OCR receipt review keeps parsed merchant")
+            reporter.check(
+                reviewLedger.saveReceiptReview(
+                    review,
+                    merchant: review.receipt.merchant,
+                    amount: review.receipt.amount,
+                    currencyCode: review.receipt.currencyCode ?? "CNY",
+                    source: review.receipt.source,
+                    category: review.receipt.suggestedCategory,
+                    occurredAt: review.receipt.occurredAt,
+                    note: review.notePrefix,
+                    conversionQuote: nil
+                ),
+                "LedgerStore saves confirmed OCR receipt review"
+            )
+            reporter.check(reviewLedger.pendingReceiptReview == nil, "LedgerStore clears pending OCR receipt review after save")
+            reporter.check(reviewLedger.transactions.count == 1, "LedgerStore persists confirmed OCR receipt review")
+        }
+
         ledger.importRecognizedText(rawText, preferredSource: .alipay)
         try await Task.sleep(nanoseconds: 200_000_000)  // 等待 Task 完成
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore imports unique OCR text")

@@ -503,6 +503,13 @@
 "live_receipt_scan.unavailable.unsupported" = "이 기기는 실시간 OCR을 지원하지 않습니다. 카메라나 사진을 계속 사용할 수 있습니다.";
 "live_receipt_scan.unavailable.camera_restricted" = "카메라 접근이 제한되어 있습니다. 사진 가져오기를 사용하세요.";
 "live_receipt_scan.unavailable.system" = "실시간 스캔을 일시적으로 사용할 수 없습니다. 카메라나 사진을 계속 사용할 수 있습니다.";
+"receipt_confirm.title" = "영수증 확인";
+"receipt_confirm.section.review" = "인식 결과";
+"receipt_confirm.confidence_format" = "신뢰도: %.2f";
+"receipt_confirm.footer" = "가맹점, 금액, 통화, 분류를 확인한 뒤 저장합니다.";
+"receipt_confirm.section.ocr_text" = "인식 원문";
+"receipt_confirm.pending_summary" = "영수증 정보를 인식했습니다. 확인한 뒤 저장하세요.";
+"receipt_confirm.multi_receipt_notice" = "이미지에 여러 영수증이 포함되었을 수 있습니다. 현재는 1건만 인식했습니다. 영수증별로 따로 가져오세요.";
 "inbox.recent_ocr" = "최근 OCR 텍스트";
 "inbox.merchant_rankings" = "판매자 순위";
 "inbox.clipboard.empty" = "클립보드에 이미지가 없습니다.";

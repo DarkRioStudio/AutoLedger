@@ -35,6 +35,17 @@ private enum HotelStayDraftDuplicateState {
     case posted
 }
 
+struct ReceiptImportReviewDraft: Identifiable {
+    let id = UUID()
+    let receipt: ImportedReceipt
+    let rawText: String
+    let notePrefix: String
+    let imageSource: ImageSource
+    let llmTrace: SmartReceiptParser.LLMTrace?
+    let usedRuleFallback: Bool
+    let multiReceiptDetected: Bool
+}
+
 final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
     static var watchSyncHandler: (() -> Void)?
@@ -50,6 +61,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var hotelStayDrafts: [HotelStayDraft] = []
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
+    @Published private(set) var pendingReceiptReview: ReceiptImportReviewDraft?
     @Published var lastImportSummary: String?
     @Published private(set) var lastBackupSummary: String?
     @Published var detectedICloudBackup: BackupBundle?
@@ -439,7 +451,8 @@ final class LedgerStore: ObservableObject {
         fallbackMerchant: String? = nil,
         notePrefix: String? = nil,
         imageSource: ImageSource = .photoLibrary,
-        ocrMinConfidence: Float? = nil
+        ocrMinConfidence: Float? = nil,
+        requiresConfirmation: Bool = false
     ) {
         let normalizedText = text
             .replacingOccurrences(of: "\r\n", with: "\n")
@@ -527,6 +540,28 @@ final class LedgerStore: ObservableObject {
                 let providerName = result.llmTrace?.providerDisplayName ?? "规则"
                 let latency = result.llmTrace?.latencyMs ?? 0
                 logger.info("[解析] 模型=\(providerName) 耗时=\(latency)ms 商户=\(result.receipt.merchant) 金额=\(result.receipt.amount) 时间=\(AppFormatters.exportDateTime(result.receipt.occurredAt)) 分类=\(result.receipt.suggestedCategory.title) 规则兜底=\(result.usedRuleFallback ? "是" : "否")")
+                if requiresConfirmation {
+                    pendingReceiptReview = ReceiptImportReviewDraft(
+                        receipt: result.receipt,
+                        rawText: normalizedText,
+                        notePrefix: resolvedNotePrefix,
+                        imageSource: imageSource,
+                        llmTrace: result.llmTrace,
+                        usedRuleFallback: result.usedRuleFallback,
+                        multiReceiptDetected: multiReceiptDetected
+                    )
+                    lastImportSummary = localizedMessage(
+                        "receipt_confirm.pending_summary",
+                        fallback: "已识别到账单信息，请确认后保存。"
+                    )
+                    if multiReceiptDetected {
+                        appendImportSummary(localizedMessage(
+                            "receipt_confirm.multi_receipt_notice",
+                            fallback: "检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。"
+                        ))
+                    }
+                    return
+                }
                 createTransaction(
                     from: result.receipt,
                     rawText: normalizedText,
@@ -574,11 +609,62 @@ final class LedgerStore: ObservableObject {
     func prepareForLiveImport() {
         lastRecognizedText = ""
         lastParsedReceipt = nil
+        pendingReceiptReview = nil
+    }
+
+    func clearPendingReceiptReview() {
+        pendingReceiptReview = nil
+    }
+
+    @discardableResult
+    func saveReceiptReview(
+        _ review: ReceiptImportReviewDraft,
+        merchant: String,
+        amount: Double,
+        currencyCode: String,
+        source: ReceiptSource,
+        category: TransactionCategory,
+        occurredAt: Date,
+        note: String,
+        conversionQuote: CurrencyConversionPreviewQuote?
+    ) -> Bool {
+        let updatedReceipt = ImportedReceipt(
+            source: source,
+            merchant: merchant,
+            amount: amount,
+            currencyCode: currencyCode,
+            occurredAt: occurredAt,
+            rawText: review.rawText,
+            summary: review.receipt.summary,
+            confidence: review.receipt.confidence,
+            suggestedCategory: category,
+            parseDiagnostics: review.receipt.parseDiagnostics
+        )
+        let didHandle = persistReceipt(
+            updatedReceipt,
+            rawText: review.rawText,
+            notePrefix: note,
+            imageSource: review.imageSource,
+            llmTrace: review.llmTrace,
+            usedRuleFallback: review.usedRuleFallback,
+            conversionQuote: conversionQuote
+        )
+        if didHandle {
+            pendingReceiptReview = nil
+            if review.multiReceiptDetected {
+                appendImportSummary(localizedMessage(
+                    "receipt_confirm.multi_receipt_notice",
+                    fallback: "检测到图片中可能包含多笔账单，当前仅识别了一笔。建议将每笔账单单独截图后分别导入。"
+                ))
+            }
+        }
+        return didHandle
     }
 
     func setImportError(_ summary: String, source: ReceiptSource = .manual, imageSource: ImageSource = .unknown) {
         lastImportSummary = summary
         lastParsedReceipt = nil
+        pendingReceiptReview = nil
         recordDebugEvent(
             stage: .ocrFailed,
             source: source,
@@ -1939,7 +2025,16 @@ final class LedgerStore: ObservableObject {
         )
     }
 
-    private func persistReceipt(_ inReceipt: ImportedReceipt, rawText: String, notePrefix: String, imageSource: ImageSource = .unknown, llmTrace: SmartReceiptParser.LLMTrace? = nil, usedRuleFallback: Bool = true) {
+    @discardableResult
+    private func persistReceipt(
+        _ inReceipt: ImportedReceipt,
+        rawText: String,
+        notePrefix: String,
+        imageSource: ImageSource = .unknown,
+        llmTrace: SmartReceiptParser.LLMTrace? = nil,
+        usedRuleFallback: Bool = true,
+        conversionQuote: CurrencyConversionPreviewQuote? = nil
+    ) -> Bool {
         let receipt = MerchantAliasResolver.applyingAlias(
             to: inReceipt,
             aliases: merchantAliases,
@@ -1967,20 +2062,37 @@ final class LedgerStore: ObservableObject {
                 llmConfidence: receipt.confidence,
                 usedRuleFallback: usedRuleFallback
             )
-            return
+            return true
         }
 
         let sourceCurrencyCode = LedgerCurrencyOption.supportedCode(matching: receipt.currencyCode ?? ExpenseCurrencyPreference.currentCode)
         let resolvedReceipt = receipt.replacingCurrencyCode(sourceCurrencyCode)
-        let transaction = transactionPreparedForLedgerCurrency(Transaction(
+        let targetLedgerID = targetLedgerIDForNewTransactions
+        let targetCurrencyCode = ledgerCurrencyCode(for: targetLedgerID)
+        let usableQuote = usableConversionQuote(
+            conversionQuote,
+            sourceAmount: resolvedReceipt.amount,
+            sourceCurrencyCode: sourceCurrencyCode,
+            targetCurrencyCode: targetCurrencyCode
+        )
+        let baseTransaction = Transaction(
             merchant: resolvedReceipt.merchant,
-            amount: resolvedReceipt.amount,
+            amount: usableQuote?.convertedAmount ?? resolvedReceipt.amount,
             occurredAt: resolvedReceipt.occurredAt,
             category: resolvedReceipt.suggestedCategory,
             source: resolvedReceipt.source,
             note: notePrefix,
-            ledgerID: targetLedgerIDForNewTransactions
-        ), sourceAmount: resolvedReceipt.amount, sourceCurrencyCode: sourceCurrencyCode)
+            ledgerID: targetLedgerID,
+            ledgerCurrencyCode: targetCurrencyCode,
+            originalAmount: sourceCurrencyCode == targetCurrencyCode ? nil : resolvedReceipt.amount,
+            originalCurrencyCode: sourceCurrencyCode == targetCurrencyCode ? nil : sourceCurrencyCode,
+            exchangeRate: usableQuote?.rate,
+            exchangeRateDate: usableQuote?.rateDate,
+            exchangeRateProvider: usableQuote?.provider
+        )
+        let transaction = usableQuote == nil
+            ? transactionPreparedForLedgerCurrency(baseTransaction, sourceAmount: resolvedReceipt.amount, sourceCurrencyCode: sourceCurrencyCode)
+            : baseTransaction
         recentImports.insert(resolvedReceipt, at: 0)
         transactions.insert(transaction, at: 0)
         sortTransactions()
@@ -2004,7 +2116,7 @@ final class LedgerStore: ObservableObject {
                 llmConfidence: resolvedReceipt.confidence,
                 usedRuleFallback: usedRuleFallback
             )
-            return
+            return false
         }
 
         let summary = "已导入 \(resolvedReceipt.merchant)，金额 \(AppFormatters.currency(resolvedReceipt.amount, code: sourceCurrencyCode))。"
@@ -2029,6 +2141,23 @@ final class LedgerStore: ObservableObject {
             llmConfidence: resolvedReceipt.confidence,
             usedRuleFallback: usedRuleFallback
         )
+        return true
+    }
+
+    private func usableConversionQuote(
+        _ quote: CurrencyConversionPreviewQuote?,
+        sourceAmount: Double,
+        sourceCurrencyCode: String,
+        targetCurrencyCode: String
+    ) -> CurrencyConversionPreviewQuote? {
+        guard let quote,
+              quote.sourceCurrencyCode == sourceCurrencyCode,
+              quote.targetCurrencyCode == targetCurrencyCode,
+              abs(quote.sourceAmount - sourceAmount) < 0.001
+        else {
+            return nil
+        }
+        return quote
     }
 
     private func hasDuplicate(_ receipt: ImportedReceipt, rawText: String = "") -> Bool {
