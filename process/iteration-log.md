@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-350 韩语识别包第一段）
+更新日期：2026-07-02（ITER-351 韩语 UI 资源第一段）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-351 韩语 UI 资源第一段
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / App UI
+- 类型：能力增强 / 本地化
+- 目标：在现有 App 语言 override 和多端本地化结构上加入韩语 UI 资源，让韩语系统或手动选择韩语时不再缺失 key 或 fallback 到中文 / 英文。
+- 改动范围：新增主 App、Watch App、Watch Widget、Control Widget、Share Extension 的 `ko.lproj` 资源；更新 `AppLanguagePreference`、Xcode `knownRegions`、四语既有 `Localizable.strings` 的韩语选项、`scripts/check_localization_coverage.py`、`versions/v1.7.0-plan.md`、`versions/v1.7.0-i18n-release-matrix.md`、README、CHANGELOG 和本日志。
+- 未改动范围：本轮未新增 ASC 韩语商店元数据、韩语截图 / App Preview、真实韩国票据样本、韩语 StoreKit 商品本地化、common-api、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`knownRegions` 新增 `ko`；App 语言设置新增 `한국어`；5 组资源集新增 `ko.lproj/Localizable.strings`，主 App、Control Widget 和 Share Extension 补齐 `ko.lproj/InfoPlist.strings`；本地化覆盖脚本将 `ko` 纳入必备语言；韩语文案以机器翻译草稿生成，并手工修正高频按钮、商户 / 来源术语、Pro 首屏、酒店消费详情和格式化文案中的明显误译。
+- 未完成内容：韩语文案尚未经过母语审校；截图模式韩语成品、ASC 韩语 metadata、订阅本地化、真实样本回归和韩国地区支付 / 票据格式专项优化仍未完成，不能把韩语标成公开 Ready 状态。
+- 测试情况：执行全量 `.strings` `plutil -lint` 通过；执行 `python3 scripts/check_localization_coverage.py` 通过；执行自定义占位符 parity 检查通过，确认 `en` 与 `ko` 的 `%@` / `%d` / `%.0f` 等格式参数集合一致；执行 token 残留检索未发现生成脚本保护 token。
+- 风险与注意事项：机器翻译草稿能解决 key 覆盖和基础可读，但术语、语气和长句仍需要韩语母语审校；截图导出前应重点复核 Pro、设置、酒店消费、账本编辑、订阅管理和 Watch 文案。
+- 回滚方式：删除新增 `ko.lproj` 目录并回退本轮对 `AppLanguagePreference`、Xcode project、coverage 脚本、既有四语文案和版本文档的修改即可；不涉及数据迁移、ASC 远端状态或用户数据回滚。
+- 结论：本轮完成韩语 UI 资源第一段，App 已具备 `ko` 资源覆盖门禁和手动语言选项，但完整韩语发布仍需 ASC、截图、母语审校和真实样本后续补齐。
+- 下一步建议：补韩语真实票据 / 支付通知 / 酒店 folio golden cases，并开始 ASC 韩语 metadata 与截图导出准备。
 
 ### ITER-350 韩语识别包第一段
 - 日期：2026-07-02

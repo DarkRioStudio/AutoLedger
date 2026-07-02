@@ -836,6 +836,7 @@
 "language.option.zh_hant" = "繁體中文";
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
+"language.option.korean" = "한국어";
 "language.footer" = "語言設定只影響本機 App 介面，不會改變帳本資料、識別結果或同步內容。";
 
 "pro.title" = "AutoLedger Pro";

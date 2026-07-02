@@ -1,0 +1,5 @@
+"control.clipboard.title" = "클립보드 원장";
+"control.clipboard.description" = "클립보드에서 결제 스크린샷을 읽어 자동으로 저장하세요.";
+"clipboard_import_intent.title" = "클립보드 원장";
+"clipboard_import_intent.description" = "클립보드에서 결제 스크린샷을 읽어 자동으로 저장하세요.";
+"clipboard_import_intent.running" = "클립보드에서 가져오는 중...";

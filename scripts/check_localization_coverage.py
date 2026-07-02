@@ -19,7 +19,7 @@ RESOURCE_SETS = [
 ]
 
 BASELINE_LOCALE = "en"
-REQUIRED_LOCALES = ["zh-Hans", "zh-Hant", "en", "ja"]
+REQUIRED_LOCALES = ["zh-Hans", "zh-Hant", "en", "ja", "ko"]
 STRING_FILE_PATTERN = re.compile(r'^\s*"((?:[^"\\]|\\.)+)"\s*=')
 
 MAIN_APP_REQUIRED_KEYS = {

@@ -1,0 +1,10 @@
+"widget.today.title" = "오늘";
+"widget.corner_text.title" = "오늘의 문자";
+"widget.default_ledger" = "로컬 원장";
+"widget.no_expense" = "비용 없음";
+"widget.count_format" = "%d 아이템";
+"widget.updated_format" = "업데이트됨 %@";
+"widget.sync_pending" = "동기화 보류 중";
+"widget.today.description" = "시계 모드에서 오늘의 AutoLedger 지출을 확인하세요.";
+"widget.corner_text.description" = "오늘의 지출을 시계 화면에 아이콘과 모서리 라벨로 표시합니다.";
+"widget.corner_text.format" = "오늘: %@";

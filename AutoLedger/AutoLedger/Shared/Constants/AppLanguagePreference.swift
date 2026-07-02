@@ -7,6 +7,7 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     case zhHant = "zh-Hant"
     case english = "en"
     case japanese = "ja"
+    case korean = "ko"
 
     static let userDefaultsKey = "appLanguagePreference"
 
@@ -24,6 +25,8 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
             return Locale(identifier: "en")
         case .japanese:
             return Locale(identifier: "ja")
+        case .korean:
+            return Locale(identifier: "ko")
         }
     }
 
@@ -39,6 +42,8 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
             return "language.option.english"
         case .japanese:
             return "language.option.japanese"
+        case .korean:
+            return "language.option.korean"
         }
     }
 

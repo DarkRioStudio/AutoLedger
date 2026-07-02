@@ -833,6 +833,7 @@
 "language.option.zh_hant" = "繁體中文";
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
+"language.option.korean" = "한국어";
 "language.footer" = "语言设置只影响本机 App 界面，不会改变账本数据、识别结果或同步内容。";
 
 "pro.title" = "AutoLedger Pro";

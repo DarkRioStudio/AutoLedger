@@ -122,11 +122,11 @@ App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/apps
 
 AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 
-- **App UI 语言**：当前主路径覆盖 `zh-Hans` 简体中文、`zh-Hant` 繁体中文、`en` 英文和 `ja` 日文；主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校验。
+- **App UI 语言**：当前主路径覆盖 `zh-Hans` 简体中文、`zh-Hant` 繁体中文、`en` 英文、`ja` 日文；`v1.7.0` 已开始加入 `ko` 韩语资源草稿。主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校验。
 - **App Store 截图语言**：截图管线已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 组织 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 场景文案；日文截图和商店元数据仍需人工审校后再提交。
 - **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
 - **日文账单识别**：日文包覆盖 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常见字段；OCR hint 使用 `ja-JP + en-US`，金额和商户 / 分类解析已经进入离线回归。
-- **v1.7.0 韩语范围**：计划新增韩语 App UI 和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint，并补齐韩语 ASC 文案、截图和 golden cases；完成前不把 `ko` 写入当前已支持语言。
+- **v1.7.0 韩语范围**：已启动韩语 App UI 资源草稿和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语 ASC 文案、截图、母语审校和 golden cases 补齐前，不把 `ko` 标成公开 Ready 语言。
 - **i18n 发布矩阵**：`versions/v1.7.0-i18n-release-matrix.md` 将每个语言按商店可见（ASC 增加语言）、界面可读（App）、基础识别可用（语言识别包）、真实样本回归、地区支付 / 票据格式专项优化五项门禁管理；后续语言不只做 UI 翻译。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
