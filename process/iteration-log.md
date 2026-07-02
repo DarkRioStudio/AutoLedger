@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-360 确认页汇率预估与失败处理）
+更新日期：2026-07-02（ITER-361 首页实时 OCR 票据扫描主线）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-361 首页实时 OCR 票据扫描主线
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Live OCR / Inbox Capture
+- 类型：能力增强 / UI / 回归
+- 目标：完成 `GOAL-2305` 的首页“票据扫描”实时 OCR 主线，让支持 VisionKit 实时扫描的 iPhone 优先进入取景框识别；不支持时继续保留拍照识别照片和相册导入兜底。
+- 改动范围：新增 `LiveReceiptScannerView`；更新 `InboxView` 的票据扫描入口、相册 / 拍照 OCR 共用导入 helper 和全屏 scanner presentation；补齐主 App 五语实时扫描文案；更新 `versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮不重构 `LedgerStore.importRecognizedText` 的既有解析后保存 / 确认策略，不新增独立 OCR 字段确认页，不修改 Pro gate、StoreKit、Worker、SQLite / CloudKit schema、ASC、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：首页“票据扫描”现在打开实时 OCR 全屏页；支持环境下使用 VisionKit `DataScannerViewController` 识别多行文字，并对每帧结果做 550ms 稳定 / 去抖后显示预览和识别行数。用户点击确认后，稳定 OCR 文本进入既有导入链路。实时扫描不可用、Mac Catalyst 或系统报告不支持时，页面显示同一套 fallback 操作；拍照按钮继续走 `CameraPicker`，相册按钮继续走 `PhotosPicker`，两者复用同一个 `OCRService.recognizeTextWithConfidence` helper。
+- 未完成内容：扫描后的账单字段统一确认页仍未在本轮落地；当前确认按钮确认的是“稳定 OCR 文本”，之后仍沿用现有 OCR 导入策略，高置信结果可能直接生成交易，低置信 / 失败结果进入现有摘要和调试记录。真实设备相机权限 / 拒绝态仍需 TestFlight 或真机 smoke 补截图证据。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行五语 `plutil -lint`，结果 PASS；执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `bash scripts/run_golden_regression.sh`，38 个 case PASS；执行 XcodeBuildMCP iOS 26.5 iPhone 17 Simulator `AutoLedger` Debug build，结果 PASS。构建仍保留既有 `AppFormatters` / App Intents / Gemma / CloudKit 等 warning，本轮未处理。
+- 风险与注意事项：VisionKit 实时扫描依赖设备、系统、相机权限和 Apple 当前可用状态；模拟器和 Mac Catalyst 会自然进入 fallback。实时文本只保存在当前 scanner 页面状态中，确认后才交给既有导入 / 调试链路；如果后续要严格做到“解析后必须确认字段再入账”，需要单独拆一个确认流 GOAL。
+- 回滚方式：回退 `LiveReceiptScannerView.swift`、`InboxView.swift` 中的 `isPresentingReceiptScanner` / `receiptScannerSheet` / `startReceiptScan` / 共用 OCR helper 改动，以及新增 `live_receipt_scan.*` 五语文案；原拍照和相册导入链路可恢复到上一轮状态。
+- 结论：本轮完成，`GOAL-2305` 实时 OCR 主入口和 fallback 主线已落地并通过本地回归与 iOS 构建。
+- 下一步建议：用真机 TestFlight 验证相机授权、权限拒绝、弱光长票据和屏幕反光场景；后续单独规划 OCR 解析字段确认页，让实时扫描、拍照和相册导入都走同一确认体验。
 
 ### ITER-360 确认页汇率预估与失败处理
 - 日期：2026-07-02

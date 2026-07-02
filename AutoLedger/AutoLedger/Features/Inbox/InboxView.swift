@@ -14,6 +14,7 @@ struct InboxView: View {
     @State private var showCamera = false
     @State private var capturedImageData: Data?
     @State private var isImportingCamera = false
+    @State private var isPresentingReceiptScanner = false
     @State private var showMerchantSheet = false
     @State private var isQuickSetupExpanded = false
     @State private var isPresentingManualEntry = false
@@ -81,6 +82,9 @@ struct InboxView: View {
             }
             .sheet(isPresented: $showCamera) {
                 CameraPicker(imageData: $capturedImageData)
+            }
+            .fullScreenCover(isPresented: $isPresentingReceiptScanner) {
+                receiptScannerSheet
             }
             .task(id: selectedPhoto) {
                 guard let selectedPhoto else {
@@ -492,7 +496,7 @@ struct InboxView: View {
 
     private var quickImportButtonRow: some View {
         Group {
-            if isQuickSetupExpanded && isCameraImportAvailable {
+            if isQuickSetupExpanded {
                 HStack(spacing: 12) {
                     photoImportButton
                     receiptScanButton
@@ -500,9 +504,7 @@ struct InboxView: View {
             } else {
                 VStack(spacing: 12) {
                     photoImportButton
-                    if isCameraImportAvailable {
-                        receiptScanButton
-                    }
+                    receiptScanButton
                 }
             }
         }
@@ -528,7 +530,7 @@ struct InboxView: View {
 
     private var receiptScanButton: some View {
         Button {
-            startCameraImport()
+            startReceiptScan()
         } label: {
             quickImportButtonLabel(
                 title: isImportingCamera ? String(localized: "inbox.import.processing") : localized("inbox.import.scan_receipt", fallback: "票据扫描"),
@@ -606,12 +608,10 @@ struct InboxView: View {
                 Label("inbox.import.photo_short", systemImage: "photo.on.rectangle")
             }
 
-            if isCameraImportAvailable {
-                Button {
-                    startCameraImport()
-                } label: {
-                    Label("inbox.import.scan_receipt", systemImage: "doc.viewfinder")
-                }
+            Button {
+                startReceiptScan()
+            } label: {
+                Label("inbox.import.scan_receipt", systemImage: "doc.viewfinder")
             }
 
             Button {
@@ -884,10 +884,7 @@ struct InboxView: View {
     }
 
     private func importPickedPhoto(_ item: PhotosPickerItem) async {
-        isImportingPhoto = true
-        store.prepareForLiveImport()
         defer {
-            isImportingPhoto = false
             selectedPhoto = nil
         }
 
@@ -895,24 +892,61 @@ struct InboxView: View {
             guard let data = try await item.loadTransferable(type: Data.self) else {
                 throw OCRServiceError.loadFailed
             }
-            let text = try ocrService.recognizeText(from: data)
-            store.importRecognizedText(text, imageSource: .photoLibrary)
+            await importImageData(data, imageSource: .photoLibrary)
         } catch {
             store.setImportError(error.localizedDescription, imageSource: .photoLibrary)
         }
     }
 
     private func importCapturedPhoto(_ data: Data) async {
-        isImportingCamera = true
+        await importImageData(data, imageSource: .camera)
+    }
+
+    private func importLiveScannedText(_ text: String) {
         store.prepareForLiveImport()
-        defer { isImportingCamera = false }
+        store.importRecognizedText(text, imageSource: .camera)
+    }
+
+    private func importImageData(_ data: Data, imageSource: ImageSource) async {
+        switch imageSource {
+        case .camera:
+            isImportingCamera = true
+        case .photoLibrary:
+            isImportingPhoto = true
+        default:
+            break
+        }
+        store.prepareForLiveImport()
+        defer {
+            switch imageSource {
+            case .camera:
+                isImportingCamera = false
+            case .photoLibrary:
+                isImportingPhoto = false
+            default:
+                break
+            }
+        }
 
         do {
-            let text = try ocrService.recognizeText(from: data)
-            store.importRecognizedText(text, imageSource: .camera)
+            let ocrResult = try ocrService.recognizeTextWithConfidence(from: data)
+            store.importRecognizedText(
+                ocrResult.text,
+                imageSource: imageSource,
+                ocrMinConfidence: ocrResult.minimumWordConfidence
+            )
         } catch {
-            store.setImportError(error.localizedDescription, imageSource: .camera)
+            store.setImportError(error.localizedDescription, imageSource: imageSource)
         }
+    }
+
+    private var receiptScannerSheet: some View {
+        LiveReceiptScannerView(
+            isCameraPhotoAvailable: isCameraImportAvailable,
+            onRecognizedText: importLiveScannedText,
+            onFallbackImageData: importImageData,
+            onRequestCameraPhoto: requestCameraPhotoFallback
+        )
     }
 
     private var merchantRankings: [(merchant: String, total: Double)] {
@@ -1002,6 +1036,18 @@ struct InboxView: View {
             return
         }
         showCamera = true
+    }
+
+    private func startReceiptScan() {
+        isPresentingReceiptScanner = true
+    }
+
+    private func requestCameraPhotoFallback() {
+        isPresentingReceiptScanner = false
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            startCameraImport()
+        }
     }
 }
 

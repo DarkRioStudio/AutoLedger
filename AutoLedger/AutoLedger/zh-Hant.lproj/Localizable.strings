@@ -491,6 +491,21 @@
 "inbox.import.camera_unavailable" = "目前裝置無法使用相機。";
 "inbox.import.hint" = "支援微信/支付寶等支付截圖，可從相簿選取、拍照或直接貼上。
 ";
+"live_receipt_scan.title" = "票據掃描";
+"live_receipt_scan.status.scanning" = "即時識別中";
+"live_receipt_scan.status.scanning_detail" = "對準支付截圖或紙本小票，識別到文字後再確認。";
+"live_receipt_scan.status.detected" = "已識別到帳單文字";
+"live_receipt_scan.status.detected_detail" = "確認後進入現有識別與記帳流程。";
+"live_receipt_scan.status.unavailable" = "即時掃描不可用";
+"live_receipt_scan.preview.title" = "識別預覽";
+"live_receipt_scan.preview.empty" = "尚未識別到文字。";
+"live_receipt_scan.lines_format" = "%d 行";
+"live_receipt_scan.confirm" = "確認識別";
+"live_receipt_scan.fallback.camera" = "拍照識別";
+"live_receipt_scan.fallback.photo" = "相簿匯入";
+"live_receipt_scan.unavailable.unsupported" = "目前裝置不支援即時 OCR，可繼續使用拍照或相簿匯入。";
+"live_receipt_scan.unavailable.camera_restricted" = "相機權限受限，可改用相簿匯入。";
+"live_receipt_scan.unavailable.system" = "即時掃描暫時不可用，可繼續使用拍照或相簿匯入。";
 "inbox.recent_ocr" = "最近 OCR 文字";
 "inbox.merchant_rankings" = "商家消費排名";
 "inbox.clipboard.empty" = "剪貼板中沒有圖片。";
