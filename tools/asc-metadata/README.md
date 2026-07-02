@@ -35,6 +35,32 @@ The audit prints:
 - App Info localizations, including Privacy Policy URL and Apple TV privacy text
 - App Store Version localizations for every platform version matching `1.5.0`
 - Missing or empty key fields by locale
+- A release locale matrix that marks planned, future, and stale locales
+- Screenshot set counts and checksum matches for every platform display type
+- App Preview set counts per locale when App Store Connect returns them
+- Local screenshot counts for planned / future / target locales
+
+By default the planned ASC locales are `zh-Hans`, `zh-Hant`, `en-US`, and `ja`,
+with `ko` listed as a future locale for the v1.7.x line. Override the matrix
+when needed:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb audit \
+  --planned-locale zh-Hans \
+  --planned-locale zh-Hant \
+  --planned-locale en-US \
+  --planned-locale ja \
+  --future-locale ko
+```
+
+When QA intentionally excludes a screenshot from upload, exclude the same local
+stem during audit so checksum counts do not look stale:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb audit \
+  --platform IOS \
+  --exclude-shot 04_workspace_cleaning
+```
 
 ## Copy English (U.S.) To English (U.K.)
 

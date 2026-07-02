@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-347 App i18n 发布专项计划）
+更新日期：2026-07-02（ITER-348 ASC metadata 资产矩阵审计）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-348 ASC metadata 资产矩阵审计
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Automation / Metadata-as-Code
+- 类型：能力增强 / 治理
+- 目标：把 ASC metadata audit 从文字本地化扩展到语言、截图和 App Preview 资产矩阵，提前发现 stale locale、截图缺失、远端截图和本地成品不一致，以及新增语言截图未准备的问题。
+- 改动范围：更新 `tools/asc-metadata/asc_metadata.rb` 和 `tools/asc-metadata/README.md`，同步回填 `CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 代码、本地化资源、识别代码、截图成品、App Preview 视频、ASC 线上数据、StoreKit 商品、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`asc_metadata.rb audit` 新增 planned / future / stale locale 状态输出；默认 planned 为 `zh-Hans`、`zh-Hant`、`en-US`、`ja`，`ko` 为 future；支持通过 `--planned-locale` 和 `--future-locale` 覆盖矩阵；新增 `--screenshot-root` 和 `--exclude-shot`；审计会按平台读取 `appScreenshotSets` / `appScreenshots`、按 locale 统计 App Preview set，并把远端截图 checksum 与本地 `tools/appstore-screenshots/output/store` 成品对齐。
+- 未完成内容：本轮没有实现 metadata YAML / JSON 源文件、订阅本地化 audit、App Preview 视频上传、截图自动重传、App Privacy nutrition label 问卷自动化或自动提交审核。
+- 测试情况：执行 `ruby -c tools/asc-metadata/asc_metadata.rb` 通过；执行 `ruby -c tools/asc-metadata/asc_screenshot_upload.rb` 通过；执行真实 ASC 只读 `audit --platform IOS --exclude-shot 04_workspace_cleaning` 通过，确认 iOS 版本能标记 `en-GB` stale、`ko` 本地截图为 0，且 en-GB iPhone / iPad / Watch 截图在排除 QA 跳过项后均为 match；本轮未写入 ASC。
+- 风险与注意事项：checksum mismatch 表示远端截图和本地当前成品不同，不一定代表线上截图错误；若某张截图经人工 QA 决定不上传，必须在 audit 和 upload 中使用相同 `--exclude-shot`，否则会产生合理但噪声较大的 mismatch。
+- 回滚方式：回退 `tools/asc-metadata/asc_metadata.rb`、`tools/asc-metadata/README.md`、`CHANGELOG.md` 和本日志即可；不涉及 App、ASC 远端状态或用户数据回滚。
+- 结论：本轮完成 ASC 资产矩阵只读审计能力，`GOAL-2312` 已具备在提交前发现 stale locale 和截图 fallback 风险的基础工具。
+- 下一步建议：继续补订阅本地化 audit 与 metadata source 文件，或转入 `GOAL-2308` 韩语 UI / 识别包第一段。
 
 ### ITER-347 App i18n 发布专项计划
 - 日期：2026-07-02

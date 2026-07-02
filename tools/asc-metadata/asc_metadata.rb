@@ -2,10 +2,12 @@
 # frozen_string_literal: true
 
 require "base64"
+require "digest"
 require "json"
 require "net/http"
 require "openssl"
 require "optparse"
+require "pathname"
 require "time"
 require "uri"
 
@@ -15,6 +17,29 @@ module ASCMetadata
   DEFAULT_VERSION = "1.5.0"
   DEFAULT_SOURCE_LOCALE = "en-US"
   DEFAULT_TARGET_LOCALE = "en-GB"
+  DEFAULT_PLANNED_LOCALES = %w[zh-Hans zh-Hant en-US ja].freeze
+  DEFAULT_FUTURE_LOCALES = %w[ko].freeze
+  DEFAULT_SCREENSHOT_ROOT = "tools/appstore-screenshots/output/store"
+
+  SCREENSHOT_LOCALE_DIRS = {
+    "zh-Hans" => "zh-Hans",
+    "zh-Hant" => "zh-Hant",
+    "en-US" => "en",
+    "en-GB" => "en",
+    "ja" => "ja",
+    "ko" => "ko"
+  }.freeze
+
+  SCREENSHOT_DISPLAY_TYPES = {
+    "IOS" => [
+      ["APP_IPHONE_65", "ios"],
+      ["APP_IPAD_PRO_3GEN_129", "ipad"],
+      ["APP_WATCH_ULTRA", "watch"]
+    ],
+    "MAC_OS" => [["APP_DESKTOP", "mac"]],
+    "TV_OS" => [["APP_APPLE_TV", "tvos"]],
+    "VISION_OS" => [["APP_APPLE_VISION_PRO", "visionos"]]
+  }.freeze
 
   APP_INFO_FIELDS = %w[
     name
@@ -191,6 +216,10 @@ module ASCMetadata
         version: ENV["ASC_VERSION"] || DEFAULT_VERSION,
         source_locale: ENV["ASC_SOURCE_LOCALE"] || DEFAULT_SOURCE_LOCALE,
         target_locale: ENV["ASC_TARGET_LOCALE"] || DEFAULT_TARGET_LOCALE,
+        screenshot_root: ENV["ASC_SCREENSHOT_ROOT"] || DEFAULT_SCREENSHOT_ROOT,
+        planned_locales: [],
+        future_locales: [],
+        exclude_shots: [],
         apply: false,
         platforms: []
       }
@@ -217,6 +246,10 @@ module ASCMetadata
         opts.on("--version VERSION", "Version string, default #{DEFAULT_VERSION}") { |v| @options[:version] = v }
         opts.on("--source-locale LOCALE", "Source locale, default #{DEFAULT_SOURCE_LOCALE}") { |v| @options[:source_locale] = v }
         opts.on("--target-locale LOCALE", "Target locale, default #{DEFAULT_TARGET_LOCALE}") { |v| @options[:target_locale] = v }
+        opts.on("--planned-locale LOCALE", "Expected ASC locale; can be repeated") { |v| @options[:planned_locales] << v }
+        opts.on("--future-locale LOCALE", "Known future locale; can be repeated") { |v| @options[:future_locales] << v }
+        opts.on("--screenshot-root PATH", "Local store screenshot root, default #{DEFAULT_SCREENSHOT_ROOT}") { |v| @options[:screenshot_root] = v }
+        opts.on("--exclude-shot ID", "Ignore local screenshot id/stem during asset audit; can be repeated") { |v| @options[:exclude_shots] << v }
         opts.on("--platform PLATFORM", "Restrict app store version platform; can be repeated") { |v| @options[:platforms] << v.upcase }
         opts.on("--apply", "Write changes to App Store Connect. Omit for dry-run.") { @options[:apply] = true }
         opts.on("-h", "--help", "Show help") { abort opts.to_s }
@@ -268,14 +301,20 @@ module ASCMetadata
     def audit
       puts "ASC audit for app #{@options[:app_id]}, version #{@options[:version]}"
       puts "Source locale: #{@options[:source_locale]}, target locale: #{@options[:target_locale]}"
+      puts "Planned locales: #{planned_locales.join(", ")}"
+      puts "Future locales: #{future_locales.join(", ")}"
+      puts "Screenshot root: #{@options[:screenshot_root]}"
       puts
 
       app_info = app_info!
       localizations = app_info_localizations(app_info["id"])
       print_app_info_localizations(localizations)
+      print_app_info_matrix(localizations)
 
       versions = app_store_versions
       print_version_localizations(versions)
+      print_version_asset_matrix(versions)
+      print_local_screenshot_matrix
     end
 
     def copy_locale
@@ -338,6 +377,21 @@ module ASCMetadata
       puts
     end
 
+    def print_app_info_matrix(localizations)
+      puts "App Info Locale Matrix"
+      present = localizations.map { |loc| loc.dig("attributes", "locale") }.compact.sort
+      puts "  present: #{present.join(", ")}"
+      print_locale_gaps("app info", present)
+      localizations.sort_by { |loc| loc.dig("attributes", "locale").to_s }.each do |loc|
+        attrs = loc["attributes"] || {}
+        locale = attrs["locale"].to_s
+        missing = missing_fields(attrs, APP_INFO_FIELDS)
+        fields = missing.empty? ? "ok" : "missing:#{missing.join(",")}"
+        puts "  - #{locale} #{locale_state(locale)} fields=#{fields}"
+      end
+      puts
+    end
+
     def print_version_localizations(versions)
       puts "App Store Versions"
       versions.each do |version|
@@ -353,6 +407,49 @@ module ASCMetadata
                "promotionalText=#{length_summary(loc_attrs["promotionalText"])} " \
                "whatsNew=#{length_summary(loc_attrs["whatsNew"])}"
         end
+      end
+      puts
+    end
+
+    def print_version_asset_matrix(versions)
+      puts "Version Locale / Asset Matrix"
+      versions.each do |version|
+        attrs = version["attributes"] || {}
+        platform = attrs["platform"].to_s
+        localizations = version_localizations(version["id"])
+        present = localizations.map { |loc| loc.dig("attributes", "locale") }.compact.sort
+        puts "  - #{platform} #{attrs["versionString"]} state=#{attrs["appStoreState"]} id=#{version["id"]}"
+        puts "      present: #{present.join(", ")}"
+        print_locale_gaps("#{platform} version", present, indent: "      ")
+        localizations.sort_by { |loc| loc.dig("attributes", "locale").to_s }.each do |loc|
+          print_version_asset_row(platform, loc)
+        end
+      end
+      puts
+    end
+
+    def print_version_asset_row(platform, localization)
+      attrs = localization["attributes"] || {}
+      locale = attrs["locale"].to_s
+      missing = missing_fields(attrs, VERSION_FIELDS)
+      screenshots = screenshot_asset_summary(platform, localization["id"], locale)
+      previews = app_preview_summary(localization["id"])
+      puts "      #{locale} #{locale_state(locale)} " \
+           "fields=#{missing.empty? ? "ok" : "missing:#{missing.join(",")}"} " \
+           "screenshots=#{screenshots} previews=#{previews}"
+    end
+
+    def print_local_screenshot_matrix
+      puts "Local Screenshot Matrix"
+      puts "  root=#{@options[:screenshot_root]}"
+      locales = (planned_locales + future_locales + [@options[:target_locale]]).uniq
+      locales.each do |locale|
+        local_locale = local_screenshot_locale(locale)
+        counts = SCREENSHOT_DISPLAY_TYPES.values.flatten(1).map do |display_type, local_dir|
+          count = local_screenshot_files(local_dir, locale).length
+          "#{local_dir}/#{display_type}=#{count}"
+        end
+        puts "  - #{locale} local=#{local_locale} #{counts.join(" ")}"
       end
       puts
     end
@@ -397,6 +494,141 @@ module ASCMetadata
           "#{label} #{target_locale}"
         )
       end
+    end
+
+    def planned_locales
+      locales = @options[:planned_locales]
+      locales.empty? ? DEFAULT_PLANNED_LOCALES : locales.uniq
+    end
+
+    def future_locales
+      locales = @options[:future_locales]
+      locales.empty? ? DEFAULT_FUTURE_LOCALES : locales.uniq
+    end
+
+    def locale_state(locale)
+      if planned_locales.include?(locale)
+        "planned"
+      elsif future_locales.include?(locale)
+        "future"
+      else
+        "stale"
+      end
+    end
+
+    def print_locale_gaps(label, present, indent: "  ")
+      missing = planned_locales - present
+      stale = present - planned_locales - future_locales
+      puts "#{indent}missing planned #{label} locales: #{missing.join(", ")}" unless missing.empty?
+      puts "#{indent}stale #{label} locales: #{stale.join(", ")}" unless stale.empty?
+    end
+
+    def missing_fields(attrs, fields)
+      fields.select { |field| attrs[field].nil? || attrs[field].to_s.empty? }
+    end
+
+    def screenshot_asset_summary(platform, localization_id, locale)
+      expected = SCREENSHOT_DISPLAY_TYPES[platform]
+      return "n/a" unless expected
+
+      sets = app_screenshot_sets(localization_id)
+      sets_by_type = sets.each_with_object({}) do |set, result|
+        result[set.dig("attributes", "screenshotDisplayType").to_s] = set
+      end
+      summaries = expected.map do |display_type, local_dir|
+        set = sets_by_type[display_type]
+        local_files = local_screenshot_files(local_dir, locale)
+        if set
+          screenshots = app_screenshots(set["id"])
+          state = checksum_state(screenshots, local_files)
+          "#{display_type}:#{screenshots.length}/#{local_files.length}:#{state}"
+        else
+          "#{display_type}:missing/#{local_files.length}"
+        end
+      end
+      extra = (sets_by_type.keys - expected.map(&:first)).sort
+      summaries << "extra=#{extra.join("|")}" unless extra.empty?
+      summaries.join(",")
+    end
+
+    def app_screenshot_sets(localization_id)
+      client.collection(
+        "/v1/appStoreVersionLocalizations/#{localization_id}/appScreenshotSets",
+        "fields[appScreenshotSets]" => "screenshotDisplayType",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read screenshot sets for #{localization_id}: #{e.message}"
+      []
+    end
+
+    def app_screenshots(set_id)
+      client.collection(
+        "/v1/appScreenshotSets/#{set_id}/appScreenshots",
+        "fields[appScreenshots]" => "fileName,sourceFileChecksum,assetDeliveryState,imageAsset",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read screenshots for #{set_id}: #{e.message}"
+      []
+    end
+
+    def app_preview_summary(localization_id)
+      sets = app_preview_sets(localization_id)
+      return "none" if sets.empty?
+
+      sets.map do |set|
+        type = set.dig("attributes", "previewType") ||
+               set.dig("attributes", "appPreviewType") ||
+               set.dig("attributes", "previewDisplayType") ||
+               "unknown"
+        previews = app_previews(set["id"])
+        "#{type}:#{previews.length}"
+      end.join(",")
+    end
+
+    def app_preview_sets(localization_id)
+      client.collection(
+        "/v1/appStoreVersionLocalizations/#{localization_id}/appPreviewSets",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read app preview sets for #{localization_id}: #{e.message}"
+      []
+    end
+
+    def app_previews(set_id)
+      client.collection(
+        "/v1/appPreviewSets/#{set_id}/appPreviews",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read app previews for #{set_id}: #{e.message}"
+      []
+    end
+
+    def checksum_state(screenshots, local_files)
+      return "remote-missing" if screenshots.empty?
+      return "local-missing" if local_files.empty?
+
+      remote = screenshots.map { |screenshot| screenshot.dig("attributes", "sourceFileChecksum") }.compact
+      local = local_files.map { |file| Digest::MD5.file(file).hexdigest }
+      return "match" if remote == local || remote.sort == local.sort
+
+      "mismatch"
+    end
+
+    def local_screenshot_files(local_dir, locale)
+      excluded = @options[:exclude_shots]
+      Pathname(@options[:screenshot_root])
+        .join(local_dir, local_screenshot_locale(locale))
+        .glob("*.png")
+        .sort
+        .reject { |file| excluded.include?(file.basename(".png").to_s) }
+    end
+
+    def local_screenshot_locale(locale)
+      SCREENSHOT_LOCALE_DIRS.fetch(locale, locale)
     end
 
     def find_locale(localizations, locale)
