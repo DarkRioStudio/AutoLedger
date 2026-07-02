@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-358 App 多币种入账与订阅币种）
+更新日期：2026-07-02（ITER-359 OCR 币种识别与区域语言设置）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-359 OCR 币种识别与区域语言设置
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Multi-currency Ledger / Confirmation UX
+- 类型：能力增强 / UI / 回归
+- 目标：让普通 OCR 截图 / 拍照识别输出明确币种；在未识别币种时使用用户可配置的默认消费币种；并在账单确认、酒店确认中按源币种和目标账本币种决定是否展示换算提示。
+- 改动范围：新增 `ReceiptCurrencyDetector`、`ImportedReceipt.currencyCode` 和消费默认币种设置；更新 `ReceiptParser`、`SmartReceiptMergePolicy`、`MerchantAliasResolver`、`VoiceLedgerParser`、`LedgerTextInterpreter` 与 `LedgerStore` 的币种传递 / 回退 / 保存链路；更新 `LanguageSettingsView`、`StructuredLedgerJSONConfirmView`、`HotelStayReviewView` 和共享 `CurrencyConversionPreviewCard`；补齐五语本地化、离线 / Golden / 批量回归脚本和离线回归样例。
+- 未改动范围：本轮未实现保存前精确目标金额预估、确认页直接展示汇率日期和 provider、汇率失败重试 UI、历史 OCR 数据回填、实时 OCR 取景框、Worker provider、StoreKit、ASC、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：OCR 文本可识别 `CNY` / `RMB` / `CN¥`、`USD` / `US$` / `$`、`JPY`、`KRW`、`SGD`、`EUR`、`GBP` 等常见币种信号，并写入 `ImportedReceipt.currencyCode`。App 设置页从“语言”升级为“区域与语言”，新增“消费默认币种”，默认跟随系统区域币种，用户可固定到常用货币目录中的任一币种。普通 OCR 保存时若识别不到币种，会使用消费默认币种作为源币种；源币种与默认写入账本币种不一致时，继续保留原始金额并触发已有后台汇率换算。结构化 JSON 确认页新增币种下拉；酒店确认页币种改为下拉；两者仅在源币种与目标账本币种不同的时候显示换算提示，用户改回同币种后提示会隐藏。
+- 未完成内容：确认页当前只展示原始金额和目标账本币种提示，尚未在保存前调用汇率接口显示精确换算后金额、rate date 和 provider；汇率不可用时仍依赖保存后的后台失败路径，没有用户可见重试或手动汇率入口。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；执行五语 `plutil -lint`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增币种探测和 OCR 币种写入样例；执行 `bash scripts/run_golden_regression.sh`，38 个 case PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS。构建仍保留既有 `AppFormatters` `nonisolated(unsafe)`、Watch `NavigationLink` / `WKExtension` deprecation 等 warning。
+- 风险与注意事项：裸 `$` 默认按 USD、裸 `¥` 默认按 CNY；如后续真实样本发现日元 / 美元地区误判，需要结合系统区域、OCR 语言和商户 / 地点上下文继续提高置信度。本轮新增偏好只影响没有识别到币种的新导入账单，不会改动已保存交易。
+- 回滚方式：回退新增币种探测器、`ImportedReceipt.currencyCode`、消费默认币种设置、确认页币种下拉 / 换算提示、`LedgerStore` OCR 保存回退逻辑、本地化和回归脚本；已有交易币种元数据 schema 来自 ITER-358，可独立保留。
+- 结论：本轮完成，普通 OCR / 拍照识别已具备基础币种输出和默认消费币种回退，账单 / 酒店确认页已按源币种与目标账本币种差异显示或隐藏换算提示。
+- 下一步建议：在确认页保存前请求汇率预估并显示目标金额、汇率日期和 provider；为 provider 失败提供手动确认 / 重试路径；把实时 OCR 主线接入同一币种输出。
 
 ### ITER-358 App 多币种入账与订阅币种
 - 日期：2026-07-02

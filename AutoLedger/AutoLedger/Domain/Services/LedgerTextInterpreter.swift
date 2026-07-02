@@ -152,6 +152,7 @@ private extension InterpretResult {
             source: source,
             merchant: draft.merchant,
             amount: draft.amount,
+            currencyCode: ReceiptCurrencyDetector.detectCode(in: rawText),
             occurredAt: draft.occurredAt,
             rawText: rawText,
             summary: "\(source.title) 地铁/公交规则解析",

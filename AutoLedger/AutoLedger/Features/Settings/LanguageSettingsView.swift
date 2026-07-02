@@ -2,9 +2,22 @@ import SwiftUI
 
 struct LanguageSettingsView: View {
     @AppStorage(AppLanguagePreference.userDefaultsKey) private var selectedLanguageRawValue = AppLanguagePreference.system.rawValue
+    @AppStorage(ExpenseCurrencyPreference.userDefaultsKey) private var selectedExpenseCurrencyRawValue = ExpenseCurrencyPreference.systemValue
 
     private var selectedLanguage: AppLanguagePreference {
         AppLanguagePreference(rawValue: selectedLanguageRawValue) ?? .system
+    }
+
+    private var selectedExpenseCurrencyCode: String {
+        let rawValue = ExpenseCurrencyPreference.normalizedRawValue(selectedExpenseCurrencyRawValue)
+        if rawValue == ExpenseCurrencyPreference.systemValue {
+            return ExpenseCurrencyPreference.systemCurrencyCode
+        }
+        return LedgerCurrencyOption.supportedCode(matching: rawValue)
+    }
+
+    private var sensoryFeedbackToken: String {
+        "\(selectedLanguageRawValue)-\(selectedExpenseCurrencyRawValue)"
     }
 
     var body: some View {
@@ -28,6 +41,18 @@ struct LanguageSettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .autoLedgerCardSurface(cornerRadius: 22)
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("language.currency.body")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    defaultCurrencyRow
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .autoLedgerCardSurface(cornerRadius: 22)
+
                 Text("language.footer")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.mutedInk)
@@ -41,7 +66,7 @@ struct LanguageSettingsView: View {
         .autoLedgerScreenChrome()
         .autoLedgerSolidNavigationBarChrome()
         .autoLedgerContentTitleNavigation("language.title")
-        .sensoryFeedback(.selection, trigger: selectedLanguageRawValue)
+        .sensoryFeedback(.selection, trigger: sensoryFeedbackToken)
     }
 
     private func languageRow(for preference: AppLanguagePreference) -> some View {
@@ -85,6 +110,99 @@ struct LanguageSettingsView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(preference.localizedTitleKey))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var defaultCurrencyRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "banknote.fill")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(AppTheme.accent)
+                )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("language.currency.title")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+                Text(defaultCurrencySubtitle)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Menu {
+                Button {
+                    selectedExpenseCurrencyRawValue = ExpenseCurrencyPreference.systemValue
+                } label: {
+                    currencyMenuLabel(
+                        title: String(
+                            format: String(localized: "language.currency.system_format"),
+                            ExpenseCurrencyPreference.systemCurrencyCode
+                        ),
+                        isSelected: selectedExpenseCurrencyRawValue == ExpenseCurrencyPreference.systemValue
+                    )
+                }
+
+                ForEach(LedgerCurrencyOption.common) { option in
+                    Button {
+                        selectedExpenseCurrencyRawValue = option.code
+                    } label: {
+                        currencyMenuLabel(
+                            title: option.localizedTitle,
+                            isSelected: selectedExpenseCurrencyRawValue == option.code
+                        )
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(selectedExpenseCurrencyCode)
+                        .font(.headline.weight(.semibold))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(AppTheme.accent.opacity(0.12))
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(AppTheme.card.opacity(0.72))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(AppTheme.cardStroke, lineWidth: 1)
+        }
+    }
+
+    private var defaultCurrencySubtitle: String {
+        if selectedExpenseCurrencyRawValue == ExpenseCurrencyPreference.systemValue {
+            return String(
+                format: String(localized: "language.currency.subtitle_system_format"),
+                ExpenseCurrencyPreference.systemCurrencyCode
+            )
+        }
+        return String(format: String(localized: "language.currency.subtitle_custom_format"), selectedExpenseCurrencyCode)
+    }
+
+    private func currencyMenuLabel(title: String, isSelected: Bool) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            if isSelected {
+                Image(systemName: "checkmark")
+            }
+        }
     }
 }
 

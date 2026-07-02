@@ -762,8 +762,8 @@
 "settings.external_assist.subtitle" = "可选开启脱敏云端辅助，改善疑难商户识别";
 "settings.appearance.title" = "外观与主题";
 "settings.appearance.subtitle" = "多套App视觉风格，随时切换你喜欢的样式";
-"settings.language.title" = "语言";
-"settings.language.subtitle" = "默认跟随系统，也可以手动指定 App 界面语言";
+"settings.language.title" = "区域与语言";
+"settings.language.subtitle" = "设置界面语言和默认消费币种";
 "settings.analysis.title" = "消费分析";
 "settings.analysis.subtitle" = "调整月报异常消费检测阈值";
 "settings.data_management.title" = "数据管理";
@@ -826,7 +826,7 @@
 "appearance.preview.month" = "本月支出";
 "appearance.preview.queue" = "待确认";
 "appearance.footer" = "主题只影响本机界面观感，不会改变账本数据、识别结果或同步内容。";
-"language.title" = "语言";
+"language.title" = "区域与语言";
 "language.body" = "选择 AutoLedger 的界面语言。选择“跟随系统”时，会使用设备的语言设置。";
 "language.option.system" = "跟随系统";
 "language.option.zh_hans" = "简体中文";
@@ -834,7 +834,12 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.footer" = "语言设置只影响本机 App 界面，不会改变账本数据、识别结果或同步内容。";
+"language.currency.body" = "默认消费币种只在账单没有识别到币种时使用；写入不同币种账本时会准备换算。";
+"language.currency.title" = "消费默认币种";
+"language.currency.system_format" = "跟随系统（%@）";
+"language.currency.subtitle_system_format" = "当前跟随系统：%@";
+"language.currency.subtitle_custom_format" = "当前固定为 %@";
+"language.footer" = "这些设置只影响本机 App 界面和未标明币种账单的默认理解，不会改变已保存账本数据。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro 只解锁省时间的自动化：邮箱水单扫描、专属水单收件箱、批量候选和高级去重。日常记账、手动导入和历史数据不会被锁住。";
@@ -1143,6 +1148,10 @@
 "import_ledger_json.confirm.footer" = "这笔 JSON 账单置信度未达到自动保存阈值，请确认后再入账。";
 "import_ledger_json.confirm.confidence_format" = "置信度：%.2f";
 "import_ledger_json.confirm.currency_format" = "币种：%@";
+"currency_conversion.preview.title" = "金额换算";
+"currency_conversion.preview.source_format" = "原始金额：%@";
+"currency_conversion.preview.target_format" = "保存后写入 %@ 账本";
+"currency_conversion.preview.footer" = "源币种和账本币种不一致时，保存后会按账单日期汇率换算，并保留原始金额。";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "打开快速记账";

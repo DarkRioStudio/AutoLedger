@@ -3,6 +3,7 @@ import SwiftUI
 
 struct HotelStayReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: LedgerStore
 
     let draft: HotelStayDraft
     let onConfirm: (HotelStayDraft) -> Void
@@ -11,6 +12,18 @@ struct HotelStayReviewView: View {
     @State private var form: HotelStayReviewForm
     @State private var validationMessageKey: String?
     private let rawTextLocalizer = HotelFolioRawTextLocalizer()
+
+    private var targetCurrencyCode: String {
+        store.ledgerCurrencyCode(for: draft.targetLedgerID)
+    }
+
+    private var normalizedFormCurrencyCode: String {
+        LedgerCurrencyOption.supportedCode(matching: form.currency)
+    }
+
+    private var shouldShowCurrencyConversion: Bool {
+        normalizedFormCurrencyCode != targetCurrencyCode
+    }
 
     init(
         draft: HotelStayDraft,
@@ -115,8 +128,20 @@ struct HotelStayReviewView: View {
 
     private var chargeSection: some View {
         Section {
-            TextField("hotel_stay.review.currency", text: $form.currency)
-                .textInputAutocapitalization(.characters)
+            Picker("hotel_stay.review.currency", selection: $form.currency) {
+                ForEach(form.currencyOptions, id: \.self) { currency in
+                    Text(currency).tag(currency)
+                }
+            }
+
+            if shouldShowCurrencyConversion {
+                CurrencyConversionPreviewCard(
+                    sourceAmount: LedgerAmountInputParser.parse(form.totalAmountText),
+                    sourceCurrencyCode: normalizedFormCurrencyCode,
+                    targetCurrencyCode: targetCurrencyCode
+                )
+            }
+
             TextField("hotel_stay.review.room_charge", text: $form.roomChargeText)
                 .keyboardType(.decimalPad)
             TextField("hotel_stay.review.tax", text: $form.taxAmountText)
@@ -258,6 +283,10 @@ private extension HotelStayReviewForm {
         Self.uniqueOptions([country] + HotelStayLocationCatalog.countryOptions())
     }
 
+    var currencyOptions: [String] {
+        Self.uniqueOptions([currency] + LedgerCurrencyOption.common.map(\.code))
+    }
+
     mutating func applyLocalizedLocation() {
         let localizedLocation = HotelStayLocationCatalog.localizedLocation(city: city, country: country)
         city = localizedLocation.city
@@ -330,4 +359,5 @@ private extension HotelStayReviewForm {
             status: .needsReview
         )
     )
+    .environmentObject(LedgerStore())
 }

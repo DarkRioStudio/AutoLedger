@@ -1970,16 +1970,18 @@ final class LedgerStore: ObservableObject {
             return
         }
 
+        let sourceCurrencyCode = LedgerCurrencyOption.supportedCode(matching: receipt.currencyCode ?? ExpenseCurrencyPreference.currentCode)
+        let resolvedReceipt = receipt.replacingCurrencyCode(sourceCurrencyCode)
         let transaction = transactionPreparedForLedgerCurrency(Transaction(
-            merchant: receipt.merchant,
-            amount: receipt.amount,
-            occurredAt: receipt.occurredAt,
-            category: receipt.suggestedCategory,
-            source: receipt.source,
+            merchant: resolvedReceipt.merchant,
+            amount: resolvedReceipt.amount,
+            occurredAt: resolvedReceipt.occurredAt,
+            category: resolvedReceipt.suggestedCategory,
+            source: resolvedReceipt.source,
             note: notePrefix,
             ledgerID: targetLedgerIDForNewTransactions
-        ))
-        recentImports.insert(receipt, at: 0)
+        ), sourceAmount: resolvedReceipt.amount, sourceCurrencyCode: sourceCurrencyCode)
+        recentImports.insert(resolvedReceipt, at: 0)
         transactions.insert(transaction, at: 0)
         sortTransactions()
 
@@ -1990,23 +1992,23 @@ final class LedgerStore: ObservableObject {
             lastImportSummary = summary
             recordDebugEvent(
                 stage: .persistenceFailed,
-                source: receipt.source,
+                source: resolvedReceipt.source,
                 imageSource: imageSource,
                 rawText: rawText,
-                parsedReceipt: receipt,
+                parsedReceipt: resolvedReceipt,
                 summary: summary,
                 llmPrompt: llmTrace?.prompt,
                 llmResponse: llmTrace?.response,
                 llmProvider: llmTrace?.providerID,
                 llmLatencyMs: llmTrace?.latencyMs,
-                llmConfidence: receipt.confidence,
+                llmConfidence: resolvedReceipt.confidence,
                 usedRuleFallback: usedRuleFallback
             )
             return
         }
 
-        let summary = "已导入 \(receipt.merchant)，金额 \(AppFormatters.currency(receipt.amount))。"
-        let debugSummary = receipt.parseDiagnostics.map { "\(summary)\n调试：\($0.debugSummary)" } ?? summary
+        let summary = "已导入 \(resolvedReceipt.merchant)，金额 \(AppFormatters.currency(resolvedReceipt.amount, code: sourceCurrencyCode))。"
+        let debugSummary = resolvedReceipt.parseDiagnostics.map { "\(summary)\n调试：\($0.debugSummary)" } ?? summary
         lastImportSummary = summary
         reloadWidgets()
         requestAutomaticBackup()
@@ -2014,17 +2016,17 @@ final class LedgerStore: ObservableObject {
         scheduleCurrencyConversionIfNeeded(for: transaction.id)
         recordDebugEvent(
             stage: .persisted,
-            source: receipt.source,
+            source: resolvedReceipt.source,
             imageSource: imageSource,
             rawText: rawText,
-            parsedReceipt: receipt,
+            parsedReceipt: resolvedReceipt,
             summary: debugSummary,
             llmPrompt: llmTrace?.prompt,
             llmResponse: llmTrace?.response,
             transactionID: transaction.id,
             llmProvider: llmTrace?.providerID,
             llmLatencyMs: llmTrace?.latencyMs,
-            llmConfidence: receipt.confidence,
+            llmConfidence: resolvedReceipt.confidence,
             usedRuleFallback: usedRuleFallback
         )
     }

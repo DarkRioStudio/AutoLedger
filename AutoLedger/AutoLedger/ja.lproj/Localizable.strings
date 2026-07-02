@@ -762,8 +762,8 @@
 "settings.external_assist.subtitle" = "難しい加盟店認識向けの任意の匿名化クラウド支援";
 "settings.appearance.title" = "外観とテーマ";
 "settings.appearance.subtitle" = "複数のスタイルから、好きな見た目へいつでも切り替え";
-"settings.language.title" = "言語";
-"settings.language.subtitle" = "通常はシステムに合わせ、手動で App の表示言語も選べます";
+"settings.language.title" = "地域と言語";
+"settings.language.subtitle" = "表示言語と支出の既定通貨を設定";
 "settings.analysis.title" = "支出分析";
 "settings.analysis.subtitle" = "月次異常支出検出のしきい値を調整";
 "settings.data_management.title" = "データ管理";
@@ -826,7 +826,7 @@
 "appearance.preview.month" = "今月";
 "appearance.preview.queue" = "確認待ち";
 "appearance.footer" = "テーマはこの端末の画面表示だけを変更します。台帳データ、認識結果、同期内容は変わりません。";
-"language.title" = "言語";
+"language.title" = "地域と言語";
 "language.body" = "AutoLedger の表示言語を選択します。「システム」を選ぶと、端末の言語設定を使用します。";
 "language.option.system" = "システム";
 "language.option.zh_hans" = "简体中文";
@@ -834,7 +834,12 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.footer" = "言語設定はこの端末の App 表示だけに影響します。台帳データ、認識結果、同期内容は変わりません。";
+"language.currency.body" = "支出の既定通貨は、レシートから通貨を識別できない場合だけ使います。台帳の通貨が異なる場合は換算を準備します。";
+"language.currency.title" = "支出の既定通貨";
+"language.currency.system_format" = "システム（%@）";
+"language.currency.subtitle_system_format" = "現在はシステムに従う：%@";
+"language.currency.subtitle_custom_format" = "現在は %@ に固定";
+"language.footer" = "これらの設定は、この端末の表示と通貨が明記されていないレシートの解釈だけに影響します。保存済みの台帳データは変わりません。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro は時間を節約する自動化だけを解放します：メール明細スキャン、専用明細受信箱、一括候補、高度な重複整理。日常の記帳、手動取り込み、過去データは引き続き利用できます。";
@@ -1143,6 +1148,10 @@
 "import_ledger_json.confirm.footer" = "この JSON 項目は自動保存の信頼度しきい値を満たしませんでした。保存前に確認してください。";
 "import_ledger_json.confirm.confidence_format" = "信頼度: %.2f";
 "import_ledger_json.confirm.currency_format" = "通貨: %@";
+"currency_conversion.preview.title" = "通貨換算";
+"currency_conversion.preview.source_format" = "元の金額：%@";
+"currency_conversion.preview.target_format" = "保存後は %@ の台帳に記録";
+"currency_conversion.preview.footer" = "元通貨と台帳通貨が異なる場合、保存後に請求日のレートで換算し、元の金額も保持します。";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "クイック追加を開く";

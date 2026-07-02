@@ -41,6 +41,7 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
     public let source: ReceiptSource
     public let merchant: String
     public let amount: Double
+    public let currencyCode: String?
     public let occurredAt: Date
     public let rawText: String
     public let summary: String
@@ -52,6 +53,7 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
         source: ReceiptSource,
         merchant: String,
         amount: Double,
+        currencyCode: String? = nil,
         occurredAt: Date,
         rawText: String,
         summary: String,
@@ -62,11 +64,27 @@ public struct ImportedReceipt: Identifiable, Equatable, Sendable {
         self.source = source
         self.merchant = merchant
         self.amount = amount
+        self.currencyCode = currencyCode
         self.occurredAt = occurredAt
         self.rawText = rawText
         self.summary = summary
         self.confidence = confidence
         self.suggestedCategory = suggestedCategory
         self.parseDiagnostics = parseDiagnostics
+    }
+
+    public func replacingCurrencyCode(_ newCurrencyCode: String?) -> ImportedReceipt {
+        ImportedReceipt(
+            source: source,
+            merchant: merchant,
+            amount: amount,
+            currencyCode: newCurrencyCode,
+            occurredAt: occurredAt,
+            rawText: rawText,
+            summary: summary,
+            confidence: confidence,
+            suggestedCategory: suggestedCategory,
+            parseDiagnostics: parseDiagnostics
+        )
     }
 }

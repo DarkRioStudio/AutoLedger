@@ -93,12 +93,14 @@ public struct ReceiptParser: Sendable {
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+        let detectedCurrencyCode = ReceiptCurrencyDetector.detectCode(in: normalized)
 
         if let transitReceipt = parseTransitStoredValueReceipt(lines: cleanedLines) {
             return ImportedReceipt(
                 source: source,
                 merchant: transitReceipt.merchant,
                 amount: transitReceipt.amount,
+                currencyCode: detectedCurrencyCode,
                 occurredAt: extractDate(from: normalized) ?? .now,
                 rawText: normalized,
                 summary: "\(source.title) 地铁/公交规则解析",
@@ -216,6 +218,7 @@ public struct ReceiptParser: Sendable {
             source: source,
             merchant: merchant,
             amount: amount,
+            currencyCode: detectedCurrencyCode,
             occurredAt: date,
             rawText: normalized,
             summary: summary,

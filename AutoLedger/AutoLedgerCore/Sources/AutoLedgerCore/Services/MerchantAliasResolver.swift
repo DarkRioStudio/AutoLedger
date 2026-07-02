@@ -49,6 +49,7 @@ public enum MerchantAliasResolver {
             source: receipt.source,
             merchant: resolvedMerchant,
             amount: receipt.amount,
+            currencyCode: receipt.currencyCode,
             occurredAt: receipt.occurredAt,
             rawText: receipt.rawText,
             summary: receipt.summary,

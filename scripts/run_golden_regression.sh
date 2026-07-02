@@ -25,6 +25,7 @@ swiftc \
   "$CORE/Services/LedgerDateCandidateExtractor.swift" \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/PaymentAmountExtractor.swift" \
+  "$CORE/Services/ReceiptCurrencyDetector.swift" \
   "$CORE/Services/MerchantResolver.swift" \
   "$CORE/Services/CategoryResolver.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \

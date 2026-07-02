@@ -120,6 +120,14 @@ enum ExternalReceiptAssistSettings {
     static var isEnabled: Bool = false
 }
 
+enum ExpenseCurrencyPreference {
+    static let userDefaultsKey = "expenseDefaultCurrencyCode"
+    static let systemValue = "system"
+    static var systemCurrencyCode: String { "CNY" }
+    static var currentCode: String { "CNY" }
+    static func normalizedRawValue(_ value: String?) -> String { value ?? systemValue }
+}
+
 struct LedgerCurrencyOption: Identifiable, Hashable {
     static let defaultCode = "CNY"
 
@@ -353,6 +361,7 @@ swiftc \
   "$CORE/Services/BillRelevanceGate.swift" \
   "$CORE/Services/LedgerAmountInputParser.swift" \
   "$CORE/Services/PaymentAmountExtractor.swift" \
+  "$CORE/Services/ReceiptCurrencyDetector.swift" \
   "$CORE/Services/MerchantResolver.swift" \
   "$CORE/Services/CategoryResolver.swift" \
   "$CORE/Services/SmartReceiptMergePolicy.swift" \

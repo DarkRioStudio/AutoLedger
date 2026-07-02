@@ -762,8 +762,8 @@
 "settings.external_assist.subtitle" = "어려운 판매자 인식을 위한 선택적인 수정된 클라우드 도움말";
 "settings.appearance.title" = "외관 및 테마";
 "settings.appearance.subtitle" = "다양한 앱 스타일 중에서 선택하고 언제든지 원하는 모양으로 전환하세요.";
-"settings.language.title" = "언어";
-"settings.language.subtitle" = "기본적으로 시스템을 따르거나 앱 언어를 수동으로 선택하세요.";
+"settings.language.title" = "지역 및 언어";
+"settings.language.subtitle" = "앱 언어와 기본 지출 통화 설정";
 "settings.analysis.title" = "지출 분석";
 "settings.analysis.subtitle" = "월간 비정상 지출 감지 임계값 조정";
 "settings.data_management.title" = "데이터 관리";
@@ -826,7 +826,7 @@
 "appearance.preview.month" = "월";
 "appearance.preview.queue" = "대기줄";
 "appearance.footer" = "테마는 로컬 인터페이스 스타일만 변경합니다. 원장 데이터, 인식 및 동기화는 변경되지 않습니다.";
-"language.title" = "언어";
+"language.title" = "지역 및 언어";
 "language.body" = "AutoLedger의 인터페이스 언어를 선택하세요. 시스템은 장치 언어 설정을 사용합니다.";
 "language.option.system" = "시스템 설정";
 "language.option.zh_hans" = "简体中文";
@@ -834,7 +834,12 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.footer" = "이는 로컬 앱 인터페이스만 변경합니다. 원장 데이터, 인식 및 동기화는 변경되지 않습니다.";
+"language.currency.body" = "기본 지출 통화는 영수증에서 통화를 인식하지 못했을 때만 사용합니다. 원장 통화가 다르면 환산을 준비합니다.";
+"language.currency.title" = "기본 지출 통화";
+"language.currency.system_format" = "시스템(%@)";
+"language.currency.subtitle_system_format" = "현재 시스템 따름: %@";
+"language.currency.subtitle_custom_format" = "현재 %@로 고정";
+"language.footer" = "이 설정은 로컬 인터페이스와 통화가 표시되지 않은 영수증 해석에만 영향을 줍니다. 저장된 원장 데이터는 바뀌지 않습니다.";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro는 이메일 Folio 스캔, 전용 Folio 받은 편지함, 일괄 후보 및 고급 중복 제거 등 시간을 절약해 주는 자동화 기능만 제공합니다. 일상적인 부기, 수동 가져오기 및 기록에 계속 액세스할 수 있습니다.";
@@ -1143,6 +1148,10 @@
 "import_ledger_json.confirm.footer" = "이 JSON 항목은 자동 저장 신뢰도 임계값을 충족하지 않았습니다. 저장하기 전에 검토하세요.";
 "import_ledger_json.confirm.confidence_format" = "자신감: %.2f";
 "import_ledger_json.confirm.currency_format" = "통화: %@";
+"currency_conversion.preview.title" = "통화 환산";
+"currency_conversion.preview.source_format" = "원래 금액: %@";
+"currency_conversion.preview.target_format" = "저장 후 %@ 원장에 기록";
+"currency_conversion.preview.footer" = "원래 통화와 원장 통화가 다르면 저장 후 결제일 환율로 환산하고 원래 금액도 보관합니다.";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "빠른 추가 열기";

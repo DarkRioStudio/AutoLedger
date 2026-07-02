@@ -44,6 +44,7 @@ public struct VoiceLedgerParseResult: Sendable {
             source: .voice,
             merchant: merchant.isEmpty ? "语音记账" : merchant,
             amount: amount,
+            currencyCode: ReceiptCurrencyDetector.detectCode(in: inputText),
             occurredAt: occurredAt,
             rawText: inputText,
             summary: "语音记账：\(inputText)",

@@ -762,8 +762,8 @@
 "settings.external_assist.subtitle" = "Optional redacted cloud help for difficult merchant recognition";
 "settings.appearance.title" = "Appearance & Theme";
 "settings.appearance.subtitle" = "Choose from multiple app styles and switch to the look you like anytime";
-"settings.language.title" = "Language";
-"settings.language.subtitle" = "Follow the system by default, or choose an app language manually";
+"settings.language.title" = "Region & Language";
+"settings.language.subtitle" = "Set app language and default spending currency";
 "settings.analysis.title" = "Spending Analysis";
 "settings.analysis.subtitle" = "Adjust the monthly abnormal spending detection threshold";
 "settings.data_management.title" = "Data Management";
@@ -826,7 +826,7 @@
 "appearance.preview.month" = "Month";
 "appearance.preview.queue" = "Queue";
 "appearance.footer" = "Themes only change the local interface style. Ledger data, recognition, and sync remain unchanged.";
-"language.title" = "Language";
+"language.title" = "Region & Language";
 "language.body" = "Choose the interface language for AutoLedger. System uses the device language setting.";
 "language.option.system" = "System";
 "language.option.zh_hans" = "简体中文";
@@ -834,7 +834,12 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.footer" = "This only changes the local app interface. Ledger data, recognition, and sync remain unchanged.";
+"language.currency.body" = "Default spending currency is used only when a bill does not show its currency. Different ledger currencies will be prepared for conversion.";
+"language.currency.title" = "Default spending currency";
+"language.currency.system_format" = "System (%@)";
+"language.currency.subtitle_system_format" = "Following system: %@";
+"language.currency.subtitle_custom_format" = "Fixed to %@";
+"language.footer" = "These settings only affect the local interface and bills with no visible currency. Saved ledger data is not changed.";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro only unlocks time-saving automation: email folio scanning, a dedicated folio inbox, batch candidates, and advanced dedupe. Everyday bookkeeping, manual import, and history stay accessible.";
@@ -1143,6 +1148,10 @@
 "import_ledger_json.confirm.footer" = "This JSON entry did not meet the automatic-save confidence threshold. Review it before saving.";
 "import_ledger_json.confirm.confidence_format" = "Confidence: %.2f";
 "import_ledger_json.confirm.currency_format" = "Currency: %@";
+"currency_conversion.preview.title" = "Currency conversion";
+"currency_conversion.preview.source_format" = "Original amount: %@";
+"currency_conversion.preview.target_format" = "Will save to the %@ ledger";
+"currency_conversion.preview.footer" = "When source and ledger currencies differ, AutoLedger converts after saving by the bill date rate and keeps the original amount.";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "Open Quick Add";

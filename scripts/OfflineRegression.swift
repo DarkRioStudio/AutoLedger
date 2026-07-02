@@ -49,6 +49,7 @@ struct OfflineRegression {
         verifyHotelStayArchivePresentation(reporter: reporter)
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
+        verifyReceiptCurrencyDetection(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
         verifyLedgerDateCandidateExtraction(reporter: reporter)
@@ -200,6 +201,24 @@ struct OfflineRegression {
         } catch {
             reporter.check(false, "StructuredLedgerJSONParser reports the expected missing-amount error")
         }
+    }
+
+    private static func verifyReceiptCurrencyDetection(reporter: RegressionReporter) {
+        reporter.check(ReceiptCurrencyDetector.detectCode(in: "合计 RMB 28.00") == "CNY", "ReceiptCurrencyDetector detects RMB as CNY")
+        reporter.check(ReceiptCurrencyDetector.detectCode(in: "TOTAL US$12.30") == "USD", "ReceiptCurrencyDetector detects US dollar evidence")
+        reporter.check(ReceiptCurrencyDetector.detectCode(in: "合計 JP¥1200") == "JPY", "ReceiptCurrencyDetector detects JPY evidence")
+        reporter.check(ReceiptCurrencyDetector.detectCode(in: "총액 12,300원") == "KRW", "ReceiptCurrencyDetector detects Korean won")
+        reporter.check(ReceiptCurrencyDetector.detectCode(in: "Total S$18.90") == "SGD", "ReceiptCurrencyDetector detects SGD before bare dollar")
+
+        let parser = ReceiptParser()
+        let receipt = parser.parse(
+            text: """
+            Demo Cafe
+            Total US$12.30
+            """,
+            source: .manual
+        )
+        reporter.check(receipt?.currencyCode == "USD", "ReceiptParser attaches detected currency to imported receipt")
     }
 
     private static func verifyHotelStayModels(reporter: RegressionReporter) {
