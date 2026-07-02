@@ -52,13 +52,13 @@
 - 目标：将 `common-api` 从 AutoLedger 专属命名调整为可供多个 darkrio App 复用的通用 Worker，并把旧 `MyWeatherLine/Api` 中可复用的天气 API 代码迁移进来。
 - 改动范围：更新 `tools/worker/common-api` 的 wrangler 名称、package 名称、README、manifest service 名、测试期望和生产 / staging 自定义域；新增天气 provider、WeatherKit JWT、OpenWeatherMap fallback、mock provider、坐标缓存、`/v1/weather/current` 与 `/v1/weather/forecast` 路由；更新版本计划、CHANGELOG 和本日志。
 - 未改动范围：本轮未修改 App Swift 代码、酒店消费 UI、账本默认币种 UI、截图管线、现有酒店水单收件箱 Worker、SQLite / CloudKit schema、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未迁移旧 WeatherKit key，也未读取旧 `.dev.vars`。
-- 完成内容：Worker 名改为 `darkrio-common-api`，npm package 改为 `@darkrio/common-api-worker`，manifest service 改为 `darkrio-common-api`；生产域名改为 `https://api.darkrio326.top`，staging 域名改为 `https://staging-api.darkrio326.top`；旧 `MyWeatherLine/Api` 的 current / forecast API、WeatherKit JWT、OpenWeatherMap 当前天气、mock provider 和 5 分钟坐标缓存迁入新 Worker。默认 `WEATHER_PROVIDER=disabled`，没有新 provider secret 时天气端点返回结构化 `503 weather_provider_not_configured`。
-- 未完成内容：尚未配置新 WeatherKit key；尚未实现 WeatherKit Daily Summary 历史天气；尚未把 `api.darkrio326.top` 旧 Worker / GitHub repo 删除结果写入自动化脚本；尚未实现汇率 provider、R2 static assets、服务端鉴权、Cloudflare 托管限流或 App 端调用。
-- 测试情况：执行 `npm install` 完成并显示 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 12 个 Vitest 合同测试，覆盖通用 manifest、HEAD 探测、五语地点目录、天气 provider disabled、坐标校验和 mock current / forecast 合同。
+- 完成内容：Worker 名改为 `darkrio-common-api`，npm package 改为 `@darkrio/common-api-worker`，manifest service 改为 `darkrio-common-api`；生产域名改为 `https://api.darkrio326.top`，staging 域名改为 `https://staging-api.darkrio326.top`；旧 `MyWeatherLine/Api` 的 current / forecast API、WeatherKit JWT、OpenWeatherMap 当前天气、mock provider 和 5 分钟坐标缓存迁入新 Worker。默认 `WEATHER_PROVIDER=disabled`，没有新 provider secret 时天气端点返回结构化 `503 weather_provider_not_configured`。已部署 `darkrio-common-api-staging` 与 `darkrio-common-api-production`，删除旧 `base-api`、`autoledger-common-api-staging`、`autoledger-common-api-production` Worker，并删除本机旧 `MyWeatherLine` repo 目录。
+- 未完成内容：尚未配置新 WeatherKit key；尚未实现 WeatherKit Daily Summary 历史天气；尚未删除 GitHub 远端 `darkrio326/MyWeatherLine` repo，因为当前 `gh` token 缺少 `delete_repo` scope；尚未实现汇率 provider、R2 static assets、服务端鉴权、Cloudflare 托管限流或 App 端调用。
+- 测试情况：执行 `npm install` 完成并显示 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 12 个 Vitest 合同测试，覆盖通用 manifest、HEAD 探测、五语地点目录、天气 provider disabled、坐标校验和 mock current / forecast 合同。线上验证 `https://api.darkrio326.top/health`、`/v1/manifest`、`HEAD /v1/locations/catalog` 和 staging `/health` 均正常；`/v1/weather/current` 在 provider disabled 状态下按预期返回 503。
 - 风险与注意事项：旧 WeatherKit key 已 revoke，新 Worker 不会读取旧 secret；正式启用天气前需要重新申请 WeatherKit key，并通过 `wrangler secret put` 配置 `WEATHERKIT_TEAM_ID`、`WEATHERKIT_SERVICE_ID`、`WEATHERKIT_KEY_ID`、`WEATHERKIT_PRIVATE_KEY`，再把 `WEATHER_PROVIDER` 改为 `weatherkit` 后重新部署。当前天气 API 只接收坐标、locale 和 timezone，不接收酒店名、账单金额或用户数据。
 - 回滚方式：回退本轮 `tools/worker/common-api` 改动和文档即可；若已部署，可用 Wrangler 回滚到上一版 `autoledger-common-api-*` deployment 或重新部署上一 commit。
 - 结论：`common-api` 已从 AutoLedger 专属 Worker 变成 darkrio 通用 Worker 基础，并保留旧 MyWeatherLine 天气 API 的主要代码资产；后续只需新 WeatherKit 凭据即可继续接真实天气。
-- 下一步建议：删除旧 `base-api` Worker 和 `MyWeatherLine` repo 后，部署 `darkrio-common-api` 到 `api.darkrio326.top` 并验证 manifest、catalog、weather disabled 和 HEAD。
+- 下一步建议：执行 `gh auth refresh -h github.com -s delete_repo` 后删除 GitHub 远端 `darkrio326/MyWeatherLine` repo；随后申请新 WeatherKit key，并用 `wrangler secret put` 配置到 `darkrio-common-api`。
 
 ### ITER-352 common-api Worker 第一段
 - 日期：2026-07-02
