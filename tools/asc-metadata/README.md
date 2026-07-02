@@ -39,6 +39,8 @@ The audit prints:
 - Screenshot set counts and checksum matches for every platform display type
 - App Preview set counts per locale when App Store Connect returns them
 - Local screenshot counts for planned / future / target locales
+- Subscription group and subscription product localization coverage
+- Subscription product period, state, family sharing flag, and description length
 
 By default the planned ASC locales are `zh-Hans`, `zh-Hant`, `en-US`, and `ja`,
 with `ko` listed as a future locale for the v1.7.x line. Override the matrix

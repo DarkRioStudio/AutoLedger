@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-348 ASC metadata 资产矩阵审计）
+更新日期：2026-07-02（ITER-349 ASC 订阅元数据审计）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-349 ASC 订阅元数据审计
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Automation / Metadata-as-Code
+- 类型：能力增强 / 治理
+- 目标：把订阅组、月付和年付 subscription localizations 纳入 ASC metadata audit，避免订阅商品描述、本地化缺失或 stale locale 在提交前才暴露。
+- 改动范围：更新 `tools/asc-metadata/asc_metadata.rb` 和 `tools/asc-metadata/README.md`，同步回填 `CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 代码、本地化资源、识别代码、截图成品、App Preview 视频、ASC 线上数据、StoreKit 商品、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`asc_metadata.rb audit` 新增 `Subscription Matrix`；读取 `subscriptionGroups`、`subscriptionGroupLocalizations`、组内 `subscriptions` 和每个商品的 `subscriptionLocalizations`；按 planned / future / stale locale 标记覆盖状态；输出商品周期、审核状态、family sharing、group level、订阅本地化 state、名称字段和描述长度，并标记超过 55 字符限制的描述。
+- 未完成内容：本轮没有实现订阅本地化写入 / copy、订阅价格 / 价格点 audit、订阅图片 checksum audit、metadata YAML 源文件或自动提交审核。
+- 测试情况：执行 `ruby -c tools/asc-metadata/asc_metadata.rb` 通过；执行真实 ASC 只读 `audit --platform IOS --exclude-shot 04_workspace_cleaning` 通过，确认 Pro 订阅组、月付和年付商品均有 `zh-Hans`、`zh-Hant`、`en-US`、`ja` 四语本地化；英文订阅描述为 `55/55`，简体 / 繁体为 `38/55`，日文为 `29/55`，均未超限；本轮未写入 ASC。
+- 风险与注意事项：audit 只检查订阅本地化覆盖和描述长度，不代表 ASC 订阅图片、价格、宽限期、审核状态或 promoted IAP 图片一定可编辑；当前月付 / 年付商品仍处于 ASC `IN_REVIEW` 状态时，图片替换仍可能被 ASC API 拒绝。
+- 回滚方式：回退 `tools/asc-metadata/asc_metadata.rb`、`tools/asc-metadata/README.md`、`CHANGELOG.md` 和本日志即可；不涉及 App、ASC 远端状态或用户数据回滚。
+- 结论：本轮完成 ASC 订阅元数据只读审计能力，`GOAL-2312` 的提交前 audit 已覆盖版本文案、截图 / App Preview 和订阅本地化三类核心发布材料。
+- 下一步建议：继续补 metadata source 文件和 dry-run diff，或进入 `GOAL-2308` 韩语 UI / 识别包第一段。
 
 ### ITER-348 ASC metadata 资产矩阵审计
 - 日期：2026-07-02

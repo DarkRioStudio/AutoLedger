@@ -57,6 +57,17 @@ module ASCMetadata
     whatsNew
   ].freeze
 
+  SUBSCRIPTION_GROUP_LOCALIZATION_FIELDS = %w[
+    name
+  ].freeze
+
+  SUBSCRIPTION_LOCALIZATION_FIELDS = %w[
+    name
+    description
+  ].freeze
+
+  SUBSCRIPTION_DESCRIPTION_LIMIT = 55
+
   class Error < StandardError; end
 
   class Client
@@ -315,6 +326,7 @@ module ASCMetadata
       print_version_localizations(versions)
       print_version_asset_matrix(versions)
       print_local_screenshot_matrix
+      print_subscription_matrix
     end
 
     def copy_locale
@@ -454,6 +466,71 @@ module ASCMetadata
       puts
     end
 
+    def print_subscription_matrix
+      puts "Subscription Matrix"
+      groups = subscription_groups
+      if groups.empty?
+        puts "  no subscription groups found"
+        puts
+        return
+      end
+
+      groups.each do |group|
+        group_attrs = group["attributes"] || {}
+        puts "  - group #{group["id"]} referenceName=#{summary(group_attrs["referenceName"])}"
+        print_subscription_group_localization_matrix(group)
+        print_subscription_products_matrix(group)
+      end
+      puts
+    end
+
+    def print_subscription_group_localization_matrix(group)
+      localizations = subscription_group_localizations(group["id"])
+      present = localizations.map { |loc| loc.dig("attributes", "locale") }.compact.sort
+      puts "      group localizations: #{present.join(", ")}"
+      print_locale_gaps("subscription group", present, indent: "      ")
+      localizations.sort_by { |loc| loc.dig("attributes", "locale").to_s }.each do |loc|
+        attrs = loc["attributes"] || {}
+        locale = attrs["locale"].to_s
+        missing = missing_fields(attrs, SUBSCRIPTION_GROUP_LOCALIZATION_FIELDS)
+        fields = missing.empty? ? "ok" : "missing:#{missing.join(",")}"
+        custom_app_name = attrs["customAppName"].nil? || attrs["customAppName"].to_s.empty? ? "default-app-name" : summary(attrs["customAppName"])
+        puts "        #{locale} #{locale_state(locale)} state=#{attrs["state"] || "unknown"} " \
+             "fields=#{fields} name=#{summary(attrs["name"])} customAppName=#{custom_app_name}"
+      end
+    end
+
+    def print_subscription_products_matrix(group)
+      subscriptions(group["id"]).sort_by { |sub| sub.dig("attributes", "productId").to_s }.each do |sub|
+        attrs = sub["attributes"] || {}
+        product_id = attrs["productId"].to_s
+        puts "      product #{sub["id"]} #{product_id} " \
+             "period=#{attrs["subscriptionPeriod"] || "unknown"} " \
+             "state=#{attrs["state"] || "unknown"} " \
+             "familySharable=#{attrs["familySharable"].nil? ? "unknown" : attrs["familySharable"]} " \
+             "groupLevel=#{attrs["groupLevel"] || "unknown"}"
+        print_subscription_localization_matrix(sub)
+      end
+    end
+
+    def print_subscription_localization_matrix(subscription)
+      localizations = subscription_localizations(subscription["id"])
+      present = localizations.map { |loc| loc.dig("attributes", "locale") }.compact.sort
+      puts "        localizations: #{present.join(", ")}"
+      print_locale_gaps("subscription #{subscription.dig("attributes", "productId")}", present, indent: "        ")
+      localizations.sort_by { |loc| loc.dig("attributes", "locale").to_s }.each do |loc|
+        attrs = loc["attributes"] || {}
+        locale = attrs["locale"].to_s
+        missing = missing_fields(attrs, SUBSCRIPTION_LOCALIZATION_FIELDS)
+        fields = missing.empty? ? "ok" : "missing:#{missing.join(",")}"
+        description = attrs["description"].to_s
+        description_status = description.empty? ? "missing" : "#{description.length}/#{SUBSCRIPTION_DESCRIPTION_LIMIT}"
+        description_status += ":over" if description.length > SUBSCRIPTION_DESCRIPTION_LIMIT
+        puts "          #{locale} #{locale_state(locale)} state=#{attrs["state"] || "unknown"} " \
+             "fields=#{fields} name=#{summary(attrs["name"])} description=#{description_status}"
+      end
+    end
+
     def copy_app_info_locale(app_info_id, source_locale, target_locale)
       localizations = app_info_localizations(app_info_id)
       source = find_locale!(localizations, source_locale, "app info")
@@ -494,6 +571,50 @@ module ASCMetadata
           "#{label} #{target_locale}"
         )
       end
+    end
+
+    def subscription_groups
+      client.collection(
+        "/v1/apps/#{@options[:app_id]}/subscriptionGroups",
+        "fields[subscriptionGroups]" => "referenceName",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read subscription groups: #{e.message}"
+      []
+    end
+
+    def subscription_group_localizations(group_id)
+      client.collection(
+        "/v1/subscriptionGroups/#{group_id}/subscriptionGroupLocalizations",
+        "fields[subscriptionGroupLocalizations]" => "name,customAppName,locale,state",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read subscription group localizations for #{group_id}: #{e.message}"
+      []
+    end
+
+    def subscriptions(group_id)
+      client.collection(
+        "/v1/subscriptionGroups/#{group_id}/subscriptions",
+        "fields[subscriptions]" => "name,productId,familySharable,state,subscriptionPeriod,groupLevel",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read subscriptions for #{group_id}: #{e.message}"
+      []
+    end
+
+    def subscription_localizations(subscription_id)
+      client.collection(
+        "/v1/subscriptions/#{subscription_id}/subscriptionLocalizations",
+        "fields[subscriptionLocalizations]" => "name,description,locale,state",
+        "limit" => "200"
+      )
+    rescue Error => e
+      warn "  warning: could not read subscription localizations for #{subscription_id}: #{e.message}"
+      []
     end
 
     def planned_locales
