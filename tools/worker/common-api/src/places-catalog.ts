@@ -23,11 +23,11 @@ export type CityRecord = {
 };
 
 export const placeCatalogSchemaVersion = 1;
-export const placeCatalogResourceVersion = "2026.07.02.1";
+export const placeCatalogResourceVersion = "2026.07.02.2";
 export const placeCatalogGeneratedAt = "2026-07-02T00:00:00.000Z";
 
 export const countries = [
-  country("country.cn", "CN", ["中国", "中國", "China", "中国", "中国"], "CNY", ["capital", "tourism", "hotel"]),
+  country("country.cn", "CN", ["中国", "中國", "China", "中国", "중국"], "CNY", ["capital", "tourism", "hotel"]),
   country("country.hk", "HK", ["中国香港", "中國香港", "Hong Kong", "香港", "홍콩"], "HKD", ["tourism", "hotel", "business"]),
   country("country.mo", "MO", ["中国澳门", "中國澳門", "Macau", "マカオ", "마카오"], "MOP", ["tourism", "hotel"]),
   country("country.tw", "TW", ["中国台湾", "中國台灣", "Taiwan", "台湾", "대만"], "TWD", ["tourism", "hotel"]),

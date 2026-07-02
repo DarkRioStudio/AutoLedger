@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-353 common-api 通用化与天气 API 迁移）
+更新日期：2026-07-02（ITER-354 酒店地点目录复用与 Common API catalog 修正）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-354 酒店地点目录复用与 Common API catalog 修正
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / Hotel UI
+- 类型：能力增强 / UI / 基础设施
+- 目标：让酒店消费国家 / 城市选择先用 App 内置同形 catalog 收口，避免城市 / 国家继续混用中英文，并同步修正线上 `common-api` 地点目录的韩语国家名。
+- 改动范围：新增 `AutoLedger/AutoLedger/Features/Hotel/HotelStayLocationCatalog.swift`；从 `HotelStayArchiveView` 移出旧内嵌地点目录；`HotelStayReviewView` 的国家 / 城市字段改为可输入 + 下拉选择，国家先选、城市按国家过滤；更新 `tools/worker/common-api/src/places-catalog.ts` 的 catalog resource version 与 `CN` 韩语名；更新 CHANGELOG 与本日志。
+- 未改动范围：本轮未实现 App 启动读取 `/v1/manifest`、sha256 校验、后台静默更新、地点目录缓存替换、汇率换算、WeatherKit 新凭据、酒店历史天气展示、SQLite / CloudKit schema、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：酒店消费正式详情编辑和待复核草稿页现在复用同一套内置地点目录；地点目录内置 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` 五语城市名，与线上 `common-api` catalog 形状对齐；复核页初始化会把已有 Tokyo / Japan 等解析值本地化到当前语言，并在选择国家时清理不属于该国家的城市。Common API `placeCatalogResourceVersion` bump 到 `2026.07.02.2`，中国国家名韩语展示修正为 `중국`，staging 与 production 已重新部署。
+- 未完成内容：App 端仍未从 `https://api.darkrio326.top/v1/manifest` 静默更新地点目录；当前目录仍是 curated 大城市 / 旅游城市集，不是全量世界城市库；韩语地点名仍需后续母语抽样审校。
+- 测试情况：执行 `swiftc -parse AutoLedger/AutoLedger/Features/Hotel/HotelStayLocationCatalog.swift`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS；执行 `npm run check`，结果 PASS（`wrangler types`、`tsc --noEmit`、12 个 Vitest 用例）。已部署 `darkrio-common-api-staging` version `db1a994b-3908-4de5-ad1e-6953a1d459ae` 与 production version `a5319a9c-5e77-4b1a-a4a4-140ec0bcb12e`；线上验证 `/v1/manifest` 和 `/v1/locations/catalog` 返回 `resourceVersion = 2026.07.02.2`，`CN.names.ko = 중국`。
+- 风险与注意事项：新增 Swift 文件依赖 Xcode 文件夹同步 target 自动收录，当前 iOS workspace build 已证明主 App target 能编入该文件；后续如拆分到独立 package，需要显式处理 target membership。地点目录与线上 catalog 目前由代码生成 / 人工同步维持，下一步应接入 manifest 下载和 sha256 校验，减少双写风险。
+- 回滚方式：回退 `HotelStayLocationCatalog.swift`、`HotelStayArchiveView.swift`、`HotelStayReviewView.swift` 和 `places-catalog.ts`；如线上 catalog 需要回退，可用 Wrangler 回滚 production / staging 到上一 Worker deployment。
+- 结论：本轮完成，酒店国家 / 城市下拉已在 App 内置 fallback 层五语收口，并且线上 Common API catalog 已同步小版本修正。
+- 下一步建议：实现 App 启动后台读取 `common-api` manifest、缓存地点目录并按 resource version 静默替换；随后接入汇率 provider 的只取 rate 合同。
 
 ### ITER-353 common-api 通用化与天气 API 迁移
 - 日期：2026-07-02

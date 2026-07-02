@@ -20,7 +20,9 @@ struct HotelStayReviewView: View {
         self.draft = draft
         self.onConfirm = onConfirm
         self.onReject = onReject
-        _form = State(initialValue: HotelStayReviewForm(draft: draft))
+        var initialForm = HotelStayReviewForm(draft: draft)
+        initialForm.applyLocalizedLocation()
+        _form = State(initialValue: initialForm)
     }
 
     var body: some View {
@@ -55,14 +57,47 @@ struct HotelStayReviewView: View {
             TextField("hotel_stay.review.hotel_name", text: $form.hotelName)
             TextField("hotel_stay.review.brand", text: $form.hotelBrand)
             TextField("hotel_stay.review.group", text: $form.hotelGroup)
-            TextField("hotel_stay.review.city", text: $form.city)
-            TextField("hotel_stay.review.country", text: $form.country)
+            locationOptionField("hotel_stay.review.country", text: $form.country, options: form.countryOptions) { selectedCountry in
+                form.applyCountrySelection(selectedCountry)
+            }
+            locationOptionField("hotel_stay.review.city", text: $form.city, options: form.cityOptions) { selectedCity in
+                form.applyCitySelection(selectedCity)
+            }
         } header: {
             Text("hotel_stay.review.identity")
         } footer: {
             if let validationMessageKey {
                 Text(LocalizedStringKey(validationMessageKey))
                     .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func locationOptionField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>,
+        options: [String],
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        LabeledContent(titleKey) {
+            HStack(spacing: 8) {
+                TextField(titleKey, text: text)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Menu {
+                    ForEach(options, id: \.self) { option in
+                        Button(option) {
+                            onSelect(option)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "chevron.down.circle")
+                        .imageScale(.medium)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
             }
         }
     }
@@ -210,6 +245,55 @@ struct HotelStayReviewView: View {
         case .imbalanced:
             return .orange
         }
+    }
+}
+
+private extension HotelStayReviewForm {
+    var cityOptions: [String] {
+        let selectedCountry = HotelStayLocationCatalog.country(matching: country)
+        return Self.uniqueOptions([city] + HotelStayLocationCatalog.cityOptions(for: selectedCountry))
+    }
+
+    var countryOptions: [String] {
+        Self.uniqueOptions([country] + HotelStayLocationCatalog.countryOptions())
+    }
+
+    mutating func applyLocalizedLocation() {
+        let localizedLocation = HotelStayLocationCatalog.localizedLocation(city: city, country: country)
+        city = localizedLocation.city
+        country = localizedLocation.country
+    }
+
+    mutating func applyCountrySelection(_ selectedCountry: String) {
+        let previousCountry = HotelStayLocationCatalog.country(matching: country)
+        let nextCountry = HotelStayLocationCatalog.country(matching: selectedCountry)
+        country = nextCountry?.localizedName ?? selectedCountry
+
+        guard previousCountry?.code != nextCountry?.code else { return }
+        guard !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard let nextCountry else {
+            city = HotelStayLocationCatalog.localizedCityName(matching: city) ?? city
+            return
+        }
+
+        if let cityInNextCountry = nextCountry.localizedCityName(matching: city) {
+            city = cityInNextCountry
+        } else {
+            city = ""
+        }
+    }
+
+    mutating func applyCitySelection(_ selectedCity: String) {
+        let selectedCountry = HotelStayLocationCatalog.country(matching: country)
+        city = HotelStayLocationCatalog.localizedCityName(matching: selectedCity, country: selectedCountry) ?? selectedCity
+    }
+
+    private static func uniqueOptions(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        return values
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .filter { seen.insert($0).inserted }
     }
 }
 
