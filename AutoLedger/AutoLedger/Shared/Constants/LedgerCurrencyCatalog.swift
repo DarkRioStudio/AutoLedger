@@ -6,15 +6,40 @@ struct LedgerCurrencyOption: Identifiable, Hashable {
     let code: String
     let symbol: String
     let decimalDigits: Int
+    let localizedNames: CommonAPICatalogService.LocalizedText?
+
+    init(
+        code: String,
+        symbol: String,
+        decimalDigits: Int,
+        localizedNames: CommonAPICatalogService.LocalizedText? = nil
+    ) {
+        self.code = code
+        self.symbol = symbol
+        self.decimalDigits = decimalDigits
+        self.localizedNames = localizedNames
+    }
 
     var id: String { code }
 
     var localizedTitle: String {
-        let name = Locale.autoupdatingCurrent.localizedString(forCurrencyCode: code) ?? code
+        let name = localizedNames?.localizedName ?? Locale.autoupdatingCurrent.localizedString(forCurrencyCode: code) ?? code
         return "\(code) · \(symbol) · \(name)"
     }
 
-    static let common: [LedgerCurrencyOption] = [
+    static var common: [LedgerCurrencyOption] {
+        let cached = CommonAPICatalogService.cachedCurrencyCatalog()?.currencies.map {
+            LedgerCurrencyOption(
+                code: $0.code,
+                symbol: $0.symbol,
+                decimalDigits: $0.decimalDigits,
+                localizedNames: $0.names
+            )
+        } ?? []
+        return cached.isEmpty ? bundledCommon : cached
+    }
+
+    private static let bundledCommon: [LedgerCurrencyOption] = [
         .init(code: "CNY", symbol: "¥", decimalDigits: 2),
         .init(code: "USD", symbol: "$", decimalDigits: 2),
         .init(code: "EUR", symbol: "€", decimalDigits: 2),

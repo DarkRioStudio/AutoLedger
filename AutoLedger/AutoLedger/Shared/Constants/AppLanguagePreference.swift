@@ -9,11 +9,11 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     case japanese = "ja"
     case korean = "ko"
 
-    static let userDefaultsKey = "appLanguagePreference"
+    nonisolated static let userDefaultsKey = "appLanguagePreference"
 
-    var id: String { rawValue }
+    nonisolated var id: String { rawValue }
 
-    var locale: Locale {
+    nonisolated var locale: Locale {
         switch self {
         case .system:
             return .autoupdatingCurrent
@@ -47,7 +47,7 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
-    static var current: AppLanguagePreference {
+    nonisolated static var current: AppLanguagePreference {
         let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey)
         return rawValue.flatMap(AppLanguagePreference.init(rawValue:)) ?? .system
     }

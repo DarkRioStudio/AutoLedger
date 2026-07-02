@@ -141,6 +141,7 @@ private struct AutoLedgerRootView: View {
                 SupportPurchaseManager.shared.startTransactionListener()
                 ProEntitlementManager.shared.startTransactionListener()
                 scheduleLaunchCloudSyncIfNeeded()
+                scheduleCommonAPIRefresh()
                 scheduleGemmaWarmupIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
@@ -168,6 +169,7 @@ private struct AutoLedgerRootView: View {
                         await ProEntitlementManager.shared.refreshEntitlements()
                     }
                     scheduleLaunchCloudSyncIfNeeded()
+                    scheduleCommonAPIRefresh()
                     Task {
                         await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
                     }
@@ -226,6 +228,14 @@ private struct AutoLedgerRootView: View {
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
             await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
+        }
+    }
+
+    private func scheduleCommonAPIRefresh() {
+        Task(priority: .background) {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            await CommonAPICatalogService.refreshIfNeeded()
         }
     }
 

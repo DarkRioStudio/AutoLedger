@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-355 Common API 货币目录与 App 币种目录复用）
+更新日期：2026-07-02（ITER-356 App 接入 Common API manifest 缓存）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-356 App 接入 Common API manifest 缓存
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / App Cache
+- 类型：能力增强 / 基础设施
+- 目标：让 App 端真正消费 `common-api` manifest，在后台静默更新地点 / 货币目录，并在失败时继续使用内置 fallback。
+- 改动范围：新增 `AutoLedger/AutoLedger/Domain/Services/CommonAPICatalogService.swift`；更新 `AutoLedgerApp` 启动任务；更新 `HotelStayLocationCatalog`、`LedgerCurrencyCatalog` 和 `AppLanguagePreference`；更新 `versions/v1.7.0-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：本轮未实现汇率 provider、金额换算、汇率持久化 schema、账单确认页换算 UI、酒店历史天气、远程识别规则、R2、D1、服务端鉴权、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：App 启动后后台读取 `https://api.darkrio326.top/v1/manifest`，按 manifest 中的 catalog URL 下载地点 / 货币目录，校验 sha256 后原子写入 Application Support `CommonAPI` 目录；HTTP、网络、解码或 sha256 校验失败时仅记录日志，不阻塞 App。酒店地点目录和多账本币种下拉现在优先读取缓存 catalog；缓存不存在或不可解码时，继续使用内置 fallback。地点和货币展示语言同步改为跟随 App 的语言 override。
+- 未完成内容：刷新间隔当前固定为 6 小时，没有 UI 状态展示或调试页可视化；地点 / 货币目录仍只更新公共目录，不会热更新识别规则；汇率端点仍未接 provider。
+- 测试情况：执行 `swiftc -parse AutoLedger/AutoLedger/Domain/Services/CommonAPICatalogService.swift AutoLedger/AutoLedger/Shared/Constants/AppLanguagePreference.swift AutoLedger/AutoLedger/Shared/Constants/LedgerCurrencyCatalog.swift AutoLedger/AutoLedger/Features/Hotel/HotelStayLocationCatalog.swift`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS。构建日志确认 `CommonAPICatalogService.swift` 已进入主 App target，且没有新增 Common API 相关 warning；日志仍保留既有 AppIntent Logger、LiteRT deprecation 和 entitlement verifier actor isolation warning。
+- 风险与注意事项：catalog 缓存是公共数据，不包含用户账单、酒店名、金额、邮箱或 OCR 原文；如果远端返回损坏内容，sha256 和 JSON decode 会阻止替换缓存。当前 UI 读取缓存为同步小文件读取，目录规模继续保持 curated 小集合；未来如目录变大，应改为内存缓存或异步注入。
+- 回滚方式：回退 `CommonAPICatalogService.swift`、`AutoLedgerApp.swift`、`HotelStayLocationCatalog.swift`、`LedgerCurrencyCatalog.swift` 和 `AppLanguagePreference.swift`；缓存文件留在 Application Support 不影响内置 fallback，可在后续清理。
+- 结论：本轮 App 端已把 Common API 从远端合同接入到实际目录数据源，Common API 主线不再停留在“Worker 已部署但 App 未消费”的状态。
+- 下一步建议：补一个 Debug / 设置页只读状态入口显示 Common API manifest 版本、地点 / 货币缓存版本和最近刷新时间；随后进入汇率 provider 或实时 OCR 主线。
 
 ### ITER-355 Common API 货币目录与 App 币种目录复用
 - 日期：2026-07-02

@@ -81,7 +81,7 @@ enum HotelStayLocationCatalog {
     }
 
     nonisolated static func countryOptions() -> [String] {
-        countries.map(\.localizedName)
+        activeCountries.map(\.localizedName)
     }
 
     nonisolated static func cityOptions(for country: Country?) -> [String] {
@@ -92,24 +92,24 @@ enum HotelStayLocationCatalog {
     }
 
     nonisolated static func country(matching value: String) -> Country? {
-        countries.first { $0.matches(value) }
+        activeCountries.first { $0.matches(value) }
     }
 
     nonisolated static func localizedCityName(matching value: String, country: Country? = nil) -> String? {
         if let country, let city = country.localizedCityName(matching: value) {
             return city
         }
-        return countries.lazy.compactMap { $0.localizedCityName(matching: value) }.first
+        return activeCountries.lazy.compactMap { $0.localizedCityName(matching: value) }.first
     }
 
     nonisolated private static func country(containingCity value: String) -> Country? {
-        countries.first { country in
+        activeCountries.first { country in
             country.cities.contains { $0.matches(value) }
         }
     }
 
     nonisolated private static var languageKey: String {
-        let identifier = Locale.current.identifier.lowercased()
+        let identifier = AppLanguagePreference.current.locale.identifier.lowercased()
         if identifier.hasPrefix("ko") {
             return "ko"
         }
@@ -175,6 +175,54 @@ enum HotelStayLocationCatalog {
             cities: cities
         )
     }
+
+    nonisolated private static var activeCountries: [Country] {
+        guard let catalog = CommonAPICatalogService.cachedPlacesCatalog() else {
+            return countries
+        }
+
+        let citiesByCountry = Dictionary(grouping: catalog.cities, by: \.countryCode)
+        let mappedCountries = catalog.countries.map { country in
+            let cities = (citiesByCountry[country.countryCode] ?? []).map { city in
+                City(
+                    english: city.names.en,
+                    zhHans: city.names.zhHans,
+                    zhHant: city.names.zhHant,
+                    ja: city.names.ja,
+                    ko: city.names.ko,
+                    aliases: [city.id] + remoteCityAliasExtras[city.id, default: []]
+                )
+            }
+            return Country(
+                code: country.countryCode,
+                zhHans: country.names.zhHans,
+                zhHant: country.names.zhHant,
+                english: country.names.en,
+                ja: country.names.ja,
+                ko: country.names.ko,
+                aliases: [country.id] + remoteCountryAliasExtras[country.countryCode, default: []],
+                cities: cities
+            )
+        }
+
+        return mappedCountries.isEmpty ? countries : mappedCountries
+    }
+
+    nonisolated private static let remoteCountryAliasExtras: [String: [String]] = [
+        "CN": ["Mainland China", "PRC"],
+        "MO": ["Macao"],
+        "KR": ["Korea"],
+        "US": ["United States of America", "USA", "US"],
+        "GB": ["UK", "Great Britain"],
+        "AE": ["UAE"]
+    ]
+
+    nonisolated private static let remoteCityAliasExtras: [String: [String]] = [
+        "city.cn.xian": ["Xian"],
+        "city.mo.macau": ["Macao"],
+        "city.us.new-york": ["NYC"],
+        "city.us.washington": ["Washington DC", "Washington, DC"]
+    ]
 
     nonisolated private static let countries: [Country] = [
         country(
@@ -518,6 +566,6 @@ enum HotelStayLocationCatalog {
     ]
 
     nonisolated private static var fallbackCities: [City] {
-        countries.flatMap(\.cities).prefix(32).map { $0 }
+        activeCountries.flatMap(\.cities).prefix(32).map { $0 }
     }
 }
