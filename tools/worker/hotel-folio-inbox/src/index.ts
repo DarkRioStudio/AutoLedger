@@ -1,4 +1,4 @@
-import { importPKCS8, SignJWT } from "jose";
+import { compactVerify, decodeProtectedHeader, importPKCS8, importX509, SignJWT } from "jose";
 import PostalMime from "postal-mime";
 
 type CandidateStatus =
@@ -143,6 +143,21 @@ type AppStoreEntitlementState = {
   active: boolean;
   expiresAt: string | null;
   reason: string;
+};
+
+type VerifiedAppStoreSignedPayload = {
+  payload: AppStoreNotificationPayload;
+  verificationMode: "certificate_chain" | "unsigned_test";
+};
+
+type ParsedCertificate = {
+  derBytes: Uint8Array;
+  pem: string;
+  tbsBytes: Uint8Array;
+  signatureAlgorithmOID: string;
+  signatureBytes: Uint8Array;
+  notBefore: Date | null;
+  notAfter: Date | null;
 };
 
 type EntitlementVerificationResult = {
@@ -550,7 +565,7 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
     return json({ error: "missing_signed_payload" }, env, 400);
   }
 
-  const decoded = decodeAppStoreServerNotificationPayload(env, signedPayload);
+  const decoded = await decodeAppStoreServerNotificationPayload(env, signedPayload);
   if (!decoded.ok) {
     return json({ error: decoded.code, message: decoded.message }, env, decoded.status);
   }
@@ -601,29 +616,152 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
   }
 }
 
-function decodeAppStoreServerNotificationPayload(
+async function decodeAppStoreServerNotificationPayload(
   env: Env,
   signedPayload: string
-): { ok: true; payload: AppStoreNotificationPayload } | { ok: false; status: number; code: string; message: string } {
-  if (!allowsUnsignedAppStoreNotifications(env)) {
-    return {
-      ok: false,
-      status: 503,
-      code: "app_store_notification_verifier_unconfigured",
-      message: "App Store Server Notifications are disabled until signedPayload certificate-chain verification is configured."
-    };
+): Promise<{ ok: true; payload: AppStoreNotificationPayload; verificationMode: VerifiedAppStoreSignedPayload["verificationMode"] } | { ok: false; status: number; code: string; message: string }> {
+  const rootCertificates = appStoreNotificationRootCertificates(env);
+  if (rootCertificates.length > 0) {
+    return verifyAppStoreSignedPayload(signedPayload, rootCertificates);
   }
 
-  const payload = decodeJWSPayload<AppStoreNotificationPayload>(signedPayload);
-  if (!payload) {
+  if (allowsUnsignedAppStoreNotifications(env)) {
+    const payload = decodeJWSPayload<AppStoreNotificationPayload>(signedPayload);
+    if (!payload) {
+      return {
+        ok: false,
+        status: 400,
+        code: "invalid_signed_payload",
+        message: "signedPayload is not a decodable App Store Server Notification V2 JWS."
+      };
+    }
+    return { ok: true, payload, verificationMode: "unsigned_test" };
+  }
+
+  return {
+    ok: false,
+    status: 503,
+    code: "app_store_notification_verifier_unconfigured",
+    message: "App Store Server Notifications require APP_STORE_NOTIFICATION_ROOT_CERT_PEM before production use."
+  };
+}
+
+async function verifyAppStoreSignedPayload(
+  signedPayload: string,
+  rootCertificatePEMs: string[],
+  now: Date = new Date()
+): Promise<{ ok: true; payload: AppStoreNotificationPayload; verificationMode: "certificate_chain" } | { ok: false; status: number; code: string; message: string }> {
+  let header: ReturnType<typeof decodeProtectedHeader>;
+  try {
+    header = decodeProtectedHeader(signedPayload);
+  } catch {
     return {
       ok: false,
       status: 400,
       code: "invalid_signed_payload",
-      message: "signedPayload is not a decodable App Store Server Notification V2 JWS."
+      message: "signedPayload is not a valid JWS."
     };
   }
-  return { ok: true, payload };
+
+  if (header.alg !== "ES256") {
+    return {
+      ok: false,
+      status: 400,
+      code: "unsupported_signed_payload_algorithm",
+      message: "App Store Server Notifications signedPayload must use ES256."
+    };
+  }
+
+  const x5c = header.x5c;
+  if (!Array.isArray(x5c) || x5c.length === 0) {
+    return {
+      ok: false,
+      status: 400,
+      code: "missing_signed_payload_certificate_chain",
+      message: "signedPayload header must contain an x5c certificate chain."
+    };
+  }
+
+  let chain: ParsedCertificate[];
+  let trustedRoot: ParsedCertificate | null;
+  try {
+    chain = x5c.map((certificate) => parseCertificate(base64ToBytes(certificate)));
+    trustedRoot = await selectTrustedRootCertificate(chain, rootCertificatePEMs);
+  } catch (caught) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload_certificate_chain",
+      message: errorMessage(caught)
+    };
+  }
+
+  if (!trustedRoot) {
+    return {
+      ok: false,
+      status: 400,
+      code: "untrusted_signed_payload_root",
+      message: "signedPayload certificate chain does not anchor to the configured Apple root certificate."
+    };
+  }
+
+  const fullChain = certificateDERKey(chain[chain.length - 1]!) === certificateDERKey(trustedRoot)
+    ? chain
+    : [...chain, trustedRoot];
+  for (const certificate of fullChain) {
+    if (!certificateIsCurrentlyValid(certificate, now)) {
+      return {
+        ok: false,
+        status: 400,
+        code: "signed_payload_certificate_expired",
+        message: "signedPayload certificate chain contains an expired or not-yet-valid certificate."
+      };
+    }
+  }
+
+  for (let index = 0; index < fullChain.length - 1; index += 1) {
+    const verified = await verifyCertificateSignature(fullChain[index]!, fullChain[index + 1]!).catch(() => false);
+    if (!verified) {
+      return {
+        ok: false,
+        status: 400,
+        code: "invalid_signed_payload_certificate_signature",
+        message: "signedPayload certificate chain signature verification failed."
+      };
+    }
+  }
+
+  const leafKey = await importX509(fullChain[0]!.pem, "ES256").catch(() => null);
+  if (!leafKey) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload_certificate_chain",
+      message: "signedPayload leaf certificate is not usable for ES256 verification."
+    };
+  }
+
+  const verified = await compactVerify(signedPayload, leafKey, { algorithms: ["ES256"] }).catch(() => null);
+  if (!verified) {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload_signature",
+      message: "signedPayload JWS signature verification failed."
+    };
+  }
+
+  try {
+    const payloadText = new TextDecoder().decode(verified.payload);
+    return { ok: true, payload: JSON.parse(payloadText) as AppStoreNotificationPayload, verificationMode: "certificate_chain" };
+  } catch {
+    return {
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload",
+      message: "signedPayload payload is not valid JSON."
+    };
+  }
 }
 
 async function prepareAppStoreNotification(
@@ -1049,6 +1187,7 @@ function appStoreRuntimeEnv(env: Env): Env & {
   APP_STORE_BUNDLE_ID?: string;
   APP_STORE_SERVER_ENVIRONMENT?: string;
   ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
+  APP_STORE_NOTIFICATION_ROOT_CERT_PEM?: string;
 } {
   return env as Env & {
     APP_STORE_CONNECT_ISSUER_ID?: string;
@@ -1057,7 +1196,17 @@ function appStoreRuntimeEnv(env: Env): Env & {
     APP_STORE_BUNDLE_ID?: string;
     APP_STORE_SERVER_ENVIRONMENT?: string;
     ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
+    APP_STORE_NOTIFICATION_ROOT_CERT_PEM?: string;
   };
+}
+
+function appStoreNotificationRootCertificates(env: Env): string[] {
+  return pemCertificates(appStoreRuntimeEnv(env).APP_STORE_NOTIFICATION_ROOT_CERT_PEM ?? "");
+}
+
+function pemCertificates(value: string): string[] {
+  const matches = value.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g);
+  return matches?.map((certificate) => certificate.trim()) ?? [];
 }
 
 async function appStoreServerJWT(config: AppStoreServerAPIConfig): Promise<string> {
@@ -1117,6 +1266,327 @@ function normalizeAppStoreNotificationType(value: string | undefined): string | 
 
 function normalizeAppStoreEnvironment(value: string | undefined): AppStoreServerEnvironment {
   return value?.trim().toLowerCase() === "sandbox" ? "sandbox" : "production";
+}
+
+async function selectTrustedRootCertificate(
+  chain: ParsedCertificate[],
+  rootCertificatePEMs: string[]
+): Promise<ParsedCertificate | null> {
+  const last = chain[chain.length - 1];
+  if (!last) {
+    return null;
+  }
+
+  for (const rootPEM of rootCertificatePEMs) {
+    const root = parseCertificate(pemCertificateToDER(rootPEM));
+    if (certificateDERKey(root) === certificateDERKey(last)) {
+      return root;
+    }
+    if (await verifyCertificateSignature(last, root)) {
+      return root;
+    }
+  }
+  return null;
+}
+
+async function verifyCertificateSignature(certificate: ParsedCertificate, issuer: ParsedCertificate): Promise<boolean> {
+  const config = certificateSignatureVerificationConfig(certificate.signatureAlgorithmOID);
+  if (!config) {
+    return false;
+  }
+
+  const key = await importX509(issuer.pem, config.importAlgorithm);
+  const signature = config.type === "ecdsa"
+    ? ecdsaDERSignatureToRaw(certificate.signatureBytes, config.coordinateLength)
+    : certificate.signatureBytes;
+  if (!signature) {
+    return false;
+  }
+  return crypto.subtle.verify(
+    config.verifyAlgorithm,
+    key,
+    arrayBufferFromBytes(signature),
+    arrayBufferFromBytes(certificate.tbsBytes)
+  );
+}
+
+function certificateSignatureVerificationConfig(oid: string): null | {
+  type: "ecdsa" | "rsa";
+  importAlgorithm: "ES256" | "ES384" | "RS256" | "RS384";
+  verifyAlgorithm: AlgorithmIdentifier | RsaPssParams | EcdsaParams;
+  coordinateLength: number;
+} {
+  switch (oid) {
+    case "1.2.840.10045.4.3.2":
+      return {
+        type: "ecdsa",
+        importAlgorithm: "ES256",
+        verifyAlgorithm: { name: "ECDSA", hash: "SHA-256" },
+        coordinateLength: 32
+      };
+    case "1.2.840.10045.4.3.3":
+      return {
+        type: "ecdsa",
+        importAlgorithm: "ES384",
+        verifyAlgorithm: { name: "ECDSA", hash: "SHA-384" },
+        coordinateLength: 48
+      };
+    case "1.2.840.113549.1.1.11":
+      return {
+        type: "rsa",
+        importAlgorithm: "RS256",
+        verifyAlgorithm: "RSASSA-PKCS1-v1_5",
+        coordinateLength: 0
+      };
+    case "1.2.840.113549.1.1.12":
+      return {
+        type: "rsa",
+        importAlgorithm: "RS384",
+        verifyAlgorithm: "RSASSA-PKCS1-v1_5",
+        coordinateLength: 0
+      };
+    default:
+      return null;
+  }
+}
+
+function certificateIsCurrentlyValid(certificate: ParsedCertificate, now: Date): boolean {
+  const time = now.getTime();
+  if (certificate.notBefore && certificate.notBefore.getTime() > time) {
+    return false;
+  }
+  if (certificate.notAfter && certificate.notAfter.getTime() < time) {
+    return false;
+  }
+  return true;
+}
+
+function parseCertificate(derBytes: Uint8Array): ParsedCertificate {
+  const certificate = readDERElement(derBytes, 0);
+  if (certificate.tag !== 0x30 || certificate.end !== derBytes.length) {
+    throw new Error("Certificate must be a DER sequence.");
+  }
+  const certificateChildren = readDERChildren(derBytes, certificate);
+  const tbs = certificateChildren[0];
+  const signatureAlgorithm = certificateChildren[1];
+  const signatureValue = certificateChildren[2];
+  if (!tbs || !signatureAlgorithm || !signatureValue || tbs.tag !== 0x30 || signatureAlgorithm.tag !== 0x30 || signatureValue.tag !== 0x03) {
+    throw new Error("Certificate is missing TBS, signature algorithm, or signature value.");
+  }
+
+  const algorithmOID = parseAlgorithmOID(derBytes, signatureAlgorithm);
+  const signatureBytes = parseBitStringBytes(derBytes, signatureValue);
+  const validity = parseCertificateValidity(derBytes, tbs);
+  return {
+    derBytes,
+    pem: derBytesToPEM(derBytes),
+    tbsBytes: derBytes.slice(tbs.headerStart, tbs.end),
+    signatureAlgorithmOID: algorithmOID,
+    signatureBytes,
+    notBefore: validity.notBefore,
+    notAfter: validity.notAfter
+  };
+}
+
+function parseCertificateValidity(bytes: Uint8Array, tbs: DERElement): { notBefore: Date | null; notAfter: Date | null } {
+  const children = readDERChildren(bytes, tbs);
+  const hasVersion = children[0]?.tag === 0xa0;
+  const validity = children[hasVersion ? 4 : 3];
+  if (!validity || validity.tag !== 0x30) {
+    return { notBefore: null, notAfter: null };
+  }
+  const validityChildren = readDERChildren(bytes, validity);
+  return {
+    notBefore: validityChildren[0] ? parseDERTime(bytes, validityChildren[0]) : null,
+    notAfter: validityChildren[1] ? parseDERTime(bytes, validityChildren[1]) : null
+  };
+}
+
+type DERElement = {
+  tag: number;
+  headerStart: number;
+  contentStart: number;
+  contentLength: number;
+  end: number;
+};
+
+function readDERElement(bytes: Uint8Array, offset: number): DERElement {
+  if (offset >= bytes.length) {
+    throw new Error("Unexpected end of DER data.");
+  }
+  const tag = bytes[offset]!;
+  const firstLengthByte = bytes[offset + 1];
+  if (firstLengthByte === undefined) {
+    throw new Error("DER length is missing.");
+  }
+
+  let length = firstLengthByte;
+  let contentStart = offset + 2;
+  if ((firstLengthByte & 0x80) !== 0) {
+    const lengthByteCount = firstLengthByte & 0x7f;
+    if (lengthByteCount === 0 || lengthByteCount > 4) {
+      throw new Error("Unsupported DER length.");
+    }
+    length = 0;
+    contentStart = offset + 2 + lengthByteCount;
+    for (let index = 0; index < lengthByteCount; index += 1) {
+      const value = bytes[offset + 2 + index];
+      if (value === undefined) {
+        throw new Error("DER length exceeds input.");
+      }
+      length = (length << 8) | value;
+    }
+  }
+
+  const end = contentStart + length;
+  if (end > bytes.length) {
+    throw new Error("DER element exceeds input length.");
+  }
+  return { tag, headerStart: offset, contentStart, contentLength: length, end };
+}
+
+function readDERChildren(bytes: Uint8Array, parent: DERElement): DERElement[] {
+  const children: DERElement[] = [];
+  let offset = parent.contentStart;
+  while (offset < parent.end) {
+    const child = readDERElement(bytes, offset);
+    children.push(child);
+    offset = child.end;
+  }
+  if (offset !== parent.end) {
+    throw new Error("DER children do not align with parent length.");
+  }
+  return children;
+}
+
+function parseAlgorithmOID(bytes: Uint8Array, algorithm: DERElement): string {
+  const oidElement = readDERChildren(bytes, algorithm)[0];
+  if (!oidElement || oidElement.tag !== 0x06) {
+    throw new Error("DER algorithm identifier is missing an OID.");
+  }
+  return parseOID(bytes.slice(oidElement.contentStart, oidElement.end));
+}
+
+function parseOID(bytes: Uint8Array): string {
+  const first = bytes[0];
+  if (first === undefined) {
+    throw new Error("OID is empty.");
+  }
+  const arcs = [Math.floor(first / 40), first % 40];
+  let value = 0;
+  for (const byte of bytes.slice(1)) {
+    value = (value << 7) | (byte & 0x7f);
+    if ((byte & 0x80) === 0) {
+      arcs.push(value);
+      value = 0;
+    }
+  }
+  return arcs.join(".");
+}
+
+function parseBitStringBytes(bytes: Uint8Array, element: DERElement): Uint8Array {
+  const unusedBits = bytes[element.contentStart];
+  if (unusedBits !== 0) {
+    throw new Error("Only zero-unused-bit DER BIT STRING values are supported.");
+  }
+  return bytes.slice(element.contentStart + 1, element.end);
+}
+
+function parseDERTime(bytes: Uint8Array, element: DERElement): Date | null {
+  if (element.tag !== 0x17 && element.tag !== 0x18) {
+    return null;
+  }
+  const text = new TextDecoder().decode(bytes.slice(element.contentStart, element.end));
+  const match = element.tag === 0x17
+    ? text.match(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z$/)
+    : text.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z$/);
+  if (!match) {
+    return null;
+  }
+  const yearText = match[1]!;
+  const year = element.tag === 0x17
+    ? Number.parseInt(yearText, 10) + (Number.parseInt(yearText, 10) >= 50 ? 1900 : 2000)
+    : Number.parseInt(yearText, 10);
+  const month = Number.parseInt(match[2]!, 10) - 1;
+  const day = Number.parseInt(match[3]!, 10);
+  const hour = Number.parseInt(match[4]!, 10);
+  const minute = Number.parseInt(match[5]!, 10);
+  const second = Number.parseInt(match[6]!, 10);
+  return new Date(Date.UTC(year, month, day, hour, minute, second));
+}
+
+function ecdsaDERSignatureToRaw(signature: Uint8Array, coordinateLength: number): Uint8Array | null {
+  const sequence = readDERElement(signature, 0);
+  if (sequence.tag !== 0x30 || sequence.end !== signature.length) {
+    return null;
+  }
+  const integers = readDERChildren(signature, sequence);
+  const r = integers[0] ? derIntegerToFixedWidth(signature, integers[0], coordinateLength) : null;
+  const s = integers[1] ? derIntegerToFixedWidth(signature, integers[1], coordinateLength) : null;
+  if (!r || !s) {
+    return null;
+  }
+  const raw = new Uint8Array(coordinateLength * 2);
+  raw.set(r, 0);
+  raw.set(s, coordinateLength);
+  return raw;
+}
+
+function derIntegerToFixedWidth(bytes: Uint8Array, element: DERElement, width: number): Uint8Array | null {
+  if (element.tag !== 0x02) {
+    return null;
+  }
+  let value = bytes.slice(element.contentStart, element.end);
+  while (value.length > 0 && value[0] === 0) {
+    value = value.slice(1);
+  }
+  if (value.length > width) {
+    return null;
+  }
+  const output = new Uint8Array(width);
+  output.set(value, width - value.length);
+  return output;
+}
+
+function pemCertificateToDER(pem: string): Uint8Array {
+  const base64 = pem
+    .replace(/-----BEGIN CERTIFICATE-----/g, "")
+    .replace(/-----END CERTIFICATE-----/g, "")
+    .replace(/\s+/g, "");
+  return base64ToBytes(base64);
+}
+
+function derBytesToPEM(bytes: Uint8Array): string {
+  const base64 = bytesToBase64(bytes);
+  const lines = base64.match(/.{1,64}/g) ?? [];
+  return `-----BEGIN CERTIFICATE-----\n${lines.join("\n")}\n-----END CERTIFICATE-----`;
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const output = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    output[index] = binary.charCodeAt(index);
+  }
+  return output;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.slice(index, index + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function certificateDERKey(certificate: ParsedCertificate): string {
+  return bytesToBase64(certificate.derBytes);
+}
+
+function arrayBufferFromBytes(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy.buffer as ArrayBuffer;
 }
 
 function appleDate(value: number | string | null | undefined): Date | null {

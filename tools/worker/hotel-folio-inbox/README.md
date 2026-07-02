@@ -110,7 +110,7 @@ Stored notification data is intentionally minimal:
 
 The Worker does not store the raw `signedPayload`, raw original transaction id, user email, hotel folio contents, PDF files, hotel names, or ledger data in the App Store notification tables.
 
-Production must keep `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS` unset. The current development/staging flag exists only to test the database contract before Apple certificate-chain verification is enabled and before App Store Connect is configured with the notification URL.
+Production must keep `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS` unset. Configure `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` with the trusted Apple root certificate before pointing App Store Connect at this endpoint. The current development/staging flag exists only to test the database contract before App Store Connect is configured with the notification URL.
 
 ## Setup
 
@@ -162,9 +162,10 @@ Configure App Store Server API secrets; do not commit these values:
 npx wrangler secret put APP_STORE_CONNECT_ISSUER_ID --env production
 npx wrangler secret put APP_STORE_CONNECT_KEY_ID --env production
 npx wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY --env production
+npx wrangler secret put APP_STORE_NOTIFICATION_ROOT_CERT_PEM --env production
 ```
 
-`APP_STORE_BUNDLE_ID` and `APP_STORE_SERVER_ENVIRONMENT` are non-secret Worker vars. Production uses `APP_STORE_SERVER_ENVIRONMENT=production`; dev/staging use `sandbox`.
+`APP_STORE_BUNDLE_ID` and `APP_STORE_SERVER_ENVIRONMENT` are non-secret Worker vars. Production uses `APP_STORE_SERVER_ENVIRONMENT=production`; dev/staging use `sandbox`. `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` is a public trust anchor rather than a credential, but it is stored as a Worker secret to keep long PEM material out of `wrangler.jsonc`.
 
 For dev/staging bootstrap only:
 
@@ -174,7 +175,7 @@ For dev/staging bootstrap only:
 "UNVERIFIED_TOKEN_TTL_DAYS": "7"
 ```
 
-Do not enable unauthenticated token claim or unsigned App Store notification decoding in production. Production uses App Store Server API verification for token claim and must only receive App Store notification payloads after certificate-chain verification is enabled.
+Do not enable unauthenticated token claim or unsigned App Store notification decoding in production. Production uses App Store Server API verification for token claim and must only receive App Store notification payloads after `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` is configured and certificate-chain verification passes.
 
 ## Current Cloudflare Deployment
 
@@ -197,6 +198,11 @@ Resources:
 - D1: `autoledger-hotel-folio-inbox-dev`, `autoledger-hotel-folio-inbox-staging`, `autoledger-hotel-folio-inbox`
 - Queue: `autoledger-hotel-folio-apns-dev`, `autoledger-hotel-folio-apns-staging`, `autoledger-hotel-folio-apns`
 
+Staging App Store Server Notifications:
+
+- `autoledger-hotel-folio-inbox-staging` has `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` configured with Apple Root CA - G3 as of 2026-07-02.
+- With the root certificate configured, staging verifies `signedPayload` and no longer accepts unsigned fake notifications for positive smoke tests. Use a real App Store Connect sandbox notification for end-to-end validation.
+
 Email Routing:
 
 - `getautoledger.app` Email Routing is enabled and ready.
@@ -208,6 +214,7 @@ Email Routing:
 Still required before production cloud inbox token claim and push notifications work:
 
 - Configure App Store Server API secrets for `POST /v1/cloud-hotel-folio-token` production verification.
+- Configure `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` before enabling App Store Server Notifications in App Store Connect.
 - Configure `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_PRIVATE_KEY` Worker secrets.
 - Provision active `pro_inbox_tokens` rows only after entitlement verification, with `status = active` and a meaningful `pro_expires_at`.
 

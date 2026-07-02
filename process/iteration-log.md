@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-364 App Store Server Notifications 服务端合同）
+更新日期：2026-07-02（ITER-365 App Store Server Notifications 验签与 staging smoke）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-365 App Store Server Notifications 验签与 staging smoke
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Entitlement / Cloud Inbox / App Store Server Notifications
+- 类型：能力增强 / 基础设施 / 回归
+- 目标：补齐 Apple App Store Server Notifications V2 `signedPayload` 证书链验签，并把第一段 D1 合同部署到 staging 做可验证 smoke。
+- 改动范围：更新 `tools/worker/hotel-folio-inbox/src/index.ts`、Worker 单元测试、Worker README、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志；执行 staging D1 远程迁移、staging Worker 部署和 staging 负向 smoke。
+- 未改动范围：本轮未修改 App Swift 代码、StoreKit 商品、ASC 线上配置、App Store Connect Server Notifications URL、production Worker secret、production D1 数据、云收件箱现有候选 PDF / APNs 逻辑、R2 对象、common-api Worker、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`hotel-folio-inbox` Worker 在配置 `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` 后，会优先进入证书链验签模式：校验 `signedPayload` protected header 必须为 `ES256`，要求 `x5c` 证书链，解析 DER 证书有效期和签名算法，验证链路签名，锚定到配置的 Apple 根证书，再用 leaf 证书验证 JWS 签名。未配置根证书时，只有显式开启 `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS=true` 的 dev / staging 才允许 unsigned 合同测试；生产默认拒收。
+- staging 状态：staging 远程 D1 已执行 `0002_app_store_notifications.sql`，数据库 `autoledger-hotel-folio-inbox-staging (3723ede1-4ecd-442c-9cac-7f7b91b2ed19)` 已存在 `app_store_notification_events` 和 `app_store_entitlements`。staging Worker 已配置 Apple Root CA - G3 secret，并部署到 Version ID `d66d8f7f-bd57-4264-853a-e62fc73774ba`。
+- 未完成内容：production 尚未配置 `APP_STORE_NOTIFICATION_ROOT_CERT_PEM`、尚未执行 production D1 迁移、尚未在 App Store Connect 配置 Server Notifications URL、尚未触发真实 ASC sandbox 通知端到端、尚未实现 Notification History 补偿任务。
+- 测试情况：执行 `npm run check` 于 `tools/worker/hotel-folio-inbox`，结果 PASS，包含 `wrangler types`、`tsc --noEmit` 和 25 个 Vitest 合同测试；新增测试覆盖证书链验签成功、错误根证书拒绝、根证书模式下畸形 JWS 返回 `invalid_signed_payload`。staging 负向 smoke：向 `https://staging-folio.getautoledger.app/v1/app-store/notifications` 发送伪造 unsigned payload，返回 `HTTP 400 {"error":"invalid_signed_payload"}`；随后远程 D1 查询确认 `notification_uuid = 'smoke-invalid-header'` 的事件数为 0。
+- 风险与注意事项：staging 配置根证书后，伪造 unsigned 通知不再可用于正向 smoke；后续正向端到端必须来自 App Store Connect sandbox 的真实 signedPayload。当前验签实现验证证书链签名、有效期和受信任根锚定；不存储 raw signedPayload 或 raw original transaction id。
+- 回滚方式：删除 staging `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` secret 或回退到上一版 Worker 即可恢复 staging unsigned 合同测试；代码层回滚 `verifyAppStoreSignedPayload`、DER 解析 helper、相关测试和 README / 文档记录。production 本轮未改动，无 production 回滚动作。
+- 结论：本轮完成 ASSN 第一段的可上线验签能力，并完成 staging D1 迁移、staging 部署和负向验签 smoke；服务端通知链路已具备接 ASC sandbox URL 做真实通知测试的前置条件。
+- 下一步建议：下一段在 App Store Connect 配置 sandbox Server Notifications V2 URL，触发真实 sandbox 购买 / 续费 / 过期通知并归档端到端证据；通过后再评估 production D1 迁移、production 根证书 secret 和 Notification History 补偿。
 
 ### ITER-364 App Store Server Notifications 服务端合同
 - 日期：2026-07-02

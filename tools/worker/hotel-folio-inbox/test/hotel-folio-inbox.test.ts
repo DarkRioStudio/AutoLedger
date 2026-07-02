@@ -1,9 +1,52 @@
 import { describe, expect, it } from "vitest";
+import { importPKCS8, SignJWT } from "jose";
 import { testInternals } from "../src/index";
 
 function unsignedJWS(payload: Record<string, unknown>): string {
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `header.${encoded}.signature`;
+}
+
+const testRootCertificatePEM = `-----BEGIN CERTIFICATE-----
+MIIBnTCCAUOgAwIBAgIUHklCHoe9Jcy1LFjPDht6xgxS200wCgYIKoZIzj0EAwIw
+JDEiMCAGA1UEAwwZQXV0b0xlZGdlciBBU1NOIFRlc3QgUm9vdDAeFw0yNjA3MDIx
+NDAxMTBaFw0zNjA2MjkxNDAxMTBaMCQxIjAgBgNVBAMMGUF1dG9MZWRnZXIgQVNT
+TiBUZXN0IFJvb3QwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASz7GTR+O9m+0NS
+OAi6ffPjJKomcmnlnu0h0SpYs+36lI3k+FfQ2ebpw9bGXE8CVXmQwrkbL2X/x+rn
+ISq0FzHto1MwUTAdBgNVHQ4EFgQU+wVBakJxrW0hT2CAHcaVrkRrEvowHwYDVR0j
+BBgwFoAU+wVBakJxrW0hT2CAHcaVrkRrEvowDwYDVR0TAQH/BAUwAwEB/zAKBggq
+hkjOPQQDAgNIADBFAiBOuZiwpa7we4Hr70exCUHCEDpovBSEQE06xew4uHQu9gIh
+AKgJ5u3GU8XQRCoWs3vhewOSGxPyRpiGDGUcQhyiF0bQ
+-----END CERTIFICATE-----`;
+
+const wrongRootCertificatePEM = `-----BEGIN CERTIFICATE-----
+MIIBljCCATugAwIBAgIUA36uf6gvWUqgKqnX/mTE1NI/jlEwCgYIKoZIzj0EAwIw
+IDEeMBwGA1UEAwwVQXV0b0xlZGdlciBXcm9uZyBSb290MB4XDTI2MDcwMjE0MDQy
+NVoXDTM2MDYyOTE0MDQyNVowIDEeMBwGA1UEAwwVQXV0b0xlZGdlciBXcm9uZyBS
+b290MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENADUoJ/9icqvdwXKGr7Z/jJS
+fuIVgmwEQS2VBYvVUswA68HxYLMKPbpg3OlJkG6RLRCZOGrj4eho+M2yjcgOWKNT
+MFEwHQYDVR0OBBYEFMUbLAkTpP4XW5ARqEmIC6t47VX8MB8GA1UdIwQYMBaAFMUb
+LAkTpP4XW5ARqEmIC6t47VX8MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwID
+SQAwRgIhANRuJymXBjBMuK5h2c1otz20YTnoJDMeErarvf+6gReAAiEAoM3+SONr
+s6zfLDoSr3I1lbUANcRVh3gClwRAq05NHA=
+-----END CERTIFICATE-----`;
+
+const testLeafPrivateKeyPKCS8 = `-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg+hOvGkHrU8/JtvCt
+yvIpLZqTMPLvuojPKXkMhvM3YkGhRANCAAQuEcU3E0zcdyR2WhIMlVs+P8b4bGmF
+X1gKk/X8Xrez9jVg5K4gWGZht+fZrAZjxsnGHpPIIkjwltmKJHn0Qxhk
+-----END PRIVATE KEY-----`;
+
+const testLeafCertificateDERBase64 = "MIIBizCCATKgAwIBAgIUC+QokLg2lzz4AORbZvtzItdUBsEwCgYIKoZIzj0EAwIwJDEiMCAGA1UEAwwZQXV0b0xlZGdlciBBU1NOIFRlc3QgUm9vdDAeFw0yNjA3MDIxNDAxMTFaFw0zNjA2MjkxNDAxMTFaMCQxIjAgBgNVBAMMGUF1dG9MZWRnZXIgQVNTTiBUZXN0IExlYWYwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQuEcU3E0zcdyR2WhIMlVs+P8b4bGmFX1gKk/X8Xrez9jVg5K4gWGZht+fZrAZjxsnGHpPIIkjwltmKJHn0Qxhko0IwQDAdBgNVHQ4EFgQUmKpYhvIjUQsvxC5kD6MWpEBrgeswHwYDVR0jBBgwFoAU+wVBakJxrW0hT2CAHcaVrkRrEvowCgYIKoZIzj0EAwIDRwAwRAIgH9qZsqP4Gb3CCHefXp0rkj/k8e83RwYtjXG5Hh6kGD8CIB5h/1VSFLZPCER+u7XpEVreLbhl0ievmoD/icvCqB93";
+
+async function signedNotificationJWS(payload: Record<string, unknown>): Promise<string> {
+  const key = await importPKCS8(testLeafPrivateKeyPKCS8, "ES256");
+  return new SignJWT(payload)
+    .setProtectedHeader({
+      alg: "ES256",
+      x5c: [testLeafCertificateDERBase64]
+    })
+    .sign(key);
 }
 
 describe("hotel folio inbox worker contract", () => {
@@ -91,7 +134,7 @@ describe("hotel folio inbox worker contract", () => {
     }, now)).toMatchObject({ allowed: false, reason: "subscription_expired" });
   });
 
-  it("keeps App Store Server Notifications disabled until verifier mode is explicit", () => {
+  it("keeps App Store Server Notifications disabled until verifier mode is explicit", async () => {
     const payload = {
       notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
       notificationType: "DID_RENEW",
@@ -99,16 +142,52 @@ describe("hotel folio inbox worker contract", () => {
     };
     const signedPayload = unsignedJWS(payload);
 
-    expect(testInternals.decodeAppStoreServerNotificationPayload({} as never, signedPayload)).toMatchObject({
+    await expect(testInternals.decodeAppStoreServerNotificationPayload({} as never, signedPayload)).resolves.toMatchObject({
       ok: false,
       status: 503,
       code: "app_store_notification_verifier_unconfigured"
     });
-    expect(testInternals.decodeAppStoreServerNotificationPayload({
+    await expect(testInternals.decodeAppStoreServerNotificationPayload({
       ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS: "true"
-    } as never, signedPayload)).toMatchObject({
+    } as never, signedPayload)).resolves.toMatchObject({
       ok: true,
       payload
+    });
+  });
+
+  it("verifies App Store Server Notification signedPayload with an x5c certificate chain", async () => {
+    const payload = {
+      notificationUUID: "5b833f42-3f8d-470a-8ee5-6d98f0b7b7da",
+      notificationType: "DID_RENEW",
+      data: {
+        bundleId: "top.darkrio326.AutoLedger",
+        environment: "Sandbox"
+      }
+    };
+    const signedPayload = await signedNotificationJWS(payload);
+
+    await expect(testInternals.decodeAppStoreServerNotificationPayload({
+      APP_STORE_NOTIFICATION_ROOT_CERT_PEM: testRootCertificatePEM
+    } as never, signedPayload)).resolves.toMatchObject({
+      ok: true,
+      payload,
+      verificationMode: "certificate_chain"
+    });
+    await expect(testInternals.decodeAppStoreServerNotificationPayload({
+      APP_STORE_NOTIFICATION_ROOT_CERT_PEM: wrongRootCertificatePEM
+    } as never, signedPayload)).resolves.toMatchObject({
+      ok: false,
+      code: "invalid_signed_payload_certificate_chain"
+    });
+  });
+
+  it("rejects malformed App Store Server Notification JWS values when certificate verification is enabled", async () => {
+    await expect(testInternals.decodeAppStoreServerNotificationPayload({
+      APP_STORE_NOTIFICATION_ROOT_CERT_PEM: testRootCertificatePEM
+    } as never, unsignedJWS({ notificationUUID: "bad-header" }))).resolves.toMatchObject({
+      ok: false,
+      status: 400,
+      code: "invalid_signed_payload"
     });
   });
 
