@@ -215,6 +215,13 @@ final class LedgerStore: ObservableObject {
         return ledgerProfiles.first { $0.id == targetID }?.name ?? TodaySpendingSummary.defaultLedgerName
     }
 
+    func ledgerCurrencyCode(for ledgerID: String?) -> String {
+        let resolvedID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let targetID = resolvedID?.isEmpty == false ? resolvedID : TodaySpendingSummary.defaultLedgerID
+        let currency = ledgerProfiles.first { $0.id == targetID }?.currency
+        return LedgerCurrencyOption.supportedCode(matching: currency)
+    }
+
     private var currentLedgerScopeID: String {
         isShowingAllLedgers ? Self.allLedgersScopeID : selectedLedgerID
     }
@@ -474,7 +481,7 @@ final class LedgerStore: ObservableObject {
 
             case .subscription(let subscription, _, _):
                 upsertSubscription(subscription)
-                lastImportSummary = "已识别为订阅：\(subscription.merchant) \(AppFormatters.currency(subscription.amount))/\(subscription.period.title)"
+                lastImportSummary = "已识别为订阅：\(subscription.merchant) \(AppFormatters.currency(subscription.amount, code: subscription.currencyCode))/\(subscription.period.title)"
 
             case .parseFailed(let normalizedText, let source):
                 let summary = "OCR 已完成，但还没解析出可入账字段。"
@@ -758,11 +765,12 @@ final class LedgerStore: ObservableObject {
     /// 手动新增账单（账本右上角 + 入口）
     @discardableResult
     func addTransaction(_ transaction: Transaction) -> Bool {
-        let resolvedTransaction = MerchantAliasResolver.applyingAlias(
+        let aliasedTransaction = MerchantAliasResolver.applyingAlias(
             to: transaction,
             aliases: merchantAliases
         )
         .assigningLedgerIDIfMissing(targetLedgerIDForNewTransactions)
+        let resolvedTransaction = transactionPreparedForLedgerCurrency(aliasedTransaction)
 
         guard let store = transactionStore else {
             // 无持久化层（预览/测试场景）：直接更新内存
@@ -786,7 +794,108 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        scheduleCurrencyConversionIfNeeded(for: resolvedTransaction.id)
         return true
+    }
+
+    private func transactionPreparedForLedgerCurrency(
+        _ transaction: Transaction,
+        sourceAmount: Double? = nil,
+        sourceCurrencyCode: String? = nil
+    ) -> Transaction {
+        let resolvedLedgerID = transaction.resolvedLedgerID(defaultLedgerID: targetLedgerIDForNewTransactions)
+        let targetCurrencyCode = ledgerCurrencyCode(for: resolvedLedgerID)
+        let normalizedSourceCurrency = LedgerCurrencyOption.supportedCode(
+            matching: sourceCurrencyCode ?? transaction.originalCurrencyCode ?? transaction.ledgerCurrencyCode ?? targetCurrencyCode
+        )
+        let originalAmount = sourceAmount ?? transaction.originalAmount ?? transaction.amount
+
+        guard normalizedSourceCurrency != targetCurrencyCode else {
+            return transaction.replacingCurrencyMetadata(
+                ledgerCurrencyCode: targetCurrencyCode,
+                originalAmount: nil,
+                originalCurrencyCode: nil,
+                exchangeRate: nil,
+                exchangeRateDate: nil,
+                exchangeRateProvider: nil
+            )
+        }
+
+        return transaction.replacingCurrencyMetadata(
+            ledgerCurrencyCode: targetCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: normalizedSourceCurrency,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
+        )
+    }
+
+    private func scheduleCurrencyConversionIfNeeded(for transactionID: UUID) {
+        guard !Self.isOfflineRegression else { return }
+        guard let transaction = transactions.first(where: { $0.id == transactionID }),
+              transactionNeedsCurrencyConversion(transaction) else {
+            return
+        }
+
+        Task { [weak self] in
+            await self?.convertStoredTransactionCurrencyIfNeeded(transactionID: transactionID)
+        }
+    }
+
+    private func transactionNeedsCurrencyConversion(_ transaction: Transaction) -> Bool {
+        guard
+            let originalAmount = transaction.originalAmount,
+            originalAmount > 0,
+            let originalCurrencyCode = transaction.originalCurrencyCode,
+            let ledgerCurrencyCode = transaction.ledgerCurrencyCode
+        else {
+            return false
+        }
+        return originalCurrencyCode != ledgerCurrencyCode && transaction.exchangeRate == nil
+    }
+
+    private func convertStoredTransactionCurrencyIfNeeded(transactionID: UUID) async {
+        guard let index = transactions.firstIndex(where: { $0.id == transactionID }) else { return }
+        let transaction = transactions[index]
+        guard transactionNeedsCurrencyConversion(transaction),
+              let originalAmount = transaction.originalAmount,
+              let originalCurrencyCode = transaction.originalCurrencyCode,
+              let ledgerCurrencyCode = transaction.ledgerCurrencyCode else {
+            return
+        }
+
+        do {
+            let quote = try await CommonAPIExchangeRateService.quote(
+                baseCurrencyCode: originalCurrencyCode,
+                quoteCurrencyCode: ledgerCurrencyCode,
+                date: transaction.occurredAt
+            )
+            let convertedAmount = (originalAmount * quote.rate * 100).rounded() / 100
+            let updated = transaction.replacingCurrencyMetadata(
+                amount: convertedAmount,
+                ledgerCurrencyCode: quote.quoteCurrencyCode,
+                originalAmount: originalAmount,
+                originalCurrencyCode: quote.baseCurrencyCode,
+                exchangeRate: quote.rate,
+                exchangeRateDate: quote.date,
+                exchangeRateProvider: quote.provider
+            )
+
+            try transactionStore?.update(transaction: updated)
+            guard let latestIndex = transactions.firstIndex(where: { $0.id == transactionID }) else { return }
+            transactions[latestIndex] = updated
+            sortTransactions()
+            reloadWidgets()
+            requestAutomaticBackup()
+            scheduleCloudKitPushAfterLocalLedgerChange()
+        } catch {
+            logger.warning("[Currency] exchange-rate conversion skipped for \(transactionID.uuidString): \(error.localizedDescription)")
+        }
+    }
+
+    private static var isOfflineRegression: Bool {
+        ProcessInfo.processInfo.environment["AUTOLEDGER_OFFLINE_REGRESSION"] == "1"
     }
 
     @discardableResult
@@ -799,7 +908,13 @@ final class LedgerStore: ObservableObject {
             sourceLabel: transaction.source,
             note: transaction.note,
             ledgerID: transaction.resolvedLedgerID(),
-            hotelStayRecordID: nil
+            hotelStayRecordID: nil,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
         )
         guard addTransaction(duplicated) else { return nil }
         lastImportSummary = String(
@@ -833,7 +948,13 @@ final class LedgerStore: ObservableObject {
             return false
         }
 
-        let updated = transactions[index].replacingLedgerID(trimmedLedgerID)
+        let existing = transactions[index]
+        let sourceCurrencyCode = existing.ledgerCurrencyCode ?? ledgerCurrencyCode(for: existing.resolvedLedgerID())
+        let updated = transactionPreparedForLedgerCurrency(
+            existing.replacingLedgerID(trimmedLedgerID),
+            sourceAmount: existing.amount,
+            sourceCurrencyCode: sourceCurrencyCode
+        )
         do {
             try transactionStore?.update(transaction: updated)
         } catch {
@@ -860,6 +981,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        scheduleCurrencyConversionIfNeeded(for: updated.id)
         return true
     }
 
@@ -1051,12 +1173,19 @@ final class LedgerStore: ObservableObject {
             )
             return false
         }
+        let transaction = transactionPreparedForLedgerCurrency(
+            result.transaction,
+            sourceAmount: result.transaction.originalAmount ?? result.transaction.amount,
+            sourceCurrencyCode: result.transaction.originalCurrencyCode ?? result.hotelStayRecord.currency
+        )
+        var postedResult = result
+        postedResult.transaction = transaction
 
         do {
             if let sqlStore = transactionStore as? SQLiteTransactionStore {
-                try sqlStore.save(hotelStayRecord: result.hotelStayRecord, linkedTransaction: result.transaction)
+                try sqlStore.save(hotelStayRecord: result.hotelStayRecord, linkedTransaction: transaction)
             } else {
-                try transactionStore?.save(transaction: result.transaction)
+                try transactionStore?.save(transaction: transaction)
             }
         } catch {
             lastImportSummary = String(
@@ -1076,21 +1205,22 @@ final class LedgerStore: ObservableObject {
         }
         recordHotelStayDraftTombstone(draft.id)
         hotelStayDrafts.removeAll { $0.id == draft.id }
-        transactions.insert(result.transaction, at: 0)
+        transactions.insert(transaction, at: 0)
         sortTransactions()
-        recordHotelFolioDebugRecord(HotelFolioDebugTraceBuilder.makePostedRecord(result: result))
+        recordHotelFolioDebugRecord(HotelFolioDebugTraceBuilder.makePostedRecord(result: postedResult))
         lastImportSummary = String(
             format: localizedMessage(
                 "hotel_stay.post.success_format",
                 fallback: "已归档酒店消费：%@ %@ %.2f。"
             ),
-            result.transaction.merchant,
+            transaction.merchant,
             result.hotelStayRecord.localizedData?.currency ?? result.hotelStayRecord.currency,
             result.transaction.amount
         )
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        scheduleCurrencyConversionIfNeeded(for: transaction.id)
         return true
     }
 
@@ -1153,7 +1283,11 @@ final class LedgerStore: ObservableObject {
         updatedRecord.updatedAt = Date()
 
         let normalizedTransaction = linkedTransaction.map {
-            hotelLinkedTransaction($0, recordID: updatedRecord.id, ledgerID: updatedRecord.ledgerID)
+            transactionPreparedForLedgerCurrency(
+                hotelLinkedTransaction($0, recordID: updatedRecord.id, ledgerID: updatedRecord.ledgerID),
+                sourceAmount: $0.originalAmount ?? $0.amount,
+                sourceCurrencyCode: updatedRecord.localizedData?.currency ?? updatedRecord.currency
+            )
         }
         if let normalizedTransaction {
             updatedRecord.linkedTransactionID = normalizedTransaction.id
@@ -1211,6 +1345,9 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        if let normalizedTransaction {
+            scheduleCurrencyConversionIfNeeded(for: normalizedTransaction.id)
+        }
         return true
     }
 
@@ -1265,7 +1402,9 @@ final class LedgerStore: ObservableObject {
         let ledgerAssignedTransaction = transaction.ledgerID == nil
             ? transaction.assigningLedgerIDIfMissing(original.resolvedLedgerID())
             : transaction
-        let resolvedTransaction = assigningHotelCategoryIfNeeded(ledgerAssignedTransaction)
+        let resolvedTransaction = transactionPreparedForLedgerCurrency(
+            assigningHotelCategoryIfNeeded(ledgerAssignedTransaction)
+        )
         let categoryChanged = original.category != resolvedTransaction.category
         let beforeMetadata = (transactionStore as? SQLiteTransactionStore)
             .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: resolvedTransaction.id) }
@@ -1316,6 +1455,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        scheduleCurrencyConversionIfNeeded(for: resolvedTransaction.id)
         appendLedgerCloudSyncLog("账单编辑已安排 iCloud 推送：\(shortID(resolvedTransaction.id))")
         return true
     }
@@ -1364,7 +1504,13 @@ final class LedgerStore: ObservableObject {
                 sourceLabel: transaction.source,
                 note: transaction.note,
                 ledgerID: transaction.resolvedLedgerID(),
-                hotelStayRecordID: transaction.hotelStayRecordID
+                hotelStayRecordID: transaction.hotelStayRecordID,
+                ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+                originalAmount: transaction.originalAmount,
+                originalCurrencyCode: transaction.originalCurrencyCode,
+                exchangeRate: transaction.exchangeRate,
+                exchangeRateDate: transaction.exchangeRateDate,
+                exchangeRateProvider: transaction.exchangeRateProvider
             )
 
             transactions[index] = updated
@@ -1824,7 +1970,7 @@ final class LedgerStore: ObservableObject {
             return
         }
 
-        let transaction = Transaction(
+        let transaction = transactionPreparedForLedgerCurrency(Transaction(
             merchant: receipt.merchant,
             amount: receipt.amount,
             occurredAt: receipt.occurredAt,
@@ -1832,7 +1978,7 @@ final class LedgerStore: ObservableObject {
             source: receipt.source,
             note: notePrefix,
             ledgerID: targetLedgerIDForNewTransactions
-        )
+        ))
         recentImports.insert(receipt, at: 0)
         transactions.insert(transaction, at: 0)
         sortTransactions()
@@ -1865,6 +2011,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
+        scheduleCurrencyConversionIfNeeded(for: transaction.id)
         recordDebugEvent(
             stage: .persisted,
             source: receipt.source,
@@ -1953,7 +2100,13 @@ final class LedgerStore: ObservableObject {
             sourceLabel: transaction.source,
             note: transaction.note,
             ledgerID: transaction.resolvedLedgerID(),
-            hotelStayRecordID: linkedHotelStayRecordID
+            hotelStayRecordID: linkedHotelStayRecordID,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
         )
     }
 
@@ -1971,7 +2124,13 @@ final class LedgerStore: ObservableObject {
             sourceLabel: transaction.source,
             note: transaction.note,
             ledgerID: transaction.resolvedLedgerID(defaultLedgerID: ledgerID),
-            hotelStayRecordID: recordID
+            hotelStayRecordID: recordID,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
         )
     }
 
@@ -2194,7 +2353,8 @@ final class LedgerStore: ObservableObject {
             guard sub.lastChargedAt >= subscriptions[idx].lastChargedAt else { return }
             let updated = subscriptions[idx].updated(
                 lastChargedAt: sub.lastChargedAt,
-                amount: sub.amount
+                amount: sub.amount,
+                currencyCode: sub.currencyCode
             )
             subscriptions[idx] = updated
             try? sqlStore.updateSubscription(updated)
@@ -2437,6 +2597,34 @@ final class LedgerStore: ObservableObject {
 }
 
 private extension Transaction {
+    func replacingCurrencyMetadata(
+        amount newAmount: Double? = nil,
+        ledgerCurrencyCode: String?,
+        originalAmount: Double?,
+        originalCurrencyCode: String?,
+        exchangeRate: Double?,
+        exchangeRateDate: String?,
+        exchangeRateProvider: String?
+    ) -> Transaction {
+        Transaction(
+            id: id,
+            merchant: merchant,
+            amount: newAmount ?? amount,
+            occurredAt: occurredAt,
+            categoryLabel: category,
+            sourceLabel: source,
+            note: note,
+            ledgerID: ledgerID,
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: ledgerCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: originalCurrencyCode,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: exchangeRateDate,
+            exchangeRateProvider: exchangeRateProvider
+        )
+    }
+
     func applyingMerchantAlias(original: String, alias: String) -> Transaction? {
         guard merchant == original, alias != merchant else { return nil }
         return Transaction(
@@ -2448,7 +2636,13 @@ private extension Transaction {
             sourceLabel: source,
             note: note,
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: ledgerCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: originalCurrencyCode,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: exchangeRateDate,
+            exchangeRateProvider: exchangeRateProvider
         )
     }
 
@@ -2462,7 +2656,13 @@ private extension Transaction {
             sourceLabel: source,
             note: note,
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: ledgerCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: originalCurrencyCode,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: exchangeRateDate,
+            exchangeRateProvider: exchangeRateProvider
         )
     }
 
@@ -2476,7 +2676,13 @@ private extension Transaction {
             sourceLabel: source,
             note: note,
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: ledgerCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: originalCurrencyCode,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: exchangeRateDate,
+            exchangeRateProvider: exchangeRateProvider
         )
     }
 }
@@ -3692,6 +3898,12 @@ private extension LedgerStore {
                 note: backup.note,
                 ledgerID: backup.ledgerID,
                 hotelStayRecordID: linkedHotelStayRecordID,
+                ledgerCurrencyCode: backup.ledgerCurrencyCode,
+                originalAmount: backup.originalAmount,
+                originalCurrencyCode: backup.originalCurrencyCode,
+                exchangeRate: backup.exchangeRate,
+                exchangeRateDate: backup.exchangeRateDate,
+                exchangeRateProvider: backup.exchangeRateProvider,
                 deletedAt: backup.deletedAt,
                 syncMetadata: backup.syncMetadata
             )

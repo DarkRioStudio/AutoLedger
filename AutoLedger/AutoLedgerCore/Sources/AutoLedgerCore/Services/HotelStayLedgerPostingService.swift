@@ -75,7 +75,9 @@ public struct HotelStayLedgerPostingService: Sendable {
             source: .manual,
             note: transactionNote(from: payload, localizedData: localizedData),
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayID
+            hotelStayRecordID: hotelStayID,
+            originalAmount: transactionAmount,
+            originalCurrencyCode: currency
         )
 
         let record = HotelStayRecord(

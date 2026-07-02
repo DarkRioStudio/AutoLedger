@@ -34,7 +34,7 @@ struct ImportLedgerJSONIntent: AppIntent {
 
         switch result.decision {
         case .autoSave:
-            return .result(value: saveAutomatically(result.draft))
+            return .result(value: await saveAutomatically(result.draft))
         case .needsConfirmation:
             StructuredLedgerJSONIntentHandoffStore.save(
                 StructuredLedgerJSONIntentHandoff(draft: result.draft, rawJSON: input)
@@ -51,7 +51,7 @@ struct ImportLedgerJSONIntent: AppIntent {
         return UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    private func saveAutomatically(_ draft: StructuredLedgerJSONDraft) -> String {
+    private func saveAutomatically(_ draft: StructuredLedgerJSONDraft) async -> String {
         let store: SQLiteTransactionStore
         do {
             store = try SQLiteTransactionStore()
@@ -60,7 +60,7 @@ struct ImportLedgerJSONIntent: AppIntent {
             return String(localized: "quick_ledger.database_failed")
         }
 
-        let transaction = transaction(from: draft)
+        let transaction = await transaction(from: draft, store: store)
         do {
             try store.save(transaction: transaction)
         } catch {
@@ -85,15 +85,68 @@ struct ImportLedgerJSONIntent: AppIntent {
         )
     }
 
-    private func transaction(from draft: StructuredLedgerJSONDraft) -> Transaction {
-        Transaction(
-            merchant: draft.merchant,
-            amount: draft.amount,
-            occurredAt: draft.occurredAt,
-            categoryLabel: draft.categoryLabel,
-            sourceLabel: ReceiptSource.manual.rawValue,
-            note: note(from: draft)
-        )
+    private func transaction(from draft: StructuredLedgerJSONDraft, store: SQLiteTransactionStore) async -> Transaction {
+        let targetContext = targetLedgerContext(in: store)
+        let sourceCurrency = LedgerCurrencyOption.supportedCode(matching: draft.currency ?? targetContext.currencyCode)
+        guard sourceCurrency != targetContext.currencyCode else {
+            return Transaction(
+                merchant: draft.merchant,
+                amount: draft.amount,
+                occurredAt: draft.occurredAt,
+                categoryLabel: draft.categoryLabel,
+                sourceLabel: ReceiptSource.manual.rawValue,
+                note: note(from: draft),
+                ledgerID: targetContext.ledgerID,
+                ledgerCurrencyCode: targetContext.currencyCode
+            )
+        }
+
+        do {
+            let quote = try await CommonAPIExchangeRateService.quote(
+                baseCurrencyCode: sourceCurrency,
+                quoteCurrencyCode: targetContext.currencyCode,
+                date: draft.occurredAt
+            )
+            let convertedAmount = (draft.amount * quote.rate * 100).rounded() / 100
+            return Transaction(
+                merchant: draft.merchant,
+                amount: convertedAmount,
+                occurredAt: draft.occurredAt,
+                categoryLabel: draft.categoryLabel,
+                sourceLabel: ReceiptSource.manual.rawValue,
+                note: note(from: draft),
+                ledgerID: targetContext.ledgerID,
+                ledgerCurrencyCode: quote.quoteCurrencyCode,
+                originalAmount: draft.amount,
+                originalCurrencyCode: quote.baseCurrencyCode,
+                exchangeRate: quote.rate,
+                exchangeRateDate: quote.date,
+                exchangeRateProvider: quote.provider
+            )
+        } catch {
+            importJSONLogger.warning("[ImportJSON] 汇率换算失败，保留原始币种元数据：\(error.localizedDescription)")
+            return Transaction(
+                merchant: draft.merchant,
+                amount: draft.amount,
+                occurredAt: draft.occurredAt,
+                categoryLabel: draft.categoryLabel,
+                sourceLabel: ReceiptSource.manual.rawValue,
+                note: note(from: draft),
+                ledgerID: targetContext.ledgerID,
+                ledgerCurrencyCode: targetContext.currencyCode,
+                originalAmount: draft.amount,
+                originalCurrencyCode: sourceCurrency
+            )
+        }
+    }
+
+    private func targetLedgerContext(in store: SQLiteTransactionStore) -> (ledgerID: String, currencyCode: String) {
+        let preferredLedgerID = UserDefaults.standard.string(forKey: "defaultWriteLedgerID") ?? TodaySpendingSummary.defaultLedgerID
+        let profiles = (try? store.loadLedgerProfiles(includeArchived: false)) ?? []
+        let profile = profiles.first { $0.id == preferredLedgerID }
+            ?? profiles.first { $0.id == TodaySpendingSummary.defaultLedgerID }
+            ?? LedgerProfile.defaultLocal()
+        return (profile.id, LedgerCurrencyOption.supportedCode(matching: profile.currency))
     }
 
     private func note(from draft: StructuredLedgerJSONDraft) -> String {

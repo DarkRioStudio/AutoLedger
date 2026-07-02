@@ -64,6 +64,7 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
     public let planName: String
     public let period: SubscriptionPeriod
     public let amount: Double
+    public let currencyCode: String
     public let lastChargedAt: Date
     public let nextChargedAt: Date
     public let status: SubscriptionStatus
@@ -75,6 +76,7 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         case planName
         case period
         case amount
+        case currencyCode
         case lastChargedAt
         case nextChargedAt
         case status
@@ -87,6 +89,7 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         planName: String,
         period: SubscriptionPeriod,
         amount: Double,
+        currencyCode: String = "CNY",
         lastChargedAt: Date,
         nextChargedAt: Date? = nil,
         status: SubscriptionStatus = .active,
@@ -97,6 +100,7 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         self.planName     = planName
         self.period       = period
         self.amount       = amount
+        self.currencyCode = Self.normalizedCurrencyCode(currencyCode)
         self.lastChargedAt = lastChargedAt
         self.nextChargedAt = nextChargedAt ?? period.nextDate(from: lastChargedAt)
         self.status       = status
@@ -112,7 +116,8 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
             merchant: transaction.merchant,
             planName: planName,
             period: period,
-            amount: transaction.amount,
+            amount: transaction.originalAmount ?? transaction.amount,
+            currencyCode: transaction.originalCurrencyCode ?? transaction.ledgerCurrencyCode ?? "CNY",
             lastChargedAt: transaction.occurredAt,
             status: .active
         )
@@ -125,6 +130,9 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         self.planName = try container.decode(String.self, forKey: .planName)
         self.period = try container.decode(SubscriptionPeriod.self, forKey: .period)
         self.amount = try container.decode(Double.self, forKey: .amount)
+        self.currencyCode = Self.normalizedCurrencyCode(
+            try container.decodeIfPresent(String.self, forKey: .currencyCode) ?? "CNY"
+        )
         self.lastChargedAt = try container.decode(Date.self, forKey: .lastChargedAt)
         self.nextChargedAt = try container.decode(Date.self, forKey: .nextChargedAt)
         self.status = try container.decodeIfPresent(SubscriptionStatus.self, forKey: .status) ?? .active
@@ -138,6 +146,7 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
         try container.encode(planName, forKey: .planName)
         try container.encode(period, forKey: .period)
         try container.encode(amount, forKey: .amount)
+        try container.encode(currencyCode, forKey: .currencyCode)
         try container.encode(lastChargedAt, forKey: .lastChargedAt)
         try container.encode(nextChargedAt, forKey: .nextChargedAt)
         try container.encode(status, forKey: .status)
@@ -145,13 +154,18 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
     }
 
     /// 更新扣费日期，保留原始 id / createdAt / planName / period
-    public func updated(lastChargedAt newDate: Date, amount newAmount: Double? = nil) -> Subscription {
+    public func updated(
+        lastChargedAt newDate: Date,
+        amount newAmount: Double? = nil,
+        currencyCode newCurrencyCode: String? = nil
+    ) -> Subscription {
         Subscription(
             id: id,
             merchant: merchant,
             planName: planName,
             period: period,
             amount: newAmount ?? amount,
+            currencyCode: newCurrencyCode ?? currencyCode,
             lastChargedAt: newDate,
             nextChargedAt: period.nextDate(from: newDate),
             status: status,
@@ -166,10 +180,31 @@ public struct Subscription: Identifiable, Equatable, Codable, Sendable {
             planName: planName,
             period: period,
             amount: amount,
+            currencyCode: currencyCode,
             lastChargedAt: lastChargedAt,
             nextChargedAt: nextChargedAt,
             status: newStatus,
             createdAt: createdAt
         )
+    }
+
+    public func updated(currencyCode newCurrencyCode: String) -> Subscription {
+        Subscription(
+            id: id,
+            merchant: merchant,
+            planName: planName,
+            period: period,
+            amount: amount,
+            currencyCode: newCurrencyCode,
+            lastChargedAt: lastChargedAt,
+            nextChargedAt: nextChargedAt,
+            status: status,
+            createdAt: createdAt
+        )
+    }
+
+    private static func normalizedCurrencyCode(_ code: String) -> String {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return normalized.isEmpty ? "CNY" : normalized
     }
 }

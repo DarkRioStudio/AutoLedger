@@ -21,6 +21,10 @@ public enum SQLiteTransactionStoreError: LocalizedError {
 public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable {
     private var db: OpaquePointer?
     private let syncDeviceID: String
+    private static let transactionReadColumns = """
+    id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id,
+    ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
+    """
 
     public init(
         baseDirectoryURL: URL? = nil,
@@ -43,7 +47,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadTransactions() throws -> [Transaction] {
         let sql = """
-        SELECT id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id
+        SELECT \(Self.transactionReadColumns)
         FROM transactions
         WHERE deleted_at IS NULL
         ORDER BY occurred_at DESC, created_at DESC;
@@ -86,7 +90,13 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     sourceLabel: source,
                     note: note,
                     ledgerID: Self.string(from: statement, index: 7),
-                    hotelStayRecordID: Self.uuid(from: statement, index: 8)
+                    hotelStayRecordID: Self.uuid(from: statement, index: 8),
+                    ledgerCurrencyCode: Self.string(from: statement, index: 9),
+                    originalAmount: Self.double(from: statement, index: 10),
+                    originalCurrencyCode: Self.string(from: statement, index: 11),
+                    exchangeRate: Self.double(from: statement, index: 12),
+                    exchangeRateDate: Self.string(from: statement, index: 13),
+                    exchangeRateProvider: Self.string(from: statement, index: 14)
                 )
             )
         }
@@ -98,9 +108,10 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         INSERT INTO transactions (
             id, merchant, amount, occurred_at, category, source, note, created_at, updated_at,
-            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id
+            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id,
+            ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -125,7 +136,13 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sync_device_id = ?,
             sync_conflict_state = ?,
             ledger_id = ?,
-            hotel_stay_record_id = ?
+            hotel_stay_record_id = ?,
+            ledger_currency_code = ?,
+            original_amount = ?,
+            original_currency_code = ?,
+            exchange_rate = ?,
+            exchange_rate_date = ?,
+            exchange_rate_provider = ?
         WHERE id = ?;
         """
         var statement: OpaquePointer?
@@ -146,7 +163,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 9, SyncConflictState.clean.rawValue, -1, sqliteTransient)
         bindOptionalString(transaction.ledgerID, to: statement, at: 10)
         bindOptionalUUID(transaction.hotelStayRecordID, to: statement, at: 11)
-        sqlite3_bind_text(statement, 12, transaction.id.uuidString, -1, sqliteTransient)
+        bindTransactionCurrencyMetadata(transaction, to: statement, startingAt: 12)
+        sqlite3_bind_text(statement, 18, transaction.id.uuidString, -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -183,7 +201,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadDeletedTransactions(limit: Int = 50) throws -> [Transaction] {
         let sql = """
-        SELECT id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id
+        SELECT \(Self.transactionReadColumns)
         FROM transactions
         WHERE deleted_at IS NOT NULL
         ORDER BY deleted_at DESC, occurred_at DESC
@@ -203,7 +221,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func loadBackupTransactions() throws -> [BackupTransaction] {
         let sql = """
         SELECT id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id, deleted_at,
-               updated_at, sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state
+               updated_at, sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state,
+               ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
         FROM transactions
         ORDER BY occurred_at DESC, created_at DESC;
         """
@@ -261,6 +280,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     note: String(cString: noteCString),
                     ledgerID: ledgerID,
                     hotelStayRecordID: hotelStayRecordID,
+                    ledgerCurrencyCode: Self.string(from: statement, index: 15),
+                    originalAmount: Self.double(from: statement, index: 16),
+                    originalCurrencyCode: Self.string(from: statement, index: 17),
+                    exchangeRate: Self.double(from: statement, index: 18),
+                    exchangeRateDate: Self.string(from: statement, index: 19),
+                    exchangeRateProvider: Self.string(from: statement, index: 20),
                     deletedAt: deletedAt,
                     syncMetadata: TransactionSyncMetadata(
                         transactionID: id,
@@ -998,6 +1023,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             note TEXT NOT NULL DEFAULT '',
             ledger_id TEXT,
             hotel_stay_record_id TEXT,
+            ledger_currency_code TEXT,
+            original_amount REAL,
+            original_currency_code TEXT,
+            exchange_rate REAL,
+            exchange_rate_date TEXT,
+            exchange_rate_provider TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -1028,6 +1059,24 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
         if !transactionColumns.contains("hotel_stay_record_id") {
             sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN hotel_stay_record_id TEXT;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("ledger_currency_code") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN ledger_currency_code TEXT;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("original_amount") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN original_amount REAL;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("original_currency_code") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN original_currency_code TEXT;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("exchange_rate") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN exchange_rate REAL;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("exchange_rate_date") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN exchange_rate_date TEXT;", nil, nil, nil)
+        }
+        if !transactionColumns.contains("exchange_rate_provider") {
+            sqlite3_exec(db, "ALTER TABLE transactions ADD COLUMN exchange_rate_provider TEXT;", nil, nil, nil)
         }
         try backfillSyncMetadataDefaults()
 
@@ -1175,6 +1224,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             plan_name TEXT NOT NULL DEFAULT '',
             period TEXT NOT NULL,
             amount REAL NOT NULL,
+            currency_code TEXT NOT NULL DEFAULT 'CNY',
             last_charged_at TEXT NOT NULL,
             next_charged_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'active',
@@ -1190,6 +1240,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let subscriptionColumns = Self.columnNames(db: db, table: "subscriptions")
         if !subscriptionColumns.contains("status") {
             sqlite3_exec(db, "ALTER TABLE subscriptions ADD COLUMN status TEXT NOT NULL DEFAULT 'active';", nil, nil, nil)
+        }
+        if !subscriptionColumns.contains("currency_code") {
+            sqlite3_exec(db, "ALTER TABLE subscriptions ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'CNY';", nil, nil, nil)
         }
 
         let correctionsSQL = """
@@ -1273,7 +1326,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         SELECT id, merchant, amount, occurred_at, category, source, note,
                updated_at, deleted_at, sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state,
-               ledger_id, hotel_stay_record_id
+               ledger_id, hotel_stay_record_id, ledger_currency_code, original_amount, original_currency_code,
+               exchange_rate, exchange_rate_date, exchange_rate_provider
         FROM transactions
         \(deletedFilter)
         ORDER BY updated_at DESC, occurred_at DESC;
@@ -1331,7 +1385,13 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sourceLabel: String(cString: sourceCString),
             note: String(cString: noteCString),
             ledgerID: Self.string(from: statement, index: 13),
-            hotelStayRecordID: Self.uuid(from: statement, index: 14)
+            hotelStayRecordID: Self.uuid(from: statement, index: 14),
+            ledgerCurrencyCode: Self.string(from: statement, index: 15),
+            originalAmount: Self.double(from: statement, index: 16),
+            originalCurrencyCode: Self.string(from: statement, index: 17),
+            exchangeRate: Self.double(from: statement, index: 18),
+            exchangeRateDate: Self.string(from: statement, index: 19),
+            exchangeRateProvider: Self.string(from: statement, index: 20)
         )
         let metadata = TransactionSyncMetadata(
             transactionID: id,
@@ -1476,9 +1536,10 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         INSERT INTO transactions (
             id, merchant, amount, occurred_at, category, source, note, created_at, updated_at, deleted_at,
-            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id
+            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id,
+            ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -1499,7 +1560,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         UPDATE transactions
         SET merchant = ?, amount = ?, occurred_at = ?, category = ?, source = ?, note = ?,
             updated_at = ?, deleted_at = ?, sync_revision = ?, sync_device_id = ?,
-            sync_idempotency_key = ?, sync_conflict_state = ?, ledger_id = ?, hotel_stay_record_id = ?
+            sync_idempotency_key = ?, sync_conflict_state = ?, ledger_id = ?, hotel_stay_record_id = ?,
+            ledger_currency_code = ?, original_amount = ?, original_currency_code = ?, exchange_rate = ?,
+            exchange_rate_date = ?, exchange_rate_provider = ?
         WHERE id = ?;
         """
         var statement: OpaquePointer?
@@ -1518,7 +1581,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         bindRemoteMetadata(record.metadata, to: statement, startingAt: 7)
         bindOptionalString(record.transaction.ledgerID, to: statement, at: 13)
         bindOptionalUUID(record.transaction.hotelStayRecordID, to: statement, at: 14)
-        sqlite3_bind_text(statement, 15, record.transaction.id.uuidString, -1, sqliteTransient)
+        bindTransactionCurrencyMetadata(record.transaction, to: statement, startingAt: 15)
+        sqlite3_bind_text(statement, 21, record.transaction.id.uuidString, -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -1554,10 +1618,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             bindRemoteMetadata(record.metadata, to: statement, startingAt: 9)
             bindOptionalString(record.transaction.ledgerID, to: statement, at: 15)
             bindOptionalUUID(record.transaction.hotelStayRecordID, to: statement, at: 16)
+            bindTransactionCurrencyMetadata(record.transaction, to: statement, startingAt: 17)
         } else {
             bindRemoteMetadata(record.metadata, to: statement, startingAt: 8)
             bindOptionalString(record.transaction.ledgerID, to: statement, at: 14)
             bindOptionalUUID(record.transaction.hotelStayRecordID, to: statement, at: 15)
+            bindTransactionCurrencyMetadata(record.transaction, to: statement, startingAt: 16)
         }
     }
 
@@ -1779,15 +1845,17 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 13, SyncConflictState.clean.rawValue, -1, sqliteTransient)
         bindOptionalString(transaction.ledgerID, to: statement, at: 14)
         bindOptionalUUID(transaction.hotelStayRecordID, to: statement, at: 15)
+        bindTransactionCurrencyMetadata(transaction, to: statement, startingAt: 16)
     }
 
     private func insertBackupTransaction(_ transaction: BackupTransaction) throws {
         let sql = """
         INSERT INTO transactions (
             id, merchant, amount, occurred_at, category, source, note, created_at, updated_at, deleted_at,
-            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id
+            sync_revision, sync_device_id, sync_idempotency_key, sync_conflict_state, ledger_id, hotel_stay_record_id,
+            ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -1831,6 +1899,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         )
         bindOptionalString(transaction.ledgerID, to: statement, at: 15)
         bindOptionalUUID(transaction.hotelStayRecordID, to: statement, at: 16)
+        bindBackupTransactionCurrencyMetadata(transaction, to: statement, startingAt: 17)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -1863,7 +1932,13 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                     sourceLabel: String(cString: sourceCString),
                     note: String(cString: noteCString),
                     ledgerID: Self.string(from: statement, index: 7),
-                    hotelStayRecordID: Self.uuid(from: statement, index: 8)
+                    hotelStayRecordID: Self.uuid(from: statement, index: 8),
+                    ledgerCurrencyCode: Self.string(from: statement, index: 9),
+                    originalAmount: Self.double(from: statement, index: 10),
+                    originalCurrencyCode: Self.string(from: statement, index: 11),
+                    exchangeRate: Self.double(from: statement, index: 12),
+                    exchangeRateDate: Self.string(from: statement, index: 13),
+                    exchangeRateProvider: Self.string(from: statement, index: 14)
                 )
             )
         }
@@ -2052,6 +2127,40 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    private func bindOptionalDouble(_ value: Double?, to statement: OpaquePointer?, at index: Int32) {
+        if let value {
+            sqlite3_bind_double(statement, index, value)
+        } else {
+            sqlite3_bind_null(statement, index)
+        }
+    }
+
+    private func bindTransactionCurrencyMetadata(
+        _ transaction: Transaction,
+        to statement: OpaquePointer?,
+        startingAt index: Int32
+    ) {
+        bindOptionalString(transaction.ledgerCurrencyCode, to: statement, at: index)
+        bindOptionalDouble(transaction.originalAmount, to: statement, at: index + 1)
+        bindOptionalString(transaction.originalCurrencyCode, to: statement, at: index + 2)
+        bindOptionalDouble(transaction.exchangeRate, to: statement, at: index + 3)
+        bindOptionalString(transaction.exchangeRateDate, to: statement, at: index + 4)
+        bindOptionalString(transaction.exchangeRateProvider, to: statement, at: index + 5)
+    }
+
+    private func bindBackupTransactionCurrencyMetadata(
+        _ transaction: BackupTransaction,
+        to statement: OpaquePointer?,
+        startingAt index: Int32
+    ) {
+        bindOptionalString(transaction.ledgerCurrencyCode, to: statement, at: index)
+        bindOptionalDouble(transaction.originalAmount, to: statement, at: index + 1)
+        bindOptionalString(transaction.originalCurrencyCode, to: statement, at: index + 2)
+        bindOptionalDouble(transaction.exchangeRate, to: statement, at: index + 3)
+        bindOptionalString(transaction.exchangeRateDate, to: statement, at: index + 4)
+        bindOptionalString(transaction.exchangeRateProvider, to: statement, at: index + 5)
+    }
+
     private func bindOptionalData(_ value: Data?, to statement: OpaquePointer?, at index: Int32) {
         guard let value, !value.isEmpty else {
             sqlite3_bind_null(statement, index)
@@ -2085,6 +2194,13 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
         let value = String(cString: cString).trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private static func double(from statement: OpaquePointer?, index: Int32) -> Double? {
+        guard sqlite3_column_type(statement, index) != SQLITE_NULL else {
+            return nil
+        }
+        return sqlite3_column_double(statement, index)
     }
 
     private static func data(from statement: OpaquePointer?, index: Int32) -> Data? {
@@ -2187,7 +2303,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     public func loadSubscriptions() throws -> [Subscription] {
         let sql = """
-        SELECT id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, status, created_at
+        SELECT id, merchant, plan_name, period, amount, currency_code, last_charged_at, next_charged_at, status, created_at
         FROM subscriptions
         ORDER BY next_charged_at ASC;
         """
@@ -2205,10 +2321,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 let merchantCStr   = sqlite3_column_text(statement, 1),
                 let planCStr       = sqlite3_column_text(statement, 2),
                 let periodCStr     = sqlite3_column_text(statement, 3),
-                let lastCStr       = sqlite3_column_text(statement, 5),
-                let nextCStr       = sqlite3_column_text(statement, 6),
-                let statusCStr     = sqlite3_column_text(statement, 7),
-                let createdCStr    = sqlite3_column_text(statement, 8),
+                let currencyCStr   = sqlite3_column_text(statement, 5),
+                let lastCStr       = sqlite3_column_text(statement, 6),
+                let nextCStr       = sqlite3_column_text(statement, 7),
+                let statusCStr     = sqlite3_column_text(statement, 8),
+                let createdCStr    = sqlite3_column_text(statement, 9),
                 let id             = UUID(uuidString: String(cString: idCStr)),
                 let period         = SubscriptionPeriod(rawValue: String(cString: periodCStr)),
                 let lastChargedAt  = Self.storageFormatter.date(from: String(cString: lastCStr)),
@@ -2225,6 +2342,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
                 planName: String(cString: planCStr),
                 period: period,
                 amount: amount,
+                currencyCode: String(cString: currencyCStr),
                 lastChargedAt: lastChargedAt,
                 nextChargedAt: nextChargedAt,
                 status: status,
@@ -2237,8 +2355,8 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func saveSubscription(_ sub: Subscription) throws {
         let sql = """
         INSERT INTO subscriptions
-            (id, merchant, plan_name, period, amount, last_charged_at, next_charged_at, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            (id, merchant, plan_name, period, amount, currency_code, last_charged_at, next_charged_at, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -2263,7 +2381,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func updateSubscription(_ sub: Subscription) throws {
         let sql = """
         UPDATE subscriptions
-        SET merchant = ?, plan_name = ?, period = ?, amount = ?,
+        SET merchant = ?, plan_name = ?, period = ?, amount = ?, currency_code = ?,
             last_charged_at = ?, next_charged_at = ?, status = ?, updated_at = ?
         WHERE id = ?;
         """
@@ -2279,11 +2397,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 2, sub.planName,                                      -1, sqliteTransient)
         sqlite3_bind_text(statement, 3, sub.period.rawValue,                               -1, sqliteTransient)
         sqlite3_bind_double(statement, 4, sub.amount)
-        sqlite3_bind_text(statement, 5, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 6, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 7, sub.status.rawValue,                               -1, sqliteTransient)
-        sqlite3_bind_text(statement, 8, now,                                               -1, sqliteTransient)
-        sqlite3_bind_text(statement, 9, sub.id.uuidString,                                 -1, sqliteTransient)
+        sqlite3_bind_text(statement, 5, sub.currencyCode,                                  -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 7, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 8, sub.status.rawValue,                               -1, sqliteTransient)
+        sqlite3_bind_text(statement, 9, now,                                               -1, sqliteTransient)
+        sqlite3_bind_text(statement, 10, sub.id.uuidString,                                -1, sqliteTransient)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
@@ -2316,11 +2435,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         sqlite3_bind_text(statement, 3, sub.planName,                                          -1, sqliteTransient)
         sqlite3_bind_text(statement, 4, sub.period.rawValue,                                   -1, sqliteTransient)
         sqlite3_bind_double(statement, 5, sub.amount)
-        sqlite3_bind_text(statement, 6, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 7, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 8, sub.status.rawValue,                                   -1, sqliteTransient)
-        sqlite3_bind_text(statement, 9, createdAt,                                             -1, sqliteTransient)
-        sqlite3_bind_text(statement, 10, updatedAt,                                            -1, sqliteTransient)
+        sqlite3_bind_text(statement, 6, sub.currencyCode,                                      -1, sqliteTransient)
+        sqlite3_bind_text(statement, 7, Self.storageFormatter.string(from: sub.lastChargedAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 8, Self.storageFormatter.string(from: sub.nextChargedAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 9, sub.status.rawValue,                                   -1, sqliteTransient)
+        sqlite3_bind_text(statement, 10, createdAt,                                            -1, sqliteTransient)
+        sqlite3_bind_text(statement, 11, updatedAt,                                            -1, sqliteTransient)
     }
 
     // MARK: - Category Corrections

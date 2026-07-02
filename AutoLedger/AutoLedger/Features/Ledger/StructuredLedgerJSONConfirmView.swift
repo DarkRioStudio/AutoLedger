@@ -119,7 +119,9 @@ struct StructuredLedgerJSONConfirmView: View {
             occurredAt: occurredAt,
             categoryLabel: category,
             sourceLabel: ReceiptSource.manual.rawValue,
-            note: noteParts.joined(separator: "\n")
+            note: noteParts.joined(separator: "\n"),
+            originalAmount: parsedAmount,
+            originalCurrencyCode: handoff.draft.currency
         )
         store.addTransaction(transaction)
         dismiss()

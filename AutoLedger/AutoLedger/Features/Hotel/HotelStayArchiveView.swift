@@ -1151,7 +1151,7 @@ private struct HotelStayRecordEditForm: Equatable {
         totalAmountText = Self.amountText(record.localizedData?.totalAmount ?? record.totalAmount)
         paymentMethod = Self.displayString(record.localizedData?.paymentMethod, fallback: record.paymentMethod)
         transactionMerchant = linkedTransaction?.merchant ?? Self.displayString(record.localizedData?.hotelName, fallback: record.hotelName)
-        transactionAmountText = Self.amountText(linkedTransaction?.amount ?? record.localizedData?.totalAmount ?? record.totalAmount)
+        transactionAmountText = Self.amountText(linkedTransaction?.originalAmount ?? linkedTransaction?.amount ?? record.localizedData?.totalAmount ?? record.totalAmount)
         transactionOccurredAt = linkedTransaction?.occurredAt ?? Self.defaultTransactionDate(checkOutDate: record.checkOutDate, fallback: record.updatedAt)
         transactionNote = linkedTransaction?.note ?? ""
 
@@ -1280,7 +1280,13 @@ private struct HotelStayRecordEditForm: Equatable {
             sourceLabel: transaction.source,
             note: transactionNote,
             ledgerID: transaction.resolvedLedgerID(defaultLedgerID: record.ledgerID),
-            hotelStayRecordID: record.id
+            hotelStayRecordID: record.id,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: parsedAmount(transactionAmountText),
+            originalCurrencyCode: normalizedCurrency(fallback: record.currency),
+            exchangeRate: nil,
+            exchangeRateDate: nil,
+            exchangeRateProvider: nil
         )
     }
 

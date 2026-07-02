@@ -1024,6 +1024,24 @@ struct LedgerCloudKitSyncAdapter {
         if let hotelStayRecordID = payload.hotelStayRecordID {
             fields[CloudLedgerSyncSchema.Field.hotelStayRecordID] = .string(hotelStayRecordID.uuidString)
         }
+        if let ledgerCurrencyCode = payload.ledgerCurrencyCode {
+            fields[CloudLedgerSyncSchema.Field.ledgerCurrencyCode] = .string(ledgerCurrencyCode)
+        }
+        if let originalAmount = payload.originalAmount {
+            fields[CloudLedgerSyncSchema.Field.originalAmount] = .double(originalAmount)
+        }
+        if let originalCurrencyCode = payload.originalCurrencyCode {
+            fields[CloudLedgerSyncSchema.Field.originalCurrencyCode] = .string(originalCurrencyCode)
+        }
+        if let exchangeRate = payload.exchangeRate {
+            fields[CloudLedgerSyncSchema.Field.exchangeRate] = .double(exchangeRate)
+        }
+        if let exchangeRateDate = payload.exchangeRateDate {
+            fields[CloudLedgerSyncSchema.Field.exchangeRateDate] = .string(exchangeRateDate)
+        }
+        if let exchangeRateProvider = payload.exchangeRateProvider {
+            fields[CloudLedgerSyncSchema.Field.exchangeRateProvider] = .string(exchangeRateProvider)
+        }
 
         return LedgerCloudKitMappedRecord(
             recordType: CloudLedgerSyncSchema.RecordType.transaction,
@@ -1252,6 +1270,12 @@ struct LedgerCloudKitSyncAdapter {
             note: note,
             ledgerID: record[CloudLedgerSyncSchema.Field.ledgerID] as? String,
             hotelStayRecordID: (record[CloudLedgerSyncSchema.Field.hotelStayRecordID] as? String).flatMap(UUID.init(uuidString:)),
+            ledgerCurrencyCode: record[CloudLedgerSyncSchema.Field.ledgerCurrencyCode] as? String,
+            originalAmount: (record[CloudLedgerSyncSchema.Field.originalAmount] as? NSNumber)?.doubleValue,
+            originalCurrencyCode: record[CloudLedgerSyncSchema.Field.originalCurrencyCode] as? String,
+            exchangeRate: (record[CloudLedgerSyncSchema.Field.exchangeRate] as? NSNumber)?.doubleValue,
+            exchangeRateDate: record[CloudLedgerSyncSchema.Field.exchangeRateDate] as? String,
+            exchangeRateProvider: record[CloudLedgerSyncSchema.Field.exchangeRateProvider] as? String,
             updatedAt: updatedAt,
             syncRevision: syncRevisionNumber.intValue,
             deviceID: deviceID,

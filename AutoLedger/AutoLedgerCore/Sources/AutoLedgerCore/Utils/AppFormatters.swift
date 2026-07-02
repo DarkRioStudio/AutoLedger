@@ -37,6 +37,22 @@ public enum AppFormatters: Sendable {
         currencyFormatter.string(from: NSNumber(value: amount)) ?? "¥0.00"
     }
 
+    public static func currency(_ amount: Double, code: String?) -> String {
+        let normalizedCode = code?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        guard !normalizedCode.isEmpty else {
+            return currency(amount)
+        }
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = normalizedCode
+        formatter.maximumFractionDigits = currencyMinorDigits(normalizedCode)
+        formatter.minimumFractionDigits = currencyMinorDigits(normalizedCode)
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(normalizedCode) \(amount)"
+    }
+
     public static func shortDateTime(_ date: Date) -> String {
         shortDateFormatter.string(from: date)
     }
@@ -47,6 +63,15 @@ public enum AppFormatters: Sendable {
 
     public static func exportDateTime(_ date: Date) -> String {
         exportDateFormatter.string(from: date)
+    }
+
+    private static func currencyMinorDigits(_ code: String) -> Int {
+        switch code.uppercased() {
+        case "JPY", "KRW", "VND", "IDR":
+            return 0
+        default:
+            return 2
+        }
     }
 
     public static func parseFlexibleDate(_ rawValue: String) -> Date? {

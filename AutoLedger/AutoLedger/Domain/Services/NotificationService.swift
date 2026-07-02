@@ -164,7 +164,7 @@ final class NotificationService: Sendable {
         content.body = String(
             format: String(localized: "notification.subscription.body_format"),
             sub.merchant,
-            formattedAmount(sub.amount),
+            AppFormatters.currency(sub.amount, code: sub.currencyCode),
             sub.period.title
         )
         content.sound = .default

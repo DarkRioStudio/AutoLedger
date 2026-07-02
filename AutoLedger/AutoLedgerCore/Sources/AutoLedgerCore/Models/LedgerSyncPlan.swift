@@ -21,6 +21,12 @@ public enum CloudLedgerSyncSchema {
         public static let note = "note"
         public static let ledgerID = "ledgerID"
         public static let hotelStayRecordID = "hotelStayRecordID"
+        public static let ledgerCurrencyCode = "ledgerCurrencyCode"
+        public static let originalAmount = "originalAmount"
+        public static let originalCurrencyCode = "originalCurrencyCode"
+        public static let exchangeRate = "exchangeRate"
+        public static let exchangeRateDate = "exchangeRateDate"
+        public static let exchangeRateProvider = "exchangeRateProvider"
         public static let updatedAt = "updatedAt"
         public static let syncRevision = "syncRevision"
         public static let deviceID = "deviceID"
@@ -554,6 +560,12 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
     public let note: String
     public let ledgerID: String?
     public let hotelStayRecordID: UUID?
+    public let ledgerCurrencyCode: String?
+    public let originalAmount: Double?
+    public let originalCurrencyCode: String?
+    public let exchangeRate: Double?
+    public let exchangeRateDate: String?
+    public let exchangeRateProvider: String?
     public let updatedAt: Date
     public let syncRevision: Int
     public let deviceID: String
@@ -572,6 +584,12 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         note: String,
         ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil,
+        ledgerCurrencyCode: String? = nil,
+        originalAmount: Double? = nil,
+        originalCurrencyCode: String? = nil,
+        exchangeRate: Double? = nil,
+        exchangeRateDate: String? = nil,
+        exchangeRateProvider: String? = nil,
         updatedAt: Date,
         syncRevision: Int,
         deviceID: String,
@@ -589,6 +607,12 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.note = note
         self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
+        self.ledgerCurrencyCode = ledgerCurrencyCode
+        self.originalAmount = originalAmount
+        self.originalCurrencyCode = originalCurrencyCode
+        self.exchangeRate = exchangeRate
+        self.exchangeRateDate = exchangeRateDate
+        self.exchangeRateProvider = exchangeRateProvider
         self.updatedAt = updatedAt
         self.syncRevision = syncRevision
         self.deviceID = deviceID
@@ -608,6 +632,12 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
         self.note = record.transaction.note
         self.ledgerID = record.transaction.ledgerID
         self.hotelStayRecordID = record.transaction.hotelStayRecordID
+        self.ledgerCurrencyCode = record.transaction.ledgerCurrencyCode
+        self.originalAmount = record.transaction.originalAmount
+        self.originalCurrencyCode = record.transaction.originalCurrencyCode
+        self.exchangeRate = record.transaction.exchangeRate
+        self.exchangeRateDate = record.transaction.exchangeRateDate
+        self.exchangeRateProvider = record.transaction.exchangeRateProvider
         self.updatedAt = record.metadata.updatedAt
         self.syncRevision = record.metadata.syncRevision
         self.deviceID = record.metadata.deviceID
@@ -631,7 +661,13 @@ public struct LedgerTransactionSyncPayload: Codable, Equatable, Sendable {
                 sourceLabel: source,
                 note: note,
                 ledgerID: ledgerID,
-                hotelStayRecordID: hotelStayRecordID
+                hotelStayRecordID: hotelStayRecordID,
+                ledgerCurrencyCode: ledgerCurrencyCode,
+                originalAmount: originalAmount,
+                originalCurrencyCode: originalCurrencyCode,
+                exchangeRate: exchangeRate,
+                exchangeRateDate: exchangeRateDate,
+                exchangeRateProvider: exchangeRateProvider
             ),
             metadata: TransactionSyncMetadata(
                 transactionID: transactionID,

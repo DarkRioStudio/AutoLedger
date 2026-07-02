@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-357 Common API 汇率端点第一版）
+更新日期：2026-07-02（ITER-358 App 多币种入账与订阅币种）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-358 App 多币种入账与订阅币种
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Multi-currency Ledger
+- 类型：能力增强 / 数据模型 / UI
+- 目标：让订阅录入可选择金额币种，并为识别账单、酒店水单和订阅在币种不同于写入账本币种时保留原始金额、按账单发生日汇率换算入账打基础。
+- 改动范围：更新 `Transaction`、`Subscription`、`BackupTransaction`、`LedgerTransactionSyncPayload`、SQLite schema / 读写、CloudKit 映射、`LedgerStore` 入账准备逻辑、酒店水单入账、结构化 JSON 确认、订阅新增 / 编辑 UI、订阅展示 / 通知金额格式、离线 regression stub 与备份恢复回归；新增 `CommonAPIExchangeRateService`。
+- 未改动范围：本轮未修改普通 OCR 解析器输出币种、账单确认页汇率明细 UI、汇率本地缓存、手动选择汇率、历史交易批量回填、Worker provider、StoreKit、ASC、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：交易模型新增账本币种、原始金额、原始币种、汇率、汇率日期和 provider；SQLite 自动补列，备份、恢复、CloudKit payload 和 merchant alias / 分类 / 账本移动路径保留这些字段。订阅模型新增 `currencyCode`，订阅新增 / 编辑 sheet 加入币种下拉，列表、提醒和续费候选金额按订阅币种展示。`LedgerStore` 在新增、编辑、移动、酒店水单确认和结构化 JSON 确认时按目标账本默认币种准备交易；如果原始币种与目标账本币种不同，会请求 `common-api` 汇率端点并后台更新入账金额，同时保留原始金额、原始币种、汇率日期和 provider。App Intent 结构化 JSON 自动保存路径也会读取默认写入账本币种，并在保存前尽量完成汇率换算。
+- 未完成内容：普通 OCR 截图 / 拍照识别目前仍不产出明确币种，因此多数国内支付截图仍按目标账本币种保存；账单确认页还没有把“原始金额 -> 账本金额”的换算明细显示给用户；汇率失败时当前只跳过后台换算并保留原始元数据，尚未提供用户可见重试入口；离线 regression 环境会禁用后台汇率任务，避免测试 runner 竞态。
+- 测试情况：执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖前置 smoke、SQLite / CloudKit / Backup / LedgerStore 回归，并新增跨币种备份恢复的原始币种元数据检查。构建和离线回归仍保留既有 `AppFormatters` `nonisolated(unsafe)` warning。
+- 风险与注意事项：当前换算是保存后后台更新，网络或 provider 失败不会阻塞用户入账，但也意味着首次保存瞬间可能短暂显示未换算金额；后续确认页需要显示换算状态并允许用户保存前复核。`common-api` 汇率端点不接收金额、商户、酒店名、PDF 或 OCR 原文，只接收币种和日期。
+- 回滚方式：回退本轮模型字段、SQLite 补列 / SQL 读写、CloudKit 映射、`CommonAPIExchangeRateService`、`LedgerStore` 入账准备逻辑、订阅 UI / 展示改动和回归脚本；已有 SQLite 新列可保留为空，不影响旧字段读取。
+- 结论：本轮完成 App 端多币种入账基础闭环和订阅币种录入，已能保留跨币种原始金额并按目标账本币种后台换算。
+- 下一步建议：把普通 OCR / 实时 OCR 识别结果也接入币种输出；在账单确认页展示原始金额、换算金额、汇率日期和 provider；为汇率失败提供手动确认 / 重试路径。
 
 ### ITER-357 Common API 汇率端点第一版
 - 日期：2026-07-02

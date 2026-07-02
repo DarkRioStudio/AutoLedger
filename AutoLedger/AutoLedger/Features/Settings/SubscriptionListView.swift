@@ -35,11 +35,14 @@ struct SubscriptionListView: View {
             preferredItemEncoding: .automatic
         )
         .sheet(item: $navigationState.subscriptionEditor) { presentation in
+            let editableSubscription = presentation.isNew
+                ? presentation.subscription.updated(currencyCode: store.ledgerCurrencyCode(for: store.targetLedgerIDForNewTransactions))
+                : presentation.subscription
             SubscriptionEditView(
-                subscription: presentation.subscription,
+                subscription: editableSubscription,
                 mode: presentation.mode,
-                annualPrice: annualPriceOverrides[presentation.subscription.id.uuidString],
-                note: subscriptionNotes[presentation.subscription.id.uuidString] ?? ""
+                annualPrice: annualPriceOverrides[editableSubscription.id.uuidString],
+                note: subscriptionNotes[editableSubscription.id.uuidString] ?? ""
             ) { updated, annualPrice, note in
                 if presentation.isNew {
                     store.createSubscription(updated)
@@ -251,7 +254,7 @@ struct SubscriptionListView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(AppFormatters.currency(sub.amount))
+                Text(AppFormatters.currency(sub.amount, code: sub.currencyCode))
                     .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
 
@@ -516,7 +519,7 @@ struct SubscriptionListView: View {
                 }
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(AppFormatters.currency(sub.amount))
+                    Text(AppFormatters.currency(sub.amount, code: sub.currencyCode))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
@@ -539,7 +542,12 @@ struct SubscriptionListView: View {
             if let suggestion = savingsSuggestion(for: sub), suggestion.savings > 0 {
                 HStack(spacing: 6) {
                     Image(systemName: "lightbulb.fill")
-                    Text(String(format: String(localized: "subscriptions.annual_savings_short_format"), AppFormatters.currency(suggestion.savings)))
+                    Text(
+                        String(
+                            format: String(localized: "subscriptions.annual_savings_short_format"),
+                            AppFormatters.currency(suggestion.savings, code: sub.currencyCode)
+                        )
+                    )
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.accent)
@@ -818,6 +826,7 @@ private struct SubscriptionEditView: View {
     @State private var planName: String
     @State private var period: SubscriptionPeriod
     @State private var amountText: String
+    @State private var currencyCode: String
     @State private var lastChargedAt: Date
     @State private var nextChargedAt: Date
     @State private var status: SubscriptionStatus
@@ -846,6 +855,7 @@ private struct SubscriptionEditView: View {
         _planName = State(initialValue: subscription.planName)
         _period = State(initialValue: subscription.period)
         _amountText = State(initialValue: mode == .create ? "" : Self.text(from: subscription.amount))
+        _currencyCode = State(initialValue: LedgerCurrencyOption.supportedCode(matching: subscription.currencyCode))
         _lastChargedAt = State(initialValue: subscription.lastChargedAt)
         _nextChargedAt = State(initialValue: subscription.nextChargedAt)
         _status = State(initialValue: subscription.status)
@@ -875,6 +885,11 @@ private struct SubscriptionEditView: View {
                     }
                     TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                    Picker("hotel_stay.review.currency", selection: $currencyCode) {
+                        ForEach(LedgerCurrencyOption.common) { option in
+                            Text(option.localizedTitle).tag(option.code)
+                        }
+                    }
                     Picker("subscriptions.edit.status", selection: $status) {
                         ForEach(SubscriptionStatus.allCases, id: \.self) { item in
                             Text(item.title).tag(item)
@@ -948,7 +963,10 @@ private struct SubscriptionEditView: View {
         guard period == .monthly, let amount, let annualPrice, annualPrice > 0 else { return nil }
         let savings = amount * 12.0 - annualPrice
         if savings > 0 {
-            return String(format: String(localized: "subscriptions.annual_savings_full_format"), AppFormatters.currency(savings))
+            return String(
+                format: String(localized: "subscriptions.annual_savings_full_format"),
+                AppFormatters.currency(savings, code: currencyCode)
+            )
         }
         return String(localized: "subscriptions.no_annual_savings")
     }
@@ -961,6 +979,7 @@ private struct SubscriptionEditView: View {
             planName: planName.trimmingCharacters(in: .whitespacesAndNewlines),
             period: period,
             amount: amount,
+            currencyCode: currencyCode,
             lastChargedAt: lastChargedAt,
             nextChargedAt: nextChargedAt,
             status: status,

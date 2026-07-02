@@ -784,7 +784,7 @@ struct InboxView: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(AppFormatters.currency(sub.amount))
+                        Text(AppFormatters.currency(sub.amount, code: sub.currencyCode))
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
 

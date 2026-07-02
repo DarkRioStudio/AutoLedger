@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.7.0）
+- [2026-07-02 14:46 +0800] 接入 App 端多币种入账准备：`Transaction` / `BackupTransaction` / `LedgerTransactionSyncPayload` / SQLite / CloudKit 映射新增账本币种、原始金额、原始币种、汇率、汇率日期和 provider 字段；订阅新增币种字段，手动新增 / 编辑订阅时可选择金额币种，订阅列表、提醒和候选续费金额按订阅币种展示。App 新增 `CommonAPIExchangeRateService` 调用 `https://api.darkrio326.top/v1/exchange-rates/rate`，当结构化 JSON、酒店水单、App Intent 自动保存或跨账本移动记录带有原始币种且不同于目标账本币种时，保留原始币种金额，并按账单发生日汇率换算到写入账本币种后更新入账金额。本轮同步补齐备份恢复与离线回归的币种元数据覆盖；普通 OCR 截图识别尚未输出明确币种，账单确认页也尚未展示换算明细，后续继续在 `v1.7.0` 收口。
+
 ### 新增（v1.6.4）
 - [2026-07-02 13:39 +0800] 将 `common-api` 汇率端点从 planned 推进为可用合同：新增 `tools/worker/common-api/src/exchange-rates/` provider / route 模块，`GET /v1/exchange-rates/rate?base=USD&quote=CNY&date=2026-07-01` 现在返回 provider、requested date、实际 rate date、base / quote、rate、inverseRate 和隐私说明；生产 / staging 默认使用免 secret 的 Frankfurter 公共 API，测试使用 mock provider，不依赖外网。端点只接收 `base`、`quote` 和可选 `date`，不接收消费金额、商户、酒店名、账单原文或用户账本数据；同币种转换在 Worker 内返回 identity rate 1。manifest `exchangeRates` 能力位改为 `available`，service resource version bump 到 `2026.07.02.4`。本轮仍未实现 App 端金额换算、汇率持久化 schema、账单确认页换算 UI、R2、服务端鉴权或商业 provider fallback。
 - [2026-07-02 13:45 +0800] 接入 App 端 `common-api` manifest 静默刷新：新增 `CommonAPICatalogService`，App 启动后后台读取 `https://api.darkrio326.top/v1/manifest`，按 manifest URL 下载地点 / 货币目录，校验 sha256 后写入 Application Support 缓存；网络、HTTP、解码或校验失败时仅记录日志并继续使用内置 fallback。酒店国家 / 城市选择和多账本默认币种下拉现在优先读取缓存 catalog，缓存不存在时回退到内置目录；目录展示语言同时跟随 App 的语言 override，而不是只读系统语言。本轮不实现汇率 provider、金额换算、天气历史摘要、远程识别规则或任何用户数据上传。

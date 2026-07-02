@@ -5490,7 +5490,9 @@ struct OfflineRegression {
             sourceLabel: "测试来源",
             note: "active",
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            originalAmount: 21.00,
+            originalCurrencyCode: "CNY"
         )
         let deleted = Transaction(
             merchant: "备份回归删除",
@@ -5610,6 +5612,18 @@ struct OfflineRegression {
         let activeBackupTransaction = bundle.transactions.first { $0.id == active.id }
         let deletedBackupTransaction = bundle.transactions.first { $0.id == deleted.id }
         reporter.check(
+            activeBackupTransaction?.ledgerCurrencyCode == "JPY" &&
+                activeBackupTransaction?.originalCurrencyCode == "CNY" &&
+                abs((activeBackupTransaction?.originalAmount ?? 0) - active.amount) < 0.001,
+            "BackupBundle preserves active transaction currency metadata"
+        )
+        reporter.check(
+            deletedBackupTransaction?.ledgerCurrencyCode == "CNY" &&
+                deletedBackupTransaction?.originalCurrencyCode == nil &&
+                deletedBackupTransaction?.originalAmount == nil,
+            "BackupBundle preserves deleted transaction currency metadata"
+        )
+        reporter.check(
             activeBackupTransaction?.syncMetadata?.transactionID == active.id,
             "BackupBundle preserves active transaction sync metadata"
         )
@@ -5650,7 +5664,10 @@ struct OfflineRegression {
             sourceLabel: active.source,
             note: active.note,
             ledgerID: active.ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: "JPY",
+            originalAmount: active.amount,
+            originalCurrencyCode: "CNY"
         )
         reporter.check(restoreLedger.transactions.contains(expectedRestoredActive), "Backup restore keeps active transaction")
         reporter.check(
@@ -5670,7 +5687,18 @@ struct OfflineRegression {
             restoredActiveMetadata?.deletedAt == nil,
             "Backup restore keeps active sync tombstone empty"
         )
-        reporter.check(restoreLedger.deletedTransactions.contains(deleted.assigningLedgerIDIfMissing()), "Backup restore keeps deleted transaction")
+        let expectedRestoredDeleted = Transaction(
+            id: deleted.id,
+            merchant: deleted.merchant,
+            amount: deleted.amount,
+            occurredAt: deleted.occurredAt,
+            categoryLabel: deleted.category,
+            sourceLabel: deleted.source,
+            note: deleted.note,
+            ledgerID: TodaySpendingSummary.defaultLedgerID,
+            ledgerCurrencyCode: "CNY"
+        )
+        reporter.check(restoreLedger.deletedTransactions.contains(expectedRestoredDeleted), "Backup restore keeps deleted transaction")
         let restoredDeletedMetadata = try restoreStore.loadTransactionSyncMetadata(transactionID: deleted.id)
         reporter.check(
             restoredDeletedMetadata?.deletedAt != nil,

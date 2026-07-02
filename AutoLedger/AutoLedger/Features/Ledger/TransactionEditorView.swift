@@ -212,7 +212,7 @@ struct TransactionEditorView: View {
                     subscriptionCreatedMessage = String(
                         format: String(localized: "transaction_subscription.created.message_format"),
                         subscription.merchant,
-                        AppFormatters.currency(subscription.amount)
+                        AppFormatters.currency(subscription.amount, code: subscription.currencyCode)
                     )
                 }
             }
@@ -279,7 +279,15 @@ struct TransactionEditorView: View {
             occurredAt: occurredAt,
             categoryLabel: category,
             sourceLabel: source,
-            note: note.trimmingCharacters(in: .whitespacesAndNewlines)
+            note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            ledgerID: transaction.ledgerID,
+            hotelStayRecordID: transaction.hotelStayRecordID,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
         )
     }
 
@@ -416,6 +424,7 @@ private struct TransactionSubscriptionCreateView: View {
     @State private var planName: String
     @State private var period: SubscriptionPeriod
     @State private var amountText: String
+    @State private var currencyCode: String
     @State private var lastChargedAt: Date
     @State private var nextChargedAt: Date
 
@@ -431,6 +440,7 @@ private struct TransactionSubscriptionCreateView: View {
         _planName = State(initialValue: subscription.planName)
         _period = State(initialValue: subscription.period)
         _amountText = State(initialValue: String(format: "%.2f", subscription.amount))
+        _currencyCode = State(initialValue: LedgerCurrencyOption.supportedCode(matching: subscription.currencyCode))
         _lastChargedAt = State(initialValue: subscription.lastChargedAt)
         _nextChargedAt = State(initialValue: subscription.nextChargedAt)
     }
@@ -466,6 +476,11 @@ private struct TransactionSubscriptionCreateView: View {
                     }
                     TextField("transaction_editor.amount", text: $amountText)
                         .keyboardType(.decimalPad)
+                    Picker("hotel_stay.review.currency", selection: $currencyCode) {
+                        ForEach(LedgerCurrencyOption.common) { option in
+                            Text(option.localizedTitle).tag(option.code)
+                        }
+                    }
                 }
 
                 Section("subscriptions.edit.section.charge_dates") {
@@ -511,6 +526,7 @@ private struct TransactionSubscriptionCreateView: View {
             planName: planName.trimmingCharacters(in: .whitespacesAndNewlines),
             period: period,
             amount: amount,
+            currencyCode: currencyCode,
             lastChargedAt: lastChargedAt,
             nextChargedAt: nextChargedAt,
             status: .active,

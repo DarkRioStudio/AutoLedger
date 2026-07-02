@@ -74,7 +74,13 @@ public enum MerchantAliasResolver {
             sourceLabel: transaction.source,
             note: transaction.note,
             ledgerID: transaction.ledgerID,
-            hotelStayRecordID: transaction.hotelStayRecordID
+            hotelStayRecordID: transaction.hotelStayRecordID,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider
         )
     }
 }

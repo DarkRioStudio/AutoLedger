@@ -202,6 +202,12 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
     public let note: String
     public let ledgerID: String?
     public let hotelStayRecordID: UUID?
+    public let ledgerCurrencyCode: String?
+    public let originalAmount: Double?
+    public let originalCurrencyCode: String?
+    public let exchangeRate: Double?
+    public let exchangeRateDate: String?
+    public let exchangeRateProvider: String?
     public let deletedAt: Date?
     public let syncMetadata: TransactionSyncMetadata?
 
@@ -215,6 +221,12 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         note: String,
         ledgerID: String? = nil,
         hotelStayRecordID: UUID? = nil,
+        ledgerCurrencyCode: String? = nil,
+        originalAmount: Double? = nil,
+        originalCurrencyCode: String? = nil,
+        exchangeRate: Double? = nil,
+        exchangeRateDate: String? = nil,
+        exchangeRateProvider: String? = nil,
         deletedAt: Date?,
         syncMetadata: TransactionSyncMetadata? = nil
     ) {
@@ -227,6 +239,12 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
         self.note = note
         self.ledgerID = ledgerID
         self.hotelStayRecordID = hotelStayRecordID
+        self.ledgerCurrencyCode = ledgerCurrencyCode
+        self.originalAmount = originalAmount
+        self.originalCurrencyCode = originalCurrencyCode
+        self.exchangeRate = exchangeRate
+        self.exchangeRateDate = exchangeRateDate
+        self.exchangeRateProvider = exchangeRateProvider
         self.deletedAt = deletedAt
         self.syncMetadata = syncMetadata
     }
@@ -242,6 +260,12 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
             note: transaction.note,
             ledgerID: transaction.ledgerID,
             hotelStayRecordID: transaction.hotelStayRecordID,
+            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            originalAmount: transaction.originalAmount,
+            originalCurrencyCode: transaction.originalCurrencyCode,
+            exchangeRate: transaction.exchangeRate,
+            exchangeRateDate: transaction.exchangeRateDate,
+            exchangeRateProvider: transaction.exchangeRateProvider,
             deletedAt: deletedAt
         )
     }
@@ -256,7 +280,13 @@ public struct BackupTransaction: Codable, Equatable, Sendable {
             sourceLabel: source,
             note: note,
             ledgerID: ledgerID,
-            hotelStayRecordID: hotelStayRecordID
+            hotelStayRecordID: hotelStayRecordID,
+            ledgerCurrencyCode: ledgerCurrencyCode,
+            originalAmount: originalAmount,
+            originalCurrencyCode: originalCurrencyCode,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: exchangeRateDate,
+            exchangeRateProvider: exchangeRateProvider
         )
     }
 }
