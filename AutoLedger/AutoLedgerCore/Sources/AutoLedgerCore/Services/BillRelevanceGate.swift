@@ -15,7 +15,7 @@ public struct BillRelevanceResult: Sendable, Codable, Equatable {
 }
 
 public struct BillRelevanceGate: Sendable {
-    private let amountPattern = #"(¥|￥|\$|€|£)?\s*[0-9]+(?:[.,][0-9]{1,2})?\s*(元|块|rmb|RMB)?"#
+    private let amountPattern = #"(¥|￥|\$|€|£|₩)?\s*[0-9]+(?:[.,][0-9]{1,3})?\s*(元|块|원|rmb|RMB|krw|KRW)?"#
     private let languagePackSet: LedgerRecognitionLanguagePackSet
 
     public init(languagePackSet: LedgerRecognitionLanguagePackSet = .builtIn) {

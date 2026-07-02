@@ -85,7 +85,7 @@ public struct PaymentAmountExtractor: Sendable {
     )
 
     private static let currencyAmountRegex = try? NSRegularExpression(
-        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:[,.][0-9]{3})+(?:[,.][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB|[¥￥$€£])?(?![A-Za-z0-9./])"#,
+        pattern: #"(?<![A-Za-z0-9])([¥￥$€£₩])?\s*([0-9]{1,3}(?:[,.][0-9]{3})+(?:[,.][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|원|rmb|RMB|krw|KRW|[¥￥$€£₩])?(?![A-Za-z0-9./])"#,
         options: [.caseInsensitive]
     )
 

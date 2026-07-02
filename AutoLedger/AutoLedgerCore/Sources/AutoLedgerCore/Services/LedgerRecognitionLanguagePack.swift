@@ -158,6 +158,7 @@ public struct LedgerRecognitionLanguagePackSet: Sendable {
             .builtInTraditionalChinese,
             .builtInEnglish,
             .builtInJapanese,
+            .builtInKorean,
         ],
         fallbackPackIDs: ["en"]
     )
@@ -589,5 +590,74 @@ public extension LedgerRecognitionLanguagePack {
             LedgerDateFormat(pattern: "yyyy年M月d日", example: "2026年6月25日"),
         ],
         ocrRecognitionLanguages: ["ja-JP", "en-US"]
+    )
+
+    static let builtInKorean = LedgerRecognitionLanguagePack(
+        id: "ko",
+        schemaVersion: 2,
+        packVersion: "1.0.0",
+        localeIdentifiers: ["ko", "ko-KR"],
+        billKeywords: [
+            "영수증", "전자영수증", "매출전표", "거래내역", "결제내역", "주문내역",
+            "합계", "총액", "총 결제금액", "결제금액", "승인금액", "소계", "부가세"
+        ],
+        paymentKeywords: [
+            "카드", "신용카드", "체크카드", "현금", "간편결제", "카카오페이", "네이버페이",
+            "토스페이", "삼성페이", "결제수단", "승인"
+        ],
+        amountLabels: ["금액", "결제금액", "승인금액", "총 결제금액", "지불금액"],
+        totalLabels: ["합계", "총액", "총금액", "총 결제금액", "결제금액", "승인금액"],
+        discountLabels: ["할인", "쿠폰", "프로모션"],
+        taxLabels: ["세금", "부가세", "VAT"],
+        dateLabels: ["일시", "거래일시", "결제일시", "승인일시", "발행일"],
+        merchantLabels: ["매장명", "가맹점명", "상호", "상점명", "판매자"],
+        nonMerchantKeywords: [
+            "주문번호", "승인번호", "거래번호", "영수증번호", "카드번호", "광고",
+            "단말기번호", "객실번호", "방번호", "담당자", "사업자번호", "회원번호"
+        ],
+        categoryKeywordMap: [
+            "카페": .dining,
+            "커피": .dining,
+            "식당": .dining,
+            "음식점": .dining,
+            "편의점": .groceries,
+            "마트": .groceries,
+            "슈퍼": .groceries,
+            "지하철": .transport,
+            "버스": .transport,
+            "택시": .transport,
+            "호텔": .hotel,
+            "숙박": .hotel,
+            "리조트": .hotel,
+            "쇼핑": .shopping,
+            "백화점": .shopping,
+            "app store": .digital,
+            "구독": .digital,
+        ],
+        provenance: .builtIn,
+        amountFormat: LedgerAmountFormat(
+            currencySymbols: ["₩", "KRW", "원"],
+            decimalSeparator: ".",
+            groupingSeparator: ",",
+            fractionDigits: 0
+        ),
+        amountLabelSet: LedgerAmountLabelSet(
+            actualPaid: ["금액", "결제금액", "승인금액", "총 결제금액", "지불금액"],
+            total: ["합계", "총액", "총금액", "총 결제금액", "결제금액", "승인금액"],
+            subtotal: ["소계"],
+            tax: ["세금", "부가세", "VAT"],
+            discount: ["할인", "쿠폰", "프로모션"],
+            deposit: ["보증금", "예약금", "예치금"],
+            refund: ["환불", "반품"],
+            change: ["거스름돈"],
+            serviceCharge: ["서비스료", "봉사료"]
+        ),
+        dateFormats: [
+            LedgerDateFormat(pattern: "yyyy.MM.dd", example: "2026.06.25"),
+            LedgerDateFormat(pattern: "yyyy-MM-dd", example: "2026-06-25"),
+            LedgerDateFormat(pattern: "yyyy/MM/dd", example: "2026/06/25"),
+            LedgerDateFormat(pattern: "yyyy년M월d일", example: "2026년6월25일"),
+        ],
+        ocrRecognitionLanguages: ["ko-KR", "en-US"]
     )
 }

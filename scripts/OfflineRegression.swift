@@ -1327,6 +1327,23 @@ struct OfflineRegression {
             "PaymentAmountExtractor classifies Japanese 合計 as total"
         )
 
+        let koreanResult = PaymentAmountExtractor(localeIdentifier: "ko-KR").extract(from: """
+        영수증
+        가맹점명: 서울카페
+        소계 ₩11,000
+        부가세 ₩1,300
+        합계 ₩12,300
+        결제수단 카드
+        """)
+        reporter.check(
+            abs((koreanResult.paidAmount ?? 0) - 12300) < 0.01,
+            "PaymentAmountExtractor uses Korean pack to parse won thousands total"
+        )
+        reporter.check(
+            koreanResult.selectedCandidate?.role == .total,
+            "PaymentAmountExtractor classifies Korean 합계 as total"
+        )
+
         let euroPack = LedgerRecognitionLanguagePack(
             id: "de",
             schemaVersion: 2,
@@ -1396,6 +1413,24 @@ struct OfflineRegression {
             "MerchantResolver excludes Japanese non-merchant identifier labels from language pack"
         )
 
+        let koreanLabeledText = """
+        영수증
+        가맹점명: 서울카페
+        합계 ₩12,300
+        주문번호: KO-123
+        """
+        let koreanExtractor = RuleMerchantExtractor(localeIdentifier: "ko-KR")
+        let koreanCandidates = koreanExtractor.extractCandidates(from: koreanLabeledText)
+        let koreanResult = resolver.resolve(candidates: koreanCandidates, text: koreanLabeledText)
+        reporter.check(
+            koreanResult.merchant == "서울카페",
+            "MerchantResolver uses Korean merchant labels from language pack"
+        )
+        reporter.check(
+            !koreanCandidates.contains { $0.name.localizedCaseInsensitiveContains("주문번호") },
+            "MerchantResolver excludes Korean non-merchant identifier labels from language pack"
+        )
+
         let blacklistHeader = """
         TAX INVOICE
         SOON HUAT MACHINERY ENTERPRISE
@@ -1461,6 +1496,20 @@ struct OfflineRegression {
             japaneseResolver.resolve(text: "駅前コンビニ") == .groceries,
             "CategoryResolver maps Japanese コンビニ keyword from language pack"
         )
+
+        let koreanResolver = CategoryResolver(localeIdentifier: "ko-KR")
+        reporter.check(
+            koreanResolver.resolve(text: "서울카페") == .dining,
+            "CategoryResolver maps Korean 카페 keyword from language pack"
+        )
+        reporter.check(
+            koreanResolver.resolve(text: "역앞 편의점") == .groceries,
+            "CategoryResolver maps Korean 편의점 keyword from language pack"
+        )
+        reporter.check(
+            koreanResolver.resolve(text: "강남 호텔 숙박") == .hotel,
+            "CategoryResolver maps Korean 호텔 / 숙박 keyword from language pack"
+        )
     }
 
     private static func verifyLedgerDateCandidateExtraction(reporter: RegressionReporter) {
@@ -1485,6 +1534,21 @@ struct OfflineRegression {
         reporter.check(
             japaneseCandidates.first?.matchedFormat == "yyyy年M月d日",
             "LedgerDateCandidateExtractor records matched Japanese date format"
+        )
+
+        let koreanCandidates = LedgerDateCandidateExtractor(localeIdentifier: "ko-KR").extractCandidates(from: """
+        영수증
+        결제일시: 2026.06.25
+        가맹점명: 서울카페
+        합계 ₩12,300
+        """)
+        reporter.check(
+            isLocalDate(koreanCandidates.first?.date, year: 2026, month: 6, day: 25),
+            "LedgerDateCandidateExtractor parses Korean dotted date format from language pack"
+        )
+        reporter.check(
+            koreanCandidates.first?.matchedFormat == "yyyy.MM.dd",
+            "LedgerDateCandidateExtractor records matched Korean date format"
         )
 
         let englishCandidates = LedgerDateCandidateExtractor(localeIdentifier: "en-US").extractCandidates(from: """
@@ -1565,6 +1629,45 @@ struct OfflineRegression {
             "Japanese recognition pack expands non-merchant keywords"
         )
 
+        let koreanChain = packSet.packs(for: "ko-KR")
+        reporter.check(koreanChain.first?.id == "ko", "RecognitionLanguagePackSet selects Korean pack for ko-KR")
+        reporter.check(koreanChain.map(\.id).contains("en"), "RecognitionLanguagePackSet keeps English fallback for Korean pack")
+        reporter.check(
+            koreanChain.first?.billKeywords.contains("영수증") == true,
+            "Korean recognition pack contains receipt keyword"
+        )
+        let koreanPack = packSet.mergedPack(for: "ko-KR")
+        reporter.check(
+            koreanPack?.amountFormat.currencySymbols.contains("₩") == true &&
+                koreanPack?.amountFormat.groupingSeparator == "," &&
+                koreanPack?.amountFormat.fractionDigits == 0,
+            "Korean recognition pack exposes won amount format"
+        )
+        reporter.check(
+            koreanPack?.amountLabelSet.deposit.contains("보증금") == true &&
+                koreanPack?.amountLabelSet.refund.contains("환불") == true &&
+                koreanPack?.amountLabelSet.change.contains("거스름돈") == true,
+            "Korean recognition pack exposes layered amount labels"
+        )
+        reporter.check(
+            koreanPack?.dateFormats.contains { $0.pattern == "yyyy.MM.dd" } == true,
+            "Korean recognition pack exposes date formats"
+        )
+        reporter.check(
+            koreanPack?.ocrRecognitionLanguages == ["ko-KR", "en-US"],
+            "Korean recognition pack exposes OCR language hints"
+        )
+        let koreanOCRHints = LedgerOCRLanguageHintResolver(localeIdentifier: "ko-KR").recognitionLanguages
+        reporter.check(
+            koreanOCRHints == ["ko-KR", "en-US"],
+            "LedgerOCRLanguageHintResolver uses Korean language pack OCR hints"
+        )
+        reporter.check(
+            koreanPack?.nonMerchantKeywords.contains("승인번호") == true &&
+                koreanPack?.nonMerchantKeywords.contains("사업자번호") == true,
+            "Korean recognition pack expands non-merchant keywords"
+        )
+
         let japaneseReceipt = """
         領収書
         店舗: Demo Cafe
@@ -1577,6 +1680,19 @@ struct OfflineRegression {
         reporter.check(
             japaneseRelevance.positiveSignals.contains("payment_or_receipt_keyword"),
             "BillRelevanceGate records language-pack receipt keyword signal"
+        )
+
+        let koreanReceipt = """
+        영수증
+        가맹점명: 서울카페
+        합계 ₩12,300
+        결제수단 카드
+        """
+        let koreanRelevance = builtInGate.evaluate(koreanReceipt, localeIdentifier: "ko-KR")
+        reporter.check(koreanRelevance.isRelevant, "BillRelevanceGate accepts Korean receipt via language pack")
+        reporter.check(
+            koreanRelevance.positiveSignals.contains("payment_or_receipt_keyword"),
+            "BillRelevanceGate records Korean language-pack receipt keyword signal"
         )
 
         let communityPack = LedgerRecognitionLanguagePack(
@@ -2132,6 +2248,35 @@ struct OfflineRegression {
         reporter.check(
             japaneseCafeResult.draft?.category == TransactionCategory.dining.rawValue,
             "LedgerTextInterpreterCore infers Japanese カフェ category using language pack (got '\(japaneseCafeResult.draft?.category ?? "")')"
+        )
+
+        let koreanReceipt = """
+        영수증
+        가맹점명: 서울카페
+        소계 ₩11,000
+        부가세 ₩1,300
+        합계 ₩12,300
+        결제수단 카드
+        """
+        let koreanResult = interpreter.interpret(
+            InterpretInput(
+                rawText: koreanReceipt,
+                sourceType: .ocr,
+                localeIdentifier: "ko-KR",
+                hints: LedgerInterpretHints(sourceHint: .receipt)
+            )
+        )
+        reporter.check(
+            abs((koreanResult.draft?.amount ?? 0) - 12300) < 0.01,
+            "LedgerTextInterpreterCore extracts Korean 합계 ₩12,300 using language pack (got \(koreanResult.draft?.amount ?? -1))"
+        )
+        reporter.check(
+            koreanResult.draft?.merchant == "서울카페",
+            "LedgerTextInterpreterCore extracts Korean 가맹점명 merchant using language pack (got '\(koreanResult.draft?.merchant ?? "")')"
+        )
+        reporter.check(
+            koreanResult.draft?.category == TransactionCategory.dining.rawValue,
+            "LedgerTextInterpreterCore infers Korean 카페 category using language pack (got '\(koreanResult.draft?.category ?? "")')"
         )
 
         // Phase 2: Merchant extraction excludes blacklisted headers
@@ -4095,6 +4240,29 @@ struct OfflineRegression {
             reporter.check(false, "LedgerTextInterpreter uses locale language pack before non-bill rejection")
         default:
             reporter.check(true, "LedgerTextInterpreter uses locale language pack before non-bill rejection")
+        }
+
+        let koreanText = """
+        영수증
+        가맹점명: 서울카페
+        합계 ₩12,300
+        결제수단 카드
+        """
+        let koreanInterpretation = await interpreter.interpret(
+            LedgerTextInterpretationInput(
+                text: koreanText,
+                preferredSource: .manual,
+                fallbackMerchant: nil,
+                ocrMinConfidence: nil,
+                localeIdentifier: "ko-KR"
+            )
+        )
+
+        switch koreanInterpretation {
+        case .nonBillImage:
+            reporter.check(false, "LedgerTextInterpreter uses Korean locale language pack before non-bill rejection")
+        default:
+            reporter.check(true, "LedgerTextInterpreter uses Korean locale language pack before non-bill rejection")
         }
     }
 

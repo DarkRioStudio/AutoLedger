@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-349 ASC 订阅元数据审计）
+更新日期：2026-07-02（ITER-350 韩语识别包第一段）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-350 韩语识别包第一段
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / Recognition
+- 类型：能力增强 / 测试
+- 目标：先把韩语账单识别包落入 `AutoLedgerCore`，让金额、商户、日期、分类和账单相关性链路具备第一版韩语基础能力，并为后续 `ko.lproj` UI 与 ASC 韩语材料准备回归基线。
+- 改动范围：更新 `LedgerRecognitionLanguagePack.swift`、`PaymentAmountExtractor.swift`、`MerchantResolver.swift`、`BillRelevanceGate.swift`、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未新增 `ko.lproj`、主 App / Watch / Widget / Share Extension 韩语 UI 文案、ASC 韩语元数据、截图成品、App Preview 视频、真实韩文样本库、common-api、StoreKit 商品、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`LedgerRecognitionLanguagePackSet.builtIn` 新增 `ko` / `ko-KR` 内置识别包，覆盖韩文账单关键词、金额标签、商户标签、非商户字段、餐饮 / 咖啡 / 便利店 / 交通 / 地铁 / 公交 / 酒店 / 购物 / 订阅等分类关键词、韩元金额格式、韩文日期格式和 `ko-KR + en-US` OCR hint；金额、商户和账单相关性正则补充 `₩`、`원`、`KRW`；离线回归新增韩语金额、商户、分类、日期、账单相关性和完整解释器样例。
+- 未完成内容：韩语 UI、韩语 App 语言 override 选项、韩语 ASC 商店语言、韩语截图 / App Preview、真实韩国票据样本和地区支付 / 票据格式专项优化仍未完成，不能对外宣传为完整韩语支持。
+- 测试情况：执行 `git diff --check` 通过；执行 `bash scripts/run_offline_regression.sh` 通过，覆盖新增韩语识别断言和既有离线回归；输出中仍有既有 `AppFormatters.swift` `nonisolated(unsafe)` warning，本轮未处理。
+- 风险与注意事项：当前只是 Core 识别包第一段，样例仍是合成回归；真实韩国收据、支付通知、酒店 folio 和 OCR 噪声仍需要样本补齐后再升级判断。UI 语言和 ASC 韩语没有同步上线前，`ko` 应保持发布矩阵中的 Build 状态。
+- 回滚方式：回退本轮四个 Core 服务文件、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志即可；不涉及数据迁移、ASC 远端状态或用户数据回滚。
+- 结论：本轮完成 `GOAL-2308` 的识别包第一段，韩语金额 / 商户 / 分类 / 日期 / 相关性已有自动回归保护，但完整韩语发布仍需 UI、ASC、截图和真实样本后续补齐。
+- 下一步建议：继续推进 `ko.lproj` UI 与 App 语言设置选项，再补真实韩文小票 / 支付通知 / 酒店 folio golden cases 和 ASC 韩语元数据。
 
 ### ITER-349 ASC 订阅元数据审计
 - 日期：2026-07-02

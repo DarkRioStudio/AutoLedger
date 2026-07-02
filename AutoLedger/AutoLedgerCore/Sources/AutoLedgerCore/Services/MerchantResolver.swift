@@ -98,7 +98,7 @@ public struct RuleMerchantExtractor: Sendable {
     private static let shortCodePattern = try? NSRegularExpression(pattern: #"^[A-Za-z0-9]{2,8}$"#)
     private static let productCodePattern = try? NSRegularExpression(pattern: #"^[A-Za-z][A-Za-z0-9]{1,5}:\d+[A-Za-z]?$"#)
     private static let amountRegex = try? NSRegularExpression(
-        pattern: #"(?<![A-Za-z0-9])([¥￥$€£])?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|rmb|RMB|RM)?(?![A-Za-z0-9./])"#,
+        pattern: #"(?<![A-Za-z0-9])([¥￥$€£₩])?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)\s*(元|块|원|rmb|RMB|RM|krw|KRW)?(?![A-Za-z0-9./])"#,
         options: [.caseInsensitive]
     )
 
