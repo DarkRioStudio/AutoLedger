@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-351 韩语 UI 资源第一段）
+更新日期：2026-07-02（ITER-352 common-api Worker 第一段）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-352 common-api Worker 第一段
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API
+- 类型：能力增强 / 基础设施
+- 目标：切换到 `GOAL-2309` 主线，先建立可复用 `common-api` Cloudflare Worker 的最小可运行合同，为地点目录热更新、汇率和酒店历史天气后续接入打基础。
+- 改动范围：新增 `tools/worker/common-api` 工作区、wrangler 配置、TypeScript Worker、五语地点目录、Vitest 合同测试和 README；更新 `versions/v1.7.0-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 App 代码、酒店消费 UI、账本默认币种 UI、截图管线、现有酒店水单收件箱 Worker、Cloudflare 线上资源、WeatherKit、汇率 provider、R2、D1、服务端鉴权、SQLite / CloudKit schema、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`common-api` 新增 `/health`、`/v1/manifest`、`/v1/locations/catalog`、`/v1/locations/countries`、`/v1/locations/cities`；manifest 返回地点目录 URL、sha256、etag、五语 locale、国家 / 城市数量和隐私边界；地点目录覆盖常用国家 / 地区、较大城市和旅游 / 酒店城市，每条国家 / 城市记录都含 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` 五语名称；汇率和酒店天气端点先返回结构化 `501` planned 响应，避免误用未接入 provider 的能力。
+- 未完成内容：尚未把地点目录放到 R2 或 static asset；尚未实现 App 启动读取 manifest、sha256 校验、后台静默更新和内置 fallback 替换；尚未接入真实 Frankfurter / WeatherKit provider；尚未增加服务端鉴权、限流、缓存策略和生产部署；酒店编辑页仍未改成远程目录来源。
+- 测试情况：执行 `npm install` 完成并显示 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 8 个 Vitest 合同测试，覆盖 manifest、目录 etag、五语名称完整性、locale fallback、国家后城市过滤、planned 汇率 / 天气响应和 CORS / read-only 边界。
+- 风险与注意事项：当前目录是 curated 第一版，不是全量世界城市库；五语名称为工程可用草稿，后续上线前仍应抽样审校。`wrangler.jsonc` 中的 `common.getautoledger.app` / `staging-common.getautoledger.app` 是路由占位，正式部署前需要确认 Cloudflare 自定义域状态。
+- 回滚方式：删除 `tools/worker/common-api` 并回退本轮文档即可；本轮没有线上部署、数据迁移或 App 运行时依赖。
+- 结论：`GOAL-2309` 第一段已具备独立 Worker 合同、五语地点目录和自动门禁，可以作为 App 端 manifest/cache 接入和后续 WeatherKit / 汇率 provider 的基础。
+- 下一步建议：先让 App 端酒店国家 / 城市选择读取内置同形 catalog，并预留从 `/v1/manifest` 静默更新；随后再接入汇率 provider 和 WeatherKit provider。
 
 ### ITER-351 韩语 UI 资源第一段
 - 日期：2026-07-02

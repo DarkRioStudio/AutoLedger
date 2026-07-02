@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "autoledger-common-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "PUBLIC_API_ORIGIN": "https://common.getautoledger.app"
+  },
+  "env": {
+    "staging": {
+      "name": "autoledger-common-api-staging",
+      "routes": [
+        {
+          "pattern": "staging-common.getautoledger.app",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "PUBLIC_API_ORIGIN": "https://staging-common.getautoledger.app"
+      }
+    },
+    "production": {
+      "name": "autoledger-common-api-production",
+      "routes": [
+        {
+          "pattern": "common.getautoledger.app",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "PUBLIC_API_ORIGIN": "https://common.getautoledger.app"
+      }
+    }
+  }
+}

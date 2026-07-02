@@ -1,0 +1,21 @@
+{
+  "name": "@autoledger/common-api-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "wrangler types && tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test",
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "types": "wrangler types"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.9",
+    "wrangler": "^4.106.0"
+  }
+}
