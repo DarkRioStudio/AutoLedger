@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { cities, countries, placesCatalog, supportedLocales } from "../src/places-catalog";
 import { routeFetch, testInternals } from "../src/index";
 
-const env = { PUBLIC_API_ORIGIN: "https://common.getautoledger.app" } as Env;
+const env = { PUBLIC_API_ORIGIN: "https://api.darkrio326.top", WEATHER_PROVIDER: "disabled" } as Env;
+const mockWeatherEnv = { PUBLIC_API_ORIGIN: "https://api.darkrio326.top", WEATHER_PROVIDER: "mock" } as unknown as Env;
 
 async function jsonBody(response: Response): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
@@ -15,7 +16,7 @@ describe("common api worker contract", () => {
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.service).toBe("autoledger-common-api");
+    expect(body.service).toBe("darkrio-common-api");
   });
 
   it("publishes a manifest for the five-locale places catalog", async () => {
@@ -23,18 +24,25 @@ describe("common api worker contract", () => {
     const body = await jsonBody(response);
     const capabilities = body.capabilities as Record<string, Record<string, unknown>>;
     const placesCatalogCapability = capabilities.placesCatalog;
+    const weatherForecastCapability = capabilities.weatherForecast;
 
     expect(response.status).toBe(200);
     expect(body.supportedLocales).toEqual(supportedLocales);
     expect(placesCatalogCapability).toBeDefined();
+    expect(weatherForecastCapability).toBeDefined();
     if (!placesCatalogCapability) {
       throw new Error("placesCatalog capability is missing");
     }
+    if (!weatherForecastCapability) {
+      throw new Error("weatherForecast capability is missing");
+    }
     expect(placesCatalogCapability.status).toBe("available");
-    expect(placesCatalogCapability.url).toBe("https://common.getautoledger.app/v1/locations/catalog");
+    expect(placesCatalogCapability.url).toBe("https://api.darkrio326.top/v1/locations/catalog");
     expect(placesCatalogCapability.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(placesCatalogCapability.countryCount).toBe(countries.length);
     expect(placesCatalogCapability.cityCount).toBe(cities.length);
+    expect(weatherForecastCapability.status).toBe("configuration_required");
+    expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
   });
 
   it("serves the full places catalog with an etag", async () => {
@@ -57,6 +65,15 @@ describe("common api worker contract", () => {
       env
     );
     expect(cached.status).toBe(304);
+  });
+
+  it("supports HEAD probes for cacheable read endpoints", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/locations/catalog", { method: "HEAD" }), env);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("etag")).toMatch(/^W\/"sha256-[a-f0-9]{64}"$/);
+    expect(response.headers.get("access-control-allow-methods")).toContain("HEAD");
+    expect(await response.text()).toBe("");
   });
 
   it("keeps every country and city name filled for all supported locales", () => {
@@ -99,6 +116,48 @@ describe("common api worker contract", () => {
     expect(await jsonBody(rate)).toMatchObject({ error: { code: "exchange_rates_not_implemented" } });
     expect(weather.status).toBe(501);
     expect(await jsonBody(weather)).toMatchObject({ error: { code: "hotel_weather_not_implemented" } });
+  });
+
+  it("keeps live weather disabled until provider secrets are configured", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/weather/current?lat=35.68&lon=139.76"), env);
+
+    expect(response.status).toBe(503);
+    expect(await jsonBody(response)).toMatchObject({ error: { code: "weather_provider_not_configured" } });
+  });
+
+  it("validates weather coordinates before calling providers", async () => {
+    const missing = await routeFetch(new Request("https://example.test/v1/weather/current?lat=35.68"), mockWeatherEnv);
+    const invalid = await routeFetch(new Request("https://example.test/v1/weather/forecast?lat=91&lon=139.76"), mockWeatherEnv);
+
+    expect(missing.status).toBe(400);
+    expect(await jsonBody(missing)).toMatchObject({ error: { code: "missing_coordinates" } });
+    expect(invalid.status).toBe(400);
+    expect(await jsonBody(invalid)).toMatchObject({ error: { code: "invalid_coordinates" } });
+  });
+
+  it("serves migrated current and forecast weather contracts when a provider is configured", async () => {
+    const current = await routeFetch(
+      new Request("https://example.test/v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo"),
+      mockWeatherEnv
+    );
+    const forecast = await routeFetch(
+      new Request("https://example.test/v1/weather/forecast?lat=35.68&lon=139.76&locale=ko&timezone=Asia/Seoul"),
+      mockWeatherEnv
+    );
+
+    expect(current.status).toBe(200);
+    expect(await jsonBody(current)).toMatchObject({
+      provider: "mock",
+      data: {
+        location: { lat: 35.68, lon: 139.76, timezone: "Asia/Tokyo" },
+        current: { icon: "MostlyCloudy" }
+      }
+    });
+    expect(forecast.status).toBe(200);
+    const forecastBody = await jsonBody(forecast);
+    expect(forecastBody.provider).toBe("mock");
+    expect(((forecastBody.data as Record<string, unknown>).hourly as unknown[])).toHaveLength(24);
+    expect(((forecastBody.data as Record<string, unknown>).daily as unknown[])).toHaveLength(7);
   });
 
   it("handles CORS preflight and read-only method boundaries", async () => {

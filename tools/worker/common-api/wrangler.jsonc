@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "autoledger-common-api",
+  "name": "darkrio-common-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-02",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,31 +9,34 @@
     "head_sampling_rate": 1
   },
   "vars": {
-    "PUBLIC_API_ORIGIN": "https://common.getautoledger.app"
+    "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
+    "WEATHER_PROVIDER": "disabled"
   },
   "env": {
     "staging": {
-      "name": "autoledger-common-api-staging",
+      "name": "darkrio-common-api-staging",
       "routes": [
         {
-          "pattern": "staging-common.getautoledger.app",
+          "pattern": "staging-api.darkrio326.top",
           "custom_domain": true
         }
       ],
       "vars": {
-        "PUBLIC_API_ORIGIN": "https://staging-common.getautoledger.app"
+        "PUBLIC_API_ORIGIN": "https://staging-api.darkrio326.top",
+        "WEATHER_PROVIDER": "disabled"
       }
     },
     "production": {
-      "name": "autoledger-common-api-production",
+      "name": "darkrio-common-api-production",
       "routes": [
         {
-          "pattern": "common.getautoledger.app",
+          "pattern": "api.darkrio326.top",
           "custom_domain": true
         }
       ],
       "vars": {
-        "PUBLIC_API_ORIGIN": "https://common.getautoledger.app"
+        "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
+        "WEATHER_PROVIDER": "disabled"
       }
     }
   }

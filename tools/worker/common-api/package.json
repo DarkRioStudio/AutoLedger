@@ -1,5 +1,5 @@
 {
-  "name": "@autoledger/common-api-worker",
+  "name": "@darkrio/common-api-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",

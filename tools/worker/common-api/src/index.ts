@@ -9,6 +9,7 @@ import {
   type LocalizedText,
   type SupportedLocale
 } from "./places-catalog";
+import { currentWeatherEndpoint, forecastWeatherEndpoint } from "./weather/routes";
 
 type APIError = {
   error: {
@@ -27,6 +28,7 @@ type LocalizedCity = CityRecord & {
 
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
+const readMethods = new Set(["GET", "HEAD"]);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -41,47 +43,63 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
     return withCommonHeaders(new Response(null, { status: 204 }));
   }
 
-  if (request.method === "GET" && url.pathname === "/health") {
-    return json({
+  if (isReadRequest(request) && url.pathname === "/health") {
+    return responseForMethod(request, json({
       ok: true,
-      service: "autoledger-common-api",
+      service: "darkrio-common-api",
       version: placeCatalogResourceVersion,
       checkedAt: new Date().toISOString()
-    });
+    }));
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/manifest") {
-    return manifestResponse(request, env);
+  if (isReadRequest(request) && url.pathname === "/v1/manifest") {
+    return responseForMethod(request, await manifestResponse(request, env));
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/locations/catalog") {
+  if (isReadRequest(request) && url.pathname === "/v1/locations/catalog") {
     return catalogResponse(request);
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/locations/countries") {
+  if (isReadRequest(request) && url.pathname === "/v1/locations/countries") {
     const locale = normalizeLocale(url.searchParams.get("locale"));
-    return json({ countries: localizedCountries(locale), locale }, 200, "public, max-age=300");
+    return responseForMethod(request, json({ countries: localizedCountries(locale), locale }, 200, "public, max-age=300"));
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/locations/cities") {
+  if (isReadRequest(request) && url.pathname === "/v1/locations/cities") {
     const locale = normalizeLocale(url.searchParams.get("locale"));
     const countryCode = normalizeCountryCode(url.searchParams.get("country"));
-    return json({ cities: localizedCities(locale, countryCode), countryCode, locale }, 200, "public, max-age=300");
+    return responseForMethod(request, json({ cities: localizedCities(locale, countryCode), countryCode, locale }, 200, "public, max-age=300"));
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/exchange-rates/rate") {
-    return plannedEndpoint("exchange_rates_not_implemented", "Exchange rate provider integration is planned for v1.7.0.");
+  if (isReadRequest(request) && url.pathname === "/v1/exchange-rates/rate") {
+    return responseForMethod(
+      request,
+      plannedEndpoint("exchange_rates_not_implemented", "Exchange rate provider integration is planned for v1.7.0.")
+    );
   }
 
-  if (request.method === "GET" && url.pathname === "/v1/weather/hotel-stay-summary") {
-    return plannedEndpoint("hotel_weather_not_implemented", "Hotel stay weather provider integration is planned for v1.7.0.");
+  if (isReadRequest(request) && url.pathname === "/v1/weather/current") {
+    const result = await currentWeatherEndpoint(request, env);
+    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
+  }
+
+  if (isReadRequest(request) && url.pathname === "/v1/weather/forecast") {
+    const result = await forecastWeatherEndpoint(request, env);
+    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
+  }
+
+  if (isReadRequest(request) && url.pathname === "/v1/weather/hotel-stay-summary") {
+    return responseForMethod(
+      request,
+      plannedEndpoint("hotel_weather_not_implemented", "Hotel stay weather provider integration is planned for v1.7.0.")
+    );
   }
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-    return json(error("method_not_allowed", "This endpoint currently accepts read-only GET requests."), 405);
+    return json(error("method_not_allowed", "This endpoint currently accepts read-only GET or HEAD requests."), 405);
   }
 
-  return json(error("not_found", "The requested endpoint does not exist."), 404);
+  return responseForMethod(request, json(error("not_found", "The requested endpoint does not exist."), 404));
 }
 
 async function manifestResponse(request: Request, env: Env): Promise<Response> {
@@ -118,6 +136,13 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           status: "planned",
           endpoint: `${baseURL}/v1/weather/hotel-stay-summary`,
           privacy: "The App should send coordinates, stay dates, locale, and units only; hotel names and folio contents stay on device."
+        },
+        weatherForecast: {
+          status: "configuration_required",
+          currentEndpoint: `${baseURL}/v1/weather/current`,
+          forecastEndpoint: `${baseURL}/v1/weather/forecast`,
+          providers: ["weatherkit", "openweathermap", "mock"],
+          privacy: "The App should send coordinates, locale, and timezone only. WeatherKit credentials are configured as Worker secrets."
         }
       }
     },
@@ -131,19 +156,22 @@ async function catalogResponse(request: Request): Promise<Response> {
   const sha256 = await sha256Hex(body);
   const etag = weakETag(sha256);
   if (request.headers.get("if-none-match") === etag) {
-    return withCommonHeaders(new Response(null, { status: 304, headers: { etag } }));
+    return responseForMethod(request, withCommonHeaders(new Response(null, { status: 304, headers: { etag } })));
   }
 
-  return withCommonHeaders(
-    new Response(body, {
-      status: 200,
-      headers: {
-        "content-type": jsonContentType,
-        "cache-control": "public, max-age=300",
-        etag,
-        "x-content-sha256": sha256
-      }
-    })
+  return responseForMethod(
+    request,
+    withCommonHeaders(
+      new Response(body, {
+        status: 200,
+        headers: {
+          "content-type": jsonContentType,
+          "cache-control": "public, max-age=300",
+          etag,
+          "x-content-sha256": sha256
+        }
+      })
+    )
   );
 }
 
@@ -195,6 +223,23 @@ function normalizeCountryCode(rawCountryCode: string | null): string | null {
   return normalized && /^[A-Z]{2}$/.test(normalized) ? normalized : null;
 }
 
+function isReadRequest(request: Request): boolean {
+  return readMethods.has(request.method);
+}
+
+function responseForMethod(request: Request, response: Response): Response {
+  if (request.method !== "HEAD") {
+    return response;
+  }
+  return withCommonHeaders(
+    new Response(null, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    })
+  );
+}
+
 async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -236,7 +281,7 @@ function json(body: unknown, status = 200, cacheControl = "no-store"): Response 
 function withCommonHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("access-control-allow-origin", "*");
-  headers.set("access-control-allow-methods", "GET, OPTIONS");
+  headers.set("access-control-allow-methods", "GET, HEAD, OPTIONS");
   headers.set("access-control-allow-headers", "content-type, if-none-match");
   headers.set("x-content-type-options", "nosniff");
   return new Response(response.body, {

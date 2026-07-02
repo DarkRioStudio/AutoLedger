@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-352 common-api Worker 第一段）
+更新日期：2026-07-02（ITER-353 common-api 通用化与天气 API 迁移）
 
 ## 记录规则
 
@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-353 common-api 通用化与天气 API 迁移
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API
+- 类型：能力增强 / 基础设施
+- 目标：将 `common-api` 从 AutoLedger 专属命名调整为可供多个 darkrio App 复用的通用 Worker，并把旧 `MyWeatherLine/Api` 中可复用的天气 API 代码迁移进来。
+- 改动范围：更新 `tools/worker/common-api` 的 wrangler 名称、package 名称、README、manifest service 名、测试期望和生产 / staging 自定义域；新增天气 provider、WeatherKit JWT、OpenWeatherMap fallback、mock provider、坐标缓存、`/v1/weather/current` 与 `/v1/weather/forecast` 路由；更新版本计划、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改 App Swift 代码、酒店消费 UI、账本默认币种 UI、截图管线、现有酒店水单收件箱 Worker、SQLite / CloudKit schema、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未迁移旧 WeatherKit key，也未读取旧 `.dev.vars`。
+- 完成内容：Worker 名改为 `darkrio-common-api`，npm package 改为 `@darkrio/common-api-worker`，manifest service 改为 `darkrio-common-api`；生产域名改为 `https://api.darkrio326.top`，staging 域名改为 `https://staging-api.darkrio326.top`；旧 `MyWeatherLine/Api` 的 current / forecast API、WeatherKit JWT、OpenWeatherMap 当前天气、mock provider 和 5 分钟坐标缓存迁入新 Worker。默认 `WEATHER_PROVIDER=disabled`，没有新 provider secret 时天气端点返回结构化 `503 weather_provider_not_configured`。
+- 未完成内容：尚未配置新 WeatherKit key；尚未实现 WeatherKit Daily Summary 历史天气；尚未把 `api.darkrio326.top` 旧 Worker / GitHub repo 删除结果写入自动化脚本；尚未实现汇率 provider、R2 static assets、服务端鉴权、Cloudflare 托管限流或 App 端调用。
+- 测试情况：执行 `npm install` 完成并显示 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 12 个 Vitest 合同测试，覆盖通用 manifest、HEAD 探测、五语地点目录、天气 provider disabled、坐标校验和 mock current / forecast 合同。
+- 风险与注意事项：旧 WeatherKit key 已 revoke，新 Worker 不会读取旧 secret；正式启用天气前需要重新申请 WeatherKit key，并通过 `wrangler secret put` 配置 `WEATHERKIT_TEAM_ID`、`WEATHERKIT_SERVICE_ID`、`WEATHERKIT_KEY_ID`、`WEATHERKIT_PRIVATE_KEY`，再把 `WEATHER_PROVIDER` 改为 `weatherkit` 后重新部署。当前天气 API 只接收坐标、locale 和 timezone，不接收酒店名、账单金额或用户数据。
+- 回滚方式：回退本轮 `tools/worker/common-api` 改动和文档即可；若已部署，可用 Wrangler 回滚到上一版 `autoledger-common-api-*` deployment 或重新部署上一 commit。
+- 结论：`common-api` 已从 AutoLedger 专属 Worker 变成 darkrio 通用 Worker 基础，并保留旧 MyWeatherLine 天气 API 的主要代码资产；后续只需新 WeatherKit 凭据即可继续接真实天气。
+- 下一步建议：删除旧 `base-api` Worker 和 `MyWeatherLine` repo 后，部署 `darkrio-common-api` 到 `api.darkrio326.top` 并验证 manifest、catalog、weather disabled 和 HEAD。
+
 ### ITER-352 common-api Worker 第一段
 - 日期：2026-07-02
 - 所属版本：v1.7.0 / ASC 1.6.0
@@ -55,7 +71,7 @@
 - 完成内容：`common-api` 新增 `/health`、`/v1/manifest`、`/v1/locations/catalog`、`/v1/locations/countries`、`/v1/locations/cities`；manifest 返回地点目录 URL、sha256、etag、五语 locale、国家 / 城市数量和隐私边界；地点目录覆盖常用国家 / 地区、较大城市和旅游 / 酒店城市，每条国家 / 城市记录都含 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` 五语名称；汇率和酒店天气端点先返回结构化 `501` planned 响应，避免误用未接入 provider 的能力。
 - 未完成内容：尚未把地点目录放到 R2 或 static asset；尚未实现 App 启动读取 manifest、sha256 校验、后台静默更新和内置 fallback 替换；尚未接入真实 Frankfurter / WeatherKit provider；尚未增加服务端鉴权、限流、缓存策略和生产部署；酒店编辑页仍未改成远程目录来源。
 - 测试情况：执行 `npm install` 完成并显示 0 vulnerabilities；执行 `npm run check` 通过，包含 `wrangler types`、`tsc --noEmit` 和 8 个 Vitest 合同测试，覆盖 manifest、目录 etag、五语名称完整性、locale fallback、国家后城市过滤、planned 汇率 / 天气响应和 CORS / read-only 边界。
-- 风险与注意事项：当前目录是 curated 第一版，不是全量世界城市库；五语名称为工程可用草稿，后续上线前仍应抽样审校。`wrangler.jsonc` 中的 `common.getautoledger.app` / `staging-common.getautoledger.app` 是路由占位，正式部署前需要确认 Cloudflare 自定义域状态。
+- 风险与注意事项：当前目录是 curated 第一版，不是全量世界城市库；五语名称为工程可用草稿，后续上线前仍应抽样审校。本条最初使用 `common.getautoledger.app` / `staging-common.getautoledger.app` 作为路由占位，后续已在 ITER-353 改为 `api.darkrio326.top` / `staging-api.darkrio326.top`。
 - 回滚方式：删除 `tools/worker/common-api` 并回退本轮文档即可；本轮没有线上部署、数据迁移或 App 运行时依赖。
 - 结论：`GOAL-2309` 第一段已具备独立 Worker 合同、五语地点目录和自动门禁，可以作为 App 端 manifest/cache 接入和后续 WeatherKit / 汇率 provider 的基础。
 - 下一步建议：先让 App 端酒店国家 / 城市选择读取内置同形 catalog，并预留从 `/v1/manifest` 静默更新；随后再接入汇率 provider 和 WeatherKit provider。
