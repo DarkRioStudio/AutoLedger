@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-346 App 语言 override 设置）
+更新日期：2026-07-02（ITER-347 App i18n 发布专项计划）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-347 App i18n 发布专项计划
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / Release Planning
+- 类型：文档 / 治理
+- 目标：为 App 多语言差异化建立专项发布计划，让每个语言按 ASC 商店可见、App 界面可读、识别包可用、真实样本回归和地区支付 / 票据格式专项优化五项门禁推进。
+- 改动范围：新增 `versions/v1.7.0-i18n-release-matrix.md`，更新 `versions/v1.7.0-plan.md`、`README.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未修改 App 代码、本地化资源、识别代码、ASC 线上配置、截图成品、App Preview 视频、StoreKit 商品、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：新增 i18n 发布矩阵文档，定义 Ready / Build / Audit / Candidate / Later 状态；把简体中文、繁体中文、英文、日文、韩语作为 P0 / v1.7.0 主线逐项列出 ASC、App、识别包、样本和地区专项状态；将西班牙语、巴西葡语、法语、德语、印度支付专项、印尼语、泰语、越南语、马来语和阿拉伯语列为后续候选；在 `v1.7.0-plan.md` 中新增 `GOAL-2302`，明确 ASC 新增语言前必须先有 UI、识别包、样本和截图 / metadata 门禁。
+- 未完成内容：本轮没有实现韩语 `ko.lproj`、韩语识别包、ASC metadata-as-code、截图导出、样本 fixture、common-api 或任何真实语言包代码。
+- 测试情况：本轮为文档变更，执行 `git diff --check` 作为最小回归；未运行 Xcode 构建、离线回归或截图导出。
+- 风险与注意事项：矩阵是准入规则，不代表所有候选语言已经支持；对外宣传时只能使用 Ready / Build 完成后的语言，Candidate / Later 只能保留为路线图。
+- 回滚方式：删除 `versions/v1.7.0-i18n-release-matrix.md` 并回退本轮对 `versions/v1.7.0-plan.md`、`README.md`、`CHANGELOG.md` 和本日志的修改即可；无 App、ASC、Worker 或用户数据回滚。
+- 结论：本轮完成 App i18n 专项计划落档，可作为 `v1.7.0` 后续韩语和更多语言扩展的发布准入依据。
+- 下一步建议：进入 `GOAL-2302` 时先把矩阵接入 ASC audit、截图语言清单和本地化覆盖检查；随后推进 `GOAL-2308` 韩语 UI 与识别包。
 
 ### ITER-346 App 语言 override 设置
 - 日期：2026-07-02

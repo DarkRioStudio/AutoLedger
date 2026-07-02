@@ -127,6 +127,7 @@ AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 - **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
 - **日文账单识别**：日文包覆盖 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常见字段；OCR hint 使用 `ja-JP + en-US`，金额和商户 / 分类解析已经进入离线回归。
 - **v1.7.0 韩语范围**：计划新增韩语 App UI 和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint，并补齐韩语 ASC 文案、截图和 golden cases；完成前不把 `ko` 写入当前已支持语言。
+- **i18n 发布矩阵**：`versions/v1.7.0-i18n-release-matrix.md` 将每个语言按商店可见（ASC 增加语言）、界面可读（App）、基础识别可用（语言识别包）、真实样本回归、地区支付 / 票据格式专项优化五项门禁管理；后续语言不只做 UI 翻译。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
 ## Tech Stack
@@ -229,7 +230,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已进入发布收口阶段，`GOAL-2200` 完成 Free / Pro 边界冻结，新增平台无关 Pro 访问策略合同；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API 和 App 侧 PDFKit 本地转换入口已落地。Cloudflare production 的 App Store Server API / APNs secret 名称已验证存在；2026-06-29 人工 smoke 已测通订阅开通、APNs 推送、Worker 云收件箱、云候选转酒店消费并入账。订阅元数据、审核材料、生命周期截图和证据归档继续收口。
-- `v1.7.0` 规划为 ASC / App Store `1.6.0`：首页“票据扫描”优先升级为实时 OCR 扫描，不支持时回退拍照识别照片 / 相册导入；新增韩语 App UI 和韩语账单识别包；建设可复用 `common-api`，用于中简 / 中繁 / 英 / 日 / 韩五语国家城市目录热更新、按日期查询汇率和酒店入住日期历史天气摘要；接入 App Store Server Notifications，补齐 Pro 服务端订阅生命周期；建立 ASC metadata-as-code，用 repo 内配置自动审计并批量更新商店信息、推广文本、描述、新增功能、隐私文本、订阅本地化、截图和 App Preview；同时把 Pro 从酒店水单自动化扩展到全账本效率层，计划实现高级搜索、订阅异常提醒、月结导出包和高级规则自动应用。
+- `v1.7.0` 规划为 ASC / App Store `1.6.0`：首页“票据扫描”优先升级为实时 OCR 扫描，不支持时回退拍照识别照片 / 相册导入；新增韩语 App UI 和韩语账单识别包；建立 i18n 发布矩阵，按 ASC 商店可见、App 界面可读、识别包可用、真实样本回归和地区支付 / 票据专项优化管理每个语言；建设可复用 `common-api`，用于中简 / 中繁 / 英 / 日 / 韩五语国家城市目录热更新、按日期查询汇率和酒店入住日期历史天气摘要；接入 App Store Server Notifications，补齐 Pro 服务端订阅生命周期；建立 ASC metadata-as-code，用 repo 内配置自动审计并批量更新商店信息、推广文本、描述、新增功能、隐私文本、订阅本地化、截图和 App Preview；同时把 Pro 从酒店水单自动化扩展到全账本效率层，计划实现高级搜索、订阅异常提醒、月结导出包和高级规则自动应用。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -251,7 +252,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | 🚧 收口中 | Personal Pro 订阅基础：Free / Pro 边界已冻结；`ProEntitlementManager`、Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口已落地；production secret 名称已验证，2026-06-29 人工 smoke 已测通订阅开通、APNs 推送和云收件箱到入账链路；订阅元数据、审核材料、生命周期截图和证据归档继续收口 |
-| v1.7.0 | **1.6.0** | 📝 规划中 | 首页实时 OCR 票据扫描：支持时优先实时识别，不支持时回退拍照识别照片 / 相册导入；韩语 App UI 与 `ko` 识别包；`common-api` 中简 / 中繁 / 英 / 日 / 韩五语地点目录热更新、按日期汇率和酒店历史天气摘要；App Store Server Notifications 与 Pro 服务端生命周期；ASC metadata-as-code 自动审计 / 更新商店信息、截图、App Preview 和订阅本地化；Pro 自动化扩展：高级搜索、订阅异常提醒、月结导出包和高级规则自动应用；免费基础识别、基础搜索、基础订阅、基础导出和历史数据继续可用 |
+| v1.7.0 | **1.6.0** | 📝 规划中 | 首页实时 OCR 票据扫描：支持时优先实时识别，不支持时回退拍照识别照片 / 相册导入；韩语 App UI 与 `ko` 识别包；i18n 发布矩阵按 ASC、App、识别包、真实样本和地区票据专项管理多语言扩展；`common-api` 中简 / 中繁 / 英 / 日 / 韩五语地点目录热更新、按日期汇率和酒店历史天气摘要；App Store Server Notifications 与 Pro 服务端生命周期；ASC metadata-as-code 自动审计 / 更新商店信息、截图、App Preview 和订阅本地化；Pro 自动化扩展：高级搜索、订阅异常提醒、月结导出包和高级规则自动应用；免费基础识别、基础搜索、基础订阅、基础导出和历史数据继续可用 |
 
 ## License
 
