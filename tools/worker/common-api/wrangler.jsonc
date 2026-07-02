@@ -10,6 +10,8 @@
   },
   "vars": {
     "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
+    "EXCHANGE_RATE_PROVIDER": "frankfurter",
+    "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
     "WEATHER_PROVIDER": "disabled"
   },
   "env": {
@@ -23,6 +25,8 @@
       ],
       "vars": {
         "PUBLIC_API_ORIGIN": "https://staging-api.darkrio326.top",
+        "EXCHANGE_RATE_PROVIDER": "frankfurter",
+        "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
         "WEATHER_PROVIDER": "disabled"
       }
     },
@@ -36,6 +40,8 @@
       ],
       "vars": {
         "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
+        "EXCHANGE_RATE_PROVIDER": "frankfurter",
+        "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
         "WEATHER_PROVIDER": "disabled"
       }
     }

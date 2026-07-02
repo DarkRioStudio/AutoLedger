@@ -16,6 +16,7 @@ import {
   defaultCurrencyCode,
   type CurrencyRecord
 } from "./currencies-catalog";
+import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
 import { currentWeatherEndpoint, forecastWeatherEndpoint } from "./weather/routes";
 
 type APIError = {
@@ -37,7 +38,7 @@ type LocalizedCurrency = CurrencyRecord & {
   displayName: string;
 };
 
-const serviceResourceVersion = "2026.07.02.3";
+const serviceResourceVersion = "2026.07.02.4";
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);
@@ -93,10 +94,8 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/exchange-rates/rate") {
-    return responseForMethod(
-      request,
-      plannedEndpoint("exchange_rates_not_implemented", "Exchange rate provider integration is planned for v1.7.0.")
-    );
+    const result = await exchangeRateEndpoint(request, env);
+    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/weather/current") {
@@ -163,10 +162,15 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           fallback: "Use the bundled App currency catalog when manifest or catalog download fails."
         },
         exchangeRates: {
-          status: "planned",
+          status: "available",
           endpoint: `${baseURL}/v1/exchange-rates/rate`,
+          provider: env.EXCHANGE_RATE_PROVIDER || "frankfurter",
           supportedCurrencyCodes: currencyCodes,
-          privacy: "The App should send base currency, quote currency, and date only; transaction amounts stay on device."
+          query: {
+            required: ["base", "quote"],
+            optional: ["date"]
+          },
+          privacy: "The App should send base currency, quote currency, and optional rate date only; transaction amounts stay on device."
         },
         hotelWeather: {
           status: "planned",
@@ -379,6 +383,7 @@ export const testInternals = {
   localizedCountries,
   localizedCities,
   localizedCurrencies,
+  exchangeRateTestInternals,
   displayName,
   validateCatalogLocales,
   sha256Hex,

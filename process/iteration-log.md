@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-356 App 接入 Common API manifest 缓存）
+更新日期：2026-07-02（ITER-357 Common API 汇率端点第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-357 Common API 汇率端点第一版
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / Exchange Rates
+- 类型：能力增强 / 基础设施
+- 目标：将 `common-api` 汇率端点从 planned 响应推进到可用只读合同，为后续多币种消费按账本默认币种换算做准备。
+- 改动范围：新增 `tools/worker/common-api/src/exchange-rates/` provider、route 和类型模块；更新 `tools/worker/common-api/src/index.ts`、`wrangler.jsonc`、Worker 合同测试、README、`versions/v1.7.0-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：本轮未实现 App 端金额换算、原始金额 / 目标金额 / 汇率日期持久化 schema、账单确认页换算 UI、汇率本地缓存、商业 provider fallback、R2、D1、服务端鉴权、天气历史摘要、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`GET /v1/exchange-rates/rate?base=USD&quote=CNY&date=2026-07-01` 现在校验 `base`、`quote` 和可选 `date`，只返回汇率相关字段，不接收消费金额。生产 / staging 默认使用免 secret 的 Frankfurter API；测试环境使用 mock provider，避免测试依赖外网。同币种转换在 Worker 内返回 identity rate 1。manifest 中 `exchangeRates.status` 改为 `available`，声明 endpoint、provider、支持币种和 required / optional query；service resource version bump 到 `2026.07.02.4`。
+- 未完成内容：App 尚未调用该端点；汇率换算结果、原始币种、汇率日期和 provider 尚未进入交易模型或待确认 UI；provider 不可用时的 App fallback 文案和手动换算流程仍待后续实现。
+- 测试情况：执行 `npm run check`，结果 PASS，包含 `wrangler types`、`tsc --noEmit` 和 18 个 Vitest 合同测试；测试覆盖 manifest `exchangeRates` available、mock 汇率成功响应、同币种 identity rate、缺失 / 不支持币种、无效日期、未来日期和 provider disabled。执行前按 Cloudflare Workers skill 拉取了最新 Workers best practices 文档和 `@cloudflare/workers-types@4.20260702.1` 临时类型包作为实现参照。
+- 风险与注意事项：Frankfurter 是公开第三方汇率源，无 secret、适合第一版低成本合同，但 SLA 和历史覆盖仍需后续评估；Worker 端不接收金额，因此不会把消费数据上传给第三方。后续 App 真正换算时必须保存 rate date 和 provider，避免 provider 使用最近可用工作日时被误认为账单当天实时汇率。
+- 回滚方式：回退 `tools/worker/common-api/src/exchange-rates/`、`src/index.ts`、`wrangler.jsonc`、Worker 测试、README 和文档变更；线上如已部署，可用 Wrangler 回滚到 manifest `2026.07.02.3` 对应版本。
+- 结论：本轮完成，`common-api` 已具备第一版可用汇率查询合同，后续可以进入 App 端换算准备。
+- 下一步建议：App 端新增 `CommonAPIExchangeRateService`，只在识别币种与账本默认币种不同时请求 rate，并把原始金额、目标金额、rate date 和 provider 放入待确认上下文，不直接静默覆盖金额。
 
 ### ITER-356 App 接入 Common API manifest 缓存
 - 日期：2026-07-02
