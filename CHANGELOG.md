@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 新增（v1.7.0）
+- [2026-07-02 17:34 +0800] 补齐 `common-api` 汇率缓存第一段：Worker 汇率端点用 Cloudflare Cache API 按 provider / base / quote / date 标准化缓存成功响应，并通过 `x-common-api-cache` 输出 `hit`、`miss` 或 `bypass` 便于排查；App 端 `CommonAPIExchangeRateService` 增加 Application Support 本地 JSON 缓存，今天汇率缓存 1 小时、历史日期缓存 30 天，网络或 provider 请求失败时可用同 key 缓存兜底。缓存内容只包含币种、日期、rate、provider 和获取 / 过期时间，不保存金额、商户、酒店名、OCR 原文或账本数据；手动汇率输入继续暂缓。
 - [2026-07-02 16:50 +0800] 补齐首页 OCR 导入后的确认页：实时扫描、拍照识别、相册导入和剪贴板图片识别在解析出单笔账单后，先弹出“确认账单”表单，用户可复核商户、金额、币种、来源、分类、时间和备注后再保存；跨币种时复用现有汇率预估卡片，保存成功后才正式写入账本并保留 OCR 原文调试链路。该确认页仅挂在 App 内首页导入入口，`QuickLedgerIntent`、`VoiceLedgerIntent`、App 启动剪贴板自动导入、订阅截图识别和 iPad 工作台既有调用保持默认直接导入语义不变。新增五语 UI 文案和离线回归断言，覆盖“确认前不入账、确认后保存”的行为。
 - [2026-07-02 16:19 +0800] 完成 `GOAL-2305` 首页实时 OCR 票据扫描主线：新增 `LiveReceiptScannerView`，首页“票据扫描”优先进入 VisionKit 实时文字扫描取景框，显示扫描状态、识别行数和稳定后的 OCR 文本预览；用户确认后把稳定文本交给既有 `LedgerStore.importRecognizedText` 导入链路。实时扫描不可用、Mac Catalyst、相机不可用或用户需要兜底时，界面保留“拍照识别照片”和“从相册选择”入口，继续复用原 `CameraPicker` / `PhotosPicker` + `OCRService` 流程。新增五语 UI 文案并通过本地化覆盖、离线回归、Golden 回归和 iOS 26.5 模拟器构建；本轮不改写既有 OCR 解析后的保存 / 确认策略，不引入 Pro gate，不上传扫描文本。
 - [2026-07-02 15:50 +0800] 收口确认页保存前汇率预估：结构化 JSON 账单确认页和酒店消费确认页在源币种不同于目标账本币种、且金额有效时，会按账单日期调用 `common-api` 汇率端点，展示预计入账金额、汇率、汇率日期和 provider；用户修改金额、日期或币种后会自动刷新预估，失败时显示可重试状态，但不阻断保存。预估成功时，结构化账单保存会直接写入换算后的目标账本金额并保留原始金额 / 原始币种 / 汇率 metadata；酒店消费确认会把预估汇率回填到酒店水单 metadata，`HotelStayLedgerPostingService` 入账时直接使用换算后金额。新增五语 UI 文案和离线回归断言，覆盖酒店水单确认汇率入账。本轮仍未实现手动输入汇率、汇率本地缓存、历史交易批量重算或 provider 多源 fallback。

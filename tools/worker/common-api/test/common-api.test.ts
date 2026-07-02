@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { currencies, currenciesCatalog, defaultCurrencyCode } from "../src/currencies-catalog";
+import { exchangeRateEndpoint } from "../src/exchange-rates/routes";
 import { cities, countries, placesCatalog, supportedLocales } from "../src/places-catalog";
 import { routeFetch, testInternals } from "../src/index";
 
@@ -24,6 +25,18 @@ const mockWeatherEnv = {
 
 async function jsonBody(response: Response): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
+}
+
+class MemoryCache {
+  private readonly records = new Map<string, Response>();
+
+  async match(request: Request): Promise<Response | undefined> {
+    return this.records.get(request.url)?.clone();
+  }
+
+  async put(request: Request, response: Response): Promise<void> {
+    this.records.set(request.url, response.clone());
+  }
 }
 
 describe("common api worker contract", () => {
@@ -198,6 +211,23 @@ describe("common api worker contract", () => {
     expect(body).not.toHaveProperty("amount");
     expect(body.privacy).toContain("Transaction amounts stay on device");
     expect(response.headers.get("cache-control")).toBe("public, max-age=86400");
+    expect(response.headers.get("x-common-api-cache")).toBe("bypass");
+  });
+
+  it("caches exchange rate quotes behind a normalized cache key", async () => {
+    const cache = new MemoryCache();
+    const request = new Request("https://example.test/v1/exchange-rates/rate?quote=CNY&base=USD&date=2026-07-01");
+
+    const first = await exchangeRateEndpoint(request, env, { cache });
+    const second = await exchangeRateEndpoint(request, env, { cache });
+    const cacheKey = testInternals.exchangeRateTestInternals.exchangeRateCacheKey(env, "USD", "CNY", "2026-07-01");
+
+    expect(first.status).toBe(200);
+    expect(first.headers?.["x-common-api-cache"]).toBe("miss");
+    expect(second.status).toBe(200);
+    expect(second.headers?.["x-common-api-cache"]).toBe("hit");
+    expect(second.body).toEqual(first.body);
+    expect(cacheKey.url).toBe("https://darkrio-common-api.local/v1/exchange-rates/rate?provider=mock&base=USD&quote=CNY&date=2026-07-01");
   });
 
   it("handles same-currency exchange rates locally", async () => {

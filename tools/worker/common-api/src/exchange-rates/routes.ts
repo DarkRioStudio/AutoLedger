@@ -1,12 +1,29 @@
 import { currencyCodes } from "../currencies-catalog";
-import { ExchangeRateProviderError, fetchExchangeRateQuote } from "./providers";
+import { ExchangeRateProviderError, exchangeRateProviderCacheScope, fetchExchangeRateQuote } from "./providers";
 import type { ExchangeRateEndpointResult, ExchangeRateErrorBody, ExchangeRateSuccessBody } from "./types";
 
 const supportedCurrencyCodes = new Set(currencyCodes);
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const exchangeRatePrivacy = "Only base currency, quote currency, and optional rate date are sent. Transaction amounts stay on device.";
+const exchangeRateCacheHeader = "x-common-api-cache";
+const exchangeRateCacheOrigin = "https://darkrio-common-api.local";
+const exchangeRateCacheName = "darkrio-common-api-exchange-rates-v1";
 
-export async function exchangeRateEndpoint(request: Request, env: Env): Promise<ExchangeRateEndpointResult> {
+type ExchangeRateCacheStore = {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+};
+
+type ExchangeRateEndpointOptions = {
+  cache?: ExchangeRateCacheStore | null;
+  ctx?: Pick<ExecutionContext, "waitUntil">;
+};
+
+export async function exchangeRateEndpoint(
+  request: Request,
+  env: Env,
+  options: ExchangeRateEndpointOptions = {}
+): Promise<ExchangeRateEndpointResult> {
   const url = new URL(request.url);
   const baseResult = normalizeCurrencyParam(url.searchParams.get("base"), "base");
   const quoteResult = normalizeCurrencyParam(url.searchParams.get("quote"), "quote");
@@ -36,8 +53,49 @@ export async function exchangeRateEndpoint(request: Request, env: Env): Promise<
   }
 
   try {
+    const cache = options.cache === undefined ? await defaultExchangeRateCache() : options.cache;
+    const cacheKey = exchangeRateCacheKey(env, baseCurrencyCode, quoteCurrencyCode, requestedDateResult.date);
+    if (cache) {
+      const cached = await readCachedQuote(cache, cacheKey, requestedDateResult.date);
+      if (cached) {
+        return {
+          ...cached,
+          headers: {
+            ...(cached.headers ?? {}),
+            [exchangeRateCacheHeader]: "hit"
+          }
+        };
+      }
+    }
+
     const quote = await fetchExchangeRateQuote(env, baseCurrencyCode, quoteCurrencyCode, requestedDateResult.date);
-    return successResult(quote, requestedDateResult.date);
+    const result = successResult(quote, requestedDateResult.date);
+    if (!cache) {
+      return {
+        ...result,
+        headers: {
+          ...(result.headers ?? {}),
+          [exchangeRateCacheHeader]: "bypass"
+        }
+      };
+    }
+
+    const cacheWrite = writeCachedQuote(cache, cacheKey, result).catch((caught: unknown) => {
+      console.warn("exchange-rate-cache-write-failed", caught);
+    });
+    if (options.ctx) {
+      options.ctx.waitUntil(cacheWrite);
+    } else {
+      await cacheWrite;
+    }
+
+    return {
+      ...result,
+      headers: {
+        ...(result.headers ?? {}),
+        [exchangeRateCacheHeader]: "miss"
+      }
+    };
   } catch (caught) {
     if (caught instanceof ExchangeRateProviderError) {
       return endpointError(caught.code, caught.message, caught.status);
@@ -74,6 +132,91 @@ function successResult(
       privacy: exchangeRatePrivacy
     }
   };
+}
+
+async function readCachedQuote(
+  cache: ExchangeRateCacheStore,
+  cacheKey: Request,
+  requestedDate: string | null
+): Promise<ExchangeRateEndpointResult | null> {
+  const response = await cache.match(cacheKey);
+  if (!response || !response.ok) {
+    return null;
+  }
+
+  const payload = await response.json();
+  if (!isExchangeRateSuccessBody(payload)) {
+    return null;
+  }
+
+  return {
+    status: 200,
+    cacheControl: cacheControlForRateDate(requestedDate),
+    body: payload
+  };
+}
+
+async function writeCachedQuote(
+  cache: ExchangeRateCacheStore,
+  cacheKey: Request,
+  result: ExchangeRateEndpointResult
+): Promise<void> {
+  if (!isExchangeRateSuccessBody(result.body)) {
+    return;
+  }
+
+  await cache.put(
+    cacheKey,
+    new Response(JSON.stringify(result.body), {
+      status: 200,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": result.cacheControl ?? "public, max-age=3600"
+      }
+    })
+  );
+}
+
+function exchangeRateCacheKey(
+  env: Env,
+  baseCurrencyCode: string,
+  quoteCurrencyCode: string,
+  requestedDate: string | null
+): Request {
+  const url = new URL("/v1/exchange-rates/rate", exchangeRateCacheOrigin);
+  url.searchParams.set("provider", exchangeRateProviderCacheScope(env));
+  url.searchParams.set("base", baseCurrencyCode);
+  url.searchParams.set("quote", quoteCurrencyCode);
+  url.searchParams.set("date", requestedDate ?? "latest");
+  return new Request(url.toString(), { method: "GET" });
+}
+
+async function defaultExchangeRateCache(): Promise<ExchangeRateCacheStore | null> {
+  if (!globalThis.caches) {
+    return null;
+  }
+  return globalThis.caches.open(exchangeRateCacheName);
+}
+
+function isExchangeRateSuccessBody(value: unknown): value is ExchangeRateSuccessBody {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const body = value as Partial<ExchangeRateSuccessBody>;
+  return body.schemaVersion === 1 &&
+    typeof body.provider === "string" &&
+    typeof body.source === "string" &&
+    (typeof body.requestedDate === "string" || body.requestedDate === null) &&
+    typeof body.date === "string" &&
+    typeof body.baseCurrencyCode === "string" &&
+    typeof body.quoteCurrencyCode === "string" &&
+    typeof body.rate === "number" &&
+    Number.isFinite(body.rate) &&
+    body.rate > 0 &&
+    typeof body.inverseRate === "number" &&
+    Number.isFinite(body.inverseRate) &&
+    typeof body.fetchedAt === "string" &&
+    typeof body.privacy === "string";
 }
 
 function normalizeCurrencyParam(rawCode: string | null, name: "base" | "quote"): { code: string; error?: never } | { code?: never; error: ExchangeRateEndpointResult } {
@@ -155,5 +298,7 @@ function errorBody(code: string, message: string): ExchangeRateErrorBody {
 export const exchangeRateTestInternals = {
   normalizeCurrencyParam,
   normalizeRateDate,
-  cacheControlForRateDate
+  cacheControlForRateDate,
+  exchangeRateCacheKey,
+  isExchangeRateSuccessBody
 };

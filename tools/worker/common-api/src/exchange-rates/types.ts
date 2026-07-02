@@ -34,4 +34,5 @@ export type ExchangeRateEndpointResult = {
   status: number;
   body: ExchangeRateSuccessBody | ExchangeRateErrorBody;
   cacheControl?: string;
+  headers?: Record<string, string>;
 };

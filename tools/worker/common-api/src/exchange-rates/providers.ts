@@ -47,6 +47,14 @@ export async function fetchExchangeRateQuote(
   }
 }
 
+export function exchangeRateProviderCacheScope(env: Env): string {
+  const provider = normalizeProvider(env.EXCHANGE_RATE_PROVIDER);
+  if (provider !== "frankfurter") {
+    return provider;
+  }
+  return `${provider}:${normalizeFrankfurterBaseURL(env.EXCHANGE_RATE_BASE_URL)}`;
+}
+
 function normalizeProvider(rawProvider: string | undefined): ConfiguredExchangeRateProviderName {
   const provider = rawProvider?.trim().toLowerCase();
   if (provider === "disabled" || provider === "mock" || provider === "frankfurter") {

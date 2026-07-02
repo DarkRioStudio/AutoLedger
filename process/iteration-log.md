@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-362 OCR 导入确认页）
+更新日期：2026-07-02（ITER-363 Common API 汇率缓存）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-363 Common API 汇率缓存
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / Exchange Rates
+- 类型：能力增强 / 基础设施 / 回归
+- 目标：为 `common-api` 汇率端点和 App 端汇率客户端补基础缓存，降低重复请求 Frankfurter 的频率，并让网络失败时可以用最近成功的同币种 / 同日期汇率兜底；手动汇率输入继续暂缓。
+- 改动范围：更新 `tools/worker/common-api/src/exchange-rates/` provider / route / type、`src/index.ts`、Worker 合同测试、`CommonAPIExchangeRateService.swift`、`tools/worker/common-api/README.md`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮不新增手动汇率输入 UI，不修改交易 schema、SQLite / CloudKit schema、StoreKit、ASC、截图 / App Preview、WeatherKit secrets、Cloudflare D1 / R2、服务端鉴权、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：Worker 汇率端点会按 provider scope、base、quote 和 date 生成标准化 cache key，优先读取 Cloudflare Cache API；命中返回 `x-common-api-cache: hit`，未命中请求 provider 后用 `ctx.waitUntil` 写入缓存并返回 `miss`，本地测试或无 Cache API 时返回 `bypass`。App 端 `CommonAPIExchangeRateService` 在请求前读取 Application Support `CommonAPI/ExchangeRates` 下的 JSON 缓存，今天汇率缓存 1 小时，历史日期缓存 30 天；网络 / HTTP / 解码失败时，如果同 key 缓存存在，即使已过期也会作为兜底返回。
+- 未完成内容：没有展示“使用缓存汇率”的用户可见标签；没有本地缓存清理 UI、手动汇率覆盖、provider 多源 fallback、历史交易批量重算或服务端持久缓存。
+- 测试情况：执行 `npm run check`，结果 PASS，包含 `wrangler types`、`tsc --noEmit` 和 19 个 Vitest 合同测试，新增汇率缓存 miss / hit 断言；执行 `swiftc -parse AutoLedger/AutoLedger/Domain/Services/CommonAPIExchangeRateService.swift`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；执行 `bash scripts/run_golden_regression.sh`，38 个 case PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS。Golden 仍保留既有 `AppFormatters` `nonisolated(unsafe)` warning，本轮未处理。
+- 风险与注意事项：缓存只保存公共汇率字段：源币种、目标币种、请求日期、实际汇率日期、rate、provider、获取时间和过期时间；不保存消费金额、商户、酒店名、OCR 原文、邮箱内容、PDF 或账本数据。过期缓存只在网络失败时使用，正常路径仍优先请求 fresh 数据。
+- 回滚方式：回退 Worker 汇率缓存 helper、`x-common-api-cache` header、App 本地缓存读写、Worker 测试和文档；已写入 App Application Support 的缓存文件可安全保留或删除，不影响账本数据。
+- 结论：本轮完成，`common-api` 汇率端点和 App 端汇率客户端已有基础缓存和网络失败兜底，手动汇率输入继续留到后续 GOAL。
+- 下一步建议：后续再做手动汇率输入 / 覆盖入口，并评估设置页 Debug 信息展示最近汇率缓存状态。
 
 ### ITER-362 OCR 导入确认页
 - 日期：2026-07-02

@@ -44,12 +44,12 @@ const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    return routeFetch(request, env);
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    return routeFetch(request, env, ctx);
   }
 } satisfies ExportedHandler<Env>;
 
-export async function routeFetch(request: Request, env: Env): Promise<Response> {
+export async function routeFetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
 
   if (request.method === "OPTIONS") {
@@ -94,8 +94,8 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/exchange-rates/rate") {
-    const result = await exchangeRateEndpoint(request, env);
-    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
+    const result = await exchangeRateEndpoint(request, env, { ctx });
+    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store", result.headers));
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/weather/current") {
@@ -337,13 +337,14 @@ function error(code: string, message: string): APIError {
   return { error: { code, message } };
 }
 
-function json(body: unknown, status = 200, cacheControl = "no-store"): Response {
+function json(body: unknown, status = 200, cacheControl = "no-store", extraHeaders: Record<string, string> = {}): Response {
   return withCommonHeaders(
     new Response(JSON.stringify(body), {
       status,
       headers: {
         "content-type": jsonContentType,
-        "cache-control": cacheControl
+        "cache-control": cacheControl,
+        ...extraHeaders
       }
     })
   );
