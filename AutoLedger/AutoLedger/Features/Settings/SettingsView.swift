@@ -46,6 +46,16 @@ struct SettingsView: View {
                             )
                         }
                         .buttonStyle(.plain)
+
+                        NavigationLink(value: SettingsNavigationTarget.language) {
+                            settingsRow(
+                                icon: "globe",
+                                iconColor: Color(red: 0.20, green: 0.51, blue: 0.70),
+                                title: "settings.language.title",
+                                subtitle: "settings.language.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     settingsSection(title: "settings.section.ledger_sync") {
@@ -275,6 +285,8 @@ struct SettingsView: View {
                 switch target {
                 case .appearance:
                     AppearanceSettingsView()
+                case .language:
+                    LanguageSettingsView()
                 case .ledgerProfiles:
                     LedgerProfileManagementView()
                         .environmentObject(store)

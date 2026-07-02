@@ -17,6 +17,7 @@ struct AutoLedgerApp: App {
     @AppStorage(AppThemeCustomTheme.surfaceHexKey) private var customThemeSurfaceHex = AppThemeCustomTheme.defaultSurfaceHex
     @AppStorage(AppThemeCustomTheme.accentHexKey) private var customThemeAccentHex = AppThemeCustomTheme.defaultAccentHex
     @AppStorage(AppThemeCustomTheme.secondaryHexKey) private var customThemeSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
+    @AppStorage(AppLanguagePreference.userDefaultsKey) private var languagePreferenceRawValue = AppLanguagePreference.system.rawValue
 
     init() {
         // 注册默认设置
@@ -27,7 +28,8 @@ struct AutoLedgerApp: App {
             AppColorSchemePreference.userDefaultsKey: AppColorSchemePreference.system.rawValue,
             AppThemeCustomTheme.surfaceHexKey: AppThemeCustomTheme.defaultSurfaceHex,
             AppThemeCustomTheme.accentHexKey: AppThemeCustomTheme.defaultAccentHex,
-            AppThemeCustomTheme.secondaryHexKey: AppThemeCustomTheme.defaultSecondaryHex
+            AppThemeCustomTheme.secondaryHexKey: AppThemeCustomTheme.defaultSecondaryHex,
+            AppLanguagePreference.userDefaultsKey: AppLanguagePreference.system.rawValue
         ])
         ScreenshotModeConfig.installRuntimeOverrides()
 
@@ -56,6 +58,10 @@ struct AutoLedgerApp: App {
                     AutoLedgerRootView()
                 }
             }
+            .environment(
+                \.locale,
+                (AppLanguagePreference(rawValue: languagePreferenceRawValue) ?? .system).locale
+            )
             .preferredColorScheme(
                 (AppColorSchemePreference(rawValue: colorSchemePreferenceRawValue) ?? .system).colorScheme
             )
@@ -64,6 +70,7 @@ struct AutoLedgerApp: App {
             .autoLedgerMotion(AppMotion.theme, value: customThemeSurfaceHex)
             .autoLedgerMotion(AppMotion.theme, value: customThemeAccentHex)
             .autoLedgerMotion(AppMotion.theme, value: customThemeSecondaryHex)
+            .autoLedgerMotion(AppMotion.theme, value: languagePreferenceRawValue)
         }
         #if targetEnvironment(macCatalyst)
         .commands {

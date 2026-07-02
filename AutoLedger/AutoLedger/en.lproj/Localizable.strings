@@ -762,6 +762,8 @@
 "settings.external_assist.subtitle" = "Optional redacted cloud help for difficult merchant recognition";
 "settings.appearance.title" = "Appearance & Theme";
 "settings.appearance.subtitle" = "Choose from multiple app styles and switch to the look you like anytime";
+"settings.language.title" = "Language";
+"settings.language.subtitle" = "Follow the system by default, or choose an app language manually";
 "settings.analysis.title" = "Spending Analysis";
 "settings.analysis.subtitle" = "Adjust the monthly abnormal spending detection threshold";
 "settings.data_management.title" = "Data Management";
@@ -824,6 +826,14 @@
 "appearance.preview.month" = "Month";
 "appearance.preview.queue" = "Queue";
 "appearance.footer" = "Themes only change the local interface style. Ledger data, recognition, and sync remain unchanged.";
+"language.title" = "Language";
+"language.body" = "Choose the interface language for AutoLedger. System uses the device language setting.";
+"language.option.system" = "System";
+"language.option.zh_hans" = "简体中文";
+"language.option.zh_hant" = "繁體中文";
+"language.option.english" = "English";
+"language.option.japanese" = "日本語";
+"language.footer" = "This only changes the local app interface. Ledger data, recognition, and sync remain unchanged.";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro only unlocks time-saving automation: email folio scanning, a dedicated folio inbox, batch candidates, and advanced dedupe. Everyday bookkeeping, manual import, and history stay accessible.";

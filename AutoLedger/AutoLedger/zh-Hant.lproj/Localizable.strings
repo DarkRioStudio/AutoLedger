@@ -765,6 +765,8 @@
 "settings.external_assist.subtitle" = "可選開啟脫敏雲端輔助，改善疑難商戶識別";
 "settings.appearance.title" = "外觀與主題";
 "settings.appearance.subtitle" = "多套 App 視覺風格，隨時切換你喜歡的樣式";
+"settings.language.title" = "語言";
+"settings.language.subtitle" = "預設跟隨系統，也可以手動指定 App 介面語言";
 "settings.analysis.title" = "消費分析";
 "settings.analysis.subtitle" = "調整月報異常消費偵測門檻";
 "settings.data_management.title" = "資料管理";
@@ -827,6 +829,14 @@
 "appearance.preview.month" = "本月支出";
 "appearance.preview.queue" = "待確認";
 "appearance.footer" = "主題只影響本機介面觀感，不會改變帳本資料、識別結果或同步內容。";
+"language.title" = "語言";
+"language.body" = "選擇 AutoLedger 的介面語言。選擇「跟隨系統」時，會使用裝置的語言設定。";
+"language.option.system" = "跟隨系統";
+"language.option.zh_hans" = "简体中文";
+"language.option.zh_hant" = "繁體中文";
+"language.option.english" = "English";
+"language.option.japanese" = "日本語";
+"language.footer" = "語言設定只影響本機 App 介面，不會改變帳本資料、識別結果或同步內容。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro 只解鎖節省時間的自動化：郵件水單掃描、專屬水單收件箱、批次候選和進階去重。日常記帳、手動匯入和歷史資料不會被鎖住。";

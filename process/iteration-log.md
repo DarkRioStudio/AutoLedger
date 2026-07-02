@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复）
+更新日期：2026-07-02（ITER-346 App 语言 override 设置）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-346 App 语言 override 设置
+- 日期：2026-07-02
+- 所属版本：v1.6.4
+- 所属阶段：Settings Polish / Localization
+- 类型：能力增强 / UI
+- 目标：在 App 设置中新增语言 override，默认跟随系统，允许用户手动切换 App 界面语言。
+- 改动范围：新增 `AppLanguagePreference`、`LanguageSettingsView`，更新 `AutoLedgerApp` 顶层 locale 注入、`SettingsView` 设置入口、`SettingsNavigationTarget`、`ScreenshotModeConfig`、四语 `Localizable.strings`、CHANGELOG 和本日志。
+- 未改动范围：本轮未修改账本数据模型、识别逻辑、同步逻辑、StoreKit 商品、Pro entitlement、Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：设置页外观分组新增“语言”入口；语言页提供跟随系统、简体中文、繁体中文、English、日本語五个选项；根 App 读取 `appLanguagePreference` 并通过 SwiftUI `locale` environment 注入，使主要 `Text` 本地化文案随设置实时切换；截图模式启动时把语言偏好重置为 system，避免商店截图导出被本机手动 override 污染。
+- 未完成内容：代码中仍有少量 `String(localized:)` 动态拼接文本，这些文本第一版不保证全部实时跟随 override；后续如需 100% 覆盖，可逐步迁到统一 localizer 或显式 locale API。韩语选项未加入，因为主 App 当前尚无 `ko.lproj`。
+- 测试情况：执行四语 `plutil -lint` 通过；执行 `python3 scripts/check_localization_coverage.py`、`python3 scripts/check_accessibility_smoke.py`、`python3 scripts/check_adaptive_layout_rules.py` 通过；执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=macOS,variant=Mac Catalyst' build` 通过。构建仍保留既有 Swift 6 / MediaPipe deprecation warning，本轮未新增处理。
+- 风险与注意事项：语言 override 只影响本机 App 界面，不改变系统 sheet、App Store 订阅弹窗、账本数据、识别结果或同步内容。若用户选择 system，仍跟随设备语言和商店截图管线传入的系统语言。
+- 回滚方式：回退本轮新增 / 修改的 Swift、本地化和文档文件即可；如果已有用户写入 `appLanguagePreference`，回滚后该 UserDefaults key 会被忽略，不影响数据。
+- 结论：本轮完成并通过本地验证；按用户要求不 push。
+- 下一步建议：验证通过后先保留本地改动，待用户确认与其他调整一起提交 / 推送。
 
 ### ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复
 - 日期：2026-07-02

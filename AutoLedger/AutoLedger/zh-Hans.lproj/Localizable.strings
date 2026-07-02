@@ -762,6 +762,8 @@
 "settings.external_assist.subtitle" = "可选开启脱敏云端辅助，改善疑难商户识别";
 "settings.appearance.title" = "外观与主题";
 "settings.appearance.subtitle" = "多套App视觉风格，随时切换你喜欢的样式";
+"settings.language.title" = "语言";
+"settings.language.subtitle" = "默认跟随系统，也可以手动指定 App 界面语言";
 "settings.analysis.title" = "消费分析";
 "settings.analysis.subtitle" = "调整月报异常消费检测阈值";
 "settings.data_management.title" = "数据管理";
@@ -824,6 +826,14 @@
 "appearance.preview.month" = "本月支出";
 "appearance.preview.queue" = "待确认";
 "appearance.footer" = "主题只影响本机界面观感，不会改变账本数据、识别结果或同步内容。";
+"language.title" = "语言";
+"language.body" = "选择 AutoLedger 的界面语言。选择“跟随系统”时，会使用设备的语言设置。";
+"language.option.system" = "跟随系统";
+"language.option.zh_hans" = "简体中文";
+"language.option.zh_hant" = "繁體中文";
+"language.option.english" = "English";
+"language.option.japanese" = "日本語";
+"language.footer" = "语言设置只影响本机 App 界面，不会改变账本数据、识别结果或同步内容。";
 
 "pro.title" = "AutoLedger Pro";
 "pro.description" = "Pro 只解锁省时间的自动化：邮箱水单扫描、专属水单收件箱、批量候选和高级去重。日常记账、手动导入和历史数据不会被锁住。";

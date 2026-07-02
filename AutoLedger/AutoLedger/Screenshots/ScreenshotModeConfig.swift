@@ -72,6 +72,11 @@ enum ScreenshotModeConfig {
                 forKey: AppColorSchemePreference.userDefaultsKey
             )
         }
+
+        UserDefaults.standard.set(
+            AppLanguagePreference.system.rawValue,
+            forKey: AppLanguagePreference.userDefaultsKey
+        )
     }
 
     private static var themePreset: AppThemePreset? {
