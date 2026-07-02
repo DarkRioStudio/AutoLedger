@@ -7,6 +7,8 @@
 - `GET /v1/locations/catalog`
 - `GET /v1/locations/countries?locale=zh-Hans`
 - `GET /v1/locations/cities?country=JP&locale=zh-Hans`
+- `GET /v1/currencies/catalog`
+- `GET /v1/currencies?locale=zh-Hans`
 - `GET /v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/weather/forecast?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/exchange-rates/rate` returns a structured `501` planned response.
@@ -21,6 +23,8 @@ The places catalog is intentionally curated, not exhaustive. It covers common co
 - `ko`
 
 The Worker does not receive receipts, folio PDFs, hotel names, merchant names, transaction amounts, inbox content, or user ledger data. Weather endpoints receive coordinates, locale, and timezone only.
+
+The currency catalog is also curated for app UI and conversion preparation. It publishes supported currency codes, symbols, localized names, and minor-unit digits so client apps can keep manual currency pickers and future exchange-rate flows aligned.
 
 ## Local Commands
 

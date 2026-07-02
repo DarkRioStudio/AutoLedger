@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-354 酒店地点目录复用与 Common API catalog 修正）
+更新日期：2026-07-02（ITER-355 Common API 货币目录与 App 币种目录复用）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-355 Common API 货币目录与 App 币种目录复用
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / Multi-ledger Currency
+- 类型：能力增强 / 基础设施 / 重构
+- 目标：在 `common-api` 中补齐货币目录合同，并把 App 多账本默认币种下拉从页面私有数组抽成共享目录，为后续汇率换算和多币种入账做准备。
+- 改动范围：新增 `tools/worker/common-api/src/currencies-catalog.ts`；更新 `tools/worker/common-api/src/index.ts`、Worker 合同测试和 README；新增 `AutoLedger/AutoLedger/Shared/Constants/LedgerCurrencyCatalog.swift`；更新 `LedgerProfileManagementView`、`versions/v1.7.0-plan.md`、CHANGELOG 和本日志。
+- 未改动范围：本轮未实现真实汇率 provider、汇率缓存、App 端 manifest 下载、远程货币目录缓存替换、交易原始币种 / 汇率 schema、账单确认页换算 UI、酒店天气、StoreKit、ASC、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：Worker 新增 `/v1/currencies/catalog` 和 `/v1/currencies`，返回 20 个常用旅行 / 酒店币种的代码、符号、`zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` 五语名称和小数位；manifest 新增 `currencyCatalog` 能力位，并在 `exchangeRates` planned 能力中声明第一批支持币种。App 侧新增共享 `LedgerCurrencyOption`，多账本新增 / 编辑 sheet 继续使用同样的固定币种下拉，但不再把选项定义在页面内部。
+- 未完成内容：线上汇率端点仍按计划返回 `501 exchange_rates_not_implemented`；App 端还未在启动时读取 manifest，也不会自动替换内置货币目录；当前货币名称仍需后续抽样审校。
+- 测试情况：执行 `npm run check`，结果 PASS（`wrangler types`、`tsc --noEmit`、14 个 Vitest 用例）；执行 `swiftc -parse AutoLedger/AutoLedger/Shared/Constants/LedgerCurrencyCatalog.swift`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS，只有既有 Logger / LiteRT / actor isolation warning。已部署 `darkrio-common-api-staging` version `34ca4d26-3710-4b07-bfb7-45804f4d603a` 与 production version `6406d5be-db75-47c6-8691-9d63ca55995e`；线上验证 `/v1/manifest` 返回 `resourceVersion = 2026.07.02.3`、`currencyCatalog.currencyCount = 20`、`exchangeRates.supportedCurrencyCodes.length = 20`，`/v1/currencies/catalog` 返回 `CNY.names.ko = 중국 위안`、`JPY.decimalDigits = 0`。
+- 风险与注意事项：本轮只冻结公共目录和 UI 下拉数据，不做金额换算，因此不会改变现有账本金额口径；后续接汇率前需要明确原始金额 / 目标金额 / 汇率日期 / provider 的本地保存位置，避免只覆盖最终金额。
+- 回滚方式：回退 `currencies-catalog.ts`、`index.ts`、Worker 测试、`LedgerCurrencyCatalog.swift` 和 `LedgerProfileManagementView.swift`；如线上 Worker 需要回退，可用 Wrangler 回滚 staging / production 到上一 version。
+- 结论：本轮完成，`common-api` 已具备货币目录能力，App 多账本币种下拉也已改为共享内置 fallback。
+- 下一步建议：实现 App 启动后台读取 `common-api` manifest、sha256 校验和地点 / 货币目录缓存替换；随后接入 Frankfurter 或等价 provider 的只取 rate 合同。
 
 ### ITER-354 酒店地点目录复用与 Common API catalog 修正
 - 日期：2026-07-02

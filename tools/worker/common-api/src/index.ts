@@ -9,6 +9,13 @@ import {
   type LocalizedText,
   type SupportedLocale
 } from "./places-catalog";
+import {
+  currencies,
+  currenciesCatalog,
+  currencyCodes,
+  defaultCurrencyCode,
+  type CurrencyRecord
+} from "./currencies-catalog";
 import { currentWeatherEndpoint, forecastWeatherEndpoint } from "./weather/routes";
 
 type APIError = {
@@ -26,6 +33,11 @@ type LocalizedCity = CityRecord & {
   displayName: string;
 };
 
+type LocalizedCurrency = CurrencyRecord & {
+  displayName: string;
+};
+
+const serviceResourceVersion = "2026.07.02.3";
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);
@@ -47,7 +59,7 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
     return responseForMethod(request, json({
       ok: true,
       service: "darkrio-common-api",
-      version: placeCatalogResourceVersion,
+      version: serviceResourceVersion,
       checkedAt: new Date().toISOString()
     }));
   }
@@ -69,6 +81,15 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
     const locale = normalizeLocale(url.searchParams.get("locale"));
     const countryCode = normalizeCountryCode(url.searchParams.get("country"));
     return responseForMethod(request, json({ cities: localizedCities(locale, countryCode), countryCode, locale }, 200, "public, max-age=300"));
+  }
+
+  if (isReadRequest(request) && url.pathname === "/v1/currencies/catalog") {
+    return currencyCatalogResponse(request);
+  }
+
+  if (isReadRequest(request) && url.pathname === "/v1/currencies") {
+    const locale = normalizeLocale(url.searchParams.get("locale"));
+    return responseForMethod(request, json({ currencies: localizedCurrencies(locale), defaultCurrencyCode, locale }, 200, "public, max-age=300"));
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/exchange-rates/rate") {
@@ -106,12 +127,15 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
   const catalogBody = JSON.stringify(placesCatalog);
   const sha256 = await sha256Hex(catalogBody);
   const etag = weakETag(sha256);
+  const currencyCatalogBody = JSON.stringify(currenciesCatalog);
+  const currencySha256 = await sha256Hex(currencyCatalogBody);
+  const currencyETag = weakETag(currencySha256);
   const baseURL = publicAPIOrigin(request, env);
 
   return json(
     {
       schemaVersion: 1,
-      resourceVersion: placeCatalogResourceVersion,
+      resourceVersion: serviceResourceVersion,
       generatedAt: placesCatalog.generatedAt,
       minSupportedAppVersion: "1.6.0",
       supportedLocales,
@@ -127,9 +151,21 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           cityCount: cities.length,
           fallback: "Use the bundled App catalog when manifest or catalog download fails."
         },
+        currencyCatalog: {
+          status: "available",
+          schemaVersion: currenciesCatalog.schemaVersion,
+          resourceVersion: currenciesCatalog.resourceVersion,
+          url: `${baseURL}/v1/currencies/catalog`,
+          sha256: currencySha256,
+          etag: currencyETag,
+          currencyCount: currencies.length,
+          defaultCurrencyCode,
+          fallback: "Use the bundled App currency catalog when manifest or catalog download fails."
+        },
         exchangeRates: {
           status: "planned",
           endpoint: `${baseURL}/v1/exchange-rates/rate`,
+          supportedCurrencyCodes: currencyCodes,
           privacy: "The App should send base currency, quote currency, and date only; transaction amounts stay on device."
         },
         hotelWeather: {
@@ -175,6 +211,30 @@ async function catalogResponse(request: Request): Promise<Response> {
   );
 }
 
+async function currencyCatalogResponse(request: Request): Promise<Response> {
+  const body = JSON.stringify(currenciesCatalog);
+  const sha256 = await sha256Hex(body);
+  const etag = weakETag(sha256);
+  if (request.headers.get("if-none-match") === etag) {
+    return responseForMethod(request, withCommonHeaders(new Response(null, { status: 304, headers: { etag } })));
+  }
+
+  return responseForMethod(
+    request,
+    withCommonHeaders(
+      new Response(body, {
+        status: 200,
+        headers: {
+          "content-type": jsonContentType,
+          "cache-control": "public, max-age=300",
+          etag,
+          "x-content-sha256": sha256
+        }
+      })
+    )
+  );
+}
+
 function localizedCountries(locale: SupportedLocale): LocalizedCountry[] {
   return countries.map((record) => ({
     ...record,
@@ -185,6 +245,13 @@ function localizedCountries(locale: SupportedLocale): LocalizedCountry[] {
 function localizedCities(locale: SupportedLocale, countryCode: string | null): LocalizedCity[] {
   const candidates = countryCode ? cities.filter((record) => record.countryCode === countryCode) : cities;
   return candidates.map((record) => ({
+    ...record,
+    displayName: displayName(record.names, locale)
+  }));
+}
+
+function localizedCurrencies(locale: SupportedLocale): LocalizedCurrency[] {
+  return currencies.map((record) => ({
     ...record,
     displayName: displayName(record.names, locale)
   }));
@@ -293,12 +360,13 @@ function withCommonHeaders(response: Response): Response {
 
 function validateCatalogLocales(): string[] {
   const failures: string[] = [];
-  const allRecords = [...countries, ...cities];
+  const allRecords = [...countries, ...cities, ...currencies];
   for (const record of allRecords) {
     for (const locale of supportedLocales) {
-      const value = record.names[locale]?.trim();
+      const value = (record.names as LocalizedText)[locale]?.trim();
       if (!value) {
-        failures.push(`${record.id}:${locale}`);
+        const recordID = "id" in record ? record.id : record.code;
+        failures.push(`${recordID}:${locale}`);
       }
     }
   }
@@ -310,6 +378,7 @@ export const testInternals = {
   normalizeCountryCode,
   localizedCountries,
   localizedCities,
+  localizedCurrencies,
   displayName,
   validateCatalogLocales,
   sha256Hex,

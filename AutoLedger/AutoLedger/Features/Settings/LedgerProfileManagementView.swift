@@ -354,50 +354,6 @@ private struct LedgerProfileEditorSheet: View {
     }
 }
 
-private struct LedgerCurrencyOption: Identifiable {
-    static let defaultCode = "CNY"
-
-    let code: String
-    let symbol: String
-
-    var id: String { code }
-
-    var localizedTitle: String {
-        let name = Locale.current.localizedString(forCurrencyCode: code) ?? code
-        return "\(code) · \(symbol) · \(name)"
-    }
-
-    static let common: [LedgerCurrencyOption] = [
-        .init(code: "CNY", symbol: "¥"),
-        .init(code: "USD", symbol: "$"),
-        .init(code: "EUR", symbol: "€"),
-        .init(code: "JPY", symbol: "¥"),
-        .init(code: "GBP", symbol: "£"),
-        .init(code: "HKD", symbol: "HK$"),
-        .init(code: "MOP", symbol: "MOP$"),
-        .init(code: "TWD", symbol: "NT$"),
-        .init(code: "SGD", symbol: "S$"),
-        .init(code: "KRW", symbol: "₩"),
-        .init(code: "THB", symbol: "฿"),
-        .init(code: "MYR", symbol: "RM"),
-        .init(code: "IDR", symbol: "Rp"),
-        .init(code: "PHP", symbol: "₱"),
-        .init(code: "VND", symbol: "₫"),
-        .init(code: "AUD", symbol: "A$"),
-        .init(code: "CAD", symbol: "C$"),
-        .init(code: "CHF", symbol: "CHF"),
-        .init(code: "NZD", symbol: "NZ$"),
-        .init(code: "AED", symbol: "د.إ")
-    ]
-
-    static func supportedCode(matching value: String?) -> String {
-        let normalized = value?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .uppercased() ?? ""
-        return common.contains { $0.code == normalized } ? normalized : defaultCode
-    }
-}
-
 #Preview {
     NavigationStack {
         LedgerProfileManagementView()

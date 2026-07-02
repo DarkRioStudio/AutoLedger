@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { currencies, currenciesCatalog, defaultCurrencyCode } from "../src/currencies-catalog";
 import { cities, countries, placesCatalog, supportedLocales } from "../src/places-catalog";
 import { routeFetch, testInternals } from "../src/index";
 
@@ -24,14 +25,19 @@ describe("common api worker contract", () => {
     const body = await jsonBody(response);
     const capabilities = body.capabilities as Record<string, Record<string, unknown>>;
     const placesCatalogCapability = capabilities.placesCatalog;
+    const currencyCatalogCapability = capabilities.currencyCatalog;
     const weatherForecastCapability = capabilities.weatherForecast;
 
     expect(response.status).toBe(200);
     expect(body.supportedLocales).toEqual(supportedLocales);
     expect(placesCatalogCapability).toBeDefined();
+    expect(currencyCatalogCapability).toBeDefined();
     expect(weatherForecastCapability).toBeDefined();
     if (!placesCatalogCapability) {
       throw new Error("placesCatalog capability is missing");
+    }
+    if (!currencyCatalogCapability) {
+      throw new Error("currencyCatalog capability is missing");
     }
     if (!weatherForecastCapability) {
       throw new Error("weatherForecast capability is missing");
@@ -41,6 +47,11 @@ describe("common api worker contract", () => {
     expect(placesCatalogCapability.sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(placesCatalogCapability.countryCount).toBe(countries.length);
     expect(placesCatalogCapability.cityCount).toBe(cities.length);
+    expect(currencyCatalogCapability.status).toBe("available");
+    expect(currencyCatalogCapability.url).toBe("https://api.darkrio326.top/v1/currencies/catalog");
+    expect(currencyCatalogCapability.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(currencyCatalogCapability.currencyCount).toBe(currencies.length);
+    expect(currencyCatalogCapability.defaultCurrencyCode).toBe(defaultCurrencyCode);
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
   });
@@ -67,6 +78,29 @@ describe("common api worker contract", () => {
     expect(cached.status).toBe(304);
   });
 
+  it("serves the full currency catalog with an etag", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/currencies/catalog"), env);
+    const body = await response.json();
+    const etag = response.headers.get("etag");
+
+    expect(response.status).toBe(200);
+    expect(etag).toMatch(/^W\/"sha256-[a-f0-9]{64}"$/);
+    expect(body).toMatchObject({
+      schemaVersion: currenciesCatalog.schemaVersion,
+      resourceVersion: currenciesCatalog.resourceVersion,
+      defaultCurrencyCode,
+      supportedLocales
+    });
+
+    const cached = await routeFetch(
+      new Request("https://example.test/v1/currencies/catalog", {
+        headers: { "if-none-match": etag ?? "" }
+      }),
+      env
+    );
+    expect(cached.status).toBe(304);
+  });
+
   it("supports HEAD probes for cacheable read endpoints", async () => {
     const response = await routeFetch(new Request("https://example.test/v1/locations/catalog", { method: "HEAD" }), env);
 
@@ -74,9 +108,15 @@ describe("common api worker contract", () => {
     expect(response.headers.get("etag")).toMatch(/^W\/"sha256-[a-f0-9]{64}"$/);
     expect(response.headers.get("access-control-allow-methods")).toContain("HEAD");
     expect(await response.text()).toBe("");
+
+    const currenciesResponse = await routeFetch(new Request("https://example.test/v1/currencies/catalog", { method: "HEAD" }), env);
+
+    expect(currenciesResponse.status).toBe(200);
+    expect(currenciesResponse.headers.get("etag")).toMatch(/^W\/"sha256-[a-f0-9]{64}"$/);
+    expect(await currenciesResponse.text()).toBe("");
   });
 
-  it("keeps every country and city name filled for all supported locales", () => {
+  it("keeps every country, city, and currency name filled for all supported locales", () => {
     expect(testInternals.validateCatalogLocales()).toEqual([]);
   });
 
@@ -103,6 +143,18 @@ describe("common api worker contract", () => {
 
     expect(localizedCities.map((record) => record.countryCode)).toEqual(localizedCities.map(() => "JP"));
     expect(localizedCities.find((record) => record.id === "city.jp.tokyo")?.displayName).toBe("东京");
+  });
+
+  it("localizes currencies and publishes default conversion targets", async () => {
+    const currencyResponse = await routeFetch(new Request("https://example.test/v1/currencies?locale=ko"), env);
+    const currencyBody = await jsonBody(currencyResponse);
+    const localizedCurrencies = currencyBody.currencies as Array<Record<string, unknown>>;
+    const cny = localizedCurrencies.find((record) => record.code === "CNY");
+    const jpy = localizedCurrencies.find((record) => record.code === "JPY");
+
+    expect(currencyBody.defaultCurrencyCode).toBe("CNY");
+    expect(cny?.displayName).toBe("중국 위안");
+    expect(jpy?.decimalDigits).toBe(0);
   });
 
   it("keeps planned exchange rate and weather endpoints explicit", async () => {
