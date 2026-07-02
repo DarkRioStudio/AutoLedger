@@ -13,6 +13,7 @@ struct StructuredLedgerJSONConfirmView: View {
     @State private var category: String
     @State private var occurredAt: Date
     @State private var note: String
+    @State private var conversionPreviewState: CurrencyConversionPreviewState = .idle
 
     init(handoff: StructuredLedgerJSONIntentHandoff) {
         self.handoff = handoff
@@ -38,6 +39,28 @@ struct StructuredLedgerJSONConfirmView: View {
 
     private var shouldShowCurrencyConversion: Bool {
         currencyCode != targetCurrencyCode
+    }
+
+    private var conversionPreviewTaskID: String {
+        [
+            currencyCode,
+            targetCurrencyCode,
+            String(format: "%.2f", parsedAmount),
+            String(Int(occurredAt.timeIntervalSince1970 / 60))
+        ]
+        .joined(separator: "|")
+    }
+
+    private var usableConversionQuote: CurrencyConversionPreviewQuote? {
+        guard shouldShowCurrencyConversion,
+              let quote = conversionPreviewState.quote,
+              quote.sourceCurrencyCode == currencyCode,
+              quote.targetCurrencyCode == targetCurrencyCode,
+              abs(quote.sourceAmount - parsedAmount) < 0.001
+        else {
+            return nil
+        }
+        return quote
     }
 
     var body: some View {
@@ -80,7 +103,9 @@ struct StructuredLedgerJSONConfirmView: View {
                         CurrencyConversionPreviewCard(
                             sourceAmount: parsedAmount,
                             sourceCurrencyCode: currencyCode,
-                            targetCurrencyCode: targetCurrencyCode
+                            targetCurrencyCode: targetCurrencyCode,
+                            state: conversionPreviewState,
+                            onRetry: retryConversionPreview
                         )
                     }
 
@@ -104,6 +129,9 @@ struct StructuredLedgerJSONConfirmView: View {
             }
             .navigationTitle(String(localized: "import_ledger_json.confirm.title"))
             .navigationBarTitleDisplayMode(.inline)
+            .task(id: conversionPreviewTaskID) {
+                await refreshConversionPreview()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") {
@@ -125,6 +153,8 @@ struct StructuredLedgerJSONConfirmView: View {
     }
 
     private func save() {
+        let conversionQuote = usableConversionQuote
+        let transactionAmount = conversionQuote?.convertedAmount ?? parsedAmount
         var noteParts: [String] = []
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedNote.isEmpty {
@@ -137,17 +167,67 @@ struct StructuredLedgerJSONConfirmView: View {
 
         let transaction = Transaction(
             merchant: merchant.trimmingCharacters(in: .whitespacesAndNewlines),
-            amount: parsedAmount,
+            amount: transactionAmount,
             occurredAt: occurredAt,
             categoryLabel: category,
             sourceLabel: ReceiptSource.manual.rawValue,
             note: noteParts.joined(separator: "\n"),
             ledgerID: store.targetLedgerIDForNewTransactions,
+            ledgerCurrencyCode: targetCurrencyCode,
             originalAmount: parsedAmount,
-            originalCurrencyCode: currencyCode
+            originalCurrencyCode: currencyCode,
+            exchangeRate: conversionQuote?.rate,
+            exchangeRateDate: conversionQuote?.rateDate,
+            exchangeRateProvider: conversionQuote?.provider
         )
         store.addTransaction(transaction)
         dismiss()
+    }
+
+    private func retryConversionPreview() {
+        Task {
+            await refreshConversionPreview()
+        }
+    }
+
+    private func refreshConversionPreview() async {
+        guard shouldShowCurrencyConversion, parsedAmount > 0 else {
+            conversionPreviewState = .idle
+            return
+        }
+
+        let sourceAmount = parsedAmount
+        let sourceCurrencyCode = currencyCode
+        let destinationCurrencyCode = targetCurrencyCode
+        let conversionDate = occurredAt
+        conversionPreviewState = .loading
+
+        do {
+            try await Task.sleep(nanoseconds: 250_000_000)
+            let quote = try await CommonAPIExchangeRateService.quote(
+                baseCurrencyCode: sourceCurrencyCode,
+                quoteCurrencyCode: destinationCurrencyCode,
+                date: conversionDate
+            )
+            guard !Task.isCancelled else { return }
+            let convertedAmount = (sourceAmount * quote.rate * 100).rounded() / 100
+            conversionPreviewState = .loaded(
+                CurrencyConversionPreviewQuote(
+                    sourceAmount: sourceAmount,
+                    sourceCurrencyCode: quote.baseCurrencyCode,
+                    targetCurrencyCode: quote.quoteCurrencyCode,
+                    convertedAmount: convertedAmount,
+                    rate: quote.rate,
+                    rateDate: quote.date,
+                    provider: quote.provider
+                )
+            )
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled else { return }
+            conversionPreviewState = .failed
+        }
     }
 }
 

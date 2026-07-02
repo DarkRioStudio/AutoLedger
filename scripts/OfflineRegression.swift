@@ -1100,7 +1100,13 @@ struct OfflineRegression {
             totalAmount: 50000,
             paymentMethod: "Amex",
             confidence: 0.91,
-            rawTextExcerpt: "Demo folio excerpt"
+            rawTextExcerpt: "Demo folio excerpt",
+            localizedData: HotelStayLocalizedData(
+                currency: "JPY",
+                exchangeRate: 0.049,
+                exchangeRateDate: "2026-06-22",
+                exchangeRateProvider: "common-api"
+            )
         )
         let sourcePDFData = Data("%PDF-1.7 posted hotel folio".utf8)
         let draft = HotelStayDraft(
@@ -1139,7 +1145,12 @@ struct OfflineRegression {
         reporter.check(result?.transaction.hotelStayRecordID == stayID, "Transaction links generated hotel stay record")
         reporter.check(result?.transaction.ledgerID == TodaySpendingSummary.defaultLedgerID, "Hotel transaction keeps target ledger id")
         reporter.check(result?.transaction.merchant == "Edited Demo Hotel", "Hotel transaction uses hotel name as merchant")
-        reporter.check(abs((result?.transaction.amount ?? 0) - 50000) < 0.001, "Hotel transaction uses folio total amount")
+        reporter.check(abs((result?.transaction.amount ?? 0) - 2450) < 0.001, "Hotel transaction applies confirmed exchange rate")
+        reporter.check(abs((result?.transaction.originalAmount ?? 0) - 50000) < 0.001, "Hotel transaction keeps folio total as original amount")
+        reporter.check(result?.transaction.originalCurrencyCode == "JPY", "Hotel transaction keeps folio currency as original currency")
+        reporter.check(abs((result?.transaction.exchangeRate ?? 0) - 0.049) < 0.000_001, "Hotel transaction keeps confirmed exchange rate")
+        reporter.check(result?.transaction.exchangeRateDate == "2026-06-22", "Hotel transaction keeps exchange-rate date")
+        reporter.check(result?.transaction.exchangeRateProvider == "common-api", "Hotel transaction keeps exchange-rate provider")
         reporter.check(result?.transaction.category == TransactionCategory.hotel.rawValue, "Hotel transaction uses built-in hotel category")
         reporter.check(result?.transaction.source == ReceiptSource.manual.rawValue, "Hotel transaction uses manual source")
         reporter.check(

@@ -1151,7 +1151,13 @@
 "currency_conversion.preview.title" = "통화 환산";
 "currency_conversion.preview.source_format" = "원래 금액: %@";
 "currency_conversion.preview.target_format" = "저장 후 %@ 원장에 기록";
-"currency_conversion.preview.footer" = "원래 통화와 원장 통화가 다르면 저장 후 결제일 환율로 환산하고 원래 금액도 보관합니다.";
+"currency_conversion.preview.loading" = "결제일 환율을 확인하는 중";
+"currency_conversion.preview.converted_format" = "예상 기록 금액: %@";
+"currency_conversion.preview.rate_format" = "%@ → %@: %@";
+"currency_conversion.preview.metadata_format" = "환율일: %@ · 출처: %@";
+"currency_conversion.preview.failed" = "현재 환율 미리보기를 가져올 수 없습니다.";
+"currency_conversion.preview.retry" = "다시 시도";
+"currency_conversion.preview.footer" = "원래 금액은 보관합니다. 환율을 가져올 수 없으면 먼저 저장하고 나중에 환산을 다시 시도합니다.";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "빠른 추가 열기";

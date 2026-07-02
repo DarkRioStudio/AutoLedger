@@ -1154,7 +1154,13 @@
 "currency_conversion.preview.title" = "金額換算";
 "currency_conversion.preview.source_format" = "原始金額：%@";
 "currency_conversion.preview.target_format" = "儲存後寫入 %@ 帳本";
-"currency_conversion.preview.footer" = "來源幣種和帳本幣種不同時，儲存後會按帳單日期匯率換算，並保留原始金額。";
+"currency_conversion.preview.loading" = "正在查詢帳單日期匯率";
+"currency_conversion.preview.converted_format" = "預計入帳金額：%@";
+"currency_conversion.preview.rate_format" = "%@ → %@：%@";
+"currency_conversion.preview.metadata_format" = "匯率日：%@ · 來源：%@";
+"currency_conversion.preview.failed" = "暫時無法取得匯率預估。";
+"currency_conversion.preview.retry" = "重試";
+"currency_conversion.preview.footer" = "儲存會保留原始金額；如果匯率暫不可用，會先入帳並稍後重試換算。";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "開啟快速記帳";

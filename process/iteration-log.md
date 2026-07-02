@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-359 OCR 币种识别与区域语言设置）
+更新日期：2026-07-02（ITER-360 确认页汇率预估与失败处理）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-360 确认页汇率预估与失败处理
+- 日期：2026-07-02
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Multi-currency Ledger / Confirmation UX
+- 类型：能力增强 / UI / 回归
+- 目标：在结构化账单确认和酒店消费确认中，保存前展示跨币种换算后的目标账本金额、汇率日期和 provider；汇率查询失败时提供用户可见重试，并保证不阻断保存。
+- 改动范围：更新 `CurrencyConversionPreviewCard`、`StructuredLedgerJSONConfirmView`、`HotelStayReviewView`、`HotelStayLedgerPostingService`、五语主 App 本地化、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：本轮未实现手动输入汇率、汇率本地缓存、历史交易批量重算、Common API provider 多源 fallback、实时 OCR 取景框、StoreKit、ASC、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：跨币种确认页会在金额有效时按当前源币种、目标账本币种和账单日期调用 `CommonAPIExchangeRateService`，显示 loading、预计入账金额、`source -> target` 汇率、汇率日期、provider 和失败重试状态。用户修改金额、币种或日期后会自动刷新预估；失败时可以重试，也可以继续保存，保存链路仍会保留原始金额并在后续后台换算。结构化 JSON 确认页在预估成功时直接保存换算后的目标账本金额和汇率 metadata；酒店确认页会把预估汇率写回 `HotelStayLocalizedData`，入账服务在已有汇率时直接生成换算后交易金额，同时保留原始水单金额、原始币种、汇率日期和 provider。
+- 未完成内容：仍没有手动汇率输入 / 覆盖入口，也没有本地汇率缓存命中展示或历史失败记录重试队列 UI；provider 不可用时只给出预估失败提示，保存后的后台重试仍沿用既有日志路径。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行五语 `plutil -lint`，结果 PASS；执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增酒店汇率入账断言；执行 `bash scripts/run_golden_regression.sh`，38 个 case PASS；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build`，结果 PASS。构建仍保留既有 `AppFormatters` / App Intents `nonisolated(unsafe)` warning、`ProEntitlementManager` actor isolation warning 和 Watch deprecation warning。
+- 风险与注意事项：确认页会在用户编辑金额时触发 250ms 去抖后的汇率请求；如果 provider 慢或不可用，UI 会显示失败但不会阻断保存。酒店服务端已有 `localizedData.exchangeRate` 时会直接换算金额，因此后续如果模型或外部来源写入了错误汇率，也会被作为已确认汇率使用；真实样本回归需要继续关注汇率来源可信度。
+- 回滚方式：回退 `CurrencyConversionPreviewCard` 的状态化 UI、两张确认页的 `.task(id:)` 汇率请求、酒店确认回填汇率、`HotelStayLedgerPostingService` 使用 exchangeRate 换算金额的逻辑，以及新增本地化和离线回归断言；上一轮 OCR 币种识别和交易币种 metadata 可独立保留。
+- 结论：本轮完成，账单 / 酒店确认页已经从“只提示会换算”推进到“保存前展示预计目标金额与汇率来源”，失败时也有可见重试和不阻断保存的兜底。
+- 下一步建议：补汇率本地缓存和手动汇率覆盖入口；把实时 OCR 主线接入同一 `ImportedReceipt.currencyCode` 输出；后续再评估 provider fallback 和历史交易批量重算。
 
 ### ITER-359 OCR 币种识别与区域语言设置
 - 日期：2026-07-02

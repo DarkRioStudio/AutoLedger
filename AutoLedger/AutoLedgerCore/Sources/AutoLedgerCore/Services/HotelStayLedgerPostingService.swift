@@ -65,11 +65,15 @@ public struct HotelStayLedgerPostingService: Sendable {
                 .joined(separator: " ")
         ) ?? "CNY"
         let occurredAt = transactionDate(from: payload) ?? postedAt
+        let exchangeRate = localizedData?.exchangeRate
+        let postedTransactionAmount = exchangeRate
+            .map { (transactionAmount * $0 * 100).rounded() / 100 }
+            ?? transactionAmount
 
         let transaction = Transaction(
             id: transactionID,
             merchant: transactionMerchant,
-            amount: transactionAmount,
+            amount: postedTransactionAmount,
             occurredAt: occurredAt,
             category: .hotel,
             source: .manual,
@@ -77,7 +81,10 @@ public struct HotelStayLedgerPostingService: Sendable {
             ledgerID: ledgerID,
             hotelStayRecordID: hotelStayID,
             originalAmount: transactionAmount,
-            originalCurrencyCode: currency
+            originalCurrencyCode: currency,
+            exchangeRate: exchangeRate,
+            exchangeRateDate: localizedData?.exchangeRateDate,
+            exchangeRateProvider: localizedData?.exchangeRateProvider
         )
 
         let record = HotelStayRecord(

@@ -1151,7 +1151,13 @@
 "currency_conversion.preview.title" = "Currency conversion";
 "currency_conversion.preview.source_format" = "Original amount: %@";
 "currency_conversion.preview.target_format" = "Will save to the %@ ledger";
-"currency_conversion.preview.footer" = "When source and ledger currencies differ, AutoLedger converts after saving by the bill date rate and keeps the original amount.";
+"currency_conversion.preview.loading" = "Checking the bill-date exchange rate";
+"currency_conversion.preview.converted_format" = "Estimated ledger amount: %@";
+"currency_conversion.preview.rate_format" = "%@ → %@: %@";
+"currency_conversion.preview.metadata_format" = "Rate date: %@ · Source: %@";
+"currency_conversion.preview.failed" = "Exchange-rate preview is unavailable right now.";
+"currency_conversion.preview.retry" = "Retry";
+"currency_conversion.preview.footer" = "AutoLedger keeps the original amount. If a rate is unavailable, it saves first and retries conversion later.";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "Open Quick Add";

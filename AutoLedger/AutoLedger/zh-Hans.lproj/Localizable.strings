@@ -1151,7 +1151,13 @@
 "currency_conversion.preview.title" = "金额换算";
 "currency_conversion.preview.source_format" = "原始金额：%@";
 "currency_conversion.preview.target_format" = "保存后写入 %@ 账本";
-"currency_conversion.preview.footer" = "源币种和账本币种不一致时，保存后会按账单日期汇率换算，并保留原始金额。";
+"currency_conversion.preview.loading" = "正在查询账单日期汇率";
+"currency_conversion.preview.converted_format" = "预计入账金额：%@";
+"currency_conversion.preview.rate_format" = "%@ → %@：%@";
+"currency_conversion.preview.metadata_format" = "汇率日：%@ · 来源：%@";
+"currency_conversion.preview.failed" = "暂时无法取得汇率预估。";
+"currency_conversion.preview.retry" = "重试";
+"currency_conversion.preview.footer" = "保存会保留原始金额；如果汇率暂不可用，会先入账并稍后重试换算。";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "打开快速记账";

@@ -1151,7 +1151,13 @@
 "currency_conversion.preview.title" = "通貨換算";
 "currency_conversion.preview.source_format" = "元の金額：%@";
 "currency_conversion.preview.target_format" = "保存後は %@ の台帳に記録";
-"currency_conversion.preview.footer" = "元通貨と台帳通貨が異なる場合、保存後に請求日のレートで換算し、元の金額も保持します。";
+"currency_conversion.preview.loading" = "請求日の為替レートを確認中";
+"currency_conversion.preview.converted_format" = "記録予定額：%@";
+"currency_conversion.preview.rate_format" = "%@ → %@：%@";
+"currency_conversion.preview.metadata_format" = "レート日：%@ · 提供元：%@";
+"currency_conversion.preview.failed" = "為替レートのプレビューを取得できません。";
+"currency_conversion.preview.retry" = "再試行";
+"currency_conversion.preview.footer" = "元の金額は保持します。レートを取得できない場合も先に保存し、後で換算を再試行します。";
 
 // MARK: - OpenQuickAddIntent
 "open_quick_add.intent.title" = "クイック追加を開く";

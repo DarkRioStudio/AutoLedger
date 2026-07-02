@@ -11,6 +11,7 @@ struct HotelStayReviewView: View {
 
     @State private var form: HotelStayReviewForm
     @State private var validationMessageKey: String?
+    @State private var conversionPreviewState: CurrencyConversionPreviewState = .idle
     private let rawTextLocalizer = HotelFolioRawTextLocalizer()
 
     private var targetCurrencyCode: String {
@@ -23,6 +24,43 @@ struct HotelStayReviewView: View {
 
     private var shouldShowCurrencyConversion: Bool {
         normalizedFormCurrencyCode != targetCurrencyCode
+    }
+
+    private var parsedTotalAmount: Double {
+        LedgerAmountInputParser.parse(form.totalAmountText) ?? 0
+    }
+
+    private var conversionPreviewDate: Date {
+        if let checkOutDate = AppFormatters.parseFlexibleDate(form.checkOutDate) {
+            return checkOutDate
+        }
+        if let checkInDate = AppFormatters.parseFlexibleDate(form.checkInDate) {
+            return checkInDate
+        }
+        return Date()
+    }
+
+    private var conversionPreviewTaskID: String {
+        [
+            normalizedFormCurrencyCode,
+            targetCurrencyCode,
+            String(format: "%.2f", parsedTotalAmount),
+            form.checkInDate,
+            form.checkOutDate
+        ]
+        .joined(separator: "|")
+    }
+
+    private var usableConversionQuote: CurrencyConversionPreviewQuote? {
+        guard shouldShowCurrencyConversion,
+              let quote = conversionPreviewState.quote,
+              quote.sourceCurrencyCode == normalizedFormCurrencyCode,
+              quote.targetCurrencyCode == targetCurrencyCode,
+              abs(quote.sourceAmount - parsedTotalAmount) < 0.001
+        else {
+            return nil
+        }
+        return quote
     }
 
     init(
@@ -49,6 +87,9 @@ struct HotelStayReviewView: View {
             }
             .navigationTitle(String(localized: "hotel_stay.review.title"))
             .navigationBarTitleDisplayMode(.inline)
+            .task(id: conversionPreviewTaskID) {
+                await refreshConversionPreview()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("hotel_stay.review.reject", role: .destructive) {
@@ -136,9 +177,11 @@ struct HotelStayReviewView: View {
 
             if shouldShowCurrencyConversion {
                 CurrencyConversionPreviewCard(
-                    sourceAmount: LedgerAmountInputParser.parse(form.totalAmountText),
+                    sourceAmount: parsedTotalAmount,
                     sourceCurrencyCode: normalizedFormCurrencyCode,
-                    targetCurrencyCode: targetCurrencyCode
+                    targetCurrencyCode: targetCurrencyCode,
+                    state: conversionPreviewState,
+                    onRetry: retryConversionPreview
                 )
             }
 
@@ -222,6 +265,7 @@ struct HotelStayReviewView: View {
 
     private func confirmDraft() {
         do {
+            applyConversionQuoteToForm()
             let confirmed = try form.confirmedDraft(from: draft)
             onConfirm(confirmed)
             dismiss()
@@ -237,6 +281,62 @@ struct HotelStayReviewView: View {
     private func rejectDraft() {
         onReject(form.rejectedDraft(from: draft))
         dismiss()
+    }
+
+    private func retryConversionPreview() {
+        Task {
+            await refreshConversionPreview()
+        }
+    }
+
+    private func refreshConversionPreview() async {
+        guard shouldShowCurrencyConversion, parsedTotalAmount > 0 else {
+            conversionPreviewState = .idle
+            return
+        }
+
+        let sourceAmount = parsedTotalAmount
+        let sourceCurrencyCode = normalizedFormCurrencyCode
+        let destinationCurrencyCode = targetCurrencyCode
+        let conversionDate = conversionPreviewDate
+        conversionPreviewState = .loading
+
+        do {
+            try await Task.sleep(nanoseconds: 250_000_000)
+            let quote = try await CommonAPIExchangeRateService.quote(
+                baseCurrencyCode: sourceCurrencyCode,
+                quoteCurrencyCode: destinationCurrencyCode,
+                date: conversionDate
+            )
+            guard !Task.isCancelled else { return }
+            let convertedAmount = (sourceAmount * quote.rate * 100).rounded() / 100
+            conversionPreviewState = .loaded(
+                CurrencyConversionPreviewQuote(
+                    sourceAmount: sourceAmount,
+                    sourceCurrencyCode: quote.baseCurrencyCode,
+                    targetCurrencyCode: quote.quoteCurrencyCode,
+                    convertedAmount: convertedAmount,
+                    rate: quote.rate,
+                    rateDate: quote.date,
+                    provider: quote.provider
+                )
+            )
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled else { return }
+            conversionPreviewState = .failed
+        }
+    }
+
+    private func applyConversionQuoteToForm() {
+        guard let quote = usableConversionQuote else { return }
+        var localizedData = form.localizedData ?? HotelStayLocalizedData()
+        localizedData.currency = quote.sourceCurrencyCode
+        localizedData.exchangeRate = quote.rate
+        localizedData.exchangeRateDate = quote.rateDate
+        localizedData.exchangeRateProvider = quote.provider
+        form.localizedData = localizedData
     }
 
     private func balanceMessageKey(for status: HotelStayAmountBalanceStatus) -> LocalizedStringKey {
