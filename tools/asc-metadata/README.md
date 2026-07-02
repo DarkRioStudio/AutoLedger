@@ -67,6 +67,57 @@ The copy includes:
 It does not upload screenshots, App Preview videos, or App Privacy nutrition
 label questionnaire answers yet.
 
+## Upload Store Screenshots
+
+`asc_screenshot_upload.rb` uploads already-rendered store screenshot PNGs from
+the local screenshot pipeline into one App Store Connect locale. Use it only
+after the local screenshot/contact-sheet QA confirms the image content matches
+the screenshot title and description.
+
+Dry-run first:
+
+```bash
+ruby tools/asc-metadata/asc_screenshot_upload.rb \
+  --app-id 6761892533 \
+  --version 1.5.0 \
+  --source-locale-dir en \
+  --target-locale en-GB
+```
+
+Apply after reviewing the dry-run output:
+
+```bash
+ruby tools/asc-metadata/asc_screenshot_upload.rb \
+  --app-id 6761892533 \
+  --version 1.5.0 \
+  --source-locale-dir en \
+  --target-locale en-GB \
+  --apply
+```
+
+Useful options:
+
+- `--platform IOS` limits the upload to one App Store platform. Repeat for
+  multiple platforms.
+- `--exclude-shot 04_workspace_cleaning` skips a local screenshot stem when QA
+  finds copy/image mismatch.
+- `--root tools/appstore-screenshots/output/store` overrides the screenshot
+  output root.
+
+The tool currently maps:
+
+- `IOS`: iPhone 6.5-inch, iPad Pro 12.9-inch, Apple Watch Ultra
+- `MAC_OS`: desktop screenshots
+- `TV_OS`: Apple TV screenshots
+- `VISION_OS`: Apple Vision Pro screenshots
+
+For each screenshot it creates an App Store Connect upload reservation, uploads
+the PNG using Apple's `uploadOperations`, commits the MD5 checksum, and skips
+sets whose remote checksums already match the local files.
+
+It does not upload App Preview videos or App Privacy nutrition label
+questionnaire answers.
+
 ## Platform Filter
 
 Restrict version localization writes to one or more platforms:
