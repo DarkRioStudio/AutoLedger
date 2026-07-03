@@ -6,7 +6,7 @@
 - `GET /v1/manifest`
 - `GET /v1/locations/catalog`
 - `GET /v1/locations/countries?locale=zh-Hans`
-- `GET /v1/locations/cities?country=JP&locale=zh-Hans`
+- `GET /v1/locations/cities?country=JP&locale=zh-Hans` returns localized city records with `latitude`, `longitude`, and `timezone`
 - `GET /v1/currencies/catalog`
 - `GET /v1/currencies?locale=zh-Hans`
 - `GET /v1/exchange-rates/rate?base=USD&quote=CNY&date=2026-07-01`

@@ -185,9 +185,13 @@ describe("common api worker contract", () => {
     const cityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=JP&locale=zh-Hans"), env);
     const cityBody = await jsonBody(cityResponse);
     const localizedCities = cityBody.cities as Array<Record<string, unknown>>;
+    const tokyo = localizedCities.find((record) => record.id === "city.jp.tokyo");
 
     expect(localizedCities.map((record) => record.countryCode)).toEqual(localizedCities.map(() => "JP"));
-    expect(localizedCities.find((record) => record.id === "city.jp.tokyo")?.displayName).toBe("东京");
+    expect(tokyo?.displayName).toBe("东京");
+    expect(tokyo?.latitude).toBe(35.6762);
+    expect(tokyo?.longitude).toBe(139.6503);
+    expect(tokyo?.timezone).toBe("Asia/Tokyo");
   });
 
   it("localizes currencies and publishes default conversion targets", async () => {
