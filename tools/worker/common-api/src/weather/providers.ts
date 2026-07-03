@@ -1,5 +1,14 @@
 import { generateWeatherKitToken } from "./jwt";
-import type { CurrentWeather, ForecastWeather, WeatherProvider, WeatherProviderName, WeatherQuery } from "./types";
+import type {
+  CurrentWeather,
+  ForecastWeather,
+  HotelStayWeatherDay,
+  HotelStayWeatherQuery,
+  HotelStayWeatherSummary,
+  WeatherProvider,
+  WeatherProviderName,
+  WeatherQuery
+} from "./types";
 
 type WeatherRuntimeEnv = Env & {
   WEATHER_PROVIDER?: string;
@@ -125,6 +134,25 @@ class MockWeatherProvider implements WeatherProvider {
       }))
     };
   }
+
+  async getHotelStaySummary(query: HotelStayWeatherQuery): Promise<HotelStayWeatherSummary> {
+    return {
+      location: { lat: query.lat, lon: query.lon },
+      checkIn: query.checkIn,
+      checkOut: query.checkOut,
+      timezone: query.timezone,
+      units: query.units,
+      days: dateRange(query.checkIn, query.checkOut).map((date, index) => ({
+        date,
+        tempMin: 18 + index,
+        tempMax: 26 + index,
+        precipitationAmount: index === 0 ? 0.8 : 0,
+        snowfallAmount: 0,
+        description: conditionDescription(index === 0 ? "Rain" : "Clear", query.locale),
+        icon: index === 0 ? "Rain" : "Clear"
+      }))
+    };
+  }
 }
 
 class OpenWeatherMapProvider implements WeatherProvider {
@@ -237,6 +265,20 @@ class WeatherKitProvider implements WeatherProvider {
     return { location: { lat: query.lat, lon: query.lon }, hourly, daily };
   }
 
+  async getHotelStaySummary(query: HotelStayWeatherQuery): Promise<HotelStayWeatherSummary> {
+    const data = await this.fetchWeatherKitDailySummary(query);
+    const days = extractWeatherKitDailySummaryDays(data, query);
+    return {
+      location: { lat: query.lat, lon: query.lon },
+      checkIn: query.checkIn,
+      checkOut: query.checkOut,
+      timezone: query.timezone,
+      units: query.units,
+      days,
+      unavailableReason: days.length === 0 ? "weatherkit_daily_summary_empty" : undefined
+    };
+  }
+
   private async fetchWeatherKit(query: WeatherQuery, dataSets: string): Promise<WeatherKitResponse> {
     const token = await generateWeatherKitToken(this.config);
     const url = new URL(
@@ -256,6 +298,27 @@ class WeatherKitProvider implements WeatherProvider {
       throwWeatherKitAPIError(response);
     }
     return (await response.json()) as WeatherKitResponse;
+  }
+
+  private async fetchWeatherKitDailySummary(query: HotelStayWeatherQuery): Promise<WeatherKitDailySummaryResponse> {
+    const token = await generateWeatherKitToken(this.config);
+    const url = new URL(`https://weatherkit.apple.com/api/v2/summary/daily/${query.lat}/${query.lon}`);
+    url.searchParams.set("dataSets", "temperature,precipitation");
+    url.searchParams.set("start", query.checkIn);
+    url.searchParams.set("end", addDays(query.checkOut, -1));
+    url.searchParams.set("timezone", query.timezone);
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        authorization: `Bearer ${token}`,
+        accept: "application/json"
+      }
+    });
+    if (!response.ok) {
+      throwWeatherKitAPIError(response);
+    }
+    return (await response.json()) as WeatherKitDailySummaryResponse;
   }
 }
 
@@ -415,6 +478,153 @@ const koConditionDescriptions: Record<string, string> = {
   Cold: "저온"
 };
 
+function dateRange(start: string, exclusiveEnd: string): string[] {
+  const dates: string[] = [];
+  let current = start;
+  while (current < exclusiveEnd) {
+    dates.push(current);
+    current = addDays(current, 1);
+  }
+  return dates;
+}
+
+function addDays(date: string, days: number): string {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function extractWeatherKitDailySummaryDays(
+  data: WeatherKitDailySummaryResponse,
+  query: HotelStayWeatherQuery
+): HotelStayWeatherDay[] {
+  const merged = new Map<string, Partial<HotelStayWeatherDay> & { icon?: string }>();
+  for (const record of weatherKitDailySummaryRecords(data)) {
+    const date = dateStringValue(record, "date", "forecastStart", "summaryStart", "startTime");
+    if (!date || date < query.checkIn || date >= query.checkOut) {
+      continue;
+    }
+    const existing = merged.get(date) ?? { date };
+    const condition = stringValue(record, "conditionCode", "condition", "icon") ?? existing.icon ?? "Summary";
+    merged.set(date, {
+      ...existing,
+      date,
+      tempMin: numberValue(record, "temperatureMin", "minimumTemperature", "lowTemperature")
+        ?? nestedNumberValue(record, "temperature", "minimum", "min", "low")
+        ?? existing.tempMin
+        ?? null,
+      tempMax: numberValue(record, "temperatureMax", "maximumTemperature", "highTemperature")
+        ?? nestedNumberValue(record, "temperature", "maximum", "max", "high")
+        ?? existing.tempMax
+        ?? null,
+      precipitationAmount: numberValue(record, "precipitationAmount", "precipitationTotal")
+        ?? nestedNumberValue(record, "precipitation", "amount", "total")
+        ?? existing.precipitationAmount
+        ?? null,
+      snowfallAmount: numberValue(record, "snowfallAmount", "snowfallTotal")
+        ?? nestedNumberValue(record, "snowfall", "amount", "total")
+        ?? existing.snowfallAmount
+        ?? null,
+      description: conditionDescription(condition, query.locale),
+      icon: condition
+    });
+  }
+
+  return dateRange(query.checkIn, query.checkOut).map((date) => {
+    const record = merged.get(date);
+    return {
+      date,
+      tempMin: record?.tempMin ?? null,
+      tempMax: record?.tempMax ?? null,
+      precipitationAmount: record?.precipitationAmount ?? null,
+      snowfallAmount: record?.snowfallAmount ?? null,
+      description: record?.description ?? conditionDescription("Summary", query.locale),
+      icon: record?.icon ?? "Summary"
+    };
+  });
+}
+
+function weatherKitDailySummaryRecords(data: WeatherKitDailySummaryResponse): Array<Record<string, unknown>> {
+  const records: Array<Record<string, unknown>> = [];
+  collectDailySummaryRecords(data, records);
+  return records;
+}
+
+function collectDailySummaryRecords(value: unknown, records: Array<Record<string, unknown>>): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (isRecord(item)) {
+        records.push(item);
+      }
+    }
+    return;
+  }
+
+  if (!isRecord(value)) {
+    return;
+  }
+
+  for (const key of ["days", "summaries", "dailySummaries", "temperature", "precipitation"]) {
+    const child = value[key];
+    if (Array.isArray(child)) {
+      collectDailySummaryRecords(child, records);
+    } else if (isRecord(child)) {
+      collectDailySummaryRecords(child.days ?? child.summaries, records);
+    }
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(record: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function dateStringValue(record: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim().slice(0, 10);
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return epochDayToISODate(value);
+    }
+  }
+  return null;
+}
+
+function epochDayToISODate(day: number): string {
+  return new Date(day * 86_400_000).toISOString().slice(0, 10);
+}
+
+function numberValue(record: Record<string, unknown>, ...keys: string[]): number | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function nestedNumberValue(record: Record<string, unknown>, objectKey: string, ...keys: string[]): number | null {
+  const nested = record[objectKey];
+  return isRecord(nested) ? numberValue(nested, ...keys) : null;
+}
+
+export const weatherProviderTestInternals = {
+  extractWeatherKitDailySummaryDays,
+  epochDayToISODate
+};
+
 type WeatherKitResponse = {
   currentWeather?: {
     metadata?: { reportedTime?: string };
@@ -449,6 +659,8 @@ type WeatherKitResponse = {
     }>;
   };
 };
+
+type WeatherKitDailySummaryResponse = Record<string, unknown>;
 
 type OpenWeatherMapCurrentResponse = {
   coord: { lat: number; lon: number };

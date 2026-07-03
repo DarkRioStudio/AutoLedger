@@ -7,6 +7,14 @@ export type WeatherQuery = {
   timezone: string;
 };
 
+export type WeatherUnits = "metric" | "imperial";
+
+export type HotelStayWeatherQuery = WeatherQuery & {
+  checkIn: string;
+  checkOut: string;
+  units: WeatherUnits;
+};
+
 export type CurrentWeather = {
   location: {
     name: string;
@@ -56,8 +64,32 @@ export type ForecastWeather = {
   daily: DailyForecast[];
 };
 
+export type HotelStayWeatherDay = {
+  date: string;
+  tempMin: number | null;
+  tempMax: number | null;
+  precipitationAmount: number | null;
+  snowfallAmount: number | null;
+  description: string;
+  icon: string;
+};
+
+export type HotelStayWeatherSummary = {
+  location: {
+    lat: number;
+    lon: number;
+  };
+  checkIn: string;
+  checkOut: string;
+  timezone: string;
+  units: WeatherUnits;
+  days: HotelStayWeatherDay[];
+  unavailableReason?: string;
+};
+
 export type WeatherProvider = {
   name: WeatherProviderName;
   getCurrentWeather(query: WeatherQuery): Promise<CurrentWeather>;
   getForecast(query: WeatherQuery): Promise<ForecastWeather>;
+  getHotelStaySummary?(query: HotelStayWeatherQuery): Promise<HotelStayWeatherSummary>;
 };

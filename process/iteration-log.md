@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-365 App Store Server Notifications 验签与 staging smoke）
+更新日期：2026-07-03（ITER-366 Common API WeatherKit 酒店历史天气 staging）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-366 Common API WeatherKit 酒店历史天气 staging
+- 日期：2026-07-03
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Infrastructure / Common API / WeatherKit
+- 类型：能力增强 / 基础设施 / 回归
+- 目标：在不影响 production 的前提下，把 `common-api` 的 WeatherKit staging 凭据和酒店入住日期历史天气端点跑通，为后续酒店消费详情展示历史天气摘要做准备。
+- 改动范围：更新 `tools/worker/common-api` 的天气类型、provider、route、内存缓存、manifest、staging 环境变量、Worker 合同测试和 README；更新 `versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志；配置 staging WeatherKit secrets 并部署 `darkrio-common-api-staging`。
+- 未改动范围：本轮未修改 App Swift 代码、App 酒店消费详情 UI、production WeatherKit secrets、production `WEATHER_PROVIDER`、服务端鉴权、限流、R2 / D1、App Store Connect、StoreKit、截图 / App Preview、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：staging Worker 已配置 WeatherKit Team ID、Services ID、Key ID 和 private key secrets，secret 不进入仓库。`/v1/weather/hotel-stay-summary` 从 planned 端点推进为可用端点，入参只包含经纬度、入住 / 离店日期、locale、timezone 和 units；端点拒绝 2021-08-01 之前、未来日期、超过 31 晚或非 metric 单位制的请求。WeatherKit provider 新增 Daily Summary 调用，并兼容 WeatherKit 返回的数字日序号日期格式；酒店天气结果按坐标和入住 / 离店日期做 6 小时内存缓存。
+- staging 状态：`darkrio-common-api-staging` 已部署最终 Version ID `abd1e2f7-6f95-4664-9e0b-81c64a56babd`；`/v1/manifest` 返回 `hotelWeather.status=available`、provider 为 `weatherkit`。production 继续保持 `WEATHER_PROVIDER=disabled`，没有开启 WeatherKit。
+- 未完成内容：App 端尚未展示酒店历史天气摘要；production 尚未配置 WeatherKit secrets；未做服务端鉴权、限流、配额提示、多 provider fallback、缓存持久化、forecast 型未来酒店天气或 App 端失败重试 UI。
+- 测试情况：执行 `git diff --check`，结果 PASS；执行 `npm run check` 于 `tools/worker/common-api`，结果 PASS，包含 `wrangler types`、`tsc --noEmit` 和 22 个 Vitest 合同测试，新增 WeatherKit Daily Summary 数字日序号解析断言。staging smoke：`/v1/manifest` HTTP 200，`/v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo` HTTP 200，`/v1/weather/hotel-stay-summary?lat=35.69&lon=139.76&checkIn=2026-07-01&checkOut=2026-07-03&locale=ja&timezone=Asia/Tokyo` HTTP 200，并返回 2 个入住夜晚的高低温、降水和降雪字段。
+- 风险与注意事项：WeatherKit Daily Summary 的字段形状与当前天气 API 不同，日期为数字日序号；本轮已补回归，但后续仍需用更多地点 / 日期 smoke。当前 endpoint 只处理历史账单天气，不把当前天气或未来天气展示到历史酒店水单上。
+- 回滚方式：将 staging `WEATHER_PROVIDER` 改回 `disabled` 并重新部署，即可让天气端点回到 `weather_provider_not_configured`；代码层可回退 hotel stay route、WeatherKit Daily Summary provider、缓存、manifest 能力位和测试。production 本轮未改动，无 production 回滚动作。
+- 结论：本轮完成 `common-api` WeatherKit staging 第一段，真实 WeatherKit 鉴权和酒店入住日期历史天气端点已跑通；可以进入 App 酒店详情展示和 production 策略设计的下一段。
+- 下一步建议：下一段在 App 酒店消费详情中读取已知城市坐标和入住日期，展示历史天气摘要；同时补无坐标、provider 失败、网络关闭和缓存命中的 UI 降级。
 
 ### ITER-365 App Store Server Notifications 验签与 staging smoke
 - 日期：2026-07-02

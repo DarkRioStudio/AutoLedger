@@ -17,7 +17,7 @@ import {
   type CurrencyRecord
 } from "./currencies-catalog";
 import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
-import { currentWeatherEndpoint, forecastWeatherEndpoint } from "./weather/routes";
+import { currentWeatherEndpoint, forecastWeatherEndpoint, hotelStayWeatherEndpoint } from "./weather/routes";
 
 type APIError = {
   error: {
@@ -38,7 +38,8 @@ type LocalizedCurrency = CurrencyRecord & {
   displayName: string;
 };
 
-const serviceResourceVersion = "2026.07.02.4";
+const serviceResourceVersion = "2026.07.03.1";
+const serviceGeneratedAt = "2026-07-03T00:00:00.000Z";
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);
@@ -109,10 +110,8 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/weather/hotel-stay-summary") {
-    return responseForMethod(
-      request,
-      plannedEndpoint("hotel_weather_not_implemented", "Hotel stay weather provider integration is planned for v1.7.0.")
-    );
+    const result = await hotelStayWeatherEndpoint(request, env);
+    return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
   }
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
@@ -135,7 +134,7 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
     {
       schemaVersion: 1,
       resourceVersion: serviceResourceVersion,
-      generatedAt: placesCatalog.generatedAt,
+      generatedAt: serviceGeneratedAt,
       minSupportedAppVersion: "1.6.0",
       supportedLocales,
       capabilities: {
@@ -173,9 +172,14 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           privacy: "The App should send base currency, quote currency, and optional rate date only; transaction amounts stay on device."
         },
         hotelWeather: {
-          status: "planned",
+          status: weatherProviderConfigured(env) ? "available" : "configuration_required",
           endpoint: `${baseURL}/v1/weather/hotel-stay-summary`,
-          privacy: "The App should send coordinates, stay dates, locale, and units only; hotel names and folio contents stay on device."
+          provider: env.WEATHER_PROVIDER || "disabled",
+          query: {
+            required: ["lat", "lon", "checkIn", "checkOut"],
+            optional: ["locale", "timezone", "units"]
+          },
+          privacy: "The App should send coordinates, stay dates, locale, timezone, and units only; hotel names and folio contents stay on device."
         },
         weatherForecast: {
           status: "configuration_required",
@@ -327,6 +331,10 @@ function publicAPIOrigin(request: Request, env: Env): string {
     return configuredOrigin.replace(/\/+$/, "");
   }
   return new URL(request.url).origin;
+}
+
+function weatherProviderConfigured(env: Env): boolean {
+  return (env.WEATHER_PROVIDER ?? "disabled").trim().toLowerCase() !== "disabled";
 }
 
 function plannedEndpoint(code: string, message: string): Response {

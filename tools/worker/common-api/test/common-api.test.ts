@@ -3,6 +3,7 @@ import { currencies, currenciesCatalog, defaultCurrencyCode } from "../src/curre
 import { exchangeRateEndpoint } from "../src/exchange-rates/routes";
 import { cities, countries, placesCatalog, supportedLocales } from "../src/places-catalog";
 import { routeFetch, testInternals } from "../src/index";
+import { weatherProviderTestInternals } from "../src/weather/providers";
 
 const env = {
   PUBLIC_API_ORIGIN: "https://api.darkrio326.top",
@@ -57,6 +58,7 @@ describe("common api worker contract", () => {
     const currencyCatalogCapability = capabilities.currencyCatalog;
     const exchangeRatesCapability = capabilities.exchangeRates;
     const weatherForecastCapability = capabilities.weatherForecast;
+    const hotelWeatherCapability = capabilities.hotelWeather;
 
     expect(response.status).toBe(200);
     expect(body.supportedLocales).toEqual(supportedLocales);
@@ -64,6 +66,7 @@ describe("common api worker contract", () => {
     expect(currencyCatalogCapability).toBeDefined();
     expect(exchangeRatesCapability).toBeDefined();
     expect(weatherForecastCapability).toBeDefined();
+    expect(hotelWeatherCapability).toBeDefined();
     if (!placesCatalogCapability) {
       throw new Error("placesCatalog capability is missing");
     }
@@ -72,6 +75,9 @@ describe("common api worker contract", () => {
     }
     if (!weatherForecastCapability) {
       throw new Error("weatherForecast capability is missing");
+    }
+    if (!hotelWeatherCapability) {
+      throw new Error("hotelWeather capability is missing");
     }
     if (!exchangeRatesCapability) {
       throw new Error("exchangeRates capability is missing");
@@ -91,6 +97,8 @@ describe("common api worker contract", () => {
     expect(exchangeRatesCapability.supportedCurrencyCodes).toEqual(currencies.map((record) => record.code));
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
+    expect(hotelWeatherCapability.status).toBe("configuration_required");
+    expect(hotelWeatherCapability.endpoint).toBe("https://api.darkrio326.top/v1/weather/hotel-stay-summary");
   });
 
   it("serves the full places catalog with an etag", async () => {
@@ -267,14 +275,93 @@ describe("common api worker contract", () => {
     expect(await jsonBody(response)).toMatchObject({ error: { code: "exchange_rate_provider_not_configured" } });
   });
 
-  it("keeps planned hotel weather endpoint explicit", async () => {
+  it("keeps hotel stay weather disabled until provider secrets are configured", async () => {
     const weather = await routeFetch(
-      new Request("https://example.test/v1/weather/hotel-stay-summary?lat=35.6&lon=139.7&checkIn=2026-07-01"),
+      new Request("https://example.test/v1/weather/hotel-stay-summary?lat=35.6&lon=139.7&checkIn=2026-07-01&checkOut=2026-07-03"),
       env
     );
 
-    expect(weather.status).toBe(501);
-    expect(await jsonBody(weather)).toMatchObject({ error: { code: "hotel_weather_not_implemented" } });
+    expect(weather.status).toBe(503);
+    expect(await jsonBody(weather)).toMatchObject({ error: { code: "weather_provider_not_configured" } });
+  });
+
+  it("serves hotel stay weather summaries when a provider is configured", async () => {
+    const response = await routeFetch(
+      new Request("https://example.test/v1/weather/hotel-stay-summary?lat=35.6&lon=139.7&checkIn=2026-07-01&checkOut=2026-07-03&locale=zh-Hans&timezone=Asia/Tokyo"),
+      mockWeatherEnv
+    );
+    const body = await jsonBody(response);
+    const data = body.data as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      provider: "mock",
+      cached: false,
+      privacy: expect.stringContaining("Only coordinates")
+    });
+    expect(data).toMatchObject({
+      checkIn: "2026-07-01",
+      checkOut: "2026-07-03",
+      timezone: "Asia/Tokyo",
+      units: "metric"
+    });
+    expect(data).not.toHaveProperty("hotelName");
+    expect(data).not.toHaveProperty("amount");
+    expect(data).not.toHaveProperty("folioText");
+    expect(data.days as unknown[]).toHaveLength(2);
+  });
+
+  it("parses WeatherKit daily summary numeric day records", () => {
+    const days = weatherProviderTestInternals.extractWeatherKitDailySummaryDays(
+      {
+        days: [
+          {
+            date: 20635,
+            temperatureMin: 22.739359,
+            temperatureMax: 27.76866,
+            precipitationAmount: 0.899,
+            snowfallAmount: 0
+          }
+        ]
+      },
+      {
+        lat: 35.68,
+        lon: 139.76,
+        locale: "en",
+        timezone: "Asia/Tokyo",
+        checkIn: "2026-07-01",
+        checkOut: "2026-07-02",
+        units: "metric"
+      }
+    );
+
+    expect(days).toEqual([
+      {
+        date: "2026-07-01",
+        tempMin: 22.739359,
+        tempMax: 27.76866,
+        precipitationAmount: 0.899,
+        snowfallAmount: 0,
+        description: "Summary",
+        icon: "Summary"
+      }
+    ]);
+  });
+
+  it("rejects hotel stay weather dates outside the supported historical window", async () => {
+    const tooOld = await routeFetch(
+      new Request("https://example.test/v1/weather/hotel-stay-summary?lat=35.6&lon=139.7&checkIn=2021-07-31&checkOut=2021-08-02"),
+      mockWeatherEnv
+    );
+    const future = await routeFetch(
+      new Request("https://example.test/v1/weather/hotel-stay-summary?lat=35.6&lon=139.7&checkIn=9999-01-01&checkOut=9999-01-03"),
+      mockWeatherEnv
+    );
+
+    expect(tooOld.status).toBe(422);
+    expect(await jsonBody(tooOld)).toMatchObject({ error: { code: "weather_history_out_of_range" } });
+    expect(future.status).toBe(400);
+    expect(await jsonBody(future)).toMatchObject({ error: { code: "future_stay_weather_not_supported" } });
   });
 
   it("keeps live weather disabled until provider secrets are configured", async () => {
