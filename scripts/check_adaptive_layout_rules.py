@@ -55,7 +55,7 @@ REQUIRED_SNIPPETS = {
         "autoLedgerThemeRefreshID",
         "AutoLedgerThemeRefreshIDKey",
         "@Environment(\\.autoLedgerThemeRefreshID)",
-        ".regularMaterial",
+        ".toolbarBackground(.hidden, for: .navigationBar)",
         "case harbor",
         "case sunrise",
         "case ledgerInk",

@@ -867,8 +867,7 @@ private struct AutoLedgerNavigationBarChromeModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .toolbarBackground(.regularMaterial, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
@@ -878,8 +877,7 @@ private struct AutoLedgerSolidNavigationBarChromeModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .toolbarBackground(.regularMaterial, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
     }
 }
