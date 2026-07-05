@@ -21,6 +21,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
     public var checkOutDate: String
     public var nightsText: String
     public var roomType: String
+    public var roomNumber: String
     public var confirmationNumber: String
     public var currency: String
     public var roomChargeText: String
@@ -47,10 +48,11 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         hotelBrand = Self.displayValue(localized?.brand, fallback: payload?.brand)
         city = Self.displayValue(localized?.city, fallback: payload?.city)
         country = Self.displayValue(localized?.country, fallback: payload?.country)
-        checkInDate = payload?.checkInDate ?? ""
-        checkOutDate = payload?.checkOutDate ?? ""
+        checkInDate = Self.normalizedDateText(payload?.checkInDate)
+        checkOutDate = Self.normalizedDateText(payload?.checkOutDate)
         nightsText = payload?.nights.map(String.init) ?? ""
         roomType = Self.displayValue(localized?.roomType, fallback: payload?.roomType)
+        roomNumber = Self.displayValue(localized?.roomNumber, fallback: payload?.roomNumber)
         confirmationNumber = payload?.confirmationNumber ?? ""
         currency = Self.currencyValue(localized?.currency, fallback: payload?.currency, context: draft.rawText)
         roomChargeText = Self.formatAmount(localized?.roomCharge ?? payload?.roomCharge)
@@ -121,10 +123,11 @@ public struct HotelStayReviewForm: Equatable, Sendable {
             group: trimmedOptional(hotelGroup),
             city: trimmedOptional(city),
             country: trimmedOptional(country),
-            checkInDate: trimmedOptional(checkInDate),
-            checkOutDate: trimmedOptional(checkOutDate),
+            checkInDate: Self.normalizedDateOptional(checkInDate),
+            checkOutDate: Self.normalizedDateOptional(checkOutDate),
             nights: Self.intValue(from: nightsText),
             roomType: trimmedOptional(roomType),
+            roomNumber: trimmedOptional(roomNumber),
             confirmationNumber: trimmedOptional(confirmationNumber),
             currency: HotelCurrencyCodeNormalizer.normalizedCode(currency, context: rawText) ?? trimmedOptional(currency.uppercased()),
             roomCharge: Self.amount(from: roomChargeText),
@@ -148,6 +151,7 @@ public struct HotelStayReviewForm: Equatable, Sendable {
             city: payload.city,
             country: payload.country,
             roomType: payload.roomType,
+            roomNumber: payload.roomNumber,
             currency: payload.currency,
             roomCharge: payload.roomCharge,
             taxAmount: payload.tax,
@@ -203,6 +207,16 @@ public struct HotelStayReviewForm: Equatable, Sendable {
     private static func currencyValue(_ localized: String?, fallback: String?, context: String) -> String {
         let value = displayValue(localized, fallback: fallback)
         return HotelCurrencyCodeNormalizer.normalizedCode(value, context: context) ?? value
+    }
+
+    private static func normalizedDateText(_ value: String?) -> String {
+        guard let value = trimmed(value) else { return "" }
+        return AppFormatters.normalizedDateString(value) ?? value
+    }
+
+    private static func normalizedDateOptional(_ value: String?) -> String? {
+        guard let value = trimmed(value) else { return nil }
+        return AppFormatters.normalizedDateString(value) ?? value
     }
 
     private static func trimmed(_ value: String?) -> String? {

@@ -95,6 +95,7 @@
 "hotel_stay.review.check_out" = "Check-out Date";
 "hotel_stay.review.nights" = "Nights";
 "hotel_stay.review.room_type" = "Room Type";
+"hotel_stay.review.room_number" = "Room Number";
 "hotel_stay.review.confirmation" = "Confirmation Number";
 "hotel_stay.review.currency" = "Currency";
 "hotel_stay.review.room_charge" = "Room Charge";
@@ -143,6 +144,13 @@
 "hotel_stay.import.processing" = "Processing hotel folio";
 "hotel_stay.import.status.extracting" = "Extracting PDF text.";
 "hotel_stay.import.status.text_extracted" = "PDF text extracted. Parsing the hotel folio.";
+"hotel_stay.import.status.parsing" = "Parsing hotel name, room number, dates, and charges.";
+"hotel_stay.import.status.pdf_text_layer_format" = "Reading the PDF text layer (%d pages).";
+"hotel_stay.import.status.pdf_text_count_format" = "PDF text layer extracted (%d characters). Checking if OCR is needed.";
+"hotel_stay.import.status.ocr_start_format" = "The text layer is incomplete. Running OCR on %d PDF pages.";
+"hotel_stay.import.status.ocr_page_format" = "Running OCR on page %d of %d.";
+"hotel_stay.import.status.ocr_completed_format" = "OCR finished (%d characters). Merging results.";
+"hotel_stay.import.status.text_ready_format" = "PDF/OCR text is ready (%d characters). Structuring the folio.";
 "hotel_stay.import.status.parsed" = "Hotel folio parsed. Review and confirm to post it.";
 "hotel_stay.import.status.manual_review_format" = "Automatic parsing did not finish: %@. Manual review is ready.";
 "hotel_stay.import.status.failed_format" = "Hotel folio import failed: %@";

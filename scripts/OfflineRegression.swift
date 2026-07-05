@@ -233,6 +233,7 @@ struct OfflineRegression {
           "check_out_date": "2026-06-22",
           "nights": 2,
           "room_type": "King Bay View",
+          "room_number": "2609",
           "confirmation_number": "ABC123",
           "currency": "JPY",
           "room_charge": 40000,
@@ -253,7 +254,9 @@ struct OfflineRegression {
         reporter.check(payload?.brand == "Demo Suites", "HotelFolioParsedPayload decodes brand")
         reporter.check(payload?.group == "Demo Hospitality", "HotelFolioParsedPayload decodes group")
         reporter.check(payload?.nights == 2, "HotelFolioParsedPayload decodes nights")
+        reporter.check(payload?.roomNumber == "2609", "HotelFolioParsedPayload decodes room_number")
         reporter.check(abs((payload?.totalAmount ?? 0) - 50000) < 0.001, "HotelFolioParsedPayload decodes total_amount")
+        reporter.check(AppFormatters.normalizedDateString("07-04-26") == "2026-07-04", "AppFormatters normalizes MM-dd-yy hotel folio dates")
 
         let now = AppFormatters.parseFlexibleDate("2026-06-24 12:00") ?? Date(timeIntervalSince1970: 0)
         let sourcePDFData = Data("%PDF-1.7 demo hotel folio".utf8)
@@ -276,6 +279,7 @@ struct OfflineRegression {
         reporter.check(draft.sourcePDFData == sourcePDFData, "HotelStayDraft keeps original source PDF data")
         reporter.check(draft.status == .needsReview, "HotelStayDraft defaults to review workflow state")
         reporter.check(draft.parsedPayload?.confirmationNumber == "ABC123", "HotelStayDraft stores parsed payload")
+        reporter.check(draft.parsedPayload?.roomNumber == "2609", "HotelStayDraft stores parsed room number")
 
         let record = HotelStayRecord(
             ledgerID: TodaySpendingSummary.defaultLedgerID,
@@ -289,6 +293,7 @@ struct OfflineRegression {
             checkOutDate: payload?.checkOutDate,
             nights: payload?.nights,
             roomType: payload?.roomType,
+            roomNumber: payload?.roomNumber,
             confirmationNumber: payload?.confirmationNumber,
             currency: payload?.currency ?? "JPY",
             roomCharge: payload?.roomCharge ?? 0,
@@ -308,6 +313,7 @@ struct OfflineRegression {
         )
         reporter.check(record.linkedTransactionID?.uuidString == "00000000-0000-0000-0000-000000000181", "HotelStayRecord can link a transaction id")
         reporter.check(record.hotelName == "Demo Bay Hotel", "HotelStayRecord records hotel name")
+        reporter.check(record.roomNumber == "2609", "HotelStayRecord records room number")
         reporter.check(record.currency == "JPY", "HotelStayRecord records currency")
         reporter.check(abs(record.totalAmount - 50000) < 0.001, "HotelStayRecord records total amount")
         reporter.check(record.sourceType == .manualPDF, "HotelStayRecord records source type")
@@ -384,6 +390,20 @@ struct OfflineRegression {
         reporter.check(parsedDraft?.sourceType == .manualPDF, "HotelFolioParsePipeline preserves source type")
         reporter.check(parsedDraft?.rawText == rawText, "HotelFolioParsePipeline preserves raw text")
         reporter.check(parsedDraft?.updatedAt == Date(timeIntervalSince1970: 1_783_065_600), "HotelFolioParsePipeline refreshes updated timestamp")
+
+        let looseDatePayload = HotelFolioParsedPayload(
+            hotelName: "Crowne Plaza Zunhua Hot Spring Town",
+            checkInDate: "07-04-26",
+            checkOutDate: "07-05-26",
+            roomNumber: "2609",
+            currency: "CNY",
+            totalAmount: 571.34,
+            confidence: 0.82
+        )
+        let looseDateDraft = try? pipeline.apply(looseDatePayload, to: draft)
+        reporter.check(looseDateDraft?.parsedPayload?.checkInDate == "2026-07-04", "HotelFolioParsePipeline normalizes nonstandard check-in dates")
+        reporter.check(looseDateDraft?.parsedPayload?.checkOutDate == "2026-07-05", "HotelFolioParsePipeline normalizes nonstandard check-out dates")
+        reporter.check(looseDateDraft?.parsedPayload?.roomNumber == "2609", "HotelFolioParsePipeline preserves room number")
 
         let localizedCurrencyPayload = HotelFolioParsedPayload(
             hotelName: "重庆 Moxy 酒店",
@@ -964,12 +984,16 @@ struct OfflineRegression {
         reporter.check(pendingLedger.hotelStayDrafts.count == 1, "LedgerStore keeps one pending hotel email draft after duplicate")
 
         reporter.check(pendingLedger.rejectHotelStayDraft(firstDraft), "LedgerStore can reject hotel email draft")
-        reporter.check(!pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore rejects duplicate of rejected hotel email draft")
+        reporter.check(pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore allows retry after rejected hotel email draft")
+        reporter.check(
+            pendingLedger.hotelStayDrafts.count == 2,
+            "LedgerStore keeps rejected hotel draft history while allowing a retry draft"
+        )
         reporter.check(
             pendingLedger.pruneStaleHotelStayDrafts(updatedBefore: .distantFuture, statuses: [.rejected]) == 1,
-            "LedgerStore can clear rejected hotel email draft for retry"
+            "LedgerStore can clear rejected hotel email draft after retry"
         )
-        reporter.check(pendingLedger.saveHotelStayDraft(duplicateDraft), "LedgerStore allows retry after rejected draft cleanup")
+        reporter.check(pendingLedger.hotelStayDrafts.count == 1, "LedgerStore keeps retry draft after rejected draft cleanup")
 
         let postedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "posted.sqlite3")
         let postedLedger = LedgerStore(transactionStore: postedStore)

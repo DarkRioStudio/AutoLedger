@@ -95,6 +95,7 @@
 "hotel_stay.review.check_out" = "退房日期";
 "hotel_stay.review.nights" = "晚數";
 "hotel_stay.review.room_type" = "房型";
+"hotel_stay.review.room_number" = "房號";
 "hotel_stay.review.confirmation" = "確認號";
 "hotel_stay.review.currency" = "幣種";
 "hotel_stay.review.room_charge" = "房費";
@@ -143,6 +144,13 @@
 "hotel_stay.import.processing" = "正在處理酒店水單";
 "hotel_stay.import.status.extracting" = "正在擷取 PDF 文字。";
 "hotel_stay.import.status.text_extracted" = "PDF 文字已擷取，正在呼叫酒店水單解析。";
+"hotel_stay.import.status.parsing" = "正在解析酒店名稱、房號、日期與費用。";
+"hotel_stay.import.status.pdf_text_layer_format" = "正在讀取 PDF 文字層（%d 頁）。";
+"hotel_stay.import.status.pdf_text_count_format" = "已擷取 PDF 文字層（%d 字元），正在檢查是否需要 OCR。";
+"hotel_stay.import.status.ocr_start_format" = "文字層資訊不完整，正在 OCR 識別 PDF 頁面（%d 頁）。";
+"hotel_stay.import.status.ocr_page_format" = "正在 OCR 第 %d / %d 頁。";
+"hotel_stay.import.status.ocr_completed_format" = "OCR 完成（%d 字元），正在合併識別結果。";
+"hotel_stay.import.status.text_ready_format" = "PDF/OCR 文字已準備（%d 字元），正在結構化解析。";
 "hotel_stay.import.status.parsed" = "酒店水單已解析，請複核後確認入帳。";
 "hotel_stay.import.status.manual_review_format" = "自動解析未完成：%@。已進入手動複核。";
 "hotel_stay.import.status.failed_format" = "酒店水單匯入失敗：%@";

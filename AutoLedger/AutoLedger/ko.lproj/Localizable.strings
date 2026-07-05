@@ -95,6 +95,7 @@
 "hotel_stay.review.check_out" = "체크아웃 날짜";
 "hotel_stay.review.nights" = "밤";
 "hotel_stay.review.room_type" = "객실타입";
+"hotel_stay.review.room_number" = "객실 번호";
 "hotel_stay.review.confirmation" = "확인번호";
 "hotel_stay.review.currency" = "통화";
 "hotel_stay.review.room_charge" = "객실요금";
@@ -143,6 +144,13 @@
 "hotel_stay.import.processing" = "호텔 폴리오 처리 중";
 "hotel_stay.import.status.extracting" = "PDF 텍스트를 추출하는 중입니다.";
 "hotel_stay.import.status.text_extracted" = "PDF 텍스트가 추출되었습니다. 호텔 폴리오를 구문 분석하는 중입니다.";
+"hotel_stay.import.status.parsing" = "호텔 이름, 객실 번호, 날짜와 금액을 분석하는 중입니다.";
+"hotel_stay.import.status.pdf_text_layer_format" = "PDF 텍스트 레이어를 읽는 중입니다(%d페이지).";
+"hotel_stay.import.status.pdf_text_count_format" = "PDF 텍스트 레이어를 추출했습니다(%d자). OCR 필요 여부를 확인하는 중입니다.";
+"hotel_stay.import.status.ocr_start_format" = "텍스트 레이어가 불완전하여 PDF 페이지를 OCR 중입니다(%d페이지).";
+"hotel_stay.import.status.ocr_page_format" = "%d / %d 페이지를 OCR 중입니다.";
+"hotel_stay.import.status.ocr_completed_format" = "OCR이 완료되었습니다(%d자). 결과를 병합하는 중입니다.";
+"hotel_stay.import.status.text_ready_format" = "PDF/OCR 텍스트가 준비되었습니다(%d자). 구조화 분석 중입니다.";
 "hotel_stay.import.status.parsed" = "호텔 폴리오가 구문 분석되었습니다. 검토하고 확인하여 게시하세요.";
 "hotel_stay.import.status.manual_review_format" = "자동 구문 분석이 완료되지 않았습니다: %@. 직접 검토가 준비되었습니다.";
 "hotel_stay.import.status.failed_format" = "호텔 폴리오 가져오기 실패: %@";

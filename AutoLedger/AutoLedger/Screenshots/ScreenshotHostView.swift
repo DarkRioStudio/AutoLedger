@@ -684,6 +684,7 @@ private enum ScreenshotHotelStayFixtures {
             checkOutDate: "2026-06-23",
             nights: 1,
             roomType: "Harbor View King",
+            roomNumber: "2609",
             confirmationNumber: "SAMPLE-20260623",
             currency: "CNY",
             roomCharge: 325,
@@ -702,6 +703,7 @@ private enum ScreenshotHotelStayFixtures {
                 city: "Shanghai",
                 country: "China",
                 roomType: "Harbor View King",
+                roomNumber: "2609",
                 currency: "CNY",
                 roomCharge: 325,
                 taxAmount: 28.5,
@@ -712,7 +714,7 @@ private enum ScreenshotHotelStayFixtures {
                 paymentMethod: "Sample Card"
             ),
             confidence: 0.94,
-            rawText: "Sample City Hotel\nRoom charge CNY 325.00\nTax CNY 28.50\nTotal CNY 369.39"
+            rawText: "Sample City Hotel\nRoom No. 2609\nRoom charge CNY 325.00\nTax CNY 28.50\nTotal CNY 369.39"
         )
     ]
 
@@ -724,7 +726,7 @@ private enum ScreenshotHotelStayFixtures {
             sourceFileName: "sample-harbor-hotel-folio.pdf",
             sourceEmailSubject: "Your Sample Harbor Hotel folio",
             sourceEmailFrom: "folio@getautoledger.app",
-            rawText: "Sample Harbor Hotel\nTotal CNY 1280.00",
+            rawText: "Sample Harbor Hotel\nRoom No. 1808\nTotal CNY 1280.00",
             parsedPayload: HotelFolioParsedPayload(
                 hotelName: "Sample Harbor Hotel",
                 brand: "Sample Stay",
@@ -735,6 +737,7 @@ private enum ScreenshotHotelStayFixtures {
                 checkOutDate: "2026-06-22",
                 nights: 2,
                 roomType: "Sample Bay King",
+                roomNumber: "1808",
                 confirmationNumber: "SAMPLE-20260622",
                 currency: "CNY",
                 roomCharge: 1120,
@@ -754,6 +757,7 @@ private enum ScreenshotHotelStayFixtures {
                 city: "Singapore",
                 country: "Singapore",
                 roomType: "Bay View King",
+                roomNumber: "1808",
                 currency: "CNY",
                 roomCharge: 1120,
                 taxAmount: 120,

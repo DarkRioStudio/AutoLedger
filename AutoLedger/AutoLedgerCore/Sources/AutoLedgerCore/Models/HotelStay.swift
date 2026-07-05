@@ -24,6 +24,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
     public var city: String?
     public var country: String?
     public var roomType: String?
+    public var roomNumber: String?
     public var currency: String?
     public var roomCharge: Double?
     public var taxAmount: Double?
@@ -45,6 +46,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         city: String? = nil,
         country: String? = nil,
         roomType: String? = nil,
+        roomNumber: String? = nil,
         currency: String? = nil,
         roomCharge: Double? = nil,
         taxAmount: Double? = nil,
@@ -65,6 +67,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         self.city = city
         self.country = country
         self.roomType = roomType
+        self.roomNumber = roomNumber
         self.currency = currency
         self.roomCharge = roomCharge
         self.taxAmount = taxAmount
@@ -87,6 +90,7 @@ public struct HotelStayLocalizedData: Codable, Equatable, Sendable {
         case city
         case country
         case roomType = "room_type"
+        case roomNumber = "room_number"
         case currency
         case roomCharge = "room_charge"
         case taxAmount = "tax"
@@ -113,6 +117,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
     public var checkOutDate: String?
     public var nights: Int?
     public var roomType: String?
+    public var roomNumber: String?
     public var confirmationNumber: String?
     public var currency: String?
     public var roomCharge: Double?
@@ -136,6 +141,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         checkOutDate: String? = nil,
         nights: Int? = nil,
         roomType: String? = nil,
+        roomNumber: String? = nil,
         confirmationNumber: String? = nil,
         currency: String? = nil,
         roomCharge: Double? = nil,
@@ -158,6 +164,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         self.checkOutDate = checkOutDate
         self.nights = nights
         self.roomType = roomType
+        self.roomNumber = roomNumber
         self.confirmationNumber = confirmationNumber
         self.currency = currency
         self.roomCharge = roomCharge
@@ -182,6 +189,7 @@ public struct HotelFolioParsedPayload: Codable, Equatable, Sendable {
         case checkOutDate = "check_out_date"
         case nights
         case roomType = "room_type"
+        case roomNumber = "room_number"
         case confirmationNumber = "confirmation_number"
         case currency
         case roomCharge = "room_charge"
@@ -271,6 +279,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
     public var checkOutDate: String?
     public var nights: Int?
     public var roomType: String?
+    public var roomNumber: String?
     public var confirmationNumber: String?
     public var currency: String
     public var roomCharge: Double
@@ -302,6 +311,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         case checkOutDate
         case nights
         case roomType
+        case roomNumber
         case confirmationNumber
         case currency
         case roomCharge
@@ -334,6 +344,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         checkOutDate: String? = nil,
         nights: Int? = nil,
         roomType: String? = nil,
+        roomNumber: String? = nil,
         confirmationNumber: String? = nil,
         currency: String,
         roomCharge: Double = 0,
@@ -364,6 +375,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
         self.checkOutDate = checkOutDate
         self.nights = nights
         self.roomType = roomType
+        self.roomNumber = roomNumber
         self.confirmationNumber = confirmationNumber
         self.currency = currency
         self.roomCharge = roomCharge
@@ -399,6 +411,7 @@ public struct HotelStayRecord: Identifiable, Codable, Equatable, Sendable {
             checkOutDate: try container.decodeIfPresent(String.self, forKey: .checkOutDate),
             nights: try container.decodeIfPresent(Int.self, forKey: .nights),
             roomType: try container.decodeIfPresent(String.self, forKey: .roomType),
+            roomNumber: try container.decodeIfPresent(String.self, forKey: .roomNumber),
             confirmationNumber: try container.decodeIfPresent(String.self, forKey: .confirmationNumber),
             currency: try container.decode(String.self, forKey: .currency),
             roomCharge: try container.decodeIfPresent(Double.self, forKey: .roomCharge) ?? 0,

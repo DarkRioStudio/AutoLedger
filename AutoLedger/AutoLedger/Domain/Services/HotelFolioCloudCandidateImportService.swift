@@ -37,14 +37,9 @@ struct HotelFolioCloudCandidatePDFImporter: Sendable {
     }
 
     nonisolated private static func extractPDFText(from data: Data) throws -> String {
-        guard let document = PDFDocument(data: data) else {
-            throw HotelFolioEmailImportError.unsupportedAttachment
-        }
-
-        let text = (0..<document.pageCount)
-            .compactMap { document.page(at: $0)?.string }
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = try HotelFolioPDFTextExtractor()
+            .extractText(from: data)
+            .combinedText
         guard !text.isEmpty else {
             throw HotelFolioEmailImportError.emptyPDFText
         }

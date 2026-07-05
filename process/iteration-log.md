@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-05（ITER-369 酒店地点目录简繁判断修复）
+更新日期：2026-07-05（ITER-370 酒店水单 OCR fallback 与确认候选）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-370 酒店水单 OCR fallback 与确认候选
+- 日期：2026-07-05
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Hotel Stay / Import Pipeline
+- 类型：Bugfix / 能力增强
+- 目标：修复用户拒绝一次酒店水单识别结果后，同一 PDF 被永久拦截的问题；同时处理文本层缺酒店名的 PDF，给用户更清晰的解析进度，并把房号、非标准日期和候选值选择纳入确认表单。
+- 改动范围：更新 `LedgerStore` 酒店水单去重判断；新增共享 `HotelFolioPDFTextExtractor`；让手动 PDF、本地邮箱 PDF 和云候选 PDF 复用同一文本层 + OCR fallback 提取链路；更新酒店水单结构化模型、SQLite、CloudKit 映射、确认表单、编辑页、归档展示、截图样例、入账备注、五语文案、离线回归、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 StoreKit、Pro gate、邮箱授权、Cloudflare Worker、App Store Connect、截图导出管线、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未把 OCR 结果上传云端；未改变快捷方式记账和普通记账保存语义。
+- 完成内容：`duplicateHotelStayDraftState(for:)` 现在遇到相同 fingerprint 但状态为 `.rejected` 的旧草稿时会继续查找其它记录，不再返回 duplicate rejected 状态；待确认草稿仍返回 pending，已确认 / 已入账草稿和正式酒店记录仍返回 posted，避免真正重复入账。PDF 导入先读取文本层，文本过短或缺少酒店信号时渲染前几页执行 Vision OCR，并把文本层与 OCR 行合并去重后交给酒店水单解析。iPad / Mac 手动导入状态会显示读取文本层、执行 OCR、整理文本和生成确认信息等阶段，不再只停在等待解析。酒店水单新增 `roomNumber` 字段，贯通 parsed payload、localized data、review form、record、SQLite、CloudKit sync、归档详情、编辑表单、截图 fixture 和入账备注。酒店到离店日期会把 `07-04-26`、`04/07/2026`、`2026年7月4日` 等格式归一化为 `yyyy-MM-dd`。确认表单的酒店名、到离店日期、房型、房号和确认号支持候选值下拉，同时保留手动输入。
+- PDF 诊断：用户提供的 `张先生.pdf` 可由 PDFKit 打开，1 页，文本层包含客人、确认号、房号、到店 / 离店、Tianjin、账单号、房费和总计，但不包含酒店名称；因此本轮补上页面 OCR fallback，专门覆盖图片 Logo / 抬头中才有酒店名的样例。
+- 未完成内容：未新增基于真实酒店样本的大规模回归集；未对已发布 `v1.6.4 / ASC 1.5.0` 二进制做 retroactive 修复；OCR fallback 目前最多扫描 PDF 前 3 页，超长水单仍以可控成本优先。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖拒绝草稿可重新导入、房号解析与持久化、非标准日期归一化、酒店水单解析流水线和既有账单 / 同步回归；执行 `bash scripts/run_golden_regression.sh`，结果 PASS，38 个 Golden case 通过；执行 `git diff --check`，结果 PASS；执行五语 `plutil -lint` 和 `python3 scripts/check_localization_coverage.py`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-07-05T13-40-14-598Z_pid86659_37199198.log`，仅保留既有 warning。
+- 风险与注意事项：拒绝草稿仍保留在本地历史 / 备份中，只是不再参与去重拦截；如果同一 PDF 同时存在 pending 或 posted 版本，仍会被拦截。OCR fallback 会增加少量本机解析耗时，所以手动导入页现在用分阶段状态提示降低等待不确定性。SQLite 新增 `room_number` 列，旧库打开时会自动迁移。
+- 回滚方式：回退 `HotelFolioPDFTextExtractor` 及三个 PDF importer 的调用、`HotelStay` / SQLite / CloudKit / UI / 本地化 / 回归改动，并把 `.rejected` 分支从 `continue` 改回返回 duplicate rejected 状态；如需数据层回滚，需要保留旧库对新增 `room_number` 列的容忍，不做破坏性迁移。
+- 结论：本轮完成酒店水单拒绝后重试、PDF 页面 OCR fallback、解析进度可见、房号结构化、非标准日期识别和确认候选值选择，进入 1.7.0 酒店水单主线。
+- 下一步建议：把用户样例和更多真实酒店水单脱敏后加入批量回归，继续优化酒店名、城市、税费和多币种字段的候选排序。
 
 ### ITER-369 酒店地点目录简繁判断修复
 - 日期：2026-07-05

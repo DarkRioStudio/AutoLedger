@@ -800,6 +800,7 @@ struct HotelStayDetailView: View {
             DatePicker("hotel_stay.review.check_out", selection: $form.checkOutDateValue, displayedComponents: [.date])
             editableNumberField("hotel_stay.review.nights", text: $form.nightsText)
             editableTextField("hotel_stay.review.room_type", text: $form.roomType)
+            editableTextField("hotel_stay.review.room_number", text: $form.roomNumber)
             editableTextField("hotel_stay.review.confirmation", text: $form.confirmationNumber)
         }
     }
@@ -937,6 +938,8 @@ struct HotelStayDetailView: View {
             return "hotel_stay.review.nights"
         case .roomType:
             return "hotel_stay.review.room_type"
+        case .roomNumber:
+            return "hotel_stay.review.room_number"
         case .confirmationNumber:
             return "hotel_stay.review.confirmation"
         case .currency:
@@ -1114,6 +1117,7 @@ private struct HotelStayRecordEditForm: Equatable {
     var checkOutDateValue: Date
     var nightsText: String
     var roomType: String
+    var roomNumber: String
     var confirmationNumber: String
     var currency: String
     var roomChargeText: String
@@ -1141,6 +1145,7 @@ private struct HotelStayRecordEditForm: Equatable {
         checkOutDateValue = Self.parsedDate(record.checkOutDate) ?? record.updatedAt
         nightsText = record.nights.map(String.init) ?? ""
         roomType = Self.displayString(record.localizedData?.roomType, fallback: record.roomType)
+        roomNumber = Self.displayString(record.localizedData?.roomNumber, fallback: record.roomNumber)
         confirmationNumber = record.confirmationNumber ?? ""
         currency = Self.currencyString(record.localizedData?.currency, fallback: record.currency, context: record.rawText)
         roomChargeText = Self.amountText(record.localizedData?.roomCharge ?? record.roomCharge)
@@ -1244,6 +1249,7 @@ private struct HotelStayRecordEditForm: Equatable {
         updated.city = trimmedOptional(city)
         updated.country = trimmedOptional(country)
         updated.roomType = trimmedOptional(roomType)
+        updated.roomNumber = trimmedOptional(roomNumber)
         updated.paymentMethod = trimmedOptional(paymentMethod)
         updated.localizedData = HotelStayLocalizedData(
             hotelName: trimmedOptional(hotelName),
@@ -1252,6 +1258,7 @@ private struct HotelStayRecordEditForm: Equatable {
             city: trimmedOptional(city),
             country: trimmedOptional(country),
             roomType: trimmedOptional(roomType),
+            roomNumber: trimmedOptional(roomNumber),
             currency: normalizedCurrency(fallback: record.currency),
             roomCharge: parsedAmount(roomChargeText),
             taxAmount: parsedAmount(taxAmountText),
@@ -1468,6 +1475,7 @@ private enum HotelStayPreviewData {
             checkOutDate: "2026-06-22",
             nights: 2,
             roomType: "King Bay View",
+            roomNumber: "2609",
             confirmationNumber: "ABC123",
             currency: "JPY",
             roomCharge: 40000,

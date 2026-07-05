@@ -108,7 +108,7 @@ struct HotelStayReviewView: View {
 
     private var identitySection: some View {
         Section {
-            TextField("hotel_stay.review.hotel_name", text: $form.hotelName)
+            optionField("hotel_stay.review.hotel_name", text: $form.hotelName, options: form.hotelNameOptions)
             TextField("hotel_stay.review.brand", text: $form.hotelBrand)
             TextField("hotel_stay.review.group", text: $form.hotelGroup)
             locationOptionField("hotel_stay.review.country", text: $form.country, options: form.countryOptions) { selectedCountry in
@@ -158,12 +158,43 @@ struct HotelStayReviewView: View {
 
     private var staySection: some View {
         Section("hotel_stay.review.stay") {
-            TextField("hotel_stay.review.check_in", text: $form.checkInDate)
-            TextField("hotel_stay.review.check_out", text: $form.checkOutDate)
+            optionField("hotel_stay.review.check_in", text: $form.checkInDate, options: form.checkInDateOptions)
+            optionField("hotel_stay.review.check_out", text: $form.checkOutDate, options: form.checkOutDateOptions)
             TextField("hotel_stay.review.nights", text: $form.nightsText)
                 .keyboardType(.numberPad)
-            TextField("hotel_stay.review.room_type", text: $form.roomType)
-            TextField("hotel_stay.review.confirmation", text: $form.confirmationNumber)
+            optionField("hotel_stay.review.room_type", text: $form.roomType, options: form.roomTypeOptions)
+            optionField("hotel_stay.review.room_number", text: $form.roomNumber, options: form.roomNumberOptions)
+            optionField("hotel_stay.review.confirmation", text: $form.confirmationNumber, options: form.confirmationNumberOptions)
+        }
+    }
+
+    private func optionField(
+        _ titleKey: LocalizedStringKey,
+        text: Binding<String>,
+        options: [String]
+    ) -> some View {
+        LabeledContent(titleKey) {
+            HStack(spacing: 8) {
+                TextField(titleKey, text: text)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                if !options.isEmpty {
+                    Menu {
+                        ForEach(options, id: \.self) { option in
+                            Button(option) {
+                                text.wrappedValue = option
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down.circle")
+                            .imageScale(.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(AppTheme.accent)
+                }
+            }
         }
     }
 
@@ -374,6 +405,42 @@ struct HotelStayReviewView: View {
 }
 
 private extension HotelStayReviewForm {
+    var hotelNameOptions: [String] {
+        Self.uniqueOptions([hotelName] + Self.hotelNameCandidates(in: rawText))
+    }
+
+    var checkInDateOptions: [String] {
+        Self.uniqueOptions([checkInDate] + Self.dateCandidates(in: rawText))
+    }
+
+    var checkOutDateOptions: [String] {
+        Self.uniqueOptions([checkOutDate] + Self.dateCandidates(in: rawText))
+    }
+
+    var roomTypeOptions: [String] {
+        Self.uniqueOptions([roomType] + Self.labeledTextCandidates(
+            in: rawText,
+            labels: ["room type", "room category", "房型", "房间类型", "房間類型", "部屋タイプ"]
+        ))
+    }
+
+    var roomNumberOptions: [String] {
+        Self.uniqueOptions([roomNumber] + Self.labeledTextCandidates(
+            in: rawText,
+            labels: ["room no", "room number", "room #", "房号", "房號", "房间号码", "房間號碼", "部屋番号"]
+        ))
+    }
+
+    var confirmationNumberOptions: [String] {
+        Self.uniqueOptions([confirmationNumber] + Self.labeledTextCandidates(
+            in: rawText,
+            labels: [
+                "confirmation", "confirmation no", "confirmation number", "reservation no",
+                "booking no", "订单号", "訂單號", "预订号", "預訂號", "予約番号"
+            ]
+        ))
+    }
+
     var cityOptions: [String] {
         let selectedCountry = HotelStayLocationCatalog.country(matching: country)
         return Self.uniqueOptions([city] + HotelStayLocationCatalog.cityOptions(for: selectedCountry))
@@ -424,6 +491,77 @@ private extension HotelStayReviewForm {
             .filter { !$0.isEmpty }
             .filter { seen.insert($0).inserted }
     }
+
+    private static func dateCandidates(in rawText: String) -> [String] {
+        matches(
+            pattern: #"\b(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\d{4}年\d{1,2}月\d{1,2}日"#,
+            in: rawText
+        )
+        .compactMap { AppFormatters.normalizedDateString($0) ?? nonEmpty($0) }
+    }
+
+    private static func labeledTextCandidates(in rawText: String, labels: [String]) -> [String] {
+        let labelPattern = labels
+            .map(NSRegularExpression.escapedPattern(for:))
+            .joined(separator: "|")
+        let pattern = #"(?i)(?:"# + labelPattern + #")\s*(?:[:：#\-]|\s)\s*([^\n\r\t,，;；]{1,48})"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(rawText.startIndex..<rawText.endIndex, in: rawText)
+        return regex.matches(in: rawText, range: range).compactMap { match in
+            guard match.numberOfRanges > 1,
+                  let valueRange = Range(match.range(at: 1), in: rawText) else {
+                return nil
+            }
+            return cleanCandidateValue(String(rawText[valueRange]))
+        }
+    }
+
+    private static func hotelNameCandidates(in rawText: String) -> [String] {
+        rawText
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { line in
+                guard (3...80).contains(line.count) else { return false }
+                let lowercased = line.lowercased()
+                let hasHotelSignal = [
+                    "hotel", "plaza", "resort", "inn", "suites", "holiday", "crowne",
+                    "酒店", "宾馆", "賓館", "皇冠假日", "假日酒店", "洲际", "洲際", "ホテル"
+                ].contains { lowercased.contains($0.lowercased()) }
+                guard hasHotelSignal else { return false }
+                return !lowercased.contains("http") &&
+                    !lowercased.contains("@") &&
+                    LedgerAmountInputParser.parse(line) == nil
+            }
+            .prefix(8)
+            .map { String($0) }
+    }
+
+    private static func matches(pattern: String, in text: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let valueRange = Range(match.range, in: text) else { return nil }
+            return String(text[valueRange])
+        }
+    }
+
+    private static func cleanCandidateValue(_ value: String) -> String? {
+        let trimmed = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: #"[\s]{2,}"#, with: " ", options: .regularExpression)
+        let stopCharacters = CharacterSet(charactersIn: "，,;；")
+        let firstSegment = trimmed
+            .components(separatedBy: stopCharacters)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return nonEmpty(firstSegment)
+    }
+
+    private static func nonEmpty(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 #Preview {
@@ -443,6 +581,7 @@ private extension HotelStayReviewForm {
                 checkOutDate: "2026-06-22",
                 nights: 2,
                 roomType: "King Bay View",
+                roomNumber: "2609",
                 confirmationNumber: "ABC123",
                 currency: "JPY",
                 roomCharge: 40000,

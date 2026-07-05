@@ -20,14 +20,23 @@ enum HotelFolioManualPDFImportError: LocalizedError, Equatable, Sendable {
     }
 }
 
-struct HotelFolioManualPDFImporter {
+struct HotelFolioManualPDFImporter: Sendable {
     private let now: @Sendable () -> Date
+    private let textExtractor: HotelFolioPDFTextExtractor
 
-    init(now: @escaping @Sendable () -> Date = { Date() }) {
+    nonisolated init(
+        now: @escaping @Sendable () -> Date = { Date() },
+        textExtractor: HotelFolioPDFTextExtractor = HotelFolioPDFTextExtractor()
+    ) {
         self.now = now
+        self.textExtractor = textExtractor
     }
 
-    func importPDF(at url: URL, targetLedgerID: String? = nil) throws -> HotelStayDraft {
+    nonisolated func importPDF(
+        at url: URL,
+        targetLedgerID: String? = nil,
+        onProgress: @Sendable (HotelFolioPDFTextExtractionProgress) -> Void = { _ in }
+    ) throws -> HotelStayDraft {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer {
             if didAccess {
@@ -40,7 +49,8 @@ struct HotelFolioManualPDFImporter {
         }
 
         let pdfData = try Data(contentsOf: url)
-        let text = try extractText(from: url)
+        let extractionResult = try textExtractor.extractText(from: pdfData, onProgress: onProgress)
+        let text = extractionResult.combinedText
         let timestamp = now()
         return HotelStayDraft(
             sourceType: .manualPDF,
@@ -58,26 +68,11 @@ struct HotelFolioManualPDFImporter {
         )
     }
 
-    func extractText(from url: URL) throws -> String {
-        guard let document = PDFDocument(url: url), document.pageCount > 0 else {
-            throw HotelFolioManualPDFImportError.cannotOpenPDF
-        }
-
-        let text = (0..<document.pageCount)
-            .compactMap { document.page(at: $0)?.string }
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !text.isEmpty else {
-            throw HotelFolioManualPDFImportError.emptyText
-        }
-
-        return text
+    nonisolated func extractText(from url: URL) throws -> String {
+        try textExtractor.extractText(from: url).combinedText
     }
 
-    private func isPDFFile(_ url: URL) -> Bool {
+    nonisolated private func isPDFFile(_ url: URL) -> Bool {
         if let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType,
            contentType.conforms(to: .pdf) {
             return true

@@ -15,6 +15,7 @@ public enum HotelStayDetailFieldKey: String, Codable, Equatable, Sendable {
     case checkOutDate
     case nights
     case roomType
+    case roomNumber
     case confirmationNumber
     case currency
     case roomCharge
@@ -229,6 +230,7 @@ public struct HotelStayArchivePresenter: Sendable {
             (.checkOutDate, record.checkOutDate),
             (.nights, record.nights.map(String.init)),
             (.roomType, displayString(record.localizedData?.roomType, fallback: record.roomType)),
+            (.roomNumber, displayString(record.localizedData?.roomNumber, fallback: record.roomNumber)),
             (.confirmationNumber, record.confirmationNumber)
         ])
     }

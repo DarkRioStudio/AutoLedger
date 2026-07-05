@@ -2306,7 +2306,7 @@ final class LedgerStore: ObservableObject {
             guard hotelStayDraftFingerprintMatches(draft, existingDraft) else { continue }
             switch existingDraft.status {
             case .rejected:
-                return .rejected
+                continue
             case .confirmed, .postedToLedger:
                 return .posted
             case .imported, .textExtracted, .parsed, .needsReview:

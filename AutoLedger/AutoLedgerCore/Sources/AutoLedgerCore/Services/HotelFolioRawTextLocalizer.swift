@@ -177,7 +177,7 @@ public struct HotelFolioRawTextLocalizer: Sendable {
         add(["arrival", "arrival date", "check in", "check-in", "check in date", "check-in date", "入住", "入住日期", "チェックイン"], .checkInDate)
         add(["departure", "departure date", "check out", "check-out", "check out date", "check-out date", "退房", "退房日期", "チェックアウト"], .checkOutDate)
         add(["night", "nights", "no of nights", "晚数", "晚數", "泊数"], .nights)
-        add(["room", "room no", "room number", "room #", "房号", "房號", "部屋番号"], .roomNumber)
+        add(["room", "room no", "room number", "room #", "房号", "房號", "房间号码", "房間號碼", "客房号", "客房號", "部屋番号"], .roomNumber)
         add(["room type", "room category", "房型", "部屋タイプ"], .roomType)
         add(["room rate", "rate", "daily rate", "房价", "房價", "客室料金"], .roomRate)
         add(["description", "item", "particulars", "项目", "項目", "摘要"], .description)

@@ -1307,6 +1307,7 @@ struct LedgerCloudKitSyncAdapter {
             checkOutDate: record.checkOutDate,
             nights: record.nights,
             roomType: record.roomType,
+            roomNumber: record.roomNumber,
             confirmationNumber: record.confirmationNumber,
             currency: record.currency,
             roomCharge: record.roomCharge,

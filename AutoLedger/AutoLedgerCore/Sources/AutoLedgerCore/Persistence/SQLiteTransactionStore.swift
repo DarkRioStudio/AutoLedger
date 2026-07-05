@@ -438,7 +438,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     public func loadHotelStayRecords() throws -> [HotelStayRecord] {
         let sql = """
         SELECT id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
-               check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
+               check_in_date, check_out_date, nights, room_type, room_number, confirmation_number, currency,
                room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
                payment_method, source_type, source_file_name, source_pdf_data, localized_data_json,
                confidence, raw_text, created_at, updated_at
@@ -531,12 +531,12 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         let sql = """
         INSERT INTO hotel_stay_records (
             id, ledger_id, linked_transaction_id, hotel_name, hotel_group, hotel_brand, city, country,
-            check_in_date, check_out_date, nights, room_type, confirmation_number, currency,
+            check_in_date, check_out_date, nights, room_type, room_number, confirmation_number, currency,
             room_charge, tax_amount, service_charge, food_beverage_amount, other_amount, total_amount,
             payment_method, source_type, source_file_name, source_pdf_data, localized_data_json,
             confidence, raw_text, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             ledger_id = excluded.ledger_id,
             linked_transaction_id = excluded.linked_transaction_id,
@@ -549,6 +549,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             check_out_date = excluded.check_out_date,
             nights = excluded.nights,
             room_type = excluded.room_type,
+            room_number = excluded.room_number,
             confirmation_number = excluded.confirmation_number,
             currency = excluded.currency,
             room_charge = excluded.room_charge,
@@ -1113,6 +1114,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             check_out_date TEXT,
             nights INTEGER,
             room_type TEXT,
+            room_number TEXT,
             confirmation_number TEXT,
             currency TEXT NOT NULL,
             room_charge REAL NOT NULL DEFAULT 0,
@@ -1142,6 +1144,9 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
         if !hotelStayColumns.contains("localized_data_json") {
             sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN localized_data_json TEXT;", nil, nil, nil)
+        }
+        if !hotelStayColumns.contains("room_number") {
+            sqlite3_exec(db, "ALTER TABLE hotel_stay_records ADD COLUMN room_number TEXT;", nil, nil, nil)
         }
 
         let hotelStayDraftsSQL = """
@@ -1963,23 +1968,24 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             sqlite3_bind_null(statement, 11)
         }
         bindOptionalString(record.roomType, to: statement, at: 12)
-        bindOptionalString(record.confirmationNumber, to: statement, at: 13)
-        sqlite3_bind_text(statement, 14, record.currency, -1, sqliteTransient)
-        sqlite3_bind_double(statement, 15, record.roomCharge)
-        sqlite3_bind_double(statement, 16, record.taxAmount)
-        sqlite3_bind_double(statement, 17, record.serviceCharge)
-        sqlite3_bind_double(statement, 18, record.foodBeverageAmount)
-        sqlite3_bind_double(statement, 19, record.otherAmount)
-        sqlite3_bind_double(statement, 20, record.totalAmount)
-        bindOptionalString(record.paymentMethod, to: statement, at: 21)
-        sqlite3_bind_text(statement, 22, record.sourceType.rawValue, -1, sqliteTransient)
-        bindOptionalString(record.sourceFileName, to: statement, at: 23)
-        bindOptionalData(record.sourcePDFData, to: statement, at: 24)
-        bindOptionalLocalizedData(record.localizedData, to: statement, at: 25)
-        sqlite3_bind_double(statement, 26, record.confidence)
-        sqlite3_bind_text(statement, 27, record.rawText, -1, sqliteTransient)
-        sqlite3_bind_text(statement, 28, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
-        sqlite3_bind_text(statement, 29, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
+        bindOptionalString(record.roomNumber, to: statement, at: 13)
+        bindOptionalString(record.confirmationNumber, to: statement, at: 14)
+        sqlite3_bind_text(statement, 15, record.currency, -1, sqliteTransient)
+        sqlite3_bind_double(statement, 16, record.roomCharge)
+        sqlite3_bind_double(statement, 17, record.taxAmount)
+        sqlite3_bind_double(statement, 18, record.serviceCharge)
+        sqlite3_bind_double(statement, 19, record.foodBeverageAmount)
+        sqlite3_bind_double(statement, 20, record.otherAmount)
+        sqlite3_bind_double(statement, 21, record.totalAmount)
+        bindOptionalString(record.paymentMethod, to: statement, at: 22)
+        sqlite3_bind_text(statement, 23, record.sourceType.rawValue, -1, sqliteTransient)
+        bindOptionalString(record.sourceFileName, to: statement, at: 24)
+        bindOptionalData(record.sourcePDFData, to: statement, at: 25)
+        bindOptionalLocalizedData(record.localizedData, to: statement, at: 26)
+        sqlite3_bind_double(statement, 27, record.confidence)
+        sqlite3_bind_text(statement, 28, record.rawText, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 29, Self.storageFormatter.string(from: record.createdAt), -1, sqliteTransient)
+        sqlite3_bind_text(statement, 30, Self.storageFormatter.string(from: record.updatedAt), -1, sqliteTransient)
     }
 
     private static func hotelStayRecord(from statement: OpaquePointer?) -> HotelStayRecord? {
@@ -1987,11 +1993,11 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             let idCString = sqlite3_column_text(statement, 0),
             let ledgerCString = sqlite3_column_text(statement, 1),
             let hotelNameCString = sqlite3_column_text(statement, 3),
-            let currencyCString = sqlite3_column_text(statement, 13),
-            let sourceTypeCString = sqlite3_column_text(statement, 21),
-            let rawTextCString = sqlite3_column_text(statement, 26),
-            let createdCString = sqlite3_column_text(statement, 27),
-            let updatedCString = sqlite3_column_text(statement, 28),
+            let currencyCString = sqlite3_column_text(statement, 14),
+            let sourceTypeCString = sqlite3_column_text(statement, 22),
+            let rawTextCString = sqlite3_column_text(statement, 27),
+            let createdCString = sqlite3_column_text(statement, 28),
+            let updatedCString = sqlite3_column_text(statement, 29),
             let id = UUID(uuidString: String(cString: idCString)),
             let sourceType = HotelFolioSourceType(rawValue: String(cString: sourceTypeCString)),
             let createdAt = storageFormatter.date(from: String(cString: createdCString)),
@@ -2017,20 +2023,21 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             checkOutDate: string(from: statement, index: 9),
             nights: nights,
             roomType: string(from: statement, index: 11),
-            confirmationNumber: string(from: statement, index: 12),
+            roomNumber: string(from: statement, index: 12),
+            confirmationNumber: string(from: statement, index: 13),
             currency: String(cString: currencyCString),
-            roomCharge: sqlite3_column_double(statement, 14),
-            taxAmount: sqlite3_column_double(statement, 15),
-            serviceCharge: sqlite3_column_double(statement, 16),
-            foodBeverageAmount: sqlite3_column_double(statement, 17),
-            otherAmount: sqlite3_column_double(statement, 18),
-            totalAmount: sqlite3_column_double(statement, 19),
-            paymentMethod: string(from: statement, index: 20),
+            roomCharge: sqlite3_column_double(statement, 15),
+            taxAmount: sqlite3_column_double(statement, 16),
+            serviceCharge: sqlite3_column_double(statement, 17),
+            foodBeverageAmount: sqlite3_column_double(statement, 18),
+            otherAmount: sqlite3_column_double(statement, 19),
+            totalAmount: sqlite3_column_double(statement, 20),
+            paymentMethod: string(from: statement, index: 21),
             sourceType: sourceType,
-            sourceFileName: string(from: statement, index: 22),
-            sourcePDFData: data(from: statement, index: 23),
-            localizedData: localizedData(from: statement, index: 24),
-            confidence: sqlite3_column_double(statement, 25),
+            sourceFileName: string(from: statement, index: 23),
+            sourcePDFData: data(from: statement, index: 24),
+            localizedData: localizedData(from: statement, index: 25),
+            confidence: sqlite3_column_double(statement, 26),
             rawText: String(cString: rawTextCString),
             createdAt: createdAt,
             updatedAt: updatedAt

@@ -328,6 +328,7 @@ public enum HotelFolioDebugTraceBuilder {
             localized.city,
             localized.country,
             localized.roomType,
+            localized.roomNumber,
             localized.paymentMethod,
             localized.currency
         ]

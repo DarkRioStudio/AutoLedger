@@ -100,6 +100,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             checkOutDate: trimmed(payload.checkOutDate),
             nights: payload.nights,
             roomType: trimmed(payload.roomType),
+            roomNumber: trimmed(payload.roomNumber),
             confirmationNumber: trimmed(payload.confirmationNumber),
             currency: currency,
             roomCharge: payload.roomCharge ?? 0,
@@ -171,6 +172,7 @@ public struct HotelStayLedgerPostingService: Sendable {
             parts.append("晚数：\(nights)")
         }
         append("房型", localizedData?.roomType ?? payload.roomType, to: &parts)
+        append("房号", localizedData?.roomNumber ?? payload.roomNumber, to: &parts)
         append("订单号", payload.confirmationNumber, to: &parts)
         append("支付方式", localizedData?.paymentMethod ?? payload.paymentMethod, to: &parts)
         return parts.joined(separator: "；")

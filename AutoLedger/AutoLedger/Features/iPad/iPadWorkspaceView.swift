@@ -2769,11 +2769,28 @@ struct HotelStayWorkspaceView: View {
                 return
             }
 
-            let draft = try HotelFolioManualPDFImporter().importPDF(
-                at: url,
-                targetLedgerID: store.targetLedgerIDForNewTransactions
+            let targetLedgerID = store.targetLedgerIDForNewTransactions
+            let importer = HotelFolioManualPDFImporter()
+            let (progressStream, progressContinuation) = AsyncStream.makeStream(
+                of: HotelFolioPDFTextExtractionProgress.self
             )
-            statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
+            let importTask = Task.detached(priority: .userInitiated) {
+                defer {
+                    progressContinuation.finish()
+                }
+                return try importer.importPDF(
+                    at: url,
+                    targetLedgerID: targetLedgerID,
+                    onProgress: { progress in
+                        progressContinuation.yield(progress)
+                    }
+                )
+            }
+            for await progress in progressStream {
+                statusMessage = localizedPDFExtractionStatus(for: progress)
+            }
+            let draft = try await importTask.value
+            statusMessage = String(localized: "hotel_stay.import.status.parsing")
             await prepareDraftForReview(draft, managesImportingState: false)
         } catch {
             statusMessage = String(
@@ -2816,7 +2833,7 @@ struct HotelStayWorkspaceView: View {
     ) async -> HotelStayDraft? {
         if managesImportingState {
             isImporting = true
-            statusMessage = String(localized: "hotel_stay.import.status.text_extracted")
+            statusMessage = String(localized: "hotel_stay.import.status.parsing")
         }
         defer {
             if managesImportingState {
@@ -2860,6 +2877,43 @@ struct HotelStayWorkspaceView: View {
         } else {
             statusMessage = store.lastImportSummary
             return nil
+        }
+    }
+
+    @MainActor
+    private func localizedPDFExtractionStatus(for progress: HotelFolioPDFTextExtractionProgress) -> String {
+        switch progress {
+        case let .readingTextLayer(pageCount):
+            return String(
+                format: String(localized: "hotel_stay.import.status.pdf_text_layer_format"),
+                pageCount
+            )
+        case let .textLayerExtracted(characterCount):
+            return String(
+                format: String(localized: "hotel_stay.import.status.pdf_text_count_format"),
+                characterCount
+            )
+        case let .ocrStarting(pageCount):
+            return String(
+                format: String(localized: "hotel_stay.import.status.ocr_start_format"),
+                pageCount
+            )
+        case let .ocrPage(index, total):
+            return String(
+                format: String(localized: "hotel_stay.import.status.ocr_page_format"),
+                index,
+                total
+            )
+        case let .ocrCompleted(characterCount):
+            return String(
+                format: String(localized: "hotel_stay.import.status.ocr_completed_format"),
+                characterCount
+            )
+        case let .completed(characterCount, _):
+            return String(
+                format: String(localized: "hotel_stay.import.status.text_ready_format"),
+                characterCount
+            )
         }
     }
 

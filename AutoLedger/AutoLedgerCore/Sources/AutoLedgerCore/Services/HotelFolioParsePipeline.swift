@@ -189,11 +189,11 @@ public struct HotelFolioOpenAICompatibleCodec: Sendable {
         """
         You are AutoLedger's hotel folio parser. Return JSON only.
         Extract one hotel stay from sanitized hotel folio text.
-        Output exactly these top-level schema keys when known: hotel_name, brand, group, city, country, check_in_date, check_out_date, nights, room_type, confirmation_number, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, confidence, raw_text_excerpt, localized.
+        Output exactly these top-level schema keys when known: hotel_name, brand, group, city, country, check_in_date, check_out_date, nights, room_type, room_number, confirmation_number, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, confidence, raw_text_excerpt, localized.
         Keep top-level fields as the original recognized folio values. Do not translate or convert top-level values.
-        The optional localized object is for display only. When reliable, put localized display values in localized using keys: hotel_name, brand, group, city, country, room_type, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, exchange_rate, exchange_rate_date, exchange_rate_provider, target_locale.
+        The optional localized object is for display only. When reliable, put localized display values in localized using keys: hotel_name, brand, group, city, country, room_type, room_number, currency, room_charge, tax, service_charge, food_beverage, other_charges, total_amount, payment_method, exchange_rate, exchange_rate_date, exchange_rate_provider, target_locale.
         Only fill localized amount fields when the folio itself provides a reliable converted amount or exchange rate. Otherwise use null for localized amount fields.
-        Use ISO 8601 date strings for check_in_date and check_out_date when possible.
+        Use ISO 8601 yyyy-MM-dd date strings for check_in_date and check_out_date when possible, including folio dates written as MM-dd-yy or dd-MM-yy.
         Amount fields must be numbers, nights must be an integer, confidence must be a number from 0 to 1.
         Do not return email addresses, phone numbers, membership numbers, passport or ID numbers, card numbers, postal addresses, or unrelated personal data.
         Use null for unknown fields instead of inventing values.
@@ -267,7 +267,9 @@ public struct HotelFolioParsePipeline: Sendable {
             throw HotelFolioParsePipelineError.missingStructuredFields
         }
 
-        let normalizedPayload = normalizeCurrencies(in: parsedPayload, rawText: draft.rawText)
+        let normalizedPayload = normalizeDates(
+            in: normalizeCurrencies(in: parsedPayload, rawText: draft.rawText)
+        )
         var updated = draft
         updated.parsedPayload = normalizedPayload
         updated.localizedData = normalizedPayload.localizedData ?? draft.localizedData
@@ -318,6 +320,21 @@ public struct HotelFolioParsePipeline: Sendable {
 
         return normalized
     }
+
+    private func normalizeDates(in payload: HotelFolioParsedPayload) -> HotelFolioParsedPayload {
+        var normalized = payload
+        normalized.checkInDate = normalizedDate(payload.checkInDate)
+        normalized.checkOutDate = normalizedDate(payload.checkOutDate)
+        return normalized
+    }
+
+    private func normalizedDate(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return nil
+        }
+        return AppFormatters.normalizedDateString(value) ?? value
+    }
 }
 
 private extension HotelFolioParsedPayload {
@@ -331,6 +348,7 @@ private extension HotelFolioParsedPayload {
             checkInDate,
             checkOutDate,
             roomType,
+            roomNumber,
             confirmationNumber,
             currency,
             paymentMethod,

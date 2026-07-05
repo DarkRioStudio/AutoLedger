@@ -95,6 +95,7 @@
 "hotel_stay.review.check_out" = "チェックアウト日";
 "hotel_stay.review.nights" = "泊数";
 "hotel_stay.review.room_type" = "部屋タイプ";
+"hotel_stay.review.room_number" = "部屋番号";
 "hotel_stay.review.confirmation" = "確認番号";
 "hotel_stay.review.currency" = "通貨";
 "hotel_stay.review.room_charge" = "宿泊料金";
@@ -143,6 +144,13 @@
 "hotel_stay.import.processing" = "ホテル明細を処理中";
 "hotel_stay.import.status.extracting" = "PDF テキストを抽出しています。";
 "hotel_stay.import.status.text_extracted" = "PDF テキストを抽出しました。ホテル明細を解析しています。";
+"hotel_stay.import.status.parsing" = "ホテル名、部屋番号、日付、料金を解析しています。";
+"hotel_stay.import.status.pdf_text_layer_format" = "PDF のテキストレイヤーを読み取っています（%d ページ）。";
+"hotel_stay.import.status.pdf_text_count_format" = "PDF テキストレイヤーを抽出しました（%d 文字）。OCR が必要か確認しています。";
+"hotel_stay.import.status.ocr_start_format" = "テキストレイヤーが不完全なため、PDF ページを OCR しています（%d ページ）。";
+"hotel_stay.import.status.ocr_page_format" = "%d / %d ページ目を OCR しています。";
+"hotel_stay.import.status.ocr_completed_format" = "OCR が完了しました（%d 文字）。結果を統合しています。";
+"hotel_stay.import.status.text_ready_format" = "PDF/OCR テキストの準備ができました（%d 文字）。構造化解析しています。";
 "hotel_stay.import.status.parsed" = "ホテル明細を解析しました。確認して記帳してください。";
 "hotel_stay.import.status.manual_review_format" = "自動解析が完了しませんでした：%@。手動確認に進みます。";
 "hotel_stay.import.status.failed_format" = "ホテル明細の取り込みに失敗しました：%@";
