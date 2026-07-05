@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-05（ITER-368 国家和地区合规与语言设置入口）
+更新日期：2026-07-05（ITER-369 酒店地点目录简繁判断修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-369 酒店地点目录简繁判断修复
+- 日期：2026-07-05
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / Hotel Stay
+- 类型：Bugfix / 本地化
+- 目标：修复酒店消费详情和城市选择列表在简体中文 UI 下可能显示繁体城市名的问题，并解释 `v1.6.4` 中列表与详情显示不一致的根因。
+- 改动范围：更新 `AppLanguagePreference` 的地点目录语言 key 解析；让 `HotelStayLocationCatalog` 和 `CommonAPICatalogService.LocalizedText` 复用同一语言 key；更新 `CHANGELOG.md` 和本日志。
+- 未改动范围：未修改酒店记录 schema、SQLite / CloudKit 字段、地点目录数据内容、common-api Worker、截图 / App Preview、App Store Connect、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：地点目录语言选择现在优先识别 `Hans` / `Hant` 脚本，再用 `TW` / `HK` / `MO` 地区兜底；`zh-Hans-HK`、`zh-Hans-MO` 等“简体中文 + 港澳台地区”不再被误判为繁体。酒店内置地点目录和 common-api 缓存目录都走同一套判断，避免详情页和城市列表继续漂移。
+- 未完成内容：已发布的 `v1.6.4 / ASC 1.5.0` 二进制无法 retroactively 修复；需要后续 TestFlight / 正式构建携带该修复。
+- 测试情况：执行 `git diff --check`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-07-05T12-42-11-388Z_pid86659_8e4957f0.log`，仅保留既有 warning。
+- 风险与注意事项：系统“跟随系统”模式下仍会根据 App 实际 preferred localization 和 locale 组合决定显示语言；本轮只修正脚本与地区优先级，不改变用户手动选择 App 语言的行为。
+- 回滚方式：回退 `AppLanguagePreference.swift`、`HotelStayLocationCatalog.swift`、`CommonAPICatalogService.swift` 以及本轮文档记录即可；无数据迁移回滚动作。
+- 结论：本轮完成，后续版本的酒店消费详情、城市列表和远程地点目录本地化会按 App 简繁语言一致显示。
+- 下一步建议：在 1.6.0 TestFlight 或后续 1.7.0 smoke 中，用简体中文 + 香港 / 澳门 / 台湾地区设置验证重庆、广州、武汉等城市仍显示简体。
 
 ### ITER-368 国家和地区合规与语言设置入口
 - 日期：2026-07-05

@@ -30,6 +30,26 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
+    nonisolated var catalogLanguageKey: String {
+        switch self {
+        case .system:
+            let preferredIdentifier = Bundle.main.preferredLocalizations.first
+            return Self.catalogLanguageKey(
+                preferredIdentifier ?? Locale.autoupdatingCurrent.identifier
+            )
+        case .zhHans:
+            return "zh-Hans"
+        case .zhHant:
+            return "zh-Hant"
+        case .english:
+            return "en"
+        case .japanese:
+            return "ja"
+        case .korean:
+            return "ko"
+        }
+    }
+
     var localizedTitleKey: LocalizedStringKey {
         switch self {
         case .system:
@@ -50,5 +70,32 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     nonisolated static var current: AppLanguagePreference {
         let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey)
         return rawValue.flatMap(AppLanguagePreference.init(rawValue:)) ?? .system
+    }
+
+    nonisolated static func catalogLanguageKey(_ identifier: String) -> String {
+        let normalized = identifier
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "-")
+
+        if normalized.hasPrefix("ko") {
+            return "ko"
+        }
+        if normalized.hasPrefix("ja") {
+            return "ja"
+        }
+        if normalized.contains("hans") {
+            return "zh-Hans"
+        }
+        if normalized.contains("hant") {
+            return "zh-Hant"
+        }
+        if normalized == "zh" || normalized.hasPrefix("zh-") {
+            if normalized.contains("-tw") || normalized.contains("-hk") || normalized.contains("-mo") {
+                return "zh-Hant"
+            }
+            return "zh-Hans"
+        }
+        return "en"
     }
 }

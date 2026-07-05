@@ -36,20 +36,7 @@ enum CommonAPICatalogService {
         }
 
         nonisolated private var languageKey: String {
-            let identifier = AppLanguagePreference.current.locale.identifier.lowercased()
-            if identifier.hasPrefix("ko") {
-                return "ko"
-            }
-            if identifier.hasPrefix("ja") {
-                return "ja"
-            }
-            if identifier.contains("hant") || identifier.contains("_tw") || identifier.contains("_hk") || identifier.contains("_mo") {
-                return "zh-Hant"
-            }
-            if identifier.hasPrefix("zh") {
-                return "zh-Hans"
-            }
-            return "en"
+            AppLanguagePreference.current.catalogLanguageKey
         }
     }
 
