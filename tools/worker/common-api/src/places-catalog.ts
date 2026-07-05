@@ -23,14 +23,14 @@ export type CityRecord = {
 };
 
 export const placeCatalogSchemaVersion = 1;
-export const placeCatalogResourceVersion = "2026.07.02.2";
-export const placeCatalogGeneratedAt = "2026-07-02T00:00:00.000Z";
+export const placeCatalogResourceVersion = "2026.07.05.1";
+export const placeCatalogGeneratedAt = "2026-07-05T00:00:00.000Z";
 
 export const countries = [
   country("country.cn", "CN", ["中国", "中國", "China", "中国", "중국"], "CNY", ["capital", "tourism", "hotel"]),
-  country("country.hk", "HK", ["中国香港", "中國香港", "Hong Kong", "香港", "홍콩"], "HKD", ["tourism", "hotel", "business"]),
-  country("country.mo", "MO", ["中国澳门", "中國澳門", "Macau", "マカオ", "마카오"], "MOP", ["tourism", "hotel"]),
-  country("country.tw", "TW", ["中国台湾", "中國台灣", "Taiwan", "台湾", "대만"], "TWD", ["tourism", "hotel"]),
+  country("country.hk", "HK", ["香港（中国）", "香港（中國）", "Hong Kong (China)", "香港（中国）", "홍콩(중국)"], "HKD", ["tourism", "hotel", "business"]),
+  country("country.mo", "MO", ["澳门（中国）", "澳門（中國）", "Macau (China)", "マカオ（中国）", "마카오(중국)"], "MOP", ["tourism", "hotel"]),
+  country("country.tw", "TW", ["台湾（中国）", "台灣（中國）", "Taiwan (China)", "台湾（中国）", "대만(중국)"], "TWD", ["tourism", "hotel"]),
   country("country.jp", "JP", ["日本", "日本", "Japan", "日本", "일본"], "JPY", ["tourism", "hotel"]),
   country("country.kr", "KR", ["韩国", "韓國", "South Korea", "韓国", "대한민국"], "KRW", ["tourism", "hotel"]),
   country("country.sg", "SG", ["新加坡", "新加坡", "Singapore", "シンガポール", "싱가포르"], "SGD", ["tourism", "hotel", "business"]),

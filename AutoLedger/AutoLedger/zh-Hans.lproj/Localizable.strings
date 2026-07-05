@@ -90,7 +90,7 @@
 "hotel_stay.review.brand" = "品牌";
 "hotel_stay.review.group" = "集团";
 "hotel_stay.review.city" = "城市";
-"hotel_stay.review.country" = "国家";
+"hotel_stay.review.country" = "国家和地区";
 "hotel_stay.review.check_in" = "入住日期";
 "hotel_stay.review.check_out" = "退房日期";
 "hotel_stay.review.nights" = "晚数";
@@ -758,6 +758,7 @@
 
 "settings.title" = "设置";
 "settings.section.appearance" = "外观";
+"settings.section.language_region" = "语言与区域";
 "settings.section.ledger_sync" = "账本与同步";
 "settings.section.recognition" = "记账与识别";
 "settings.section.rules" = "规则与归类";

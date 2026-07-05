@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-03（ITER-366 Common API WeatherKit 酒店历史天气 staging）
+更新日期：2026-07-05（ITER-368 国家和地区合规与语言设置入口）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-368 国家和地区合规与语言设置入口
+- 日期：2026-07-05
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / Common API / Settings
+- 类型：治理 / UI 调整 / 基础设施
+- 目标：统一 AutoLedger、AutoNotice 及后续项目的国家和地区选择口径，并让 AutoLedger 1.7.0 的语言切换入口在设置页中清晰可见。
+- 改动范围：更新 AutoLedger App 的酒店地点内置 fallback、五语本地化、设置页分组、`common-api` 地点目录和合同测试；更新 AutoNotice 的位置选择文案与设计说明；更新 `README.md`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 AutoLedger / AutoNotice 的 bundle id、signing、entitlements、StoreKit 商品、App Store Connect 线上元数据、截图成品、App Icon、WeatherKit / APNs secret、SQLite / CloudKit schema 或 Xcode Cloud 脚本。
+- 完成内容：AutoLedger 设置页中“区域与语言”从“外观”分组拆出为单独“语言与区域 / Language & Region”分组，继续进入既有 `LanguageSettingsView`，可切换跟随系统、简体中文、繁体中文、English、日本語、한국어，并管理默认消费币种。AutoLedger 酒店消费字段 `hotel_stay.review.country` 五语改为“国家和地区” / `Country/Region` 等。Common API 地点目录和 App 内置 fallback 中，香港、澳门、台湾国家和地区层级展示为“香港（中国）” / `Hong Kong (China)`、“澳门（中国）” / `Macau (China)`、“台湾（中国）” / `Taiwan (China)`，城市层级保持普通城市名；旧写法保留在 alias 中用于历史数据匹配。
+- 未完成内容：本轮未新增全量国家 / 省州 / 城市数据库；未重新生成 App Store 截图；未修改历史已保存记录的原始文本，只在打开编辑 / 复核时按目录显示本地化名称。
+- 测试情况：执行 `plutil -lint` 覆盖 AutoLedger 五语和 AutoNotice 双语 Localizable，结果 PASS；执行 `swiftc -parse AutoLedger/AutoLedger/Features/Hotel/HotelStayLocationCatalog.swift`，结果 PASS；执行 `npm run check` 于 `tools/worker/common-api`，结果 PASS，23 个 Vitest 用例通过；执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：Common API 地点目录资源版本已推进到 `2026.07.05.1`，客户端需通过 manifest 刷新后才能拿到远端目录新名称；App 内置 fallback 已同步，网络不可用时仍能显示新口径。当前 TestFlight 若未包含 1.7.0 代码，设置页可能仍看不到独立语言分组，需要新构建验证。
+- 回滚方式：回退本轮 AutoLedger / AutoNotice 文案、`HotelStayLocationCatalog.swift`、`common-api` 地点目录与测试、README / 版本计划 / 日志；Common API 可用 `wrangler rollback --env production` 回退上一版本。
+- 结论：本轮完成国家和地区合规口径和 AutoLedger 语言设置入口可见性调整，进入 1.7.0 / ASC 1.6.0 发布线。
+- 下一步建议：构建 AutoLedger 1.7.0 TestFlight 后，重点验证设置页顶部是否显示“语言与区域”，以及酒店消费复核 / 编辑页的国家和地区字段是否显示新口径。
+
+### ITER-367 Apple 原生多层图标规划
+- 日期：2026-07-05
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Brand Assets / Release Assets
+- 类型：文档 / 规划
+- 目标：将 AutoLedger 后续 App Icon 升级到 Apple 原生多层图标体系，并与 AutoNotice 形成统一但不混淆的产品家族视觉语言，同时避免影响当前 `ASC 1.5.0` 审核线。
+- 改动范围：更新 `versions/v1.7.0-plan.md` 的执行顺序、版本定位、目标范围、品牌资产小节、GOAL 队列、测试验收和非目标；更新 `CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 App 图标资源、Icon Composer 源文件、截图 / App Preview 成品、Swift 代码、Xcode 工程配置、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION`、build number 或 App Store Connect 线上元数据。
+- 完成内容：新增 `GOAL-2355`，明确 AutoLedger 后续使用 Icon Composer / 多层源文件管理 Default、Dark、Mono 等外观，并导出 App Store 1024 图和各平台 fallback 图；AutoLedger 与 AutoNotice 共享玻璃质感、层次、光照、圆角和品牌色逻辑，但 AutoLedger 保留账本、账单卡片、金额线条和自动整理语义。
+- 未完成内容：未实际生成新图标、未接入 Xcode asset catalog、未导出商店图标、未对 AutoNotice 资产做联动设计。
+- 测试情况：执行 `git diff --check`，结果 PASS。
+- 风险与注意事项：图标更新涉及二进制、商店素材、官网素材和截图联动，不应穿插进当前 `ASC 1.5.0` 审核热修；后续真正落地图标时，需要先完成多层源文件和导出规范，再统一替换各平台资源。
+- 回滚方式：回退 `versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志中的本轮文档记录即可；没有代码或资源回滚动作。
+- 结论：本轮完成品牌资产规划入列，图标升级进入 `v1.7.0 / ASC 1.6.0`，当前审核线不受影响。
+- 下一步建议：待 `ASC 1.5.0` 审核稳定后，再以 `GOAL-2355` 单独开工，先产出 AutoLedger / AutoNotice 并排视觉方向和 Icon Composer 源资产。
 
 ### ITER-366 Common API WeatherKit 酒店历史天气 staging
 - 日期：2026-07-03

@@ -194,6 +194,36 @@ describe("common api worker contract", () => {
     expect(tokyo?.timezone).toBe("Asia/Tokyo");
   });
 
+  it("uses country/region compliance names without changing city names", async () => {
+    const zhCountryResponse = await routeFetch(new Request("https://example.test/v1/locations/countries?locale=zh-Hans"), env);
+    const zhCountryBody = await jsonBody(zhCountryResponse);
+    const zhCountries = zhCountryBody.countries as Array<Record<string, unknown>>;
+
+    expect(zhCountries.find((record) => record.countryCode === "HK")?.displayName).toBe("香港（中国）");
+    expect(zhCountries.find((record) => record.countryCode === "MO")?.displayName).toBe("澳门（中国）");
+    expect(zhCountries.find((record) => record.countryCode === "TW")?.displayName).toBe("台湾（中国）");
+
+    const enCountryResponse = await routeFetch(new Request("https://example.test/v1/locations/countries?locale=en"), env);
+    const enCountryBody = await jsonBody(enCountryResponse);
+    const enCountries = enCountryBody.countries as Array<Record<string, unknown>>;
+
+    expect(enCountries.find((record) => record.countryCode === "HK")?.displayName).toBe("Hong Kong (China)");
+    expect(enCountries.find((record) => record.countryCode === "MO")?.displayName).toBe("Macau (China)");
+    expect(enCountries.find((record) => record.countryCode === "TW")?.displayName).toBe("Taiwan (China)");
+
+    const hkCityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=HK&locale=en"), env);
+    const hkCityBody = await jsonBody(hkCityResponse);
+    const hkCities = hkCityBody.cities as Array<Record<string, unknown>>;
+
+    expect(hkCities.find((record) => record.id === "city.hk.hong-kong")?.displayName).toBe("Hong Kong");
+
+    const moCityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=MO&locale=zh-Hans"), env);
+    const moCityBody = await jsonBody(moCityResponse);
+    const moCities = moCityBody.cities as Array<Record<string, unknown>>;
+
+    expect(moCities.find((record) => record.id === "city.mo.macau")?.displayName).toBe("澳门");
+  });
+
   it("localizes currencies and publishes default conversion targets", async () => {
     const currencyResponse = await routeFetch(new Request("https://example.test/v1/currencies?locale=ko"), env);
     const currencyBody = await jsonBody(currencyResponse);

@@ -90,7 +90,7 @@
 "hotel_stay.review.brand" = "상표";
 "hotel_stay.review.group" = "그룹";
 "hotel_stay.review.city" = "도시";
-"hotel_stay.review.country" = "국가";
+"hotel_stay.review.country" = "국가/지역";
 "hotel_stay.review.check_in" = "체크인 날짜";
 "hotel_stay.review.check_out" = "체크아웃 날짜";
 "hotel_stay.review.nights" = "밤";
@@ -758,6 +758,7 @@
 
 "settings.title" = "설정";
 "settings.section.appearance" = "모습";
+"settings.section.language_region" = "언어 및 지역";
 "settings.section.ledger_sync" = "원장 및 동기화";
 "settings.section.recognition" = "캡처 및 인식";
 "settings.section.rules" = "규칙 및 분류";

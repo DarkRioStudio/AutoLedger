@@ -38,8 +38,8 @@ type LocalizedCurrency = CurrencyRecord & {
   displayName: string;
 };
 
-const serviceResourceVersion = "2026.07.03.1";
-const serviceGeneratedAt = "2026-07-03T00:00:00.000Z";
+const serviceResourceVersion = "2026.07.05.1";
+const serviceGeneratedAt = "2026-07-05T00:00:00.000Z";
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);

@@ -90,7 +90,7 @@
 "hotel_stay.review.brand" = "Brand";
 "hotel_stay.review.group" = "Group";
 "hotel_stay.review.city" = "City";
-"hotel_stay.review.country" = "Country";
+"hotel_stay.review.country" = "Country/Region";
 "hotel_stay.review.check_in" = "Check-in Date";
 "hotel_stay.review.check_out" = "Check-out Date";
 "hotel_stay.review.nights" = "Nights";
@@ -758,6 +758,7 @@
 
 "settings.title" = "Settings";
 "settings.section.appearance" = "Appearance";
+"settings.section.language_region" = "Language & Region";
 "settings.section.ledger_sync" = "Ledger & Sync";
 "settings.section.recognition" = "Capture & Recognition";
 "settings.section.rules" = "Rules & Classification";

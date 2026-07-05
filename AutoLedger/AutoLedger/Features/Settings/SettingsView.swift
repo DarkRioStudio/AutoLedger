@@ -46,7 +46,9 @@ struct SettingsView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                    }
 
+                    settingsSection(title: "settings.section.language_region") {
                         NavigationLink(value: SettingsNavigationTarget.language) {
                             settingsRow(
                                 icon: "globe",

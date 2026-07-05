@@ -252,33 +252,36 @@ enum HotelStayLocationCatalog {
         ),
         country(
             "HK",
-            zhHans: "中国香港",
-            zhHant: "中國香港",
-            english: "Hong Kong",
-            ja: "香港",
-            ko: "홍콩",
+            zhHans: "香港（中国）",
+            zhHant: "香港（中國）",
+            english: "Hong Kong (China)",
+            ja: "香港（中国）",
+            ko: "홍콩(중국)",
+            aliases: ["中国香港", "中國香港", "Hong Kong", "香港", "홍콩"],
             cities: [
             city("Hong Kong", zhHans: "香港", zhHant: "香港", ja: "香港", ko: "홍콩")
             ]
         ),
         country(
             "MO",
-            zhHans: "中国澳门",
-            zhHant: "中國澳門",
-            english: "Macau",
-            ja: "マカオ",
-            ko: "마카오", aliases: ["Macao"],
+            zhHans: "澳门（中国）",
+            zhHant: "澳門（中國）",
+            english: "Macau (China)",
+            ja: "マカオ（中国）",
+            ko: "마카오(중국)",
+            aliases: ["中国澳门", "中國澳門", "Macau", "Macao", "澳门", "澳門", "マカオ", "마카오"],
             cities: [
             city("Macau", zhHans: "澳门", zhHant: "澳門", ja: "マカオ", ko: "마카오", aliases: ["Macao"])
             ]
         ),
         country(
             "TW",
-            zhHans: "中国台湾",
-            zhHant: "中國台灣",
-            english: "Taiwan",
-            ja: "台湾",
-            ko: "대만",
+            zhHans: "台湾（中国）",
+            zhHant: "台灣（中國）",
+            english: "Taiwan (China)",
+            ja: "台湾（中国）",
+            ko: "대만(중국)",
+            aliases: ["中国台湾", "中國台灣", "Taiwan", "台湾", "台灣", "대만"],
             cities: [
             city("Taipei", zhHans: "台北", zhHant: "台北", ja: "台北", ko: "타이베이"),
             city("Taichung", zhHans: "台中", zhHant: "台中", ja: "台中", ko: "타이중"),

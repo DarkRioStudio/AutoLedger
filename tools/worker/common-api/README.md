@@ -22,6 +22,8 @@ The places catalog is intentionally curated, not exhaustive. It covers common co
 - `ja`
 - `ko`
 
+For country and city selection, client UI should label the first level as `Country/Region` in English and `国家和地区` in Simplified Chinese unless a jurisdiction-specific requirement calls for different wording. Hong Kong, Macau, and Taiwan must be displayed at the country/region level as `香港（中国）` / `Hong Kong (China)`, `澳门（中国）` / `Macau (China)`, and `台湾（中国）` / `Taiwan (China)`; city records remain plain city names such as `香港`, `澳门`, and `台北`.
+
 The Worker does not receive receipts, folio PDFs, hotel names, merchant names, transaction amounts, inbox content, or user ledger data. Exchange-rate endpoints receive only base currency, quote currency, and optional rate date. Weather endpoints receive coordinates, locale, timezone, and, for hotel stay summaries, stay dates and units only.
 
 The currency catalog is also curated for app UI and conversion preparation. It publishes supported currency codes, symbols, localized names, and minor-unit digits so client apps can keep manual currency pickers and future exchange-rate flows aligned.
