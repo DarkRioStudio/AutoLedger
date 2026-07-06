@@ -5,23 +5,128 @@ import { cities, countries, placesCatalog, supportedLocales } from "../src/place
 import { routeFetch, testInternals } from "../src/index";
 import { weatherProviderTestInternals } from "../src/weather/providers";
 
+type ReleaseNoteFixture = {
+  app_id: string;
+  app_version: string;
+  locale: string;
+  schema_version: number;
+  resource_version: string;
+  current_title: string;
+  current_body: string;
+  upcoming_title: string;
+  upcoming_body: string;
+  status: "published" | "draft" | "archived";
+};
+
+const releaseNotesFixtures: ReleaseNoteFixture[] = [
+  {
+    app_id: "autoledger",
+    app_version: "1.6.0",
+    locale: "zh-Hans",
+    schema_version: 1,
+    resource_version: "2026.07.06.1",
+    current_title: "当前版本",
+    current_body: "这个版本加入了 AutoLedger Pro 的第一批自动化能力。",
+    upcoming_title: "后续计划",
+    upcoming_body: "后续版本会加入更强的搜索、订阅异常提醒、月结导出和自动规则整理。",
+    status: "published"
+  },
+  {
+    app_id: "autoledger",
+    app_version: "1.6.0",
+    locale: "en",
+    schema_version: 1,
+    resource_version: "2026.07.06.1",
+    current_title: "Current Version",
+    current_body: "This version adds the first AutoLedger Pro automations.",
+    upcoming_title: "Coming Next",
+    upcoming_body: "Later releases will add stronger search and smarter rules automation.",
+    status: "published"
+  }
+];
+
+class MemoryD1Database {
+  constructor(private readonly rows: ReleaseNoteFixture[]) {}
+
+  prepare(sql: string): MemoryD1PreparedStatement {
+    return new MemoryD1PreparedStatement(sql, this.rows);
+  }
+}
+
+class MemoryD1PreparedStatement {
+  private readonly params: unknown[];
+
+  constructor(
+    private readonly sql: string,
+    private readonly rows: ReleaseNoteFixture[],
+    params: unknown[] = []
+  ) {
+    this.params = params;
+  }
+
+  bind(...params: unknown[]): MemoryD1PreparedStatement {
+    return new MemoryD1PreparedStatement(this.sql, this.rows, params);
+  }
+
+  async first<T>(): Promise<T | null> {
+    const [appID, version, locale] = this.params.map(String);
+    const row = this.rows.find((candidate) =>
+      candidate.app_id === appID &&
+      candidate.app_version === version &&
+      candidate.locale === locale &&
+      candidate.status === "published"
+    );
+    return (row ?? null) as T | null;
+  }
+
+  async all<T>(): Promise<{ results: T[] }> {
+    if (this.sql.includes("SELECT DISTINCT app_version")) {
+      const [appID] = this.params.map(String);
+      const versions = Array.from(new Set(
+        this.rows
+          .filter((row) => row.app_id === appID && row.status === "published")
+          .map((row) => row.app_version)
+      ))
+        .sort()
+        .map((app_version) => ({ app_version }));
+      return { results: versions as T[] };
+    }
+
+    const manifestRows = this.rows
+      .filter((row) => row.status === "published")
+      .map((row) => ({
+        app_id: row.app_id,
+        app_version: row.app_version,
+        locale: row.locale,
+        resource_version: row.resource_version,
+        schema_version: row.schema_version
+      }));
+    return { results: manifestRows as T[] };
+  }
+}
+
+const releaseNotesDB = new MemoryD1Database(releaseNotesFixtures) as unknown as D1Database;
+
 const env = {
   PUBLIC_API_ORIGIN: "https://api.darkrio326.top",
   EXCHANGE_RATE_PROVIDER: "mock",
   EXCHANGE_RATE_BASE_URL: "https://api.frankfurter.dev/v2",
-  WEATHER_PROVIDER: "disabled"
+  WEATHER_PROVIDER: "disabled",
+  COMMON_API_DB: releaseNotesDB
 } as unknown as Env;
 const disabledExchangeEnv = {
   PUBLIC_API_ORIGIN: "https://api.darkrio326.top",
   EXCHANGE_RATE_PROVIDER: "disabled",
   EXCHANGE_RATE_BASE_URL: "https://api.frankfurter.dev/v2",
-  WEATHER_PROVIDER: "disabled"
+  WEATHER_PROVIDER: "disabled",
+  COMMON_API_DB: releaseNotesDB
 } as unknown as Env;
 const mockWeatherEnv = {
   PUBLIC_API_ORIGIN: "https://api.darkrio326.top",
   EXCHANGE_RATE_PROVIDER: "mock",
   EXCHANGE_RATE_BASE_URL: "https://api.frankfurter.dev/v2",
-  WEATHER_PROVIDER: "mock"
+  WEATHER_PROVIDER: "mock",
+  COMMON_API_DB: releaseNotesDB
 } as unknown as Env;
 
 async function jsonBody(response: Response): Promise<Record<string, unknown>> {
@@ -57,6 +162,7 @@ describe("common api worker contract", () => {
     const placesCatalogCapability = capabilities.placesCatalog;
     const currencyCatalogCapability = capabilities.currencyCatalog;
     const exchangeRatesCapability = capabilities.exchangeRates;
+    const releaseNotesCapability = capabilities.releaseNotes;
     const weatherForecastCapability = capabilities.weatherForecast;
     const hotelWeatherCapability = capabilities.hotelWeather;
 
@@ -65,6 +171,7 @@ describe("common api worker contract", () => {
     expect(placesCatalogCapability).toBeDefined();
     expect(currencyCatalogCapability).toBeDefined();
     expect(exchangeRatesCapability).toBeDefined();
+    expect(releaseNotesCapability).toBeDefined();
     expect(weatherForecastCapability).toBeDefined();
     expect(hotelWeatherCapability).toBeDefined();
     if (!placesCatalogCapability) {
@@ -82,6 +189,9 @@ describe("common api worker contract", () => {
     if (!exchangeRatesCapability) {
       throw new Error("exchangeRates capability is missing");
     }
+    if (!releaseNotesCapability) {
+      throw new Error("releaseNotes capability is missing");
+    }
     expect(placesCatalogCapability.status).toBe("available");
     expect(placesCatalogCapability.url).toBe("https://api.darkrio326.top/v1/locations/catalog");
     expect(placesCatalogCapability.sha256).toMatch(/^[a-f0-9]{64}$/);
@@ -95,6 +205,11 @@ describe("common api worker contract", () => {
     expect(exchangeRatesCapability.status).toBe("available");
     expect(exchangeRatesCapability.endpoint).toBe("https://api.darkrio326.top/v1/exchange-rates/rate");
     expect(exchangeRatesCapability.supportedCurrencyCodes).toEqual(currencies.map((record) => record.code));
+    expect(releaseNotesCapability.status).toBe("available");
+    expect(releaseNotesCapability.endpoint).toBe("https://api.darkrio326.top/v1/release-notes");
+    expect(releaseNotesCapability.supportedApps).toContain("autoledger");
+    expect(releaseNotesCapability.supportedVersions).toMatchObject({ autoledger: ["1.6.0"] });
+    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.1");
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
     expect(hotelWeatherCapability.status).toBe("configuration_required");
@@ -234,6 +349,52 @@ describe("common api worker contract", () => {
     expect(currencyBody.defaultCurrencyCode).toBe("CNY");
     expect(cny?.displayName).toBe("중국 위안");
     expect(jpy?.decimalDigits).toBe(0);
+  });
+
+  it("serves versioned release notes by app version and locale", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autoledger&version=1.6.0&locale=zh-Hans"), env);
+    const body = await jsonBody(response);
+    const current = body.current as Record<string, unknown>;
+    const upcoming = body.upcoming as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      schemaVersion: 1,
+      app: "autoledger",
+      version: "1.6.0",
+      locale: "zh-Hans"
+    });
+    expect(current.title).toBe("当前版本");
+    expect(current.body).toContain("AutoLedger Pro");
+    expect(upcoming.title).toBe("后续计划");
+    expect(upcoming.body).toContain("订阅异常提醒");
+    expect(body.privacy).toContain("stay on device");
+    expect(body).not.toHaveProperty("ledger");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300");
+  });
+
+  it("falls back locale aliases for release notes without changing the requested app version", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autoledger&version=1.6.0&locale=en-GB"), env);
+    const body = await jsonBody(response);
+    const current = body.current as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body.locale).toBe("en");
+    expect(body.version).toBe("1.6.0");
+    expect(current.title).toBe("Current Version");
+  });
+
+  it("requires explicit release-note app and known version values", async () => {
+    const missingApp = await routeFetch(new Request("https://example.test/v1/release-notes?version=1.6.0"), env);
+    const missingVersion = await routeFetch(new Request("https://example.test/v1/release-notes?app=autoledger"), env);
+    const unknownVersion = await routeFetch(new Request("https://example.test/v1/release-notes?app=autoledger&version=9.9.9"), env);
+
+    expect(missingApp.status).toBe(400);
+    expect(await jsonBody(missingApp)).toMatchObject({ error: { code: "missing_release_notes_app" } });
+    expect(missingVersion.status).toBe(400);
+    expect(await jsonBody(missingVersion)).toMatchObject({ error: { code: "missing_release_notes_version" } });
+    expect(unknownVersion.status).toBe(404);
+    expect(await jsonBody(unknownVersion)).toMatchObject({ error: { code: "release_notes_not_found" } });
   });
 
   it("serves exchange rate quotes without receiving transaction amounts", async () => {

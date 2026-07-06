@@ -90,6 +90,12 @@ struct HotelStayReviewView: View {
             .task(id: conversionPreviewTaskID) {
                 await refreshConversionPreview()
             }
+            .onChange(of: form.checkInDate) { _, _ in
+                form.updateNightsFromStayDates()
+            }
+            .onChange(of: form.checkOutDate) { _, _ in
+                form.updateNightsFromStayDates()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("hotel_stay.review.reject", role: .destructive) {

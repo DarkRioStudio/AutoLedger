@@ -28,7 +28,14 @@
         "EXCHANGE_RATE_PROVIDER": "frankfurter",
         "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
         "WEATHER_PROVIDER": "weatherkit"
-      }
+      },
+      "d1_databases": [
+        {
+          "binding": "COMMON_API_DB",
+          "database_name": "darkrio-common-api-staging",
+          "database_id": "5d527513-8596-4906-94fc-be1617dfe13e"
+        }
+      ]
     },
     "production": {
       "name": "darkrio-common-api-production",
@@ -43,7 +50,14 @@
         "EXCHANGE_RATE_PROVIDER": "frankfurter",
         "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
         "WEATHER_PROVIDER": "disabled"
-      }
+      },
+      "d1_databases": [
+        {
+          "binding": "COMMON_API_DB",
+          "database_name": "darkrio-common-api-production",
+          "database_id": "53c6aca5-2532-439e-961f-34c0e1500be6"
+        }
+      ]
     }
   }
 }

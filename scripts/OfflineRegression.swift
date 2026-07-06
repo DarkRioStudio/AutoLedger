@@ -1066,15 +1066,38 @@ struct OfflineRegression {
         form.totalAmountText = "50000"
         form.hotelName = "Edited Demo Hotel"
         form.paymentMethod = "Amex"
+        form.checkOutDate = "2026-06-23"
+        form.updateNightsFromStayDates()
+        reporter.check(form.nightsText == "3", "HotelStayReviewForm recalculates nights after date edits")
         let confirmedAt = Date(timeIntervalSince1970: 1_783_065_600)
         let confirmedDraft = try? form.confirmedDraft(from: draft, updatedAt: confirmedAt)
         reporter.check(confirmedDraft?.status == .confirmed, "HotelStayReviewForm confirms draft")
-        reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Demo Bay Hotel", "HotelStayReviewForm preserves original recognized hotel name")
+        reporter.check(confirmedDraft?.parsedPayload?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes reviewed hotel name into payload")
         reporter.check(confirmedDraft?.localizedData?.hotelName == "Edited Demo Hotel", "HotelStayReviewForm writes edited localized hotel name")
-        reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Visa", "HotelStayReviewForm preserves original recognized payment method")
+        reporter.check(confirmedDraft?.parsedPayload?.checkOutDate == "2026-06-23", "HotelStayReviewForm writes reviewed check-out date into payload")
+        reporter.check(confirmedDraft?.parsedPayload?.nights == 3, "HotelStayReviewForm writes recalculated nights into payload")
+        reporter.check(confirmedDraft?.parsedPayload?.paymentMethod == "Amex", "HotelStayReviewForm writes reviewed payment method into payload")
         reporter.check(confirmedDraft?.localizedData?.paymentMethod == "Amex", "HotelStayReviewForm writes edited localized payment method")
         reporter.check(confirmedDraft?.sourcePDFData == sourcePDFData, "HotelStayReviewForm preserves source PDF data")
         reporter.check(confirmedDraft?.updatedAt == confirmedAt, "HotelStayReviewForm refreshes confirmed timestamp")
+
+        if let confirmedDraft {
+            let stayID = UUID(uuidString: "00000000-0000-0000-0000-000000001811")!
+            let transactionID = UUID(uuidString: "00000000-0000-0000-0000-000000001812")!
+            let postingService = HotelStayLedgerPostingService(
+                now: { Date(timeIntervalSince1970: 1_783_071_600) },
+                hotelStayIDGenerator: { stayID },
+                transactionIDGenerator: { transactionID }
+            )
+            let result = try? postingService.post(confirmedDraft)
+            reporter.check(result?.hotelStayRecord.hotelName == "Edited Demo Hotel", "HotelStayReviewForm posts reviewed hotel name")
+            reporter.check(result?.hotelStayRecord.checkOutDate == "2026-06-23", "HotelStayReviewForm posts reviewed check-out date")
+            reporter.check(result?.hotelStayRecord.nights == 3, "HotelStayReviewForm posts recalculated nights")
+            reporter.check(
+                result?.transaction.occurredAt == AppFormatters.parseFlexibleDate("2026-06-23 16:00"),
+                "HotelStayReviewForm posts transaction on reviewed check-out date"
+            )
+        }
 
         let rejectedAt = Date(timeIntervalSince1970: 1_783_071_600)
         let rejectedDraft = form.rejectedDraft(from: draft, updatedAt: rejectedAt)

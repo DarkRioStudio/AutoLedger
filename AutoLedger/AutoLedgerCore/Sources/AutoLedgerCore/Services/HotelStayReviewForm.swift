@@ -84,18 +84,20 @@ public struct HotelStayReviewForm: Equatable, Sendable {
         return abs(amountBalanceDelta) <= 0.01 ? .balanced : .imbalanced
     }
 
-    public func confirmedDraft(from draft: HotelStayDraft, updatedAt: Date = Date()) throws -> HotelStayDraft {
-        let displayPayload = try parsedPayload()
-        let localizedData = localizedData(from: displayPayload)
-        var updated = draft
-        if var originalPayload = draft.parsedPayload {
-            originalPayload.localizedData = localizedData
-            updated.parsedPayload = originalPayload
-            updated.confidence = originalPayload.confidence ?? confidence
-        } else {
-            updated.parsedPayload = displayPayload
-            updated.confidence = displayPayload.confidence ?? confidence
+    public mutating func updateNightsFromStayDates() {
+        guard let nights = Self.nightsBetween(checkInDate: checkInDate, checkOutDate: checkOutDate) else {
+            return
         }
+        nightsText = String(nights)
+    }
+
+    public func confirmedDraft(from draft: HotelStayDraft, updatedAt: Date = Date()) throws -> HotelStayDraft {
+        var displayPayload = try parsedPayload()
+        let localizedData = localizedData(from: displayPayload)
+        displayPayload.localizedData = localizedData
+        var updated = draft
+        updated.parsedPayload = displayPayload
+        updated.confidence = displayPayload.confidence ?? confidence
         updated.localizedData = localizedData
         updated.status = .confirmed
         updated.updatedAt = updatedAt
@@ -217,6 +219,28 @@ public struct HotelStayReviewForm: Equatable, Sendable {
     private static func normalizedDateOptional(_ value: String?) -> String? {
         guard let value = trimmed(value) else { return nil }
         return AppFormatters.normalizedDateString(value) ?? value
+    }
+
+    private static func nightsBetween(checkInDate: String, checkOutDate: String) -> Int? {
+        guard let startDate = parsedStayDate(checkInDate),
+              let endDate = parsedStayDate(checkOutDate) else {
+            return nil
+        }
+        let start = AppFormatters.calendar.startOfDay(for: startDate)
+        let end = AppFormatters.calendar.startOfDay(for: endDate)
+        guard let days = AppFormatters.calendar.dateComponents([.day], from: start, to: end).day,
+              days > 0 else {
+            return nil
+        }
+        return days
+    }
+
+    private static func parsedStayDate(_ value: String) -> Date? {
+        guard let value = trimmed(value) else { return nil }
+        if let normalized = AppFormatters.normalizedDateString(value) {
+            return AppFormatters.parseFlexibleDate(normalized)
+        }
+        return AppFormatters.parseFlexibleDate(value)
     }
 
     private static func trimmed(_ value: String?) -> String? {

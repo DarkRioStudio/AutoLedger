@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var versionTapCount = 0
     @State private var showDebugUnlocked = false
     @State private var showFeedbackComposer = false
+    @State private var releaseNotes: CommonAPIReleaseNotesService.ReleaseNotes?
 
     init(topContentPadding: CGFloat = 20) {
         self.topContentPadding = topContentPadding
@@ -17,6 +18,26 @@ struct SettingsView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    private var releaseNotesTaskID: String {
+        "\(appVersion)-\(AppLanguagePreference.current.catalogLanguageKey)"
+    }
+
+    private var currentVersionTitle: String {
+        releaseNotes?.current.title ?? String(localized: "settings.version.title")
+    }
+
+    private var currentVersionBody: String {
+        releaseNotes?.current.body ?? String(localized: "settings.version.body")
+    }
+
+    private var upcomingVersionTitle: String {
+        releaseNotes?.upcoming.title ?? String(localized: "settings.release_status.title")
+    }
+
+    private var upcomingVersionBody: String {
+        releaseNotes?.upcoming.body ?? String(localized: "settings.release_status.body")
     }
 
     private var privacyPolicyURL: URL {
@@ -231,10 +252,10 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("settings.version.title")
+                            Text(currentVersionTitle)
                                 .font(.headline)
                                 .foregroundStyle(AppTheme.ink)
-                            Text("v\(appVersion) — \(String(localized: "settings.version.body"))")
+                            Text("v\(appVersion) — \(currentVersionBody)")
                                 .font(.subheadline)
                                 .foregroundStyle(AppTheme.mutedInk)
                         }
@@ -252,8 +273,8 @@ struct SettingsView: View {
                         privacyCard()
 
                         infoCard(
-                            title: "settings.release_status.title",
-                            body: "settings.release_status.body"
+                            title: upcomingVersionTitle,
+                            body: upcomingVersionBody
                         )
                     }
 
@@ -304,6 +325,10 @@ struct SettingsView: View {
             .task {
                 guard proEntitlement.products.isEmpty else { return }
                 await proEntitlement.loadProducts()
+            }
+            .task(id: releaseNotesTaskID) {
+                releaseNotes = CommonAPIReleaseNotesService.cachedReleaseNotes(appVersion: appVersion)
+                releaseNotes = await CommonAPIReleaseNotesService.refreshReleaseNotes(appVersion: appVersion)
             }
         }
     }
@@ -516,7 +541,7 @@ struct SettingsView: View {
         .autoLedgerCardSurface(cornerRadius: 22)
     }
 
-    private func infoCard(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
+    private func infoCard(title: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)

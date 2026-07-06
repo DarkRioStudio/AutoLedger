@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-05（ITER-370 酒店水单 OCR fallback 与确认候选）
+更新日期：2026-07-06（ITER-372 酒店复核房晚与入账同步）
 
 ## 记录规则
 
@@ -43,6 +43,38 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-372 酒店复核房晚与入账同步
+- 日期：2026-07-06
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Hotel Stay / Review
+- 类型：Bugfix
+- 目标：修复酒店消费复核时，用户修改入住 / 退房日期后房晚不随之变化，以及确认入账仍可能沿用原始识别 payload 的问题。
+- 改动范围：更新 `HotelStayReviewForm`、`HotelStayReviewView`、离线回归、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改酒店 PDF / OCR 解析器、邮箱 / 云收件箱导入、SQLite / CloudKit schema、Common API、StoreKit、截图导出、App Store Connect、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：复核页在 `checkInDate` 或 `checkOutDate` 变化时调用表单方法实时重算房晚；表单重算复用 `AppFormatters.parseFlexibleDate` 和 `normalizedDateString`，可处理已经归一化或 OCR 常见非标准日期。确认时会把复核后的表单值写回 confirmed draft 的 `parsedPayload`，让后续 `HotelStayLedgerPostingService` 读取到用户最终确认的酒店名、退房日期、房晚、支付方式和金额。离线回归新增从日期修改、房晚重算、确认 draft 到正式入账记录 / 关联账单日期的闭环断言。
+- 未完成内容：本轮未把入住 / 退房复核控件从文本候选菜单改成 DatePicker；未新增真实酒店水单样本集；未对已发布二进制做 retroactive 修复。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖酒店复核日期修改、房晚重算、确认 draft 和入账记录 / 关联账单使用复核结果；执行 `git diff --check`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_sim_2026-07-06T03-48-31-516Z_pid57615_5afd8970.log`，仅保留既有 warning。
+- 风险与注意事项：确认 draft 后 `parsedPayload` 现在代表复核后的入账事实，不再保留一份覆盖入账的原始识别 payload；原始 PDF、raw text 和 OCR 摘要仍保留用于追溯。该行为符合“用户复核后才入账”的当前产品语义。
+- 回滚方式：回退 `HotelStayReviewForm` 的 payload 写回与房晚重算方法、`HotelStayReviewView` 的日期 onChange、离线回归和文档记录即可；无数据迁移回滚动作。
+- 结论：本轮完成并通过回归验证；酒店消费复核确认后会按用户最后确认的日期、房晚和字段入账。
+- 下一步建议：后续可把酒店复核的入住 / 退房控件升级为 DatePicker + 候选值选择组合，并用更多真实酒店 PDF 验证日期候选排序。
+
+### ITER-371 D1 远端版本说明
+- 日期：2026-07-06
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Common API / Settings
+- 类型：能力增强 / UI 文案治理
+- 目标：把设置页“当前版本”和“后续计划”从 App 二进制硬编码主路径迁移到服务端 Worker + Cloudflare D1 维护的版本号对应 Release Notes，让客户端按自己的版本号和语言拉取说明文本。
+- 改动范围：新增 `common-api` D1 `release_notes` schema / seed、`/v1/release-notes` 只读端点、manifest `releaseNotes` 能力位、D1 绑定和 Worker 合同测试；新增 App 端 `CommonAPIReleaseNotesService`；调整 `SettingsView` 使用远端 current / upcoming 文案并保留本地 fallback；更新 `CHANGELOG.md`、Worker README 和本日志。
+- 未改动范围：未修改 StoreKit、Pro gate、账本 / 酒店 / 订阅数据 schema、CloudKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未移除本地 Localizable fallback；未上传任何用户账本、账单、酒店水单、订阅或账号数据。
+- 完成内容：Worker 现在可通过 `GET /v1/release-notes?app=autoledger&version=1.6.0&locale=<locale>` 从 D1 `release_notes` 表返回 `current` 和 `upcoming` 文案；表主键为 `app_id + app_version + locale`，可同时承载不同 App、不同公开版本和不同语言。未知 app / 缺失版本 / 未配置版本会返回结构化错误；`/v1/manifest` 从 D1 聚合 release notes 能力、资源版本、支持 app、支持版本、支持语言和隐私边界。App 设置页根据 `CFBundleShortVersionString` 和 `AppLanguagePreference.current.catalogLanguageKey` 请求远端文案，先显示 Application Support 缓存，刷新成功后更新 UI；网络失败或 404 时继续显示本地文案。
+- 未完成内容：本轮未接入后台 launch 预拉取 release notes；未做 App Store Connect metadata 自动同步；未为其它 App 增加 release notes 数据，只先落地 `autoledger` / `1.6.0` 五语 seed。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check`，结果 PASS，`wrangler types`、`tsc --noEmit` 和 26 个 Vitest 用例通过；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-06T04-25-19-878Z_pid57615_98c96f6c.log`。已创建并绑定 D1 `darkrio-common-api-staging` / `darkrio-common-api-production`，staging / production 均执行 `0001_release_notes.sql` migration 和 `release_notes_autoledger_1_6_0.sql` seed，D1 查询确认 `autoledger / 1.6.0` published locale 数为 5；staging 部署 Version ID `39425a49-bc60-4a3f-914d-5656acd3d8c2`，production 部署 Version ID `9fccd49f-1112-4d68-b411-bc71d42a35f5`；`https://staging-api.darkrio326.top` 与 `https://api.darkrio326.top` 的 `/v1/manifest` 和 `/v1/release-notes?app=autoledger&version=1.6.0&locale=zh-Hans` smoke 均通过。
+- 风险与注意事项：设置页文案首次打开时可能先显示本地 fallback，远端返回后再更新；如果服务端没有对应客户端版本，App 会继续显示本地文案。Release notes 是公开文案，存储在 Cloudflare D1 并由 Worker 只读返回，不含 secret。
+- 回滚方式：回退 D1 binding / migration / seed、`release-notes-store.ts`、`index.ts`、Worker 测试、`CommonAPIReleaseNotesService.swift`、`SettingsView.swift` 和文档记录即可；App 会恢复只读本地 `Localizable.strings` 文案。远端如需回滚，可将对应 D1 行状态改为 `archived` 或恢复上一版 seed。
+- 结论：本轮完成 D1 远端版本说明第一段，后续可以在 D1 中新增或更新版本号文案，不必为了设置页版本说明单独重打 App。
+- 下一步建议：后续把 ASC metadata、App Preview / 截图说明和 App 内 release notes 统一到同一份版本文案源，减少多语言维护成本。
 
 ### ITER-370 酒店水单 OCR fallback 与确认候选
 - 日期：2026-07-05

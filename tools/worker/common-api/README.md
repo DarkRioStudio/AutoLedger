@@ -10,6 +10,7 @@
 - `GET /v1/currencies/catalog`
 - `GET /v1/currencies?locale=zh-Hans`
 - `GET /v1/exchange-rates/rate?base=USD&quote=CNY&date=2026-07-01`
+- `GET /v1/release-notes?app=autoledger&version=1.6.0&locale=zh-Hans`
 - `GET /v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/weather/forecast?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/weather/hotel-stay-summary?lat=35.68&lon=139.76&checkIn=2026-07-01&checkOut=2026-07-03&locale=ja&timezone=Asia/Tokyo`
@@ -30,6 +31,8 @@ The currency catalog is also curated for app UI and conversion preparation. It p
 
 Exchange rates are read-only and intended for local client-side conversion preparation. Production and staging use the public Frankfurter API by default and require no secret. The Worker caches normalized `base + quote + date + provider` responses with the Cloudflare Cache API; clients may inspect `x-common-api-cache` for `hit`, `miss`, or `bypass`. App clients should still persist the provider, rate date, source currency, target currency, and rate alongside any converted amount when conversion is implemented.
 
+Release notes are stored in Cloudflare D1, not embedded in Worker code. The lookup key is `app_id + app_version + locale`, so multiple apps, languages, and public versions can coexist behind the same endpoint. The endpoint receives only app id, app version, and locale; it does not receive ledger data, receipt text, hotel folios, subscriptions, or account identifiers.
+
 Hotel stay weather summaries use WeatherKit Daily Summary when the weather provider is configured. The first contract supports historical stays from `2021-08-01`, caps each request at 31 nights, and returns one record per stay night with high / low temperature, precipitation, snowfall, and a provider-neutral summary field. Future stay weather and non-metric units are intentionally rejected in this slice so historical hotel bills are not shown as current or upcoming weather.
 
 ## Local Commands
@@ -37,6 +40,10 @@ Hotel stay weather summaries use WeatherKit Daily Summary when the weather provi
 ```bash
 npm install
 npm run check
+npm run d1:migrate:staging
+npm run d1:seed:staging
+npm run d1:migrate:production
+npm run d1:seed:production
 npm run dev
 ```
 
@@ -46,6 +53,20 @@ Exchange rates do not require secrets. `wrangler.jsonc` contains public origins,
 
 - staging: `https://staging-api.darkrio326.top`
 - production: `https://api.darkrio326.top`
+
+Release notes use separate D1 databases per environment:
+
+- staging: `darkrio-common-api-staging`
+- production: `darkrio-common-api-production`
+
+To add or update release notes, insert or update rows in `release_notes` with `app_id`, `app_version`, `locale`, `current_*`, `upcoming_*`, `resource_version`, and `status='published'`. For the current AutoLedger seed, run:
+
+```bash
+npm run d1:migrate:staging
+npm run d1:seed:staging
+npm run d1:migrate:production
+npm run d1:seed:production
+```
 
 The legacy `MyWeatherLine/Api` current and forecast weather provider structure has been migrated into this Worker. Staging is configured with WeatherKit secrets and `WEATHER_PROVIDER=weatherkit`; production is intentionally deployed with `WEATHER_PROVIDER=disabled` until the App integration and quota policy are ready.
 

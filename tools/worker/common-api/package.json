@@ -8,6 +8,10 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
     "dev": "wrangler dev",
+    "d1:migrate:staging": "wrangler d1 migrations apply COMMON_API_DB --env staging --remote",
+    "d1:migrate:production": "wrangler d1 migrations apply COMMON_API_DB --env production --remote",
+    "d1:seed:staging": "wrangler d1 execute COMMON_API_DB --env staging --remote --file seeds/release_notes_autoledger_1_6_0.sql",
+    "d1:seed:production": "wrangler d1 execute COMMON_API_DB --env production --remote --file seeds/release_notes_autoledger_1_6_0.sql",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "types": "wrangler types"

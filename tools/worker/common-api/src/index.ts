@@ -17,6 +17,12 @@ import {
   type CurrencyRecord
 } from "./currencies-catalog";
 import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
+import {
+  releaseNotesSchemaVersion,
+  releaseNotesFor,
+  releaseNotesManifest,
+  supportedReleaseNoteVersions,
+} from "./release-notes-store";
 import { currentWeatherEndpoint, forecastWeatherEndpoint, hotelStayWeatherEndpoint } from "./weather/routes";
 
 type APIError = {
@@ -38,8 +44,8 @@ type LocalizedCurrency = CurrencyRecord & {
   displayName: string;
 };
 
-const serviceResourceVersion = "2026.07.05.1";
-const serviceGeneratedAt = "2026-07-05T00:00:00.000Z";
+const serviceResourceVersion = "2026.07.06.1";
+const serviceGeneratedAt = "2026-07-06T00:00:00.000Z";
 const supportedLocaleSet = new Set<string>(supportedLocales);
 const jsonContentType = "application/json; charset=utf-8";
 const readMethods = new Set(["GET", "HEAD"]);
@@ -94,6 +100,10 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
     return responseForMethod(request, json({ currencies: localizedCurrencies(locale), defaultCurrencyCode, locale }, 200, "public, max-age=300"));
   }
 
+  if (isReadRequest(request) && url.pathname === "/v1/release-notes") {
+    return responseForMethod(request, await releaseNotesResponse(request, env));
+  }
+
   if (isReadRequest(request) && url.pathname === "/v1/exchange-rates/rate") {
     const result = await exchangeRateEndpoint(request, env, { ctx });
     return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store", result.headers));
@@ -129,6 +139,7 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
   const currencySha256 = await sha256Hex(currencyCatalogBody);
   const currencyETag = weakETag(currencySha256);
   const baseURL = publicAPIOrigin(request, env);
+  const releaseNotes = await releaseNotesManifest(env.COMMON_API_DB);
 
   return json(
     {
@@ -171,6 +182,20 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           },
           privacy: "The App should send base currency, quote currency, and optional rate date only; transaction amounts stay on device."
         },
+        releaseNotes: {
+          status: releaseNotes.status,
+          schemaVersion: releaseNotes.schemaVersion,
+          resourceVersion: releaseNotes.resourceVersion,
+          endpoint: `${baseURL}/v1/release-notes`,
+          supportedApps: releaseNotes.supportedApps,
+          supportedVersions: releaseNotes.supportedVersions,
+          supportedLocales: releaseNotes.supportedLocales,
+          query: {
+            required: ["app", "version"],
+            optional: ["locale"]
+          },
+          privacy: "The App should send app id, app version, and locale only; no ledger, receipt, hotel, subscription, or user account data is needed."
+        },
         hotelWeather: {
           status: weatherProviderConfigured(env) ? "available" : "configuration_required",
           endpoint: `${baseURL}/v1/weather/hotel-stay-summary`,
@@ -189,6 +214,51 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           privacy: "The App should send coordinates, locale, and timezone only. WeatherKit credentials are configured as Worker secrets."
         }
       }
+    },
+    200,
+    "public, max-age=300"
+  );
+}
+
+async function releaseNotesResponse(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const appID = normalizeReleaseNotesAppID(url.searchParams.get("app"));
+  const version = normalizeAppVersion(url.searchParams.get("version"));
+  const locale = normalizeLocale(url.searchParams.get("locale"));
+
+  if (!appID) {
+    return json(error("missing_release_notes_app", "Pass an app id, for example app=autoledger."), 400);
+  }
+  if (!version) {
+    return json(error("missing_release_notes_version", "Pass the client app version, for example version=1.6.0."), 400);
+  }
+  if (!env.COMMON_API_DB) {
+    return json(error("release_notes_unconfigured", "Release notes database is not configured."), 503, "no-store");
+  }
+
+  const notes = await releaseNotesFor(env.COMMON_API_DB, appID, version, locale);
+  if (!notes) {
+    return json(
+      error(
+        "release_notes_not_found",
+        `No release notes are configured for app=${appID} version=${version}.`
+      ),
+      404,
+      "public, max-age=300"
+    );
+  }
+
+  return json(
+    {
+      schemaVersion: releaseNotesSchemaVersion,
+      resourceVersion: notes.resourceVersion,
+      app: notes.app,
+      version: notes.version,
+      locale: notes.locale,
+      current: notes.current,
+      upcoming: notes.upcoming,
+      availableVersions: await supportedReleaseNoteVersions(env.COMMON_API_DB, appID),
+      privacy: "This endpoint uses only app id, app version, and locale. User ledger data, receipt text, hotel folios, subscriptions, and account identifiers stay on device."
     },
     200,
     "public, max-age=300"
@@ -298,6 +368,16 @@ function normalizeCountryCode(rawCountryCode: string | null): string | null {
   return normalized && /^[A-Z]{2}$/.test(normalized) ? normalized : null;
 }
 
+function normalizeReleaseNotesAppID(rawAppID: string | null): string | null {
+  const normalized = rawAppID?.trim().toLowerCase();
+  return normalized && /^[a-z][a-z0-9-]{1,48}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeAppVersion(rawVersion: string | null): string | null {
+  const normalized = rawVersion?.trim();
+  return normalized && /^\d+(?:\.\d+){1,3}$/.test(normalized) ? normalized : null;
+}
+
 function isReadRequest(request: Request): boolean {
   return readMethods.has(request.method);
 }
@@ -396,5 +476,7 @@ export const testInternals = {
   displayName,
   validateCatalogLocales,
   sha256Hex,
-  weakETag
+  weakETag,
+  normalizeReleaseNotesAppID,
+  normalizeAppVersion
 };
