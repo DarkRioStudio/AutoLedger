@@ -21,10 +21,10 @@ type ReleaseNoteFixture = {
 const releaseNotesFixtures: ReleaseNoteFixture[] = [
   {
     app_id: "autoledger",
-    app_version: "1.6.0",
+    app_version: "1.5.0",
     locale: "zh-Hans",
     schema_version: 1,
-    resource_version: "2026.07.06.1",
+    resource_version: "2026.07.06.2",
     current_title: "当前版本",
     current_body: "这个版本加入了 AutoLedger Pro 的第一批自动化能力。",
     upcoming_title: "后续计划",
@@ -33,14 +33,38 @@ const releaseNotesFixtures: ReleaseNoteFixture[] = [
   },
   {
     app_id: "autoledger",
-    app_version: "1.6.0",
+    app_version: "1.5.0",
     locale: "en",
     schema_version: 1,
-    resource_version: "2026.07.06.1",
+    resource_version: "2026.07.06.2",
     current_title: "Current Version",
     current_body: "This version adds the first AutoLedger Pro automations.",
     upcoming_title: "Coming Next",
     upcoming_body: "Later releases will add stronger search and smarter rules automation.",
+    status: "published"
+  },
+  {
+    app_id: "autoledger",
+    app_version: "1.6.0",
+    locale: "zh-Hans",
+    schema_version: 1,
+    resource_version: "2026.07.06.2",
+    current_title: "当前版本",
+    current_body: "这个版本让记账更适合真实票据场景：票据扫描升级为实时 OCR，并新增韩语界面和韩语账单识别。",
+    upcoming_title: "后续计划",
+    upcoming_body: "接下来会继续补齐更多地区票据样本，并推进 Pro 自动化里的搜索、月结导出和规则整理。",
+    status: "published"
+  },
+  {
+    app_id: "autoledger",
+    app_version: "1.6.0",
+    locale: "en",
+    schema_version: 1,
+    resource_version: "2026.07.06.2",
+    current_title: "Current Version",
+    current_body: "This version makes AutoLedger better for real receipt workflows with live OCR and Korean receipt recognition.",
+    upcoming_title: "Coming Next",
+    upcoming_body: "Next we will add more regional receipt samples and continue Pro automations for search, month-end exports, and rules.",
     status: "published"
   }
 ];
@@ -208,8 +232,8 @@ describe("common api worker contract", () => {
     expect(releaseNotesCapability.status).toBe("available");
     expect(releaseNotesCapability.endpoint).toBe("https://api.darkrio326.top/v1/release-notes");
     expect(releaseNotesCapability.supportedApps).toContain("autoledger");
-    expect(releaseNotesCapability.supportedVersions).toMatchObject({ autoledger: ["1.6.0"] });
-    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.1");
+    expect(releaseNotesCapability.supportedVersions).toMatchObject({ autoledger: ["1.5.0", "1.6.0"] });
+    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.2");
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
     expect(hotelWeatherCapability.status).toBe("configuration_required");
@@ -365,12 +389,29 @@ describe("common api worker contract", () => {
       locale: "zh-Hans"
     });
     expect(current.title).toBe("当前版本");
-    expect(current.body).toContain("AutoLedger Pro");
+    expect(current.body).toContain("实时 OCR");
     expect(upcoming.title).toBe("后续计划");
-    expect(upcoming.body).toContain("订阅异常提醒");
+    expect(upcoming.body).toContain("Pro 自动化");
     expect(body.privacy).toContain("stay on device");
     expect(body).not.toHaveProperty("ledger");
     expect(response.headers.get("cache-control")).toBe("public, max-age=300");
+  });
+
+  it("keeps ASC 1.5.0 release notes available separately from the 1.6.0 draft", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autoledger&version=1.5.0&locale=zh-Hans"), env);
+    const body = await jsonBody(response);
+    const current = body.current as Record<string, unknown>;
+    const upcoming = body.upcoming as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      schemaVersion: 1,
+      app: "autoledger",
+      version: "1.5.0",
+      locale: "zh-Hans"
+    });
+    expect(current.body).toContain("AutoLedger Pro");
+    expect(upcoming.body).toContain("订阅异常提醒");
   });
 
   it("falls back locale aliases for release notes without changing the requested app version", async () => {

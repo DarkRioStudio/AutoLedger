@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-06（ITER-372 酒店复核房晚与入账同步）
+更新日期：2026-07-06（ITER-373 D1 Release Notes 版本映射修正）
 
 ## 记录规则
 
@@ -44,6 +44,22 @@
 
 ## 日志条目
 
+### ITER-373 D1 Release Notes 版本映射修正
+- 日期：2026-07-06
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Common API / Settings
+- 类型：数据治理 / 文案治理
+- 目标：修正 `common-api` D1 中 AutoLedger Release Notes 的版本号映射，让当前已上线 / 审核基线文案归属 `1.5.0`，并为正在开发的 `v1.7.0` 主线准备对外 `ASC 1.6.0` 的远端版本说明。
+- 改动范围：更新 `tools/worker/common-api` release notes seed、D1 seed 脚本、Worker 合同测试、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 Worker 路由实现、App 设置页调用逻辑、SQLite / CloudKit schema、StoreKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未创建构建触发 tag。
+- 完成内容：将原 `autoledger / 1.6.0` 五语 Pro / 酒店自动化说明移动为 `autoledger / 1.5.0`；新增 `autoledger / 1.6.0` 五语草稿，内容对应当前内部 `v1.7.0` 开发线，面向终端用户说明实时 OCR、韩语界面与识别、多币种、酒店水单复核和后续 Pro 自动化计划。Seed 文件改为 `release_notes_autoledger_versions.sql`，避免文件名继续暗示单版本数据。Worker 单测增加 `1.5.0` / `1.6.0` 并存断言，manifest 预期支持版本更新为两项。
+- 未完成内容：本轮未把 ASC metadata、截图说明和 App Preview 文案接入同一数据源；未实现后台管理界面或自动翻译 / 审校流程。
+- 测试情况：执行 `git diff --check`，结果 PASS；在 `tools/worker/common-api` 执行 `npx wrangler --version` 确认当前 CLI 为 `4.106.0`；执行 `npm run check`，结果 PASS，覆盖 `wrangler types`、`tsc --noEmit` 和 27 个 Vitest 合同测试。执行 `npm run d1:seed:staging` 与 `npm run d1:seed:production`，两套 D1 均成功 upsert `release_notes_autoledger_versions.sql`。D1 远端查询确认 staging / production 均存在 `autoledger / 1.5.0` 和 `autoledger / 1.6.0`，每个版本 5 个 published locale，resource version 均为 `2026.07.06.2`。线上 smoke 确认 `https://staging-api.darkrio326.top` 和 `https://api.darkrio326.top` 的 `/v1/release-notes` 对 `1.5.0` 返回旧 Pro 自动化文案，对 `1.6.0` 返回实时 OCR / 韩语 / 多币种新文案，`/v1/manifest` 同时列出 `1.5.0`、`1.6.0` 和五语 locale。
+- 风险与注意事项：旧 `1.6.0` 行会被 upsert 成新的 ASC 1.6.0 草稿；如果仍有客户端把当前 ASC 1.5.0 内容请求为 `1.6.0`，将看到新开发线说明。当前产品约定以客户端公开版本号为准，请求 `1.5.0` 时才返回 ASC 1.5.0 文案。
+- 回滚方式：恢复上一版 seed 和测试，或在 D1 中把 `autoledger / 1.6.0` 行内容重新 upsert 为旧文案；无 schema 迁移回滚动作。
+- 结论：本轮完成并已写入 staging / production D1；远端版本说明现在按客户端公开版本号区分 `1.5.0` 与 `1.6.0`。
+- 下一步建议：将 release notes 数据纳入后续 ASC metadata-as-code 工具链，避免手工维护多处版本说明。
+
 ### ITER-372 酒店复核房晚与入账同步
 - 日期：2026-07-06
 - 所属版本：v1.7.0 / ASC 1.6.0
@@ -70,7 +86,7 @@
 - 未改动范围：未修改 StoreKit、Pro gate、账本 / 酒店 / 订阅数据 schema、CloudKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number；未移除本地 Localizable fallback；未上传任何用户账本、账单、酒店水单、订阅或账号数据。
 - 完成内容：Worker 现在可通过 `GET /v1/release-notes?app=autoledger&version=1.6.0&locale=<locale>` 从 D1 `release_notes` 表返回 `current` 和 `upcoming` 文案；表主键为 `app_id + app_version + locale`，可同时承载不同 App、不同公开版本和不同语言。未知 app / 缺失版本 / 未配置版本会返回结构化错误；`/v1/manifest` 从 D1 聚合 release notes 能力、资源版本、支持 app、支持版本、支持语言和隐私边界。App 设置页根据 `CFBundleShortVersionString` 和 `AppLanguagePreference.current.catalogLanguageKey` 请求远端文案，先显示 Application Support 缓存，刷新成功后更新 UI；网络失败或 404 时继续显示本地文案。
 - 未完成内容：本轮未接入后台 launch 预拉取 release notes；未做 App Store Connect metadata 自动同步；未为其它 App 增加 release notes 数据，只先落地 `autoledger` / `1.6.0` 五语 seed。
-- 测试情况：在 `tools/worker/common-api` 执行 `npm run check`，结果 PASS，`wrangler types`、`tsc --noEmit` 和 26 个 Vitest 用例通过；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-06T04-25-19-878Z_pid57615_98c96f6c.log`。已创建并绑定 D1 `darkrio-common-api-staging` / `darkrio-common-api-production`，staging / production 均执行 `0001_release_notes.sql` migration 和 `release_notes_autoledger_1_6_0.sql` seed，D1 查询确认 `autoledger / 1.6.0` published locale 数为 5；staging 部署 Version ID `39425a49-bc60-4a3f-914d-5656acd3d8c2`，production 部署 Version ID `9fccd49f-1112-4d68-b411-bc71d42a35f5`；`https://staging-api.darkrio326.top` 与 `https://api.darkrio326.top` 的 `/v1/manifest` 和 `/v1/release-notes?app=autoledger&version=1.6.0&locale=zh-Hans` smoke 均通过。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check`，结果 PASS，`wrangler types`、`tsc --noEmit` 和 26 个 Vitest 用例通过；执行 `bash scripts/run_offline_regression.sh`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-06T04-25-19-878Z_pid57615_98c96f6c.log`。已创建并绑定 D1 `darkrio-common-api-staging` / `darkrio-common-api-production`，staging / production 均执行 `0001_release_notes.sql` migration 和初始五语 seed，D1 查询确认 `autoledger / 1.6.0` published locale 数为 5；staging 部署 Version ID `39425a49-bc60-4a3f-914d-5656acd3d8c2`，production 部署 Version ID `9fccd49f-1112-4d68-b411-bc71d42a35f5`；`https://staging-api.darkrio326.top` 与 `https://api.darkrio326.top` 的 `/v1/manifest` 和 `/v1/release-notes?app=autoledger&version=1.6.0&locale=zh-Hans` smoke 均通过。
 - 风险与注意事项：设置页文案首次打开时可能先显示本地 fallback，远端返回后再更新；如果服务端没有对应客户端版本，App 会继续显示本地文案。Release notes 是公开文案，存储在 Cloudflare D1 并由 Worker 只读返回，不含 secret。
 - 回滚方式：回退 D1 binding / migration / seed、`release-notes-store.ts`、`index.ts`、Worker 测试、`CommonAPIReleaseNotesService.swift`、`SettingsView.swift` 和文档记录即可；App 会恢复只读本地 `Localizable.strings` 文案。远端如需回滚，可将对应 D1 行状态改为 `archived` 或恢复上一版 seed。
 - 结论：本轮完成 D1 远端版本说明第一段，后续可以在 D1 中新增或更新版本号文案，不必为了设置页版本说明单独重打 App。
