@@ -16,6 +16,7 @@ struct TransactionEditorView: View {
     var onDelete: ((Transaction) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var store: LedgerStore
     @State private var merchant: String
     @State private var amountText: String
@@ -82,7 +83,7 @@ struct TransactionEditorView: View {
         Form {
                 Section("transaction_editor.section.basic") {
                     CompositionSafeTextField(
-                        placeholder: String(localized: "transaction_editor.merchant"),
+                        placeholder: localized("transaction_editor.merchant"),
                         text: $merchant
                     )
 
@@ -138,7 +139,7 @@ struct TransactionEditorView: View {
                 }
             }
             .autoLedgerFormChrome()
-            .navigationTitle(isNew ? String(localized: "transaction_editor.title.new") : String(localized: "transaction_editor.title.edit"))
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if showsCancelButton {
@@ -175,7 +176,7 @@ struct TransactionEditorView: View {
                     continueSave(updated, refreshSameMerchantCategory: true)
                 }
             } message: { updated in
-                Text(String(format: String(localized: "transaction_editor.category_refresh.message_format"), updated.merchant, updated.categoryTitle))
+                Text(String(format: localized("transaction_editor.category_refresh.message_format"), updated.merchant, updated.categoryTitle))
             }
             .alert("transaction_editor.merchant_alias.title", isPresented: $showMerchantAliasPrompt, presenting: pendingSave) { updated in
                 Button("transaction_editor.merchant_alias.skip", role: .cancel) {
@@ -193,7 +194,7 @@ struct TransactionEditorView: View {
                     )
                 }
             } message: { updated in
-                Text(String(format: String(localized: "transaction_editor.merchant_alias.message_format"), transaction.merchant, updated.merchant))
+                Text(String(format: localized("transaction_editor.merchant_alias.message_format"), transaction.merchant, updated.merchant))
             }
             .alert("transaction_editor.save_failed.title", isPresented: Binding(
                 get: { saveErrorMessage != nil },
@@ -201,7 +202,7 @@ struct TransactionEditorView: View {
             )) {
                 Button("common.done", role: .cancel) {}
             } message: {
-                Text(saveErrorMessage ?? String(localized: "transaction_editor.save_failed.message"))
+                Text(saveErrorMessage ?? localized("transaction_editor.save_failed.message"))
             }
             .sheet(item: $subscriptionDraft) { draft in
                 TransactionSubscriptionCreateView(
@@ -210,7 +211,7 @@ struct TransactionEditorView: View {
                 ) { subscription in
                     store.createSubscription(subscription)
                     subscriptionCreatedMessage = String(
-                        format: String(localized: "transaction_subscription.created.message_format"),
+                        format: localized("transaction_subscription.created.message_format"),
                         subscription.merchant,
                         AppFormatters.currency(subscription.amount, code: subscription.currencyCode)
                     )
@@ -224,6 +225,17 @@ struct TransactionEditorView: View {
             } message: {
                 Text(subscriptionCreatedMessage ?? "")
             }
+    }
+
+    private var navigationTitleText: String {
+        AppLanguagePreference.localizedString(
+            isNew ? "transaction_editor.title.new" : "transaction_editor.title.edit",
+            locale: locale
+        )
+    }
+
+    private func localized(_ key: String, fallback: String? = nil) -> String {
+        AppLanguagePreference.localizedString(key, locale: locale, fallback: fallback)
     }
 
     private var showsTransactionActionMenu: Bool {
@@ -349,7 +361,7 @@ struct TransactionEditorView: View {
             }
         } else {
             isSaving = false
-            saveErrorMessage = String(localized: "transaction_editor.save_failed.message")
+            saveErrorMessage = localized("transaction_editor.save_failed.message")
         }
     }
 }
@@ -415,6 +427,7 @@ private struct CompositionSafeTextField: UIViewRepresentable {
 
 private struct TransactionSubscriptionCreateView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     let subscription: Subscription
     let existingSubscription: Subscription?
@@ -456,7 +469,7 @@ private struct TransactionSubscriptionCreateView: View {
                     if let existingSubscription {
                         Text(
                             String(
-                                format: String(localized: "transaction_subscription.existing.message_format"),
+                                format: localized("transaction_subscription.existing.message_format"),
                                 existingSubscription.merchant,
                                 existingSubscription.period.title
                             )
@@ -516,6 +529,10 @@ private struct TransactionSubscriptionCreateView: View {
     private var canSave: Bool {
         guard let amount else { return false }
         return !merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && amount > 0
+    }
+
+    private func localized(_ key: String, fallback: String? = nil) -> String {
+        AppLanguagePreference.localizedString(key, locale: locale, fallback: fallback)
     }
 
     private func save() {

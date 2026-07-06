@@ -641,6 +641,7 @@ private struct HotelStayDraftRowView: View {
 
 struct HotelStayDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @State private var form: HotelStayRecordEditForm
     @State private var saveMessage: String?
     @State private var saveMessageIsSuccess = false
@@ -694,7 +695,7 @@ struct HotelStayDetailView: View {
             rawTextSection
         }
         .autoLedgerListChrome()
-        .navigationTitle("hotel_stay.detail.title")
+        .navigationTitle(detailNavigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .autoLedgerNavigationBarChrome()
         .toolbar {
@@ -744,6 +745,14 @@ struct HotelStayDetailView: View {
         }
     }
 
+    private var detailNavigationTitle: String {
+        AppLanguagePreference.localizedString("hotel_stay.detail.title", locale: locale)
+    }
+
+    private func localized(_ key: String, fallback: String? = nil) -> String {
+        AppLanguagePreference.localizedString(key, locale: locale, fallback: fallback)
+    }
+
     private var detailHeader: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
@@ -757,7 +766,7 @@ struct HotelStayDetailView: View {
                     }
                     if let nightsText = form.nightsText.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
                         Label(
-                            String(format: String(localized: "hotel_stay.list.nights_format"), nightsText),
+                            String(format: localized("hotel_stay.list.nights_format"), nightsText),
                             systemImage: "moon"
                         )
                     }
@@ -892,7 +901,7 @@ struct HotelStayDetailView: View {
     private var localizedRawText: String {
         let rawText = snapshot.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !rawText.isEmpty else {
-            return String(localized: "hotel_stay.detail.raw_text.empty")
+            return localized("hotel_stay.detail.raw_text.empty")
         }
         return rawTextLocalizer.localizedText(rawText)
     }
@@ -900,7 +909,7 @@ struct HotelStayDetailView: View {
     private func displayValue(for field: HotelStayDetailField) -> String {
         if field.key == .sourceType,
            let sourceType = HotelFolioSourceType(rawValue: field.value) {
-            return NSLocalizedString(sourceStringKey(for: sourceType), comment: "")
+            return localized(sourceStringKey(for: sourceType))
         }
         return field.value
     }
@@ -1069,7 +1078,7 @@ struct HotelStayDetailView: View {
     private func saveEdits() {
         guard let onUpdateRecord else { return }
         guard form.isValid else {
-            saveMessage = String(localized: "hotel_stay.review.validation.required")
+            saveMessage = localized("hotel_stay.review.validation.required")
             saveMessageIsSuccess = false
             return
         }
@@ -1077,13 +1086,13 @@ struct HotelStayDetailView: View {
         let updatedRecord = form.updatedRecord(from: record)
         let updatedTransaction = form.updatedTransaction(from: linkedTransaction, record: updatedRecord)
         if onUpdateRecord(updatedRecord, updatedTransaction) {
-            saveMessage = String(localized: "common.saved")
+            saveMessage = localized("common.saved")
             saveMessageIsSuccess = true
             form = HotelStayRecordEditForm(record: updatedRecord, linkedTransaction: updatedTransaction)
             onSaveRecord?()
             dismiss()
         } else {
-            saveMessage = String(localized: "hotel_stay.detail.save.failed")
+            saveMessage = localized("hotel_stay.detail.save.failed")
             saveMessageIsSuccess = false
         }
     }

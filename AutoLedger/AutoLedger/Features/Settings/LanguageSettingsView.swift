@@ -3,6 +3,7 @@ import SwiftUI
 struct LanguageSettingsView: View {
     @AppStorage(AppLanguagePreference.userDefaultsKey) private var selectedLanguageRawValue = AppLanguagePreference.system.rawValue
     @AppStorage(ExpenseCurrencyPreference.userDefaultsKey) private var selectedExpenseCurrencyRawValue = ExpenseCurrencyPreference.systemValue
+    @Environment(\.locale) private var locale
 
     private var selectedLanguage: AppLanguagePreference {
         AppLanguagePreference(rawValue: selectedLanguageRawValue) ?? .system
@@ -139,7 +140,7 @@ struct LanguageSettingsView: View {
                 } label: {
                     currencyMenuLabel(
                         title: String(
-                            format: String(localized: "language.currency.system_format"),
+                            format: localizedString("language.currency.system_format"),
                             ExpenseCurrencyPreference.systemCurrencyCode
                         ),
                         isSelected: selectedExpenseCurrencyRawValue == ExpenseCurrencyPreference.systemValue
@@ -188,11 +189,18 @@ struct LanguageSettingsView: View {
     private var defaultCurrencySubtitle: String {
         if selectedExpenseCurrencyRawValue == ExpenseCurrencyPreference.systemValue {
             return String(
-                format: String(localized: "language.currency.subtitle_system_format"),
+                format: localizedString("language.currency.subtitle_system_format"),
                 ExpenseCurrencyPreference.systemCurrencyCode
             )
         }
-        return String(format: String(localized: "language.currency.subtitle_custom_format"), selectedExpenseCurrencyCode)
+        return String(format: localizedString("language.currency.subtitle_custom_format"), selectedExpenseCurrencyCode)
+    }
+
+    private func localizedString(_ key: String) -> String {
+        if selectedLanguage == .system {
+            return AppLanguagePreference.localizedString(key, locale: locale)
+        }
+        return AppLanguagePreference.localizedString(key, languageKey: selectedLanguage.catalogLanguageKey)
     }
 
     private func currencyMenuLabel(title: String, isSelected: Bool) -> some View {

@@ -8,6 +8,7 @@ struct InboxView: View {
     @EnvironmentObject private var store: LedgerStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+    @Environment(\.locale) private var locale
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isImportingPhoto = false
     @State private var isImportingClipboard = false
@@ -20,15 +21,15 @@ struct InboxView: View {
     @State private var isPresentingManualEntry = false
     @State private var isPresentingVoiceEntry = false
 
-    private let ocrService = OCRService()
     private var hasShortcutEntries: Bool {
-        let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
-        return store.visibleTransactions.contains { $0.note == shortcutNote }
+        !shortcutTransactions.isEmpty
     }
 
     private var upcomingSubscriptions: [Subscription] {
         store.upcomingSubscriptionsForCurrentLedger()
     }
+
+    private let ocrService = OCRService()
 
     var body: some View {
         NavigationStack {
@@ -206,8 +207,7 @@ struct InboxView: View {
 
     private var captureHeroSubtitle: String {
         if hasShortcutEntries {
-            let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
-            let count = store.visibleTransactions.filter { $0.note == shortcutNote }.count
+            let count = shortcutTransactions.count
             return String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count)
         }
         return localized("inbox.quick_setup.subtitle", fallback: "Assign the shortcut to the Action Button so a press-and-hold logs your screenshot.")
@@ -521,7 +521,7 @@ struct InboxView: View {
             preferredItemEncoding: .automatic
         ) {
             quickImportButtonLabel(
-                title: isImportingPhoto ? String(localized: "inbox.import.processing") : localized("inbox.import.photo_short", fallback: "相册截图"),
+                title: isImportingPhoto ? localized("inbox.import.processing", fallback: "Recognizing...") : localized("inbox.import.photo_short", fallback: "相册截图"),
                 subtitle: localized("inbox.import.photo_short_detail", fallback: "支付截图导入"),
                 systemImage: isImportingPhoto ? nil : "photo.on.rectangle",
                 isLoading: isImportingPhoto,
@@ -536,7 +536,7 @@ struct InboxView: View {
             startReceiptScan()
         } label: {
             quickImportButtonLabel(
-                title: isImportingCamera ? String(localized: "inbox.import.processing") : localized("inbox.import.scan_receipt", fallback: "票据扫描"),
+                title: isImportingCamera ? localized("inbox.import.processing", fallback: "Recognizing...") : localized("inbox.import.scan_receipt", fallback: "票据扫描"),
                 subtitle: localized("inbox.import.scan_receipt_detail", fallback: "实时拍照识别"),
                 systemImage: isImportingCamera ? nil : "doc.viewfinder",
                 isLoading: isImportingCamera,
@@ -731,8 +731,7 @@ struct InboxView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    let shortcutNote = localized("quick_ledger.note", fallback: "Saved by Shortcuts")
-                    let count = store.visibleTransactions.filter { $0.note == shortcutNote }.count
+                    let count = shortcutTransactions.count
                     Text(String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -1072,6 +1071,14 @@ struct InboxView: View {
 }
 
 private extension InboxView {
+    var shortcutNoteCandidates: Set<String> {
+        AppLanguagePreference.localizedStrings("quick_ledger.note", fallback: "Saved by Shortcuts")
+    }
+
+    var shortcutTransactions: [Transaction] {
+        store.visibleTransactions.filter { shortcutNoteCandidates.contains($0.note) }
+    }
+
     var isCameraImportAvailable: Bool {
         #if targetEnvironment(macCatalyst)
         false
@@ -1081,13 +1088,12 @@ private extension InboxView {
     }
 
     func localized(_ key: String, fallback: String) -> String {
-        let value = NSLocalizedString(key, comment: "")
-        return value == key ? fallback : value
+        AppLanguagePreference.localizedString(key, locale: locale, fallback: fallback)
     }
 
     func daysText(_ days: Int) -> String {
-        if days <= 0 { return String(localized: "common.today") }
-        if days == 1 { return String(localized: "common.tomorrow") }
+        if days <= 0 { return localized("common.today", fallback: "Today") }
+        if days == 1 { return localized("common.tomorrow", fallback: "Tomorrow") }
         return String(format: localized("common.days_later_format", fallback: "%d days later"), days)
     }
 }

@@ -10,6 +10,7 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     case korean = "ko"
 
     nonisolated static let userDefaultsKey = "appLanguagePreference"
+    nonisolated private static let catalogLanguageKeys = ["zh-Hans", "zh-Hant", "en", "ja", "ko"]
 
     nonisolated var id: String { rawValue }
 
@@ -97,5 +98,50 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
             return "zh-Hans"
         }
         return "en"
+    }
+
+    nonisolated static func localizedString(
+        _ key: String,
+        locale: Locale,
+        fallback: String? = nil
+    ) -> String {
+        localizedString(
+            key,
+            languageKey: catalogLanguageKey(locale.identifier),
+            fallback: fallback
+        )
+    }
+
+    nonisolated static func localizedString(
+        _ key: String,
+        languageKey: String,
+        fallback: String? = nil
+    ) -> String {
+        let fallbackValue = fallback ?? key
+        guard
+            let path = Bundle.main.path(forResource: languageKey, ofType: "lproj"),
+            let bundle = Bundle(path: path)
+        else {
+            return Bundle.main.localizedString(forKey: key, value: fallbackValue, table: nil)
+        }
+        return bundle.localizedString(forKey: key, value: fallbackValue, table: nil)
+    }
+
+    nonisolated static func localizedStrings(_ key: String, fallback: String? = nil) -> Set<String> {
+        var values = Set<String>()
+        if let fallback, !fallback.isEmpty {
+            values.insert(fallback)
+        }
+        for languageKey in catalogLanguageKeys {
+            let value = localizedString(
+                key,
+                languageKey: languageKey,
+                fallback: fallback
+            )
+            if !value.isEmpty {
+                values.insert(value)
+            }
+        }
+        return values
     }
 }

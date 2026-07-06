@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-06（ITER-373 D1 Release Notes 版本映射修正）
+更新日期：2026-07-06（ITER-374 运行时本地化补齐）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-374 运行时本地化补齐
+- 日期：2026-07-06
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Localization / Settings
+- 类型：Bugfix / 本地化
+- 目标：修复 App 内语言 override 下，部分运行时拼接字符串仍跟随系统语言或默认语言的问题。
+- 改动范围：更新 `AppLanguagePreference`、`LanguageSettingsView`、`InboxView`、`TransactionEditorView`、`HotelStayArchiveView`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改本地化 key 文案、App 语言设置入口、币种目录、common-api、SQLite / CloudKit schema、StoreKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：新增 `AppLanguagePreference.localizedString` / `localizedStrings`，按 App 当前语言显式读取对应 `.lproj`。`LanguageSettingsView` 的消费默认币种菜单和副标题、`InboxView` 的快捷记账说明、流程步骤、首页统计、导入按钮和相对日期、`TransactionEditorView` 的标题 / 占位符 / 弹窗动态文案、`HotelStayDetailView` 的标题 / raw text 空状态 / 来源字段 / 保存提示改为使用该 helper。快捷指令记账统计同时匹配五语 `quick_ledger.note`，避免语言切换后历史快捷记录不被计入。
+- 未完成内容：本轮未全量替换 App 内所有 `String(localized:)`；酒店消费列表、账本列表等其它页面若继续出现同类运行时本地化问题，后续按同一 helper 逐页收口。
+- 测试情况：执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；执行五语 `plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-06T05-28-39-920Z_pid57615_e064a3db.log`，仅保留既有 warning；随后将模拟器 App 语言偏好写为 `ja` 并重启，确认 App 语言 override 生效。XcodeBuildMCP UI 快照受当前 Xcode-beta `SimulatorKit.framework` 路径缺失影响未能使用语义点按验证记账首页截图。
+- 风险与注意事项：运行时 helper 只影响显式调用路径；用户数据字段如账本名、商户名、酒店名不会也不应被自动翻译。当前模拟器上仍可看到历史账本名为中文，这是数据内容，不属于本轮本地化 key 修复。
+- 回滚方式：回退 `AppLanguagePreference` 新增 helper 及上述页面调用，并恢复本轮文档记录即可；无数据迁移回滚动作。
+- 结论：本轮完成；截图中记账首页、普通账单编辑和酒店消费详情的动态 UI 文案会跟随 App 内语言设置。
+- 下一步建议：后续可继续用 `AppLanguagePreference.localizedString` 专项扫描酒店消费列表、账本列表和其它 `String(localized:)` 运行时路径，逐页消除 App 语言 override 漏项。
 
 ### ITER-373 D1 Release Notes 版本映射修正
 - 日期：2026-07-06
