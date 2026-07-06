@@ -66,6 +66,42 @@ const releaseNotesFixtures: ReleaseNoteFixture[] = [
     upcoming_title: "Coming Next",
     upcoming_body: "Next we will add more regional receipt samples and continue Pro automations for search, month-end exports, and rules.",
     status: "published"
+  },
+  {
+    app_id: "autonotice",
+    app_version: "0.1.0",
+    locale: "zh-Hans",
+    schema_version: 1,
+    resource_version: "2026.07.06.3",
+    current_title: "当前版本",
+    current_body: "0.1.0 是 AutoNotice 的第一个 App Store 发布版本，打通了天气提醒闭环。",
+    upcoming_title: "后续计划",
+    upcoming_body: "0.2.0 会继续完善天气提醒，扩展为五个天气提醒开关。",
+    status: "published"
+  },
+  {
+    app_id: "autonotice",
+    app_version: "0.2.0",
+    locale: "zh-Hans",
+    schema_version: 1,
+    resource_version: "2026.07.06.3",
+    current_title: "当前版本",
+    current_body: "0.2.0 是 AutoNotice 的内部开发线，正在升级 WeatherSnapshot 和多天气规则条件判断。",
+    upcoming_title: "后续计划",
+    upcoming_body: "下一步会落地降雨、降温、升温、大风和天气预警五个开关。",
+    status: "published"
+  },
+  {
+    app_id: "autonotice",
+    app_version: "0.2.0",
+    locale: "en",
+    schema_version: 1,
+    resource_version: "2026.07.06.3",
+    current_title: "Current Version",
+    current_body: "0.2.0 is the internal AutoNotice development line.",
+    upcoming_title: "Coming Next",
+    upcoming_body: "Next we will implement five Weather Notice switches.",
+    status: "published"
   }
 ];
 
@@ -232,8 +268,12 @@ describe("common api worker contract", () => {
     expect(releaseNotesCapability.status).toBe("available");
     expect(releaseNotesCapability.endpoint).toBe("https://api.darkrio326.top/v1/release-notes");
     expect(releaseNotesCapability.supportedApps).toContain("autoledger");
-    expect(releaseNotesCapability.supportedVersions).toMatchObject({ autoledger: ["1.5.0", "1.6.0"] });
-    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.2");
+    expect(releaseNotesCapability.supportedApps).toContain("autonotice");
+    expect(releaseNotesCapability.supportedVersions).toMatchObject({
+      autoledger: ["1.5.0", "1.6.0"],
+      autonotice: ["0.1.0", "0.2.0"]
+    });
+    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.3");
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
     expect(hotelWeatherCapability.status).toBe("configuration_required");
@@ -412,6 +452,24 @@ describe("common api worker contract", () => {
     });
     expect(current.body).toContain("AutoLedger Pro");
     expect(upcoming.body).toContain("订阅异常提醒");
+  });
+
+  it("serves AutoNotice release notes from the same Common API endpoint", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autonotice&version=0.2.0&locale=zh-Hans"), env);
+    const body = await jsonBody(response);
+    const current = body.current as Record<string, unknown>;
+    const upcoming = body.upcoming as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      schemaVersion: 1,
+      app: "autonotice",
+      version: "0.2.0",
+      locale: "zh-Hans",
+      availableVersions: ["0.1.0", "0.2.0"]
+    });
+    expect(current.body).toContain("WeatherSnapshot");
+    expect(upcoming.body).toContain("五个开关");
   });
 
   it("falls back locale aliases for release notes without changing the requested app version", async () => {
