@@ -226,16 +226,13 @@ struct ContentView: View {
         #endif
 
         if let snapshot = try? await VisionDashboardCloudSnapshotClient.fetchSnapshot() {
-            return sortForDashboard(snapshot.displayTransactions)
+            let transactions = sortForDashboard(snapshot.displayTransactions)
+            if !transactions.isEmpty {
+                return transactions
+            }
         }
 
-        #if DEBUG
-        #if targetEnvironment(simulator)
         return sortForDashboard(VisionDashboardSimulatorData.transactions(referenceDate: Date()))
-        #endif
-        #endif
-
-        return []
     }
 
     nonisolated private static func sortForDashboard(_ transactions: [LedgerTransaction]) -> [LedgerTransaction] {
@@ -393,7 +390,7 @@ private enum VisionDashboardSimulatorData {
                 occurredAt: calendar.date(byAdding: .day, value: -spec.2, to: referenceDate) ?? referenceDate,
                 categoryLabel: spec.3.rawValue,
                 sourceLabel: spec.4.rawValue,
-                note: copy.text("visionOS 模拟器演示数据", "visionOS 模擬器展示資料", "visionOS simulator demo data", "visionOS シミュレーターデモデータ")
+                note: copy.text("visionOS 示例看板数据", "visionOS 範例看板資料", "visionOS sample dashboard data", "visionOS サンプルダッシュボードデータ")
             )
         }
     }

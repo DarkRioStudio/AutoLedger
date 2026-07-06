@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-02（ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复）
+更新日期：2026-07-06（ITER-346 ASC 1.5.0 visionOS 样例看板热修）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-346 ASC 1.5.0 visionOS 样例看板热修
+- 日期：2026-07-06
+- 所属版本：v1.6.4 / ASC 1.5.0
+- 所属阶段：App Review Follow-up
+- 类型：Bugfix / 审核材料
+- 目标：处理 visionOS 审核设备没有可展示账本数据，导致 App Review 无法验证只读看板的问题。
+- 改动范围：更新 `AutoLedgerVision/ContentView.swift`、`versions/v1.6.0-review-notes.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 iOS / iPadOS / macOS / tvOS / Watch / Widget / Share Extension、StoreKit、Pro entitlement、Worker、CloudKit schema、SQLite schema、截图导出、signing、entitlements、Xcode Cloud workflow、`MARKETING_VERSION` 或 build number。
+- 完成内容：visionOS 读取 CloudKit `LedgerDashboardSnapshot` 后，如果交易列表非空继续展示真实只读看板；如果没有快照或快照为空，发布包也会回退到本地虚构样例账本数据，展示月度支出、分类卡片、年度时间线和最近账单。样例数据只存在于 visionOS 展示端运行态，不写入真实账本，也不读取候选账单、OCR 原文或截图。
+- 未完成内容：未增加账号 / demo account；未让 visionOS 具备导入、编辑、删除能力；未改 tvOS。
+- 测试情况：执行 `git diff --check` 通过；执行 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build` 通过，产物完成签名与 validation，Xcode 输出 `BUILD SUCCEEDED`。
+- 风险与注意事项：无真实同步数据时 visionOS 会展示虚构样例看板而不是空态；Review Notes 需说明这是本地样例数据。真实 CloudKit 快照一旦有非空交易，仍优先展示真实账本快照。
+- 回滚方式：回退 `AutoLedgerVision/ContentView.swift` 的发布包样例数据 fallback，以及 Review Notes / CHANGELOG / 本日志即可；无数据迁移。
+- 结论：本轮完成，visionOS 审核设备没有 iCloud 看板快照时不再停留空态，会展示本地虚构样例看板用于 App Review 验证。
+- 下一步建议：重新触发 visionOS 1.5.0 构建并在 ASC Review Notes 中说明无需 demo account，visionOS 无同步快照时会显示本地虚构样例看板。
 
 ### ITER-345 ASC 1.5.0 iOS 订阅 EULA 复审修复
 - 日期：2026-07-02
