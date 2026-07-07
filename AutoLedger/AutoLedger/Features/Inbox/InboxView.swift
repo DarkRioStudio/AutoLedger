@@ -78,6 +78,7 @@ struct InboxView: View {
             }
             .sheet(isPresented: $isPresentingVoiceEntry) {
                 VoiceLedgerConfirmView()
+                    .environmentObject(store)
             }
             .sheet(isPresented: $showCamera) {
                 CameraPicker(imageData: $capturedImageData)
@@ -939,6 +940,7 @@ struct InboxView: View {
         ) { newTransaction, _, _ in
             store.addTransaction(newTransaction)
         }
+        .environmentObject(store)
     }
 
     @ViewBuilder

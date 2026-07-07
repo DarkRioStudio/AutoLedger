@@ -123,12 +123,15 @@ struct LedgerView: View {
                 }
                 return didSave
             }
+            .environmentObject(store)
         }
         .sheet(isPresented: $navigationState.isPresentingVoiceLedger) {
             VoiceLedgerConfirmView()
+                .environmentObject(store)
         }
         .sheet(isPresented: $navigationState.isPresentingDeletedTransactions) {
             DeletedTransactionsView()
+                .environmentObject(store)
         }
         .sheet(isPresented: $navigationState.isPresentingLedgerProfiles) {
             NavigationStack {
