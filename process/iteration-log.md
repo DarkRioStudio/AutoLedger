@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-380 Common API 直辖市区县下钻开关）
+更新日期：2026-07-07（ITER-381 数据清洗采纳历史与审计）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-381 数据清洗采纳历史与审计
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345C / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：在忽略建议和批量采纳之后，补齐数据清洗采纳历史，让用户采纳建议后仍能看到最近结果、撤销入口和本机审计记录。
+- 改动范围：更新 `LedgerStore` 本机历史记录模型与持久化、iPhone `DataCleaningSuggestionsView` 历史区域、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现跨设备建议队列、忽略项管理列表、Worker 辅助解释、脱敏特征合同或 Mac 专属历史表格 UI。
+- 完成内容：新增 `DataCleaningApplicationHistoryEntry` 和 `dataCleaningApplicationHistory`，记录采纳建议 ID、建议类型、建议标题、采纳数量、更新 / 删除 / 跳过数量和采纳时间。
+- 完成内容：历史记录使用本机 `UserDefaults` 持久化，最多保留最近 20 条；撤销上次数据清洗时将对应历史项标记为已撤销，保留审计痕迹。
+- 完成内容：iPhone“智能整理建议”页把“最近一次结果 / 撤销”从建议列表中拆出，并新增“最近清洗记录”；建议清空后页面不再只显示空状态。
+- 完成内容：五语补齐历史标题、统计格式、已应用和已撤销状态文案。
+- 未完成内容：历史记录当前不同步到 iCloud / CloudKit，也不会上传到 Worker；如果后续需要跨设备建议队列，应先冻结隐私边界和同步合同。
+- 测试情况：先新增离线 RED 断言并执行 `bash scripts/run_offline_regression.sh`，确认缺少 `dataCleaningApplicationHistory` 时编译失败；实现后执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；五语 `Localizable.strings` `plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖采纳历史记录与撤销标记；使用 XcodeBuildMCP 执行 iPhone 17 Pro Max Simulator Debug build/run，结果 PASS，构建日志 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-07T06-44-34-761Z_pid47116_0aee8116.log`，仅保留既有 warning，随后已停止模拟器 App。
+- 风险与注意事项：本轮历史是本机轻量审计，不是跨设备事实源；用户换设备或清理 App 数据后历史不会保留，但已采纳的商户别名和规则仍按现有链路继续生效。
+- 回滚方式：回退 `LedgerStore` 历史模型 / UserDefaults 持久化、`DataCleaningSuggestionsView` 历史区域和五语文案，并删除离线回归新增断言；不涉及数据迁移或 CloudKit schema。
+- 结论：本轮完成；`GOAL-2345C` 形成本地可追溯的建议采纳历史，并让 iPhone 采纳后的页面状态更清楚。
+- 下一步建议：继续设计 Worker 辅助建议的脱敏特征合同，或先补 Mac / iPad 大屏历史表格与忽略项管理入口。
 
 ### ITER-380 Common API 直辖市区县下钻开关
 - 日期：2026-07-07

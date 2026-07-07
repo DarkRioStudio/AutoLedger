@@ -5685,6 +5685,16 @@ struct OfflineRegression {
 
             let result = ledger.applyDataCleaningPreview(normalizationPreview)
             reporter.check(result.updatedCount == 1 && result.canUndo, "LedgerStore applies merchant normalization suggestion")
+            let historyCountAfterNormalization = ledger.dataCleaningApplicationHistory.count
+            let normalizationHistory = ledger.dataCleaningApplicationHistory.first
+            reporter.check(
+                normalizationHistory?.previewID == normalizationPreview.id &&
+                    normalizationHistory?.previewCount == 1 &&
+                    normalizationHistory?.updatedCount == 1 &&
+                    normalizationHistory?.deletedCount == 0 &&
+                    normalizationHistory?.undoneAt == nil,
+                "LedgerStore records accepted data cleaning history"
+            )
             reporter.check(
                 ledger.merchantAliases["Normalization Coffee West Gate"] == "Normalization Coffee",
                 "LedgerStore stores accepted merchant normalization as alias"
@@ -5694,6 +5704,12 @@ struct OfflineRegression {
                 "LedgerStore updates accepted merchant normalization history"
             )
             _ = ledger.undoLastDataCleaningApplication()
+            reporter.check(
+                ledger.dataCleaningApplicationHistory.count == historyCountAfterNormalization &&
+                    ledger.dataCleaningApplicationHistory.first?.previewID == normalizationPreview.id &&
+                    ledger.dataCleaningApplicationHistory.first?.undoneAt != nil,
+                "LedgerStore marks data cleaning history as undone"
+            )
             reporter.check(
                 ledger.merchantAliases["Normalization Coffee West Gate"] == nil,
                 "LedgerStore undo removes accepted merchant normalization alias"

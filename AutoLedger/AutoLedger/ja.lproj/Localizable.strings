@@ -406,6 +406,10 @@
 "ipad.cleaning.apply_confirm_action" = "適用";
 "ipad.cleaning.result" = "最新結果";
 "ipad.cleaning.result_format" = "%d 件更新、%d 件を最近削除へ移動、%d 件スキップ。";
+"ipad.cleaning.history.title" = "最近の整理履歴";
+"ipad.cleaning.history.detail_format" = "%d 件の候補を適用、%d 件更新、%d 件を最近削除へ移動、%d 件スキップ。";
+"ipad.cleaning.history.applied" = "適用済み";
+"ipad.cleaning.history.undone" = "取り消し済み";
 
 "common.close" = "閉じる";
 "common.cancel" = "キャンセル";

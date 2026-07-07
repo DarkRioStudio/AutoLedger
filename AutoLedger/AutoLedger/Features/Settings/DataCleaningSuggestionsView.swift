@@ -34,9 +34,13 @@ struct DataCleaningSuggestionsView: View {
                                 suggestionCard(item)
                             }
                         }
+                    }
 
+                    if store.lastDataCleaningApplicationResult != nil {
                         undoCard
                     }
+
+                    historySection
                 } else {
                     proGateCard
                 }
@@ -128,6 +132,66 @@ struct DataCleaningSuggestionsView: View {
         .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
         .padding(20)
         .autoLedgerCardSurface(cornerRadius: 18)
+    }
+
+    @ViewBuilder
+    private var historySection: some View {
+        if !store.dataCleaningApplicationHistory.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("ipad.cleaning.history.title", systemImage: "clock.arrow.circlepath")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+
+                VStack(spacing: 10) {
+                    ForEach(store.dataCleaningApplicationHistory.prefix(5)) { entry in
+                        historyRow(entry)
+                    }
+                }
+            }
+            .padding(16)
+            .autoLedgerCardSurface(cornerRadius: 18)
+        }
+    }
+
+    private func historyRow(_ entry: DataCleaningApplicationHistoryEntry) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: entry.undoneAt == nil ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
+                .font(.headline)
+                .foregroundStyle(entry.undoneAt == nil ? AppTheme.accent : AppTheme.mutedInk)
+                .frame(width: 28, height: 28)
+                .background((entry.undoneAt == nil ? AppTheme.accent : AppTheme.mutedInk).opacity(0.12))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(kindTitle(entry.kind))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
+                    Text(entry.appliedAt, format: .dateTime.month().day().hour().minute())
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                Text(historyDetail(entry))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let firstTitle = entry.previewTitles.first {
+                    Text(firstTitle)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Text(entry.undoneAt == nil ? String(localized: "ipad.cleaning.history.applied") : String(localized: "ipad.cleaning.history.undone"))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(entry.undoneAt == nil ? AppTheme.accent : AppTheme.mutedInk)
+        }
+        .padding(.vertical, 4)
     }
 
     private var applyAllRow: some View {
@@ -314,6 +378,16 @@ struct DataCleaningSuggestionsView: View {
         case .duplicateCandidate:
             return String(localized: "ipad.cleaning.reason.duplicate")
         }
+    }
+
+    private func historyDetail(_ entry: DataCleaningApplicationHistoryEntry) -> String {
+        String(
+            format: String(localized: "ipad.cleaning.history.detail_format"),
+            entry.previewCount,
+            entry.updatedCount,
+            entry.deletedCount,
+            entry.skippedCount
+        )
     }
 
     private func kindTitle(_ kind: DataCleaningPreviewKind) -> String {

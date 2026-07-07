@@ -406,6 +406,10 @@
 "ipad.cleaning.apply_confirm_action" = "적용";
 "ipad.cleaning.result" = "최신 결과";
 "ipad.cleaning.result_format" = "업데이트됨 %d, 최근 삭제된 항목 %d로 이동, %d 건너뛰었습니다.";
+"ipad.cleaning.history.title" = "최근 정리 기록";
+"ipad.cleaning.history.detail_format" = "제안 %d개 적용, %d개 업데이트, 최근 삭제된 항목으로 %d개 이동, %d개 건너뜀.";
+"ipad.cleaning.history.applied" = "적용됨";
+"ipad.cleaning.history.undone" = "실행 취소됨";
 
 "common.close" = "닫기";
 "common.cancel" = "취소";

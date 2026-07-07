@@ -406,6 +406,10 @@
 "ipad.cleaning.apply_confirm_action" = "Apply";
 "ipad.cleaning.result" = "Latest Result";
 "ipad.cleaning.result_format" = "Updated %d, moved to Recently Deleted %d, skipped %d.";
+"ipad.cleaning.history.title" = "Recent Cleanup History";
+"ipad.cleaning.history.detail_format" = "Applied %d suggestions, updated %d, moved %d to Recently Deleted, skipped %d.";
+"ipad.cleaning.history.applied" = "Applied";
+"ipad.cleaning.history.undone" = "Undone";
 
 "common.close" = "Close";
 "common.cancel" = "Cancel";

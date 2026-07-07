@@ -406,6 +406,10 @@
 "ipad.cleaning.apply_confirm_action" = "確認套用";
 "ipad.cleaning.result" = "最近一次結果";
 "ipad.cleaning.result_format" = "更新 %d 筆，移入最近刪除 %d 筆，略過 %d 筆。";
+"ipad.cleaning.history.title" = "最近清洗記錄";
+"ipad.cleaning.history.detail_format" = "採納 %d 條建議，更新 %d 筆，移入最近刪除 %d 筆，略過 %d 筆。";
+"ipad.cleaning.history.applied" = "已套用";
+"ipad.cleaning.history.undone" = "已撤銷";
 
 "common.close" = "關閉";
 "common.cancel" = "取消";

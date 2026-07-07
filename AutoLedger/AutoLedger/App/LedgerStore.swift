@@ -20,6 +20,43 @@ struct DataCleaningApplicationResult: Identifiable, Equatable {
     let canUndo: Bool
 }
 
+struct DataCleaningApplicationHistoryEntry: Identifiable, Codable, Equatable {
+    var id: UUID
+    var previewID: String
+    var kind: DataCleaningPreviewKind
+    var previewCount: Int
+    var previewTitles: [String]
+    var updatedCount: Int
+    var deletedCount: Int
+    var skippedCount: Int
+    var appliedAt: Date
+    var undoneAt: Date?
+
+    init(
+        id: UUID = UUID(),
+        previewID: String,
+        kind: DataCleaningPreviewKind,
+        previewCount: Int,
+        previewTitles: [String],
+        updatedCount: Int,
+        deletedCount: Int,
+        skippedCount: Int,
+        appliedAt: Date = Date(),
+        undoneAt: Date? = nil
+    ) {
+        self.id = id
+        self.previewID = previewID
+        self.kind = kind
+        self.previewCount = previewCount
+        self.previewTitles = previewTitles
+        self.updatedCount = updatedCount
+        self.deletedCount = deletedCount
+        self.skippedCount = skippedCount
+        self.appliedAt = appliedAt
+        self.undoneAt = undoneAt
+    }
+}
+
 private struct DataCleaningUndoSnapshot {
     let previewID: String
     let kind: DataCleaningPreviewKind
@@ -80,6 +117,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
+    @Published private(set) var dataCleaningApplicationHistory: [DataCleaningApplicationHistoryEntry] = []
     @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = []
 
     private let parser: ReceiptParser
@@ -112,6 +150,7 @@ final class LedgerStore: ObservableObject {
         self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
         self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
         self.ledgerSyncConflictRecords = LedgerStore.loadInitialLedgerSyncConflictRecords(using: transactionStore)
+        self.dataCleaningApplicationHistory = Self.loadDataCleaningApplicationHistory()
         self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
         let storedCustomCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
         let normalizedCustomCategories = Self.normalizedCustomCategories(storedCustomCategories)
@@ -1954,6 +1993,7 @@ final class LedgerStore: ObservableObject {
                 updatedCount: updatedCount,
                 deletedCount: deletedCount
             )
+            recordDataCleaningApplicationHistory(previews: previews, result: result)
             sortTransactions()
             lastImportSummary = "已应用数据清洗：更新 \(updatedCount) 笔，移入最近删除 \(deletedCount) 笔。"
             reloadWidgets()
@@ -1992,6 +2032,7 @@ final class LedgerStore: ObservableObject {
         )
         lastDataCleaningApplicationResult = result
         lastDataCleaningUndoSnapshot = nil
+        markDataCleaningApplicationHistoryUndone(previewID: snapshot.previewID)
         lastImportSummary = "已撤销上一次数据清洗操作。"
         reloadWidgets()
         requestAutomaticBackup()
@@ -2100,6 +2141,36 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
         persistMerchantAliasDeletedKeys()
         markLedgerConfigurationChanged()
+    }
+
+    private func recordDataCleaningApplicationHistory(
+        previews: [DataCleaningPreviewItem],
+        result: DataCleaningApplicationResult
+    ) {
+        let entry = DataCleaningApplicationHistoryEntry(
+            previewID: result.previewID,
+            kind: result.kind,
+            previewCount: previews.count,
+            previewTitles: previews.map(\.title),
+            updatedCount: result.updatedCount,
+            deletedCount: result.deletedCount,
+            skippedCount: result.skippedCount
+        )
+        dataCleaningApplicationHistory.insert(entry, at: 0)
+        if dataCleaningApplicationHistory.count > Self.dataCleaningApplicationHistoryLimit {
+            dataCleaningApplicationHistory = Array(dataCleaningApplicationHistory.prefix(Self.dataCleaningApplicationHistoryLimit))
+        }
+        persistDataCleaningApplicationHistory()
+    }
+
+    private func markDataCleaningApplicationHistoryUndone(previewID: String) {
+        guard let index = dataCleaningApplicationHistory.firstIndex(where: {
+            $0.previewID == previewID && $0.undoneAt == nil
+        }) else {
+            return
+        }
+        dataCleaningApplicationHistory[index].undoneAt = Date()
+        persistDataCleaningApplicationHistory()
     }
 
     private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {
@@ -2767,6 +2838,19 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(ignoredDataCleaningPreviewIDs.sorted(), forKey: Self.ignoredDataCleaningPreviewIDsKey)
     }
 
+    private static func loadDataCleaningApplicationHistory() -> [DataCleaningApplicationHistoryEntry] {
+        guard let data = UserDefaults.standard.data(forKey: Self.dataCleaningApplicationHistoryKey),
+              let entries = try? JSONDecoder().decode([DataCleaningApplicationHistoryEntry].self, from: data) else {
+            return []
+        }
+        return Array(entries.prefix(Self.dataCleaningApplicationHistoryLimit))
+    }
+
+    private func persistDataCleaningApplicationHistory() {
+        guard let data = try? JSONEncoder().encode(dataCleaningApplicationHistory) else { return }
+        UserDefaults.standard.set(data, forKey: Self.dataCleaningApplicationHistoryKey)
+    }
+
     private static func resolvedDefaultWriteLedgerID(_ candidate: String?, from profiles: [LedgerProfile]) -> String {
         let activeProfiles = profiles.filter { !$0.isArchived }
         let activeIDs = Set(activeProfiles.map(\.id))
@@ -2991,6 +3075,8 @@ extension LedgerStore {
     private static let hotelStayDraftTombstonesKey = "hotelStayDraftCloudTombstones"
     private static let merchantAliasDeletedKeysKey = "merchantAliasDeletedKeys"
     private static let ignoredDataCleaningPreviewIDsKey = "ignoredDataCleaningPreviewIDs"
+    private static let dataCleaningApplicationHistoryKey = "dataCleaningApplicationHistory"
+    private static let dataCleaningApplicationHistoryLimit = 20
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
     private static var appGroupDefaults: UserDefaults? {

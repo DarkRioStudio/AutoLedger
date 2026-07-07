@@ -406,6 +406,10 @@
 "ipad.cleaning.apply_confirm_action" = "确认应用";
 "ipad.cleaning.result" = "最近一次结果";
 "ipad.cleaning.result_format" = "更新 %d 笔，移入最近删除 %d 笔，跳过 %d 笔。";
+"ipad.cleaning.history.title" = "最近清洗记录";
+"ipad.cleaning.history.detail_format" = "采纳 %d 条建议，更新 %d 笔，移入最近删除 %d 笔，跳过 %d 笔。";
+"ipad.cleaning.history.applied" = "已应用";
+"ipad.cleaning.history.undone" = "已撤销";
 
 "common.close" = "关闭";
 "common.cancel" = "取消";
