@@ -1417,3 +1417,17 @@
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "Could not claim the dedicated folio address. Please try again later.";
 "hotel_stay.cloud_inbox.error.http_status_format" = "Cloud inbox request failed (%d): %@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "Could not save the dedicated folio address (Keychain %d).";
+
+// MARK: - Subscription Anomalies
+"subscriptions.anomaly.title" = "Anomalies & renewals";
+"subscriptions.anomaly.pro.title" = "Subscription alerts are Pro automation";
+"subscriptions.anomaly.pro.body" = "Basic subscription tracking stays free. Pro helps spot price increases, duplicate charges, billing-cycle drift, and upcoming renewal pressure.";
+"subscriptions.anomaly.empty" = "No subscription anomalies need attention.";
+"subscriptions.anomaly.price_increase" = "Possible price increase";
+"subscriptions.anomaly.price_increase_format" = "%@ changed from %@ to %@.";
+"subscriptions.anomaly.duplicate_charge" = "Possible duplicate charge";
+"subscriptions.anomaly.duplicate_charge_format" = "%@ has a nearby charge of %@.";
+"subscriptions.anomaly.billing_cycle_drift" = "Billing cycle drift";
+"subscriptions.anomaly.billing_cycle_drift_format" = "%@ was expected on %@, current record is %@.";
+"subscriptions.anomaly.pressure" = "Renewal pressure";
+"subscriptions.anomaly.pressure_format" = "Next %d days: %@ across %d subscriptions.";

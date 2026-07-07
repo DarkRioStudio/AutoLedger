@@ -1417,3 +1417,17 @@
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "전용 Folio 주소를 요청할 수 없습니다. 나중에 다시 시도해 주세요.";
 "hotel_stay.cloud_inbox.error.http_status_format" = "클라우드 받은편지함 요청 실패(%d): %@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "전용 Folio 주소(Keychain %d)를 저장할 수 없습니다.";
+
+// MARK: - Subscription Anomalies
+"subscriptions.anomaly.title" = "이상 항목과 갱신 부담";
+"subscriptions.anomaly.pro.title" = "구독 이상 알림은 Pro 자동화입니다";
+"subscriptions.anomaly.pro.body" = "기본 구독 관리는 계속 무료입니다. Pro는 가격 인상, 중복 결제 의심, 결제 주기 이탈, 곧 다가올 갱신 부담을 찾아줍니다.";
+"subscriptions.anomaly.empty" = "처리할 구독 이상 항목이 없습니다.";
+"subscriptions.anomaly.price_increase" = "가격 인상 가능성";
+"subscriptions.anomaly.price_increase_format" = "%@ 금액이 %@에서 %@로 변경되었습니다.";
+"subscriptions.anomaly.duplicate_charge" = "중복 결제 의심";
+"subscriptions.anomaly.duplicate_charge_format" = "%@에 가까운 시점의 %@ 결제가 있습니다.";
+"subscriptions.anomaly.billing_cycle_drift" = "결제 주기 이탈";
+"subscriptions.anomaly.billing_cycle_drift_format" = "%@ 예정일은 %@였지만 현재 기록은 %@입니다.";
+"subscriptions.anomaly.pressure" = "갱신 부담";
+"subscriptions.anomaly.pressure_format" = "앞으로 %d일: %@, 구독 %d개.";

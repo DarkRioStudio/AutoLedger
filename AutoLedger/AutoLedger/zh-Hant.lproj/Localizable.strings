@@ -1420,3 +1420,17 @@
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "領取專屬水單地址失敗，請稍後再試。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "雲端收件箱請求失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "專屬水單地址儲存失敗（Keychain %d）。";
+
+// MARK: - Subscription Anomalies
+"subscriptions.anomaly.title" = "異常與續費壓力";
+"subscriptions.anomaly.pro.title" = "訂閱異常提醒是 Pro 自動化";
+"subscriptions.anomaly.pro.body" = "基礎訂閱管理繼續免費；Pro 會幫你發現漲價、疑似重複扣費、週期異常和近期續費壓力。";
+"subscriptions.anomaly.empty" = "暫未發現需要處理的訂閱異常。";
+"subscriptions.anomaly.price_increase" = "價格可能上漲";
+"subscriptions.anomaly.price_increase_format" = "%@ 從 %@ 調整到 %@。";
+"subscriptions.anomaly.duplicate_charge" = "疑似重複扣費";
+"subscriptions.anomaly.duplicate_charge_format" = "%@ 短時間內出現相近扣費 %@。";
+"subscriptions.anomaly.billing_cycle_drift" = "扣費週期異常";
+"subscriptions.anomaly.billing_cycle_drift_format" = "%@ 預計 %@，目前記錄為 %@。";
+"subscriptions.anomaly.pressure" = "續費壓力";
+"subscriptions.anomaly.pressure_format" = "未來 %d 天：%@，共 %d 個訂閱。";

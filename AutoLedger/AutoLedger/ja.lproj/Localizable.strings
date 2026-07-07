@@ -1417,3 +1417,17 @@
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "専用明細アドレスを取得できませんでした。しばらくしてからもう一度お試しください。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "クラウド受信箱リクエスト失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "専用明細アドレスを保存できませんでした（Keychain %d）。";
+
+// MARK: - Subscription Anomalies
+"subscriptions.anomaly.title" = "異常と更新負担";
+"subscriptions.anomaly.pro.title" = "サブスク異常通知は Pro 自動化です";
+"subscriptions.anomaly.pro.body" = "基本のサブスク管理は無料のまま。Pro は値上げ、重複請求、請求周期のずれ、近日の更新負担を見つけます。";
+"subscriptions.anomaly.empty" = "対応が必要なサブスク異常はありません。";
+"subscriptions.anomaly.price_increase" = "価格上昇の可能性";
+"subscriptions.anomaly.price_increase_format" = "%@ が %@ から %@ に変わりました。";
+"subscriptions.anomaly.duplicate_charge" = "重複請求の可能性";
+"subscriptions.anomaly.duplicate_charge_format" = "%@ に近い時期の請求 %@ があります。";
+"subscriptions.anomaly.billing_cycle_drift" = "請求周期のずれ";
+"subscriptions.anomaly.billing_cycle_drift_format" = "%@ は %@ の予定でしたが、現在の記録は %@ です。";
+"subscriptions.anomaly.pressure" = "更新負担";
+"subscriptions.anomaly.pressure_format" = "今後 %d 日：%@、%d 件のサブスク。";

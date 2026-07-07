@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-387 高级搜索第一版）
+更新日期：2026-07-07（ITER-388 订阅异常提醒第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-388 订阅异常提醒第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2320 / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：让 Pro 用户在订阅管理页看到价格上涨、疑似重复扣费、扣费周期异常和近期续费压力，同时保持基础订阅记录与手动维护免费。
+- 改动范围：新增 `SubscriptionAnomalyDetector`；更新 `AutoLedgerProAccessPolicy`；更新 `SubscriptionListView` 订阅异常分区、Pro gate 和 Pro 页面入口；补齐五语 `subscriptions.anomaly.*` 文案；新增订阅异常 UI smoke 并接入离线回归。
+- 未改动范围：未新增 Worker endpoint、未修改 App Store Server Notifications、未修改 StoreKit 商品、未修改 SQLite / CloudKit schema、未修改截图管线、未移动构建 tag。
+- 完成内容：Core 检测器可从订阅和账单历史中生成涨价、重复扣费、周期异常和 7 / 30 / 90 天续费压力摘要；`subscriptionAnomalyDetection` 进入 v1.7.0 P0 Pro 本地 UI gate；iOS 订阅管理页展示前三条异常与 7 / 30 天续费压力；未订阅用户看到统一 Pro 自动化说明和订阅入口。
+- 未完成内容：本轮没有做后台推送提醒、服务端订阅生命周期主动通知 UI、跨设备异常已读状态或年度订阅成本详情图；这些可在 ASSN / 通知体验稳定后继续扩展。
+- 测试情况：执行 `python3 scripts/check_subscription_anomaly_ui_smoke.py`、`python3 scripts/check_localization_coverage.py`、`plutil -lint` 五语 strings、`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' -configuration Debug build` 和 `bash scripts/run_offline_regression.sh`，结果均 PASS。
+- 风险与注意事项：异常检测当前基于本机订阅和交易历史，不代表 Apple 订阅后台事件；数据少或历史账单不完整时可能没有可显示异常。续费压力按本机订阅金额汇总，跨币种年度成本和更复杂汇率口径留到后续。
+- 回滚方式：回退 `SubscriptionListView` 异常分区、五语 `subscriptions.anomaly.*` 文案、`check_subscription_anomaly_ui_smoke.py`、`SubscriptionAnomalyDetector.swift` 和 `ProAccessPolicy` 中 `subscriptionAnomalyDetection` P0 gate 即可恢复旧订阅列表。
+- 结论：本轮完成，GOAL-2320 第一版工程闭环可进入月结导出包或高级规则自动化。
+- 下一步建议：进入 GOAL-2330 月结导出包，优先在 Core 层固定导出资料包合同和脱敏边界。
 
 ### ITER-387 高级搜索第一版
 - 日期：2026-07-07

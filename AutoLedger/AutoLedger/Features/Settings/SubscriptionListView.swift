@@ -5,10 +5,12 @@ import SwiftUI
 struct SubscriptionListView: View {
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
 
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isPresentingPhotoPicker = false
     @State private var isImporting = false
+    @State private var isPresentingProSheet = false
     @State private var annualPriceOverrides: [String: Double] = [:]
     @State private var subscriptionNotes: [String: String] = [:]
     private let ocrService = OCRService()
@@ -55,6 +57,18 @@ struct SubscriptionListView: View {
                 store.requestAutomaticBackup()
             }
         }
+        .sheet(isPresented: $isPresentingProSheet) {
+            NavigationStack {
+                AutoLedgerProView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingProSheet = false
+                            }
+                        }
+                    }
+            }
+        }
         .onAppear {
             loadSupplementalSubscriptionData()
         }
@@ -66,6 +80,10 @@ struct SubscriptionListView: View {
         .task(id: selectedPhoto) {
             guard let item = selectedPhoto else { return }
             await importPickedPhoto(item)
+        }
+        .task {
+            await proEntitlement.loadProducts()
+            await proEntitlement.refreshEntitlements()
         }
     }
 
@@ -112,6 +130,8 @@ struct SubscriptionListView: View {
                 emptyState
                     .listRowBackground(AppTheme.card)
             } else {
+                subscriptionAnomalySection
+
                 let upcoming = upcomingSubscriptions
                 if !upcoming.isEmpty {
                     Section("subscriptions.upcoming") {
@@ -141,6 +161,168 @@ struct SubscriptionListView: View {
         }
         .autoLedgerListChrome()
         .navigationTitle("settings.subscriptions.title")
+    }
+
+    private var subscriptionAnomalySummary: SubscriptionAnomalySummary {
+        SubscriptionAnomalyDetector().analyze(
+            subscriptions: scopedSubscriptions,
+            transactions: store.visibleTransactions
+        )
+    }
+
+    @ViewBuilder
+    private var subscriptionAnomalySection: some View {
+        Section("subscriptions.anomaly.title") {
+            if proEntitlement.canUse(.subscriptionAnomalyDetection) {
+                let summary = subscriptionAnomalySummary
+                if summary.anomalies.isEmpty && summary.renewalPressure.isEmpty {
+                    Text("subscriptions.anomaly.empty")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .listRowBackground(AppTheme.card)
+                } else {
+                    ForEach(Array(summary.anomalies.prefix(3))) { anomaly in
+                        subscriptionAnomalyRow(anomaly)
+                            .listRowBackground(AppTheme.card)
+                    }
+
+                    ForEach(summary.renewalPressure.filter { $0.windowDays == 7 || $0.windowDays == 30 }) { pressure in
+                        subscriptionRenewalPressureRow(pressure)
+                            .listRowBackground(AppTheme.card)
+                    }
+                }
+            } else {
+                subscriptionAnomalyProGate
+                    .listRowBackground(AppTheme.card)
+            }
+        }
+    }
+
+    private var subscriptionAnomalyProGate: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "bell.badge.fill")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 42, height: 42)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("subscriptions.anomaly.pro.title")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text("subscriptions.anomaly.pro.body")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+            }
+
+            Button {
+                isPresentingProSheet = true
+            } label: {
+                Label("pro.cta.view_plans", systemImage: "sparkles")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.accent)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func subscriptionAnomalyRow(_ anomaly: SubscriptionAnomaly) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: anomalyIcon(for: anomaly.kind))
+                .font(.headline.weight(.bold))
+                .foregroundStyle(anomaly.severity == .critical ? .red : AppTheme.accentSecondary)
+                .frame(width: 36, height: 36)
+                .background((anomaly.severity == .critical ? Color.red : AppTheme.accentSecondary).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(anomalyTitle(for: anomaly.kind))
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+                Text(anomalyMessage(for: anomaly))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func subscriptionRenewalPressureRow(_ pressure: SubscriptionRenewalPressure) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 36, height: 36)
+                .background(AppTheme.accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("subscriptions.anomaly.pressure")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.ink)
+                Text(
+                    String(
+                        format: String(localized: "subscriptions.anomaly.pressure_format"),
+                        pressure.windowDays,
+                        AppFormatters.currency(pressure.totalAmount, code: pressure.currencyCode),
+                        pressure.subscriptionCount
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func anomalyTitle(for kind: SubscriptionAnomalyKind) -> LocalizedStringKey {
+        switch kind {
+        case .priceIncrease: return "subscriptions.anomaly.price_increase"
+        case .duplicateCharge: return "subscriptions.anomaly.duplicate_charge"
+        case .billingCycleDrift: return "subscriptions.anomaly.billing_cycle_drift"
+        }
+    }
+
+    private func anomalyMessage(for anomaly: SubscriptionAnomaly) -> String {
+        switch anomaly.kind {
+        case .priceIncrease:
+            return String(
+                format: String(localized: "subscriptions.anomaly.price_increase_format"),
+                anomaly.merchant,
+                AppFormatters.currency(anomaly.previousAmount ?? 0, code: anomaly.currencyCode),
+                AppFormatters.currency(anomaly.currentAmount ?? 0, code: anomaly.currencyCode)
+            )
+        case .duplicateCharge:
+            return String(
+                format: String(localized: "subscriptions.anomaly.duplicate_charge_format"),
+                anomaly.merchant,
+                AppFormatters.currency(anomaly.currentAmount ?? 0, code: anomaly.currencyCode)
+            )
+        case .billingCycleDrift:
+            return String(
+                format: String(localized: "subscriptions.anomaly.billing_cycle_drift_format"),
+                anomaly.merchant,
+                anomaly.expectedDate.map(AppFormatters.shortDateTime) ?? "-",
+                anomaly.actualDate.map(AppFormatters.shortDateTime) ?? "-"
+            )
+        }
+    }
+
+    private func anomalyIcon(for kind: SubscriptionAnomalyKind) -> String {
+        switch kind {
+        case .priceIncrease: return "tag.fill"
+        case .duplicateCharge: return "exclamationmark.2"
+        case .billingCycleDrift: return "calendar.badge.exclamationmark"
+        }
     }
 
     private var monthlyEstimate: Double {

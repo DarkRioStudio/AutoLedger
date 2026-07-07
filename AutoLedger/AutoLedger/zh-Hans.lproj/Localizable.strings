@@ -1417,3 +1417,17 @@
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "领取专属水单地址失败，请稍后重试。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "云端收件箱请求失败（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "专属水单地址保存失败（Keychain %d）。";
+
+// MARK: - Subscription Anomalies
+"subscriptions.anomaly.title" = "异常与续费压力";
+"subscriptions.anomaly.pro.title" = "订阅异常提醒是 Pro 自动化";
+"subscriptions.anomaly.pro.body" = "基础订阅管理继续免费；Pro 会帮你发现涨价、疑似重复扣费、周期异常和近期续费压力。";
+"subscriptions.anomaly.empty" = "暂未发现需要处理的订阅异常。";
+"subscriptions.anomaly.price_increase" = "价格可能上涨";
+"subscriptions.anomaly.price_increase_format" = "%@ 从 %@ 调整到 %@。";
+"subscriptions.anomaly.duplicate_charge" = "疑似重复扣费";
+"subscriptions.anomaly.duplicate_charge_format" = "%@ 短时间内出现相近扣费 %@。";
+"subscriptions.anomaly.billing_cycle_drift" = "扣费周期异常";
+"subscriptions.anomaly.billing_cycle_drift_format" = "%@ 预计 %@，当前记录为 %@。";
+"subscriptions.anomaly.pressure" = "续费压力";
+"subscriptions.anomaly.pressure_format" = "未来 %d 天：%@，共 %d 个订阅。";

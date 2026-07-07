@@ -29,8 +29,7 @@ public struct SubscriptionAnomaly: Identifiable, Codable, Equatable, Sendable {
         [
             kind.rawValue,
             subscriptionID.uuidString,
-            relatedTransactionIDs.map(\.uuidString).joined(separator: "-"),
-            String(Int(detectedAt.timeIntervalSince1970))
+            relatedTransactionIDs.map(\.uuidString).joined(separator: "-")
         ].joined(separator: ":")
     }
 
