@@ -57,6 +57,10 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    settingsSection(title: "settings.section.smart_cleanup") {
+                        dataCleaningShortcutRow()
+                    }
+
                     settingsSection(title: "settings.section.appearance") {
                         NavigationLink(value: SettingsNavigationTarget.appearance) {
                             settingsRow(
@@ -188,19 +192,6 @@ struct SettingsView: View {
                                 iconColor: Color(red: 0.33, green: 0.59, blue: 0.41),
                                 title: "settings.aliases.title",
                                 subtitle: "settings.aliases.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        NavigationLink {
-                            DataCleaningSuggestionsView()
-                                .environmentObject(store)
-                        } label: {
-                            settingsRow(
-                                icon: "wand.and.sparkles",
-                                iconColor: AppTheme.accent,
-                                title: "settings.data_cleaning.title",
-                                subtitle: "settings.data_cleaning.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
@@ -344,6 +335,21 @@ struct SettingsView: View {
                 releaseNotes = await CommonAPIReleaseNotesService.refreshReleaseNotes(appVersion: appVersion)
             }
         }
+    }
+
+    private func dataCleaningShortcutRow() -> some View {
+        NavigationLink {
+            DataCleaningSuggestionsView()
+                .environmentObject(store)
+        } label: {
+            settingsRow(
+                icon: "wand.and.sparkles",
+                iconColor: AppTheme.accent,
+                title: "settings.data_cleaning.title",
+                subtitle: "settings.data_cleaning.subtitle"
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func proHighlightCard() -> some View {

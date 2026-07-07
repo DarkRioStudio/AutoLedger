@@ -51,6 +51,7 @@ Risk: fine for UI, purchase messaging, and local allowance. Not sufficient for W
 - `IPadBatchImportWorkspaceView` uses `canUse(.batchCandidateImport)` to gate new multi-file batch import, drag-and-drop import, Mac import-file commands, retry, and recognition execution; existing candidates and queue review remain reachable.
 - `IPadCleaningPreviewWorkspaceView` uses `canUse(.advancedDeduplication)` for local data cleaning and deduplication UI.
 - `DataCleaningSuggestionsView` uses `canUse(.merchantNormalizationSuggestions)` for the iPhone smart cleanup suggestions page. Pro users can preview, ignore, apply, batch-apply, undo local cleanup suggestions, and review recent local application history; accepted aliases and rules remain usable after Pro expires.
+- `DataCleaningSuggestionsView` also exposes the first cloud-assist opt-in card through local `dataCleaningCloudAssistEnabled` preference and `DataCleaningAssistRequestPolicy` status messaging. This is a local authorization preference only in the current build; it does not call `common-api`, does not call a Worker endpoint, and does not upload ledger data.
 
 Risk: local UI gates can be bypassed in forks. The impact for local features is limited to local experience; server-cost features must not depend on this.
 

@@ -7,6 +7,7 @@ struct DataCleaningSuggestionsView: View {
     @State private var pendingPreviews: [DataCleaningPreviewItem] = []
     @State private var showsApplyConfirmation = false
     @State private var isPresentingProSheet = false
+    @AppStorage("dataCleaningCloudAssistEnabled") private var cloudAssistEnabled = false
 
     private var snapshot: DataCleaningPreviewSnapshot {
         store.dataCleaningPreviewSnapshot()
@@ -16,6 +17,21 @@ struct DataCleaningSuggestionsView: View {
         snapshot.items
     }
 
+    private var cloudAssistDecision: DataCleaningAssistRequestDecision {
+        let payload = DataCleaningAssistPayloadBuilder().build(
+            transactions: store.transactions,
+            merchantAliases: store.merchantAliases,
+            categoryCorrections: store.categoryCorrections
+        )
+        return DataCleaningAssistRequestPolicy().evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: cloudAssistEnabled,
+                isProActive: proEntitlement.isProActive
+            )
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -23,6 +39,7 @@ struct DataCleaningSuggestionsView: View {
 
                 if proEntitlement.canUse(.merchantNormalizationSuggestions) {
                     summaryRow
+                    cloudAssistAuthorizationCard
 
                     if previews.isEmpty {
                         emptyState
@@ -82,6 +99,64 @@ struct DataCleaningSuggestionsView: View {
                         }
                     }
             }
+        }
+    }
+
+    private var cloudAssistAuthorizationCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "cloud.bolt.fill")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 42, height: 42)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("ipad.cleaning.cloud_assist.title")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text("ipad.cleaning.cloud_assist.subtitle")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Toggle("", isOn: $cloudAssistEnabled)
+                    .labelsHidden()
+                    .tint(AppTheme.accent)
+            }
+
+            Label(cloudAssistStatusText, systemImage: cloudAssistDecision.isAllowed ? "checkmark.seal.fill" : "info.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(cloudAssistDecision.isAllowed ? AppTheme.accent : AppTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("ipad.cleaning.cloud_assist.privacy_note")
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .autoLedgerCardSurface(cornerRadius: 18)
+    }
+
+    private var cloudAssistStatusText: LocalizedStringKey {
+        switch cloudAssistDecision.reason {
+        case .allowed:
+            return "ipad.cleaning.cloud_assist.status.allowed"
+        case .disabledByUser:
+            return "ipad.cleaning.cloud_assist.status.disabled"
+        case .requiresPro:
+            return "ipad.cleaning.cloud_assist.status.requires_pro"
+        case .insufficientHistory:
+            return "ipad.cleaning.cloud_assist.status.insufficient_history"
+        case .coolingDown:
+            return "ipad.cleaning.cloud_assist.status.cooling_down"
+        case .backoffActive:
+            return "ipad.cleaning.cloud_assist.status.backoff"
         }
     }
 

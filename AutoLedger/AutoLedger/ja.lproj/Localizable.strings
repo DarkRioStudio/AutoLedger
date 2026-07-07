@@ -776,6 +776,7 @@
 "settings.section.language_region" = "言語と地域";
 "settings.section.ledger_sync" = "台帳と同期";
 "settings.section.recognition" = "記録と認識";
+"settings.section.smart_cleanup" = "スマート整理";
 "settings.section.rules" = "ルールと分類";
 "settings.section.recurring" = "定期支払い";
 "settings.section.support" = "サポートと情報";
@@ -823,6 +824,16 @@
 "settings.privacy.link" = "プライバシーポリシーを見る";
 "settings.release_status.title" = "次に予定";
 "settings.release_status.body" = "次は Pro のサブスクリプション体験とホテル明細フローをさらに磨きます。登録、購入の復元、受信箱の候補確認、確認後の保存をより使いやすくし、その後は検索、サブスクリプション異常通知、月末エクスポート、自動ルール整理を強化します。";
+
+"ipad.cleaning.cloud_assist.title" = "クラウド補助候補";
+"ipad.cleaning.cloud_assist.subtitle" = "有効にすると、今後のバージョンで確認後に匿名化された集計特徴を使い、整理候補を改善できます。";
+"ipad.cleaning.cloud_assist.status.allowed" = "今後のリクエスト条件を満たしています。現バージョンでは台帳データをアップロードしません。";
+"ipad.cleaning.cloud_assist.status.disabled" = "初期状態ではオフです。本機内の整理候補のみ使用します。";
+"ipad.cleaning.cloud_assist.status.requires_pro" = "クラウド補助候補には Pro が必要です。";
+"ipad.cleaning.cloud_assist.status.insufficient_history" = "台帳履歴がまだ少ないため、まず本機内の候補を使います。";
+"ipad.cleaning.cloud_assist.status.cooling_down" = "最近リクエスト済みです。しばらくしてから更新してください。";
+"ipad.cleaning.cloud_assist.status.backoff" = "前回のリクエストは一時的に利用できません。後でお試しください。";
+"ipad.cleaning.cloud_assist.privacy_note" = "このバージョンは許可設定だけを保存し、加盟店名、金額、メモ、OCR 原文、取引 ID は送信しません。";
 
 "appearance.title" = "外観とテーマ";
 "appearance.theme_picker" = "テーマ";

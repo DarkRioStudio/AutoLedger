@@ -776,6 +776,7 @@
 "settings.section.language_region" = "언어 및 지역";
 "settings.section.ledger_sync" = "원장 및 동기화";
 "settings.section.recognition" = "캡처 및 인식";
+"settings.section.smart_cleanup" = "스마트 정리";
 "settings.section.rules" = "규칙 및 분류";
 "settings.section.recurring" = "반복 청구서";
 "settings.section.support" = "지원 및 정보";
@@ -823,6 +824,16 @@
 "settings.privacy.link" = "개인정보 보호정책 보기";
 "settings.release_status.title" = "다음은";
 "settings.release_status.body" = "다음으로 우리는 Pro 구독 경험과 호텔 폴리오 작업 흐름을 계속해서 개선하여 구독, 구매 복원, 받은 편지함 후보 검토, 확인된 기록 저장 등이 더욱 원활하게 진행될 수 있도록 하겠습니다. 이후 릴리스에는 더 강력한 검색, 구독 이상 경고, 월말 내보내기 및 더 스마트한 규칙 자동화가 추가됩니다.";
+
+"ipad.cleaning.cloud_assist.title" = "클라우드 보조 제안";
+"ipad.cleaning.cloud_assist.subtitle" = "켜면 이후 버전에서 확인 후 익명화된 집계 특징을 사용해 정리 제안을 개선할 수 있습니다.";
+"ipad.cleaning.cloud_assist.status.allowed" = "향후 요청 조건을 충족했습니다. 현재 버전은 원장 데이터를 업로드하지 않습니다.";
+"ipad.cleaning.cloud_assist.status.disabled" = "기본값은 꺼짐입니다. 기기 내 정리 제안만 사용합니다.";
+"ipad.cleaning.cloud_assist.status.requires_pro" = "클라우드 보조 제안을 사용하려면 Pro가 필요합니다.";
+"ipad.cleaning.cloud_assist.status.insufficient_history" = "원장 기록이 아직 부족합니다. 먼저 기기 내 제안을 계속 사용하세요.";
+"ipad.cleaning.cloud_assist.status.cooling_down" = "최근 요청했습니다. 잠시 후 클라우드 보조 제안을 새로고침하세요.";
+"ipad.cleaning.cloud_assist.status.backoff" = "이전 요청을 잠시 사용할 수 없습니다. 나중에 다시 시도하세요.";
+"ipad.cleaning.cloud_assist.privacy_note" = "이 버전은 권한 설정만 저장하며 판매자명, 금액, 메모, OCR 원문 또는 거래 ID를 보내지 않습니다.";
 
 "appearance.title" = "외관 및 테마";
 "appearance.theme_picker" = "주제";

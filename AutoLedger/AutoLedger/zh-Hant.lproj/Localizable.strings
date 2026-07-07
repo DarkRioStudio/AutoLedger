@@ -779,6 +779,7 @@
 "settings.section.language_region" = "語言與地區";
 "settings.section.ledger_sync" = "帳本與同步";
 "settings.section.recognition" = "記帳與識別";
+"settings.section.smart_cleanup" = "智能整理";
 "settings.section.rules" = "規則與歸類";
 "settings.section.recurring" = "週期帳單";
 "settings.section.support" = "支持與關於";
@@ -826,6 +827,16 @@
 "settings.privacy.link" = "查看隱私政策";
 "settings.release_status.title" = "後續計畫";
 "settings.release_status.body" = "接下來會繼續打磨 Pro 訂閱體驗和飯店水單流程，讓開通、恢復購買、收件箱候選和確認入帳更順手。後續版本會加入更強的搜尋、訂閱異常提醒、月結匯出和自動規則整理。";
+
+"ipad.cleaning.cloud_assist.title" = "雲端輔助建議";
+"ipad.cleaning.cloud_assist.subtitle" = "開啟後，後續版本可在你確認後使用脫敏彙總特徵輔助生成整理建議。";
+"ipad.cleaning.cloud_assist.status.allowed" = "已符合請求條件；目前版本仍不會上傳帳本資料。";
+"ipad.cleaning.cloud_assist.status.disabled" = "預設關閉，只使用本機整理建議。";
+"ipad.cleaning.cloud_assist.status.requires_pro" = "需要 Pro 權益後才能使用雲端輔助建議。";
+"ipad.cleaning.cloud_assist.status.insufficient_history" = "帳本記錄還不夠多，先繼續使用本機建議。";
+"ipad.cleaning.cloud_assist.status.cooling_down" = "剛剛請求過，稍後再重新整理雲端輔助建議。";
+"ipad.cleaning.cloud_assist.status.backoff" = "上次請求暫不可用，稍後再試。";
+"ipad.cleaning.cloud_assist.privacy_note" = "本版本只保存授權偏好，不會傳送商戶名、金額、備註、OCR 原文或交易 ID。";
 
 "appearance.title" = "外觀與主題";
 "appearance.theme_picker" = "主題";

@@ -776,6 +776,7 @@
 "settings.section.language_region" = "Language & Region";
 "settings.section.ledger_sync" = "Ledger & Sync";
 "settings.section.recognition" = "Capture & Recognition";
+"settings.section.smart_cleanup" = "Smart Cleanup";
 "settings.section.rules" = "Rules & Classification";
 "settings.section.recurring" = "Recurring Bills";
 "settings.section.support" = "Support & About";
@@ -823,6 +824,16 @@
 "settings.privacy.link" = "View Privacy Policy";
 "settings.release_status.title" = "Coming Next";
 "settings.release_status.body" = "Next we will keep polishing the Pro subscription experience and hotel folio workflow, so subscribing, restoring purchases, reviewing inbox candidates, and saving confirmed records feel smoother. Later releases will add stronger search, subscription anomaly alerts, month-end exports, and smarter rules automation.";
+
+"ipad.cleaning.cloud_assist.title" = "Cloud-assisted suggestions";
+"ipad.cleaning.cloud_assist.subtitle" = "When enabled, a later version can use redacted aggregate features after your confirmation to improve cleanup suggestions.";
+"ipad.cleaning.cloud_assist.status.allowed" = "Ready for future requests; this version still does not upload ledger data.";
+"ipad.cleaning.cloud_assist.status.disabled" = "Off by default. Only on-device cleanup suggestions are used.";
+"ipad.cleaning.cloud_assist.status.requires_pro" = "Pro is required for cloud-assisted suggestions.";
+"ipad.cleaning.cloud_assist.status.insufficient_history" = "Not enough ledger history yet. Keep using on-device suggestions for now.";
+"ipad.cleaning.cloud_assist.status.cooling_down" = "A request was made recently. Try refreshing cloud assist later.";
+"ipad.cleaning.cloud_assist.status.backoff" = "The last request is temporarily unavailable. Try again later.";
+"ipad.cleaning.cloud_assist.privacy_note" = "This version only stores the permission preference and never sends merchant names, amounts, notes, OCR text, or transaction IDs.";
 
 "appearance.title" = "Appearance & Theme";
 "appearance.theme_picker" = "Theme";

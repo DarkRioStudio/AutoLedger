@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-385 Worker 辅助建议请求策略）
+更新日期：2026-07-07（ITER-386 iOS 数据清洗入口与云端辅助授权）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-386 iOS 数据清洗入口与云端辅助授权
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345G / Pro Automation
+- 类型：能力增强 / UI / 隐私边界 / 测试
+- 目标：解决 iOS 最新 build 中用户看不到数据清洗入口的问题，并把上一段 Worker 辅助请求策略接到清晰的端上授权入口，但保持当前版本零上传。
+- 改动范围：更新 iOS 设置页入口、`DataCleaningSuggestionsView` 云端辅助授权卡、五语本地化、离线静态 smoke、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议或跨设备建议队列。
+- 完成内容：设置页在 Pro 卡片下新增独立“智能整理”分区，直接进入 `DataCleaningSuggestionsView`；旧“规则”分区里的重复入口已移除，避免入口被埋住。
+- 完成内容：`DataCleaningSuggestionsView` 新增“云端辅助建议”授权卡，使用 `@AppStorage("dataCleaningCloudAssistEnabled")` 保存本机偏好，并复用 `DataCleaningAssistRequestPolicy` 展示默认关闭、Pro gate、历史不足、冷却和失败回退状态。
+- 完成内容：五语补齐 `settings.section.smart_cleanup` 与 `ipad.cleaning.cloud_assist.*` 文案；文案明确当前版本只保存授权偏好，不发送商户名、金额、备注、OCR 原文或交易 ID。
+- 完成内容：新增 `scripts/check_data_cleaning_ios_entry_smoke.py` 并接入离线回归，静态检查 iOS 设置入口位置、云端辅助授权卡、请求策略 wiring 和五语文案。
+- 未完成内容：本轮没有真实 Worker 请求、服务端配额、鉴权、失败回退持久化、跨设备授权同步或云端建议结果 UI。
+- 测试情况：先执行 `python3 scripts/check_data_cleaning_ios_entry_smoke.py`，确认缺少独立入口和授权卡时失败；实现后同脚本 PASS。执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；五语 `Localizable.strings` `plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增 static smoke 随离线回归运行；执行 iPhone 17 Pro Max Simulator Debug build，结果 PASS。
+- 风险与注意事项：`cloudAssistEnabled` 当前只是本机授权偏好，不代表服务端可用；真正接入 Worker 时仍需服务端鉴权、配额、日志最小化、失败回退策略和用户撤销入口。
+- 回滚方式：回退 `SettingsView` 新增分区、`DataCleaningSuggestionsView` 授权卡、五语文案和静态 smoke 脚本，并从离线回归移除该脚本；不涉及数据迁移或用户账本。
+- 结论：本轮完成；iOS 设置页已有独立可见的数据清洗入口，云端辅助授权偏好已接入端上状态说明，但仍保持零上传。
+- 下一步建议：完成验证和提交后，继续接入 Worker 辅助建议的服务端合同或先补 Mac / iPad 大屏数据清洗表格体验。
 
 ### ITER-385 Worker 辅助建议请求策略
 - 日期：2026-07-07
