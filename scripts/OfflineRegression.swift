@@ -70,6 +70,7 @@ struct OfflineRegression {
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifyDataCleaningAssistPayload(reporter: reporter)
+        verifyDataCleaningAssistResponseMapping(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
@@ -4199,6 +4200,105 @@ struct OfflineRegression {
                 categoryCorrections: ["Private Coffee": TransactionCategory.dining]
             ),
             "DataCleaningAssistPayload is deterministic across transaction ordering"
+        )
+    }
+
+    private static func verifyDataCleaningAssistResponseMapping(reporter: RegressionReporter) {
+        let base = Date(timeIntervalSince1970: 1_782_100_000)
+        let anchorA = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002551") ?? UUID(),
+            merchant: "Worker Coffee",
+            amount: 18,
+            occurredAt: base,
+            category: .dining,
+            source: .manual,
+            note: "local only anchor A"
+        )
+        let anchorB = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002552") ?? UUID(),
+            merchant: "Worker Coffee",
+            amount: 21,
+            occurredAt: base.addingTimeInterval(-60),
+            category: .dining,
+            source: .manual,
+            note: "local only anchor B"
+        )
+        let variant = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002553") ?? UUID(),
+            merchant: "Worker Coffee Airport",
+            amount: 24,
+            occurredAt: base.addingTimeInterval(-120),
+            category: .dining,
+            source: .alipay,
+            note: "local only variant"
+        )
+        let transactions = [anchorA, anchorB, variant]
+        let payload = DataCleaningAssistPayloadBuilder(now: { base }).build(
+            transactions: transactions,
+            merchantAliases: [:],
+            categoryCorrections: [:]
+        )
+        let targetHash = payload.merchantFeatures.first { $0.transactionCount == 2 }?.merchantKeyHash ?? ""
+        let candidateHash = payload.merchantFeatures.first { $0.transactionCount == 1 }?.merchantKeyHash ?? ""
+        let response = DataCleaningAssistResponse(
+            suggestions: [
+                DataCleaningAssistSuggestion(
+                    kind: .merchantNormalization,
+                    candidateMerchantHash: candidateHash,
+                    targetMerchantHash: targetHash,
+                    confidence: 0.88,
+                    reasonCode: "prefix_overlap"
+                ),
+                DataCleaningAssistSuggestion(
+                    kind: .merchantNormalization,
+                    candidateMerchantHash: "m_unknown_candidate",
+                    targetMerchantHash: targetHash,
+                    confidence: 0.91,
+                    reasonCode: "unknown_candidate"
+                ),
+                DataCleaningAssistSuggestion(
+                    kind: .merchantNormalization,
+                    candidateMerchantHash: candidateHash,
+                    targetMerchantHash: targetHash,
+                    confidence: 0.55,
+                    reasonCode: "low_confidence"
+                )
+            ]
+        )
+
+        let snapshot = DataCleaningAssistSuggestionMapper().map(
+            response: response,
+            transactions: transactions
+        )
+        reporter.check(snapshot.items.count == 1, "DataCleaningAssistSuggestionMapper keeps only actionable suggestions")
+        let item = snapshot.items.first
+        reporter.check(
+            item?.kind == .merchantAlias &&
+                item?.currentValue == "Worker Coffee Airport" &&
+                item?.proposedValue == "Worker Coffee" &&
+                item?.affectedTransactionIDs == [variant.id],
+            "DataCleaningAssistSuggestionMapper resolves hashes to local preview values"
+        )
+        reporter.check(item?.score == 0.88, "DataCleaningAssistSuggestionMapper preserves worker confidence")
+        reporter.check(item?.reason == "worker assist merchant normalization", "DataCleaningAssistSuggestionMapper records worker assist reason")
+        let unsupportedResponse = DataCleaningAssistResponse(
+            schemaVersion: 2,
+            privacyMode: "raw_suggestions_v1",
+            suggestions: response.suggestions
+        )
+        let unsupportedSnapshot = DataCleaningAssistSuggestionMapper().map(
+            response: unsupportedResponse,
+            transactions: transactions
+        )
+        reporter.check(unsupportedSnapshot.items.isEmpty, "DataCleaningAssistSuggestionMapper rejects unsupported response contracts")
+
+        let encodedResponse = (try? JSONEncoder().encode(response))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        reporter.check(
+            !encodedResponse.contains("Worker Coffee") &&
+                !encodedResponse.contains(anchorA.id.uuidString) &&
+                !encodedResponse.contains(variant.id.uuidString),
+            "DataCleaningAssistResponse carries hashes only"
         )
     }
 

@@ -75,6 +75,129 @@ public struct DataCleaningMerchantPrefixHash: Codable, Equatable, Sendable {
     }
 }
 
+public struct DataCleaningAssistResponse: Codable, Equatable, Sendable {
+    public let schemaVersion: Int
+    public let privacyMode: String
+    public let suggestions: [DataCleaningAssistSuggestion]
+
+    public init(
+        schemaVersion: Int = 1,
+        privacyMode: String = "hashed_suggestions_v1",
+        suggestions: [DataCleaningAssistSuggestion]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.privacyMode = privacyMode
+        self.suggestions = suggestions
+    }
+}
+
+public enum DataCleaningAssistSuggestionKind: String, Codable, Sendable {
+    case merchantNormalization
+}
+
+public struct DataCleaningAssistSuggestion: Codable, Equatable, Sendable {
+    public let kind: DataCleaningAssistSuggestionKind
+    public let candidateMerchantHash: String
+    public let targetMerchantHash: String
+    public let confidence: Double
+    public let reasonCode: String
+
+    public init(
+        kind: DataCleaningAssistSuggestionKind,
+        candidateMerchantHash: String,
+        targetMerchantHash: String,
+        confidence: Double,
+        reasonCode: String
+    ) {
+        self.kind = kind
+        self.candidateMerchantHash = candidateMerchantHash
+        self.targetMerchantHash = targetMerchantHash
+        self.confidence = confidence
+        self.reasonCode = reasonCode
+    }
+}
+
+public struct DataCleaningAssistSuggestionMapper: Sendable {
+    private let minimumConfidence: Double
+    private let minimumTargetTransactionCount: Int
+
+    public init(
+        minimumConfidence: Double = 0.75,
+        minimumTargetTransactionCount: Int = 2
+    ) {
+        self.minimumConfidence = minimumConfidence
+        self.minimumTargetTransactionCount = minimumTargetTransactionCount
+    }
+
+    public func map(
+        response: DataCleaningAssistResponse,
+        transactions: [Transaction],
+        ignoredPreviewIDs: Set<String> = []
+    ) -> DataCleaningPreviewSnapshot {
+        guard response.schemaVersion == 1, response.privacyMode == "hashed_suggestions_v1" else {
+            return DataCleaningPreviewSnapshot(items: [])
+        }
+
+        let grouped = Dictionary(grouping: transactions) { transaction in
+            DataCleaningAssistFingerprint.merchantHash(transaction.merchant)
+        }
+        var seenIDs: Set<String> = []
+        let items = response.suggestions.compactMap { suggestion -> DataCleaningPreviewItem? in
+            guard suggestion.kind == .merchantNormalization,
+                  suggestion.confidence >= minimumConfidence,
+                  suggestion.candidateMerchantHash != suggestion.targetMerchantHash,
+                  let candidateTransactions = grouped[suggestion.candidateMerchantHash],
+                  let targetTransactions = grouped[suggestion.targetMerchantHash],
+                  targetTransactions.count >= minimumTargetTransactionCount else {
+                return nil
+            }
+
+            let id = "workerMerchantNormalization:\(suggestion.candidateMerchantHash)->\(suggestion.targetMerchantHash)"
+            guard !ignoredPreviewIDs.contains(id), !seenIDs.contains(id) else { return nil }
+            seenIDs.insert(id)
+
+            let currentMerchant = representativeMerchant(from: candidateTransactions)
+            let targetMerchant = representativeMerchant(from: targetTransactions)
+            guard currentMerchant != targetMerchant else { return nil }
+
+            let affectedIDs = candidateTransactions
+                .sorted { lhs, rhs in
+                    if lhs.occurredAt != rhs.occurredAt { return lhs.occurredAt > rhs.occurredAt }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                .map(\.id)
+
+            return DataCleaningPreviewItem(
+                id: id,
+                kind: .merchantAlias,
+                title: currentMerchant,
+                subtitle: "\(affectedIDs.count)",
+                currentValue: currentMerchant,
+                proposedValue: targetMerchant,
+                affectedTransactionIDs: affectedIDs,
+                score: suggestion.confidence,
+                reason: "worker assist merchant normalization"
+            )
+        }
+
+        return DataCleaningPreviewSnapshot(items: items)
+    }
+
+    private func representativeMerchant(from transactions: [Transaction]) -> String {
+        let counts = Dictionary(grouping: transactions) { transaction in
+            transaction.merchant.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return counts
+            .filter { !$0.key.isEmpty }
+            .sorted { lhs, rhs in
+                if lhs.value.count != rhs.value.count { return lhs.value.count > rhs.value.count }
+                if lhs.key.count != rhs.key.count { return lhs.key.count < rhs.key.count }
+                return lhs.key < rhs.key
+            }
+            .first?.key ?? ""
+    }
+}
+
 public struct DataCleaningAssistPayloadBuilder: Sendable {
     private let now: @Sendable () -> Date
 
@@ -88,7 +211,7 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
         categoryCorrections: [String: TransactionCategory]
     ) -> DataCleaningAssistPayload {
         let merchantGroups = Dictionary(grouping: transactions) { transaction in
-            normalizedMerchantKey(transaction.merchant)
+            DataCleaningAssistFingerprint.normalizedMerchantKey(transaction.merchant)
         }
         let aliasHashes = hashedAliasTargets(merchantAliases)
         let categoryCorrectionsByHash = hashedCategoryCorrections(categoryCorrections)
@@ -99,8 +222,8 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
                 merchantFeature(
                     normalizedKey: normalizedKey,
                     transactions: groupedTransactions,
-                    aliasTargetHash: aliasHashes[stableHashID(normalizedKey)],
-                    correctedCategory: categoryCorrectionsByHash[stableHashID(normalizedKey)]
+                    aliasTargetHash: aliasHashes[DataCleaningAssistFingerprint.stableHashID(normalizedKey)],
+                    correctedCategory: categoryCorrectionsByHash[DataCleaningAssistFingerprint.stableHashID(normalizedKey)]
                 )
             }
             .sorted { lhs, rhs in
@@ -127,7 +250,7 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
         correctedCategory: String?
     ) -> DataCleaningMerchantFeature {
         DataCleaningMerchantFeature(
-            merchantKeyHash: stableHashID(normalizedKey),
+            merchantKeyHash: DataCleaningAssistFingerprint.stableHashID(normalizedKey),
             normalizedLength: normalizedKey.count,
             transactionCount: transactions.count,
             categoryCounts: counted(transactions.map(\.category)),
@@ -142,10 +265,10 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
     private func hashedAliasTargets(_ aliases: [String: String]) -> [String: String] {
         Dictionary(
             uniqueKeysWithValues: aliases.compactMap { original, alias in
-                let originalKey = normalizedMerchantKey(original)
-                let aliasKey = normalizedMerchantKey(alias)
+                let originalKey = DataCleaningAssistFingerprint.normalizedMerchantKey(original)
+                let aliasKey = DataCleaningAssistFingerprint.normalizedMerchantKey(alias)
                 guard !originalKey.isEmpty, !aliasKey.isEmpty else { return nil }
-                return (stableHashID(originalKey), stableHashID(aliasKey))
+                return (DataCleaningAssistFingerprint.stableHashID(originalKey), DataCleaningAssistFingerprint.stableHashID(aliasKey))
             }
         )
     }
@@ -153,9 +276,9 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
     private func hashedCategoryCorrections(_ corrections: [String: TransactionCategory]) -> [String: String] {
         Dictionary(
             uniqueKeysWithValues: corrections.compactMap { merchant, category in
-                let key = normalizedMerchantKey(merchant)
+                let key = DataCleaningAssistFingerprint.normalizedMerchantKey(merchant)
                 guard !key.isEmpty else { return nil }
-                return (stableHashID(key), category.rawValue)
+                return (DataCleaningAssistFingerprint.stableHashID(key), category.rawValue)
             }
         )
     }
@@ -164,7 +287,7 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
         guard normalizedKey.count >= 4 else { return [] }
         return (4...normalizedKey.count).map { length in
             let prefix = String(normalizedKey.prefix(length))
-            return DataCleaningMerchantPrefixHash(length: length, hash: stableHashID(prefix))
+            return DataCleaningMerchantPrefixHash(length: length, hash: DataCleaningAssistFingerprint.stableHashID(prefix))
         }
     }
 
@@ -194,18 +317,25 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
         return counts
     }
 
-    private func normalizedMerchantKey(_ merchant: String) -> String {
+}
+
+private enum DataCleaningAssistFingerprint {
+    static func merchantHash(_ merchant: String) -> String {
+        stableHashID(normalizedMerchantKey(merchant))
+    }
+
+    static func normalizedMerchantKey(_ merchant: String) -> String {
         merchant
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
             .filter { $0.isLetter || $0.isNumber }
     }
 
-    private func stableHashID(_ value: String) -> String {
+    static func stableHashID(_ value: String) -> String {
         "m_" + stableHashHex(Data(value.utf8))
     }
 
-    private func stableHashHex(_ data: Data) -> String {
+    private static func stableHashHex(_ data: Data) -> String {
         var hash: UInt64 = 14_695_981_039_346_656_037
         for byte in data {
             hash ^= UInt64(byte)

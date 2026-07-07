@@ -25,6 +25,7 @@ Risk: public source can be forked and local client checks can be modified. This 
 - New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
 - `cloudFolioInbox` is `serverVerified`; local email scan, batch import, advanced deduplication, and merchant normalization suggestions are still `localUIGate`.
 - `DataCleaningAssistPayloadBuilder` defines the first local-only Worker assist contract for future merchant normalization suggestions. It emits hashed aggregate merchant features, category/source distributions, amount buckets, and prefix hashes; it does not include raw merchant names, notes, OCR text, transaction ids, or exact amounts. No current call site uploads this payload.
+- `DataCleaningAssistSuggestionMapper` defines the matching local-only response mapping contract. Future Worker responses may carry hash-only merchant normalization suggestions, but the client must resolve those hashes against local transactions before any user-readable preview exists. Unknown hashes, low-confidence suggestions, duplicate/ignored suggestions, and insufficiently supported targets are filtered locally. No current call site requests these suggestions from a Worker, and the response contract cannot directly mutate the ledger.
 
 Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
 

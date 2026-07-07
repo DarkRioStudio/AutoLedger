@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-382 Worker 辅助建议脱敏合同）
+更新日期：2026-07-07（ITER-383 Worker 辅助建议响应映射）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-383 Worker 辅助建议响应映射
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345E / Pro Automation
+- 类型：能力增强 / 隐私边界 / 测试
+- 目标：在 Worker 真实接入前，先冻结 hash-only 响应 schema 和本地映射规则，让服务端未来只返回不可直接展示的 hash 建议，客户端再在本机解析成用户可读预览。
+- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 App UI、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、Pro 网络授权、配额、用户开关或跨设备建议队列。
+- 完成内容：新增 `DataCleaningAssistResponse`、`DataCleaningAssistSuggestion` 和 `DataCleaningAssistSuggestionKind`，定义 `hashed_suggestions_v1` 响应只携带 kind、候选商户 hash、目标商户 hash、confidence 和 reason code。
+- 完成内容：新增 `DataCleaningAssistSuggestionMapper`，用本机交易重新计算商户 hash，将 Worker 返回的“候选 hash -> 目标 hash”解析为 `.merchantAlias` `DataCleaningPreviewItem`；真实商户名、受影响交易和可采纳动作只在本机产生。
+- 完成内容：mapper 过滤未知 hash、低置信度、候选和目标相同、目标交易支撑不足、重复和已忽略建议；输出的 preview id、代表商户名和受影响交易顺序保持稳定。
+- 完成内容：离线回归确认响应 JSON 不包含真实商户名或交易 UUID，并覆盖可行动建议映射、unknown hash 过滤、低置信度过滤、confidence 保留和 reason 写入。
+- 未完成内容：本轮只完成本地响应合同和 mapper，没有接入 Worker 或 `common-api`；hash 只是稳定分组指纹，不是安全鉴权或匿名化数学证明，真正上传前仍需威胁建模、日志策略和字段复审。
+- 测试情况：先新增离线 RED 断言并执行 `bash scripts/run_offline_regression.sh`，确认缺少 `DataCleaningAssistResponse`、`DataCleaningAssistSuggestion` 和 `DataCleaningAssistSuggestionMapper` 时编译失败；实现后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖 hash-only 响应和本地 preview 映射。
+- 风险与注意事项：当前 mapper 只处理本地传入的响应对象，不能代表服务端可信执行；后续接入 Worker 时仍需用户显式开启云端 Pro 自动化、服务端鉴权、配额、请求 / 响应日志最小化和客户端可撤销预览。
+- 回滚方式：删除 `DataCleaningAssistResponse`、`DataCleaningAssistSuggestion`、`DataCleaningAssistSuggestionMapper` 和对应离线回归断言，并回退文档记录；不涉及数据迁移或用户数据。
+- 结论：本轮完成；`GOAL-2345E` 已把 Worker 辅助建议的返回侧合同落成可回归代码，但仍保持零上传和零 Worker 调用。
+- 下一步建议：继续补 Worker 辅助建议的用户授权开关 / 请求策略，或转向 Mac / iPad 大屏数据清洗表格与忽略项管理。
 
 ### ITER-382 Worker 辅助建议脱敏合同
 - 日期：2026-07-07
