@@ -76,7 +76,7 @@ npm run d1:seed:autonotice:staging
 npm run d1:seed:autonotice:production
 ```
 
-The legacy `MyWeatherLine/Api` current and forecast weather provider structure has been migrated into this Worker. Staging is configured with WeatherKit secrets and `WEATHER_PROVIDER=weatherkit`; production is intentionally deployed with `WEATHER_PROVIDER=disabled` until the App integration and quota policy are ready.
+The legacy `MyWeatherLine/Api` current and forecast weather provider structure has been migrated into this Worker. Staging and production are configured with the Common API WeatherKit service identity and `WEATHER_PROVIDER=weatherkit`; weather endpoints only receive coordinates, dates, locale, timezone, and units.
 
 WeatherKit secrets:
 
@@ -92,6 +92,6 @@ wrangler secret put WEATHERKIT_KEY_ID --env production
 wrangler secret put WEATHERKIT_PRIVATE_KEY --env production
 ```
 
-Then set `WEATHER_PROVIDER` to `weatherkit` in the environment vars and redeploy.
+Then set `WEATHER_PROVIDER` to `weatherkit` in the environment vars and redeploy. Keep WeatherKit output as neutral trip context for app-side summaries; do not send hotel names, amounts, PDFs, OCR text, or user notes to the weather endpoints.
 
 R2 static assets and service-to-service auth should be added in later slices behind the same public response contracts.

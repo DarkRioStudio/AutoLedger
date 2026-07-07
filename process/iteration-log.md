@@ -76,6 +76,22 @@
 - 结论：本轮完成，iOS 数据清洗入口可见性补强完成。
 - 下一步建议：继续收口 `GOAL-2310` Notification History 补偿和最终全量门禁。
 
+### ITER-394 Common API production WeatherKit 开启
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2309 / Common API
+- 类型：基础设施 / 运营配置 / 文档
+- 目标：把已经在 staging 跑通的 Common API WeatherKit 配置扩展到 production，让正式域名可以为酒店消费详情和后续旅程回忆文案提供历史天气材料。
+- 改动范围：`tools/worker/common-api/wrangler.jsonc` production `WEATHER_PROVIDER` 从 `disabled` 改为 `weatherkit`；production Worker secrets 配置 `WEATHERKIT_TEAM_ID`、`WEATHERKIT_SERVICE_ID`、`WEATHERKIT_KEY_ID`、`WEATHERKIT_PRIVATE_KEY`；更新 `common-api` README、`v1.7.0` 计划和 CHANGELOG。
+- 未改动范围：未新增天气端点；未修改 App Swift 代码、酒店入账逻辑、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、构建 tag 或服务端订阅链路。
+- 完成内容：production 使用 Common API 专用 WeatherKit 服务身份，正式域名天气端点只接收坐标、日期、locale、timezone 和 units，不接收酒店名、金额、PDF、OCR 原文、邮箱内容或用户备注。`v1.7.0` 计划同步记录：天气结果不一定作为独立卡片呈现，更长期目标是作为 App 端酒店旅程回忆文案的事实材料，引导用户回想当时出行场景。
+- 未完成内容：服务端鉴权、配额策略、多 provider fallback、缓存清理 UI、旅程回忆文案生成和用户交互启发仍留到后续 GOAL。
+- 测试情况：`npm run check` PASS，包含 `wrangler types`、`tsc --noEmit` 和 29 个 Vitest 合同测试；`npm run deploy:production` PASS，production Version ID `9e05c657-b0f7-4018-b4bd-202bacdf0a75`；`curl https://api.darkrio326.top/v1/manifest` 返回 HTTP 200 且 `hotelWeather.status=available`、provider 为 `weatherkit`；`curl "https://api.darkrio326.top/v1/weather/hotel-stay-summary?lat=35.69&lon=139.76&checkIn=2026-07-01&checkOut=2026-07-03&locale=ja&timezone=Asia/Tokyo"` 返回 HTTP 200、provider 为 `weatherkit`，包含 2 个入住夜晚；`curl "https://api.darkrio326.top/v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo"` 返回 HTTP 200、provider 为 `weatherkit`。
+- 风险与注意事项：WeatherKit production 开启后会消耗正式 Apple WeatherKit 配额；当前端点不需要用户数据，若后续做旅程文案，应继续在 App 端本地组合天气事实和酒店记录。
+- 回滚方式：将 production `WEATHER_PROVIDER` 改回 `disabled` 并重新部署，或移除 production WeatherKit secrets，即可让天气端点回到 `weather_provider_not_configured` 降级。
+- 结论：本轮完成，Common API production WeatherKit 已开启并通过正式域名 smoke。
+- 下一步建议：推进 App 端旅程回忆文案的本地生成原型，让天气从“摘要卡片”变成酒店记录里的轻量回忆线索。
+
 ### ITER-392 酒店历史天气 App 展示第一版
 - 日期：2026-07-07
 - 所属版本：v1.7.0 / ASC 1.6.0
@@ -83,14 +99,14 @@
 - 类型：能力增强 / UI / 测试
 - 目标：把 `common-api` 酒店入住历史天气端点接入 App 酒店消费详情页，同时保持酒店名称、金额、PDF、邮箱内容和账单原文不上传。
 - 改动范围：新增 `CommonAPIHotelWeatherService`；扩展 `HotelStayLocationCatalog` 保留远端地点目录的经纬度和时区；酒店消费详情新增入住天气卡片；补齐五语 `hotel_stay.detail.weather.*` 文案；新增 `scripts/check_hotel_weather_ui_smoke.py` 并纳入离线回归。
-- 未改动范围：未开启 production WeatherKit provider；未新增 Worker endpoint；未修改酒店入账逻辑、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview 管线或构建 tag。
+- 未改动范围：本轮当时未开启 production WeatherKit provider，后续已在 ITER-394 作为运营配置开启；未新增 Worker endpoint；未修改酒店入账逻辑、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview 管线或构建 tag。
 - 完成内容：酒店详情页会按当前城市 / 国家和地区、入住 / 退房日期从地点目录解析经纬度和时区，只向 `common-api` 发送坐标、日期、locale、timezone 和 units；服务端不可用、无坐标、日期无效或无天气日记录时显示“暂无天气摘要”，不会用当前天气或未来天气冒充历史入住天气。
-- 未完成内容：production 仍保持 `WEATHER_PROVIDER=disabled`；服务端鉴权、配额策略、多 provider fallback、天气缓存清理 UI 和真实酒店样例截图仍留到后续发布门禁或运营配置。
+- 未完成内容：production WeatherKit 当时仍保持 `WEATHER_PROVIDER=disabled`，后续已在 ITER-394 开启；服务端鉴权、配额策略、多 provider fallback、天气缓存清理 UI 和真实酒店样例截图仍留到后续发布门禁或运营配置。
 - 测试情况：先执行 `python3 scripts/check_hotel_weather_ui_smoke.py` 得到预期失败；实现后执行同一 smoke、`python3 scripts/check_localization_coverage.py`、五语 `plutil -lint`、`git diff --check`、`bash scripts/run_offline_regression.sh` 和 XcodeBuildMCP iPhone 17 Pro Max Debug build-run，结果均 PASS。
-- 风险与注意事项：在 production WeatherKit 未开启时，用户会看到不可用降级；远端地点目录未缓存且内置 fallback 无坐标的城市不会请求天气，避免传错地点。
+- 风险与注意事项：在 production WeatherKit 未开启或服务端不可用时，用户会看到不可用降级；远端地点目录未缓存且内置 fallback 无坐标的城市不会请求天气，避免传错地点。
 - 回滚方式：回退 `CommonAPIHotelWeatherService.swift`、酒店详情天气卡片、地点目录坐标扩展、五语天气文案、`check_hotel_weather_ui_smoke.py` 和离线回归接入，即可恢复旧酒店消费详情页。
 - 结论：本轮完成，`GOAL-2309` 的 App 端酒店历史天气展示第一版具备工程闭环。
-- 下一步建议：继续做最终全量门禁、分类提交汇总和 `xcbuild-v1.7.0` 构建 tag 移动；production WeatherKit 开关等运营配置不阻塞工程代码收口。
+- 下一步建议：继续做最终全量门禁、分类提交汇总和 `xcbuild-v1.7.0` 构建 tag 移动；production WeatherKit 已在 ITER-394 开启，后续继续推进配额、鉴权和旅程回忆文案。
 
 ### ITER-391 ASC metadata-as-code 第一版
 - 日期：2026-07-07
