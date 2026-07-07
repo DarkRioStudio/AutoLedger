@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-383 Worker 辅助建议响应映射）
+更新日期：2026-07-07（ITER-384 visionOS review fallback 移植）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-384 visionOS review fallback 移植
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Platform Review Follow-up
+- 类型：Bugfix / 测试 / 发布治理
+- 目标：把 `v1.6.4 / ASC 1.5.0` visionOS review hotfix 的生产代码单独移植到 `main`，避免 1.7 主线在 visionOS 无 CloudKit 看板数据时继续显示空看板。
+- 改动范围：更新 `AutoLedger/AutoLedgerVision/ContentView.swift`、新增 `scripts/check_visionos_review_smoke.py`、接入 `scripts/run_offline_regression.sh`，并回填 `CHANGELOG.md` 与本日志。
+- 未改动范围：未 merge `codex/macos-ledger-plus-hotfix-v1.6.4` 分支，未带入 1.6.4 的 review notes / 发布文档差异；未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Common API、Worker、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。
+- 完成内容：`loadTransactions()` 在 CloudKit snapshot 存在但交易为空时，不再直接返回空数组；只有真实交易非空才使用 CloudKit 数据，否则使用本机 `VisionDashboardSimulatorData` 示例看板数据。
+- 完成内容：release / review 环境也可使用示例看板 fallback，不再局限于 DEBUG simulator；示例备注文案从“visionOS simulator demo data”调整为“visionOS sample dashboard data”。
+- 完成内容：新增 visionOS review smoke，静态检查 `loadTransactions()` 不直接返回空 snapshot、不回退 `return []`，并检查示例文案使用 sample dashboard data；该脚本已纳入离线回归。
+- 未完成内容：本轮没有新增 visionOS 登录 / demo mode，也没有修改 CloudKit dashboard snapshot 生成逻辑；真实用户有 CloudKit 看板数据时仍优先显示真实数据。
+- 测试情况：先新增 `scripts/check_visionos_review_smoke.py` 并执行，确认当前 main 缺少空 snapshot fallback 且包含 `return []` / simulator demo 文案时失败；修复后执行同一脚本，结果 PASS。后续收尾需执行完整离线回归、`git diff --check` 和 visionOS generic build。
+- 风险与注意事项：示例数据只用于 review / 空数据兜底，不会写入用户账本；如果后续希望在 App 内显式区分“示例数据”和“真实数据”，应另开 UI 标识设计。
+- 回滚方式：回退 `ContentView.swift` 中 `loadTransactions()` 的 fallback 逻辑和示例 note 文案，并删除 visionOS review smoke 脚本及离线回归入口。
+- 结论：本轮代码移植已完成，等待收尾验证。
+- 下一步建议：通过验证后提交到 `main`，不需要再把 1.6.4 hotfix 分支整体 merge。
 
 ### ITER-383 Worker 辅助建议响应映射
 - 日期：2026-07-07
