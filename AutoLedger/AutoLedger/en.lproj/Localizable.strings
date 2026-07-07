@@ -382,6 +382,13 @@
 "ipad.cleaning.kind.duplicate" = "Suspected Duplicate";
 "ipad.cleaning.empty.title" = "No Cleanup Suggestions";
 "ipad.cleaning.empty.subtitle" = "There are no merchant, category, or duplicate previews right now.";
+"ipad.cleaning.rules.title" = "Automation Rules";
+"ipad.cleaning.rules.subtitle_format" = "Found %d confirmed rules that can update %d transactions.";
+"ipad.cleaning.rules.empty" = "No confirmed rules are ready to apply.";
+"ipad.cleaning.rules.apply" = "Apply Rules";
+"ipad.cleaning.rules.alias_count_format" = "%d merchant aliases";
+"ipad.cleaning.rules.category_count_format" = "%d category fixes";
+"ipad.cleaning.rules.affected_count_format" = "%d entries to update";
 "ipad.cleaning.preview" = "Preview";
 "ipad.cleaning.current" = "Current";
 "ipad.cleaning.proposed" = "Suggested";

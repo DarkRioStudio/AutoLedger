@@ -382,6 +382,13 @@
 "ipad.cleaning.kind.duplicate" = "중복이 의심됨";
 "ipad.cleaning.empty.title" = "정리 제안 없음";
 "ipad.cleaning.empty.subtitle" = "현재 판매자, 카테고리 또는 중복된 미리보기가 없습니다.";
+"ipad.cleaning.rules.title" = "자동화 규칙";
+"ipad.cleaning.rules.subtitle_format" = "확정된 규칙 %d개로 거래 %d건을 업데이트할 수 있습니다.";
+"ipad.cleaning.rules.empty" = "적용할 확정 규칙이 없습니다.";
+"ipad.cleaning.rules.apply" = "규칙 적용";
+"ipad.cleaning.rules.alias_count_format" = "가맹점 별칭 %d개";
+"ipad.cleaning.rules.category_count_format" = "카테고리 수정 %d개";
+"ipad.cleaning.rules.affected_count_format" = "업데이트 %d건";
 "ipad.cleaning.preview" = "시사";
 "ipad.cleaning.current" = "현재의";
 "ipad.cleaning.proposed" = "제안";

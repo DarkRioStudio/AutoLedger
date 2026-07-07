@@ -506,6 +506,15 @@ private struct IPadCleaningPreviewWorkspaceView: View {
         snapshot.items
     }
 
+    private var advancedRulePlan: AdvancedRuleAutomationPlan {
+        AdvancedRuleAutomationPlanner().buildPlan(
+            transactions: store.visibleTransactions,
+            merchantAliases: store.merchantAliases,
+            categoryCorrections: store.categoryCorrections,
+            ignoredRuleIDs: store.ignoredDataCleaningPreviewIDs
+        )
+    }
+
     private var selectedPreview: DataCleaningPreviewItem? {
         if let selectedPreviewID,
            let preview = previews.first(where: { $0.id == selectedPreviewID }) {
@@ -525,7 +534,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if proEntitlement.canUse(.advancedDeduplication) {
+                if proEntitlement.canUse(.advancedRuleAutomation) {
                     HStack(spacing: 0) {
                         previewList
                             .frame(minWidth: 390, idealWidth: 460, maxWidth: 540)
@@ -638,6 +647,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
             }
 
             summaryRow
+            advancedRuleAutomationPanel
 
             if previews.isEmpty {
                 emptyPreview
@@ -679,6 +689,64 @@ private struct IPadCleaningPreviewWorkspaceView: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(AppTheme.accent)
+    }
+
+    private var advancedRuleAutomationPanel: some View {
+        let plan = advancedRulePlan
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 38, height: 38)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("ipad.cleaning.rules.title")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text(String(
+                        format: String(localized: "ipad.cleaning.rules.subtitle_format"),
+                        plan.ruleCount,
+                        plan.affectedTransactionCount
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(format: String(localized: "ipad.cleaning.rules.alias_count_format"), plan.rules(kind: .merchantAlias).count))
+                Text(String(format: String(localized: "ipad.cleaning.rules.category_count_format"), plan.rules(kind: .categoryCorrection).count))
+                Text(String(format: String(localized: "ipad.cleaning.rules.affected_count_format"), plan.affectedTransactionCount))
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(AppTheme.mutedInk)
+
+            if plan.isEmpty {
+                Label("ipad.cleaning.rules.empty", systemImage: "checkmark.seal")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.mutedInk)
+            } else {
+                Button {
+                    previewPendingApplication = advancedRulePlan.previewItems
+                    showsApplyConfirmation = true
+                } label: {
+                    Label("ipad.cleaning.rules.apply", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+            }
+        }
+        .padding(14)
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var summaryRow: some View {

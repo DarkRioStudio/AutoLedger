@@ -17,6 +17,15 @@ struct DataCleaningSuggestionsView: View {
         snapshot.items
     }
 
+    private var advancedRulePlan: AdvancedRuleAutomationPlan {
+        AdvancedRuleAutomationPlanner().buildPlan(
+            transactions: store.visibleTransactions,
+            merchantAliases: store.merchantAliases,
+            categoryCorrections: store.categoryCorrections,
+            ignoredRuleIDs: store.ignoredDataCleaningPreviewIDs
+        )
+    }
+
     private var cloudAssistDecision: DataCleaningAssistRequestDecision {
         let payload = DataCleaningAssistPayloadBuilder().build(
             transactions: store.transactions,
@@ -37,8 +46,9 @@ struct DataCleaningSuggestionsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 AutoLedgerPageTitle("ipad.cleaning.title")
 
-                if proEntitlement.canUse(.merchantNormalizationSuggestions) {
+                if proEntitlement.canUse(.advancedRuleAutomation) {
                     summaryRow
+                    advancedRuleAutomationCard
                     cloudAssistAuthorizationCard
 
                     if previews.isEmpty {
@@ -100,6 +110,90 @@ struct DataCleaningSuggestionsView: View {
                     }
             }
         }
+    }
+
+    private var advancedRuleAutomationCard: some View {
+        let plan = advancedRulePlan
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 42, height: 42)
+                    .background(AppTheme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("ipad.cleaning.rules.title")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text(String(
+                        format: String(localized: "ipad.cleaning.rules.subtitle_format"),
+                        plan.ruleCount,
+                        plan.affectedTransactionCount
+                    ))
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+            }
+
+            HStack(spacing: 10) {
+                ruleMetric(
+                    String(format: String(localized: "ipad.cleaning.rules.alias_count_format"), plan.rules(kind: .merchantAlias).count),
+                    systemImage: "textformat.alt",
+                    tint: AppTheme.accent
+                )
+                ruleMetric(
+                    String(format: String(localized: "ipad.cleaning.rules.category_count_format"), plan.rules(kind: .categoryCorrection).count),
+                    systemImage: "tag.fill",
+                    tint: AppTheme.accentSecondary
+                )
+                ruleMetric(
+                    String(format: String(localized: "ipad.cleaning.rules.affected_count_format"), plan.affectedTransactionCount),
+                    systemImage: "checklist",
+                    tint: AppTheme.ink
+                )
+            }
+
+            if plan.isEmpty {
+                Label("ipad.cleaning.rules.empty", systemImage: "checkmark.seal")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.mutedInk)
+            } else {
+                Button {
+                    pendingPreviews = advancedRulePlan.previewItems
+                    showsApplyConfirmation = true
+                } label: {
+                    Label("ipad.cleaning.rules.apply", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppTheme.accent)
+            }
+        }
+        .padding(16)
+        .autoLedgerCardSurface(cornerRadius: 18)
+    }
+
+    private func ruleMetric(_ text: String, systemImage: String, tint: Color) -> some View {
+        Label {
+            Text(text)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.76)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, minHeight: 38)
+        .padding(.horizontal, 10)
+        .background(tint.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private var cloudAssistAuthorizationCard: some View {

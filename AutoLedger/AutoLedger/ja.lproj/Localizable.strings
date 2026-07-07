@@ -382,6 +382,13 @@
 "ipad.cleaning.kind.duplicate" = "重複の可能性";
 "ipad.cleaning.empty.title" = "整理候補なし";
 "ipad.cleaning.empty.subtitle" = "現在、加盟店、カテゴリ、重複のプレビューはありません。";
+"ipad.cleaning.rules.title" = "自動化ルール";
+"ipad.cleaning.rules.subtitle_format" = "%d 件の確定済みルールで %d 件の記録を更新できます。";
+"ipad.cleaning.rules.empty" = "適用できる確定済みルールはありません。";
+"ipad.cleaning.rules.apply" = "ルールを適用";
+"ipad.cleaning.rules.alias_count_format" = "%d 件の加盟店別名";
+"ipad.cleaning.rules.category_count_format" = "%d 件のカテゴリ修正";
+"ipad.cleaning.rules.affected_count_format" = "%d 件を更新";
 "ipad.cleaning.preview" = "プレビュー";
 "ipad.cleaning.current" = "現在";
 "ipad.cleaning.proposed" = "提案";

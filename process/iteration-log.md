@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-389 月结导出包第一版）
+更新日期：2026-07-07（ITER-390 高级规则自动应用第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-390 高级规则自动应用第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2340 / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：把用户已确认的商户别名和分类修正规则聚合成可预览、可一键应用、可撤销的 Pro 自动化入口，同时保持单条编辑和基础规则免费。
+- 改动范围：新增 `AdvancedRuleAutomationPlanner`；更新 `AutoLedgerProAccessPolicy`；更新 iPhone `DataCleaningSuggestionsView` 和 iPad / Mac `IPadCleaningPreviewWorkspaceView` 的自动化规则卡片；补齐五语 `ipad.cleaning.rules.*` 文案；新增高级规则 UI smoke 并接入离线回归。
+- 未改动范围：未新增 Worker endpoint、未调用 `common-api`、未上传账本数据、未修改 SQLite / CloudKit schema、未修改 StoreKit 商品、未修改截图 / App Preview 管线、未移动构建 tag。
+- 完成内容：Core 层计划只包含已保存商户别名和分类修正规则，明确排除疑似重复和云端辅助候选；iPhone 与 iPad / Mac 入口展示规则数、商户别名数、分类修正数和影响账单数；点击应用复用既有 `applyDataCleaningPreviews`，因此继续具备批量撤销和历史记录。
+- 未完成内容：本轮没有实现低置信度集中复核队列、跨设备建议队列、Worker 模型辅助解释或服务端规则生成；这些继续归入后续数据清洗增强。
+- 测试情况：执行 `python3 scripts/check_advanced_rule_automation_ui_smoke.py`、`python3 scripts/check_localization_coverage.py`、五语 `Localizable.strings` `plutil -lint`、`git diff --check`、iPhone 17 Pro Max Simulator Debug build-run 和 `bash scripts/run_offline_regression.sh`，结果均 PASS。
+- 风险与注意事项：该入口只批量应用用户已经确认过的别名和分类规则，不会自动采纳疑似重复，也不会上传账本。规则太少时卡片会显示空态，避免误导用户以为云端自动整理已经启用。
+- 回滚方式：回退 `DataCleaningSuggestionsView` / `iPadWorkspaceView` 自动化规则卡片、五语 `ipad.cleaning.rules.*` 文案、`check_advanced_rule_automation_ui_smoke.py`、`AdvancedRuleAutomationPlanner.swift` 和 `ProAccessPolicy` 中 `advancedRuleAutomation` P0 gate，即可恢复旧数据清洗入口。
+- 结论：本轮完成，GOAL-2340 第一版工程闭环可进入后续 Common API / ASSN / ASC 工具链收口。
+- 下一步建议：继续收口 `v1.7.0` 剩余工程项，优先确认 Common API / ASSN / ASC 自动化是否还有未提交代码，再做全量门禁和构建 tag 移动。
 
 ### ITER-389 月结导出包第一版
 - 日期：2026-07-07

@@ -382,6 +382,13 @@
 "ipad.cleaning.kind.duplicate" = "疑似重复";
 "ipad.cleaning.empty.title" = "暂无清洗建议";
 "ipad.cleaning.empty.subtitle" = "当前没有可预览的商户统一、分类修正或疑似重复账单。";
+"ipad.cleaning.rules.title" = "自动化规则";
+"ipad.cleaning.rules.subtitle_format" = "已找到 %d 条可直接套用的规则，可影响 %d 笔账单。";
+"ipad.cleaning.rules.empty" = "暂无可自动套用的已确认规则。";
+"ipad.cleaning.rules.apply" = "应用规则";
+"ipad.cleaning.rules.alias_count_format" = "%d 条商户别名";
+"ipad.cleaning.rules.category_count_format" = "%d 条分类修正";
+"ipad.cleaning.rules.affected_count_format" = "%d 笔会更新";
 "ipad.cleaning.preview" = "预览";
 "ipad.cleaning.current" = "当前";
 "ipad.cleaning.proposed" = "建议";
