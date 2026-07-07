@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-393 iOS 数据清洗账本入口补强）
+更新日期：2026-07-07（ITER-394 Notification History 补偿第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-394 Notification History 补偿第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2310 / Entitlement
+- 类型：能力增强 / Worker / 测试
+- 目标：补齐 App Store Server Notifications 的 History 补偿代码，避免 Worker 短暂不可用或 Apple 投递重试失败后服务端 Pro 状态长期不同步。
+- 改动范围：`hotel-folio-inbox` Worker scheduled task 新增 Notification History 补偿；抽出 App Store 通知内部处理函数供 webhook 和 History 复用；新增 History 请求窗口、分页收集和补偿执行 helper；更新 Worker README、`v1.7.0` 计划、CHANGELOG 和 Worker 合同测试。
+- 未改动范围：未在 App Store Connect 配置 Server Notifications URL；未执行 production D1 migration；未新增 D1 表或 schema；未修改 App 代码、StoreKit 商品、SQLite / CloudKit schema、Common API、截图 / App Preview、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION`、build number 或构建 tag。
+- 完成内容：配置 App Store Server API secrets 后，Worker 会每天请求 Apple `POST /inApps/v1/notifications/history`，默认回看最近 72 小时、`onlyFailures=true`、最多分页 5 页；补回的每个 `signedPayload` 继续走证书链验签、bundle / product / environment 校验、`notificationUUID` 幂等、服务端 entitlement 更新和云收件箱 token 生命周期更新。
+- 未完成内容：真实 ASC sandbox 投递和 History 补偿 smoke 需要等 ASC 配置 Server Notifications URL 后执行；production Apple root certificate、App Store Server API secrets 和 D1 migration 仍需发布前确认。
+- 测试情况：先新增 Worker RED 用例，确认缺少 History 请求窗口与分页 helper 时 `vitest` 失败；实现后执行 `cd tools/worker/hotel-folio-inbox && npm test -- hotel-folio-inbox.test.ts`，27 个 Worker 合同测试 PASS。
+- 风险与注意事项：History 补偿只拉 Apple 记录的失败 / 重试通知，不替代 webhook 正常投递；未配置 App Store Server API secrets 时任务安全跳过；本轮不保存 raw `signedPayload` 或 raw original transaction id。
+- 回滚方式：回退 scheduled task 中的 `processAppStoreNotificationHistory`、内部处理函数抽取、History helper、Worker 测试和文档记录，即可恢复到仅 webhook 接收通知。
+- 结论：本轮完成，`GOAL-2310` 的 Notification History 工程代码第一版已闭环。
+- 下一步建议：执行 Worker typecheck / 全量回归 / App 构建门禁，然后 push main 并移动 `xcbuild-v1.7.0`。
 
 ### ITER-393 iOS 数据清洗账本入口补强
 - 日期：2026-07-07

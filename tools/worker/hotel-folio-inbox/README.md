@@ -100,6 +100,8 @@ They do not include hotel name, amount, order number, attachment filename, or in
 
 `POST /v1/app-store/notifications` is reserved for App Store Server Notifications V2. The endpoint accepts Apple's `signedPayload`, decodes the notification contract, writes an idempotent event row keyed by `notificationUUID`, updates `app_store_entitlements`, and adjusts active cloud-inbox tokens for the matching `appstore:<sha256-original-transaction-id>` service user.
 
+The daily scheduled task also runs a Notification History compensation pass. When App Store Server API secrets are configured, it calls `POST /inApps/v1/notifications/history` with `onlyFailures=true`, a default 72-hour lookback window, and paginated results. Each recovered `signedPayload` is processed through the same verification, idempotency, entitlement, and token lifecycle path as the direct webhook endpoint.
+
 Stored notification data is intentionally minimal:
 
 - notification UUID, type, subtype, version, environment, bundle id, product id, transaction id
@@ -111,6 +113,11 @@ Stored notification data is intentionally minimal:
 The Worker does not store the raw `signedPayload`, raw original transaction id, user email, hotel folio contents, PDF files, hotel names, or ledger data in the App Store notification tables.
 
 Production must keep `ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS` unset. Configure `APP_STORE_NOTIFICATION_ROOT_CERT_PEM` with the trusted Apple root certificate before pointing App Store Connect at this endpoint. The current development/staging flag exists only to test the database contract before App Store Connect is configured with the notification URL.
+
+Optional non-secret tuning vars:
+
+- `APP_STORE_NOTIFICATION_HISTORY_LOOKBACK_HOURS`: defaults to `72`, clamped to `1...168`.
+- `APP_STORE_NOTIFICATION_HISTORY_MAX_PAGES`: defaults to `5`, clamped to `1...20`.
 
 ## Setup
 

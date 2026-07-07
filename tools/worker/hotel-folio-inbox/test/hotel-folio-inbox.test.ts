@@ -324,6 +324,66 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.appStoreServerAPIHost("sandbox")).toBe("https://api.storekit-sandbox.itunes.apple.com");
   });
 
+  it("builds an App Store notification history compensation request window", () => {
+    const now = new Date("2026-07-07T12:00:00.000Z");
+    const request = testInternals.appStoreNotificationHistoryRequestBody(now, 72);
+
+    expect(request).toEqual({
+      startDate: Date.parse("2026-07-04T12:00:00.000Z"),
+      endDate: Date.parse("2026-07-07T12:00:00.000Z"),
+      onlyFailures: true
+    });
+  });
+
+  it("collects paginated App Store notification history signed payloads", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const fetcher = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      calls.push({ url: String(input), init: init ?? {} });
+      if (calls.length === 1) {
+        return new Response(JSON.stringify({
+          hasMore: true,
+          paginationToken: "next-page",
+          notificationHistory: [
+            { signedPayload: "payload-1" },
+            { signedPayload: "" }
+          ]
+        }));
+      }
+      return new Response(JSON.stringify({
+        hasMore: false,
+        notificationHistory: [
+          { signedPayload: "payload-2" },
+          { signedPayload: "payload-3" }
+        ]
+      }));
+    };
+
+    const result = await testInternals.collectAppStoreNotificationHistorySignedPayloads(
+      { environment: "sandbox" },
+      "jwt-token",
+      { startDate: 1, endDate: 2, onlyFailures: true },
+      fetcher,
+      5
+    );
+
+    expect(result).toEqual({
+      signedPayloads: ["payload-1", "payload-2", "payload-3"],
+      pages: 2,
+      hasMore: false
+    });
+    expect(calls[0]!.url).toBe("https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/history");
+    expect(calls[1]!.url).toBe("https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/history?paginationToken=next-page");
+    expect(calls[0]!.init).toMatchObject({
+      method: "POST",
+      headers: {
+        authorization: "Bearer jwt-token",
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ startDate: 1, endDate: 2, onlyFailures: true })
+    });
+  });
+
   it("accepts Swift UUID path casing for candidate detail endpoints", () => {
     expect(testInternals.normalizeCandidateID(" 9A91F1E2-0A3F-414E-8B6C-99236F58AAF9 ")).toBe(
       "9a91f1e2-0a3f-414e-8b6c-99236f58aaf9"

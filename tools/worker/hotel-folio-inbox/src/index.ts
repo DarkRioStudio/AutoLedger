@@ -150,6 +150,47 @@ type VerifiedAppStoreSignedPayload = {
   verificationMode: "certificate_chain" | "unsigned_test";
 };
 
+type AppStoreNotificationProcessResult =
+  | {
+      ok: true;
+      duplicate: boolean;
+      notificationUUID: string;
+      userID?: string;
+      entitlementStatus?: AppStoreEntitlementState["status"];
+      active?: boolean;
+      expiresAt?: string | null;
+    }
+  | { ok: false; status: number; code: string; message: string };
+
+type AppStoreNotificationHistoryRequest = {
+  startDate: number;
+  endDate: number;
+  onlyFailures: boolean;
+};
+
+type AppStoreNotificationHistoryResponse = {
+  paginationToken?: string;
+  hasMore?: boolean;
+  notificationHistory?: Array<{ signedPayload?: string }>;
+};
+
+type AppStoreNotificationHistoryCollectResult = {
+  signedPayloads: string[];
+  pages: number;
+  hasMore: boolean;
+};
+
+type AppStoreNotificationHistoryProcessResult = {
+  ok: boolean;
+  skippedReason?: string;
+  collected: number;
+  processed: number;
+  duplicates: number;
+  failed: number;
+  pages: number;
+  hasMore: boolean;
+};
+
 type ParsedCertificate = {
   derBytes: Uint8Array;
   pem: string;
@@ -246,6 +287,9 @@ export default {
 
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(pruneExpiredCandidates(env));
+    ctx.waitUntil(processAppStoreNotificationHistory(env).catch((error) => {
+      console.error("app_store_notification_history_failed", errorMessage(error));
+    }));
   }
 } satisfies ExportedHandler<Env>;
 
@@ -565,24 +609,35 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
     return json({ error: "missing_signed_payload" }, env, 400);
   }
 
+  const result = await processAppStoreServerNotificationPayload(env, signedPayload);
+  if (!result.ok) {
+    return json({ error: result.code, message: result.message }, env, result.status);
+  }
+  return json(result, env);
+}
+
+async function processAppStoreServerNotificationPayload(
+  env: Env,
+  signedPayload: string
+): Promise<AppStoreNotificationProcessResult> {
   const decoded = await decodeAppStoreServerNotificationPayload(env, signedPayload);
   if (!decoded.ok) {
-    return json({ error: decoded.code, message: decoded.message }, env, decoded.status);
+    return decoded;
   }
 
   const config = appStoreRuntimeConfig(env);
   const prepared = await prepareAppStoreNotification(config, signedPayload, decoded.payload);
   if (!prepared.ok) {
-    return json({ error: prepared.code, message: prepared.message }, env, prepared.status);
+    return prepared;
   }
 
   const inserted = await insertAppStoreNotificationEvent(env, prepared.scope);
   if (!inserted) {
-    return json({
+    return {
       ok: true,
       duplicate: true,
       notificationUUID: prepared.scope.notificationUUID
-    }, env);
+    };
   }
 
   const state = appStoreEntitlementStateForNotification(
@@ -595,7 +650,7 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
   try {
     await applyAppStoreEntitlementState(env, prepared.scope, state);
     await markAppStoreNotificationEvent(env, prepared.scope.notificationUUID, "processed", null, state);
-    return json({
+    return {
       ok: true,
       duplicate: false,
       notificationUUID: prepared.scope.notificationUUID,
@@ -603,7 +658,7 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
       entitlementStatus: state.status,
       active: state.active,
       expiresAt: state.expiresAt
-    }, env);
+    };
   } catch (caught) {
     await markAppStoreNotificationEvent(
       env,
@@ -612,7 +667,12 @@ async function receiveAppStoreServerNotification(request: Request, env: Env): Pr
       errorMessage(caught),
       state
     );
-    return json({ error: "app_store_notification_processing_failed", message: errorMessage(caught) }, env, 500);
+    return {
+      ok: false,
+      status: 500,
+      code: "app_store_notification_processing_failed",
+      message: errorMessage(caught)
+    };
   }
 }
 
@@ -1188,6 +1248,8 @@ function appStoreRuntimeEnv(env: Env): Env & {
   APP_STORE_SERVER_ENVIRONMENT?: string;
   ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
   APP_STORE_NOTIFICATION_ROOT_CERT_PEM?: string;
+  APP_STORE_NOTIFICATION_HISTORY_LOOKBACK_HOURS?: string;
+  APP_STORE_NOTIFICATION_HISTORY_MAX_PAGES?: string;
 } {
   return env as Env & {
     APP_STORE_CONNECT_ISSUER_ID?: string;
@@ -1197,6 +1259,8 @@ function appStoreRuntimeEnv(env: Env): Env & {
     APP_STORE_SERVER_ENVIRONMENT?: string;
     ALLOW_UNVERIFIED_APP_STORE_NOTIFICATIONS?: string;
     APP_STORE_NOTIFICATION_ROOT_CERT_PEM?: string;
+    APP_STORE_NOTIFICATION_HISTORY_LOOKBACK_HOURS?: string;
+    APP_STORE_NOTIFICATION_HISTORY_MAX_PAGES?: string;
   };
 }
 
@@ -1224,6 +1288,147 @@ function appStoreServerAPIHost(environment: AppStoreServerEnvironment): string {
   return environment === "sandbox"
     ? "https://api.storekit-sandbox.itunes.apple.com"
     : "https://api.storekit.itunes.apple.com";
+}
+
+function appStoreNotificationHistoryLookbackHours(env: Env): number {
+  const raw = appStoreRuntimeEnv(env).APP_STORE_NOTIFICATION_HISTORY_LOOKBACK_HOURS?.trim() ?? "";
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return 72;
+  }
+  return Math.min(168, Math.max(1, parsed));
+}
+
+function appStoreNotificationHistoryMaxPages(env: Env): number {
+  const raw = appStoreRuntimeEnv(env).APP_STORE_NOTIFICATION_HISTORY_MAX_PAGES?.trim() ?? "";
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return 5;
+  }
+  return Math.min(20, Math.max(1, parsed));
+}
+
+function appStoreNotificationHistoryRequestBody(
+  now: Date = new Date(),
+  lookbackHours = 72
+): AppStoreNotificationHistoryRequest {
+  const safeHours = Math.min(168, Math.max(1, Math.floor(lookbackHours)));
+  const endDate = now.getTime();
+  const startDate = endDate - safeHours * 60 * 60 * 1000;
+  return { startDate, endDate, onlyFailures: true };
+}
+
+function appStoreNotificationHistoryEndpoint(
+  config: Pick<AppStoreServerAPIConfig, "environment">,
+  paginationToken: string | null = null
+): string {
+  const url = new URL(`${appStoreServerAPIHost(config.environment)}/inApps/v1/notifications/history`);
+  if (paginationToken) {
+    url.searchParams.set("paginationToken", paginationToken);
+  }
+  return url.toString();
+}
+
+async function collectAppStoreNotificationHistorySignedPayloads(
+  config: Pick<AppStoreServerAPIConfig, "environment">,
+  jwt: string,
+  requestBody: AppStoreNotificationHistoryRequest,
+  fetcher: (input: string, init: RequestInit) => Promise<Response> = fetch,
+  maxPages = 5
+): Promise<AppStoreNotificationHistoryCollectResult> {
+  const signedPayloads: string[] = [];
+  let paginationToken: string | null = null;
+  let pages = 0;
+  let hasMore = false;
+  const safeMaxPages = Math.min(20, Math.max(1, Math.floor(maxPages)));
+
+  do {
+    const response = await fetcher(appStoreNotificationHistoryEndpoint(config, paginationToken), {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${jwt}`,
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+    pages += 1;
+
+    if (!response.ok) {
+      throw new Error(`App Store notification history request failed with HTTP ${response.status}`);
+    }
+
+    const body = await response.json().catch(() => ({})) as AppStoreNotificationHistoryResponse;
+    for (const item of body.notificationHistory ?? []) {
+      const signedPayload = item.signedPayload?.trim() ?? "";
+      if (signedPayload) {
+        signedPayloads.push(signedPayload);
+      }
+    }
+
+    paginationToken = typeof body.paginationToken === "string" && body.paginationToken.trim()
+      ? body.paginationToken.trim()
+      : null;
+    hasMore = body.hasMore === true && paginationToken !== null;
+  } while (hasMore && pages < safeMaxPages);
+
+  return { signedPayloads, pages, hasMore };
+}
+
+async function processAppStoreNotificationHistory(
+  env: Env,
+  now: Date = new Date(),
+  fetcher: (input: string, init: RequestInit) => Promise<Response> = fetch
+): Promise<AppStoreNotificationHistoryProcessResult> {
+  const config = appStoreServerAPIConfig(env);
+  if (!config) {
+    return {
+      ok: false,
+      skippedReason: "app_store_server_api_unconfigured",
+      collected: 0,
+      processed: 0,
+      duplicates: 0,
+      failed: 0,
+      pages: 0,
+      hasMore: false
+    };
+  }
+
+  const jwt = await appStoreServerJWT(config);
+  const requestBody = appStoreNotificationHistoryRequestBody(now, appStoreNotificationHistoryLookbackHours(env));
+  const collected = await collectAppStoreNotificationHistorySignedPayloads(
+    config,
+    jwt,
+    requestBody,
+    fetcher,
+    appStoreNotificationHistoryMaxPages(env)
+  );
+
+  let processed = 0;
+  let duplicates = 0;
+  let failed = 0;
+  for (const signedPayload of collected.signedPayloads) {
+    const result = await processAppStoreServerNotificationPayload(env, signedPayload);
+    if (!result.ok) {
+      failed += 1;
+      continue;
+    }
+    if (result.duplicate) {
+      duplicates += 1;
+    } else {
+      processed += 1;
+    }
+  }
+
+  return {
+    ok: failed === 0,
+    collected: collected.signedPayloads.length,
+    processed,
+    duplicates,
+    failed,
+    pages: collected.pages,
+    hasMore: collected.hasMore
+  };
 }
 
 function decodeJWSPayload<T>(jws: string): T | null {
@@ -2502,6 +2707,10 @@ export const testInternals = {
   normalizeAppStoreEnvironment,
   appStoreNotificationTransactionScope,
   appStoreServerAPIHost,
+  appStoreNotificationHistoryRequestBody,
+  appStoreNotificationHistoryEndpoint,
+  collectAppStoreNotificationHistorySignedPayloads,
+  processAppStoreNotificationHistory,
   appStoreUserID,
   sha256Hex
 };
