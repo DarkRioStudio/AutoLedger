@@ -1,6 +1,6 @@
 # 迭代工作流
 
-更新日期：2026-03-26
+更新日期：2026-07-07
 
 ## 1. 原则
 
@@ -44,6 +44,7 @@
 - 构建/测试失败：不进入下一轮
 - 范围漂移：先收口再继续
 - 日志未回填：视为未完成
+- CloudKit record type / field / index 发生新增或变更时，TestFlight / ASC 前必须在 CloudKit Console 执行 `Deploy Schema Changes`，把 Development schema 发布到 Production，并在版本回归基线或迭代日志中记录证据。
 
 ## 5. 与迭代日志模板的边界
 

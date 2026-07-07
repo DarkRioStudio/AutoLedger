@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-375 快捷指令 SQLite 写入锁等待）
+更新日期：2026-07-07（ITER-376 CloudKit Production schema 发布门禁）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-376 CloudKit Production schema 发布门禁
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release / CloudKit
+- 类型：治理 / 发布门禁
+- 目标：把 TestFlight 中 `CloudKit rejected record save` 的实际原因沉淀为固定发布检查，避免后续新增 CloudKit 字段后忘记部署 Production schema。
+- 改动范围：更新 `process/agent-iteration-workflow.md`、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 App 业务代码、CloudKit adapter、SQLite / Backup schema、Common API、StoreKit、App Store Connect 线上元数据、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：确认 TestFlight `767f41d` 在解决 iCloud 冲突后强制刷新报 `CloudKit rejected record save`，执行 CloudKit Console `Deploy Schema Changes` 后同步正常完成。发布工作流新增门禁：凡 CloudKit record type、field 或 index 有新增 / 修改，TestFlight / ASC 前必须把 Development schema deploy 到 Production，并在回归基线或迭代日志中记录证据。`v1.7.0` 计划同步记录本次事故原因和不做代码侧静默降级的结论。
+- 未完成内容：本轮未创建自动化 CloudKit schema audit 工具；CloudKit Console 部署动作仍需人工完成并记录证据。
+- 测试情况：执行 `git diff --check`，结果 PASS。用户反馈执行 CloudKit Console `Deploy Schema Changes` 后，TestFlight 强制刷新 iCloud 数据已正常完成。
+- 风险与注意事项：TestFlight 和 App Store 使用 CloudKit Production 环境；Development 下能保存新字段不代表外测可用。后续如果新增 `LedgerTransaction` 币种字段、酒店同步字段、dashboard snapshot 字段或索引，必须先部署 Production schema。
+- 回滚方式：回退本轮文档变更即可；不涉及代码或数据迁移。
+- 结论：本轮完成；CloudKit schema 部署从口头提醒变为发布硬门禁。
+- 下一步建议：后续可在 ASC metadata-as-code 或 release checklist 中增加一条“CloudKit schema deploy evidence”检查项，必要时再评估 CloudKit schema 自动审计脚本。
 
 ### ITER-375 快捷指令 SQLite 写入锁等待
 - 日期：2026-07-07
