@@ -286,6 +286,14 @@
 "hotel_stay.detail.linked_transaction" = "關聯帳單";
 "hotel_stay.detail.linked_transaction.missing" = "沒有找到關聯的普通支出流水。";
 "hotel_stay.detail.linked_transaction_id" = "關聯流水 ID";
+"hotel_stay.detail.weather.title" = "入住天氣";
+"hotel_stay.detail.weather.subtitle_format" = "%@ 至 %@";
+"hotel_stay.detail.weather.loading" = "正在讀取歷史天氣...";
+"hotel_stay.detail.weather.unavailable" = "這次入住暫無天氣摘要。";
+"hotel_stay.detail.weather.day_format" = "%@";
+"hotel_stay.detail.weather.temperature_format" = "低 %@ / 高 %@";
+"hotel_stay.detail.weather.precipitation_format" = "降水 %@";
+"hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.transaction_merchant" = "商戶";
 "hotel_stay.detail.transaction_amount" = "金額";
 "hotel_stay.detail.transaction_date" = "日期";

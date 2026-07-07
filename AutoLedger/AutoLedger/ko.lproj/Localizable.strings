@@ -286,6 +286,14 @@
 "hotel_stay.detail.linked_transaction" = "연계거래";
 "hotel_stay.detail.linked_transaction.missing" = "연결된 비용 거래를 찾을 수 없습니다.";
 "hotel_stay.detail.linked_transaction_id" = "연결된 거래 ID";
+"hotel_stay.detail.weather.title" = "숙박 당시 날씨";
+"hotel_stay.detail.weather.subtitle_format" = "%@ ~ %@";
+"hotel_stay.detail.weather.loading" = "과거 날씨를 불러오는 중...";
+"hotel_stay.detail.weather.unavailable" = "이 숙박의 날씨 요약이 없습니다.";
+"hotel_stay.detail.weather.day_format" = "%@";
+"hotel_stay.detail.weather.temperature_format" = "최저 %@ / 최고 %@";
+"hotel_stay.detail.weather.precipitation_format" = "강수 %@";
+"hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.transaction_merchant" = "가맹점";
 "hotel_stay.detail.transaction_amount" = "금액";
 "hotel_stay.detail.transaction_date" = "날짜";

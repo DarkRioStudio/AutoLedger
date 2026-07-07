@@ -646,6 +646,7 @@ struct HotelStayDetailView: View {
     @State private var saveMessage: String?
     @State private var saveMessageIsSuccess = false
     @State private var showsDeleteConfirmation = false
+    @State private var weatherSummaryState: HotelWeatherSummaryState = .idle
 
     let record: HotelStayRecord
     let transactions: [Transaction]
@@ -688,6 +689,7 @@ struct HotelStayDetailView: View {
             detailHeader
             identityEditorSection
             stayEditorSection
+            hotelWeatherCard
             chargeEditorSection
             linkedTransactionEditorSection
             fieldSection(titleKey: "hotel_stay.detail.source", fields: snapshot.sourceFields)
@@ -728,6 +730,9 @@ struct HotelStayDetailView: View {
         }
         .onChange(of: form.checkOutDateValue) { _, _ in
             form.updateNightsFromDates()
+        }
+        .task(id: weatherTaskID) {
+            await refreshWeatherSummary()
         }
         .confirmationDialog(
             "hotel_stay.delete.confirm.title",
@@ -811,6 +816,49 @@ struct HotelStayDetailView: View {
             editableTextField("hotel_stay.review.room_type", text: $form.roomType)
             editableTextField("hotel_stay.review.room_number", text: $form.roomNumber)
             editableTextField("hotel_stay.review.confirmation", text: $form.confirmationNumber)
+        }
+    }
+
+    private var hotelWeatherCard: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Label {
+                    Text(weatherSubtitle)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                } icon: {
+                    Image(systemName: "cloud.sun")
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                switch weatherSummaryState {
+                case .idle, .loading:
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("hotel_stay.detail.weather.loading")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+                case .unavailable:
+                    Label("hotel_stay.detail.weather.unavailable", systemImage: "cloud.slash")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                case .loaded(let response):
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(Array(response.data.days.prefix(4)), id: \.date) { day in
+                            hotelWeatherDayRow(day)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+            .autoLedgerSelectableRowBackground(false)
+        } header: {
+            Text("hotel_stay.detail.weather.title")
+        } footer: {
+            if case .loaded(let response) = weatherSummaryState {
+                Text(String(format: localized("hotel_stay.detail.weather.provider_format"), response.provider, response.data.timezone))
+            }
         }
     }
 
@@ -904,6 +952,131 @@ struct HotelStayDetailView: View {
             return localized("hotel_stay.detail.raw_text.empty")
         }
         return rawTextLocalizer.localizedText(rawText)
+    }
+
+    private var weatherTaskID: String {
+        [
+            form.city,
+            form.country,
+            Self.weatherDateText(form.checkInDateValue),
+            Self.weatherDateText(form.checkOutDateValue),
+            AppLanguagePreference.current.catalogLanguageKey
+        ]
+        .joined(separator: "|")
+    }
+
+    private var weatherSubtitle: String {
+        String(
+            format: localized("hotel_stay.detail.weather.subtitle_format"),
+            Self.weatherDateText(form.checkInDateValue),
+            Self.weatherDateText(form.checkOutDateValue)
+        )
+    }
+
+    private func refreshWeatherSummary() async {
+        guard let location = HotelStayLocationCatalog.weatherLocation(city: form.city, country: form.country),
+              form.checkOutDateValue > form.checkInDateValue else {
+            weatherSummaryState = .unavailable
+            return
+        }
+
+        let checkIn = Self.weatherDateText(form.checkInDateValue)
+        let checkOut = Self.weatherDateText(form.checkOutDateValue)
+        weatherSummaryState = .loading
+
+        do {
+            let response = try await CommonAPIHotelWeatherService.summary(
+                latitude: location.latitude,
+                longitude: location.longitude,
+                checkIn: checkIn,
+                checkOut: checkOut,
+                locale: AppLanguagePreference.current.catalogLanguageKey,
+                timezone: location.timezone
+            )
+            weatherSummaryState = response.data.days.isEmpty ? .unavailable : .loaded(response)
+        } catch {
+            weatherSummaryState = .unavailable
+        }
+    }
+
+    private func hotelWeatherDayRow(_ day: CommonAPIHotelWeatherService.HotelStayWeatherDay) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: weatherIconName(for: day.icon))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 26, height: 26)
+                .background(AppTheme.accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(format: localized("hotel_stay.detail.weather.day_format"), day.date))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Text(day.description.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? localized("hotel_stay.detail.weather.unavailable"))
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.mutedInk)
+
+                HStack(spacing: 10) {
+                    Text(temperatureText(for: day))
+                    Text(precipitationText(for: day))
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+            }
+        }
+    }
+
+    private func temperatureText(for day: CommonAPIHotelWeatherService.HotelStayWeatherDay) -> String {
+        let low = day.tempMin.map(formattedTemperature) ?? "-"
+        let high = day.tempMax.map(formattedTemperature) ?? "-"
+        return String(format: localized("hotel_stay.detail.weather.temperature_format"), low, high)
+    }
+
+    private func precipitationText(for day: CommonAPIHotelWeatherService.HotelStayWeatherDay) -> String {
+        let precipitation = max(day.precipitationAmount ?? 0, day.snowfallAmount ?? 0)
+        return String(
+            format: localized("hotel_stay.detail.weather.precipitation_format"),
+            Self.formattedWeatherAmount(precipitation)
+        )
+    }
+
+    private func formattedTemperature(_ value: Double) -> String {
+        String(format: "%.0f\u{00B0}C", locale: Locale(identifier: "en_US_POSIX"), value)
+    }
+
+    private func weatherIconName(for icon: String) -> String {
+        let normalized = icon.lowercased()
+        if normalized.contains("rain") {
+            return "cloud.rain"
+        }
+        if normalized.contains("snow") {
+            return "snowflake"
+        }
+        if normalized.contains("cloud") {
+            return "cloud"
+        }
+        if normalized.contains("wind") {
+            return "wind"
+        }
+        return "sun.max"
+    }
+
+    private static func weatherDateText(_ date: Date) -> String {
+        let components = AppFormatters.calendar.dateComponents([.year, .month, .day], from: date)
+        guard let year = components.year,
+              let month = components.month,
+              let day = components.day else {
+            return ""
+        }
+        return String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    private static func formattedWeatherAmount(_ value: Double) -> String {
+        if value < 0.05 {
+            return "0 mm"
+        }
+        return String(format: "%.1f mm", locale: Locale(identifier: "en_US_POSIX"), value)
     }
 
     private func displayValue(for field: HotelStayDetailField) -> String {
@@ -1114,6 +1287,13 @@ struct HotelStayDetailView: View {
             transaction.hotelStayRecordID == record.id
         }
     }
+}
+
+private enum HotelWeatherSummaryState: Equatable {
+    case idle
+    case loading
+    case unavailable
+    case loaded(CommonAPIHotelWeatherService.Response)
 }
 
 private struct HotelStayRecordEditForm: Equatable {

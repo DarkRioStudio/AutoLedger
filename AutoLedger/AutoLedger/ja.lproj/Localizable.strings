@@ -286,6 +286,14 @@
 "hotel_stay.detail.linked_transaction" = "リンク済み取引";
 "hotel_stay.detail.linked_transaction.missing" = "リンク済みの支出取引が見つかりません。";
 "hotel_stay.detail.linked_transaction_id" = "リンク済み取引 ID";
+"hotel_stay.detail.weather.title" = "滞在時の天気";
+"hotel_stay.detail.weather.subtitle_format" = "%@ から %@";
+"hotel_stay.detail.weather.loading" = "過去の天気を読み込み中...";
+"hotel_stay.detail.weather.unavailable" = "この滞在の天気概要はありません。";
+"hotel_stay.detail.weather.day_format" = "%@";
+"hotel_stay.detail.weather.temperature_format" = "最低 %@ / 最高 %@";
+"hotel_stay.detail.weather.precipitation_format" = "降水 %@";
+"hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.transaction_merchant" = "加盟店";
 "hotel_stay.detail.transaction_amount" = "金額";
 "hotel_stay.detail.transaction_date" = "日付";

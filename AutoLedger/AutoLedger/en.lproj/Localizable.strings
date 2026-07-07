@@ -286,6 +286,14 @@
 "hotel_stay.detail.linked_transaction" = "Linked Transaction";
 "hotel_stay.detail.linked_transaction.missing" = "No linked expense transaction was found.";
 "hotel_stay.detail.linked_transaction_id" = "Linked Transaction ID";
+"hotel_stay.detail.weather.title" = "Stay Weather";
+"hotel_stay.detail.weather.subtitle_format" = "%@ to %@";
+"hotel_stay.detail.weather.loading" = "Loading historical weather...";
+"hotel_stay.detail.weather.unavailable" = "No weather summary available for this stay.";
+"hotel_stay.detail.weather.day_format" = "%@";
+"hotel_stay.detail.weather.temperature_format" = "Low %@ / High %@";
+"hotel_stay.detail.weather.precipitation_format" = "Precip %@";
+"hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.transaction_merchant" = "Merchant";
 "hotel_stay.detail.transaction_amount" = "Amount";
 "hotel_stay.detail.transaction_date" = "Date";

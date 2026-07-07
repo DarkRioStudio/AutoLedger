@@ -1,6 +1,12 @@
 import Foundation
 
 enum HotelStayLocationCatalog {
+    struct WeatherLocation: Sendable, Equatable {
+        let latitude: Double
+        let longitude: Double
+        let timezone: String
+    }
+
     struct Country: Sendable {
         let code: String
         let zhHans: String
@@ -46,6 +52,9 @@ enum HotelStayLocationCatalog {
         let ja: String
         let ko: String
         let aliases: [String]
+        let latitude: Double?
+        let longitude: Double?
+        let timezone: String?
 
         nonisolated var localizedName: String {
             switch HotelStayLocationCatalog.languageKey {
@@ -102,10 +111,35 @@ enum HotelStayLocationCatalog {
         return activeCountries.lazy.compactMap { $0.localizedCityName(matching: value) }.first
     }
 
+    nonisolated static func weatherLocation(city: String, country: String) -> WeatherLocation? {
+        let matchedCountry = self.country(matching: country) ?? self.country(containingCity: city)
+        let matchedCity = self.city(matching: city, country: matchedCountry)
+            ?? self.city(matching: city, country: nil)
+        guard let matchedCity,
+              let latitude = matchedCity.latitude,
+              let longitude = matchedCity.longitude,
+              let timezone = matchedCity.timezone?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !timezone.isEmpty else {
+            return nil
+        }
+        return WeatherLocation(
+            latitude: latitude,
+            longitude: longitude,
+            timezone: timezone
+        )
+    }
+
     nonisolated private static func country(containingCity value: String) -> Country? {
         activeCountries.first { country in
             country.cities.contains { $0.matches(value) }
         }
+    }
+
+    nonisolated private static func city(matching value: String, country: Country?) -> City? {
+        if let country, let city = country.cities.first(where: { $0.matches(value) }) {
+            return city
+        }
+        return activeCountries.lazy.flatMap(\.cities).first { $0.matches(value) }
     }
 
     nonisolated private static var languageKey: String {
@@ -129,7 +163,10 @@ enum HotelStayLocationCatalog {
         zhHant: String,
         ja: String,
         ko: String,
-        aliases: [String] = []
+        aliases: [String] = [],
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        timezone: String? = nil
     ) -> City {
         City(
             english: english,
@@ -137,7 +174,10 @@ enum HotelStayLocationCatalog {
             zhHant: zhHant,
             ja: ja,
             ko: ko,
-            aliases: aliases
+            aliases: aliases,
+            latitude: latitude,
+            longitude: longitude,
+            timezone: timezone
         )
     }
 
@@ -177,7 +217,10 @@ enum HotelStayLocationCatalog {
                     zhHant: city.names.zhHant,
                     ja: city.names.ja,
                     ko: city.names.ko,
-                    aliases: [city.id] + remoteCityAliasExtras[city.id, default: []]
+                    aliases: [city.id] + remoteCityAliasExtras[city.id, default: []],
+                    latitude: city.latitude,
+                    longitude: city.longitude,
+                    timezone: city.timezone
                 )
             }
             return Country(

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-391 ASC metadata-as-code 第一版）
+更新日期：2026-07-07（ITER-392 酒店历史天气 App 展示第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-392 酒店历史天气 App 展示第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2309 / Common API
+- 类型：能力增强 / UI / 测试
+- 目标：把 `common-api` 酒店入住历史天气端点接入 App 酒店消费详情页，同时保持酒店名称、金额、PDF、邮箱内容和账单原文不上传。
+- 改动范围：新增 `CommonAPIHotelWeatherService`；扩展 `HotelStayLocationCatalog` 保留远端地点目录的经纬度和时区；酒店消费详情新增入住天气卡片；补齐五语 `hotel_stay.detail.weather.*` 文案；新增 `scripts/check_hotel_weather_ui_smoke.py` 并纳入离线回归。
+- 未改动范围：未开启 production WeatherKit provider；未新增 Worker endpoint；未修改酒店入账逻辑、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview 管线或构建 tag。
+- 完成内容：酒店详情页会按当前城市 / 国家和地区、入住 / 退房日期从地点目录解析经纬度和时区，只向 `common-api` 发送坐标、日期、locale、timezone 和 units；服务端不可用、无坐标、日期无效或无天气日记录时显示“暂无天气摘要”，不会用当前天气或未来天气冒充历史入住天气。
+- 未完成内容：production 仍保持 `WEATHER_PROVIDER=disabled`；服务端鉴权、配额策略、多 provider fallback、天气缓存清理 UI 和真实酒店样例截图仍留到后续发布门禁或运营配置。
+- 测试情况：先执行 `python3 scripts/check_hotel_weather_ui_smoke.py` 得到预期失败；实现后执行同一 smoke、`python3 scripts/check_localization_coverage.py`、五语 `plutil -lint`、`git diff --check`、`bash scripts/run_offline_regression.sh` 和 XcodeBuildMCP iPhone 17 Pro Max Debug build-run，结果均 PASS。
+- 风险与注意事项：在 production WeatherKit 未开启时，用户会看到不可用降级；远端地点目录未缓存且内置 fallback 无坐标的城市不会请求天气，避免传错地点。
+- 回滚方式：回退 `CommonAPIHotelWeatherService.swift`、酒店详情天气卡片、地点目录坐标扩展、五语天气文案、`check_hotel_weather_ui_smoke.py` 和离线回归接入，即可恢复旧酒店消费详情页。
+- 结论：本轮完成，`GOAL-2309` 的 App 端酒店历史天气展示第一版具备工程闭环。
+- 下一步建议：继续做最终全量门禁、分类提交汇总和 `xcbuild-v1.7.0` 构建 tag 移动；production WeatherKit 开关等运营配置不阻塞工程代码收口。
 
 ### ITER-391 ASC metadata-as-code 第一版
 - 日期：2026-07-07
