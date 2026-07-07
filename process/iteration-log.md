@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-381 数据清洗采纳历史与审计）
+更新日期：2026-07-07（ITER-382 Worker 辅助建议脱敏合同）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-382 Worker 辅助建议脱敏合同
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345D / Pro Automation
+- 类型：能力增强 / 隐私边界 / 测试
+- 目标：在真正接入 Worker 辅助建议之前，先冻结本地脱敏 payload 合同，确保后续云端只看到不可还原账本明细的聚合特征。
+- 改动范围：新增 `AutoLedgerCore` `DataCleaningAssistPayload` 合同和 builder，更新离线回归和显式编译清单，并回填 `versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 App UI、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、返回建议 schema、Pro 网络授权、配额或用户开关。
+- 完成内容：新增 `DataCleaningAssistPayloadBuilder`，将本地交易聚合为 `hashed_aggregate_v1` payload，包含 normalized merchant hash、normalized length、交易数量、分类 / 来源分布、金额区间桶、prefix hash、已存在 alias / category correction 的 hash 或 enum 值。
+- 完成内容：payload 不包含真实商户名、备注、OCR 原文、交易 UUID、订单号、手机号、精确金额或账单日期；prefix 只暴露 hash 和长度，未来 Worker 可返回 hash 对 hash 的建议，再由客户端本地映射成用户可读建议。
+- 完成内容：离线回归新增 forbidden fragments 检查，确认 JSON 编码结果不会泄漏真实商户名、门店后缀、订单号、手机号、OCR 原文或交易 UUID；同时验证聚合特征、金额区间、prefix hash overlap 和输入顺序确定性。
+- 完成内容：`scripts/run_offline_regression.sh` 显式加入新 Core 文件，保证脱敏合同进入离线门禁。
+- 未完成内容：本轮只完成本地合同，没有接入 Worker 或 `common-api`；hash 只是稳定分组指纹，不是安全鉴权或匿名化数学证明，真正上传前仍需威胁建模和字段复审。
+- 测试情况：先新增离线 RED 断言并执行 `bash scripts/run_offline_regression.sh`，确认缺少 `DataCleaningAssistPayloadBuilder` 时编译失败；实现后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖脱敏 payload schema、聚合特征、金额区间、prefix hash overlap、禁止 raw 数据泄漏和输入顺序确定性。
+- 风险与注意事项：如果后续把该 payload 上传到 Worker，仍需要用户显式开启云端 Pro 自动化、服务端鉴权、配额、日志最小化和返回建议 schema；不能因为 payload 已脱敏就默认允许后台静默上传。
+- 回滚方式：删除 `DataCleaningAssistPayload.swift`、离线回归新增用例和 `run_offline_regression.sh` 新增源文件，并回退对应文档记录；不涉及数据迁移或用户数据。
+- 结论：本轮完成；`GOAL-2345D` 已把 Worker 辅助建议的最小隐私合同落成可回归代码，但仍保持零上传。
+- 下一步建议：继续设计 Worker 返回建议 schema 和用户授权开关，或先补 Mac / iPad 大屏历史表格与忽略项管理。
 
 ### ITER-381 数据清洗采纳历史与审计
 - 日期：2026-07-07

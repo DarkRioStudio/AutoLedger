@@ -389,6 +389,7 @@ swiftc \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
+  "$CORE/Services/DataCleaningAssistPayload.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \
   "$CORE/Services/LedgerCSVCodec.swift" \
   "$CORE/Services/StructuredLedgerJSONParser.swift" \

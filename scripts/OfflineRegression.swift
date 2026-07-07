@@ -69,6 +69,7 @@ struct OfflineRegression {
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
+        verifyDataCleaningAssistPayload(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
@@ -4109,6 +4110,95 @@ struct OfflineRegression {
         reporter.check(
             !ignoredSnapshot.items.contains { $0.currentValue == "Cafe Roma Terminal 2" },
             "DataCleaningPreviewPlanner hides ignored suggestions"
+        )
+    }
+
+    private static func verifyDataCleaningAssistPayload(reporter: RegressionReporter) {
+        let base = Date(timeIntervalSince1970: 1_782_000_000)
+        let anchorA = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002451") ?? UUID(),
+            merchant: "Private Coffee",
+            amount: 18.8,
+            occurredAt: base,
+            category: .dining,
+            source: .manual,
+            note: "VIP phone 13800138000 order SECRET-ORDER-001"
+        )
+        let anchorB = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002452") ?? UUID(),
+            merchant: "Private Coffee",
+            amount: 22,
+            occurredAt: base.addingTimeInterval(-86_400),
+            category: .dining,
+            source: .alipay,
+            note: "another private note"
+        )
+        let variant = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000002453") ?? UUID(),
+            merchant: "Private Coffee West Gate",
+            amount: 128,
+            occurredAt: base.addingTimeInterval(-172_800),
+            category: .dining,
+            source: .wechat,
+            note: "OCR raw text should never leave this device"
+        )
+
+        let payload = DataCleaningAssistPayloadBuilder(now: { base }).build(
+            transactions: [anchorA, anchorB, variant],
+            merchantAliases: ["Private Coffee West Gate": "Private Coffee"],
+            categoryCorrections: ["Private Coffee": TransactionCategory.dining]
+        )
+        reporter.check(payload.schemaVersion == 1, "DataCleaningAssistPayload records schema version")
+        reporter.check(payload.transactionCount == 3, "DataCleaningAssistPayload records transaction count")
+        reporter.check(payload.merchantFeatures.count == 2, "DataCleaningAssistPayload aggregates by normalized merchant")
+        reporter.check(payload.privacyMode == "hashed_aggregate_v1", "DataCleaningAssistPayload declares hashed aggregate privacy mode")
+
+        let anchorFeature = payload.merchantFeatures.first { $0.transactionCount == 2 }
+        let variantFeature = payload.merchantFeatures.first { $0.transactionCount == 1 }
+        reporter.check(
+            anchorFeature?.categoryCounts["dining"] == 2 &&
+                anchorFeature?.sourceCounts["manual"] == 1 &&
+                anchorFeature?.sourceCounts["alipay"] == 1,
+            "DataCleaningAssistPayload keeps category and source distributions"
+        )
+        reporter.check(
+            anchorFeature?.amountBuckets["10_30"] == 2 &&
+                variantFeature?.amountBuckets["100_500"] == 1,
+            "DataCleaningAssistPayload buckets amounts without exact values"
+        )
+        let prefixOverlapExists: Bool
+        if let anchorFeature, let variantFeature {
+            prefixOverlapExists = variantFeature.prefixHashes.contains { prefix in
+                prefix.length == anchorFeature.normalizedLength &&
+                    prefix.hash == anchorFeature.merchantKeyHash
+            }
+        } else {
+            prefixOverlapExists = false
+        }
+        reporter.check(prefixOverlapExists, "DataCleaningAssistPayload exposes hashed prefix overlap for normalization")
+
+        let encoded = (try? JSONEncoder().encode(payload))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        let forbiddenFragments = [
+            "Private Coffee",
+            "West Gate",
+            "SECRET-ORDER",
+            "13800138000",
+            anchorA.id.uuidString,
+            variant.id.uuidString,
+            "OCR raw text"
+        ]
+        reporter.check(
+            forbiddenFragments.allSatisfy { !encoded.contains($0) },
+            "DataCleaningAssistPayload excludes raw merchants, notes, phone numbers, orders, OCR text, and transaction ids"
+        )
+        reporter.check(
+            payload == DataCleaningAssistPayloadBuilder(now: { base }).build(
+                transactions: [variant, anchorB, anchorA],
+                merchantAliases: ["Private Coffee West Gate": "Private Coffee"],
+                categoryCorrections: ["Private Coffee": TransactionCategory.dining]
+            ),
+            "DataCleaningAssistPayload is deterministic across transaction ordering"
         )
     }
 

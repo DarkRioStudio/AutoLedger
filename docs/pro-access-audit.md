@@ -24,6 +24,7 @@ Risk: public source can be forked and local client checks can be modified. This 
 - v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro gates full-ledger analysis, merchant normalization suggestions, batch preview/application, low-confidence review queues, and optional future Worker-assisted suggestion generation.
 - New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
 - `cloudFolioInbox` is `serverVerified`; local email scan, batch import, advanced deduplication, and merchant normalization suggestions are still `localUIGate`.
+- `DataCleaningAssistPayloadBuilder` defines the first local-only Worker assist contract for future merchant normalization suggestions. It emits hashed aggregate merchant features, category/source distributions, amount buckets, and prefix hashes; it does not include raw merchant names, notes, OCR text, transaction ids, or exact amounts. No current call site uploads this payload.
 
 Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
 
@@ -60,6 +61,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 - Policy definitions and regression references use all capabilities.
 - Version docs and iteration logs reference `cloudFolioInbox`, P0 Pro gates, and planned v1.7.0 merchant normalization / data-cleaning gates.
 - UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, and `cloudFolioInbox`.
+- Core regression references `DataCleaningAssistPayloadBuilder` only as a privacy contract; it is not wired to `common-api` or any Worker endpoint yet.
 
 ## Worker Side
 
