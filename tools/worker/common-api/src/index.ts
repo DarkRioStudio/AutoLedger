@@ -88,7 +88,11 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
   if (isReadRequest(request) && url.pathname === "/v1/locations/cities") {
     const locale = normalizeLocale(url.searchParams.get("locale"));
     const countryCode = normalizeCountryCode(url.searchParams.get("country"));
-    return responseForMethod(request, json({ cities: localizedCities(locale, countryCode), countryCode, locale }, 200, "public, max-age=300"));
+    const includeDistricts = normalizeBooleanFlag(url.searchParams.get("includeDistricts"));
+    return responseForMethod(
+      request,
+      json({ cities: localizedCities(locale, countryCode, includeDistricts), countryCode, locale, includeDistricts }, 200, "public, max-age=300")
+    );
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/currencies/catalog") {
@@ -320,9 +324,10 @@ function localizedCountries(locale: SupportedLocale): LocalizedCountry[] {
   }));
 }
 
-function localizedCities(locale: SupportedLocale, countryCode: string | null): LocalizedCity[] {
+function localizedCities(locale: SupportedLocale, countryCode: string | null, includeDistricts: boolean): LocalizedCity[] {
   const candidates = countryCode ? cities.filter((record) => record.countryCode === countryCode) : cities;
-  return candidates.map((record) => ({
+  const visibleCities = includeDistricts ? candidates : candidates.filter((record) => record.administrativeLevel !== "district");
+  return visibleCities.map((record) => ({
     ...record,
     displayName: displayName(record.names, locale)
   }));
@@ -366,6 +371,11 @@ function normalizeLocale(rawLocale: string | null): SupportedLocale {
 function normalizeCountryCode(rawCountryCode: string | null): string | null {
   const normalized = rawCountryCode?.trim().toUpperCase();
   return normalized && /^[A-Z]{2}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeBooleanFlag(rawValue: string | null): boolean {
+  const normalized = rawValue?.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
 }
 
 function normalizeReleaseNotesAppID(rawAppID: string | null): string | null {

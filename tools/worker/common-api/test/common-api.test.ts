@@ -403,6 +403,44 @@ describe("common api worker contract", () => {
     expect(moCities.find((record) => record.id === "city.mo.macau")?.displayName).toBe("澳门");
   });
 
+  it("includes district-level choices for municipalities", async () => {
+    const zhCityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=CN&locale=zh-Hans"), env);
+    const zhCityBody = await jsonBody(zhCityResponse);
+    const zhCities = zhCityBody.cities as Array<Record<string, unknown>>;
+    const beijing = zhCities.find((record) => record.id === "city.cn.beijing");
+    const hiddenHaidian = zhCities.find((record) => record.id === "city.cn.beijing.haidian");
+
+    expect(beijing?.displayName).toBe("北京");
+    expect(beijing?.tags).toContain("municipality");
+    expect(hiddenHaidian).toBeUndefined();
+
+    const zhDistrictResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=CN&locale=zh-Hans&includeDistricts=true"), env);
+    const zhDistrictBody = await jsonBody(zhDistrictResponse);
+    const zhDistrictCities = zhDistrictBody.cities as Array<Record<string, unknown>>;
+    const haidian = zhDistrictCities.find((record) => record.id === "city.cn.beijing.haidian");
+
+    expect(zhDistrictBody.includeDistricts).toBe(true);
+    expect(haidian?.displayName).toBe("北京 - 海淀区");
+    expect(haidian?.parentId).toBe("city.cn.beijing");
+    expect(haidian?.administrativeLevel).toBe("district");
+    expect(haidian?.tags).toContain("district");
+    expect(haidian?.latitude).toBe(39.9599);
+    expect(haidian?.longitude).toBe(116.2981);
+
+    const enCityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=CN&locale=en&includeDistricts=true"), env);
+    const enCityBody = await jsonBody(enCityResponse);
+    const enCities = enCityBody.cities as Array<Record<string, unknown>>;
+
+    expect(enCities.find((record) => record.id === "city.cn.beijing.haidian")?.displayName).toBe("Beijing - Haidian District");
+
+    const koCityResponse = await routeFetch(new Request("https://example.test/v1/locations/cities?country=CN&locale=ko&includeDistricts=true"), env);
+    const koCityBody = await jsonBody(koCityResponse);
+    const koCities = koCityBody.cities as Array<Record<string, unknown>>;
+
+    expect(koCities.find((record) => record.id === "city.cn.beijing.haidian")?.displayName).toBe("베이징 - 하이뎬구");
+    expect(koCities.find((record) => record.id === "city.cn.chongqing.yuzhong")?.displayName).toBe("충칭 - 위중구");
+  });
+
   it("localizes currencies and publishes default conversion targets", async () => {
     const currencyResponse = await routeFetch(new Request("https://example.test/v1/currencies?locale=ko"), env);
     const currencyBody = await jsonBody(currencyResponse);

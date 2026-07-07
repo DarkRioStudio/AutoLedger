@@ -2,7 +2,7 @@ export const supportedLocales = ["zh-Hans", "zh-Hant", "en", "ja", "ko"] as cons
 
 export type SupportedLocale = (typeof supportedLocales)[number];
 export type LocalizedText = Record<SupportedLocale, string>;
-export type PlaceTag = "capital" | "tourism" | "hotel" | "business" | "transit" | "resort";
+export type PlaceTag = "capital" | "tourism" | "hotel" | "business" | "transit" | "resort" | "municipality" | "district";
 
 export type CountryRecord = {
   id: string;
@@ -20,11 +20,21 @@ export type CityRecord = {
   longitude: number;
   timezone: string;
   tags: PlaceTag[];
+  administrativeLevel?: "city" | "district";
+  parentId?: string;
+};
+
+type DistrictDefinition = {
+  slug: string;
+  names: readonly [string, string, string, string, string];
+  latitude: number;
+  longitude: number;
+  tags: PlaceTag[];
 };
 
 export const placeCatalogSchemaVersion = 1;
-export const placeCatalogResourceVersion = "2026.07.05.1";
-export const placeCatalogGeneratedAt = "2026-07-05T00:00:00.000Z";
+export const placeCatalogResourceVersion = "2026.07.07.1";
+export const placeCatalogGeneratedAt = "2026-07-07T06:00:00.000Z";
 
 export const countries = [
   country("country.cn", "CN", ["中国", "中國", "China", "中国", "중국"], "CNY", ["capital", "tourism", "hotel"]),
@@ -54,15 +64,97 @@ export const countries = [
 ] satisfies CountryRecord[];
 
 export const cities = [
-  city("city.cn.beijing", "CN", ["北京", "北京", "Beijing", "北京", "베이징"], 39.9042, 116.4074, "Asia/Shanghai", ["capital", "hotel", "business"]),
-  city("city.cn.shanghai", "CN", ["上海", "上海", "Shanghai", "上海", "상하이"], 31.2304, 121.4737, "Asia/Shanghai", ["tourism", "hotel", "business"]),
+  city("city.cn.beijing", "CN", ["北京", "北京", "Beijing", "北京", "베이징"], 39.9042, 116.4074, "Asia/Shanghai", ["capital", "hotel", "business", "municipality"]),
+  ...municipalityDistricts("city.cn.beijing", "CN", ["北京", "北京", "Beijing", "北京", "베이징"], "Asia/Shanghai", [
+    district("dongcheng", ["东城区", "東城區", "Dongcheng District", "東城区", "둥청구"], 39.9289, 116.4164, ["capital", "hotel"]),
+    district("xicheng", ["西城区", "西城區", "Xicheng District", "西城区", "시청구"], 39.9123, 116.3659, ["capital", "hotel"]),
+    district("chaoyang", ["朝阳区", "朝陽區", "Chaoyang District", "朝陽区", "차오양구"], 39.9215, 116.4431, ["business", "hotel"]),
+    district("fengtai", ["丰台区", "豐台區", "Fengtai District", "豊台区", "펑타이구"], 39.8584, 116.2867, ["hotel"]),
+    district("shijingshan", ["石景山区", "石景山區", "Shijingshan District", "石景山区", "스징산구"], 39.9066, 116.2229, ["hotel"]),
+    district("haidian", ["海淀区", "海淀區", "Haidian District", "海淀区", "하이뎬구"], 39.9599, 116.2981, ["business", "hotel"]),
+    district("mentougou", ["门头沟区", "門頭溝區", "Mentougou District", "門頭溝区", "먼터우거우구"], 39.9404, 116.1017, ["tourism"]),
+    district("fangshan", ["房山区", "房山區", "Fangshan District", "房山区", "팡산구"], 39.7479, 116.1433, ["tourism"]),
+    district("tongzhou", ["通州区", "通州區", "Tongzhou District", "通州区", "퉁저우구"], 39.9025, 116.6564, ["hotel"]),
+    district("shunyi", ["顺义区", "順義區", "Shunyi District", "順義区", "순이구"], 40.1302, 116.6547, ["transit", "hotel"]),
+    district("changping", ["昌平区", "昌平區", "Changping District", "昌平区", "창핑구"], 40.2207, 116.2312, ["hotel"]),
+    district("daxing", ["大兴区", "大興區", "Daxing District", "大興区", "다싱구"], 39.7289, 116.3414, ["transit", "hotel"]),
+    district("huairou", ["怀柔区", "懷柔區", "Huairou District", "懐柔区", "화이러우구"], 40.316, 116.632, ["tourism"]),
+    district("pinggu", ["平谷区", "平谷區", "Pinggu District", "平谷区", "핑구구"], 40.1406, 117.1214, ["tourism"]),
+    district("miyun", ["密云区", "密雲區", "Miyun District", "密雲区", "미윈구"], 40.3774, 116.843, ["tourism"]),
+    district("yanqing", ["延庆区", "延慶區", "Yanqing District", "延慶区", "옌칭구"], 40.4567, 115.9749, ["tourism"])
+  ]),
+  city("city.cn.shanghai", "CN", ["上海", "上海", "Shanghai", "上海", "상하이"], 31.2304, 121.4737, "Asia/Shanghai", ["tourism", "hotel", "business", "municipality"]),
+  ...municipalityDistricts("city.cn.shanghai", "CN", ["上海", "上海", "Shanghai", "上海", "상하이"], "Asia/Shanghai", [
+    district("huangpu", ["黄浦区", "黃浦區", "Huangpu District", "黄浦区", "황푸구"], 31.2317, 121.4846, ["tourism", "hotel", "business"]),
+    district("xuhui", ["徐汇区", "徐匯區", "Xuhui District", "徐匯区", "쉬후이구"], 31.1885, 121.4368, ["hotel", "business"]),
+    district("changning", ["长宁区", "長寧區", "Changning District", "長寧区", "창닝구"], 31.2204, 121.4246, ["hotel", "business"]),
+    district("jingan", ["静安区", "靜安區", "Jing'an District", "静安区", "징안구"], 31.229, 121.4598, ["hotel", "business"]),
+    district("putuo", ["普陀区", "普陀區", "Putuo District", "普陀区", "푸퉈구"], 31.2495, 121.3955, ["hotel"]),
+    district("hongkou", ["虹口区", "虹口區", "Hongkou District", "虹口区", "훙커우구"], 31.2646, 121.5051, ["hotel"]),
+    district("yangpu", ["杨浦区", "楊浦區", "Yangpu District", "楊浦区", "양푸구"], 31.2596, 121.526, ["hotel", "business"]),
+    district("minhang", ["闵行区", "閔行區", "Minhang District", "閔行区", "민항구"], 31.1128, 121.3817, ["hotel", "business"]),
+    district("baoshan", ["宝山区", "寶山區", "Baoshan District", "宝山区", "바오산구"], 31.4055, 121.4899, ["hotel"]),
+    district("jiading", ["嘉定区", "嘉定區", "Jiading District", "嘉定区", "자딩구"], 31.3756, 121.2653, ["hotel"]),
+    district("pudong", ["浦东新区", "浦東新區", "Pudong New Area", "浦東新区", "푸둥신구"], 31.2215, 121.5447, ["transit", "hotel", "business"]),
+    district("jinshan", ["金山区", "金山區", "Jinshan District", "金山区", "진산구"], 30.7419, 121.3416, ["hotel"]),
+    district("songjiang", ["松江区", "松江區", "Songjiang District", "松江区", "쑹장구"], 31.0326, 121.2277, ["tourism", "hotel"]),
+    district("qingpu", ["青浦区", "青浦區", "Qingpu District", "青浦区", "칭푸구"], 31.1512, 121.1242, ["tourism", "hotel"]),
+    district("fengxian", ["奉贤区", "奉賢區", "Fengxian District", "奉賢区", "펑셴구"], 30.9184, 121.474, ["hotel"]),
+    district("chongming", ["崇明区", "崇明區", "Chongming District", "崇明区", "충밍구"], 31.6236, 121.3975, ["tourism"])
+  ]),
   city("city.cn.guangzhou", "CN", ["广州", "廣州", "Guangzhou", "広州", "광저우"], 23.1291, 113.2644, "Asia/Shanghai", ["hotel", "business"]),
   city("city.cn.shenzhen", "CN", ["深圳", "深圳", "Shenzhen", "深セン", "선전"], 22.5431, 114.0579, "Asia/Shanghai", ["hotel", "business"]),
-  city("city.cn.chongqing", "CN", ["重庆", "重慶", "Chongqing", "重慶", "충칭"], 29.563, 106.5516, "Asia/Shanghai", ["tourism", "hotel"]),
+  city("city.cn.chongqing", "CN", ["重庆", "重慶", "Chongqing", "重慶", "충칭"], 29.563, 106.5516, "Asia/Shanghai", ["tourism", "hotel", "municipality"]),
+  ...municipalityDistricts("city.cn.chongqing", "CN", ["重庆", "重慶", "Chongqing", "重慶", "충칭"], "Asia/Shanghai", [
+    district("yuzhong", ["渝中区", "渝中區", "Yuzhong District", "渝中区", "위중구"], 29.5528, 106.5689, ["business", "hotel"]),
+    district("dadukou", ["大渡口区", "大渡口區", "Dadukou District", "大渡口区", "다두커우구"], 29.4844, 106.4823, ["hotel"]),
+    district("jiangbei", ["江北区", "江北區", "Jiangbei District", "江北区", "장베이구"], 29.6066, 106.5743, ["business", "hotel"]),
+    district("shapingba", ["沙坪坝区", "沙坪壩區", "Shapingba District", "沙坪壩区", "사핑바구"], 29.5412, 106.4574, ["hotel"]),
+    district("jiulongpo", ["九龙坡区", "九龍坡區", "Jiulongpo District", "九龍坡区", "주룽포구"], 29.5023, 106.5111, ["hotel"]),
+    district("nanan", ["南岸区", "南岸區", "Nan'an District", "南岸区", "난안구"], 29.5231, 106.6449, ["tourism", "hotel"]),
+    district("beibei", ["北碚区", "北碚區", "Beibei District", "北碚区", "베이베이구"], 29.805, 106.3956, ["tourism", "hotel"]),
+    district("yubei", ["渝北区", "渝北區", "Yubei District", "渝北区", "위베이구"], 29.7181, 106.6312, ["transit", "hotel", "business"]),
+    district("banan", ["巴南区", "巴南區", "Banan District", "巴南区", "바난구"], 29.4027, 106.5404, ["hotel"]),
+    district("wanzhou", ["万州区", "萬州區", "Wanzhou District", "万州区", "완저우구"], 30.8078, 108.4087, ["hotel"]),
+    district("qianjiang", ["黔江区", "黔江區", "Qianjiang District", "黔江区", "첸장구"], 29.5332, 108.7707, ["tourism", "hotel"]),
+    district("fuling", ["涪陵区", "涪陵區", "Fuling District", "涪陵区", "푸링구"], 29.7031, 107.3893, ["hotel"]),
+    district("changshou", ["长寿区", "長壽區", "Changshou District", "長寿区", "창서우구"], 29.8579, 107.0817, ["hotel"]),
+    district("jiangjin", ["江津区", "江津區", "Jiangjin District", "江津区", "장진구"], 29.2901, 106.2596, ["hotel"]),
+    district("hechuan", ["合川区", "合川區", "Hechuan District", "合川区", "허촨구"], 29.9721, 106.2763, ["hotel"]),
+    district("yongchuan", ["永川区", "永川區", "Yongchuan District", "永川区", "융촨구"], 29.356, 105.9274, ["hotel"]),
+    district("nanchuan", ["南川区", "南川區", "Nanchuan District", "南川区", "난촨구"], 29.1579, 107.0989, ["tourism", "hotel"]),
+    district("qijiang", ["綦江区", "綦江區", "Qijiang District", "綦江区", "치장구"], 29.0281, 106.6514, ["hotel"]),
+    district("dazu", ["大足区", "大足區", "Dazu District", "大足区", "다쭈구"], 29.7005, 105.7153, ["tourism", "hotel"]),
+    district("bishan", ["璧山区", "璧山區", "Bishan District", "璧山区", "비산구"], 29.5936, 106.2273, ["hotel"]),
+    district("tongliang", ["铜梁区", "銅梁區", "Tongliang District", "銅梁区", "퉁량구"], 29.8399, 106.0564, ["hotel"]),
+    district("tongnan", ["潼南区", "潼南區", "Tongnan District", "潼南区", "퉁난구"], 30.191, 105.8406, ["hotel"]),
+    district("rongchang", ["荣昌区", "榮昌區", "Rongchang District", "栄昌区", "룽창구"], 29.4049, 105.5945, ["hotel"]),
+    district("kaizhou", ["开州区", "開州區", "Kaizhou District", "開州区", "카이저우구"], 31.1607, 108.3931, ["hotel"]),
+    district("liangping", ["梁平区", "梁平區", "Liangping District", "梁平区", "량핑구"], 30.6737, 107.8, ["hotel"]),
+    district("wulong", ["武隆区", "武隆區", "Wulong District", "武隆区", "우룽구"], 29.3257, 107.7599, ["tourism", "hotel"])
+  ]),
   city("city.cn.chengdu", "CN", ["成都", "成都", "Chengdu", "成都", "청두"], 30.5728, 104.0668, "Asia/Shanghai", ["tourism", "hotel"]),
   city("city.cn.hangzhou", "CN", ["杭州", "杭州", "Hangzhou", "杭州", "항저우"], 30.2741, 120.1551, "Asia/Shanghai", ["tourism", "hotel", "business"]),
   city("city.cn.nanjing", "CN", ["南京", "南京", "Nanjing", "南京", "난징"], 32.0603, 118.7969, "Asia/Shanghai", ["tourism", "hotel"]),
-  city("city.cn.tianjin", "CN", ["天津", "天津", "Tianjin", "天津", "톈진"], 39.3434, 117.3616, "Asia/Shanghai", ["hotel", "business"]),
+  city("city.cn.tianjin", "CN", ["天津", "天津", "Tianjin", "天津", "톈진"], 39.3434, 117.3616, "Asia/Shanghai", ["hotel", "business", "municipality"]),
+  ...municipalityDistricts("city.cn.tianjin", "CN", ["天津", "天津", "Tianjin", "天津", "톈진"], "Asia/Shanghai", [
+    district("heping", ["和平区", "和平區", "Heping District", "和平区", "허핑구"], 39.1172, 117.2145, ["business", "hotel"]),
+    district("hedong", ["河东区", "河東區", "Hedong District", "河東区", "허둥구"], 39.1283, 117.2517, ["hotel"]),
+    district("hexi", ["河西区", "河西區", "Hexi District", "河西区", "허시구"], 39.1096, 117.2234, ["business", "hotel"]),
+    district("nankai", ["南开区", "南開區", "Nankai District", "南開区", "난카이구"], 39.1382, 117.1507, ["hotel"]),
+    district("hebei", ["河北区", "河北區", "Hebei District", "河北区", "허베이구"], 39.149, 117.1966, ["hotel"]),
+    district("hongqiao", ["红桥区", "紅橋區", "Hongqiao District", "紅橋区", "훙차오구"], 39.1646, 117.1515, ["hotel"]),
+    district("dongli", ["东丽区", "東麗區", "Dongli District", "東麗区", "둥리구"], 39.0868, 117.3136, ["hotel"]),
+    district("xiqing", ["西青区", "西青區", "Xiqing District", "西青区", "시칭구"], 39.1394, 117.0089, ["hotel"]),
+    district("jinnan", ["津南区", "津南區", "Jinnan District", "津南区", "진난구"], 38.9896, 117.3573, ["hotel"]),
+    district("beichen", ["北辰区", "北辰區", "Beichen District", "北辰区", "베이천구"], 39.2256, 117.1356, ["hotel"]),
+    district("wuqing", ["武清区", "武清區", "Wuqing District", "武清区", "우칭구"], 39.3841, 117.0444, ["hotel"]),
+    district("baodi", ["宝坻区", "寶坻區", "Baodi District", "宝坻区", "바오디구"], 39.7173, 117.3097, ["hotel"]),
+    district("binhai", ["滨海新区", "濱海新區", "Binhai New Area", "浜海新区", "빈하이신구"], 39.0032, 117.7107, ["transit", "hotel", "business"]),
+    district("ninghe", ["宁河区", "寧河區", "Ninghe District", "寧河区", "닝허구"], 39.3294, 117.8281, ["hotel"]),
+    district("jinghai", ["静海区", "靜海區", "Jinghai District", "静海区", "징하이구"], 38.9357, 116.9744, ["hotel"]),
+    district("jizhou", ["蓟州区", "薊州區", "Jizhou District", "薊州区", "지저우구"], 40.0453, 117.4083, ["tourism", "hotel"])
+  ]),
   city("city.cn.xian", "CN", ["西安", "西安", "Xi'an", "西安", "시안"], 34.3416, 108.9398, "Asia/Shanghai", ["tourism", "hotel"]),
   city("city.cn.wuhan", "CN", ["武汉", "武漢", "Wuhan", "武漢", "우한"], 30.5928, 114.3055, "Asia/Shanghai", ["hotel", "business"]),
   city("city.cn.suzhou", "CN", ["苏州", "蘇州", "Suzhou", "蘇州", "쑤저우"], 31.2989, 120.5853, "Asia/Shanghai", ["tourism", "hotel"]),
@@ -197,8 +289,62 @@ function city(
     latitude,
     longitude,
     timezone,
+    tags,
+    administrativeLevel: "city"
+  };
+}
+
+function district(
+  slug: string,
+  nameValues: readonly [string, string, string, string, string],
+  latitude: number,
+  longitude: number,
+  tags: PlaceTag[]
+): DistrictDefinition {
+  return {
+    slug,
+    names: nameValues,
+    latitude,
+    longitude,
     tags
   };
+}
+
+function municipalityDistricts(
+  parentId: string,
+  countryCode: string,
+  cityNameValues: readonly [string, string, string, string, string],
+  timezone: string,
+  districts: DistrictDefinition[]
+): CityRecord[] {
+  return districts.map((record) => ({
+    id: `${parentId}.${record.slug}`,
+    countryCode,
+    names: localized(prefixedDistrictNames(cityNameValues, record.names)),
+    latitude: record.latitude,
+    longitude: record.longitude,
+    timezone,
+    tags: uniqueTags(["district", ...record.tags]),
+    administrativeLevel: "district",
+    parentId
+  }));
+}
+
+function prefixedDistrictNames(
+  cityNameValues: readonly [string, string, string, string, string],
+  districtNameValues: readonly [string, string, string, string, string]
+): readonly [string, string, string, string, string] {
+  return [
+    `${cityNameValues[0]} - ${districtNameValues[0]}`,
+    `${cityNameValues[1]} - ${districtNameValues[1]}`,
+    `${cityNameValues[2]} - ${districtNameValues[2]}`,
+    `${cityNameValues[3]} - ${districtNameValues[3]}`,
+    `${cityNameValues[4]} - ${districtNameValues[4]}`
+  ];
+}
+
+function uniqueTags(tags: PlaceTag[]): PlaceTag[] {
+  return Array.from(new Set(tags));
 }
 
 function localized(values: readonly [string, string, string, string, string]): LocalizedText {

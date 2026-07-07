@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-379 数据清洗忽略建议与批量采纳）
+更新日期：2026-07-07（ITER-380 Common API 直辖市区县下钻开关）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-380 Common API 直辖市区县下钻开关
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2309 / Common API
+- 类型：能力增强 / 基础设施 / 测试
+- 目标：为共享 `common-api` 地点目录补充直辖市区县级候选，同时避免 AutoLedger 默认城市选择被区县项污染；区县下钻主要供 AutoNotice 等需要更精确地点的 App 显式复用。
+- 改动范围：更新 `tools/worker/common-api/src/places-catalog.ts`、`tools/worker/common-api/src/index.ts`、Worker 合同测试、`versions/v1.7.0-plan.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 AutoLedger App UI、酒店消费编辑页、App 内置地点 fallback、账本数据、SQLite / CloudKit schema、StoreKit、ASC、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。
+- 完成内容：地点 catalog 为北京、上海、重庆、天津补充 `administrativeLevel`、`parentId`、`municipality` / `district` tags 和五语区县名称，资源版本推进到 `2026.07.07.1`。
+- 完成内容：`GET /v1/locations/cities` 默认过滤 `administrativeLevel=district` 记录，只返回城市级候选；调用方显式传 `includeDistricts=true` 时才返回区县级记录，并在响应中返回 `includeDistricts` 标记。
+- 完成内容：合同测试覆盖默认不返回北京海淀区、显式开启后返回北京海淀区和重庆渝中区，并验证简体中文、英文、韩语展示名和区县元数据。
+- 未完成内容：本轮未改造 AutoNotice 客户端，也未把区县下钻接入 AutoLedger 酒店消费编辑；若 AutoNotice 需要更多国家 / 城市区县，应在 common-api 继续按轻量常用集追加，不维护全量世界行政区库。
+- 测试情况：先新增合同测试并执行 `npm test`，确认默认端点仍返回区县导致预期失败；实现 `includeDistricts` 开关后再次执行 `npm test`，结果 PASS，29 个测试通过。
+- 风险与注意事项：区县名称为静态轻量目录，适合常见地点选择，不适合作为完整 GIS 数据源；默认城市端点保持城市级是兼容 AutoLedger 的关键边界。
+- 回滚方式：回退 `places-catalog.ts` 的区县记录和 `index.ts` 的 `includeDistricts` 参数处理，并删除对应合同测试与文档记录，即可恢复到纯城市目录。
+- 结论：本轮完成；common-api 已具备可选区县下钻能力，同时 AutoLedger 默认调用仍保持城市级。
+- 下一步建议：回到 AutoLedger 1.7.0 Pro 自动化主线，继续建议历史 / 审计记录或 Worker 辅助建议的脱敏特征合同设计。
 
 ### ITER-379 数据清洗忽略建议与批量采纳
 - 日期：2026-07-07
