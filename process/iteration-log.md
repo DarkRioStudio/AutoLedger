@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-392 酒店历史天气 App 展示第一版）
+更新日期：2026-07-07（ITER-393 iOS 数据清洗账本入口补强）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-393 iOS 数据清洗账本入口补强
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345G / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：修复 iPhone 最新 build 中数据清洗不够可见的问题，让用户在账本页也能直接进入智能整理建议。
+- 改动范围：`LedgerView` 右上角更多菜单新增“智能整理建议”入口，打开同一套 `DataCleaningSuggestionsView`；扩展 `scripts/check_data_cleaning_ios_entry_smoke.py`，同时约束设置页入口和账本页入口。
+- 未改动范围：未修改数据清洗建议模型、采纳 / 撤销逻辑、商户别名 / 分类学习存储、SQLite / CloudKit schema、Worker endpoint、`common-api` 上传策略、StoreKit、ASC metadata、截图 / App Preview 或构建 tag。
+- 完成内容：iPhone 端现在既可以从设置页“智能整理”进入，也可以在账本页更多菜单进入；两个入口共享同一份当前建议、Pro gate、批量采纳、撤销和最近清洗记录。
+- 未完成内容：本轮没有新增 Worker 辅助请求、跨设备同步建议队列或云端辅助返回建议 UI。
+- 测试情况：先扩展 `python3 scripts/check_data_cleaning_ios_entry_smoke.py` 并确认缺少账本入口时失败；实现后执行同一 smoke，结果 PASS。
+- 风险与注意事项：入口放在账本页更多菜单，不改变主工具栏按钮密度；未订阅用户进入后仍看到统一 Pro 自动化说明和免费能力边界。
+- 回滚方式：回退 `LedgerView` 的 `isPresentingDataCleaning` sheet 和菜单项，并回退 smoke 中对账本入口的检查，即可恢复到仅设置页入口。
+- 结论：本轮完成，iOS 数据清洗入口可见性补强完成。
+- 下一步建议：继续收口 `GOAL-2310` Notification History 补偿和最终全量门禁。
 
 ### ITER-392 酒店历史天气 App 展示第一版
 - 日期：2026-07-07

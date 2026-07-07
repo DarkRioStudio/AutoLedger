@@ -17,11 +17,15 @@ def main() -> int:
     failures: list[str] = []
     settings = (APP / "Features" / "Settings" / "SettingsView.swift").read_text(encoding="utf-8")
     cleaning = (APP / "Features" / "Settings" / "DataCleaningSuggestionsView.swift").read_text(encoding="utf-8")
+    ledger = (APP / "Features" / "Ledger" / "LedgerView.swift").read_text(encoding="utf-8")
 
     require(settings, 'settingsSection(title: "settings.section.smart_cleanup")', "SettingsView", failures)
     require(settings, "private func dataCleaningShortcutRow()", "SettingsView", failures)
     require(settings, "DataCleaningSuggestionsView()", "SettingsView", failures)
     require(settings, "wand.and.sparkles", "SettingsView", failures)
+    require(ledger, "isPresentingDataCleaning", "LedgerView", failures)
+    require(ledger, "DataCleaningSuggestionsView()", "LedgerView", failures)
+    require(ledger, 'Label("settings.data_cleaning.title", systemImage: "wand.and.sparkles")', "LedgerView", failures)
 
     appearance_index = settings.find('settingsSection(title: "settings.section.appearance")')
     cleanup_index = settings.find('settingsSection(title: "settings.section.smart_cleanup")')

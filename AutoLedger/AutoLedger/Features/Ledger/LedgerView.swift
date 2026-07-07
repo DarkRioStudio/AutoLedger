@@ -44,6 +44,7 @@ struct LedgerView: View {
     @State private var searchText = ""
     @State private var advancedSearchQuery = LedgerAdvancedSearchQuery()
     @State private var isPresentingAdvancedSearch = false
+    @State private var isPresentingDataCleaning = false
     @State private var isPresentingProSheet = false
     @State private var savedAdvancedSearches: [LedgerSavedSearch] = []
     @AppStorage("ledgerAdvancedSavedSearches") private var savedAdvancedSearchesData = Data()
@@ -158,6 +159,19 @@ struct LedgerView: View {
         }
         .sheet(isPresented: $isPresentingAdvancedSearch) {
             advancedSearchSheet
+        }
+        .sheet(isPresented: $isPresentingDataCleaning) {
+            NavigationStack {
+                DataCleaningSuggestionsView()
+                    .environmentObject(store)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingDataCleaning = false
+                            }
+                        }
+                    }
+            }
         }
         .sheet(isPresented: $isPresentingProSheet) {
             NavigationStack {
@@ -315,6 +329,12 @@ struct LedgerView: View {
                         presentLedgerProfiles()
                     } label: {
                         Label("ledger_profiles.title", systemImage: "books.vertical")
+                    }
+
+                    Button {
+                        isPresentingDataCleaning = true
+                    } label: {
+                        Label("settings.data_cleaning.title", systemImage: "wand.and.sparkles")
                     }
 
                     if !store.deletedTransactions.isEmpty {
