@@ -198,6 +198,7 @@ class ShareViewController: UIViewController {
                     rawText: text,
                     debugRecords: (try? store.loadDebugEvents()) ?? [],
                     activeTransactionIDs: Set(existing.map(\.id)),
+                    parsedAmount: receiptForSave.amount,
                     threshold: 0.8
                 )
             }()

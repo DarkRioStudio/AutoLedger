@@ -5233,6 +5233,35 @@ struct OfflineRegression {
         try await Task.sleep(nanoseconds: 200_000_000)  // 等待 Task 完成
         reporter.check(ledger.transactions.count == initialCount + 1, "LedgerStore imports unique OCR text")
 
+        do {
+            let differentAmountStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "different-amount-dedupe.sqlite3")
+            let differentAmountLedger = LedgerStore(transactionStore: differentAmountStore)
+            let firstAmountText = """
+            支付宝
+            交易成功
+            商户：近时相同商户
+            金额：￥12.50
+            时间：2026/03/27 09:15
+            订单号：SIMILAR-ORDER-001
+            """
+            let secondAmountText = """
+            支付宝
+            交易成功
+            商户：近时相同商户
+            金额：￥13.50
+            时间：2026/03/27 09:15
+            订单号：SIMILAR-ORDER-002
+            """
+            differentAmountLedger.importRecognizedText(firstAmountText, preferredSource: .alipay)
+            try await Task.sleep(nanoseconds: 200_000_000)
+            differentAmountLedger.importRecognizedText(secondAmountText, preferredSource: .alipay)
+            try await Task.sleep(nanoseconds: 200_000_000)
+            reporter.check(
+                differentAmountLedger.transactions.count == 2,
+                "LedgerStore does not skip OCR-similar same-merchant receipts when amounts differ"
+            )
+        }
+
         ledger.setMerchantAlias(original: "离线回归咖啡", alias: "回归咖啡")
         reporter.check(ledger.transactions.first?.merchant == "回归咖啡", "Merchant alias refreshes existing transactions")
 

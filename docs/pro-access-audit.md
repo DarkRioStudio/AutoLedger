@@ -1,6 +1,6 @@
 # Pro Access Audit
 
-Date: 2026-06-30
+Date: 2026-07-07
 
 This audit records the current Pro entitlement boundary after the source-available and Worker token-claim hardening pass. The goal is to keep local Free / Pro UX intact while making clear that server-cost features require server-side verification.
 
@@ -21,6 +21,7 @@ Risk: public source can be forked and local client checks can be modified. This 
 - Defines `AutoLedgerCapability`, `ProAccessTier`, and `AutoLedgerProAccessPolicy`.
 - Free/core capabilities remain free: `manualTransactionEntry`, `singleReceiptScan`, `manualHotelFolioImport`, `hotelStayArchiveAccess`, basic subscription/report/widget/export/backup, history edit/delete, and support donation.
 - Current P0 Pro capabilities remain `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
+- Planned v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro may gate full-ledger analysis, model-assisted suggestions, batch preview/application, low-confidence review queues, and optional Worker-assisted suggestion generation.
 - New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
 - `cloudFolioInbox` is `serverVerified`; local email scan, batch import, and advanced deduplication are still `localUIGate`.
 
@@ -56,7 +57,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 ### Direct `AutoLedgerCapability` Usage
 
 - Policy definitions and regression references use all capabilities.
-- Version docs and iteration logs reference `cloudFolioInbox` and P0 Pro gates.
+- Version docs and iteration logs reference `cloudFolioInbox`, P0 Pro gates, and planned v1.7.0 merchant normalization / data-cleaning gates.
 - UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
 
 ## Worker Side

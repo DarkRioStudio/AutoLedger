@@ -2176,6 +2176,7 @@ final class LedgerStore: ObservableObject {
             rawText: rawText,
             debugRecords: debugRecords,
             activeTransactionIDs: Set(transactions.map(\.id)),
+            parsedAmount: receipt.amount,
             threshold: 0.8
         ) {
             logger.info("[去重] OCR Jaccard 相似度命中（>0.8），判定为重复来源")

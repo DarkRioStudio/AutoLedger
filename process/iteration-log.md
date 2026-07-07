@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-376 CloudKit Production schema 发布门禁）
+更新日期：2026-07-07（ITER-377 OCR 金额差异去重保护与数据清洗计划）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-377 OCR 金额差异去重保护与数据清洗计划
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Ledger Import / Data Cleaning Planning
+- 类型：Bugfix / 文档 / Pro 边界治理
+- 目标：修复同商户、时间接近但金额不同的 OCR 账单被相似文本去重误判为重复的问题，并把 Mac / iOS 商户归一化与数据清洗建议写入 `v1.7.0` 执行计划。
+- 改动范围：更新 `ImportDuplicateDetector`、App 内 OCR / 快捷指令 / 语音 / Share Extension 去重调用点、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、账单解析字段、OCR UI、快捷指令参数、商户别名存储结构、分类学习实现、Common API、Worker、StoreKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`ImportDuplicateDetector.hasOCRTextDuplicate` 新增解析金额保护：当前导入金额和历史 debug record 金额都存在且差异超过 `0.01` 时，该历史 OCR 文本不参与 Jaccard 重复判断；缺少金额的旧 debug record 继续保持兼容，避免破坏旧导入记录。`LedgerStore`、`QuickLedgerIntent`、`VoiceLedgerIntent` 和 Share Extension 传入解析金额，共享同一规则。离线回归新增同商户同时间、OCR 文本高度相似但金额不同的样例，确认 `12.50` 与 `13.50` 两笔都能入账，同时既有相同金额相似 OCR 去重仍通过。
+- 完成内容：`v1.7.0` 计划新增 `GOAL-2345` 商户归一化与数据清洗建议，明确 Mac 端继续作为大屏清洗工作台、iOS 端复用同一建议合同提供轻量采纳；基础商户别名、分类学习、单条编辑和已采纳规则后续生效继续免费，Pro 只覆盖全账本自动分析、模型辅助建议、批量预览 / 应用、低置信度集中复核和可选 Worker 辅助。计划要求采纳结果反哺 OCR、快捷指令、语音、Share Extension 和手动记账保存前规则链路。
+- 未完成内容：本轮未实现新的商户归一化建议引擎、Mac / iOS 建议 UI、Worker 辅助分析、CloudKit 规则同步变更或新的 Pro policy capability；这些仍属于 `GOAL-2345` 后续实现范围。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增 “LedgerStore does not skip OCR-similar same-merchant receipts when amounts differ” 用例通过；脚本仍输出既有 `AppFormatters` `nonisolated(unsafe)` warning，本轮未处理。后续还需执行 `git diff --check` 作为收尾门禁。
+- 风险与注意事项：金额保护只在当前解析金额与历史 debug 金额都存在时排除相似 OCR；如果旧记录没有金额或新解析没识别到金额，仍沿用原相似文本去重策略以防重复导入。数据清洗建议规划涉及 Pro 边界和隐私边界，后续实现前必须先冻结建议合同、脱敏策略、撤销模型和本地 / Worker 模式切换。
+- 回滚方式：回退 `ImportDuplicateDetector` 的 `parsedAmount` / `amountTolerance` 参数与过滤逻辑，并移除四个调用点传参和离线回归新增用例；文档层回滚 `GOAL-2345`、Pro audit、CHANGELOG 与本日志条目即可。
+- 结论：本轮代码修复已通过离线回归；商户归一化与数据清洗建议已进入 `v1.7.0` 执行计划，但实现仍需单独开 GOAL。
+- 下一步建议：进入 `GOAL-2345` 前先设计平台无关 suggestion schema、采纳 / 忽略 / 撤销模型和隐私边界，再分别落 Mac 工作台与 iOS 轻量采纳入口。
 
 ### ITER-376 CloudKit Production schema 发布门禁
 - 日期：2026-07-07

@@ -72,6 +72,7 @@ struct VoiceLedgerIntent: AppIntent {
             debugRecords: (try? store.loadDebugEvents()) ?? [],
             activeTransactionIDs: Set(existing.map(\.id)),
             imageSource: .voiceIntent,
+            parsedAmount: receipt.amount,
             threshold: 0.95
         )
 

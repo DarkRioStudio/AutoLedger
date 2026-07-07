@@ -165,6 +165,7 @@ struct QuickLedgerIntent: AppIntent {
                 rawText: text,
                 debugRecords: (try? store.loadDebugEvents()) ?? [],
                 activeTransactionIDs: Set(existing.map(\.id)),
+                parsedAmount: receipt.amount,
                 threshold: 0.8
             )
         }()
