@@ -20,6 +20,7 @@ python3 "$ROOT/scripts/check_advanced_search_ui_smoke.py"
 python3 "$ROOT/scripts/check_subscription_anomaly_ui_smoke.py"
 python3 "$ROOT/scripts/check_monthly_export_ui_smoke.py"
 python3 "$ROOT/scripts/check_advanced_rule_automation_ui_smoke.py"
+python3 "$ROOT/scripts/check_asc_metadata_as_code_smoke.py"
 
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT

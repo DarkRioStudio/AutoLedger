@@ -10,6 +10,7 @@ require "optparse"
 require "pathname"
 require "time"
 require "uri"
+require "yaml"
 
 module ASCMetadata
   API_BASE = "https://api.appstoreconnect.apple.com"
@@ -20,6 +21,7 @@ module ASCMetadata
   DEFAULT_PLANNED_LOCALES = %w[zh-Hans zh-Hant en-US ja].freeze
   DEFAULT_FUTURE_LOCALES = %w[ko].freeze
   DEFAULT_SCREENSHOT_ROOT = "tools/appstore-screenshots/output/store"
+  DEFAULT_METADATA_CONFIG = "tools/asc-metadata/metadata.yml"
 
   SCREENSHOT_LOCALE_DIRS = {
     "zh-Hans" => "zh-Hans",
@@ -231,6 +233,7 @@ module ASCMetadata
         planned_locales: [],
         future_locales: [],
         exclude_shots: [],
+        config_path: DEFAULT_METADATA_CONFIG,
         apply: false,
         platforms: []
       }
@@ -243,6 +246,8 @@ module ASCMetadata
         audit
       when "copy-locale"
         copy_locale
+      when "push-config"
+        push_config
       else
         abort usage
       end
@@ -257,6 +262,7 @@ module ASCMetadata
         opts.on("--version VERSION", "Version string, default #{DEFAULT_VERSION}") { |v| @options[:version] = v }
         opts.on("--source-locale LOCALE", "Source locale, default #{DEFAULT_SOURCE_LOCALE}") { |v| @options[:source_locale] = v }
         opts.on("--target-locale LOCALE", "Target locale, default #{DEFAULT_TARGET_LOCALE}") { |v| @options[:target_locale] = v }
+        opts.on("--config PATH", "Metadata YAML config, default #{DEFAULT_METADATA_CONFIG}") { |v| @options[:config_path] = v }
         opts.on("--planned-locale LOCALE", "Expected ASC locale; can be repeated") { |v| @options[:planned_locales] << v }
         opts.on("--future-locale LOCALE", "Known future locale; can be repeated") { |v| @options[:future_locales] << v }
         opts.on("--screenshot-root PATH", "Local store screenshot root, default #{DEFAULT_SCREENSHOT_ROOT}") { |v| @options[:screenshot_root] = v }
@@ -281,6 +287,10 @@ module ASCMetadata
           # Apply the copy
           ASC_ISSUER_ID=... ASC_KEY_ID=... ASC_PRIVATE_KEY_PATH=/secure/AuthKey.p8 \\
             ruby tools/asc-metadata/asc_metadata.rb copy-locale --apply
+
+          # Preview pushing metadata.yml into ASC
+          ASC_ISSUER_ID=... ASC_KEY_ID=... ASC_PRIVATE_KEY_PATH=/secure/AuthKey.p8 \\
+            ruby tools/asc-metadata/asc_metadata.rb push-config --config tools/asc-metadata/metadata.yml
       USAGE
     end
 
@@ -339,6 +349,119 @@ module ASCMetadata
       app_info = app_info!
       copy_app_info_locale(app_info["id"], source, target)
       app_store_versions.each { |version| copy_version_locale(version, source, target) }
+    end
+
+    def push_config
+      config = load_metadata_config
+      apply_metadata_config_defaults(config)
+      mode = @options[:apply] ? "APPLY" : "DRY-RUN"
+      puts "#{mode}: push metadata config #{@options[:config_path]} for app #{@options[:app_id]}, version #{@options[:version]}"
+      puts "Planned locales: #{planned_locales.join(", ")}"
+      puts
+
+      app_info = app_info!
+      push_app_info_config(app_info["id"], config.fetch("app_info", {}))
+      push_version_localization_config(config.fetch("version_localizations", {}))
+      push_subscription_config(config)
+    end
+
+    def load_metadata_config
+      path = Pathname(@options[:config_path])
+      raise Error, "Metadata config not found: #{path}" unless path.file?
+
+      YAML.safe_load(path.read, aliases: true) || {}
+    rescue Psych::SyntaxError => e
+      raise Error, "Invalid metadata YAML #{path}: #{e.message}"
+    end
+
+    def apply_metadata_config_defaults(config)
+      config_app_id = config["app_id"].to_s.strip
+      config_version = config["version"].to_s.strip
+      @options[:app_id] = config_app_id unless config_app_id.empty? || @options[:app_id] != DEFAULT_APP_ID
+      @options[:version] = config_version unless config_version.empty? || @options[:version] != DEFAULT_VERSION
+      @options[:planned_locales] = Array(config["planned_locales"]).map(&:to_s) if @options[:planned_locales].empty? && config["planned_locales"]
+      @options[:future_locales] = Array(config["future_locales"]).map(&:to_s) if @options[:future_locales].empty? && config["future_locales"]
+    end
+
+    def push_app_info_config(app_info_id, localizations)
+      puts "App Info Config"
+      existing = app_info_localizations(app_info_id)
+      each_locale_attrs(localizations) do |locale, attrs|
+        target = find_locale(existing, locale)
+        upsert_localization(
+          type: "appInfoLocalizations",
+          target: target,
+          locale: locale,
+          attrs: attrs,
+          fields: APP_INFO_FIELDS,
+          relationships: { "appInfo" => { "data" => { "type" => "appInfos", "id" => app_info_id } } },
+          label: "app info #{locale}"
+        )
+      end
+      puts
+    end
+
+    def push_version_localization_config(localizations)
+      puts "Version Localization Config"
+      app_store_versions.each do |version|
+        version_attrs = version["attributes"] || {}
+        label = "#{version_attrs["platform"]} #{version_attrs["versionString"]}"
+        existing = version_localizations(version["id"])
+        each_locale_attrs(localizations) do |locale, attrs|
+          target = find_locale(existing, locale)
+          upsert_localization(
+            type: "appStoreVersionLocalizations",
+            target: target,
+            locale: locale,
+            attrs: attrs,
+            fields: VERSION_FIELDS,
+            relationships: { "appStoreVersion" => { "data" => { "type" => "appStoreVersions", "id" => version["id"] } } },
+            label: "#{label} #{locale}"
+          )
+        end
+      end
+      puts
+    end
+
+    def push_subscription_config(config)
+      puts "Subscription Config"
+      group_config = config.fetch("subscription_group", {})
+      group = configured_subscription_group(group_config)
+      if group && group_config["localizations"]
+        existing = subscription_group_localizations(group["id"])
+        each_locale_attrs(group_config["localizations"]) do |locale, attrs|
+          target = find_locale(existing, locale)
+          upsert_localization(
+            type: "subscriptionGroupLocalizations",
+            target: target,
+            locale: locale,
+            attrs: attrs,
+            fields: SUBSCRIPTION_GROUP_LOCALIZATION_FIELDS,
+            relationships: { "subscriptionGroup" => { "data" => { "type" => "subscriptionGroups", "id" => group["id"] } } },
+            label: "subscription group #{locale}"
+          )
+        end
+      end
+
+      subscriptions_by_product_id.each do |product_id, subscription|
+        product_config = config.fetch("subscriptions", {}).fetch(product_id, nil)
+        next unless product_config && product_config["localizations"]
+
+        existing = subscription_localizations(subscription["id"])
+        each_locale_attrs(product_config["localizations"]) do |locale, attrs|
+          target = find_locale(existing, locale)
+          upsert_localization(
+            type: "subscriptionLocalizations",
+            target: target,
+            locale: locale,
+            attrs: attrs,
+            fields: SUBSCRIPTION_LOCALIZATION_FIELDS,
+            relationships: { "subscription" => { "data" => { "type" => "subscriptions", "id" => subscription["id"] } } },
+            label: "subscription #{product_id} #{locale}"
+          )
+        end
+      end
+      puts
     end
 
     def app_info!
@@ -584,6 +707,25 @@ module ASCMetadata
       []
     end
 
+    def configured_subscription_group(group_config)
+      groups = subscription_groups
+      return nil if groups.empty?
+
+      reference_name = group_config["reference_name"].to_s.strip
+      return groups.first if reference_name.empty?
+
+      groups.find { |group| group.dig("attributes", "referenceName").to_s == reference_name } || groups.first
+    end
+
+    def subscriptions_by_product_id
+      subscription_groups.each_with_object({}) do |group, result|
+        subscriptions(group["id"]).each do |subscription|
+          product_id = subscription.dig("attributes", "productId").to_s
+          result[product_id] = subscription unless product_id.empty?
+        end
+      end
+    end
+
     def subscription_group_localizations(group_id)
       client.collection(
         "/v1/subscriptionGroups/#{group_id}/subscriptionGroupLocalizations",
@@ -762,6 +904,42 @@ module ASCMetadata
 
       available = localizations.map { |loc| loc.dig("attributes", "locale") }.compact.sort.join(", ")
       raise Error, "Missing #{locale} #{label} localization. Available: #{available}"
+    end
+
+    def each_locale_attrs(localizations)
+      localizations.to_h.sort.each do |locale, attrs|
+        yield locale.to_s, attrs.to_h
+      end
+    end
+
+    def upsert_localization(type:, target:, locale:, attrs:, fields:, relationships:, label:)
+      desired = desired_attributes(attrs, fields)
+      warn_config_missing(desired, fields, label)
+      if target
+        changed = desired.each_with_object({}) do |(field, value), result|
+          result[field] = value unless target.dig("attributes", field) == value
+        end
+        patch_resource(type, target["id"], changed, label)
+      else
+        create_resource(type, desired.merge("locale" => locale), relationships, label)
+      end
+    end
+
+    def desired_attributes(attrs, fields)
+      attrs.each_with_object({}) do |(key, value), result|
+        field = key.to_s
+        next unless fields.include?(field)
+        next if value.nil?
+
+        result[field] = value
+      end
+    end
+
+    def warn_config_missing(attrs, fields, label)
+      missing = fields.select { |field| attrs[field].nil? || attrs[field].to_s.empty? }
+      return if missing.empty?
+
+      warn "  warning: metadata config #{label} has empty fields: #{missing.join(", ")}"
     end
 
     def copied_attributes(source, fields, include_locale:, target_locale:)

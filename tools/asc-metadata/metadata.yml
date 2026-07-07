@@ -1,0 +1,123 @@
+app_id: "6761892533"
+version: "1.6.0"
+planned_locales:
+  - "zh-Hans"
+  - "zh-Hant"
+  - "en-US"
+  - "ja"
+  - "ko"
+future_locales: []
+
+app_info:
+  zh-Hans:
+    name: "AutoLedger - 一键记账"
+    subtitle: "截图、语音、酒店水单自动整理"
+    privacyPolicyUrl: "https://getautoledger.app/privacy"
+    privacyPolicyText: "AutoLedger 会在 Apple TV 版中显示只读月报、账本摘要和最近记录。账本资料优先保存在设备本地；如果使用 iCloud，同步会通过用户自己的 iCloud 账户完成。AutoLedger 不出售用户资料，也不使用第三方广告追踪。Apple TV 版不提供相机、麦克风、照片、信箱或酒店水单 PDF 导入。截图识别、收据辨识、饭店水单汇入、本机信箱扫描和 Pro 自动化主要在 iPhone、iPad 和 Mac 上完成。"
+  zh-Hant:
+    name: "AutoLedger - 一鍵記帳"
+    subtitle: "截圖、語音、飯店水單自動整理"
+    privacyPolicyUrl: "https://getautoledger.app/privacy"
+    privacyPolicyText: "AutoLedger 會在 Apple TV 版中顯示唯讀月報、帳本摘要和最近記錄。帳本資料優先保存在裝置本機；如果使用 iCloud，同步會透過使用者自己的 iCloud 帳戶完成。AutoLedger 不出售使用者資料，也不使用第三方廣告追蹤。Apple TV 版不提供相機、麥克風、照片、信箱或飯店水單 PDF 匯入。截圖辨識、收據辨識、飯店水單匯入、本機信箱掃描和 Pro 自動化主要在 iPhone、iPad 和 Mac 上完成。"
+  en-US:
+    name: "AutoLedger - Quick Ledger"
+    subtitle: "Screenshots, voice, hotel folios"
+    privacyPolicyUrl: "https://getautoledger.app/privacy"
+    privacyPolicyText: "AutoLedger for Apple TV shows read-only monthly reports, ledger summaries, and recent entries. Ledger data is stored on device first. If iCloud sync is enabled, syncing uses the user's own iCloud account. AutoLedger does not sell user data and does not use third-party advertising tracking. The Apple TV app does not import camera, microphone, photos, email, or hotel folio PDF content. Screenshot recognition, receipt review, hotel folio import, local email scanning, and Pro automation are mainly available on iPhone, iPad, and Mac."
+  ja:
+    name: "AutoLedger - 簡単記帳"
+    subtitle: "スクショ、音声、ホテル明細を整理"
+    privacyPolicyUrl: "https://getautoledger.app/privacy"
+    privacyPolicyText: "Apple TV 版 AutoLedger では、月次レポート、台帳概要、最近の記録を読み取り専用で表示します。台帳データはまず端末内に保存され、iCloud 同期を有効にした場合は利用者自身の iCloud アカウントで同期されます。AutoLedger は利用者データを販売せず、第三者広告トラッキングも使用しません。Apple TV 版ではカメラ、マイク、写真、メール、ホテル明細 PDF の取り込みは行いません。スクリーンショット認識、レシート確認、ホテル明細取り込み、ローカルメールスキャン、Pro 自動化は主に iPhone、iPad、Mac で利用できます。"
+  ko:
+    name: "AutoLedger - 빠른 가계부"
+    subtitle: "스크린샷, 음성, 호텔 명세서 정리"
+    privacyPolicyUrl: "https://getautoledger.app/privacy"
+    privacyPolicyText: "Apple TV용 AutoLedger는 읽기 전용 월간 보고서, 장부 요약, 최근 기록을 표시합니다. 장부 데이터는 먼저 기기에 저장되며, iCloud 동기화를 켜면 사용자의 iCloud 계정을 통해 동기화됩니다. AutoLedger는 사용자 데이터를 판매하지 않으며 타사 광고 추적을 사용하지 않습니다. Apple TV 앱은 카메라, 마이크, 사진, 이메일 또는 호텔 명세서 PDF를 가져오지 않습니다. 스크린샷 인식, 영수증 확인, 호텔 명세서 가져오기, 로컬 이메일 스캔, Pro 자동화는 주로 iPhone, iPad, Mac에서 사용할 수 있습니다."
+
+version_localizations:
+  zh-Hans:
+    promotionalText: "Pro 自动化已扩展到酒店水单、订阅异常、高级搜索和月结整理。"
+    description: "AutoLedger 是一款本地优先的个人记账工具。你可以通过截图、拍照、语音、快捷指令和手动输入记录日常消费，并在确认后写入本地账本。它支持多账本、酒店消费、水单复核、订阅管理、月报统计和基础导出。AutoLedger Pro 进一步提供邮箱水单扫描、专属收件箱、批量候选整理、高级搜索、订阅异常提醒、月结资料包和规则自动化等效率能力。基础记账、历史查看、编辑、删除和基础导出不会因为 Pro 到期而被锁定。"
+    keywords: "记账,账本,截图记账,酒店水单,订阅管理,月报,快捷指令,OCR"
+    supportUrl: "https://getautoledger.app/support"
+    marketingUrl: "https://getautoledger.app"
+    whatsNew: "新增实时 OCR 票据扫描、韩语界面与识别、多币种准备、酒店水单复核改进，以及 Pro 高级搜索、订阅异常、月结包和自动化规则。"
+  zh-Hant:
+    promotionalText: "Pro 自動化已擴展到飯店水單、訂閱異常、進階搜尋和月結整理。"
+    description: "AutoLedger 是一款本機優先的個人記帳工具。你可以透過截圖、拍照、語音、捷徑和手動輸入記錄日常消費，並在確認後寫入本機帳本。它支援多帳本、飯店消費、水單複核、訂閱管理、月報統計和基礎匯出。AutoLedger Pro 進一步提供信箱水單掃描、專屬收件箱、批次候選整理、進階搜尋、訂閱異常提醒、月結資料包和規則自動化等效率能力。基礎記帳、歷史查看、編輯、刪除和基礎匯出不會因 Pro 到期而被鎖定。"
+    keywords: "記帳,帳本,截圖記帳,飯店水單,訂閱管理,月報,捷徑,OCR"
+    supportUrl: "https://getautoledger.app/support"
+    marketingUrl: "https://getautoledger.app"
+    whatsNew: "新增即時 OCR 票據掃描、韓語介面與識別、多幣種準備、飯店水單複核改進，以及 Pro 進階搜尋、訂閱異常、月結包和自動化規則。"
+  en-US:
+    promotionalText: "Pro automation now covers hotel folios, anomaly checks, advanced search, and monthly cleanup."
+    description: "AutoLedger is a local-first personal ledger for everyday spending. Capture expenses from screenshots, camera photos, voice, Shortcuts, or manual entry, then review before saving them to your ledger. It supports multiple ledgers, hotel stays, folio review, subscription management, monthly reports, and basic exports. AutoLedger Pro adds automation for email folio scanning, a dedicated inbox, batch candidate cleanup, advanced search, subscription anomaly checks, monthly export packages, and rule automation. Basic ledger entries, history, editing, deletion, and basic exports stay available even when Pro expires."
+    keywords: "ledger,expense,receipt OCR,hotel folio,subscriptions,monthly report,Shortcuts"
+    supportUrl: "https://getautoledger.app/support"
+    marketingUrl: "https://getautoledger.app"
+    whatsNew: "Adds live OCR receipt scanning, Korean UI and recognition, multi-currency preparation, hotel folio review improvements, and Pro automation for search, subscriptions, monthly exports, and rules."
+  ja:
+    promotionalText: "Pro 自動化がホテル明細、異常チェック、高度な検索、月次整理に対応しました。"
+    description: "AutoLedger はローカル優先の個人向け記帳アプリです。スクリーンショット、カメラ写真、音声、ショートカット、手入力から支出を記録し、確認してから台帳へ保存できます。複数台帳、ホテル滞在、明細確認、サブスクリプション管理、月次レポート、基本エクスポートに対応します。AutoLedger Pro では、メール内のホテル明細スキャン、専用受信箱、候補の一括整理、高度な検索、サブスクリプション異常チェック、月次エクスポートパッケージ、ルール自動化などの効率機能を利用できます。基本の記帳、履歴表示、編集、削除、基本エクスポートは Pro の期限後も利用できます。"
+    keywords: "記帳,家計簿,レシートOCR,ホテル明細,サブスク,月次レポート,ショートカット"
+    supportUrl: "https://getautoledger.app/support"
+    marketingUrl: "https://getautoledger.app"
+    whatsNew: "リアルタイム OCR スキャン、韓国語 UI と認識、多通貨準備、ホテル明細確認の改善、Pro の検索・サブスク・月次出力・ルール自動化を追加しました。"
+  ko:
+    promotionalText: "Pro 자동화가 호텔 명세서, 이상 확인, 고급 검색, 월간 정리로 확장되었습니다."
+    description: "AutoLedger는 로컬 우선 개인 장부 앱입니다. 스크린샷, 카메라 사진, 음성, 단축어, 직접 입력으로 지출을 기록하고 확인 후 장부에 저장할 수 있습니다. 여러 장부, 호텔 숙박, 명세서 검토, 구독 관리, 월간 보고서, 기본 내보내기를 지원합니다. AutoLedger Pro는 이메일 호텔 명세서 스캔, 전용 수신함, 후보 일괄 정리, 고급 검색, 구독 이상 확인, 월간 내보내기 패키지, 규칙 자동화 같은 효율 기능을 제공합니다. 기본 기록, 기록 보기, 편집, 삭제, 기본 내보내기는 Pro가 만료되어도 계속 사용할 수 있습니다."
+    keywords: "가계부,장부,영수증OCR,호텔명세서,구독관리,월간보고서,단축어"
+    supportUrl: "https://getautoledger.app/support"
+    marketingUrl: "https://getautoledger.app"
+    whatsNew: "실시간 OCR 영수증 스캔, 한국어 UI와 인식, 다중 통화 준비, 호텔 명세서 검토 개선, Pro 고급 검색·구독 이상·월간 내보내기·규칙 자동화를 추가했습니다."
+
+subscription_group:
+  reference_name: "Pro Subscription Group"
+  localizations:
+    zh-Hans:
+      name: "AutoLedger 专业版"
+    zh-Hant:
+      name: "AutoLedger 專業版"
+    en-US:
+      name: "AutoLedger Pro"
+    ja:
+      name: "AutoLedger Pro"
+    ko:
+      name: "AutoLedger Pro"
+
+subscriptions:
+  top.darkrio326.AutoLedger.pro.monthly:
+    localizations:
+      zh-Hans:
+        name: "AutoLedger Pro 月付"
+        description: "解锁Pro更多自动化能力：包括但不限于邮箱水单扫描、专属收件箱与批量候选整理"
+      zh-Hant:
+        name: "AutoLedger Pro 月付"
+        description: "解鎖Pro更多自動化能力：含信箱水單掃描、專屬收件箱與批次候選整理"
+      en-US:
+        name: "AutoLedger Pro Monthly"
+        description: "Pro automation: email folios, inbox, batch cleanup"
+      ja:
+        name: "AutoLedger Pro 月額"
+        description: "Pro自動化: メール明細、専用受信箱、一括整理"
+      ko:
+        name: "AutoLedger Pro 월간"
+        description: "Pro 자동화: 메일 명세서, 전용함, 일괄 정리"
+  top.darkrio326.AutoLedger.pro.yearly:
+    localizations:
+      zh-Hans:
+        name: "AutoLedger Pro 年付"
+        description: "解锁Pro更多自动化能力：包括但不限于邮箱水单扫描、专属收件箱与批量候选整理"
+      zh-Hant:
+        name: "AutoLedger Pro 年付"
+        description: "解鎖Pro更多自動化能力：含信箱水單掃描、專屬收件箱與批次候選整理"
+      en-US:
+        name: "AutoLedger Pro Yearly"
+        description: "Pro automation: email folios, inbox, batch cleanup"
+      ja:
+        name: "AutoLedger Pro 年額"
+        description: "Pro自動化: メール明細、専用受信箱、一括整理"
+      ko:
+        name: "AutoLedger Pro 연간"
+        description: "Pro 자동화: 메일 명세서, 전용함, 일괄 정리"

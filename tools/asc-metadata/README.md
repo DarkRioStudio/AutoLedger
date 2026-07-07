@@ -6,6 +6,14 @@ This first tool uses the official App Store Connect API to audit localizations
 and copy the current English (U.S.) metadata into English (U.K.) as a short-term
 workaround for App Store Connect locale validation issues.
 
+For v1.7.0 and later, the preferred flow is metadata-as-code:
+
+1. Edit `tools/asc-metadata/metadata.yml`.
+2. Run `audit` to inspect the current App Store Connect state.
+3. Run `push-config` without `--apply` and review the dry-run diff.
+4. Run `push-config --apply` only after the diff is expected.
+5. Run `audit` again before submitting the version.
+
 ## Credentials
 
 Do not commit `.p8` keys or `.env` files. Provide credentials through your shell:
@@ -63,6 +71,40 @@ ruby tools/asc-metadata/asc_metadata.rb audit \
   --platform IOS \
   --exclude-shot 04_workspace_cleaning
 ```
+
+## Push Metadata Config
+
+`metadata.yml` is the repo-owned source for app info, version localizations,
+subscription group localization, and monthly/yearly subscription localization.
+It intentionally does not contain API keys, private keys, real ledger data,
+hotel orders, email content, screenshots, or App Preview binaries.
+
+Dry-run first:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb push-config \
+  --config tools/asc-metadata/metadata.yml
+```
+
+Apply after reviewing the dry-run output:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb push-config \
+  --config tools/asc-metadata/metadata.yml \
+  --apply
+```
+
+The push updates or creates:
+
+- `appInfoLocalizations`: app name, subtitle, Privacy Policy URL, Apple TV privacy policy text
+- `appStoreVersionLocalizations`: description, keywords, marketing URL, promotional text, support URL, What's New
+- `subscriptionGroupLocalizations`: subscription group display name
+- `subscriptionLocalizations`: product display name and description
+
+`push-config` uses App Store Connect API dry-run mode by default and prints the
+field-level changes it would make. It still requires credentials because it has
+to compare the config against current ASC resource IDs. Subscription
+descriptions must stay within ASC's 55-character limit.
 
 ## Copy English (U.S.) To English (U.K.)
 

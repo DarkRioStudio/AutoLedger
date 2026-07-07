@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-390 高级规则自动应用第一版）
+更新日期：2026-07-07（ITER-391 ASC metadata-as-code 第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-391 ASC metadata-as-code 第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2312 / Release Automation
+- 类型：发布自动化 / 工具 / 测试
+- 目标：把 ASC 1.6.0 的五语 App Info、版本文案、订阅组和订阅商品本地化收敛为 repo 源文件，并提供可审计的 dry-run / apply 工具。
+- 改动范围：新增 `tools/asc-metadata/metadata.yml`；扩展 `asc_metadata.rb push-config`；更新 ASC metadata README；新增 `scripts/check_asc_metadata_as_code_smoke.py` 并接入离线回归；更新 v1.7.0 计划和 CHANGELOG。
+- 未改动范围：未上传截图或 App Preview；未自动提交审核；未修改 App Privacy nutrition label；未提交 ASC API key、issuer id、key id、p8 或任何 secret；未修改 Xcode Cloud、StoreKit、SQLite / CloudKit schema 或构建 tag。
+- 完成内容：`push-config` 可从 YAML 更新或创建 `appInfoLocalizations`、`appStoreVersionLocalizations`、`subscriptionGroupLocalizations` 和 `subscriptionLocalizations`；默认 dry-run 输出字段级 diff，显式 `--apply` 才写入 ASC。配置覆盖中简、繁中、美英、日、韩五语，并静态校验 Pro 订阅描述不超过 55 字符。
+- 未完成内容：截图和 App Preview 仍由现有独立上传 / 审计脚本处理；App Privacy 问卷仍需人工确认；五语商店文案发布前仍需人工审校，尤其是日语和韩语。
+- 测试情况：执行 `python3 scripts/check_asc_metadata_as_code_smoke.py`、`ruby -c tools/asc-metadata/asc_metadata.rb`、`ruby -c tools/asc-metadata/asc_screenshot_upload.rb` 和 YAML 解析 / 订阅描述长度检查，结果均 PASS。
+- 风险与注意事项：`push-config --apply` 会真实写入 ASC，应始终先跑 dry-run 和 audit；当前配置是 ASC 1.6.0 发布线源数据，不应回写到仍在审核或已上线的旧版本。
+- 回滚方式：回退 `metadata.yml`、`asc_metadata.rb push-config`、README、`check_asc_metadata_as_code_smoke.py` 和离线回归接入即可恢复到只支持 audit / copy-locale / screenshot upload 的工具状态。
+- 结论：本轮完成，GOAL-2312 第一版工程闭环可进入 Worker / ASSN 和最终门禁收口。
+- 下一步建议：继续验证 Common API 与 hotel-folio-inbox Worker 的 typecheck / test / deployment 状态，再进入全量 App 回归和构建 tag 移动。
 
 ### ITER-390 高级规则自动应用第一版
 - 日期：2026-07-07
