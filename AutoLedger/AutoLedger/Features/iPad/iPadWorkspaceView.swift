@@ -1106,6 +1106,7 @@ private struct IPadBatchImportWorkspaceView: View {
                     CameraPicker(imageData: $capturedImageData)
                 case .voice:
                     VoiceLedgerConfirmView()
+                        .environmentObject(store)
                 case .pro:
                     NavigationStack {
                         AutoLedgerProView()
@@ -3515,6 +3516,7 @@ private struct IPadLedgerWorkspaceView: View {
                     }
                     return didSave
                 }
+                .environmentObject(store)
             }
             .sheet(isPresented: $isAddingTransaction) {
                 TransactionEditorView(
@@ -3534,9 +3536,11 @@ private struct IPadLedgerWorkspaceView: View {
                     }
                     return didSave
                 }
+                .environmentObject(store)
             }
             .sheet(isPresented: $isShowingVoiceLedger) {
                 VoiceLedgerConfirmView()
+                    .environmentObject(store)
             }
             .confirmationDialog(
                 batchConfirmationTitle,

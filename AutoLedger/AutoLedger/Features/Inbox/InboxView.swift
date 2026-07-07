@@ -80,6 +80,7 @@ struct InboxView: View {
             }
             .sheet(isPresented: $isPresentingVoiceEntry) {
                 VoiceLedgerConfirmView()
+                    .environmentObject(store)
             }
             .sheet(isPresented: $showCamera) {
                 CameraPicker(imageData: $capturedImageData)
@@ -89,6 +90,7 @@ struct InboxView: View {
             }
             .sheet(item: pendingReceiptReviewBinding) { draft in
                 ReceiptImportConfirmView(draft: draft)
+                    .environmentObject(store)
             }
             .task(id: selectedPhoto) {
                 guard let selectedPhoto else {
@@ -987,6 +989,7 @@ struct InboxView: View {
         ) { newTransaction, _, _ in
             store.addTransaction(newTransaction)
         }
+        .environmentObject(store)
     }
 
     @ViewBuilder
