@@ -75,6 +75,7 @@ public struct DataCleaningPreviewPlanner: Sendable {
         let activeTransactions = transactions.sorted { $0.occurredAt > $1.occurredAt }
         var items: [DataCleaningPreviewItem] = []
         items.append(contentsOf: merchantAliasItems(transactions: activeTransactions, merchantAliases: merchantAliases))
+        items.append(contentsOf: merchantNormalizationItems(transactions: activeTransactions, merchantAliases: merchantAliases))
         items.append(contentsOf: categoryCorrectionItems(transactions: activeTransactions, categoryCorrections: categoryCorrections))
         items.append(contentsOf: duplicateItems(transactions: activeTransactions))
         return DataCleaningPreviewSnapshot(items: items)
@@ -100,6 +101,82 @@ public struct DataCleaningPreviewPlanner: Sendable {
                     reason: "merchant alias"
                 )
             }
+    }
+
+    private func merchantNormalizationItems(
+        transactions: [Transaction],
+        merchantAliases: [String: String]
+    ) -> [DataCleaningPreviewItem] {
+        let groups = Dictionary(grouping: transactions) { $0.merchant.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.key.isEmpty }
+        let stats = groups.map { merchant, transactions in
+            MerchantNormalizationStats(
+                merchant: merchant,
+                normalized: normalizedMerchantKey(merchant),
+                count: transactions.count,
+                transactionIDs: transactions.map(\.id)
+            )
+        }
+        .filter { !$0.normalized.isEmpty }
+
+        return stats
+            .filter { candidate in
+                candidate.count > 0 &&
+                    merchantAliases[candidate.merchant] == nil &&
+                    !merchantAliases.values.contains(candidate.merchant)
+            }
+            .compactMap { candidate -> DataCleaningPreviewItem? in
+                guard let target = bestNormalizationTarget(for: candidate, in: stats) else { return nil }
+                return DataCleaningPreviewItem(
+                    id: "merchantNormalization:\(candidate.merchant)->\(target.merchant)",
+                    kind: .merchantAlias,
+                    title: candidate.merchant,
+                    subtitle: "\(candidate.count)",
+                    currentValue: candidate.merchant,
+                    proposedValue: target.merchant,
+                    affectedTransactionIDs: candidate.transactionIDs,
+                    score: merchantNormalizationScore(candidate: candidate, target: target),
+                    reason: "merchant normalization suggestion"
+                )
+            }
+            .sorted { lhs, rhs in
+                if (lhs.score ?? 0) != (rhs.score ?? 0) {
+                    return (lhs.score ?? 0) > (rhs.score ?? 0)
+                }
+                return lhs.currentValue < rhs.currentValue
+            }
+    }
+
+    private func bestNormalizationTarget(
+        for candidate: MerchantNormalizationStats,
+        in stats: [MerchantNormalizationStats]
+    ) -> MerchantNormalizationStats? {
+        stats
+            .filter { target in
+                target.merchant != candidate.merchant &&
+                    target.count >= 2 &&
+                    target.normalized.count >= 4 &&
+                    candidate.normalized.hasPrefix(target.normalized) &&
+                    candidate.normalized.count >= target.normalized.count + 3
+            }
+            .sorted { lhs, rhs in
+                if lhs.count != rhs.count { return lhs.count > rhs.count }
+                if lhs.normalized.count != rhs.normalized.count {
+                    return lhs.normalized.count > rhs.normalized.count
+                }
+                return lhs.merchant < rhs.merchant
+            }
+            .first
+    }
+
+    private func merchantNormalizationScore(
+        candidate: MerchantNormalizationStats,
+        target: MerchantNormalizationStats
+    ) -> Double {
+        let support = min(0.12, Double(target.count - 1) * 0.04)
+        let extraLength = max(0, candidate.normalized.count - target.normalized.count)
+        let suffixSignal = min(0.08, Double(extraLength) * 0.01)
+        return min(0.95, 0.78 + support + suffixSignal)
     }
 
     private func categoryCorrectionItems(
@@ -179,6 +256,13 @@ public struct DataCleaningPreviewPlanner: Sendable {
         merchant.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
+    private func normalizedMerchantKey(_ merchant: String) -> String {
+        merchant
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber }
+    }
+
     private func normalizedSource(_ source: String) -> String {
         source.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
@@ -204,4 +288,11 @@ public struct DataCleaningPreviewPlanner: Sendable {
         }
         return "same merchant, amount, and nearby time"
     }
+}
+
+private struct MerchantNormalizationStats: Sendable {
+    let merchant: String
+    let normalized: String
+    let count: Int
+    let transactionIDs: [UUID]
 }

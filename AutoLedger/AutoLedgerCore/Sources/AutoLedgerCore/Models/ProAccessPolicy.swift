@@ -15,6 +15,7 @@ public enum AutoLedgerCapability: String, CaseIterable, Codable, Equatable, Send
     case localEmailFolioScan
     case batchCandidateImport
     case advancedDeduplication
+    case merchantNormalizationSuggestions
     case cloudFolioInbox
 
     case advancedSearch
@@ -57,6 +58,7 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
         case .localEmailFolioScan,
              .batchCandidateImport,
              .advancedDeduplication,
+             .merchantNormalizationSuggestions,
              .cloudFolioInbox:
             return .proAutomationP0
 
@@ -102,7 +104,8 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .supportDeveloperDonation,
              .localEmailFolioScan,
              .batchCandidateImport,
-             .advancedDeduplication:
+             .advancedDeduplication,
+             .merchantNormalizationSuggestions:
             return .localUIGate
 
         case .cloudFolioInbox:
@@ -130,7 +133,7 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
             return [.manualHotelFolioImport, .hotelStayArchiveAccess]
         case .batchCandidateImport:
             return [.singleReceiptScan, .manualHotelFolioImport]
-        case .advancedDeduplication, .advancedRuleAutomation:
+        case .advancedDeduplication, .merchantNormalizationSuggestions, .advancedRuleAutomation:
             return [.historyViewEditDelete]
         case .advancedSearch:
             return [.historyViewEditDelete]

@@ -193,6 +193,19 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
 
                         NavigationLink {
+                            DataCleaningSuggestionsView()
+                                .environmentObject(store)
+                        } label: {
+                            settingsRow(
+                                icon: "wand.and.sparkles",
+                                iconColor: AppTheme.accent,
+                                title: "settings.data_cleaning.title",
+                                subtitle: "settings.data_cleaning.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink {
                             CategoryLearningView()
                                 .environmentObject(store)
                         } label: {

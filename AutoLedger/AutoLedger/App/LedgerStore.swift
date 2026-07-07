@@ -25,6 +25,8 @@ private struct DataCleaningUndoSnapshot {
     let kind: DataCleaningPreviewKind
     let previousActiveTransactions: [Transaction]
     let previousDeletedTransactions: [Transaction]
+    let previousMerchantAliases: [String: String]
+    let previousMerchantAliasDeletedKeys: Set<String>
     let updatedCount: Int
     let deletedCount: Int
 }
@@ -1777,14 +1779,26 @@ final class LedgerStore: ObservableObject {
     func applyDataCleaningPreview(_ preview: DataCleaningPreviewItem) -> DataCleaningApplicationResult {
         let previousActive = transactions
         let previousDeleted = deletedTransactions
+        let previousMerchantAliases = merchantAliases
+        let previousMerchantAliasDeletedKeys = merchantAliasDeletedKeys
         let affectedIDs = Set(preview.affectedTransactionIDs)
         var updatedCount = 0
         var deletedCount = 0
         var skippedCount = 0
+        var ruleChanged = false
 
         do {
             switch preview.kind {
             case .merchantAlias:
+                let trimmedOriginal = preview.currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmedAlias = preview.proposedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmedOriginal.isEmpty,
+                   !trimmedAlias.isEmpty,
+                   trimmedOriginal != trimmedAlias,
+                   merchantAliases[trimmedOriginal] != trimmedAlias {
+                    recordMerchantAlias(original: trimmedOriginal, alias: trimmedAlias)
+                    ruleChanged = true
+                }
                 for transaction in transactions where affectedIDs.contains(transaction.id) {
                     guard let updated = transaction.applyingMerchantAlias(
                         original: preview.currentValue,
@@ -1823,6 +1837,10 @@ final class LedgerStore: ObservableObject {
             }
         } catch {
             restoreDataCleaningSnapshot(active: previousActive, deleted: previousDeleted)
+            restoreMerchantAliasState(
+                aliases: previousMerchantAliases,
+                deletedKeys: previousMerchantAliasDeletedKeys
+            )
             lastImportSummary = "数据清洗应用失败，已尝试恢复到应用前状态：\(error.localizedDescription)"
             let result = DataCleaningApplicationResult(
                 previewID: preview.id,
@@ -1837,22 +1855,25 @@ final class LedgerStore: ObservableObject {
         }
 
         let changedCount = updatedCount + deletedCount
+        let canUndo = changedCount > 0 || ruleChanged
         let result = DataCleaningApplicationResult(
             previewID: preview.id,
             kind: preview.kind,
             updatedCount: updatedCount,
             deletedCount: deletedCount,
             skippedCount: skippedCount,
-            canUndo: changedCount > 0
+            canUndo: canUndo
         )
         lastDataCleaningApplicationResult = result
 
-        if changedCount > 0 {
+        if canUndo {
             lastDataCleaningUndoSnapshot = DataCleaningUndoSnapshot(
                 previewID: preview.id,
                 kind: preview.kind,
                 previousActiveTransactions: previousActive,
                 previousDeletedTransactions: previousDeleted,
+                previousMerchantAliases: previousMerchantAliases,
+                previousMerchantAliasDeletedKeys: previousMerchantAliasDeletedKeys,
                 updatedCount: updatedCount,
                 deletedCount: deletedCount
             )
@@ -1879,6 +1900,10 @@ final class LedgerStore: ObservableObject {
         restoreDataCleaningSnapshot(
             active: snapshot.previousActiveTransactions,
             deleted: snapshot.previousDeletedTransactions
+        )
+        restoreMerchantAliasState(
+            aliases: snapshot.previousMerchantAliases,
+            deletedKeys: snapshot.previousMerchantAliasDeletedKeys
         )
         let result = DataCleaningApplicationResult(
             previewID: snapshot.previewID,
@@ -1980,6 +2005,24 @@ final class LedgerStore: ObservableObject {
         transactions = active
         deletedTransactions = Array(deleted.prefix(50))
         sortTransactions()
+    }
+
+    private func restoreMerchantAliasState(aliases: [String: String], deletedKeys: Set<String>) {
+        if let sqlStore = transactionStore as? SQLiteTransactionStore {
+            let currentKeys = Set(merchantAliases.keys)
+            let restoredKeys = Set(aliases.keys)
+            for removedKey in currentKeys.subtracting(restoredKeys) {
+                try? sqlStore.deleteMerchantAlias(original: removedKey)
+            }
+            for (original, alias) in aliases {
+                try? sqlStore.saveMerchantAlias(original: original, alias: alias)
+            }
+        }
+        merchantAliases = aliases
+        merchantAliasDeletedKeys = deletedKeys
+        UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
+        persistMerchantAliasDeletedKeys()
+        markLedgerConfigurationChanged()
     }
 
     private func learnMerchantAliasIfNeeded(from original: Transaction, to updated: Transaction) {

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-377 OCR 金额差异去重保护与数据清洗计划）
+更新日期：2026-07-07（ITER-378 商户归一化建议与 iPhone 智能整理入口）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-378 商户归一化建议与 iPhone 智能整理入口
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345A / Pro Automation
+- 类型：能力增强 / Pro 边界治理 / UI
+- 目标：优先完成 iOS 和通用平台层面的 Pro 自动化第一段，让 App 可以本地分析账本、提出商户归一化建议，并在 iPhone 上提供可采纳入口。
+- 改动范围：更新 `DataCleaningPreviewPlanner`、`AutoLedgerProAccessPolicy`、`LedgerStore` 数据清洗采纳 / 撤销逻辑、新增 `DataCleaningSuggestionsView`、设置页入口、iPad / Mac 清洗原因文案、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、App Store Connect、Worker、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现 Worker 辅助建议、忽略建议、建议历史、批量全选、跨设备建议队列、复杂模糊匹配或 Mac 专属新 UI。
+- 完成内容：`DataCleaningPreviewPlanner` 新增本地商户归一化建议。规则先保持保守：短商户名在账本中至少出现 2 次，长商户名以该短商户名为前缀并带有额外后缀时，生成 `.merchantAlias` 建议，适合门店、航站楼、分店等常见后缀整理。
+- 完成内容：`LedgerStore.applyDataCleaningPreview` 在采纳商户统一建议时会写入商户别名并回刷历史账单；后续 OCR、快捷指令、语音、Share Extension 和手动新增账单继续复用既有别名规则。数据清洗撤销现在会恢复采纳前的商户别名状态，避免撤销后残留自动建议规则。
+- 完成内容：新增 `AutoLedgerCapability.merchantNormalizationSuggestions`，归入 `proAutomationP0` 和本地 UI gate；基础商户别名、分类学习、单条编辑和已采纳规则继续免费。
+- 完成内容：iPhone 设置页“规则”区域新增“智能整理建议”入口。Pro 用户可查看商户统一、分类修正和疑似重复建议，逐条采纳并撤销上次清洗；未订阅用户看到 Pro 自动化说明和免费能力说明。iPad / Mac 既有数据清洗工作台复用同一 planner，并能显示新的商户归一化原因。
+- 测试情况：先新增离线 RED 用例，确认 `DataCleaningPreviewPlanner suggests merchant normalization from ledger history` 和 `LedgerStore can preview merchant normalization suggestions from history` 失败；实现后执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖建议生成、采纳写入别名、历史回刷、撤销恢复别名、后续 OCR 入账应用别名和 Pro policy gate。执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；五语 `Localizable.strings` `plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-07T04-09-01-879Z_pid26522_a66d0959.log`，仅保留既有 warning，随后已停止模拟器 App。
+- 风险与注意事项：第一段只做高置信前缀式归一化，不做任意模糊合并，避免误把不同商户合并。建议队列目前为本地实时计算，不持久化忽略状态；如果用户暂时不想采纳，只能离开页面或手动维护别名。Pro gate 是本地 UI gate，不是服务器安全边界。
+- 回滚方式：回退 `DataCleaningPreviewPlanner` 的 `merchantNormalizationItems` 逻辑、`AutoLedgerCapability.merchantNormalizationSuggestions`、`LedgerStore` 别名状态快照恢复、新增 `DataCleaningSuggestionsView`、设置页入口和五语文案，并删除新增离线回归断言；不涉及数据迁移。
+- 结论：本轮完成；`GOAL-2345` 已有可运行的本地第一段，iOS 和 iPad / Mac 共用同一套建议引擎，采纳结果会反哺后续识别链路。
+- 下一步建议：继续做 `GOAL-2345B`，补“忽略建议 / 建议历史 / 批量采纳 / 更细的置信解释”；随后再评估 Worker 辅助模式的脱敏特征合同。
 
 ### ITER-377 OCR 金额差异去重保护与数据清洗计划
 - 日期：2026-07-07

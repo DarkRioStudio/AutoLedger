@@ -874,6 +874,7 @@ struct OfflineRegression {
             .localEmailFolioScan,
             .batchCandidateImport,
             .advancedDeduplication,
+            .merchantNormalizationSuggestions,
             .cloudFolioInbox
         ]
         let expectedLaterPro: Set<AutoLedgerCapability> = [
@@ -894,6 +895,7 @@ struct OfflineRegression {
         reporter.check(policy.requiresActiveProInCurrentRelease(.localEmailFolioScan), "ProAccessPolicy gates local email folio scan as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.batchCandidateImport), "ProAccessPolicy gates batch candidate import as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.advancedDeduplication), "ProAccessPolicy gates advanced deduplication as P0 automation")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.merchantNormalizationSuggestions), "ProAccessPolicy gates merchant normalization suggestions as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.cloudFolioInbox), "ProAccessPolicy gates cloud folio inbox as P0 automation")
         reporter.check(!policy.requiresActiveProInCurrentRelease(.advancedSearch), "ProAccessPolicy does not gate P1 advanced search in current release")
         reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
@@ -4016,14 +4018,51 @@ struct OfflineRegression {
             source: .alipay,
             note: "支付宝交易成功 Demo Coffee 26.80 订单 EXAMPLE-001"
         )
+        let normalizationBaseA = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001557") ?? UUID(),
+            merchant: "Cafe Roma",
+            amount: 18,
+            occurredAt: base.addingTimeInterval(-1_800),
+            category: .dining,
+            source: .manual,
+            note: ""
+        )
+        let normalizationBaseB = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001558") ?? UUID(),
+            merchant: "Cafe Roma",
+            amount: 22,
+            occurredAt: base.addingTimeInterval(-1_900),
+            category: .dining,
+            source: .manual,
+            note: ""
+        )
+        let normalizationVariant = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001559") ?? UUID(),
+            merchant: "Cafe Roma Terminal 2",
+            amount: 19,
+            occurredAt: base.addingTimeInterval(-2_000),
+            category: .dining,
+            source: .manual,
+            note: ""
+        )
 
         let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
-            transactions: [aliasTransaction, categoryTransaction, duplicateA, duplicateB, textDuplicateA, textDuplicateB],
+            transactions: [
+                aliasTransaction,
+                categoryTransaction,
+                duplicateA,
+                duplicateB,
+                textDuplicateA,
+                textDuplicateB,
+                normalizationBaseA,
+                normalizationBaseB,
+                normalizationVariant
+            ],
             merchantAliases: ["Demo Coffee Original": "Demo Coffee"],
             categoryCorrections: ["Example Market": .groceries]
         )
 
-        reporter.check(snapshot.items(kind: .merchantAlias).count == 1, "DataCleaningPreviewPlanner previews merchant alias impact")
+        reporter.check(snapshot.items(kind: .merchantAlias).count == 2, "DataCleaningPreviewPlanner previews alias impact and normalization suggestions")
         reporter.check(snapshot.items(kind: .categoryCorrection).count == 1, "DataCleaningPreviewPlanner previews category correction impact")
         reporter.check(snapshot.items(kind: .duplicateCandidate).count == 2, "DataCleaningPreviewPlanner previews field and text duplicate candidates")
         reporter.check(
@@ -4040,6 +4079,15 @@ struct OfflineRegression {
                 ($0.score ?? 0) >= 0.85
             },
             "DataCleaningPreviewPlanner detects same-source similar-note duplicate candidates"
+        )
+        reporter.check(
+            snapshot.items(kind: .merchantAlias).contains {
+                $0.currentValue == "Cafe Roma Terminal 2" &&
+                $0.proposedValue == "Cafe Roma" &&
+                $0.affectedTransactionIDs == [normalizationVariant.id] &&
+                $0.reason == "merchant normalization suggestion"
+            },
+            "DataCleaningPreviewPlanner suggests merchant normalization from ledger history"
         )
     }
 
@@ -5560,6 +5608,85 @@ struct OfflineRegression {
             reporter.check(
                 ledger.transactions.contains { $0.id == cleaningAlias.id && $0.merchant == "Cleanup Original Merchant" },
                 "LedgerStore undo restores merchant alias cleaning"
+            )
+        }
+
+        let normalizationAnchorA = Transaction(
+            merchant: "Normalization Coffee",
+            amount: 18,
+            occurredAt: .now.addingTimeInterval(-60),
+            category: .dining,
+            source: .manual,
+            note: "merchant normalization anchor"
+        )
+        let normalizationAnchorB = Transaction(
+            merchant: "Normalization Coffee",
+            amount: 20,
+            occurredAt: .now.addingTimeInterval(-90),
+            category: .dining,
+            source: .manual,
+            note: "merchant normalization anchor"
+        )
+        let normalizationVariant = Transaction(
+            merchant: "Normalization Coffee West Gate",
+            amount: 21,
+            occurredAt: .now.addingTimeInterval(-120),
+            category: .dining,
+            source: .manual,
+            note: "merchant normalization variant"
+        )
+        ledger.addTransaction(normalizationAnchorA)
+        ledger.addTransaction(normalizationAnchorB)
+        ledger.addTransaction(normalizationVariant)
+        let normalizationPreview = DataCleaningPreviewPlanner()
+            .buildSnapshot(
+                transactions: ledger.transactions,
+                merchantAliases: ledger.merchantAliases,
+                categoryCorrections: ledger.categoryCorrections
+            )
+            .items(kind: .merchantAlias)
+            .first {
+                $0.currentValue == "Normalization Coffee West Gate" &&
+                $0.proposedValue == "Normalization Coffee"
+            }
+        reporter.check(normalizationPreview != nil, "LedgerStore can preview merchant normalization suggestions from history")
+        if let normalizationPreview {
+            let result = ledger.applyDataCleaningPreview(normalizationPreview)
+            reporter.check(result.updatedCount == 1 && result.canUndo, "LedgerStore applies merchant normalization suggestion")
+            reporter.check(
+                ledger.merchantAliases["Normalization Coffee West Gate"] == "Normalization Coffee",
+                "LedgerStore stores accepted merchant normalization as alias"
+            )
+            reporter.check(
+                ledger.transactions.contains { $0.id == normalizationVariant.id && $0.merchant == "Normalization Coffee" },
+                "LedgerStore updates accepted merchant normalization history"
+            )
+            _ = ledger.undoLastDataCleaningApplication()
+            reporter.check(
+                ledger.merchantAliases["Normalization Coffee West Gate"] == nil,
+                "LedgerStore undo removes accepted merchant normalization alias"
+            )
+            reporter.check(
+                ledger.transactions.contains { $0.id == normalizationVariant.id && $0.merchant == "Normalization Coffee West Gate" },
+                "LedgerStore undo restores accepted merchant normalization history"
+            )
+
+            _ = ledger.applyDataCleaningPreview(normalizationPreview)
+            ledger.importRecognizedText(
+                """
+                支付宝
+                交易成功
+                商户：Normalization Coffee West Gate
+                金额：￥32.00
+                时间：2026/03/28 10:00
+                订单号：NORMALIZATION-NEW-001
+                """,
+                preferredSource: .alipay
+            )
+            try await Task.sleep(nanoseconds: 200_000_000)
+            reporter.check(
+                ledger.transactions.contains { $0.merchant == "Normalization Coffee" && abs($0.amount - 32) < 0.001 },
+                "LedgerStore applies accepted merchant normalization to later OCR imports"
             )
         }
 

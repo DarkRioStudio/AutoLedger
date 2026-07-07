@@ -926,6 +926,9 @@ private struct IPadCleaningPreviewWorkspaceView: View {
     }
 
     private func localizedReason(_ item: DataCleaningPreviewItem) -> String {
+        if item.reason == "merchant normalization suggestion" {
+            return String(localized: "ipad.cleaning.reason.normalization")
+        }
         switch item.kind {
         case .merchantAlias:
             return String(localized: "ipad.cleaning.reason.alias")

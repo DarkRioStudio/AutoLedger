@@ -389,6 +389,7 @@
 "ipad.cleaning.score" = "類似度";
 "ipad.cleaning.reason" = "理由";
 "ipad.cleaning.reason.alias" = "保存済みの加盟店別名ルールに一致します。";
+"ipad.cleaning.reason.normalization" = "台帳内で繰り返し出てくる似た加盟店名から生成した統一候補です。";
 "ipad.cleaning.reason.category" = "保存済みのカテゴリ修正ルールに一致します。";
 "ipad.cleaning.reason.duplicate" = "加盟店、金額、時刻が近いため重複として確認できます。";
 "ipad.cleaning.affected_transactions" = "影響を受ける取引";
@@ -781,6 +782,8 @@
 "settings.categories.subtitle" = "支出カテゴリを管理し、カスタムカテゴリを追加";
 "settings.aliases.title" = "加盟店別名";
 "settings.aliases.subtitle" = "解析された加盟店名を覚えやすい短い名前に対応付けます。例: Guangzhou Qian Tech Co., Ltd. -> Qingju Bike";
+"settings.data_cleaning.title" = "スマート整理候補";
+"settings.data_cleaning.subtitle" = "台帳を分析し、加盟店名、カテゴリ、重複の整理を提案します";
 "settings.subscriptions.title" = "サブスクリプション";
 "settings.subscriptions.subtitle" = "検出された定期支払いを表示し、請求リマインダーを管理";
 "settings.subscription_reminder.title" = "サブスクリプション請求リマインダー";

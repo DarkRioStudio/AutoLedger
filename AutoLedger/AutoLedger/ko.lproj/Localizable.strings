@@ -389,6 +389,7 @@
 "ipad.cleaning.score" = "유사";
 "ipad.cleaning.reason" = "이유";
 "ipad.cleaning.reason.alias" = "저장된 판매자 별칭 규칙과 일치합니다.";
+"ipad.cleaning.reason.normalization" = "장부에 반복해서 나타나는 비슷한 판매자 이름을 바탕으로 만든 정리 제안입니다.";
 "ipad.cleaning.reason.category" = "저장된 카테고리 수정 규칙과 일치합니다.";
 "ipad.cleaning.reason.duplicate" = "판매자, 금액, 시간이 중복으로 검토될 만큼 가깝습니다.";
 "ipad.cleaning.affected_transactions" = "영향을 받은 거래";
@@ -781,6 +782,8 @@
 "settings.categories.subtitle" = "비용 카테고리 관리 및 맞춤 카테고리 추가";
 "settings.aliases.title" = "판매자 별칭";
 "settings.aliases.subtitle" = "구문 분석된 판매자 이름을 친숙한 짧은 이름으로 매핑합니다(예: 광주 Qian Tech Co., Ltd. -> Qingju Bike)";
+"settings.data_cleaning.title" = "스마트 정리 제안";
+"settings.data_cleaning.subtitle" = "장부를 분석해 판매자 이름, 카테고리, 중복 정리를 제안합니다";
 "settings.subscriptions.title" = "구독";
 "settings.subscriptions.subtitle" = "감지된 반복 구독 보기 및 요금 알림 관리";
 "settings.subscription_reminder.title" = "구독료 알림";

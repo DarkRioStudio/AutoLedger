@@ -389,6 +389,7 @@
 "ipad.cleaning.score" = "Similarity";
 "ipad.cleaning.reason" = "Reason";
 "ipad.cleaning.reason.alias" = "Matches a saved merchant alias rule.";
+"ipad.cleaning.reason.normalization" = "Suggested from similar merchant names that appear repeatedly in your ledger.";
 "ipad.cleaning.reason.category" = "Matches a saved category correction rule.";
 "ipad.cleaning.reason.duplicate" = "Merchant, amount, and time are close enough to review as a duplicate.";
 "ipad.cleaning.affected_transactions" = "Affected Transactions";
@@ -781,6 +782,8 @@
 "settings.categories.subtitle" = "Manage expense categories and add custom categories";
 "settings.aliases.title" = "Merchant Aliases";
 "settings.aliases.subtitle" = "Map parsed merchant names to familiar short names, for example Guangzhou Qian Tech Co., Ltd. -> Qingju Bike";
+"settings.data_cleaning.title" = "Smart Cleanup Suggestions";
+"settings.data_cleaning.subtitle" = "Analyze your ledger and suggest merchant, category, and duplicate cleanup";
 "settings.subscriptions.title" = "Subscriptions";
 "settings.subscriptions.subtitle" = "View detected recurring subscriptions and manage charge reminders";
 "settings.subscription_reminder.title" = "Subscription Charge Reminders";

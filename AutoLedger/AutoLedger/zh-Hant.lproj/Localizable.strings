@@ -389,6 +389,7 @@
 "ipad.cleaning.score" = "相似度";
 "ipad.cleaning.reason" = "原因";
 "ipad.cleaning.reason.alias" = "命中已儲存的商戶別名規則。";
+"ipad.cleaning.reason.normalization" = "根據帳本中反覆出現的相似商戶名產生的歸一化建議。";
 "ipad.cleaning.reason.category" = "命中已儲存的分類修正規則。";
 "ipad.cleaning.reason.duplicate" = "商戶、金額和發生時間接近，可能是重複帳單。";
 "ipad.cleaning.affected_transactions" = "受影響帳單";
@@ -784,6 +785,8 @@
 "settings.categories.subtitle" = "管理支出分類，查看或新增自訂分類";
 "settings.aliases.title" = "商家別名";
 "settings.aliases.subtitle" = "將解析到的商家全名對應為熟悉的短名稱，如「廣州騎安科技有限公司 → 青桔單車」";
+"settings.data_cleaning.title" = "智能整理建議";
+"settings.data_cleaning.subtitle" = "分析帳本，建議統一商家名稱、修正分類和處理疑似重複";
 "settings.subscriptions.title" = "訂閱管理";
 "settings.subscriptions.subtitle" = "查看已識別的週期性訂閱，管理扣費提醒";
 "settings.subscription_reminder.title" = "訂閱扣費提醒";

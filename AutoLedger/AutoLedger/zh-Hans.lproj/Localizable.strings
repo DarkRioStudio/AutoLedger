@@ -389,6 +389,7 @@
 "ipad.cleaning.score" = "相似度";
 "ipad.cleaning.reason" = "原因";
 "ipad.cleaning.reason.alias" = "命中已保存的商户别名规则。";
+"ipad.cleaning.reason.normalization" = "根据账本中反复出现的相似商户名生成的归一化建议。";
 "ipad.cleaning.reason.category" = "命中已保存的分类修正规则。";
 "ipad.cleaning.reason.duplicate" = "商户、金额和发生时间接近，可能是重复账单。";
 "ipad.cleaning.affected_transactions" = "受影响账单";
@@ -781,6 +782,8 @@
 "settings.categories.subtitle" = "管理支出分类，查看或新增自定义分类";
 "settings.aliases.title" = "商户别名";
 "settings.aliases.subtitle" = "将解析到的商户全称映射为熟悉的短名称，如「广州骑安科技有限公司 → 青桔单车」";
+"settings.data_cleaning.title" = "智能整理建议";
+"settings.data_cleaning.subtitle" = "分析账本，建议统一商户名称、修正分类和处理疑似重复";
 "settings.subscriptions.title" = "订阅管理";
 "settings.subscriptions.subtitle" = "查看已识别的周期性订阅，管理扣费提醒";
 "settings.subscription_reminder.title" = "订阅扣费提醒";

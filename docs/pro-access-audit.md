@@ -20,10 +20,10 @@ Risk: public source can be forked and local client checks can be modified. This 
 
 - Defines `AutoLedgerCapability`, `ProAccessTier`, and `AutoLedgerProAccessPolicy`.
 - Free/core capabilities remain free: `manualTransactionEntry`, `singleReceiptScan`, `manualHotelFolioImport`, `hotelStayArchiveAccess`, basic subscription/report/widget/export/backup, history edit/delete, and support donation.
-- Current P0 Pro capabilities remain `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
-- Planned v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro may gate full-ledger analysis, model-assisted suggestions, batch preview/application, low-confidence review queues, and optional Worker-assisted suggestion generation.
+- Current P0 Pro capabilities are `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, and `cloudFolioInbox`.
+- v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro gates full-ledger analysis, merchant normalization suggestions, batch preview/application, low-confidence review queues, and optional future Worker-assisted suggestion generation.
 - New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
-- `cloudFolioInbox` is `serverVerified`; local email scan, batch import, and advanced deduplication are still `localUIGate`.
+- `cloudFolioInbox` is `serverVerified`; local email scan, batch import, advanced deduplication, and merchant normalization suggestions are still `localUIGate`.
 
 Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
 
@@ -58,7 +58,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 
 - Policy definitions and regression references use all capabilities.
 - Version docs and iteration logs reference `cloudFolioInbox`, P0 Pro gates, and planned v1.7.0 merchant normalization / data-cleaning gates.
-- UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, and `cloudFolioInbox`.
+- UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, and `cloudFolioInbox`.
 
 ## Worker Side
 
