@@ -70,6 +70,7 @@ struct OfflineRegression {
         verifyBatchImportRecognitionExecutor(reporter: reporter)
         verifyLedgerAdvancedSearch(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
+        verifyAdvancedRuleAutomationPlanner(reporter: reporter)
         verifyDataCleaningAssistPayload(reporter: reporter)
         verifyDataCleaningAssistResponseMapping(reporter: reporter)
         verifyDataCleaningAssistRequestPolicy(reporter: reporter)
@@ -884,11 +885,10 @@ struct OfflineRegression {
             .cloudFolioInbox,
             .advancedSearch,
             .subscriptionAnomalyDetection,
-            .monthlyExportPackage
-        ]
-        let expectedLaterPro: Set<AutoLedgerCapability> = [
+            .monthlyExportPackage,
             .advancedRuleAutomation
         ]
+        let expectedLaterPro: Set<AutoLedgerCapability> = []
 
         reporter.check(freeCore == expectedFreeCore, "ProAccessPolicy freezes free core capabilities")
         reporter.check(p0Pro == expectedP0Pro, "ProAccessPolicy freezes v1.7.0 P0 Pro automation gates")
@@ -909,6 +909,8 @@ struct OfflineRegression {
         reporter.check(policy.securityBoundary(for: .subscriptionAnomalyDetection) == .localUIGate, "ProAccessPolicy keeps subscription anomaly detection behind local UI gate")
         reporter.check(policy.requiresActiveProInCurrentRelease(.monthlyExportPackage), "ProAccessPolicy gates monthly export package as P0 automation")
         reporter.check(policy.securityBoundary(for: .monthlyExportPackage) == .localUIGate, "ProAccessPolicy keeps monthly export package behind local UI gate")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.advancedRuleAutomation), "ProAccessPolicy gates advanced rule automation as P0 automation")
+        reporter.check(policy.securityBoundary(for: .advancedRuleAutomation) == .localUIGate, "ProAccessPolicy keeps advanced rule automation behind local UI gate")
         reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
         reporter.check(policy.remainsAvailableAfterProExpiration(.hotelStayArchiveAccess), "ProAccessPolicy keeps hotel archive access after expiration")
         reporter.check(
@@ -4367,6 +4369,72 @@ struct OfflineRegression {
             !ignoredSnapshot.items.contains { $0.currentValue == "Cafe Roma Terminal 2" },
             "DataCleaningPreviewPlanner hides ignored suggestions"
         )
+    }
+
+    private static func verifyAdvancedRuleAutomationPlanner(reporter: RegressionReporter) {
+        let aliasID = UUID(uuidString: "00000000-0000-0000-0000-000000002340") ?? UUID()
+        let categoryID = UUID(uuidString: "00000000-0000-0000-0000-000000002341") ?? UUID()
+        let duplicateAID = UUID(uuidString: "00000000-0000-0000-0000-000000002342") ?? UUID()
+        let duplicateBID = UUID(uuidString: "00000000-0000-0000-0000-000000002343") ?? UUID()
+        let baseDate = Date(timeIntervalSince1970: 1_788_307_200)
+        let transactions = [
+            Transaction(
+                id: aliasID,
+                merchant: "MTR WX",
+                amount: 3.5,
+                occurredAt: baseDate,
+                category: .transport,
+                source: .wechat,
+                note: ""
+            ),
+            Transaction(
+                id: categoryID,
+                merchant: "Demo Cafe",
+                amount: 28,
+                occurredAt: baseDate.addingTimeInterval(-3_600),
+                category: .shopping,
+                source: .manual,
+                note: ""
+            ),
+            Transaction(
+                id: duplicateAID,
+                merchant: "Demo Shop",
+                amount: 19.9,
+                occurredAt: baseDate.addingTimeInterval(-7_200),
+                category: .shopping,
+                source: .manual,
+                note: "same receipt"
+            ),
+            Transaction(
+                id: duplicateBID,
+                merchant: "Demo Shop",
+                amount: 19.9,
+                occurredAt: baseDate.addingTimeInterval(-7_210),
+                category: .shopping,
+                source: .manual,
+                note: "same receipt"
+            )
+        ]
+
+        let plan = AdvancedRuleAutomationPlanner().buildPlan(
+            transactions: transactions,
+            merchantAliases: ["MTR WX": "MTR"],
+            categoryCorrections: ["Demo Cafe": .dining]
+        )
+        reporter.check(plan.ruleCount == 2, "AdvancedRuleAutomationPlanner collects merchant alias and category rules")
+        reporter.check(plan.affectedTransactionCount == 2, "AdvancedRuleAutomationPlanner counts affected transactions once")
+        reporter.check(plan.rules.contains { $0.kind == .merchantAlias && $0.previewItem.affectedTransactionIDs == [aliasID] }, "AdvancedRuleAutomationPlanner includes merchant alias rule preview")
+        reporter.check(plan.rules.contains { $0.kind == .categoryCorrection && $0.previewItem.affectedTransactionIDs == [categoryID] }, "AdvancedRuleAutomationPlanner includes category correction rule preview")
+        reporter.check(!plan.rules.contains { $0.previewItem.kind == .duplicateCandidate }, "AdvancedRuleAutomationPlanner excludes duplicate cleanup candidates")
+        reporter.check(Set(plan.previewItems.map(\.id)) == Set(plan.rules.map(\.id)), "AdvancedRuleAutomationPlanner exposes preview items for LedgerStore batch apply")
+
+        let ignored = AdvancedRuleAutomationPlanner().buildPlan(
+            transactions: transactions,
+            merchantAliases: ["MTR WX": "MTR"],
+            categoryCorrections: ["Demo Cafe": .dining],
+            ignoredRuleIDs: Set(plan.rules.prefix(1).map(\.id))
+        )
+        reporter.check(ignored.ruleCount == 1, "AdvancedRuleAutomationPlanner hides ignored rules")
     }
 
     private static func verifyDataCleaningAssistPayload(reporter: RegressionReporter) {

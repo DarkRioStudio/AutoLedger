@@ -395,6 +395,7 @@ swiftc \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
   "$CORE/Services/LedgerAdvancedSearch.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
+  "$CORE/Services/AdvancedRuleAutomationPlanner.swift" \
   "$CORE/Services/DataCleaningAssistPayload.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \
   "$CORE/Services/LedgerCSVCodec.swift" \
