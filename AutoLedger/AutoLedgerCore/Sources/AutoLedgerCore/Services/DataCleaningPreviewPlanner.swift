@@ -70,7 +70,8 @@ public struct DataCleaningPreviewPlanner: Sendable {
     public func buildSnapshot(
         transactions: [Transaction],
         merchantAliases: [String: String],
-        categoryCorrections: [String: TransactionCategory]
+        categoryCorrections: [String: TransactionCategory],
+        ignoredPreviewIDs: Set<String> = []
     ) -> DataCleaningPreviewSnapshot {
         let activeTransactions = transactions.sorted { $0.occurredAt > $1.occurredAt }
         var items: [DataCleaningPreviewItem] = []
@@ -78,7 +79,10 @@ public struct DataCleaningPreviewPlanner: Sendable {
         items.append(contentsOf: merchantNormalizationItems(transactions: activeTransactions, merchantAliases: merchantAliases))
         items.append(contentsOf: categoryCorrectionItems(transactions: activeTransactions, categoryCorrections: categoryCorrections))
         items.append(contentsOf: duplicateItems(transactions: activeTransactions))
-        return DataCleaningPreviewSnapshot(items: items)
+        let visibleItems = ignoredPreviewIDs.isEmpty
+            ? items
+            : items.filter { !ignoredPreviewIDs.contains($0.id) }
+        return DataCleaningPreviewSnapshot(items: visibleItems)
     }
 
     private func merchantAliasItems(

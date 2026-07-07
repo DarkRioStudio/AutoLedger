@@ -397,7 +397,9 @@
 "ipad.cleaning.duplicate_score_format" = "Similarity %.0f%%";
 "ipad.cleaning.apply_note" = "Review the impact before applying. Duplicate items are moved to Recently Deleted and can be restored.";
 "ipad.cleaning.apply" = "Apply Cleanup";
+"ipad.cleaning.apply_all" = "Apply All";
 "ipad.cleaning.apply_duplicate" = "Move to Recently Deleted";
+"ipad.cleaning.ignore" = "Ignore";
 "ipad.cleaning.undo_last" = "Undo Last Cleanup";
 "ipad.cleaning.apply_confirm_title" = "Apply data cleanup?";
 "ipad.cleaning.apply_confirm_message" = "This will update affected transactions. Duplicate items are moved to Recently Deleted, not permanently deleted.";

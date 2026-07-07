@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-378 商户归一化建议与 iPhone 智能整理入口）
+更新日期：2026-07-07（ITER-379 数据清洗忽略建议与批量采纳）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-379 数据清洗忽略建议与批量采纳
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345B / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：在 `GOAL-2345A` 的本地商户归一化建议基础上，补齐用户可忽略建议和一次性采纳多个建议的闭环，让 iPhone 与 iPad / Mac 数据清洗入口使用同一份建议状态。
+- 改动范围：更新 `DataCleaningPreviewPlanner` ignored preview 过滤参数、`LedgerStore` 忽略建议持久化和批量采纳 / 撤销逻辑、iPhone `DataCleaningSuggestionsView`、iPad / Mac `IPadCleaningPreviewWorkspaceView`、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现建议历史、忽略项管理列表、跨设备建议队列、Worker 辅助解释、更复杂模糊合并或 Mac 专属批量表格 UI。
+- 完成内容：`DataCleaningPreviewPlanner.buildSnapshot` 新增默认参数 `ignoredPreviewIDs`，可过滤用户已忽略的建议，并保持旧调用兼容。
+- 完成内容：`LedgerStore` 新增 `ignoredDataCleaningPreviewIDs`，使用 `UserDefaults` 做本机持久化；新增 `dataCleaningPreviewSnapshot()`、`ignoreDataCleaningPreview(id:)` 和 `restoreIgnoredDataCleaningPreview(id:)`，让 iPhone 与 iPad / Mac 工作台读取同一份当前账本过滤快照。
+- 完成内容：`applyDataCleaningPreview` 保持单条 API，但内部复用新的 `applyDataCleaningPreviews`；批量采纳会按建议 ID 去重并只生成一次撤销快照，撤销会恢复历史账单、最近删除和商户别名状态。
+- 完成内容：iPhone“智能整理建议”页新增“全部应用”和单条“忽略”按钮；iPad / Mac 数据清洗工作台新增同样动作。五语补齐 `ipad.cleaning.apply_all` 与 `ipad.cleaning.ignore`。
+- 未完成内容：忽略建议目前是本机偏好，不会通过 iCloud / CloudKit 同步；跨设备仍按本地账本重算建议。没有新增审计历史，也没有把建议发送到 Worker。
+- 测试情况：先新增离线 RED 断言并运行 `bash scripts/run_offline_regression.sh`，观察到缺少 `ignoredPreviewIDs`、`ignoreDataCleaningPreview`、`dataCleaningPreviewSnapshot`、`restoreIgnoredDataCleaningPreview` 和 `applyDataCleaningPreviews` 的预期编译失败。实现后执行 `python3 scripts/check_localization_coverage.py`，结果 PASS；五语 `Localizable.strings` `plutil -lint`，结果 PASS；执行 `git diff --check`，结果 PASS；再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖忽略过滤、恢复忽略、批量采纳两条商户归一化建议、批量撤销恢复别名和历史账单；使用 XcodeBuildMCP 执行 iPhone 17 Pro Max Simulator Debug build/run，结果 PASS，构建日志 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-07T05-51-19-143Z_pid47116_1dacf729.log`，仅保留既有 warning，随后已停止模拟器 App。
+- 风险与注意事项：忽略状态当前只保存在本机 `UserDefaults`，不会随账本数据同步；如果用户在另一台设备打开数据清洗页，仍可能看到同一条建议。批量采纳使用同一撤销快照，但仍是本地 UI gate，不是服务端安全边界。
+- 回滚方式：回退 `DataCleaningPreviewPlanner` 的 `ignoredPreviewIDs` 参数、`LedgerStore` 忽略 / 批量采纳 API、两个数据清洗 UI 的按钮和五语文案，并删除离线回归新增断言；不涉及数据迁移。
+- 结论：本轮完成；`GOAL-2345B` 已形成本地可用的忽略与批量采纳闭环，且 iPhone 与 iPad / Mac 入口使用同一份建议快照。
+- 下一步建议：继续设计建议历史和审计记录，再评估跨设备同步“已采纳规则”与“本机忽略偏好”的边界；Worker 辅助建议应先冻结脱敏特征合同。
 
 ### ITER-378 商户归一化建议与 iPhone 智能整理入口
 - 日期：2026-07-07

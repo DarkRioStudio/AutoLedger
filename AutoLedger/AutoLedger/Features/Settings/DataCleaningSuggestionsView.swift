@@ -4,16 +4,12 @@ import SwiftUI
 struct DataCleaningSuggestionsView: View {
     @EnvironmentObject private var store: LedgerStore
     @ObservedObject private var proEntitlement = ProEntitlementManager.shared
-    @State private var pendingPreview: DataCleaningPreviewItem?
+    @State private var pendingPreviews: [DataCleaningPreviewItem] = []
     @State private var showsApplyConfirmation = false
     @State private var isPresentingProSheet = false
 
     private var snapshot: DataCleaningPreviewSnapshot {
-        DataCleaningPreviewPlanner().buildSnapshot(
-            transactions: store.visibleTransactions,
-            merchantAliases: store.merchantAliases,
-            categoryCorrections: store.categoryCorrections
-        )
+        store.dataCleaningPreviewSnapshot()
     }
 
     private var previews: [DataCleaningPreviewItem] {
@@ -31,6 +27,8 @@ struct DataCleaningSuggestionsView: View {
                     if previews.isEmpty {
                         emptyState
                     } else {
+                        applyAllRow
+
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(previews) { item in
                                 suggestionCard(item)
@@ -61,10 +59,10 @@ struct DataCleaningSuggestionsView: View {
             titleVisibility: .visible
         ) {
             Button("ipad.cleaning.apply_confirm_action", role: .destructive) {
-                applyPendingPreview()
+                applyPendingPreviews()
             }
             Button("common.cancel", role: .cancel) {
-                pendingPreview = nil
+                pendingPreviews = []
             }
         } message: {
             Text("ipad.cleaning.apply_confirm_message")
@@ -130,6 +128,19 @@ struct DataCleaningSuggestionsView: View {
         .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
         .padding(20)
         .autoLedgerCardSurface(cornerRadius: 18)
+    }
+
+    private var applyAllRow: some View {
+        Button {
+            pendingPreviews = previews
+            showsApplyConfirmation = true
+        } label: {
+            Label("ipad.cleaning.apply_all", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.accent)
     }
 
     private var proGateCard: some View {
@@ -209,15 +220,25 @@ struct DataCleaningSuggestionsView: View {
                 }
             }
 
-            Button {
-                pendingPreview = item
-                showsApplyConfirmation = true
-            } label: {
-                Label(applyButtonTitle(for: item.kind), systemImage: item.kind == .duplicateCandidate ? "trash" : "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity, minHeight: 42)
+            HStack(spacing: 10) {
+                Button {
+                    store.ignoreDataCleaningPreview(id: item.id)
+                } label: {
+                    Label("ipad.cleaning.ignore", systemImage: "eye.slash")
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    pendingPreviews = [item]
+                    showsApplyConfirmation = true
+                } label: {
+                    Label(applyButtonTitle(for: item.kind), systemImage: item.kind == .duplicateCandidate ? "trash" : "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(kindTint(item.kind))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(kindTint(item.kind))
         }
         .padding(16)
         .autoLedgerCardSurface(cornerRadius: 18)
@@ -266,10 +287,10 @@ struct DataCleaningSuggestionsView: View {
         .autoLedgerCardSurface(cornerRadius: 18)
     }
 
-    private func applyPendingPreview() {
-        guard let pendingPreview else { return }
-        _ = store.applyDataCleaningPreview(pendingPreview)
-        self.pendingPreview = nil
+    private func applyPendingPreviews() {
+        guard !pendingPreviews.isEmpty else { return }
+        _ = store.applyDataCleaningPreviews(pendingPreviews)
+        pendingPreviews = []
     }
 
     private func applyButtonTitle(for kind: DataCleaningPreviewKind) -> LocalizedStringKey {

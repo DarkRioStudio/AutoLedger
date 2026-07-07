@@ -4089,6 +4089,27 @@ struct OfflineRegression {
             },
             "DataCleaningPreviewPlanner suggests merchant normalization from ledger history"
         )
+
+        let ignoredSnapshot = DataCleaningPreviewPlanner().buildSnapshot(
+            transactions: [
+                aliasTransaction,
+                categoryTransaction,
+                duplicateA,
+                duplicateB,
+                textDuplicateA,
+                textDuplicateB,
+                normalizationBaseA,
+                normalizationBaseB,
+                normalizationVariant
+            ],
+            merchantAliases: ["Demo Coffee Original": "Demo Coffee"],
+            categoryCorrections: ["Example Market": .groceries],
+            ignoredPreviewIDs: ["merchantNormalization:Cafe Roma Terminal 2->Cafe Roma"]
+        )
+        reporter.check(
+            !ignoredSnapshot.items.contains { $0.currentValue == "Cafe Roma Terminal 2" },
+            "DataCleaningPreviewPlanner hides ignored suggestions"
+        )
     }
 
     private static func verifySampleParsing(
@@ -5651,6 +5672,17 @@ struct OfflineRegression {
             }
         reporter.check(normalizationPreview != nil, "LedgerStore can preview merchant normalization suggestions from history")
         if let normalizationPreview {
+            ledger.ignoreDataCleaningPreview(id: normalizationPreview.id)
+            reporter.check(
+                !ledger.dataCleaningPreviewSnapshot().items.contains { $0.id == normalizationPreview.id },
+                "LedgerStore hides ignored data cleaning suggestions"
+            )
+            ledger.restoreIgnoredDataCleaningPreview(id: normalizationPreview.id)
+            reporter.check(
+                ledger.dataCleaningPreviewSnapshot().items.contains { $0.id == normalizationPreview.id },
+                "LedgerStore restores ignored data cleaning suggestions"
+            )
+
             let result = ledger.applyDataCleaningPreview(normalizationPreview)
             reporter.check(result.updatedCount == 1 && result.canUndo, "LedgerStore applies merchant normalization suggestion")
             reporter.check(
@@ -5669,6 +5701,67 @@ struct OfflineRegression {
             reporter.check(
                 ledger.transactions.contains { $0.id == normalizationVariant.id && $0.merchant == "Normalization Coffee West Gate" },
                 "LedgerStore undo restores accepted merchant normalization history"
+            )
+
+            let batchAnchorA = Transaction(
+                merchant: "Batch Cleanup Coffee",
+                amount: 11,
+                occurredAt: .now.addingTimeInterval(-180),
+                category: .dining,
+                source: .manual,
+                note: "batch cleanup anchor"
+            )
+            let batchAnchorB = Transaction(
+                merchant: "Batch Cleanup Coffee",
+                amount: 12,
+                occurredAt: .now.addingTimeInterval(-210),
+                category: .dining,
+                source: .manual,
+                note: "batch cleanup anchor"
+            )
+            let batchVariantA = Transaction(
+                merchant: "Batch Cleanup Coffee North",
+                amount: 13,
+                occurredAt: .now.addingTimeInterval(-240),
+                category: .dining,
+                source: .manual,
+                note: "batch cleanup variant"
+            )
+            let batchVariantB = Transaction(
+                merchant: "Batch Cleanup Coffee South",
+                amount: 14,
+                occurredAt: .now.addingTimeInterval(-270),
+                category: .dining,
+                source: .manual,
+                note: "batch cleanup variant"
+            )
+            ledger.addTransaction(batchAnchorA)
+            ledger.addTransaction(batchAnchorB)
+            ledger.addTransaction(batchVariantA)
+            ledger.addTransaction(batchVariantB)
+            let batchPreviews = DataCleaningPreviewPlanner()
+                .buildSnapshot(
+                    transactions: ledger.transactions,
+                    merchantAliases: ledger.merchantAliases,
+                    categoryCorrections: ledger.categoryCorrections
+                )
+                .items(kind: .merchantAlias)
+                .filter { $0.proposedValue == "Batch Cleanup Coffee" }
+            reporter.check(batchPreviews.count == 2, "LedgerStore can preview multiple merchant normalization suggestions")
+            let batchResult = ledger.applyDataCleaningPreviews(batchPreviews)
+            reporter.check(batchResult.updatedCount == 2 && batchResult.canUndo, "LedgerStore applies multiple data cleaning suggestions as one undoable batch")
+            reporter.check(
+                ledger.merchantAliases["Batch Cleanup Coffee North"] == "Batch Cleanup Coffee" &&
+                    ledger.merchantAliases["Batch Cleanup Coffee South"] == "Batch Cleanup Coffee",
+                "LedgerStore stores batch merchant normalization aliases"
+            )
+            _ = ledger.undoLastDataCleaningApplication()
+            reporter.check(
+                ledger.merchantAliases["Batch Cleanup Coffee North"] == nil &&
+                    ledger.merchantAliases["Batch Cleanup Coffee South"] == nil &&
+                    ledger.transactions.contains { $0.id == batchVariantA.id && $0.merchant == "Batch Cleanup Coffee North" } &&
+                    ledger.transactions.contains { $0.id == batchVariantB.id && $0.merchant == "Batch Cleanup Coffee South" },
+                "LedgerStore undo restores batch data cleaning changes"
             )
 
             _ = ledger.applyDataCleaningPreview(normalizationPreview)

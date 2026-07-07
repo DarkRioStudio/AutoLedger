@@ -397,7 +397,9 @@
 "ipad.cleaning.duplicate_score_format" = "類似度 %.0f%%";
 "ipad.cleaning.apply_note" = "適用前に影響を確認してください。重複項目は最近削除した項目へ移動され、復元できます。";
 "ipad.cleaning.apply" = "整理を適用";
+"ipad.cleaning.apply_all" = "すべて適用";
 "ipad.cleaning.apply_duplicate" = "最近削除した項目へ移動";
+"ipad.cleaning.ignore" = "無視";
 "ipad.cleaning.undo_last" = "直前の整理を元に戻す";
 "ipad.cleaning.apply_confirm_title" = "データ整理を適用しますか?";
 "ipad.cleaning.apply_confirm_message" = "影響を受ける取引が更新されます。重複項目は完全削除ではなく、最近削除した項目へ移動されます。";

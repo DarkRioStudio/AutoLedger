@@ -80,6 +80,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
+    @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = []
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -120,6 +121,7 @@ final class LedgerStore: ObservableObject {
         }
         self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
         self.merchantAliasDeletedKeys = Self.loadMerchantAliasDeletedKeys()
+        self.ignoredDataCleaningPreviewIDs = Self.loadIgnoredDataCleaningPreviewIDs()
         let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
         self.ledgerProfiles = initialLedgerProfiles
         self.selectedLedgerID = LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
@@ -167,6 +169,33 @@ final class LedgerStore: ObservableObject {
 
     var visibleSubscriptions: [Subscription] {
         subscriptionsForCurrentLedger(subscriptions)
+    }
+
+    func dataCleaningPreviewSnapshot() -> DataCleaningPreviewSnapshot {
+        DataCleaningPreviewPlanner().buildSnapshot(
+            transactions: visibleTransactions,
+            merchantAliases: merchantAliases,
+            categoryCorrections: categoryCorrections,
+            ignoredPreviewIDs: ignoredDataCleaningPreviewIDs
+        )
+    }
+
+    func ignoreDataCleaningPreview(id: String) {
+        let trimmedID = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedID.isEmpty,
+              !ignoredDataCleaningPreviewIDs.contains(trimmedID) else {
+            return
+        }
+        ignoredDataCleaningPreviewIDs.insert(trimmedID)
+        persistIgnoredDataCleaningPreviewIDs()
+    }
+
+    func restoreIgnoredDataCleaningPreview(id: String) {
+        let trimmedID = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard ignoredDataCleaningPreviewIDs.remove(trimmedID) != nil else {
+            return
+        }
+        persistIgnoredDataCleaningPreviewIDs()
     }
 
     var targetLedgerIDForNewTransactions: String {
@@ -1777,63 +1806,111 @@ final class LedgerStore: ObservableObject {
 
     @discardableResult
     func applyDataCleaningPreview(_ preview: DataCleaningPreviewItem) -> DataCleaningApplicationResult {
+        applyDataCleaningPreviews(
+            [preview],
+            previewID: preview.id,
+            kind: preview.kind
+        )
+    }
+
+    @discardableResult
+    func applyDataCleaningPreviews(_ previews: [DataCleaningPreviewItem]) -> DataCleaningApplicationResult {
+        var seenIDs = Set<String>()
+        let deduplicatedPreviews = previews.filter { preview in
+            guard !seenIDs.contains(preview.id) else { return false }
+            seenIDs.insert(preview.id)
+            return true
+        }
+        guard let firstPreview = deduplicatedPreviews.first else {
+            let result = DataCleaningApplicationResult(
+                previewID: "batch:empty",
+                kind: .merchantAlias,
+                updatedCount: 0,
+                deletedCount: 0,
+                skippedCount: 0,
+                canUndo: false
+            )
+            lastDataCleaningApplicationResult = result
+            lastDataCleaningUndoSnapshot = nil
+            lastImportSummary = "没有需要应用的数据清洗项。"
+            return result
+        }
+
+        let batchID = deduplicatedPreviews.count == 1
+            ? firstPreview.id
+            : "batch:\(deduplicatedPreviews.map(\.id).joined(separator: "|"))"
+        return applyDataCleaningPreviews(
+            deduplicatedPreviews,
+            previewID: batchID,
+            kind: firstPreview.kind
+        )
+    }
+
+    @discardableResult
+    private func applyDataCleaningPreviews(
+        _ previews: [DataCleaningPreviewItem],
+        previewID: String,
+        kind: DataCleaningPreviewKind
+    ) -> DataCleaningApplicationResult {
         let previousActive = transactions
         let previousDeleted = deletedTransactions
         let previousMerchantAliases = merchantAliases
         let previousMerchantAliasDeletedKeys = merchantAliasDeletedKeys
-        let affectedIDs = Set(preview.affectedTransactionIDs)
         var updatedCount = 0
         var deletedCount = 0
         var skippedCount = 0
         var ruleChanged = false
 
         do {
-            switch preview.kind {
-            case .merchantAlias:
-                let trimmedOriginal = preview.currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                let trimmedAlias = preview.proposedValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmedOriginal.isEmpty,
-                   !trimmedAlias.isEmpty,
-                   trimmedOriginal != trimmedAlias,
-                   merchantAliases[trimmedOriginal] != trimmedAlias {
-                    recordMerchantAlias(original: trimmedOriginal, alias: trimmedAlias)
-                    ruleChanged = true
-                }
-                for transaction in transactions where affectedIDs.contains(transaction.id) {
-                    guard let updated = transaction.applyingMerchantAlias(
-                        original: preview.currentValue,
-                        alias: preview.proposedValue
-                    ) else {
-                        skippedCount += 1
+            for preview in previews {
+                let affectedIDs = Set(preview.affectedTransactionIDs)
+                switch preview.kind {
+                case .merchantAlias:
+                    let trimmedOriginal = preview.currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmedAlias = preview.proposedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmedOriginal.isEmpty,
+                       !trimmedAlias.isEmpty,
+                       trimmedOriginal != trimmedAlias,
+                       merchantAliases[trimmedOriginal] != trimmedAlias {
+                        recordMerchantAlias(original: trimmedOriginal, alias: trimmedAlias)
+                        ruleChanged = true
+                    }
+                    for transaction in transactions where affectedIDs.contains(transaction.id) {
+                        guard let updated = transaction.applyingMerchantAlias(
+                            original: preview.currentValue,
+                            alias: preview.proposedValue
+                        ) else {
+                            skippedCount += 1
+                            continue
+                        }
+                        try updateTransactionForDataCleaning(updated)
+                        updatedCount += 1
+                    }
+
+                case .categoryCorrection:
+                    guard let categoryRawValue = categoryRawValue(from: preview) else {
+                        skippedCount += preview.affectedTransactionIDs.count
                         continue
                     }
-                    try updateTransactionForDataCleaning(updated)
-                    updatedCount += 1
-                }
-
-            case .categoryCorrection:
-                guard let categoryRawValue = categoryRawValue(from: preview) else {
-                    skippedCount = preview.affectedTransactionIDs.count
-                    break
-                }
-                for transaction in transactions where affectedIDs.contains(transaction.id) {
-                    guard transaction.category != categoryRawValue else {
-                        skippedCount += 1
-                        continue
+                    for transaction in transactions where affectedIDs.contains(transaction.id) {
+                        guard transaction.category != categoryRawValue else {
+                            skippedCount += 1
+                            continue
+                        }
+                        try updateTransactionForDataCleaning(transaction.replacingCategory(categoryRawValue))
+                        updatedCount += 1
                     }
-                    try updateTransactionForDataCleaning(transaction.replacingCategory(categoryRawValue))
-                    updatedCount += 1
-                }
 
-            case .duplicateCandidate:
-                let affected = transactions
-                    .filter { affectedIDs.contains($0.id) }
-                    .sorted { $0.occurredAt > $1.occurredAt }
-                for transaction in affected.dropFirst() {
-                    try softDeleteTransactionForDataCleaning(transaction)
-                    deletedCount += 1
+                case .duplicateCandidate:
+                    let affected = transactions
+                        .filter { affectedIDs.contains($0.id) }
+                        .sorted { $0.occurredAt > $1.occurredAt }
+                    for transaction in affected.dropFirst() {
+                        try softDeleteTransactionForDataCleaning(transaction)
+                        deletedCount += 1
+                    }
+                    skippedCount += max(0, preview.affectedTransactionIDs.count - affected.count)
                 }
-                skippedCount = max(0, preview.affectedTransactionIDs.count - affected.count)
             }
         } catch {
             restoreDataCleaningSnapshot(active: previousActive, deleted: previousDeleted)
@@ -1843,11 +1920,11 @@ final class LedgerStore: ObservableObject {
             )
             lastImportSummary = "数据清洗应用失败，已尝试恢复到应用前状态：\(error.localizedDescription)"
             let result = DataCleaningApplicationResult(
-                previewID: preview.id,
-                kind: preview.kind,
+                previewID: previewID,
+                kind: kind,
                 updatedCount: 0,
                 deletedCount: 0,
-                skippedCount: preview.affectedTransactionIDs.count,
+                skippedCount: previews.reduce(0) { $0 + $1.affectedTransactionIDs.count },
                 canUndo: false
             )
             lastDataCleaningApplicationResult = result
@@ -1857,8 +1934,8 @@ final class LedgerStore: ObservableObject {
         let changedCount = updatedCount + deletedCount
         let canUndo = changedCount > 0 || ruleChanged
         let result = DataCleaningApplicationResult(
-            previewID: preview.id,
-            kind: preview.kind,
+            previewID: previewID,
+            kind: kind,
             updatedCount: updatedCount,
             deletedCount: deletedCount,
             skippedCount: skippedCount,
@@ -1868,8 +1945,8 @@ final class LedgerStore: ObservableObject {
 
         if canUndo {
             lastDataCleaningUndoSnapshot = DataCleaningUndoSnapshot(
-                previewID: preview.id,
-                kind: preview.kind,
+                previewID: previewID,
+                kind: kind,
                 previousActiveTransactions: previousActive,
                 previousDeletedTransactions: previousDeleted,
                 previousMerchantAliases: previousMerchantAliases,
@@ -2682,6 +2759,14 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(merchantAliasDeletedKeys.sorted(), forKey: Self.merchantAliasDeletedKeysKey)
     }
 
+    private static func loadIgnoredDataCleaningPreviewIDs() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: Self.ignoredDataCleaningPreviewIDsKey) ?? [])
+    }
+
+    private func persistIgnoredDataCleaningPreviewIDs() {
+        UserDefaults.standard.set(ignoredDataCleaningPreviewIDs.sorted(), forKey: Self.ignoredDataCleaningPreviewIDsKey)
+    }
+
     private static func resolvedDefaultWriteLedgerID(_ candidate: String?, from profiles: [LedgerProfile]) -> String {
         let activeProfiles = profiles.filter { !$0.isArchived }
         let activeIDs = Set(activeProfiles.map(\.id))
@@ -2905,6 +2990,7 @@ extension LedgerStore {
     private static let hotelStayRecordTombstonesKey = "hotelStayRecordCloudTombstones"
     private static let hotelStayDraftTombstonesKey = "hotelStayDraftCloudTombstones"
     private static let merchantAliasDeletedKeysKey = "merchantAliasDeletedKeys"
+    private static let ignoredDataCleaningPreviewIDsKey = "ignoredDataCleaningPreviewIDs"
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"
     private static var appGroupDefaults: UserDefaults? {

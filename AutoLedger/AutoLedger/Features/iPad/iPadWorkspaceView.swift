@@ -494,16 +494,12 @@ private struct IPadCleaningPreviewWorkspaceView: View {
     @EnvironmentObject private var store: LedgerStore
     @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     @State private var selectedPreviewID: String?
-    @State private var previewPendingApplication: DataCleaningPreviewItem?
+    @State private var previewPendingApplication: [DataCleaningPreviewItem] = []
     @State private var showsApplyConfirmation = false
     @State private var isPresentingProSheet = false
 
     private var snapshot: DataCleaningPreviewSnapshot {
-        DataCleaningPreviewPlanner().buildSnapshot(
-            transactions: store.visibleTransactions,
-            merchantAliases: store.merchantAliases,
-            categoryCorrections: store.categoryCorrections
-        )
+        store.dataCleaningPreviewSnapshot()
     }
 
     private var previews: [DataCleaningPreviewItem] {
@@ -560,10 +556,10 @@ private struct IPadCleaningPreviewWorkspaceView: View {
                 titleVisibility: .visible
             ) {
                 Button("ipad.cleaning.apply_confirm_action", role: .destructive) {
-                    applyPendingPreview()
+                    applyPendingPreviews()
                 }
                 Button("common.cancel", role: .cancel) {
-                    previewPendingApplication = nil
+                    previewPendingApplication = []
                 }
             } message: {
                 Text("ipad.cleaning.apply_confirm_message")
@@ -646,6 +642,8 @@ private struct IPadCleaningPreviewWorkspaceView: View {
             if previews.isEmpty {
                 emptyPreview
             } else {
+                applyAllRow
+
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(DataCleaningPreviewKind.allCases, id: \.rawValue) { kind in
@@ -668,6 +666,19 @@ private struct IPadCleaningPreviewWorkspaceView: View {
         }
         .padding(24)
         .background(AppTheme.canvas.opacity(0.45))
+    }
+
+    private var applyAllRow: some View {
+        Button {
+            previewPendingApplication = previews
+            showsApplyConfirmation = true
+        } label: {
+            Label("ipad.cleaning.apply_all", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(AppTheme.accent)
     }
 
     private var summaryRow: some View {
@@ -859,7 +870,7 @@ private struct IPadCleaningPreviewWorkspaceView: View {
 
             HStack(spacing: 12) {
                 Button {
-                    previewPendingApplication = item
+                    previewPendingApplication = [item]
                     showsApplyConfirmation = true
                 } label: {
                     Label(applyButtonTitle(for: item.kind), systemImage: item.kind == .duplicateCandidate ? "trash" : "checkmark.circle.fill")
@@ -867,6 +878,18 @@ private struct IPadCleaningPreviewWorkspaceView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(kindTint(item.kind))
+
+                Button {
+                    let ignoredID = item.id
+                    store.ignoreDataCleaningPreview(id: ignoredID)
+                    if selectedPreviewID == ignoredID {
+                        selectedPreviewID = previews.first { $0.id != ignoredID }?.id
+                    }
+                } label: {
+                    Label("ipad.cleaning.ignore", systemImage: "eye.slash")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
 
                 Button {
                     _ = store.undoLastDataCleaningApplication()
@@ -897,10 +920,10 @@ private struct IPadCleaningPreviewWorkspaceView: View {
         }
     }
 
-    private func applyPendingPreview() {
-        guard let previewPendingApplication else { return }
-        _ = store.applyDataCleaningPreview(previewPendingApplication)
-        self.previewPendingApplication = nil
+    private func applyPendingPreviews() {
+        guard !previewPendingApplication.isEmpty else { return }
+        _ = store.applyDataCleaningPreviews(previewPendingApplication)
+        previewPendingApplication = []
         selectedPreviewID = previews.first?.id
     }
 

@@ -397,7 +397,9 @@
 "ipad.cleaning.duplicate_score_format" = "相似度 %.0f%%";
 "ipad.cleaning.apply_note" = "套用前請確認影響範圍。重複項會移入最近刪除，可恢復。";
 "ipad.cleaning.apply" = "套用清洗";
+"ipad.cleaning.apply_all" = "全部套用";
 "ipad.cleaning.apply_duplicate" = "移入最近刪除";
+"ipad.cleaning.ignore" = "忽略";
 "ipad.cleaning.undo_last" = "撤銷上次清洗";
 "ipad.cleaning.apply_confirm_title" = "套用資料清洗？";
 "ipad.cleaning.apply_confirm_message" = "此操作會修改受影響帳單。重複項會移入最近刪除，不會徹底刪除。";
