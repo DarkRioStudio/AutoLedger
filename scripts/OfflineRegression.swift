@@ -75,6 +75,7 @@ struct OfflineRegression {
         verifyDataCleaningAssistRequestPolicy(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifySubscriptionAnomalyDetection(reporter: reporter)
+        verifyMonthlyExportPackage(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
@@ -882,10 +883,10 @@ struct OfflineRegression {
             .merchantNormalizationSuggestions,
             .cloudFolioInbox,
             .advancedSearch,
-            .subscriptionAnomalyDetection
+            .subscriptionAnomalyDetection,
+            .monthlyExportPackage
         ]
         let expectedLaterPro: Set<AutoLedgerCapability> = [
-            .monthlyExportPackage,
             .advancedRuleAutomation
         ]
 
@@ -906,6 +907,8 @@ struct OfflineRegression {
         reporter.check(policy.securityBoundary(for: .advancedSearch) == .localUIGate, "ProAccessPolicy keeps advanced search behind local UI gate")
         reporter.check(policy.requiresActiveProInCurrentRelease(.subscriptionAnomalyDetection), "ProAccessPolicy gates subscription anomaly detection as P0 automation")
         reporter.check(policy.securityBoundary(for: .subscriptionAnomalyDetection) == .localUIGate, "ProAccessPolicy keeps subscription anomaly detection behind local UI gate")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.monthlyExportPackage), "ProAccessPolicy gates monthly export package as P0 automation")
+        reporter.check(policy.securityBoundary(for: .monthlyExportPackage) == .localUIGate, "ProAccessPolicy keeps monthly export package behind local UI gate")
         reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
         reporter.check(policy.remainsAvailableAfterProExpiration(.hotelStayArchiveAccess), "ProAccessPolicy keeps hotel archive access after expiration")
         reporter.check(
@@ -2564,6 +2567,110 @@ struct OfflineRegression {
         let thirtyDayPressure = summary.renewalPressure.first { $0.windowDays == 30 && $0.currencyCode == "USD" }
         reporter.check(thirtyDayPressure?.subscriptionCount == 2, "SubscriptionAnomalyDetector counts 30-day renewal pressure")
         reporter.check(abs((thirtyDayPressure?.totalAmount ?? 0) - 41.99) < 0.001, "SubscriptionAnomalyDetector totals upcoming renewal pressure")
+    }
+
+    private static func verifyMonthlyExportPackage(reporter: RegressionReporter) {
+        let monthDate = AppFormatters.parseFlexibleDate("2026-02-15 12:00") ?? .now
+        let exportDate = AppFormatters.parseFlexibleDate("2026-02-28 18:00") ?? monthDate
+        let hotelID = UUID(uuidString: "00000000-0000-0000-0000-000000002330") ?? UUID()
+        let hotelTransactionID = UUID(uuidString: "00000000-0000-0000-0000-000000002331") ?? UUID()
+        let coffeeTransactionID = UUID(uuidString: "00000000-0000-0000-0000-000000002332") ?? UUID()
+
+        let transactions = [
+            Transaction(
+                id: hotelTransactionID,
+                merchant: "重庆 Moxy 酒店",
+                amount: 360,
+                occurredAt: AppFormatters.parseFlexibleDate("2026-02-12 16:00") ?? monthDate,
+                category: .hotel,
+                source: .manual,
+                note: "房号 1818",
+                ledgerID: "travel",
+                hotelStayRecordID: hotelID,
+                ledgerCurrencyCode: "CNY"
+            ),
+            Transaction(
+                id: coffeeTransactionID,
+                merchant: "Demo Coffee",
+                amount: 28,
+                occurredAt: AppFormatters.parseFlexibleDate("2026-02-13 09:30") ?? monthDate,
+                category: .dining,
+                source: .wechat,
+                note: "早餐",
+                ledgerID: "travel",
+                ledgerCurrencyCode: "CNY"
+            ),
+            Transaction(
+                merchant: "Previous Month",
+                amount: 99,
+                occurredAt: AppFormatters.parseFlexibleDate("2026-01-31 20:00") ?? monthDate,
+                category: .shopping,
+                source: .manual,
+                note: "",
+                ledgerID: "travel",
+                ledgerCurrencyCode: "CNY"
+            )
+        ]
+
+        let hotelRecords = [
+            HotelStayRecord(
+                id: hotelID,
+                ledgerID: "travel",
+                linkedTransactionID: hotelTransactionID,
+                hotelName: "重庆 Moxy 酒店",
+                city: "重庆",
+                country: "中国",
+                checkInDate: "2026-02-10",
+                checkOutDate: "2026-02-12",
+                nights: 2,
+                roomNumber: "1818",
+                confirmationNumber: "CN123456",
+                currency: "CNY",
+                totalAmount: 360,
+                sourceType: .manualPDF,
+                sourceFileName: "moxy-folio.pdf",
+                sourcePDFData: Data([0x25, 0x50, 0x44, 0x46]),
+                confidence: 0.92
+            )
+        ]
+
+        let builder = MonthlyExportPackageBuilder(now: { exportDate })
+        let package = builder.build(
+            transactions: transactions,
+            hotelStayRecords: hotelRecords,
+            referenceDate: monthDate,
+            options: MonthlyExportPackageOptions(ledgerID: "travel", redactSensitiveFields: false)
+        )
+
+        reporter.check(package.summary.transactionCount == 2, "MonthlyExportPackage filters to selected month and ledger")
+        reporter.check(abs(package.summary.totalExpense - 388) < 0.01, "MonthlyExportPackage totals selected transactions")
+        reporter.check(package.files.contains { $0.kind == .excelCSV && $0.fileName.hasSuffix(".csv") }, "MonthlyExportPackage includes Excel-compatible CSV")
+        reporter.check(package.files.contains { $0.kind == .printableReport && $0.fileName.hasSuffix(".md") }, "MonthlyExportPackage includes printable report source")
+        reporter.check(package.files.contains { $0.kind == .hotelAttachmentIndex && $0.fileName.contains("hotel_folios") }, "MonthlyExportPackage includes hotel folio attachment index")
+        reporter.check(package.hotelAttachmentIndex.count == 1, "MonthlyExportPackage indexes hotel folio attachments")
+        reporter.check(package.hotelAttachmentIndex.first?.sourceFileName == "moxy-folio.pdf", "MonthlyExportPackage keeps hotel folio source filename")
+        reporter.check(package.hotelAttachmentIndex.first?.hasPDFData == true, "MonthlyExportPackage records hotel folio PDF availability")
+
+        let reportText = package.fileText(kind: .printableReport)
+        let csvText = package.fileText(kind: .excelCSV)
+        reporter.check(reportText.contains("重庆 Moxy 酒店"), "MonthlyExportPackage report includes hotel name before redaction")
+        reporter.check(csvText.contains("Demo Coffee"), "MonthlyExportPackage CSV includes merchant before redaction")
+        reporter.check(!csvText.contains("Previous Month"), "MonthlyExportPackage CSV excludes out-of-month transactions")
+
+        let redacted = builder.build(
+            transactions: transactions,
+            hotelStayRecords: hotelRecords,
+            referenceDate: monthDate,
+            options: MonthlyExportPackageOptions(ledgerID: "travel", redactSensitiveFields: true)
+        )
+        reporter.check(!redacted.fileText(kind: .printableReport).contains("重庆 Moxy 酒店"), "MonthlyExportPackage redacts hotel name in report")
+        reporter.check(!redacted.fileText(kind: .excelCSV).contains("Demo Coffee"), "MonthlyExportPackage redacts merchant name in CSV")
+        reporter.check(redacted.fileText(kind: .excelCSV).contains("Merchant 2"), "MonthlyExportPackage uses stable redacted merchant labels")
+        reporter.check(redacted.hotelAttachmentIndex.first?.hotelName == "Hotel 1", "MonthlyExportPackage redacts hotel attachment index")
+
+        let policy = AutoLedgerProAccessPolicy.current
+        reporter.check(policy.requiresActiveProInCurrentRelease(.monthlyExportPackage), "MonthlyExportPackage is a current Pro automation")
+        reporter.check(policy.isAvailableWithoutPro(.basicDataExportAndBackup), "Basic CSV and JSON export stays free")
     }
 
     private static func verifySubscriptionStatusCodable(reporter: RegressionReporter) {

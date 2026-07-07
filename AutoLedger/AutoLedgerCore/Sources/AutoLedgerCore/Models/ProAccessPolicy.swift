@@ -61,11 +61,11 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .merchantNormalizationSuggestions,
              .cloudFolioInbox,
              .advancedSearch,
-             .subscriptionAnomalyDetection:
+             .subscriptionAnomalyDetection,
+             .monthlyExportPackage:
             return .proAutomationP0
 
-        case .monthlyExportPackage,
-             .advancedRuleAutomation:
+        case .advancedRuleAutomation:
             return .proAutomationLater
         }
     }
@@ -107,14 +107,14 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .advancedDeduplication,
              .merchantNormalizationSuggestions,
              .advancedSearch,
-             .subscriptionAnomalyDetection:
+             .subscriptionAnomalyDetection,
+             .monthlyExportPackage:
             return .localUIGate
 
         case .cloudFolioInbox:
             return .serverVerified
 
-        case .monthlyExportPackage,
-             .advancedRuleAutomation:
+        case .advancedRuleAutomation:
             return .planned
         }
     }

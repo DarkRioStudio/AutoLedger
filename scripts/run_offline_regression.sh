@@ -401,6 +401,7 @@ swiftc \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
   "$CORE/Services/SubscriptionAnomalyDetector.swift" \
+  "$CORE/Services/MonthlyExportPackageBuilder.swift" \
   "$CORE/Persistence/TransactionStore.swift" \
   "$CORE/Persistence/SQLiteTransactionStore.swift" \
   "$PREP_DIR/LedgerTextInterpreter.swift" \
