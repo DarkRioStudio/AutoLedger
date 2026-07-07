@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-06（ITER-374 运行时本地化补齐）
+更新日期：2026-07-07（ITER-375 快捷指令 SQLite 写入锁等待）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-375 快捷指令 SQLite 写入锁等待
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Persistence / App Intents
+- 类型：Bugfix / 可靠性
+- 目标：降低快捷指令记账在识别成功后偶发“入账失败”的概率，并让失败 debug 记录包含可定位的 SQLite 错误信息。
+- 改动范围：更新 `SQLiteTransactionStore`、`scripts/OfflineRegression.swift`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 SQLite schema、`QuickLedgerIntent` 的 OCR / 解析 / 去重逻辑、快捷指令参数、iCloud 同步策略、Widget / Watch 数据结构、StoreKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
+- 完成内容：`SQLiteTransactionStore` 打开数据库后启用 extended result codes、设置 `busy_timeout`、尝试切换 WAL journal 和 NORMAL synchronous；普通交易 `save(transaction:)` 在 `SQLITE_BUSY` / `SQLITE_LOCKED` 时进行短延迟重试，覆盖 App 本体、快捷指令、Widget / Watch 刷新或 iCloud 同步短暂争用同一 App Group SQLite 的情况。SQLite prepare / execute 失败会把 `sqlite_code`、`sqlite_extended_code` 和 `sqlite_errmsg` 拼进错误描述，让 `QuickLedgerIntent` 的 `persistenceFailed` debug record 后续能看到具体原因。
+- 未完成内容：本轮只为正式交易保存路径加短重试；其它 SQLite 写入路径仍主要依赖 connection-level busy timeout。未新增用户可见的失败详情页，也未做真机快捷指令压力测试。
+- 测试情况：执行 `bash scripts/run_offline_regression.sh`，结果 PASS，新增 busy retry 用例覆盖“原生 SQLite 连接持有 writer lock -> 另一 `SQLiteTransactionStore.save(transaction:)` 等待 -> 释放锁后保存成功 -> 重新打开数据库能读到该笔交易”；执行 `git diff --check`，结果 PASS；使用 XcodeBuildMCP 执行 iPhone 17 Simulator Debug build/run，结果 PASS，构建日志位于 `/Users/darkrio/Library/Developer/XcodeBuildMCP/workspaces/AutoLedgerRio-f8282a3b23c4/logs/build_run_sim_2026-07-07T00-58-55-668Z_pid26522_9078c175.log`，仅保留既有 warning；随后已停止模拟器内 App。
+- 风险与注意事项：busy timeout 和短重试会在数据库被其它连接短暂占用时多等待一小段时间，换取快捷指令后台写入成功率；如果遇到长期锁、只读库或 schema 错误，仍会失败，但 debug record 会带 SQLite code 和 message。WAL / synchronous 是连接级配置，不改变表结构。
+- 回滚方式：回退 `SQLiteTransactionStore` 的连接配置、`save(transaction:)` 重试和错误详情 helper，并删除离线回归 busy retry 用例；无数据库迁移回滚动作。
+- 结论：本轮完成；快捷指令识别成功后的本地入账对短暂 SQLite 写锁更耐受，后续若仍出现“入账失败”可根据 debug record 的 SQLite code 继续定位。
+- 下一步建议：用户可在真机上连续触发快捷指令、同时打开 App 做 iCloud 同步或 Widget 刷新复测；若仍有失败，再把 `persistenceFailed` 最新 debug record 中的 sqlite code/message 贴出来定位。
 
 ### ITER-374 运行时本地化补齐
 - 日期：2026-07-06

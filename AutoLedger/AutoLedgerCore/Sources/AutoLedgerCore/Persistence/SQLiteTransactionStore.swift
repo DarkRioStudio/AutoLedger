@@ -21,6 +21,8 @@ public enum SQLiteTransactionStoreError: LocalizedError {
 public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable {
     private var db: OpaquePointer?
     private let syncDeviceID: String
+    private static let busyTimeoutMilliseconds: Int32 = 2_500
+    private static let busyRetryDelays: [TimeInterval] = [0.05, 0.15, 0.35]
     private static let transactionReadColumns = """
     id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id,
     ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
@@ -38,6 +40,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
             throw SQLiteTransactionStoreError.openDatabase
         }
 
+        configureDatabaseConnection()
         try createTableIfNeeded()
     }
 
@@ -117,14 +120,14 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         defer { sqlite3_finalize(statement) }
 
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw SQLiteTransactionStoreError.prepareStatement(sql)
+            throw prepareStatementError(sql)
         }
 
         let now = Self.storageFormatter.string(from: .now)
         bind(transaction: transaction, to: statement, includeTimestamps: now)
 
-        guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw SQLiteTransactionStoreError.executeStatement(sql)
+        guard stepWithBusyRetry(statement, sql: sql) == SQLITE_DONE else {
+            throw executeStatementError(sql)
         }
     }
 
@@ -2300,9 +2303,46 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         "transaction:\(transactionID.uuidString)"
     }
 
+    private func configureDatabaseConnection() {
+        _ = sqlite3_extended_result_codes(db, 1)
+        _ = sqlite3_busy_timeout(db, Self.busyTimeoutMilliseconds)
+        _ = sqlite3_exec(db, "PRAGMA busy_timeout = \(Self.busyTimeoutMilliseconds);", nil, nil, nil)
+        _ = sqlite3_exec(db, "PRAGMA journal_mode = WAL;", nil, nil, nil)
+        _ = sqlite3_exec(db, "PRAGMA synchronous = NORMAL;", nil, nil, nil)
+    }
+
+    private func stepWithBusyRetry(_ statement: OpaquePointer?, sql: String) -> Int32 {
+        var result = sqlite3_step(statement)
+        for delay in Self.busyRetryDelays where Self.isBusy(result) {
+            sqlite3_reset(statement)
+            Thread.sleep(forTimeInterval: delay)
+            result = sqlite3_step(statement)
+        }
+        return result
+    }
+
+    private static func isBusy(_ result: Int32) -> Bool {
+        result == SQLITE_BUSY || result == SQLITE_LOCKED
+    }
+
+    private func prepareStatementError(_ sql: String) -> SQLiteTransactionStoreError {
+        .prepareStatement(sqlWithSQLiteError(sql))
+    }
+
+    private func executeStatementError(_ sql: String) -> SQLiteTransactionStoreError {
+        .executeStatement(sqlWithSQLiteError(sql))
+    }
+
+    private func sqlWithSQLiteError(_ sql: String) -> String {
+        let code = sqlite3_errcode(db)
+        let extendedCode = sqlite3_extended_errcode(db)
+        let message = sqlite3_errmsg(db).map { String(cString: $0) } ?? "unknown"
+        return "\(sql) [sqlite_code=\(code), sqlite_extended_code=\(extendedCode), message=\(message)]"
+    }
+
     private func execute(_ sql: String) throws {
         guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else {
-            throw SQLiteTransactionStoreError.executeStatement(sql)
+            throw executeStatementError(sql)
         }
     }
 

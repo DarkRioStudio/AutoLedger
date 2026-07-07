@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import SQLite3
 
 final class RegressionReporter {
     private(set) var failures: [String] = []
@@ -81,6 +82,7 @@ struct OfflineRegression {
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
+        try verifySQLiteBusyRetry(reporter: reporter)
         try verifyHotelStaySQLitePersistence(reporter: reporter)
         try verifyHotelStayDraftPersistence(reporter: reporter)
         try verifyLedgerStoreHotelStayPosting(reporter: reporter)
@@ -4775,6 +4777,95 @@ struct OfflineRegression {
         reporter.check(
             loadedSubscriptions.first { $0.id == editedSubscription.id }?.status == .paused,
             "SQLite subscription update persists paused status"
+        )
+    }
+
+    private static func verifySQLiteBusyRetry(reporter: RegressionReporter) throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerBusyRetry-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let filename = "busy-retry.sqlite3"
+        let writerStore = try SQLiteTransactionStore(
+            baseDirectoryURL: rootURL,
+            filename: filename,
+            syncDeviceID: "busy-retry-writer"
+        )
+        let databaseURL = rootURL
+            .appendingPathComponent("AutoLedger", isDirectory: true)
+            .appendingPathComponent(filename)
+
+        var locker: OpaquePointer?
+        defer {
+            sqlite3_close(locker)
+        }
+        reporter.check(sqlite3_open(databaseURL.path, &locker) == SQLITE_OK, "SQLite busy retry test opens locker connection")
+        _ = sqlite3_busy_timeout(locker, 1_000)
+        reporter.check(
+            sqlite3_exec(locker, "BEGIN IMMEDIATE TRANSACTION;", nil, nil, nil) == SQLITE_OK,
+            "SQLite busy retry test holds a writer lock"
+        )
+
+        final class SaveResultBox {
+            private let lock = NSLock()
+            private var value: Result<Void, Error>?
+
+            func set(_ result: Result<Void, Error>) {
+                lock.lock()
+                value = result
+                lock.unlock()
+            }
+
+            func get() -> Result<Void, Error>? {
+                lock.lock()
+                defer { lock.unlock() }
+                return value
+            }
+        }
+
+        let resultBox = SaveResultBox()
+        let finished = DispatchSemaphore(value: 0)
+        let transaction = Transaction(
+            merchant: "Busy Retry Merchant",
+            amount: 42,
+            occurredAt: AppFormatters.parseFlexibleDate("2026-07-07 09:30") ?? .now,
+            category: .other,
+            source: .manual,
+            note: "busy retry regression"
+        )
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try writerStore.save(transaction: transaction)
+                resultBox.set(.success(()))
+            } catch {
+                resultBox.set(.failure(error))
+            }
+            finished.signal()
+        }
+
+        Thread.sleep(forTimeInterval: 0.25)
+        reporter.check(
+            sqlite3_exec(locker, "COMMIT;", nil, nil, nil) == SQLITE_OK,
+            "SQLite busy retry test releases writer lock"
+        )
+        let waitResult = finished.wait(timeout: .now() + 5)
+        reporter.check(waitResult == .success, "SQLite save waits for a transient writer lock")
+
+        if case let .failure(error) = resultBox.get() {
+            reporter.check(false, "SQLite save after transient lock failed: \(error.localizedDescription)")
+        } else {
+            reporter.check(true, "SQLite save after transient lock succeeds")
+        }
+
+        let reloadedStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: filename)
+        let retriedTransactionPersisted = try reloadedStore.loadTransactions().contains { $0.id == transaction.id }
+        reporter.check(
+            retriedTransactionPersisted,
+            "SQLite busy retry persists the retried transaction"
         )
     }
 
