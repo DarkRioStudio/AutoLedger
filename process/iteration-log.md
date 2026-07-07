@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-386 iOS 数据清洗入口与云端辅助授权）
+更新日期：2026-07-07（ITER-387 高级搜索第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-387 高级搜索第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2315 / Pro Automation
+- 类型：能力增强 / UI / 测试
+- 目标：让 Pro 用户在账本页组合金额、日期、分类、来源、账本和酒店水单线索搜索历史记录，同时保持基础关键词搜索免费。
+- 改动范围：新增 `LedgerAdvancedSearchQuery`、`LedgerAdvancedSearchService`、`LedgerSavedSearch`；更新 `AutoLedgerProAccessPolicy`；更新 `LedgerView` 高级搜索入口、表单和常用条件本地保存；补齐五语本地化和高级搜索 UI smoke。
+- 未改动范围：未新增 Worker endpoint、未修改 SQLite / CloudKit schema、未修改 StoreKit 商品、未修改截图管线、未移动构建 tag。
+- 完成内容：Core 搜索服务支持关键字、金额区间、日期区间、分类、来源、账本、酒店水单关联和原始币种线索组合筛选；`advancedSearch` 进入 v1.7.0 P0 Pro 本地 UI gate；基础关键词查询不触发 Pro；iOS 账本页可打开高级搜索表单并保存 / 套用常用条件。
+- 未完成内容：高级搜索暂未接入 Mac 专用表格工作台的独立筛选条，后续可复用同一 Core 服务扩展；跨设备同步保存条件暂未做。
+- 测试情况：执行 `python3 scripts/check_advanced_search_ui_smoke.py`、`python3 scripts/check_localization_coverage.py`、`plutil -lint` 五语 strings、`bash scripts/run_offline_regression.sh` 和 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' -configuration Debug build`，结果均 PASS。
+- 风险与注意事项：常用搜索条件目前存于本机 `AppStorage`，不进入 iCloud；未订阅用户如果此前已有高级条件缓存，结果会降级为基础关键词搜索。
+- 回滚方式：回退 `LedgerView` 高级搜索 UI、五语 `ledger.advanced_search.*` 文案、`check_advanced_search_ui_smoke.py`、`LedgerAdvancedSearch.swift` 和 `ProAccessPolicy` 中 `advancedSearch` P0 gate 即可恢复旧基础搜索。
+- 结论：本轮完成，GOAL-2315 第一版工程闭环可进入下一项 Pro 自动化能力。
+- 下一步建议：进入 GOAL-2320 订阅异常提醒，优先固定异常检测 Core 合同和基础 UI 入口。
 
 ### ITER-386 iOS 数据清洗入口与云端辅助授权
 - 日期：2026-07-07

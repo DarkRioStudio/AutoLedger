@@ -16,6 +16,7 @@ python3 "$ROOT/scripts/check_long_list_performance_smoke.py"
 python3 "$ROOT/scripts/check_l10n_release_smoke.py"
 python3 "$ROOT/scripts/check_visionos_review_smoke.py"
 python3 "$ROOT/scripts/check_data_cleaning_ios_entry_smoke.py"
+python3 "$ROOT/scripts/check_advanced_search_ui_smoke.py"
 
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT

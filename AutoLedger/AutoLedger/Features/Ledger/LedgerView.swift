@@ -37,10 +37,16 @@ struct LedgerView: View {
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @EnvironmentObject private var store: LedgerStore
     @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     private let onOpenLedgerSettings: (() -> Void)?
     @State private var filter: LedgerFilter = .all
     @State private var filterDate = Date()
     @State private var searchText = ""
+    @State private var advancedSearchQuery = LedgerAdvancedSearchQuery()
+    @State private var isPresentingAdvancedSearch = false
+    @State private var isPresentingProSheet = false
+    @State private var savedAdvancedSearches: [LedgerSavedSearch] = []
+    @AppStorage("ledgerAdvancedSavedSearches") private var savedAdvancedSearchesData = Data()
 
     init(onOpenLedgerSettings: (() -> Void)? = nil) {
         self.onOpenLedgerSettings = onOpenLedgerSettings
@@ -63,13 +69,24 @@ struct LedgerView: View {
     }
 
     private var searchFilteredTransactions: [Transaction] {
-        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return filteredTransactions }
-        return filteredTransactions.filter {
-            $0.merchant.localizedCaseInsensitiveContains(trimmed) ||
-            $0.note.localizedCaseInsensitiveContains(trimmed) ||
-            $0.categoryTitle.localizedCaseInsensitiveContains(trimmed)
+        let query = effectiveAdvancedSearchQuery
+        if query.hasAdvancedFilters && !proEntitlement.canUse(.advancedSearch) {
+            return LedgerAdvancedSearchService().search(
+                transactions: filteredTransactions,
+                query: LedgerAdvancedSearchQuery(keyword: query.keyword)
+            )
         }
+        return LedgerAdvancedSearchService().search(transactions: filteredTransactions, query: query)
+    }
+
+    private var effectiveAdvancedSearchQuery: LedgerAdvancedSearchQuery {
+        var query = advancedSearchQuery
+        query.keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query
+    }
+
+    private var hasAdvancedSearchFilters: Bool {
+        advancedSearchQuery.hasAdvancedFilters
     }
 
     private var selectedTransaction: Transaction? {
@@ -139,6 +156,21 @@ struct LedgerView: View {
                     .environmentObject(store)
             }
         }
+        .sheet(isPresented: $isPresentingAdvancedSearch) {
+            advancedSearchSheet
+        }
+        .sheet(isPresented: $isPresentingProSheet) {
+            NavigationStack {
+                AutoLedgerProView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingProSheet = false
+                            }
+                        }
+                    }
+            }
+        }
         .confirmationDialog(
             "ledger.move.title",
             isPresented: Binding(
@@ -162,6 +194,7 @@ struct LedgerView: View {
         }
         .onAppear {
             store.showSelectedLedgerOnly()
+            loadSavedAdvancedSearches()
             consumePendingNewTransactionIfNeeded()
             ensurePersistentDetailSelectionIfNeeded()
         }
@@ -251,6 +284,17 @@ struct LedgerView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    presentAdvancedSearch()
+                } label: {
+                    Image(systemName: hasAdvancedSearchFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .fontWeight(.semibold)
+                }
+                .foregroundStyle(hasAdvancedSearchFilters ? AppTheme.accent : AppTheme.ink)
+                .accessibilityLabel(Text("ledger.advanced_search.title"))
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     navigationState.isPresentingNewTransaction = true
                 } label: {
                     Image(systemName: "plus")
@@ -288,6 +332,75 @@ struct LedgerView: View {
                 }
             }
         }
+    }
+
+    private var advancedSearchSheet: some View {
+        NavigationStack {
+            LedgerAdvancedSearchSheet(
+                query: $advancedSearchQuery,
+                searchText: $searchText,
+                savedAdvancedSearches: $savedAdvancedSearches,
+                categoryOptions: advancedCategoryOptions,
+                sourceOptions: advancedSourceOptions,
+                ledgerOptions: advancedLedgerOptions,
+                onPersistSavedSearches: persistSavedAdvancedSearches
+            )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.close") {
+                        isPresentingAdvancedSearch = false
+                    }
+                }
+            }
+        }
+    }
+
+    private var advancedCategoryOptions: [LedgerAdvancedSearchOption] {
+        let builtIns = TransactionCategory.allCases.map {
+            LedgerAdvancedSearchOption(id: $0.rawValue, title: $0.title)
+        }
+        let custom = store.customCategories.map {
+            LedgerAdvancedSearchOption(id: $0, title: $0)
+        }
+        return builtIns + custom
+    }
+
+    private var advancedSourceOptions: [LedgerAdvancedSearchOption] {
+        let builtIns = ReceiptSource.allCases.map {
+            LedgerAdvancedSearchOption(id: $0.rawValue, title: $0.title)
+        }
+        let custom = store.customSources.map {
+            LedgerAdvancedSearchOption(id: $0, title: $0)
+        }
+        return builtIns + custom
+    }
+
+    private var advancedLedgerOptions: [LedgerAdvancedSearchOption] {
+        store.activeLedgerProfiles.map {
+            LedgerAdvancedSearchOption(id: $0.id, title: $0.name)
+        }
+    }
+
+    private func presentAdvancedSearch() {
+        if proEntitlement.canUse(.advancedSearch) {
+            isPresentingAdvancedSearch = true
+        } else {
+            isPresentingProSheet = true
+        }
+    }
+
+    private func loadSavedAdvancedSearches() {
+        guard !savedAdvancedSearchesData.isEmpty,
+              let decoded = try? JSONDecoder().decode([LedgerSavedSearch].self, from: savedAdvancedSearchesData) else {
+            savedAdvancedSearches = []
+            return
+        }
+        savedAdvancedSearches = decoded.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private func persistSavedAdvancedSearches() {
+        savedAdvancedSearches = savedAdvancedSearches.sorted { $0.updatedAt > $1.updatedAt }
+        savedAdvancedSearchesData = (try? JSONEncoder().encode(savedAdvancedSearches)) ?? Data()
     }
 
     private func presentLedgerProfiles() {
@@ -528,6 +641,216 @@ struct LedgerView: View {
         case .year: return cal.isDate(filterDate, equalTo: Date(), toGranularity: .year) ||
                           filterDate > Date()
         }
+    }
+}
+
+private struct LedgerAdvancedSearchOption: Identifiable, Hashable {
+    let id: String
+    let title: String
+}
+
+private struct LedgerAdvancedSearchSheet: View {
+    @Binding var query: LedgerAdvancedSearchQuery
+    @Binding var searchText: String
+    @Binding var savedAdvancedSearches: [LedgerSavedSearch]
+    let categoryOptions: [LedgerAdvancedSearchOption]
+    let sourceOptions: [LedgerAdvancedSearchOption]
+    let ledgerOptions: [LedgerAdvancedSearchOption]
+    let onPersistSavedSearches: () -> Void
+
+    @State private var minAmountText: String
+    @State private var maxAmountText: String
+    @State private var savedSearchName = ""
+
+    init(
+        query: Binding<LedgerAdvancedSearchQuery>,
+        searchText: Binding<String>,
+        savedAdvancedSearches: Binding<[LedgerSavedSearch]>,
+        categoryOptions: [LedgerAdvancedSearchOption],
+        sourceOptions: [LedgerAdvancedSearchOption],
+        ledgerOptions: [LedgerAdvancedSearchOption],
+        onPersistSavedSearches: @escaping () -> Void
+    ) {
+        self._query = query
+        self._searchText = searchText
+        self._savedAdvancedSearches = savedAdvancedSearches
+        self.categoryOptions = categoryOptions
+        self.sourceOptions = sourceOptions
+        self.ledgerOptions = ledgerOptions
+        self.onPersistSavedSearches = onPersistSavedSearches
+        self._minAmountText = State(initialValue: Self.text(for: query.wrappedValue.minAmount))
+        self._maxAmountText = State(initialValue: Self.text(for: query.wrappedValue.maxAmount))
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Text("ledger.advanced_search.subtitle")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.mutedInk)
+
+                TextField("ledger.search.prompt", text: $searchText)
+            } header: {
+                Text("ledger.advanced_search.title")
+            }
+
+            Section("ledger.advanced_search.amount_range") {
+                TextField("ledger.advanced_search.min_amount", text: $minAmountText)
+                    .onChange(of: minAmountText) { _, newValue in
+                        query.minAmount = Self.amount(from: newValue)
+                    }
+                TextField("ledger.advanced_search.max_amount", text: $maxAmountText)
+                    .onChange(of: maxAmountText) { _, newValue in
+                        query.maxAmount = Self.amount(from: newValue)
+                    }
+            }
+
+            Section("ledger.advanced_search.date_range") {
+                Toggle("ledger.advanced_search.start_date", isOn: Binding(
+                    get: { query.startDate != nil },
+                    set: { query.startDate = $0 ? (query.startDate ?? .now) : nil }
+                ))
+                if query.startDate != nil {
+                    DatePicker(
+                        "ledger.advanced_search.start_date",
+                        selection: Binding(
+                            get: { query.startDate ?? .now },
+                            set: { query.startDate = $0 }
+                        ),
+                        displayedComponents: .date
+                    )
+                }
+
+                Toggle("ledger.advanced_search.end_date", isOn: Binding(
+                    get: { query.endDate != nil },
+                    set: { query.endDate = $0 ? (query.endDate ?? .now) : nil }
+                ))
+                if query.endDate != nil {
+                    DatePicker(
+                        "ledger.advanced_search.end_date",
+                        selection: Binding(
+                            get: { query.endDate ?? .now },
+                            set: { query.endDate = $0 }
+                        ),
+                        displayedComponents: .date
+                    )
+                }
+            }
+
+            optionSection("ledger.advanced_search.category", options: categoryOptions, selection: $query.categoryIDs)
+            optionSection("ledger.advanced_search.source", options: sourceOptions, selection: $query.sourceIDs)
+            optionSection("ledger.advanced_search.ledger", options: ledgerOptions, selection: $query.ledgerIDs)
+
+            Section {
+                Toggle("ledger.advanced_search.hotel_folio", isOn: $query.requiresHotelFolioLink)
+                Toggle("ledger.advanced_search.original_currency", isOn: Binding(
+                    get: { query.requiresOriginalCurrency == true },
+                    set: { query.requiresOriginalCurrency = $0 ? true : nil }
+                ))
+            }
+
+            Section("ledger.advanced_search.saved") {
+                if savedAdvancedSearches.isEmpty {
+                    Text("ledger.advanced_search.saved_empty")
+                        .foregroundStyle(AppTheme.mutedInk)
+                } else {
+                    ForEach(savedAdvancedSearches) { saved in
+                        Button {
+                            query = saved.query
+                            searchText = saved.query.keyword
+                            minAmountText = Self.text(for: saved.query.minAmount)
+                            maxAmountText = Self.text(for: saved.query.maxAmount)
+                        } label: {
+                            Label(saved.name, systemImage: "bookmark")
+                        }
+                    }
+                    .onDelete { indexSet in
+                        savedAdvancedSearches.remove(atOffsets: indexSet)
+                        onPersistSavedSearches()
+                    }
+                }
+
+                TextField("ledger.advanced_search.save_name", text: $savedSearchName)
+
+                Button {
+                    saveCurrentSearch()
+                } label: {
+                    Label("ledger.advanced_search.save_current", systemImage: "bookmark.fill")
+                }
+                .disabled(savedSearchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .navigationTitle("ledger.advanced_search.title")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("ledger.advanced_search.clear") {
+                    clearSearch()
+                }
+            }
+        }
+    }
+
+    private func optionSection(
+        _ titleKey: LocalizedStringKey,
+        options: [LedgerAdvancedSearchOption],
+        selection: Binding<Set<String>>
+    ) -> some View {
+        Section(titleKey) {
+            ForEach(options) { option in
+                Toggle(option.title, isOn: Binding(
+                    get: { selection.wrappedValue.contains(option.id) },
+                    set: { isSelected in
+                        if isSelected {
+                            selection.wrappedValue.insert(option.id)
+                        } else {
+                            selection.wrappedValue.remove(option.id)
+                        }
+                    }
+                ))
+            }
+        }
+    }
+
+    private func saveCurrentSearch() {
+        let trimmed = savedSearchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var snapshot = query
+        snapshot.keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let now = Date()
+        if let existingIndex = savedAdvancedSearches.firstIndex(where: { $0.name == trimmed }) {
+            let existing = savedAdvancedSearches[existingIndex]
+            savedAdvancedSearches[existingIndex] = LedgerSavedSearch(
+                id: existing.id,
+                name: existing.name,
+                query: snapshot,
+                createdAt: existing.createdAt,
+                updatedAt: now
+            )
+        } else {
+            savedAdvancedSearches.append(
+                LedgerSavedSearch(name: trimmed, query: snapshot, createdAt: now, updatedAt: now)
+            )
+        }
+        savedSearchName = ""
+        onPersistSavedSearches()
+    }
+
+    private func clearSearch() {
+        query = LedgerAdvancedSearchQuery()
+        searchText = ""
+        minAmountText = ""
+        maxAmountText = ""
+    }
+
+    private static func amount(from text: String) -> Double? {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
+        guard !normalized.isEmpty else { return nil }
+        return Double(normalized)
+    }
+
+    private static func text(for amount: Double?) -> String {
+        guard let amount else { return "" }
+        return String(format: "%.2f", amount)
     }
 }
 
