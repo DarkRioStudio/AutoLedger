@@ -117,6 +117,108 @@ public struct DataCleaningAssistSuggestion: Codable, Equatable, Sendable {
     }
 }
 
+public struct DataCleaningAssistRequestContext: Equatable, Sendable {
+    public let userEnabledCloudAssist: Bool
+    public let isProActive: Bool
+    public let lastRequestedAt: Date?
+    public let backoffUntil: Date?
+    public let forceRefresh: Bool
+
+    public init(
+        userEnabledCloudAssist: Bool,
+        isProActive: Bool,
+        lastRequestedAt: Date? = nil,
+        backoffUntil: Date? = nil,
+        forceRefresh: Bool = false
+    ) {
+        self.userEnabledCloudAssist = userEnabledCloudAssist
+        self.isProActive = isProActive
+        self.lastRequestedAt = lastRequestedAt
+        self.backoffUntil = backoffUntil
+        self.forceRefresh = forceRefresh
+    }
+}
+
+public enum DataCleaningAssistRequestDecisionReason: String, Codable, Equatable, Sendable {
+    case allowed
+    case disabledByUser
+    case requiresPro
+    case insufficientHistory
+    case coolingDown
+    case backoffActive
+}
+
+public struct DataCleaningAssistRequestDecision: Equatable, Sendable {
+    public let isAllowed: Bool
+    public let reason: DataCleaningAssistRequestDecisionReason
+    public let nextEligibleAt: Date?
+
+    public init(
+        isAllowed: Bool,
+        reason: DataCleaningAssistRequestDecisionReason,
+        nextEligibleAt: Date? = nil
+    ) {
+        self.isAllowed = isAllowed
+        self.reason = reason
+        self.nextEligibleAt = nextEligibleAt
+    }
+}
+
+public struct DataCleaningAssistRequestPolicy: Equatable, Sendable {
+    public let minimumTransactionCount: Int
+    public let cooldownInterval: TimeInterval
+
+    public init(
+        minimumTransactionCount: Int = 8,
+        cooldownInterval: TimeInterval = 21_600
+    ) {
+        self.minimumTransactionCount = max(1, minimumTransactionCount)
+        self.cooldownInterval = max(0, cooldownInterval)
+    }
+
+    public func evaluate(
+        payload: DataCleaningAssistPayload,
+        context: DataCleaningAssistRequestContext,
+        now: Date = Date()
+    ) -> DataCleaningAssistRequestDecision {
+        guard context.userEnabledCloudAssist else {
+            return blocked(.disabledByUser)
+        }
+        guard context.isProActive else {
+            return blocked(.requiresPro)
+        }
+        guard payload.schemaVersion == 1,
+              payload.privacyMode == "hashed_aggregate_v1",
+              payload.transactionCount >= minimumTransactionCount,
+              payload.merchantFeatureCount > 0 else {
+            return blocked(.insufficientHistory)
+        }
+        if let backoffUntil = context.backoffUntil, backoffUntil > now {
+            return blocked(.backoffActive, nextEligibleAt: backoffUntil)
+        }
+        if !context.forceRefresh,
+           let lastRequestedAt = context.lastRequestedAt,
+           cooldownInterval > 0 {
+            let nextEligibleAt = lastRequestedAt.addingTimeInterval(cooldownInterval)
+            if nextEligibleAt > now {
+                return blocked(.coolingDown, nextEligibleAt: nextEligibleAt)
+            }
+        }
+        return DataCleaningAssistRequestDecision(isAllowed: true, reason: .allowed)
+    }
+
+    private func blocked(
+        _ reason: DataCleaningAssistRequestDecisionReason,
+        nextEligibleAt: Date? = nil
+    ) -> DataCleaningAssistRequestDecision {
+        DataCleaningAssistRequestDecision(
+            isAllowed: false,
+            reason: reason,
+            nextEligibleAt: nextEligibleAt
+        )
+    }
+}
+
 public struct DataCleaningAssistSuggestionMapper: Sendable {
     private let minimumConfidence: Double
     private let minimumTargetTransactionCount: Int

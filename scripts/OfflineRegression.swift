@@ -71,6 +71,7 @@ struct OfflineRegression {
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifyDataCleaningAssistPayload(reporter: reporter)
         verifyDataCleaningAssistResponseMapping(reporter: reporter)
+        verifyDataCleaningAssistRequestPolicy(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
@@ -4299,6 +4300,181 @@ struct OfflineRegression {
                 !encodedResponse.contains(anchorA.id.uuidString) &&
                 !encodedResponse.contains(variant.id.uuidString),
             "DataCleaningAssistResponse carries hashes only"
+        )
+    }
+
+    private static func verifyDataCleaningAssistRequestPolicy(reporter: RegressionReporter) {
+        let base = Date(timeIntervalSince1970: 1_782_200_000)
+        let transactions = [
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002651") ?? UUID(),
+                merchant: "Policy Coffee",
+                amount: 18,
+                occurredAt: base,
+                category: .dining,
+                source: .manual,
+                note: ""
+            ),
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002652") ?? UUID(),
+                merchant: "Policy Coffee",
+                amount: 21,
+                occurredAt: base.addingTimeInterval(-60),
+                category: .dining,
+                source: .wechat,
+                note: ""
+            ),
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002653") ?? UUID(),
+                merchant: "Policy Coffee",
+                amount: 19,
+                occurredAt: base.addingTimeInterval(-120),
+                category: .dining,
+                source: .alipay,
+                note: ""
+            ),
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002654") ?? UUID(),
+                merchant: "Policy Coffee Airport",
+                amount: 24,
+                occurredAt: base.addingTimeInterval(-180),
+                category: .dining,
+                source: .manual,
+                note: ""
+            ),
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002655") ?? UUID(),
+                merchant: "Policy Coffee Airport",
+                amount: 26,
+                occurredAt: base.addingTimeInterval(-240),
+                category: .dining,
+                source: .wechat,
+                note: ""
+            ),
+            Transaction(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000002656") ?? UUID(),
+                merchant: "Metro Line",
+                amount: 6,
+                occurredAt: base.addingTimeInterval(-300),
+                category: .transport,
+                source: .manual,
+                note: ""
+            )
+        ]
+        let payload = DataCleaningAssistPayloadBuilder(now: { base }).build(
+            transactions: transactions,
+            merchantAliases: [:],
+            categoryCorrections: [:]
+        )
+        let policy = DataCleaningAssistRequestPolicy(
+            minimumTransactionCount: 5,
+            cooldownInterval: 3_600
+        )
+
+        let disabledDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: false,
+                isProActive: true
+            ),
+            now: base
+        )
+        reporter.check(
+            !disabledDecision.isAllowed && disabledDecision.reason == .disabledByUser,
+            "DataCleaningAssistRequestPolicy requires explicit user opt-in"
+        )
+
+        let nonProDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: false
+            ),
+            now: base
+        )
+        reporter.check(
+            !nonProDecision.isAllowed && nonProDecision.reason == .requiresPro,
+            "DataCleaningAssistRequestPolicy keeps cloud assist behind Pro"
+        )
+
+        let smallPayload = DataCleaningAssistPayloadBuilder(now: { base }).build(
+            transactions: Array(transactions.prefix(2)),
+            merchantAliases: [:],
+            categoryCorrections: [:]
+        )
+        let insufficientDecision = policy.evaluate(
+            payload: smallPayload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: true
+            ),
+            now: base
+        )
+        reporter.check(
+            !insufficientDecision.isAllowed && insufficientDecision.reason == .insufficientHistory,
+            "DataCleaningAssistRequestPolicy avoids requests when local history is too small"
+        )
+
+        let allowedDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: true
+            ),
+            now: base
+        )
+        reporter.check(
+            allowedDecision.isAllowed && allowedDecision.reason == .allowed && allowedDecision.nextEligibleAt == nil,
+            "DataCleaningAssistRequestPolicy allows useful Pro opt-in payloads"
+        )
+
+        let cooldownDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: true,
+                lastRequestedAt: base.addingTimeInterval(-600)
+            ),
+            now: base
+        )
+        reporter.check(
+            !cooldownDecision.isAllowed &&
+                cooldownDecision.reason == .coolingDown &&
+                cooldownDecision.nextEligibleAt?.timeIntervalSince1970 == base.addingTimeInterval(3_000).timeIntervalSince1970,
+            "DataCleaningAssistRequestPolicy throttles repeated requests"
+        )
+
+        let forcedDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: true,
+                lastRequestedAt: base.addingTimeInterval(-600),
+                forceRefresh: true
+            ),
+            now: base
+        )
+        reporter.check(
+            forcedDecision.isAllowed && forcedDecision.reason == .allowed,
+            "DataCleaningAssistRequestPolicy lets explicit refresh bypass cooldown"
+        )
+
+        let backoffUntil = base.addingTimeInterval(900)
+        let backoffDecision = policy.evaluate(
+            payload: payload,
+            context: DataCleaningAssistRequestContext(
+                userEnabledCloudAssist: true,
+                isProActive: true,
+                backoffUntil: backoffUntil,
+                forceRefresh: true
+            ),
+            now: base
+        )
+        reporter.check(
+            !backoffDecision.isAllowed &&
+                backoffDecision.reason == .backoffActive &&
+                backoffDecision.nextEligibleAt?.timeIntervalSince1970 == backoffUntil.timeIntervalSince1970,
+            "DataCleaningAssistRequestPolicy honors failure backoff even on explicit refresh"
         )
     }
 

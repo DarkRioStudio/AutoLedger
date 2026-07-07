@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-384 visionOS review fallback 移植）
+更新日期：2026-07-07（ITER-385 Worker 辅助建议请求策略）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-385 Worker 辅助建议请求策略
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2345F / Pro Automation
+- 类型：能力增强 / 隐私边界 / 测试
+- 目标：在真正接入 Worker 之前，先冻结云端辅助数据清洗建议的请求前置策略，确保未来不会在用户未开启、未订阅 Pro、历史不足、冷却期内或失败回退期内静默发起请求。
+- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 未改动范围：未修改 App UI、UserDefaults 开关、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、配额、用户授权页面或跨设备建议队列。
+- 完成内容：新增 `DataCleaningAssistRequestContext`，显式表达 `userEnabledCloudAssist`、`isProActive`、`lastRequestedAt`、`backoffUntil` 和 `forceRefresh`。
+- 完成内容：新增 `DataCleaningAssistRequestDecision` 和 `DataCleaningAssistRequestDecisionReason`，让调用方只拿到 allowed / reason / nextEligibleAt，不暴露账本明细。
+- 完成内容：新增 `DataCleaningAssistRequestPolicy`，要求用户显式开启、Pro 有效、payload schema / privacy mode 正确、本地历史足够且不在失败回退期；默认最小交易数为 8，默认冷却 6 小时。
+- 完成内容：显式刷新只绕过冷却，不绕过用户开关、Pro 权益、历史不足或失败回退。
+- 未完成内容：本轮只完成 Core 请求策略合同，没有 App 设置开关、持久化、Worker 调用或服务端实现；`userEnabledCloudAssist` 后续仍需要接入清晰的用户授权入口。
+- 测试情况：先新增离线 RED 断言并执行 `bash scripts/run_offline_regression.sh`，确认缺少 `DataCleaningAssistRequestPolicy` 和 `DataCleaningAssistRequestContext` 时编译失败；实现后再次执行 `bash scripts/run_offline_regression.sh`，结果 PASS，覆盖默认关闭、Pro gate、历史不足、允许请求、冷却、强制刷新和失败回退。
+- 风险与注意事项：该策略仍是客户端合同，不是服务端安全边界；真正接入 Worker 时仍需服务端鉴权、配额、日志最小化、威胁建模、用户可撤销授权和 App 侧清晰说明。
+- 回滚方式：删除 `DataCleaningAssistRequestContext`、`DataCleaningAssistRequestDecision`、`DataCleaningAssistRequestDecisionReason`、`DataCleaningAssistRequestPolicy` 和对应离线回归断言，并回退文档记录；不涉及数据迁移或用户数据。
+- 结论：本轮完成；`GOAL-2345F` 已把 Worker 辅助建议的请求 eligibility 落成可回归代码，但仍保持零上传和零 Worker 调用。
+- 下一步建议：继续补 App 侧用户授权开关与本机持久化，或先推进 Mac / iPad 大屏忽略项管理和建议历史表格。
 
 ### ITER-384 visionOS review fallback 移植
 - 日期：2026-07-07

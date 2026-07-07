@@ -26,6 +26,7 @@ Risk: public source can be forked and local client checks can be modified. This 
 - `cloudFolioInbox` is `serverVerified`; local email scan, batch import, advanced deduplication, and merchant normalization suggestions are still `localUIGate`.
 - `DataCleaningAssistPayloadBuilder` defines the first local-only Worker assist contract for future merchant normalization suggestions. It emits hashed aggregate merchant features, category/source distributions, amount buckets, and prefix hashes; it does not include raw merchant names, notes, OCR text, transaction ids, or exact amounts. No current call site uploads this payload.
 - `DataCleaningAssistSuggestionMapper` defines the matching local-only response mapping contract. Future Worker responses may carry hash-only merchant normalization suggestions, but the client must resolve those hashes against local transactions before any user-readable preview exists. Unknown hashes, low-confidence suggestions, duplicate/ignored suggestions, and insufficiently supported targets are filtered locally. No current call site requests these suggestions from a Worker, and the response contract cannot directly mutate the ledger.
+- `DataCleaningAssistRequestPolicy` defines the local-only request eligibility contract for future Worker-assisted suggestions. It requires explicit user opt-in, active Pro access, enough local history to make a useful aggregate payload, cooldown throttling, and failure backoff. Explicit refresh can bypass cooldown but not user opt-in, Pro access, insufficient history, or backoff. No current call site sends a request to `common-api` or any Worker endpoint.
 
 Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
 
@@ -62,7 +63,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 - Policy definitions and regression references use all capabilities.
 - Version docs and iteration logs reference `cloudFolioInbox`, P0 Pro gates, and planned v1.7.0 merchant normalization / data-cleaning gates.
 - UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, and `cloudFolioInbox`.
-- Core regression references `DataCleaningAssistPayloadBuilder` only as a privacy contract; it is not wired to `common-api` or any Worker endpoint yet.
+- Core regression references `DataCleaningAssistPayloadBuilder`, `DataCleaningAssistSuggestionMapper`, and `DataCleaningAssistRequestPolicy` only as local privacy / mapping / request-eligibility contracts; they are not wired to `common-api` or any Worker endpoint yet.
 
 ## Worker Side
 
