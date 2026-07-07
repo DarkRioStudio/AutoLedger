@@ -68,6 +68,7 @@ struct OfflineRegression {
         await verifyLedgerTextInterpreterUsesLocaleLanguagePack(reporter: reporter)
         verifyBatchImportQueue(reporter: reporter)
         verifyBatchImportRecognitionExecutor(reporter: reporter)
+        verifyLedgerAdvancedSearch(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifyDataCleaningAssistPayload(reporter: reporter)
         verifyDataCleaningAssistResponseMapping(reporter: reporter)
@@ -878,17 +879,17 @@ struct OfflineRegression {
             .batchCandidateImport,
             .advancedDeduplication,
             .merchantNormalizationSuggestions,
-            .cloudFolioInbox
+            .cloudFolioInbox,
+            .advancedSearch
         ]
         let expectedLaterPro: Set<AutoLedgerCapability> = [
-            .advancedSearch,
             .subscriptionAnomalyDetection,
             .monthlyExportPackage,
             .advancedRuleAutomation
         ]
 
         reporter.check(freeCore == expectedFreeCore, "ProAccessPolicy freezes free core capabilities")
-        reporter.check(p0Pro == expectedP0Pro, "ProAccessPolicy freezes v1.6.4 P0 Pro automation gates")
+        reporter.check(p0Pro == expectedP0Pro, "ProAccessPolicy freezes v1.7.0 P0 Pro automation gates")
         reporter.check(laterPro == expectedLaterPro, "ProAccessPolicy keeps P1 Pro features out of current gates")
         reporter.check(policy.isAvailableWithoutPro(.manualTransactionEntry), "ProAccessPolicy keeps manual transactions free")
         reporter.check(policy.isAvailableWithoutPro(.manualHotelFolioImport), "ProAccessPolicy keeps manual hotel PDF import free")
@@ -900,7 +901,8 @@ struct OfflineRegression {
         reporter.check(policy.requiresActiveProInCurrentRelease(.advancedDeduplication), "ProAccessPolicy gates advanced deduplication as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.merchantNormalizationSuggestions), "ProAccessPolicy gates merchant normalization suggestions as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.cloudFolioInbox), "ProAccessPolicy gates cloud folio inbox as P0 automation")
-        reporter.check(!policy.requiresActiveProInCurrentRelease(.advancedSearch), "ProAccessPolicy does not gate P1 advanced search in current release")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.advancedSearch), "ProAccessPolicy gates advanced search as P0 automation")
+        reporter.check(policy.securityBoundary(for: .advancedSearch) == .localUIGate, "ProAccessPolicy keeps advanced search behind local UI gate")
         reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
         reporter.check(policy.remainsAvailableAfterProExpiration(.hotelStayArchiveAccess), "ProAccessPolicy keeps hotel archive access after expiration")
         reporter.check(
@@ -3963,6 +3965,72 @@ struct OfflineRegression {
         let retryResult = executor.process(snapshot: retrySnapshot, itemIDs: [retryItem.id], now: now.addingTimeInterval(90))
         reporter.check(retryResult.processedCount == 1, "BatchImportRecognitionExecutor retries selected item only")
         reporter.check(retryResult.snapshot.items.first(where: { $0.id == retryItem.id })?.retryCount == 1, "BatchImportRecognitionExecutor preserves retry count")
+    }
+
+    private static func verifyLedgerAdvancedSearch(reporter: RegressionReporter) {
+        let base = Date(timeIntervalSince1970: 1_790_000_000)
+        let hotelStayID = UUID(uuidString: "00000000-0000-0000-0000-000000001715") ?? UUID()
+        let hotel = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001711") ?? UUID(),
+            merchant: "Park Hyatt Tokyo",
+            amount: 1250,
+            occurredAt: base.addingTimeInterval(2 * 86_400),
+            category: .hotel,
+            source: .manual,
+            note: "folio PDF imported from inbox, booking reference AL-1715",
+            ledgerID: "travel",
+            hotelStayRecordID: hotelStayID,
+            ledgerCurrencyCode: "USD",
+            originalAmount: 189_000,
+            originalCurrencyCode: "JPY",
+            exchangeRate: 0.0066,
+            exchangeRateDate: "2026-09-12",
+            exchangeRateProvider: "common-api"
+        )
+        let coffee = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001712") ?? UUID(),
+            merchant: "Blue Bottle Coffee",
+            amount: 8.4,
+            occurredAt: base.addingTimeInterval(3 * 86_400),
+            category: .dining,
+            source: .wechat,
+            note: "morning coffee",
+            ledgerID: "daily",
+            ledgerCurrencyCode: "USD"
+        )
+        let store = Transaction(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000001713") ?? UUID(),
+            merchant: "Example Market",
+            amount: 76,
+            occurredAt: base.addingTimeInterval(9 * 86_400),
+            category: .shopping,
+            source: .alipay,
+            note: "home supplies",
+            ledgerID: "daily",
+            ledgerCurrencyCode: "CNY"
+        )
+
+        let service = LedgerAdvancedSearchService()
+        let query = LedgerAdvancedSearchQuery(
+            keyword: "folio jpy",
+            minAmount: 1000,
+            maxAmount: 1500,
+            startDate: base,
+            endDate: base.addingTimeInterval(5 * 86_400),
+            categoryIDs: [TransactionCategory.hotel.rawValue],
+            sourceIDs: [ReceiptSource.manual.rawValue],
+            ledgerIDs: ["travel"],
+            requiresHotelFolioLink: true,
+            requiresOriginalCurrency: true
+        )
+        let results = service.search(transactions: [coffee, store, hotel], query: query)
+        reporter.check(results.map(\.id) == [hotel.id], "LedgerAdvancedSearch combines keyword amount date source ledger and hotel filters")
+        reporter.check(query.requiresProAccess, "LedgerAdvancedSearch marks combined filters as Pro")
+
+        let basicKeyword = LedgerAdvancedSearchQuery(keyword: "coffee")
+        let basicResults = service.search(transactions: [coffee, store, hotel], query: basicKeyword)
+        reporter.check(basicResults.map(\.id) == [coffee.id], "LedgerAdvancedSearch keeps basic keyword search free-compatible")
+        reporter.check(basicKeyword.requiresProAccess == false, "LedgerAdvancedSearch does not mark basic keyword as Pro")
     }
 
     private static func verifyDataCleaningPreviewPlanner(reporter: RegressionReporter) {

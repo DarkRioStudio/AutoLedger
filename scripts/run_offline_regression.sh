@@ -390,6 +390,7 @@ swiftc \
   "$CORE/Services/HotelStayReviewForm.swift" \
   "$CORE/Services/LedgerTextInterpreterCore.swift" \
   "$CORE/Services/BatchImportRecognitionExecutor.swift" \
+  "$CORE/Services/LedgerAdvancedSearch.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
   "$CORE/Services/DataCleaningAssistPayload.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \

@@ -59,11 +59,11 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .batchCandidateImport,
              .advancedDeduplication,
              .merchantNormalizationSuggestions,
-             .cloudFolioInbox:
+             .cloudFolioInbox,
+             .advancedSearch:
             return .proAutomationP0
 
-        case .advancedSearch,
-             .subscriptionAnomalyDetection,
+        case .subscriptionAnomalyDetection,
              .monthlyExportPackage,
              .advancedRuleAutomation:
             return .proAutomationLater
@@ -105,14 +105,14 @@ public struct AutoLedgerProAccessPolicy: Equatable, Sendable {
              .localEmailFolioScan,
              .batchCandidateImport,
              .advancedDeduplication,
-             .merchantNormalizationSuggestions:
+             .merchantNormalizationSuggestions,
+             .advancedSearch:
             return .localUIGate
 
         case .cloudFolioInbox:
             return .serverVerified
 
-        case .advancedSearch,
-             .subscriptionAnomalyDetection,
+        case .subscriptionAnomalyDetection,
              .monthlyExportPackage,
              .advancedRuleAutomation:
             return .planned
