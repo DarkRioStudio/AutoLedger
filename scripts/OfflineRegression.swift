@@ -74,6 +74,7 @@ struct OfflineRegression {
         verifyDataCleaningAssistResponseMapping(reporter: reporter)
         verifyDataCleaningAssistRequestPolicy(reporter: reporter)
         verifySubscriptionDetection(reporter: reporter)
+        verifySubscriptionAnomalyDetection(reporter: reporter)
         verifySubscriptionStatusCodable(reporter: reporter)
         verifySubscriptionDraftFromTransaction(reporter: reporter)
         verifyTodaySpendingSummary(reporter: reporter)
@@ -880,10 +881,10 @@ struct OfflineRegression {
             .advancedDeduplication,
             .merchantNormalizationSuggestions,
             .cloudFolioInbox,
-            .advancedSearch
+            .advancedSearch,
+            .subscriptionAnomalyDetection
         ]
         let expectedLaterPro: Set<AutoLedgerCapability> = [
-            .subscriptionAnomalyDetection,
             .monthlyExportPackage,
             .advancedRuleAutomation
         ]
@@ -903,6 +904,8 @@ struct OfflineRegression {
         reporter.check(policy.requiresActiveProInCurrentRelease(.cloudFolioInbox), "ProAccessPolicy gates cloud folio inbox as P0 automation")
         reporter.check(policy.requiresActiveProInCurrentRelease(.advancedSearch), "ProAccessPolicy gates advanced search as P0 automation")
         reporter.check(policy.securityBoundary(for: .advancedSearch) == .localUIGate, "ProAccessPolicy keeps advanced search behind local UI gate")
+        reporter.check(policy.requiresActiveProInCurrentRelease(.subscriptionAnomalyDetection), "ProAccessPolicy gates subscription anomaly detection as P0 automation")
+        reporter.check(policy.securityBoundary(for: .subscriptionAnomalyDetection) == .localUIGate, "ProAccessPolicy keeps subscription anomaly detection behind local UI gate")
         reporter.check(!policy.remainsAvailableAfterProExpiration(.localEmailFolioScan), "ProAccessPolicy pauses new email automation after expiration")
         reporter.check(policy.remainsAvailableAfterProExpiration(.hotelStayArchiveAccess), "ProAccessPolicy keeps hotel archive access after expiration")
         reporter.check(
@@ -2485,6 +2488,82 @@ struct OfflineRegression {
         reporter.check(detected.contains { $0.merchant == "Apple Services" }, "SubscriptionDetector scans digital service subscriptions")
         reporter.check(!detected.contains { $0.merchant == "Demo Burger" }, "SubscriptionDetector excludes dining transactions")
         reporter.check(!detected.contains { $0.merchant.contains("地铁") }, "SubscriptionDetector excludes transport transactions")
+    }
+
+    private static func verifySubscriptionAnomalyDetection(reporter: RegressionReporter) {
+        let now = Date(timeIntervalSince1970: 1_788_307_200) // 2026-09-01 00:00:00 UTC
+        let monthlyServiceID = UUID(uuidString: "00000000-0000-0000-0000-000000002321") ?? UUID()
+        let cloudServiceID = UUID(uuidString: "00000000-0000-0000-0000-000000002322") ?? UUID()
+        let monthlyService = Subscription(
+            id: monthlyServiceID,
+            merchant: "Demo Stream",
+            planName: "Premium",
+            period: .monthly,
+            amount: 12.99,
+            currencyCode: "USD",
+            lastChargedAt: now.addingTimeInterval(-86_400),
+            nextChargedAt: now.addingTimeInterval(6 * 86_400)
+        )
+        let cloudService = Subscription(
+            id: cloudServiceID,
+            merchant: "Demo Cloud",
+            planName: "Storage",
+            period: .monthly,
+            amount: 29,
+            currencyCode: "USD",
+            lastChargedAt: now.addingTimeInterval(-32 * 86_400),
+            nextChargedAt: now.addingTimeInterval(22 * 86_400)
+        )
+
+        let olderCharge = Transaction(
+            merchant: "Demo Stream",
+            amount: 9.99,
+            occurredAt: now.addingTimeInterval(-31 * 86_400),
+            category: .digital,
+            source: .appStore,
+            note: "previous subscription charge",
+            ledgerCurrencyCode: "USD"
+        )
+        let currentCharge = Transaction(
+            merchant: "Demo Stream",
+            amount: 12.99,
+            occurredAt: now.addingTimeInterval(-86_400),
+            category: .digital,
+            source: .appStore,
+            note: "renewal charge",
+            ledgerCurrencyCode: "USD"
+        )
+        let duplicateCharge = Transaction(
+            merchant: "Demo Stream",
+            amount: 12.99,
+            occurredAt: now.addingTimeInterval(-12 * 60 * 60),
+            category: .digital,
+            source: .appStore,
+            note: "second renewal charge",
+            ledgerCurrencyCode: "USD"
+        )
+        let cloudCharge = Transaction(
+            merchant: "Demo Cloud",
+            amount: 29,
+            occurredAt: now.addingTimeInterval(-32 * 86_400),
+            category: .digital,
+            source: .appStore,
+            note: "renewal charge",
+            ledgerCurrencyCode: "USD"
+        )
+
+        let summary = SubscriptionAnomalyDetector().analyze(
+            subscriptions: [monthlyService, cloudService],
+            transactions: [olderCharge, currentCharge, duplicateCharge, cloudCharge],
+            now: now
+        )
+        reporter.check(summary.anomalies.contains { $0.kind == .priceIncrease && $0.subscriptionID == monthlyServiceID }, "SubscriptionAnomalyDetector detects price increases")
+        reporter.check(summary.anomalies.contains { $0.kind == .duplicateCharge && $0.subscriptionID == monthlyServiceID }, "SubscriptionAnomalyDetector detects duplicate charges")
+        reporter.check(summary.anomalies.contains { $0.kind == .billingCycleDrift && $0.subscriptionID == cloudServiceID }, "SubscriptionAnomalyDetector detects billing cycle drift")
+
+        let thirtyDayPressure = summary.renewalPressure.first { $0.windowDays == 30 && $0.currencyCode == "USD" }
+        reporter.check(thirtyDayPressure?.subscriptionCount == 2, "SubscriptionAnomalyDetector counts 30-day renewal pressure")
+        reporter.check(abs((thirtyDayPressure?.totalAmount ?? 0) - 41.99) < 0.001, "SubscriptionAnomalyDetector totals upcoming renewal pressure")
     }
 
     private static func verifySubscriptionStatusCodable(reporter: RegressionReporter) {

@@ -399,6 +399,7 @@ swiftc \
   "$CORE/Services/StructuredLedgerJSONParser.swift" \
   "$CORE/Services/SampleReceiptProvider.swift" \
   "$CORE/Services/SubscriptionDetector.swift" \
+  "$CORE/Services/SubscriptionAnomalyDetector.swift" \
   "$CORE/Persistence/TransactionStore.swift" \
   "$CORE/Persistence/SQLiteTransactionStore.swift" \
   "$PREP_DIR/LedgerTextInterpreter.swift" \
