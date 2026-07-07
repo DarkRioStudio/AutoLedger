@@ -584,6 +584,14 @@
 "report.trend.accessibility_format" = "Last 6 months: %@";
 "report.trend.accessibility_item_format" = "%@, %@, %@";
 "report.merchant.accessibility_format" = "Rank %d, %@, %@, %@, %@";
+"report.monthly_export.title" = "Monthly Export";
+"report.monthly_export.body_format" = "Package %@ entries, category summary, and hotel folio index into shareable files.";
+"report.monthly_export.redact_toggle" = "Hide merchant and hotel names before export";
+"report.monthly_export.export_action" = "Export Package";
+"report.monthly_export.pro.action" = "View Pro";
+"report.monthly_export.accessibility_label" = "Export monthly package";
+"report.monthly_export.status_ready_format" = "%d files are ready to share or save.";
+"report.monthly_export.status_failed_format" = "Monthly export failed: %@";
 
 "merchant_alias.title" = "Merchant Aliases";
 "merchant_alias.add_mapping" = "Add Mapping";

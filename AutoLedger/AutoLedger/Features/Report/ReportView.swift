@@ -2,12 +2,18 @@ import AutoLedgerCore
 import Charts
 import SwiftUI
 
+private struct MonthlyExportSharePayload: Identifiable {
+    let id = UUID()
+    let urls: [URL]
+}
+
 struct ReportView: View {
     @EnvironmentObject private var store: LedgerStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
+    @ObservedObject private var proEntitlement = ProEntitlementManager.shared
     @AppStorage("monthlyAnomalyThresholdPercent") private var anomalyThresholdPercent = 150.0
     @ScaledMetric(relativeTo: .largeTitle) private var totalAmountFontSize: CGFloat = 36
     @ScaledMetric(relativeTo: .caption) private var rankBadgeSize: CGFloat = 26
@@ -15,6 +21,10 @@ struct ReportView: View {
     @State private var selectedCategoryID: String?
     @State private var selectedMonth: Date = .now
     @State private var selectedTrendLabel: String?
+    @State private var shouldRedactMonthlyExport = true
+    @State private var monthlyExportStatusMessage: String?
+    @State private var monthlyExportSharePayload: MonthlyExportSharePayload?
+    @State private var isPresentingProSheet = false
     private let insightService = MonthlyInsightService()
 
     private var isCurrentMonth: Bool {
@@ -42,6 +52,8 @@ struct ReportView: View {
                     AutoLedgerPageTitle("tab.report")
 
                     summaryCard(snapshot)
+
+                    monthlyExportSection(snapshot)
 
                     if !anomalyAlerts.isEmpty {
                         anomalySection(anomalyAlerts)
@@ -80,6 +92,25 @@ struct ReportView: View {
             .autoLedgerSolidNavigationBarChrome()
             .autoLedgerContentTitleNavigation("tab.report")
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
+            .sheet(item: $monthlyExportSharePayload) { payload in
+                ActivityShareSheet(activityItems: payload.urls.map { $0 as Any })
+            }
+            .sheet(isPresented: $isPresentingProSheet) {
+                NavigationStack {
+                    AutoLedgerProView()
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("common.close") {
+                                    isPresentingProSheet = false
+                                }
+                            }
+                        }
+                }
+            }
+            .task {
+                await proEntitlement.loadProducts()
+                await proEntitlement.refreshEntitlements()
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
@@ -99,6 +130,83 @@ struct ReportView: View {
                 }
             }
         }
+    }
+
+    private func monthlyExportSection(_ snapshot: MonthlySnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "tray.and.arrow.up.fill")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(AppTheme.accent.opacity(0.12))
+                    )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text("report.monthly_export.title")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
+                        Text("Pro")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(AppTheme.accent.opacity(0.12)))
+                    }
+
+                    Text(String(format: String(localized: "report.monthly_export.body_format"), snapshot.monthLabel))
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Toggle(isOn: $shouldRedactMonthlyExport) {
+                Text("report.monthly_export.redact_toggle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+            }
+            .tint(AppTheme.accent)
+
+            Button {
+                exportMonthlyPackage()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: proEntitlement.canUse(.monthlyExportPackage) ? "square.and.arrow.up.fill" : "lock.fill")
+                    if proEntitlement.canUse(.monthlyExportPackage) {
+                        Text("report.monthly_export.export_action")
+                    } else {
+                        Text("report.monthly_export.pro.action")
+                    }
+                    Spacer()
+                    Text(transactionCountText(snapshot.transactionCount))
+                        .font(.caption.weight(.semibold))
+                        .opacity(0.78)
+                }
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.accent)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("report.monthly_export.accessibility_label"))
+
+            if let monthlyExportStatusMessage {
+                Text(monthlyExportStatusMessage)
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .transition(reduceMotion ? .identity : .opacity)
+            }
+        }
+        .padding(18)
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func anomalySection(_ alerts: [AnomalyAlert]) -> some View {
@@ -425,6 +533,30 @@ struct ReportView: View {
     private func changeSelectedCategory(to id: String?) {
         withOptionalAnimation(.easeInOut(duration: 0.16)) {
             selectedCategoryID = id
+        }
+    }
+
+    private func exportMonthlyPackage() {
+        guard proEntitlement.canUse(.monthlyExportPackage) else {
+            isPresentingProSheet = true
+            return
+        }
+
+        do {
+            let urls = try store.writeMonthlyExportPackage(
+                referenceDate: selectedMonth,
+                redactSensitiveFields: shouldRedactMonthlyExport
+            )
+            monthlyExportStatusMessage = String(
+                format: String(localized: "report.monthly_export.status_ready_format"),
+                urls.count
+            )
+            monthlyExportSharePayload = MonthlyExportSharePayload(urls: urls)
+        } catch {
+            monthlyExportStatusMessage = String(
+                format: String(localized: "report.monthly_export.status_failed_format"),
+                error.localizedDescription
+            )
         }
     }
 

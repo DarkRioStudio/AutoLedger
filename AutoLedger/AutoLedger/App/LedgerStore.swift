@@ -3220,6 +3220,128 @@ extension LedgerStore {
         return url
     }
 
+    func writeMonthlyExportPackage(referenceDate: Date, redactSensitiveFields: Bool = true) throws -> [URL] {
+        let scopedLedgerID = isShowingAllLedgers ? nil : selectedLedgerID
+
+        let package = MonthlyExportPackageBuilder().build(
+            transactions: transactions,
+            hotelStayRecords: hotelStayRecords,
+            referenceDate: referenceDate,
+            options: MonthlyExportPackageOptions(
+                ledgerID: scopedLedgerID,
+                redactSensitiveFields: redactSensitiveFields,
+                includeHotelAttachmentIndex: true
+            )
+        )
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let folderName = "AutoLedger_monthly_export_\(formatter.string(from: package.generatedAt))"
+        let folderURL = FileManager.default.temporaryDirectory.appendingPathComponent(folderName, isDirectory: true)
+        if FileManager.default.fileExists(atPath: folderURL.path) {
+            try FileManager.default.removeItem(at: folderURL)
+        }
+        try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+
+        let urls = try package.files.map { file in
+            let exportFile = monthlyExportWritableFile(from: file)
+            let url = folderURL.appendingPathComponent(exportFile.fileName)
+            try exportFile.data.write(to: url, options: [.atomic])
+            return url
+        }
+        lastBackupSummary = String(
+            format: String(localized: "report.monthly_export.status_ready_format"),
+            urls.count
+        )
+        return urls
+    }
+
+    private func monthlyExportWritableFile(from file: MonthlyExportPackageFile) -> (fileName: String, data: Data) {
+        switch file.kind {
+        case .printableReport:
+            #if canImport(UIKit)
+            let pdfName = file.fileName.replacingOccurrences(of: ".md", with: ".pdf")
+            return (pdfName, Self.renderMonthlyExportPDF(from: file.text))
+            #else
+            return (file.fileName, file.data)
+            #endif
+
+        case .manifestJSON:
+            let manifestText = file.text.replacingOccurrences(of: "_monthly_report.md", with: "_monthly_report.pdf")
+            return (file.fileName, Data(manifestText.utf8))
+
+        case .excelCSV, .hotelAttachmentIndex:
+            return (file.fileName, file.data)
+        }
+    }
+
+    #if canImport(UIKit)
+    private static func renderMonthlyExportPDF(from markdownText: String) -> Data {
+        let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let margin: CGFloat = 44
+        let textWidth = pageBounds.width - margin * 2
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
+            .foregroundColor: UIColor.label
+        ]
+        let bodyAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byWordWrapping
+                style.lineSpacing = 2
+                return style
+            }()
+        ]
+        let captionAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 10, weight: .regular),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        let lines = markdownText.components(separatedBy: .newlines)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
+
+        return renderer.pdfData { context in
+            var index = 0
+            repeat {
+                context.beginPage()
+                var y = margin
+                while index < lines.count {
+                    let rawLine = lines[index]
+                    let printableLine = rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : rawLine
+                    let attributes: [NSAttributedString.Key: Any]
+                    if printableLine.hasPrefix("#") {
+                        attributes = titleAttributes
+                    } else if printableLine.hasPrefix("-") {
+                        attributes = bodyAttributes
+                    } else {
+                        attributes = captionAttributes
+                    }
+                    let boundingRect = printableLine.boundingRect(
+                        with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+                        options: [.usesLineFragmentOrigin, .usesFontLeading],
+                        attributes: attributes,
+                        context: nil
+                    )
+                    let lineHeight = max(14, ceil(boundingRect.height) + 7)
+                    if y + lineHeight > pageBounds.maxY - margin, y > margin {
+                        break
+                    }
+                    printableLine.draw(
+                        with: CGRect(x: margin, y: y, width: textWidth, height: lineHeight),
+                        options: [.usesLineFragmentOrigin, .usesFontLeading],
+                        attributes: attributes,
+                        context: nil
+                    )
+                    y += lineHeight
+                    index += 1
+                }
+            } while index < lines.count
+        }
+    }
+    #endif
+
     func importBackup(from url: URL) throws {
         let didAccess = url.startAccessingSecurityScopedResource()
         defer {

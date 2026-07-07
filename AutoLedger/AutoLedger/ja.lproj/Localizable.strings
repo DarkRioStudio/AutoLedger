@@ -584,6 +584,14 @@
 "report.trend.accessibility_format" = "直近 6 か月: %@";
 "report.trend.accessibility_item_format" = "%@、%@、%@";
 "report.merchant.accessibility_format" = "%d 位、%@、%@、%@、%@";
+"report.monthly_export.title" = "月次エクスポート";
+"report.monthly_export.body_format" = "%@ の記録、カテゴリ概要、ホテル明細索引を共有しやすいファイルにまとめます。";
+"report.monthly_export.redact_toggle" = "出力前に加盟店名とホテル名を隠す";
+"report.monthly_export.export_action" = "月次パックを作成";
+"report.monthly_export.pro.action" = "Pro を見る";
+"report.monthly_export.accessibility_label" = "月次パックを作成";
+"report.monthly_export.status_ready_format" = "%d 個のファイルを共有または保存できます。";
+"report.monthly_export.status_failed_format" = "月次エクスポートに失敗しました：%@";
 
 "merchant_alias.title" = "加盟店別名";
 "merchant_alias.add_mapping" = "マッピングを追加";

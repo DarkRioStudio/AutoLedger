@@ -584,6 +584,14 @@
 "report.trend.accessibility_format" = "近 6 个月趋势：%@";
 "report.trend.accessibility_item_format" = "%@，%@，%@";
 "report.merchant.accessibility_format" = "第 %d 名，%@，%@，%@，%@";
+"report.monthly_export.title" = "月结包导出";
+"report.monthly_export.body_format" = "把 %@ 的账单、分类概览和酒店水单索引整理成可分享文件。";
+"report.monthly_export.redact_toggle" = "导出前隐藏商户和酒店名称";
+"report.monthly_export.export_action" = "生成月结包";
+"report.monthly_export.pro.action" = "查看 Pro";
+"report.monthly_export.accessibility_label" = "生成本月月结包";
+"report.monthly_export.status_ready_format" = "已生成 %d 个文件，可继续分享或保存。";
+"report.monthly_export.status_failed_format" = "月结包生成失败：%@";
 
 "merchant_alias.title" = "商户别名";
 "merchant_alias.add_mapping" = "添加映射";

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-388 订阅异常提醒第一版）
+更新日期：2026-07-07（ITER-389 月结导出包第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-389 月结导出包第一版
+- 日期：2026-07-07
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2330 / Pro Automation
+- 类型：能力增强 / 导出 / UI / 测试
+- 目标：让 Pro 用户在月报页一键生成月度资料包，包含账单明细、月报摘要、酒店水单附件索引和脱敏选项，同时保持基础 CSV / JSON 导出免费。
+- 改动范围：新增 `MonthlyExportPackageBuilder`、月结包模型和离线回归；更新 `AutoLedgerProAccessPolicy`；更新 `LedgerStore` 月结包写出与 PDF 渲染；更新 `ReportView` 月结包卡片、Pro gate、分享入口和脱敏开关；补齐五语 `report.monthly_export.*` 文案；新增月结包 UI smoke 并接入离线回归。
+- 未改动范围：未新增 Worker endpoint、未修改 StoreKit 商品、未修改 SQLite / CloudKit schema、未修改基础 CSV / JSON 备份入口、未修改截图 / App Preview 管线、未移动构建 tag。
+- 完成内容：Core 层可按月份、账本、分类、商户和时间范围过滤交易，生成 Excel 兼容 CSV、可打印月报源、酒店水单附件索引和 manifest；App 侧分享时将月报源渲染为 PDF，并同步 manifest 文件名；导出默认开启商户 / 酒店名称脱敏。`monthlyExportPackage` 进入 v1.7.0 P0 Pro 本地 UI gate，未订阅用户进入统一 Pro 页面。
+- 未完成内容：本轮没有做 ZIP 打包、Numbers / Excel 原生工作簿、跨设备导出历史、异步后台导出队列或 Mac 专用月结工作台；这些可在真实用户导出文件规模明确后继续扩展。
+- 测试情况：执行 `python3 scripts/check_monthly_export_ui_smoke.py`、`python3 scripts/check_localization_coverage.py`、五语 `Localizable.strings` `plutil -lint`、`git diff --check`、iPhone 17 Pro Max Simulator Debug build-run 和 `bash scripts/run_offline_regression.sh`，结果均 PASS。
+- 风险与注意事项：分享 sheet 当前直接分享同一临时目录内的多文件 URL，系统目标 App 对多文件接收能力不同；PDF 为 App 侧基础分页渲染，适合审核和普通分享，复杂排版或品牌化报表可后续单独增强。
+- 回滚方式：回退 `ReportView` 月结包卡片、`LedgerStore.writeMonthlyExportPackage`、五语 `report.monthly_export.*` 文案、`check_monthly_export_ui_smoke.py`、`MonthlyExportPackageBuilder.swift` 和 `ProAccessPolicy` 中 `monthlyExportPackage` P0 gate，即可恢复旧月报页和基础导出行为。
+- 结论：本轮完成，GOAL-2330 第一版工程闭环可进入高级规则自动化。
+- 下一步建议：进入 GOAL-2340 高级规则自动应用，复用既有数据清洗预览 / 撤销模型，先固定规则预览合同和单条编辑免费边界。
 
 ### ITER-388 订阅异常提醒第一版
 - 日期：2026-07-07

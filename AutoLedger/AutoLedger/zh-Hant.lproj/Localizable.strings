@@ -587,6 +587,14 @@
 "report.trend.accessibility_format" = "近 6 個月趨勢：%@";
 "report.trend.accessibility_item_format" = "%@，%@，%@";
 "report.merchant.accessibility_format" = "第 %d 名，%@，%@，%@，%@";
+"report.monthly_export.title" = "月結包匯出";
+"report.monthly_export.body_format" = "把 %@ 的帳單、分類概覽和酒店水單索引整理成可分享檔案。";
+"report.monthly_export.redact_toggle" = "匯出前隱藏商戶和酒店名稱";
+"report.monthly_export.export_action" = "產生月結包";
+"report.monthly_export.pro.action" = "查看 Pro";
+"report.monthly_export.accessibility_label" = "產生本月月結包";
+"report.monthly_export.status_ready_format" = "已產生 %d 個檔案，可繼續分享或儲存。";
+"report.monthly_export.status_failed_format" = "月結包產生失敗：%@";
 
 "merchant_alias.title" = "商家別名";
 "merchant_alias.add_mapping" = "新增映射";
