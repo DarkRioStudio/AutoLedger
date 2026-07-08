@@ -71,7 +71,7 @@ export async function autoLedgerDashboardDataResponse(env: Env): Promise<Respons
     rowLimit: dashboardMaxRows,
     source: "autoledger_analytics_events",
     privacy: {
-      summary: "This dashboard exposes aggregate counts and rates only. It never returns raw event rows or payload JSON.",
+      summary: "此面板只展示聚合计数和比率，不返回原始事件行或 payload JSON。",
       dataCategories: ["Diagnostics", "Usage Data"],
       linked: false,
       tracking: false
@@ -106,46 +106,46 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const privacyEvents = events.filter((event) => event.eventName === "al_privacy_payload_guard_violation");
 
   return [
-    countMetric("total_events_count", "Total accepted analytics events", events.length),
+    countMetric("total_events_count", "已接收匿名事件总数", events.length),
     percentMetric(
       "launch_success_rate",
-      "Launch success rate",
+      "启动成功率",
       launchEvents.filter((event) => stringPayload(event.payload, "result") === "success").length,
       launchEvents.length
     ),
     percentMetric(
       "import_completion_rate",
-      "Import completion rate",
+      "导入完成率",
       importCompletions.filter((event) => stringPayload(event.payload, "status") === "success").length,
       importStarts.length
     ),
     countMetric(
       "import_error_code_top_n",
-      "Import error code breakdown",
+      "导入错误码分布",
       importCompletions.length,
       breakdown(importCompletions.map((event) => stringPayload(event.payload, "error_code") ?? "unknown"))
     ),
     percentMetric(
       "confirmation_discard_rate",
-      "Confirmation discard rate",
+      "确认页放弃率",
       confirmationEvents.filter((event) => stringPayload(event.payload, "confirm_status") === "discarded").length,
       confirmationEvents.length
     ),
     percentMetric(
       "currency_lookup_success_rate",
-      "Currency lookup success rate",
+      "汇率查询成功率",
       currencyEvents.filter((event) => stringPayload(event.payload, "rate_lookup_status") === "success").length,
       currencyEvents.length
     ),
     percentMetric(
       "purchase_flow_failure_rate",
-      "Purchase flow failure rate",
+      "购买流程失败率",
       purchaseEvents.filter((event) => isPurchaseFailure(stringPayload(event.payload, "storekit_status"))).length,
       purchaseEvents.length
     ),
     countMetric(
       "privacy_payload_violation_count",
-      "Privacy payload guard violations",
+      "隐私 payload 拦截次数",
       privacyEvents.length,
       breakdown(privacyEvents.map((event) => stringPayload(event.payload, "blocked_field_category") ?? "unknown"))
     )
@@ -249,11 +249,11 @@ function error(code: string, message: string): APIError {
 }
 
 const dashboardHTML = `<!doctype html>
-<html lang="en">
+<html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AutoLedger Ops Dashboard</title>
+  <title>AutoLedger 运营观测面板</title>
   <style>
     :root {
       color-scheme: light;
@@ -293,23 +293,23 @@ const dashboardHTML = `<!doctype html>
   <main>
     <header>
       <div>
-        <h1>AutoLedger Ops Dashboard</h1>
-        <p>Anonymous aggregate metrics for marketing-readiness checks. No ledger amounts, merchant names, screenshots, PDFs, emails, hotel identifiers, room numbers, precise location, OCR text, StoreKit transaction identifiers, receipts, or payment data are shown here.</p>
+        <h1>AutoLedger 运营观测面板</h1>
+        <p>匿名聚合指标，用于上线前检查。这里不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
       </div>
-      <span class="badge" id="status">Loading</span>
+      <span class="badge" id="status">正在加载</span>
     </header>
     <section class="grid" id="metrics"></section>
     <section class="section-grid">
       <div class="panel">
-        <h2>Event Mix</h2>
+        <h2>事件分布</h2>
         <table>
-          <thead><tr><th>Event</th><th>Count</th><th>Latest</th></tr></thead>
-          <tbody id="eventBreakdown"><tr><td colspan="3" class="muted">Loading</td></tr></tbody>
+          <thead><tr><th>事件</th><th>次数</th><th>最近接收</th></tr></thead>
+          <tbody id="eventBreakdown"><tr><td colspan="3" class="muted">正在加载</td></tr></tbody>
         </table>
       </div>
       <div class="panel">
-        <h2>Privacy Profile</h2>
-        <p id="privacy" class="muted">Loading</p>
+        <h2>隐私边界</h2>
+        <p id="privacy" class="muted">正在加载</p>
       </div>
     </section>
   </main>
@@ -326,8 +326,16 @@ const dashboardHTML = `<!doctype html>
     ];
 
     function formatMetric(metric) {
-      if (metric.value === null) return "No data";
+      if (metric.value === null) return "暂无数据";
       return metric.unit === "percent" ? metric.value + "%" : String(metric.value);
+    }
+
+    function statusText(status) {
+      switch (status) {
+        case "available": return "可用";
+        case "insufficient_data": return "数据不足";
+        default: return status || "-";
+      }
     }
 
     function escapeHTML(value) {
@@ -346,23 +354,23 @@ const dashboardHTML = `<!doctype html>
         const response = await fetch("/dashboard/data", { cache: "no-store" });
         if (!response.ok) throw new Error("Dashboard data unavailable");
         const data = await response.json();
-        status.textContent = "Last updated " + new Date(data.generatedAt).toLocaleString();
-        document.getElementById("privacy").textContent = data.privacy.summary + " Data is " + (data.privacy.linked ? "linked" : "not linked") + " and " + (data.privacy.tracking ? "used for tracking." : "not used for tracking.");
+        status.textContent = "最近更新 " + new Date(data.generatedAt).toLocaleString("zh-CN", { hour12: false });
+        document.getElementById("privacy").textContent = data.privacy.summary + " 数据" + (data.privacy.linked ? "会关联用户" : "不关联用户") + "，" + (data.privacy.tracking ? "用于追踪。" : "不用于追踪。");
 
         const byID = new Map(data.metrics.map((metric) => [metric.metricID, metric]));
         document.getElementById("metrics").innerHTML = metricOrder
           .map((metricID) => byID.get(metricID))
           .filter(Boolean)
-          .map((metric) => '<article class="metric"><h2>' + escapeHTML(metric.label) + '</h2><div><div class="value">' + escapeHTML(formatMetric(metric)) + '</div><div class="detail">' + escapeHTML(metric.numerator + ' / ' + metric.denominator + ' · ' + metric.status.replace("_", " ")) + '</div></div></article>')
+          .map((metric) => '<article class="metric"><h2>' + escapeHTML(metric.label) + '</h2><div><div class="value">' + escapeHTML(formatMetric(metric)) + '</div><div class="detail">' + escapeHTML(metric.numerator + ' / ' + metric.denominator + ' · ' + statusText(metric.status)) + '</div></div></article>')
           .join("");
 
         document.getElementById("eventBreakdown").innerHTML = data.eventBreakdown.length
-          ? data.eventBreakdown.map((row) => '<tr><td>' + escapeHTML(row.eventName) + '</td><td>' + escapeHTML(row.count) + '</td><td class="muted">' + escapeHTML(row.latestReceivedAt || "No data") + '</td></tr>').join("")
-          : '<tr><td colspan="3" class="muted">No events in the selected window.</td></tr>';
+          ? data.eventBreakdown.map((row) => '<tr><td>' + escapeHTML(row.eventName) + '</td><td>' + escapeHTML(row.count) + '</td><td class="muted">' + escapeHTML(row.latestReceivedAt || "暂无数据") + '</td></tr>').join("")
+          : '<tr><td colspan="3" class="muted">当前窗口内没有事件。</td></tr>';
       } catch (error) {
-        status.textContent = "Unavailable";
+        status.textContent = "暂不可用";
         status.className = "badge error";
-        document.getElementById("metrics").innerHTML = '<article class="metric"><h2>Dashboard unavailable</h2><div class="detail">Refresh after the Worker and D1 binding are available.</div></article>';
+        document.getElementById("metrics").innerHTML = '<article class="metric"><h2>面板暂不可用</h2><div class="detail">请在 Worker 和 D1 绑定恢复后刷新。</div></article>';
       }
     }
 

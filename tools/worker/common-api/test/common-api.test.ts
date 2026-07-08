@@ -457,10 +457,15 @@ describe("common api worker contract", () => {
       windowDays: 30
     });
     expect(byID.get("total_events_count")).toMatchObject({ value: 6, unit: "count" });
+    expect(byID.get("total_events_count")).toMatchObject({ label: "已接收匿名事件总数" });
     expect(byID.get("launch_success_rate")).toMatchObject({ value: 50, unit: "percent", numerator: 1, denominator: 2 });
+    expect(byID.get("launch_success_rate")).toMatchObject({ label: "启动成功率" });
     expect(byID.get("import_completion_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("privacy_payload_violation_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(body.privacy).toMatchObject({
+      summary: "此面板只展示聚合计数和比率，不返回原始事件行或 payload JSON。"
+    });
     expect(body).not.toHaveProperty("events");
     expect(body).not.toHaveProperty("rows");
     expect(serialized).not.toContain("payload_json");
@@ -474,8 +479,13 @@ describe("common api worker contract", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(html).toContain("AutoLedger Ops Dashboard");
+    expect(html).toContain("AutoLedger 运营观测面板");
+    expect(html).toContain("匿名聚合指标，用于上线前检查");
+    expect(html).toContain("事件分布");
+    expect(html).toContain("隐私边界");
     expect(html).toContain("/dashboard/data");
+    expect(html).not.toContain("AutoLedger Ops Dashboard");
+    expect(html).not.toContain("Anonymous aggregate metrics");
     expect(html).not.toContain("payload_json");
   });
 
