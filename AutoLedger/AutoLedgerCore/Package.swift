@@ -13,5 +13,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "AutoLedgerCore"),
+        .testTarget(
+            name: "AutoLedgerCoreTests",
+            dependencies: ["AutoLedgerCore"]
+        ),
     ]
 )
