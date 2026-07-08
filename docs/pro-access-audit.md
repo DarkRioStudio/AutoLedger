@@ -1,8 +1,15 @@
 # Pro Access Audit
 
-Date: 2026-07-07
+Date: 2026-07-08
 
 This audit records the current Pro entitlement boundary after the source-available and Worker token-claim hardening pass. The goal is to keep local Free / Pro UX intact while making clear that server-cost features require server-side verification.
+
+Product language for the current implementation:
+
+- AutoLedger positioning: local-first personal ledger + automated import + hotel folio archive.
+- Pro positioning: Free users complete the work manually; Pro automates repetitive cleanup and review.
+- Pro must not imply that historical data, manual bookkeeping, manual hotel folio import, basic exports, or basic reports are locked behind subscription.
+- The local Pro gate is only a local UI / local-feature boundary. `cloudFolioInbox` is a server-verified service boundary and cannot be authorized by client StoreKit state alone.
 
 ## App Side
 

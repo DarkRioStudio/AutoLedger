@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-401 数据清洗别名 hash 冲突崩溃修复）
+更新日期：2026-07-08（ITER-402 个人 Pro 文档与产品口径收口）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-402 个人 Pro 文档与产品口径收口
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Docs / Product Positioning
+- 类型：文档 / 治理
+- 目标：让 repo 中 AutoLedger 个人 Pro 说明与当前实现一致，统一为“本地优先个人账本 + 自动化导入 + 酒店水单归档”和“免费版手动完成，Pro 自动整理”。
+- 改动范围：README 顶层定位；`docs/autoledger-personal-pro-design.md` 当前 Pro 能力与后续方向；新增 `docs/autoledger-personal-pro-roadmap.md`；`docs/pro-access-audit.md` 本地 gate / server-verified 边界；`docs/iap-support.md` Pro / Support Developer 双线说明；`versions/v1.7.0-plan.md` 个人 Pro 后续路线图；CHANGELOG 本轮记录。
+- 未改动范围：未修改 Swift 业务代码、SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、Pro 定价策略、ASC 自动提交逻辑或构建 tag。
+- 完成内容：免费版完整手动路径、当前 9 项 Pro 自动化能力、Pro 到期不锁历史数据、云端水单收件箱服务端验证和后续 P0 / P1 / P2 路线图已经在文档中对齐。
+- 未完成内容：未重新生成 App Store 截图 / App Preview，未提交 ASC 元数据，未做 UI 真机截图。
+- 测试情况：`git diff --check` PASS。本轮只改 Markdown / 文案源文件，不运行完整 Xcode build。
+- 风险与注意事项：当前操作在 `/tmp/AutoLedgerRio-docs-work` 临时副本中完成，因为原工作树 `/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio` 读取文件时持续返回 `Interrupted system call`；需要原目录恢复后再同步或以临时副本结果为准提交。
+- 回滚方式：回退本轮 Markdown / 文案源文件改动，删除新增 `docs/autoledger-personal-pro-roadmap.md` 即可。
+- 结论：文档口径完成收口，未引入功能或数据结构变更。
+- 下一步建议：原工作区恢复后，把临时副本的文档 diff 合回主工作区并按常规路径提交；若继续卡住，优先修复本机文件服务 / 原仓库目录状态。
 
 ### ITER-401 数据清洗别名 hash 冲突崩溃修复
 - 日期：2026-07-08

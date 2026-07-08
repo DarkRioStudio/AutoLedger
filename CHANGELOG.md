@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.7.0）
+- [2026-07-08 21:05 +0800] 收口 AutoLedger 个人 Pro 文档与产品口径：README 顶层定位统一为“本地优先个人账本 + 自动化导入 + 酒店水单归档”，`docs/autoledger-personal-pro-design.md` 从早期 6 项 Pro 推荐权益升级为当前 9 项自动化能力，并新增 `docs/autoledger-personal-pro-roadmap.md` 作为个人 Pro 后续路线图。`docs/pro-access-audit.md` 和 `docs/iap-support.md` 补充“免费版手动完成，Pro 自动整理”、云端水单收件箱 server-verified、本地 gate 只作为 UI / 本地能力边界等说明；`versions/v1.7.0-plan.md` 将后续 Pro 方向整理为统一待处理中心、月结检查清单、规则中心、智能视图 / Saved Views、订阅省钱看板等流程化路线。本轮只修改 Markdown / 文案源文件，未修改 SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、Pro 定价策略或 Swift 业务代码。
 - [2026-07-08 13:55 +0800] 更新 AutoLedger Pro 页面与审核说明边界：原路线图中的高级搜索、订阅异常、月结包和高级规则已归入“已实现的 Pro 自动化”，并保留邮箱水单、专属收件箱、批量候选和高级去重作为当前权益；路线图改为云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步等后续方向，不再在用户界面暴露内部版本号。五语 Pro 文案、订阅商品说明、Pro access audit、IAP 支持说明和 v1.7.0 计划同步更新，新增 `check_pro_page_copy_smoke.py` 防止实现 / 预告边界回退。
 - [2026-07-08 13:28 +0800] 调整月报交互：`ReportView` 将月份切换从左右箭头改为导航栏左侧下拉菜单，菜单按当前账本可见流水月份和本月生成；右上角新增系统分享按钮，直接打开当前月度分享图预览；正文里的“生成分享图”卡片隐藏，保留月结包和报表主体信息密度。`LedgerStore` 新增月报月份选项缓存，交易或账本范围变化时自动失效；五语补齐 `report.month_picker.*` 文案，分享图 smoke 同步改为约束导航栏入口。
 - [2026-07-07 11:36 +0800] 将 Mac / iOS 商户归一化与数据清洗建议纳入 `v1.7.0 / ASC 1.6.0` 执行计划：新增 `GOAL-2345`，明确 Mac 端继续作为大屏数据清洗工作台，iOS 端提供同一建议模型的轻量采纳入口；建议引擎合同放在平台无关层，分析账本提出商户名称归一化、分类整理、疑似重复规则和低置信度集中复核建议。基础商户别名、分类学习、单条编辑和已采纳规则后续生效继续免费，Pro 提升只覆盖全账本自动分析、模型辅助建议、批量预览 / 应用和可选 Worker 辅助；采纳结果必须反哺 OCR、快捷指令、语音、Share Extension 和手动记账保存前规则链路。

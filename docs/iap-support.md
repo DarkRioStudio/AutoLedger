@@ -1,13 +1,13 @@
 # StoreKit Products
 
-更新日期：2026-06-29
+更新日期：2026-07-08
 
 ## 1. 产品定位
 
 AutoLedger 的付费能力分为两条线：
 
 - `Support Developer`：一次性消耗型赞助，不解锁功能，不影响任何记账能力。
-- `AutoLedger Pro`：订阅型自动化权益，只解锁省时间的自动化能力，例如本地邮箱水单扫描、批量候选导入、高级去重和专属水单收件箱。
+- `AutoLedger Pro`：订阅型自动化权益，只解锁省时间的自动化能力，例如本地邮箱水单扫描、专属水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议和高级规则自动应用。
 
 基础记账长期免费。手动记账、单张截图 / 照片识别、语音 / 文本输入、手动酒店水单 PDF 导入、酒店历史记录查看、基础订阅管理、基础月报、Widget / Share Extension、JSON 导入导出、备份恢复以及历史记录编辑 / 删除，都不应被 Pro 锁住。
 
@@ -108,7 +108,7 @@ Subscription：
 4. Product ID 必须与代码和 StoreKit 配置完全一致：
    - `top.darkrio326.AutoLedger.pro.monthly`
    - `top.darkrio326.AutoLedger.pro.yearly`
-5. 补齐英文、简体中文、繁体中文、日文本地化展示名和说明。
+5. 补齐英文、简体中文、繁体中文、日文、韩文本地化展示名和说明。
 6. 确认隐私政策 URL、订阅说明、恢复购买入口和管理订阅入口在审核前可用。
 
 App 内不要引导用户使用外部支付方式，不要在文案中提供外部付款链接。
@@ -116,9 +116,9 @@ App 内不要引导用户使用外部支付方式，不要在文案中提供外�
 ## 7. Review Notes 建议
 
 ```text
-AutoLedger includes optional consumable purchases for developer support and AutoLedger Pro subscriptions for time-saving automation. Core bookkeeping remains free. Pro does not lock existing ledger data, manual entries, manual hotel folio PDF import, export/import, widgets, or historical editing/deletion.
+AutoLedger includes optional consumable purchases for developer support and AutoLedger Pro subscriptions for time-saving automation. Core bookkeeping remains free. Pro does not lock existing ledger data, manual entries, manual hotel folio PDF import, basic export/import, widgets, basic reports, or historical editing/deletion.
 
-Pro automation creates reviewable candidates only. It does not silently write transactions into the ledger. Hotel folio entries still require user review before saving.
+Pro automation covers email folio scanning, a dedicated cloud folio inbox, batch candidate import, advanced deduplication, advanced search, subscription anomaly detection, monthly export packages, smart cleanup suggestions, and advanced rule automation. Pro automation creates reviewable candidates only. It does not silently write transactions into the ledger. Hotel folio entries still require user review before saving.
 ```
 
 ## 8. 当前边界
