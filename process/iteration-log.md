@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-396 酒店旅程回忆文案第一版）
+更新日期：2026-07-08（ITER-400 永久删除后 OCR 重导入回归修复）
 
 ## 记录规则
 
@@ -43,6 +43,70 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-400 永久删除后 OCR 重导入回归修复
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Import Reliability
+- 类型：Bugfix / 测试
+- 目标：修复离线回归中“账单永久删除后，同一 OCR 文本应允许重新导入”的红灯。
+- 改动范围：`SQLiteTransactionStore` 新增按 `transaction_id` 删除 debug event 的方法；`LedgerStore.permanentlyDeleteTransaction` 在永久删除交易后同步清理关联 debug event 和内存 debug 记录。
+- 未改动范围：未修改 OCR 解析、相似度算法、软删除 / 恢复流程、legacy 无 transactionID debug event、SQLite schema、CloudKit schema、Pro gate、StoreKit、ASC metadata、构建号或 tag。
+- 完成内容：永久删除后的旧 persisted debug 记录不再阻挡同一账单重新导入；无 transactionID 的历史调试记录仍保留用于排查。
+- 未完成内容：未做 debug event 清理 UI、批量历史清理或迁移脚本。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_pro_page_copy_smoke.py` PASS；`python3 scripts/check_localization_coverage.py` PASS；五语 `.strings` `plutil -lint` PASS；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS，仍有既有 formatter `nonisolated(unsafe)` 等 warning。
+- 风险与注意事项：只清理明确关联到永久删除交易的 debug event，不会清掉 parse failed、duplicate skipped 或旧版本缺 transactionID 的排查记录。
+- 回滚方式：回退 `deleteDebugEvents(transactionID:)` 和 `LedgerStore.permanentlyDeleteTransaction` 中的 debug 清理调用，即可恢复旧行为。
+- 结论：本轮完成，离线回归和 iOS workspace 构建通过。
+- 下一步建议：如果后续用户仍反馈“删除后无法重导入”，再检查同图像 source / idempotency key 或 Share Extension 侧 duplicate path。
+
+### ITER-399 Pro 页面当前权益与路线图收口
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Pro / Review QA
+- 类型：UI / 文案 / 文档 / 测试
+- 目标：把 Pro 页面从旧预告状态更新到当前 1.7.0 实际能力，并重新规划下一阶段用户可理解的 Pro 自动化方向。
+- 改动范围：`SupportAutoLedgerView` 将高级搜索、订阅异常、月结包和高级规则从路线图移入已实现权益；路线图改为云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步；五语 Pro 文案、订阅商品说明、Pro access audit、IAP 支持说明、v1.7.0 计划、CHANGELOG 和离线 smoke 同步更新。
+- 未改动范围：未修改 StoreKit 商品 ID、订阅价格、Pro entitlement 判定、服务端 token claim、App Store Server Notifications、SQLite / CloudKit schema、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、MARKETING_VERSION、build number 或构建 tag。
+- 完成内容：Pro 页面当前权益与 `ProAccessPolicy` 的 P0 能力保持一致，用户界面不再把已实现功能标为后续版本；路线图不再显示内部版本号。
+- 未完成内容：未做真机视觉截图和 TestFlight 订阅页人工 walkthrough；云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步仍只是后续规划。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_pro_page_copy_smoke.py` PASS；`python3 scripts/check_localization_coverage.py` PASS；五语 `.strings` `plutil -lint` PASS；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS，仍有既有 formatter `nonisolated(unsafe)` 等 warning。
+- 风险与注意事项：当前 Pro 页权益文案覆盖较多功能，后续若某项能力降级或临时隐藏，必须同步更新页面和 smoke；路线图文案只表达方向，不承诺具体上线时间。
+- 回滚方式：回退 `SupportAutoLedgerView` 的 feature / roadmap 数据源、五语 `pro.*` 文案、`check_pro_page_copy_smoke.py`、`run_offline_regression.sh` 和相关文档条目，即可恢复旧 Pro 页面。
+- 结论：本轮完成 Pro 页面能力边界收口，并已通过回归验证。
+- 下一步建议：在 TestFlight 最新构建中检查 Pro 页面首屏信息密度、已实现权益卡片高度和订阅商品说明是否适合 ASC 审核录屏。
+
+### ITER-398 月报月份下拉与分享入口收口
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Report UI / Share Cards
+- 类型：UI / 能力增强 / 测试
+- 目标：让月报月份切换更直观，并把月报分享图入口从正文卡片收口到右上角导航栏。
+- 改动范围：`ReportView` 移除正文“生成分享图”卡片；导航栏左侧改为月份下拉菜单，右侧新增分享按钮；`LedgerStore` 新增按当前账本范围缓存的月报可选月份；五语补齐 `report.month_picker.*` 文案；更新分享图 smoke、v1.7.0 计划和 CHANGELOG。
+- 未改动范围：未修改分享卡 PNG 渲染、分享预览 sheet、酒店入住分享卡、月结包 ZIP 导出、Pro gate、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、MARKETING_VERSION、build number 或构建 tag。
+- 完成内容：月报页现在基于当前账本可见流水月份和本月生成下拉选项，选择月份后清空当前分类 / 趋势选中状态；正文不再显示“生成分享图”推广卡片；右上角系统分享图标直接打开当前月度分享图预览。
+- 未完成内容：未做真机视觉截图对比、iPad / Mac 月报月份选择统一改造或 Charts 级性能剖析。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_share_cards_smoke.py` PASS；`python3 scripts/check_monthly_export_ui_smoke.py` PASS；`python3 scripts/check_localization_coverage.py` PASS；五语 `.strings` `plutil -lint` PASS；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS，仍有既有 `nonisolated(unsafe)`、`LlmInference` deprecated、`@preconcurrency` 和 actor isolation warning。
+- 风险与注意事项：月份菜单来自当前账本范围的实际交易月份和本月；如果用户切换账本或全部账本，菜单会随 `LedgerStore` 缓存失效刷新。正文入口隐藏后，分享功能主要依赖右上角图标的可发现性，后续可按 TestFlight 反馈调整图标可见性。
+- 回滚方式：回退 `ReportView` 的 toolbar / 月份下拉 / 正文分享卡片改动、`LedgerStore.reportMonthOptions()`、五语 `report.month_picker.*` 文案、分享图 smoke 和文档条目，即可恢复到左右箭头切月和正文分享卡片。
+- 结论：本轮完成，月报月份切换和分享入口已收口并通过最小回归与 iOS workspace 构建。
+- 下一步建议：在 TestFlight 上检查月报导航栏左侧月份下拉、右上角分享按钮和正文信息密度；若仍感觉月份选择弱，可再做标题区内嵌 segmented / picker 方案。
+
+### ITER-397 月结包 ZIP 与月报性能第一轮优化
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2330 / Report Performance
+- 类型：能力增强 / 性能 / 测试
+- 目标：把月结包从多文件分享改为单个压缩包，并降低几百条账单时月报 Tab 切换和月份切换的同步重算压力。
+- 改动范围：`LedgerStore.writeMonthlyExportPackage` 外层改为 ZIP；五语月结包文案改为压缩包；`LedgerStore` 新增月报快照和异常提醒缓存；`MonthlySnapshot.build` 改为单次遍历汇总当前月和近 6 个月趋势；`ReportView` 改为读取缓存后的异常提醒；扩展月结包 smoke；更新 v1.7.0 计划和 CHANGELOG。
+- 未改动范围：未修改月结包内部四类资料文件、Pro gate、基础 CSV / JSON 免费导出、月结导出筛选合同、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、MARKETING_VERSION、build number 或构建 tag。
+- 完成内容：用户分享时只看到一个 `AutoLedger_monthly_export_*.zip`，zip 内部仍保留交易 CSV、月报 PDF、酒店水单附件索引 CSV 和 manifest JSON；月报数据在当前账本和月份维度缓存，交易或账本范围变化时自动失效；当前月异常提醒也按月份 / 账本 / 阈值缓存。
+- 未完成内容：未做 Instruments 真机剖析、Charts 渲染专项优化、后台导出任务、导出历史、原生 Excel / Numbers 工作簿或 Mac 大屏月结工作台；这些需要结合 TestFlight / 真机反馈继续拆分。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_monthly_export_ui_smoke.py` PASS；五语 `Localizable.strings` `plutil -lint` PASS；`python3 scripts/check_localization_coverage.py` PASS；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS，仍有既有 `nonisolated(unsafe)`、`LlmInference` deprecated 和 `@preconcurrency` warning。
+- 风险与注意事项：ZIP 使用系统 `NSFileCoordinator(.forUploading)`，与现有反馈包压缩路径一致；性能优化是代码级确定性优化，不能替代 Instruments 对真实卡顿来源的最终定位。
+- 回滚方式：回退 `LedgerStore` ZIP 写入与月报缓存、`MonthlySnapshot` 单次遍历重构、`ReportView` 异常提醒调用、五语月结包文案、smoke 扩展和文档条目，即可恢复到多文件分享和原始月报计算路径。
+- 结论：本轮完成，月结包 ZIP 化和月报同步重算第一轮优化已通过最小回归与 iOS workspace 构建。
+- 下一步建议：在最新 TestFlight 通过后，用同一份几百条数据做 Release 真机手感对比；若仍卡顿，优先用 Instruments 分别捕获 Tab 切换、月份切换和 Charts 交互。
 
 ### ITER-396 酒店旅程回忆文案第一版
 - 日期：2026-07-08

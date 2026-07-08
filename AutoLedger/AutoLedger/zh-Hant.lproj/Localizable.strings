@@ -616,13 +616,15 @@
 "report.trend.accessibility_item_format" = "%@，%@，%@";
 "report.merchant.accessibility_format" = "第 %d 名，%@，%@，%@，%@";
 "report.monthly_export.title" = "月結包匯出";
-"report.monthly_export.body_format" = "把 %@ 的帳單、分類概覽和酒店水單索引整理成可分享檔案。";
+"report.monthly_export.body_format" = "把 %@ 的帳單、分類概覽和酒店水單索引整理成一個壓縮包。";
 "report.monthly_export.redact_toggle" = "匯出前隱藏商戶和酒店名稱";
 "report.monthly_export.export_action" = "產生月結包";
 "report.monthly_export.pro.action" = "查看 Pro";
 "report.monthly_export.accessibility_label" = "產生本月月結包";
-"report.monthly_export.status_ready_format" = "已產生 %d 個檔案，可繼續分享或儲存。";
+"report.monthly_export.status_ready_format" = "已產生 %d 個壓縮包，可繼續分享或儲存。";
 "report.monthly_export.status_failed_format" = "月結包產生失敗：%@";
+"report.month_picker.current_month" = "本月";
+"report.month_picker.accessibility_label" = "選擇月報月份";
 
 "merchant_alias.title" = "商家別名";
 "merchant_alias.add_mapping" = "新增映射";
@@ -952,11 +954,11 @@
 "language.footer" = "這些設定只影響本機 App 介面和未標明幣種帳單的預設理解，不會改變已儲存帳本資料。";
 
 "pro.title" = "AutoLedger Pro";
-"pro.description" = "Pro 只解鎖節省時間的自動化：郵件水單掃描、專屬水單收件箱、批次候選和進階去重。日常記帳、手動匯入和歷史資料不會被鎖住。";
+"pro.description" = "Pro 解鎖節省時間的自動化：郵件水單、專屬收件箱、批次候選、進階搜尋、訂閱異常、月結包和規則整理。日常記帳、手動匯入和歷史資料不會被鎖住。";
 "pro.hero.badge" = "Pro";
 "pro.hero.crown" = "專享";
 "pro.hero.title" = "免費記帳不變，Pro 自動整理";
-"pro.hero.subtitle" = "AutoLedger 可以替你找郵件水單、接收專屬地址轉寄、批次整理候選並提示疑似重複；儲存到正式帳本前仍由你確認。";
+"pro.hero.subtitle" = "AutoLedger 可以替你找郵件水單、接收專屬地址轉寄、批次整理候選，並提供進階搜尋、訂閱異常、月結包和規則整理；儲存到正式帳本前仍由你確認。";
 "pro.hero.price_line_format" = "月付 %@，首發年付 %@。";
 "pro.hero.price_monthly_format" = "月付 %@";
 "pro.hero.price_yearly_format" = "首發年付 %@";
@@ -967,7 +969,7 @@
 "pro.preview.folio" = "郵件水單待確認";
 "pro.preview.batch" = "批次候選待處理";
 "pro.preview.duplicates" = "疑似重複待處理";
-"pro.features.title" = "目前 Pro 自動化";
+"pro.features.title" = "已實現的 Pro 自動化";
 "pro.feature.email.title" = "本機郵件掃描";
 "pro.feature.email.body" = "主動掃描本機授權信箱，找出飯店水單和 PDF 候選。";
 "pro.feature.cloud_inbox.title" = "專屬水單收件箱";
@@ -987,8 +989,16 @@
 "pro.feature.rules.title" = "進階規則";
 "pro.feature.rules.body" = "將商戶別名、分類修正規則和低信心結果集中套用到歷史與未來記錄。";
 "pro.roadmap.title" = "Pro 路線圖預告";
-"pro.roadmap.subtitle" = "以下能力不屬於目前公開版本；計畫在後續版本作為 Pro 自動化擴展實現。";
-"pro.roadmap.item_badge" = "1.6.0";
+"pro.roadmap.subtitle" = "以下是後續繼續打磨的 Pro 自動化方向，穩定後會逐項上線。";
+"pro.roadmap.item_badge" = "計畫";
+"pro.roadmap.cloud_assist.title" = "雲端輔助整理";
+"pro.roadmap.cloud_assist.body" = "開啟後用脫敏摘要協助發現商戶歸一化建議。";
+"pro.roadmap.review_queue.title" = "智能複核佇列";
+"pro.roadmap.review_queue.body" = "集中複核低信心度、疑似重複、匯率異常和訂閱變動。";
+"pro.roadmap.share_templates.title" = "進階分享模板";
+"pro.roadmap.share_templates.body" = "提供更多月報和入住卡模板、故事化分享和浮水印控制。";
+"pro.roadmap.cross_device.title" = "多裝置自動化同步";
+"pro.roadmap.cross_device.body" = "讓 Pro 狀態、雲收件箱和自動化佇列在多平台更穩定同步。";
 "pro.assurance.title" = "安全邊界清楚";
 "pro.assurance.local.title" = "本機優先";
 "pro.assurance.local.body" = "帳本資料優先留在裝置上，信箱授權不上傳雲端。";
@@ -1005,10 +1015,10 @@
 "pro.legal.privacy" = "隱私政策";
 "pro.legal.terms" = "使用條款（EULA）";
 "pro.active.title" = "Pro 已啟用";
-"pro.active.body" = "本機郵件掃描、專屬水單收件箱、批次候選和進階去重已可使用。";
+"pro.active.body" = "郵件水單、批次候選、進階搜尋、訂閱異常、月結包和規則整理已可使用。";
 "pro.status.active.title" = "Pro 已啟用";
 "pro.status.active.badge" = "可用";
-"pro.status.active.body" = "本機郵件掃描、專屬水單收件箱、批次候選和進階去重已可使用。儲存到正式帳本前仍需要你確認。";
+"pro.status.active.body" = "郵件水單、批次候選、進階搜尋、訂閱異常、月結包和規則整理已可使用。儲存到正式帳本前仍需要你確認。";
 "pro.status.inactive.title" = "目前使用免費版";
 "pro.status.inactive.badge" = "免費";
 "pro.status.inactive.body" = "手動記帳、單張辨識、手動匯入飯店水單和歷史資料繼續可用；Pro 只解鎖新的自動化整理。";
@@ -1019,10 +1029,10 @@
 "pro.status.product_format" = "%@ 已訂閱";
 "pro.status.verified_format" = "上次校驗：%@";
 "pro.product.monthly.title" = "Pro 月度訂閱";
-"pro.product.monthly.description_format" = "%@ / 月，適合先試用郵件掃描、專屬收件箱和批次候選。";
+"pro.product.monthly.description_format" = "%@ / 月，適合先試用郵件掃描、進階搜尋和月結包。";
 "pro.product.monthly.action" = "選擇月度";
 "pro.product.yearly.title" = "Pro 年度訂閱";
-"pro.product.yearly.description_format" = "首發 %@ / 年，適合長期整理飯店水單、高頻帳單和疑似重複。";
+"pro.product.yearly.description_format" = "首發 %@ / 年，適合長期整理飯店水單、訂閱異常和自動化規則。";
 "pro.product.yearly.action" = "選擇年度";
 "pro.product.choose" = "選擇訂閱";
 "pro.product.recommended" = "推薦";

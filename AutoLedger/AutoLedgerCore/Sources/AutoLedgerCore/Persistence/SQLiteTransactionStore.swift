@@ -424,6 +424,22 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    public func deleteDebugEvents(transactionID: UUID) throws {
+        let sql = "DELETE FROM debug_events WHERE transaction_id = ?;"
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, transactionID.uuidString, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+    }
+
     public func bootstrapIfNeeded(with transactions: [Transaction]) throws -> [Transaction] {
         let existing = try loadTransactions()
         guard existing.isEmpty else {

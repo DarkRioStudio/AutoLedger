@@ -85,9 +85,35 @@ public struct MonthlySnapshot: Sendable {
     }
 
     public static func build(from transactions: [Transaction], referenceDate: Date) -> MonthlySnapshot {
-        let monthTransactions = transactions.filter {
-            AppFormatters.calendar.isDate($0.occurredAt, equalTo: referenceDate, toGranularity: .month) &&
-            AppFormatters.calendar.isDate($0.occurredAt, equalTo: referenceDate, toGranularity: .year)
+        guard let selectedMonth = AppFormatters.calendar.dateInterval(of: .month, for: referenceDate) else {
+            return MonthlySnapshot(
+                monthLabel: AppFormatters.month(referenceDate),
+                totalExpense: 0,
+                transactionCount: 0,
+                topMerchants: [],
+                topMerchantMetrics: [],
+                categoryBreakdown: [],
+                monthlyTrend: []
+            )
+        }
+
+        let trendMonths = buildTrendMonths(referenceDate: referenceDate)
+        let trendMonthStarts = Set(trendMonths.map(\.monthStart))
+        var monthTransactions: [Transaction] = []
+        var trendTotals: [Date: (total: Double, count: Int)] = [:]
+
+        for transaction in transactions {
+            if selectedMonth.contains(transaction.occurredAt) {
+                monthTransactions.append(transaction)
+            }
+
+            guard let transactionMonthStart = AppFormatters.calendar.dateInterval(of: .month, for: transaction.occurredAt)?.start,
+                  trendMonthStarts.contains(transactionMonthStart)
+            else {
+                continue
+            }
+            let current = trendTotals[transactionMonthStart] ?? (0, 0)
+            trendTotals[transactionMonthStart] = (current.total + transaction.amount, current.count + 1)
         }
 
         let total = monthTransactions.reduce(0) { $0 + $1.amount }
@@ -127,7 +153,7 @@ public struct MonthlySnapshot: Sendable {
                 return lhs.total > rhs.total
             })
 
-        let trendMetrics = buildMonthlyTrend(from: transactions, referenceDate: referenceDate)
+        let trendMetrics = buildMonthlyTrend(from: trendMonths, totals: trendTotals)
 
         return MonthlySnapshot(
             monthLabel: AppFormatters.month(referenceDate),
@@ -140,34 +166,38 @@ public struct MonthlySnapshot: Sendable {
         )
     }
 
-    private static func buildMonthlyTrend(from transactions: [Transaction], referenceDate: Date) -> [MonthlyTrendMetric] {
+    private static func buildTrendMonths(referenceDate: Date) -> [(monthStart: Date, isCurrentMonth: Bool)] {
         guard let currentMonthStart = AppFormatters.calendar.dateInterval(of: .month, for: referenceDate)?.start else {
             return []
         }
 
+        return (0..<6).reversed().compactMap { offset in
+            guard let monthStart = AppFormatters.calendar.date(byAdding: .month, value: -offset, to: currentMonthStart) else {
+                return nil
+            }
+            return (
+                monthStart: monthStart,
+                isCurrentMonth: AppFormatters.calendar.isDate(monthStart, equalTo: currentMonthStart, toGranularity: .month)
+            )
+        }
+    }
+
+    private static func buildMonthlyTrend(
+        from trendMonths: [(monthStart: Date, isCurrentMonth: Bool)],
+        totals: [Date: (total: Double, count: Int)]
+    ) -> [MonthlyTrendMetric] {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
         formatter.dateFormat = "M月"
 
-        return (0..<6).reversed().compactMap { offset in
-            guard
-                let monthStart = AppFormatters.calendar.date(byAdding: .month, value: -offset, to: currentMonthStart),
-                let monthInterval = AppFormatters.calendar.dateInterval(of: .month, for: monthStart)
-            else {
-                return nil
-            }
-
-            let entries = transactions.filter {
-                monthInterval.contains($0.occurredAt)
-            }
-            let total = entries.reduce(0) { $0 + $1.amount }
-
+        return trendMonths.map { month in
+            let metric = totals[month.monthStart] ?? (0, 0)
             return MonthlyTrendMetric(
-                monthStart: monthStart,
-                label: formatter.string(from: monthStart),
-                total: total,
-                transactionCount: entries.count,
-                isCurrentMonth: AppFormatters.calendar.isDate(monthStart, equalTo: currentMonthStart, toGranularity: .month)
+                monthStart: month.monthStart,
+                label: formatter.string(from: month.monthStart),
+                total: metric.total,
+                transactionCount: metric.count,
+                isCurrentMonth: month.isCurrentMonth
             )
         }
     }

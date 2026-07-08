@@ -694,6 +694,34 @@ struct AutoLedgerProView: View {
                 title: "pro.feature.dedupe.title",
                 body: "pro.feature.dedupe.body",
                 colors: [Color.orange, gold]
+            ),
+            ProFeatureItem(
+                id: "search",
+                icon: "magnifyingglass",
+                title: "pro.feature.search.title",
+                body: "pro.feature.search.body",
+                colors: [Color.teal, AppTheme.accent]
+            ),
+            ProFeatureItem(
+                id: "alerts",
+                icon: "bell.badge.fill",
+                title: "pro.feature.alerts.title",
+                body: "pro.feature.alerts.body",
+                colors: [Color.cyan, Color.blue]
+            ),
+            ProFeatureItem(
+                id: "export",
+                icon: "archivebox.fill",
+                title: "pro.feature.export.title",
+                body: "pro.feature.export.body",
+                colors: [Color.indigo, Color.blue]
+            ),
+            ProFeatureItem(
+                id: "rules",
+                icon: "wand.and.sparkles",
+                title: "pro.feature.rules.title",
+                body: "pro.feature.rules.body",
+                colors: [gold, Color.orange]
             )
         ]
     }
@@ -701,31 +729,31 @@ struct AutoLedgerProView: View {
     private var roadmapItems: [ProRoadmapItem] {
         [
             ProRoadmapItem(
-                id: "search",
-                icon: "magnifyingglass",
-                title: "pro.feature.search.title",
-                body: "pro.feature.search.body",
+                id: "cloudAssist",
+                icon: "sparkles",
+                title: "pro.roadmap.cloud_assist.title",
+                body: "pro.roadmap.cloud_assist.body",
                 tint: AppTheme.accent
             ),
             ProRoadmapItem(
-                id: "alerts",
-                icon: "bell.fill",
-                title: "pro.feature.alerts.title",
-                body: "pro.feature.alerts.body",
+                id: "reviewQueue",
+                icon: "checklist",
+                title: "pro.roadmap.review_queue.title",
+                body: "pro.roadmap.review_queue.body",
                 tint: Color.teal
             ),
             ProRoadmapItem(
-                id: "export",
-                icon: "square.and.arrow.down.fill",
-                title: "pro.feature.export.title",
-                body: "pro.feature.export.body",
+                id: "shareTemplates",
+                icon: "photo.on.rectangle.angled",
+                title: "pro.roadmap.share_templates.title",
+                body: "pro.roadmap.share_templates.body",
                 tint: Color.indigo
             ),
             ProRoadmapItem(
-                id: "rules",
-                icon: "wand.and.sparkles",
-                title: "pro.feature.rules.title",
-                body: "pro.feature.rules.body",
+                id: "crossDevice",
+                icon: "icloud.fill",
+                title: "pro.roadmap.cross_device.title",
+                body: "pro.roadmap.cross_device.body",
                 tint: gold
             )
         ]

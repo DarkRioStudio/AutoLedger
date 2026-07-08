@@ -21,6 +21,7 @@ python3 "$ROOT/scripts/check_subscription_anomaly_ui_smoke.py"
 python3 "$ROOT/scripts/check_monthly_export_ui_smoke.py"
 python3 "$ROOT/scripts/check_share_cards_smoke.py"
 python3 "$ROOT/scripts/check_advanced_rule_automation_ui_smoke.py"
+python3 "$ROOT/scripts/check_pro_page_copy_smoke.py"
 python3 "$ROOT/scripts/check_asc_metadata_as_code_smoke.py"
 python3 "$ROOT/scripts/check_hotel_weather_ui_smoke.py"
 
@@ -36,6 +37,7 @@ trap 'rm -f "$TMP_BIN"; rm -rf "$PREP_DIR"' EXIT
 sed '/import AutoLedgerCore/d; /import UIKit/d; /import UserNotifications/d; /typealias Subscription/d' "$ROOT/AutoLedger/AutoLedger/App/LedgerStore.swift" > "$PREP_DIR/LedgerStore.swift"
 sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift" > "$PREP_DIR/LedgerTextInterpreter.swift"
 sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/ReceiptParser.swift" > "$PREP_DIR/ReceiptParser.swift"
+sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/MonthlyInsightService.swift" > "$PREP_DIR/MonthlyInsightService.swift"
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
@@ -410,6 +412,7 @@ swiftc \
   "$CORE/Services/MonthlyExportPackageBuilder.swift" \
   "$CORE/Persistence/TransactionStore.swift" \
   "$CORE/Persistence/SQLiteTransactionStore.swift" \
+  "$PREP_DIR/MonthlyInsightService.swift" \
   "$PREP_DIR/LedgerTextInterpreter.swift" \
   "$PREP_DIR/LedgerStore.swift" \
   "$PREP_DIR/SmartReceiptParserStub.swift" \

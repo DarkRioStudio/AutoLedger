@@ -613,13 +613,15 @@
 "report.trend.accessibility_item_format" = "%@，%@，%@";
 "report.merchant.accessibility_format" = "第 %d 名，%@，%@，%@，%@";
 "report.monthly_export.title" = "月结包导出";
-"report.monthly_export.body_format" = "把 %@ 的账单、分类概览和酒店水单索引整理成可分享文件。";
+"report.monthly_export.body_format" = "把 %@ 的账单、分类概览和酒店水单索引整理成一个压缩包。";
 "report.monthly_export.redact_toggle" = "导出前隐藏商户和酒店名称";
 "report.monthly_export.export_action" = "生成月结包";
 "report.monthly_export.pro.action" = "查看 Pro";
 "report.monthly_export.accessibility_label" = "生成本月月结包";
-"report.monthly_export.status_ready_format" = "已生成 %d 个文件，可继续分享或保存。";
+"report.monthly_export.status_ready_format" = "已生成 %d 个压缩包，可继续分享或保存。";
 "report.monthly_export.status_failed_format" = "月结包生成失败：%@";
+"report.month_picker.current_month" = "本月";
+"report.month_picker.accessibility_label" = "选择月报月份";
 
 "merchant_alias.title" = "商户别名";
 "merchant_alias.add_mapping" = "添加映射";
@@ -949,11 +951,11 @@
 "language.footer" = "这些设置只影响本机 App 界面和未标明币种账单的默认理解，不会改变已保存账本数据。";
 
 "pro.title" = "AutoLedger Pro";
-"pro.description" = "Pro 只解锁省时间的自动化：邮箱水单扫描、专属水单收件箱、批量候选和高级去重。日常记账、手动导入和历史数据不会被锁住。";
+"pro.description" = "Pro 解锁省时间的自动化：邮箱水单、专属收件箱、批量候选、高级搜索、订阅异常、月结包和规则整理。日常记账、手动导入和历史数据不会被锁住。";
 "pro.hero.badge" = "Pro";
 "pro.hero.crown" = "专享";
 "pro.hero.title" = "免费记账不变，Pro 自动整理";
-"pro.hero.subtitle" = "AutoLedger 可以替你找邮箱水单、接收专属地址转发、批量整理候选并提示疑似重复；保存到正式账本前仍由你确认。";
+"pro.hero.subtitle" = "AutoLedger 可以替你找邮箱水单、接收专属地址转发、批量整理候选，并提供高级搜索、订阅异常、月结包和规则整理；保存到正式账本前仍由你确认。";
 "pro.hero.price_line_format" = "月付 %@，首发年付 %@。";
 "pro.hero.price_monthly_format" = "月付 %@";
 "pro.hero.price_yearly_format" = "首发年付 %@";
@@ -964,7 +966,7 @@
 "pro.preview.folio" = "邮箱水单待确认";
 "pro.preview.batch" = "批量候选待处理";
 "pro.preview.duplicates" = "疑似重复待处理";
-"pro.features.title" = "当前 Pro 自动化";
+"pro.features.title" = "已实现的 Pro 自动化";
 "pro.feature.email.title" = "本地邮箱扫描";
 "pro.feature.email.body" = "主动扫描本机授权邮箱，找出酒店水单和 PDF 候选。";
 "pro.feature.cloud_inbox.title" = "专属水单收件箱";
@@ -984,8 +986,16 @@
 "pro.feature.rules.title" = "高级规则";
 "pro.feature.rules.body" = "将商户别名、分类修正规则和低置信度结果集中应用到历史与未来记录。";
 "pro.roadmap.title" = "Pro 路线图预告";
-"pro.roadmap.subtitle" = "下面能力不属于当前公开版本；计划在后续版本作为 Pro 自动化扩展实现。";
-"pro.roadmap.item_badge" = "1.6.0";
+"pro.roadmap.subtitle" = "下面是后续继续打磨的 Pro 自动化方向，会在稳定后逐项上线。";
+"pro.roadmap.item_badge" = "计划";
+"pro.roadmap.cloud_assist.title" = "云端辅助整理";
+"pro.roadmap.cloud_assist.body" = "开启后用脱敏摘要帮助发现商户归一化建议。";
+"pro.roadmap.review_queue.title" = "智能复核队列";
+"pro.roadmap.review_queue.body" = "集中复核低置信度、疑似重复、汇率异常和订阅变动。";
+"pro.roadmap.share_templates.title" = "高级分享模板";
+"pro.roadmap.share_templates.body" = "提供更多月报和入住卡模板、故事化分享和水印控制。";
+"pro.roadmap.cross_device.title" = "多设备自动化同步";
+"pro.roadmap.cross_device.body" = "让 Pro 状态、云收件箱和自动化队列在多平台更稳定同步。";
 "pro.assurance.title" = "安全边界清楚";
 "pro.assurance.local.title" = "本机优先";
 "pro.assurance.local.body" = "账本数据优先留在设备上，邮箱授权不上传云端。";
@@ -1002,10 +1012,10 @@
 "pro.legal.privacy" = "隐私政策";
 "pro.legal.terms" = "使用条款（EULA）";
 "pro.active.title" = "Pro 已启用";
-"pro.active.body" = "本地邮箱扫描、专属水单收件箱、批量候选和高级去重已经可用。";
+"pro.active.body" = "邮箱水单、批量候选、高级搜索、订阅异常、月结包和规则整理已经可用。";
 "pro.status.active.title" = "Pro 已启用";
 "pro.status.active.badge" = "可用";
-"pro.status.active.body" = "本地邮箱扫描、专属水单收件箱、批量候选和高级去重已经可用。保存到正式账本前仍需要你确认。";
+"pro.status.active.body" = "邮箱水单、批量候选、高级搜索、订阅异常、月结包和规则整理已经可用。保存到正式账本前仍需要你确认。";
 "pro.status.inactive.title" = "当前使用免费版";
 "pro.status.inactive.badge" = "免费";
 "pro.status.inactive.body" = "手动记账、单张识别、手动酒店水单导入和历史数据继续可用；Pro 只解锁新的自动化整理。";
@@ -1016,10 +1026,10 @@
 "pro.status.product_format" = "%@ 已订阅";
 "pro.status.verified_format" = "上次校验：%@";
 "pro.product.monthly.title" = "Pro 月度订阅";
-"pro.product.monthly.description_format" = "%@ / 月，适合先试用邮箱扫描、专属收件箱和批量候选。";
+"pro.product.monthly.description_format" = "%@ / 月，适合先试用邮箱扫描、高级搜索和月结包。";
 "pro.product.monthly.action" = "选择月度";
 "pro.product.yearly.title" = "Pro 年度订阅";
-"pro.product.yearly.description_format" = "首发 %@ / 年，适合长期整理酒店水单、高频账单和疑似重复。";
+"pro.product.yearly.description_format" = "首发 %@ / 年，适合长期整理酒店水单、订阅异常和自动化规则。";
 "pro.product.yearly.action" = "选择年度";
 "pro.product.choose" = "选择订阅";
 "pro.product.recommended" = "推荐";

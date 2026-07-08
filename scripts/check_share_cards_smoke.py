@@ -34,7 +34,8 @@ def main() -> int:
         if expected not in share_files:
             failures.append(f"ShareCards missing file: {expected}")
 
-    require(report, "shareCardSection(snapshot)", "ReportView", failures)
+    require(report, "monthPickerMenu(snapshot)", "ReportView", failures)
+    require(report, "toolbarShareButton(snapshot)", "ReportView", failures)
     require(report, "ShareCardPreviewSheet(mode: mode)", "ReportView", failures)
     require(report, "monthlyShareCardData(from:", "ReportView", failures)
     require(hotel, "shareStayCardSection", "HotelStayDetailView", failures)
@@ -76,6 +77,8 @@ def main() -> int:
         "share_card.monthly.preview_title",
         "share_card.monthly.show_amount",
         "share_card.monthly.summary_top_category_format",
+        "report.month_picker.current_month",
+        "report.month_picker.accessibility_label",
         "share_card.hotel.action",
         "share_card.hotel.preview_title",
         "share_card.hotel.show_price",

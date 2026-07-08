@@ -26,26 +26,26 @@ struct ReportView: View {
     @State private var monthlyExportSharePayload: MonthlyExportSharePayload?
     @State private var shareCardPreviewMode: ShareCardPreviewSheet.Mode?
     @State private var isPresentingProSheet = false
-    private let insightService = MonthlyInsightService()
 
     private var isCurrentMonth: Bool {
         AppFormatters.calendar.isDate(selectedMonth, equalTo: .now, toGranularity: .month)
     }
 
-    private func stepMonth(by value: Int) {
-        guard let next = AppFormatters.calendar.date(byAdding: .month, value: value, to: selectedMonth) else { return }
-        selectedMonth = next
-        selectedCategoryID = nil
-        selectedTrendLabel = nil
+    private var monthMenuOptions: [Date] {
+        var months = store.reportMonthOptions()
+        if let selectedMonthStart = monthStart(for: selectedMonth),
+           !months.contains(where: { AppFormatters.calendar.isDate($0, equalTo: selectedMonthStart, toGranularity: .month) }) {
+            months.append(selectedMonthStart)
+            months.sort(by: >)
+        }
+        return months
     }
 
     var body: some View {
         let snapshot = store.monthlySnapshot(for: selectedMonth)
-        let scopedTransactions = store.visibleTransactions
-        let anomalyAlerts = isCurrentMonth ? insightService.detectAnomalies(
-            transactions: scopedTransactions,
-            thresholdPercent: anomalyThresholdPercent
-        ) : []
+        let anomalyAlerts = isCurrentMonth
+            ? store.monthlyAnomalyAlerts(for: selectedMonth, thresholdPercent: anomalyThresholdPercent)
+            : []
 
         NavigationStack {
             ScrollView {
@@ -53,8 +53,6 @@ struct ReportView: View {
                     AutoLedgerPageTitle("tab.report")
 
                     summaryCard(snapshot)
-
-                    shareCardSection(snapshot)
 
                     monthlyExportSection(snapshot)
 
@@ -119,73 +117,76 @@ struct ReportView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: -1) } } label: {
-                        Image(systemName: "chevron.left")
-                            .fontWeight(.semibold)
-                    }
-                    .accessibilityLabel(Text("ledger.filter.previous_month"))
+                    monthPickerMenu(snapshot)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { withOptionalAnimation(.easeInOut(duration: 0.18)) { stepMonth(by: 1) } } label: {
-                        Image(systemName: "chevron.right")
-                            .fontWeight(.semibold)
-                    }
-                    .disabled(isCurrentMonth)
-                    .opacity(isCurrentMonth ? 0.35 : 1)
-                    .accessibilityLabel(Text("ledger.filter.next_month"))
+                    toolbarShareButton(snapshot)
                 }
             }
         }
     }
 
-    private func shareCardSection(_ snapshot: MonthlySnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(AppTheme.accent)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(AppTheme.accent.opacity(0.12))
-                    )
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("share_card.monthly.entry_title")
-                        .font(.headline)
-                        .foregroundStyle(AppTheme.ink)
-                    Text("share_card.monthly.entry_body")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.mutedInk)
+    private func monthPickerMenu(_ snapshot: MonthlySnapshot) -> some View {
+        Menu {
+            ForEach(monthMenuOptions, id: \.self) { month in
+                Button {
+                    selectMonth(month)
+                } label: {
+                    if isSelectedMonth(month) {
+                        Label(monthMenuTitle(for: month), systemImage: "checkmark")
+                    } else {
+                        Text(monthMenuTitle(for: month))
+                    }
                 }
-                Spacer(minLength: 0)
             }
-
-            Button {
-                shareCardPreviewMode = .monthly(monthlyShareCardData(from: snapshot))
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "square.and.arrow.up")
-                    Text("share_card.monthly.action")
-                    Spacer()
-                    Text(transactionCountText(snapshot.transactionCount))
-                        .font(.caption.weight(.semibold))
-                        .opacity(0.78)
+        } label: {
+            Label {
+                HStack(spacing: 4) {
+                    Text(snapshot.monthLabel)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
                 }
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 13)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(AppTheme.accent)
-                )
+            } icon: {
+                Image(systemName: "calendar")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("share_card.monthly.accessibility_label"))
+            .font(.subheadline.weight(.semibold))
         }
-        .padding(18)
-        .autoLedgerCardSurface(cornerRadius: 22)
+        .accessibilityLabel(Text("report.month_picker.accessibility_label"))
+    }
+
+    private func toolbarShareButton(_ snapshot: MonthlySnapshot) -> some View {
+        Button {
+            shareCardPreviewMode = .monthly(monthlyShareCardData(from: snapshot))
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+                .fontWeight(.semibold)
+        }
+        .accessibilityLabel(Text("share_card.monthly.accessibility_label"))
+    }
+
+    private func selectMonth(_ month: Date) {
+        guard let monthStart = monthStart(for: month) else { return }
+        withOptionalAnimation(.easeInOut(duration: 0.18)) {
+            selectedMonth = monthStart
+            selectedCategoryID = nil
+            selectedTrendLabel = nil
+        }
+    }
+
+    private func monthStart(for date: Date) -> Date? {
+        AppFormatters.calendar.dateInterval(of: .month, for: date)?.start
+    }
+
+    private func isSelectedMonth(_ month: Date) -> Bool {
+        AppFormatters.calendar.isDate(month, equalTo: selectedMonth, toGranularity: .month)
+    }
+
+    private func monthMenuTitle(for month: Date) -> String {
+        if AppFormatters.calendar.isDate(month, equalTo: .now, toGranularity: .month) {
+            return String(localized: "report.month_picker.current_month")
+        }
+        return AppFormatters.month(month)
     }
 
     private func monthlyExportSection(_ snapshot: MonthlySnapshot) -> some View {

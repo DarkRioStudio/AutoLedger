@@ -613,13 +613,15 @@
 "report.trend.accessibility_item_format" = "%@, %@, %@";
 "report.merchant.accessibility_format" = "랭크 %d, %@, %@, %@, %@";
 "report.monthly_export.title" = "월간 내보내기";
-"report.monthly_export.body_format" = "%@ 기록, 카테고리 요약, 호텔 영수증 색인을 공유 가능한 파일로 묶습니다.";
+"report.monthly_export.body_format" = "%@ 기록, 카테고리 요약, 호텔 영수증 색인을 하나의 ZIP으로 묶습니다.";
 "report.monthly_export.redact_toggle" = "내보내기 전에 가맹점과 호텔 이름 숨기기";
 "report.monthly_export.export_action" = "월간 패키지 만들기";
 "report.monthly_export.pro.action" = "Pro 보기";
 "report.monthly_export.accessibility_label" = "월간 패키지 만들기";
-"report.monthly_export.status_ready_format" = "%d개 파일을 공유하거나 저장할 수 있습니다.";
+"report.monthly_export.status_ready_format" = "%d개 ZIP 패키지를 공유하거나 저장할 수 있습니다.";
 "report.monthly_export.status_failed_format" = "월간 내보내기 실패: %@";
+"report.month_picker.current_month" = "이번 달";
+"report.month_picker.accessibility_label" = "월간 리포트 월 선택";
 
 "merchant_alias.title" = "판매자 별칭";
 "merchant_alias.add_mapping" = "매핑 추가";
@@ -949,11 +951,11 @@
 "language.footer" = "이 설정은 로컬 인터페이스와 통화가 표시되지 않은 영수증 해석에만 영향을 줍니다. 저장된 원장 데이터는 바뀌지 않습니다.";
 
 "pro.title" = "AutoLedger Pro";
-"pro.description" = "Pro는 이메일 Folio 스캔, 전용 Folio 받은 편지함, 일괄 후보 및 고급 중복 제거 등 시간을 절약해 주는 자동화 기능만 제공합니다. 일상적인 부기, 수동 가져오기 및 기록에 계속 액세스할 수 있습니다.";
+"pro.description" = "Pro는 이메일 Folio, 전용 받은 편지함, 일괄 후보, 고급 검색, 구독 이상, 월간 패키지, 규칙 정리 같은 시간 절약 자동화를 제공합니다. 일반 기록, 수동 가져오기, 기록은 계속 사용할 수 있습니다.";
 "pro.hero.badge" = "Pro";
 "pro.hero.crown" = "회원";
 "pro.hero.title" = "무료 기록은 그대로. Pro가 정리를 자동화합니다.";
-"pro.hero.subtitle" = "AutoLedger는 이메일 Folio를 찾고, 전용 주소로 전달된 Folio를 수신하고, 일괄 후보를 구성하고, 중복 가능성이 있는 항목에 플래그를 지정할 수 있습니다. 저장되기 전에도 계속 검토할 수 있습니다.";
+"pro.hero.subtitle" = "AutoLedger는 이메일 Folio를 찾고, 전달된 Folio를 받고, 일괄 후보를 정리하며, 고급 검색, 구독 이상, 월간 패키지, 규칙 정리를 제공합니다. 저장 전에는 항상 검토할 수 있습니다.";
 "pro.hero.price_line_format" = "월 %@, 출시 연간 %@.";
 "pro.hero.price_monthly_format" = "월간 %@";
 "pro.hero.price_yearly_format" = "출시 연간 %@";
@@ -964,7 +966,7 @@
 "pro.preview.folio" = "검토할 Folio를 이메일로 보냅니다.";
 "pro.preview.batch" = "배치 후보 대기 중";
 "pro.preview.duplicates" = "중복 가능성이 보류 중입니다.";
-"pro.features.title" = "현재 Pro 자동화";
+"pro.features.title" = "사용 가능한 Pro 자동화";
 "pro.feature.email.title" = "로컬 이메일 검사";
 "pro.feature.email.body" = "호텔 폴리오와 PDF 후보자를 찾으려면 이 기기에서 승인한 메일함을 스캔하세요.";
 "pro.feature.cloud_inbox.title" = "전용 Folio 받은 편지함";
@@ -984,8 +986,16 @@
 "pro.feature.rules.title" = "고급 규칙";
 "pro.feature.rules.body" = "과거 및 미래 기록 전반에 걸쳐 판매자 별칭, 카테고리 수정, 신뢰도가 낮은 검토 대기열을 적용합니다.";
 "pro.roadmap.title" = "Pro 로드맵 미리보기";
-"pro.roadmap.subtitle" = "이는 현재 공개 릴리스의 일부가 아닙니다. 향후 버전에서는 더 광범위한 Pro 자동화가 계획되어 있습니다.";
-"pro.roadmap.item_badge" = "1.6.0";
+"pro.roadmap.subtitle" = "다음으로 다듬을 Pro 자동화 방향입니다. 안정화되면 순차적으로 제공됩니다.";
+"pro.roadmap.item_badge" = "예정";
+"pro.roadmap.cloud_assist.title" = "클라우드 보조 정리";
+"pro.roadmap.cloud_assist.body" = "비식별 요약으로 판매자 이름 통합 제안을 찾습니다.";
+"pro.roadmap.review_queue.title" = "스마트 검토 대기열";
+"pro.roadmap.review_queue.body" = "낮은 신뢰도, 중복 의심, 환율 이상, 구독 변경을 한곳에서 검토합니다.";
+"pro.roadmap.share_templates.title" = "고급 공유 템플릿";
+"pro.roadmap.share_templates.body" = "더 많은 월간 보고서와 숙박 카드 템플릿, 스토리형 공유, 워터마크 제어를 제공합니다.";
+"pro.roadmap.cross_device.title" = "기기 간 자동화 동기화";
+"pro.roadmap.cross_device.body" = "Pro 상태, 클라우드 받은 편지함, 자동화 대기열을 여러 플랫폼에서 더 안정적으로 동기화합니다.";
 "pro.assurance.title" = "명확한 안전 경계";
 "pro.assurance.local.title" = "로컬 우선";
 "pro.assurance.local.body" = "원장 데이터는 기기 우선으로 유지되며 이메일 자격 증명은 업로드되지 않습니다.";
@@ -1002,10 +1012,10 @@
 "pro.legal.privacy" = "개인 정보 보호 정책";
 "pro.legal.terms" = "이용약관(EULA)";
 "pro.active.title" = "Pro 활성 상태";
-"pro.active.body" = "로컬 이메일 검사, 전용 Folio 받은 편지함, 배치 후보 및 고급 중복 제거 기능을 사용할 수 있습니다.";
+"pro.active.body" = "이메일 Folio, 일괄 후보, 고급 검색, 구독 이상, 월간 패키지, 규칙 정리를 사용할 수 있습니다.";
 "pro.status.active.title" = "Pro 활성 상태";
 "pro.status.active.badge" = "활성";
-"pro.status.active.body" = "로컬 이메일 검사, 전용 Folio 받은 편지함, 배치 후보 및 고급 중복 제거 기능을 사용할 수 있습니다. 저장되기 전에도 계속 검토할 수 있습니다.";
+"pro.status.active.body" = "이메일 Folio, 일괄 후보, 고급 검색, 구독 이상, 월간 패키지, 규칙 정리를 사용할 수 있습니다. 저장 전에는 항상 검토할 수 있습니다.";
 "pro.status.inactive.title" = "무료 플랜";
 "pro.status.inactive.badge" = "무료";
 "pro.status.inactive.body" = "수동 기록, 단일 항목 인식, 수동 호텔 Folio 가져오기 및 기록은 계속 사용할 수 있습니다. Pro는 새로운 자동화만 잠금 해제합니다.";
@@ -1016,10 +1026,10 @@
 "pro.status.product_format" = "%@ 구독했습니다";
 "pro.status.verified_format" = "마지막 확인: %@";
 "pro.product.monthly.title" = "Pro 월간";
-"pro.product.monthly.description_format" = "%@/월. 이메일 검사, 전용 받은 편지함, 일괄 후보를 먼저 시도하는 데 가장 적합합니다.";
+"pro.product.monthly.description_format" = "%@/월. 이메일 검사, 고급 검색, 월간 패키지를 먼저 사용해 보기 좋습니다.";
 "pro.product.monthly.action" = "월간 선택";
 "pro.product.yearly.title" = "Pro 연간";
-"pro.product.yearly.description_format" = "출시 가격 %@/년. 진행 중인 호텔 폴리오, 잦은 비용 지출, 중복된 정리 작업에 가장 적합합니다.";
+"pro.product.yearly.description_format" = "출시 가격 %@/년. 호텔 Folio, 구독 이상, 규칙 자동화를 꾸준히 쓰기 좋습니다.";
 "pro.product.yearly.action" = "연간 선택";
 "pro.product.choose" = "플랜을 선택하세요";
 "pro.product.recommended" = "추천";

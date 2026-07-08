@@ -613,13 +613,15 @@
 "report.trend.accessibility_item_format" = "%@、%@、%@";
 "report.merchant.accessibility_format" = "%d 位、%@、%@、%@、%@";
 "report.monthly_export.title" = "月次エクスポート";
-"report.monthly_export.body_format" = "%@ の記録、カテゴリ概要、ホテル明細索引を共有しやすいファイルにまとめます。";
+"report.monthly_export.body_format" = "%@ の記録、カテゴリ概要、ホテル明細索引を 1 つの ZIP にまとめます。";
 "report.monthly_export.redact_toggle" = "出力前に加盟店名とホテル名を隠す";
 "report.monthly_export.export_action" = "月次パックを作成";
 "report.monthly_export.pro.action" = "Pro を見る";
 "report.monthly_export.accessibility_label" = "月次パックを作成";
-"report.monthly_export.status_ready_format" = "%d 個のファイルを共有または保存できます。";
+"report.monthly_export.status_ready_format" = "%d 個の ZIP を共有または保存できます。";
 "report.monthly_export.status_failed_format" = "月次エクスポートに失敗しました：%@";
+"report.month_picker.current_month" = "今月";
+"report.month_picker.accessibility_label" = "月報の月を選択";
 
 "merchant_alias.title" = "加盟店別名";
 "merchant_alias.add_mapping" = "マッピングを追加";
@@ -949,11 +951,11 @@
 "language.footer" = "これらの設定は、この端末の表示と通貨が明記されていないレシートの解釈だけに影響します。保存済みの台帳データは変わりません。";
 
 "pro.title" = "AutoLedger Pro";
-"pro.description" = "Pro は時間を節約する自動化だけを解放します：メール明細スキャン、専用明細受信箱、一括候補、高度な重複整理。日常の記帳、手動取り込み、過去データは引き続き利用できます。";
+"pro.description" = "Pro は時間を節約する自動化を解放します：メール明細、専用受信箱、一括候補、高度な検索、サブスク異常、月次パッケージ、ルール整理。日常の記帳、手動取り込み、過去データは引き続き利用できます。";
 "pro.hero.badge" = "Pro";
 "pro.hero.crown" = "特典";
 "pro.hero.title" = "無料の記帳はそのまま。Pro が整理を自動化";
-"pro.hero.subtitle" = "AutoLedger はメール明細を見つけ、専用アドレスへの転送明細を受け取り、一括候補を整理し、重複の可能性を知らせます。保存前には必ず確認できます。";
+"pro.hero.subtitle" = "AutoLedger はメール明細を見つけ、転送明細を受け取り、一括候補を整理し、高度な検索、サブスク異常、月次パッケージ、ルール整理も提供します。保存前には必ず確認できます。";
 "pro.hero.price_line_format" = "月額 %@、年額ローンチ価格 %@。";
 "pro.hero.price_monthly_format" = "月額 %@";
 "pro.hero.price_yearly_format" = "年額ローンチ価格 %@";
@@ -964,7 +966,7 @@
 "pro.preview.folio" = "確認待ちメール明細";
 "pro.preview.batch" = "処理待ち一括候補";
 "pro.preview.duplicates" = "確認待ち重複候補";
-"pro.features.title" = "現在の Pro 自動化";
+"pro.features.title" = "利用できる Pro 自動化";
 "pro.feature.email.title" = "ローカルメールスキャン";
 "pro.feature.email.body" = "この端末で許可したメールボックスをスキャンし、ホテル明細と PDF 候補を見つけます。";
 "pro.feature.cloud_inbox.title" = "専用明細受信箱";
@@ -976,7 +978,7 @@
 "pro.feature.appearance.title" = "カスタム外観";
 "pro.feature.appearance.body" = "主色、補助色、背景トーンを選び、いつでも自分の画面スタイルへ切り替えられます。";
 "pro.feature.search.title" = "高度な検索";
-"pro.feature.search.body" = "金額、日付、店舗、来源、添付の手がかりで記録を探せます。";
+"pro.feature.search.body" = "金額、日付、店舗、入力元、添付の手がかりで記録を探せます。";
 "pro.feature.alerts.title" = "サブスク異常";
 "pro.feature.alerts.body" = "更新、金額変更、重複請求に早めに気づけます。";
 "pro.feature.export.title" = "月次パッケージ";
@@ -984,8 +986,16 @@
 "pro.feature.rules.title" = "高度なルール";
 "pro.feature.rules.body" = "店舗エイリアス、カテゴリ修正、低信頼度レビューを過去と今後の記録へまとめて適用します。";
 "pro.roadmap.title" = "Pro ロードマップ予告";
-"pro.roadmap.subtitle" = "以下の機能は現在の公開版には含まれません。今後のバージョンで Pro 自動化の拡張として実装予定です。";
-"pro.roadmap.item_badge" = "1.6.0";
+"pro.roadmap.subtitle" = "以下は今後さらに磨き込む Pro 自動化の方向です。安定後に順次提供します。";
+"pro.roadmap.item_badge" = "予定";
+"pro.roadmap.cloud_assist.title" = "クラウド補助整理";
+"pro.roadmap.cloud_assist.body" = "匿名化した要約で店舗名の統一候補を見つけます。";
+"pro.roadmap.review_queue.title" = "スマート確認キュー";
+"pro.roadmap.review_queue.body" = "低信頼度、重複候補、為替差、サブスク変更をまとめて確認します。";
+"pro.roadmap.share_templates.title" = "高度な共有テンプレート";
+"pro.roadmap.share_templates.body" = "月報や宿泊カードの追加テンプレート、ストーリー共有、透かし制御を提供します。";
+"pro.roadmap.cross_device.title" = "複数デバイス自動化同期";
+"pro.roadmap.cross_device.body" = "Pro 状態、クラウド受信箱、自動化キューを複数プラットフォームでより安定して同期します。";
 "pro.assurance.title" = "安心して使える設計";
 "pro.assurance.local.title" = "ローカル優先";
 "pro.assurance.local.body" = "帳簿データは端末優先で扱い、メール認証情報はアップロードしません。";
@@ -1002,10 +1012,10 @@
 "pro.legal.privacy" = "プライバシーポリシー";
 "pro.legal.terms" = "利用規約（EULA）";
 "pro.active.title" = "Pro が有効です";
-"pro.active.body" = "ローカルメールスキャン、専用明細受信箱、一括候補、高度な重複整理を利用できます。";
+"pro.active.body" = "メール明細、一括候補、高度な検索、サブスク異常、月次パッケージ、ルール整理を利用できます。";
 "pro.status.active.title" = "Pro が有効です";
 "pro.status.active.badge" = "有効";
-"pro.status.active.body" = "ローカルメールスキャン、専用明細受信箱、一括候補、高度な重複整理を利用できます。保存前には必ず確認します。";
+"pro.status.active.body" = "メール明細、一括候補、高度な検索、サブスク異常、月次パッケージ、ルール整理を利用できます。保存前には必ず確認します。";
 "pro.status.inactive.title" = "無料版を利用中";
 "pro.status.inactive.badge" = "無料";
 "pro.status.inactive.body" = "手動記帳、1 件ずつの認識、ホテル明細の手動取り込み、履歴データは引き続き利用できます。Pro は新しい自動整理だけを解放します。";
@@ -1016,10 +1026,10 @@
 "pro.status.product_format" = "%@ を購読中";
 "pro.status.verified_format" = "最終確認：%@";
 "pro.product.monthly.title" = "Pro 月額";
-"pro.product.monthly.description_format" = "%@ / 月。まずメールスキャン、専用受信箱、一括候補を試すのに向いています。";
+"pro.product.monthly.description_format" = "%@ / 月。まずメールスキャン、高度な検索、月次パッケージを試すのに向いています。";
 "pro.product.monthly.action" = "月額を選択";
 "pro.product.yearly.title" = "Pro 年額";
-"pro.product.yearly.description_format" = "ローンチ価格 %@ / 年。ホテル明細、頻繁な支出、重複整理を継続して使う方向けです。";
+"pro.product.yearly.description_format" = "ローンチ価格 %@ / 年。ホテル明細、サブスク異常、ルール自動化を継続して使う方向けです。";
 "pro.product.yearly.action" = "年額を選択";
 "pro.product.choose" = "プランを選択";
 "pro.product.recommended" = "おすすめ";

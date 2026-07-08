@@ -74,6 +74,17 @@ private enum HotelStayDraftDuplicateState {
     case posted
 }
 
+private struct MonthlyReportCacheKey: Hashable {
+    let monthStart: Date
+    let ledgerScopeID: String
+}
+
+private struct MonthlyAnomalyCacheKey: Hashable {
+    let monthStart: Date
+    let ledgerScopeID: String
+    let thresholdPercent: Double
+}
+
 struct ReceiptImportReviewDraft: Identifiable {
     let id = UUID()
     let receipt: ImportedReceipt
@@ -89,7 +100,9 @@ final class LedgerStore: ObservableObject {
     static var shared: LedgerStore?
     static var watchSyncHandler: (() -> Void)?
 
-    @Published private(set) var transactions: [Transaction]
+    @Published private(set) var transactions: [Transaction] {
+        didSet { invalidateMonthlyReportCaches() }
+    }
     @Published private(set) var deletedTransactions: [Transaction] = []
     @Published private(set) var subscriptions: [Subscription] = []
     @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:]
@@ -108,9 +121,21 @@ final class LedgerStore: ObservableObject {
     @Published var customCategories: [String] = []
     @Published private(set) var merchantAliases: [String: String] = [:]
     @Published private(set) var ledgerProfiles: [LedgerProfile] = []
-    @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID
+    @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID {
+        didSet {
+            if oldValue != selectedLedgerID {
+                invalidateMonthlyReportCaches()
+            }
+        }
+    }
     @Published private(set) var defaultWriteLedgerID = TodaySpendingSummary.defaultLedgerID
-    @Published private(set) var isShowingAllLedgers = false
+    @Published private(set) var isShowingAllLedgers = false {
+        didSet {
+            if oldValue != isShowingAllLedgers {
+                invalidateMonthlyReportCaches()
+            }
+        }
+    }
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
     @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = []
@@ -133,6 +158,10 @@ final class LedgerStore: ObservableObject {
     private var merchantAliasDeletedKeys: Set<String> = []
     private var lastDataCleaningUndoSnapshot: DataCleaningUndoSnapshot?
     private let iCloudBackupService = ICloudBackupService()
+    private let monthlyInsightService = MonthlyInsightService()
+    private var monthlySnapshotCache: [MonthlyReportCacheKey: MonthlySnapshot] = [:]
+    private var monthlyAnomalyCache: [MonthlyAnomalyCacheKey: [AnomalyAlert]] = [:]
+    private var reportMonthOptionsCache: [String: [Date]] = [:]
 
     init(
         parser: ReceiptParser = ReceiptParser(),
@@ -178,7 +207,58 @@ final class LedgerStore: ObservableObject {
     }
 
     func monthlySnapshot(for referenceDate: Date) -> MonthlySnapshot {
-        MonthlySnapshot.build(from: visibleTransactions, referenceDate: referenceDate)
+        guard let key = monthlyReportCacheKey(for: referenceDate) else {
+            return MonthlySnapshot.build(from: visibleTransactions, referenceDate: referenceDate)
+        }
+        if let cached = monthlySnapshotCache[key] {
+            return cached
+        }
+        let snapshot = MonthlySnapshot.build(from: visibleTransactions, referenceDate: referenceDate)
+        monthlySnapshotCache[key] = snapshot
+        return snapshot
+    }
+
+    func monthlyAnomalyAlerts(for referenceDate: Date = .now, thresholdPercent: Double) -> [AnomalyAlert] {
+        guard let monthStart = AppFormatters.calendar.dateInterval(of: .month, for: referenceDate)?.start else {
+            return []
+        }
+        let key = MonthlyAnomalyCacheKey(
+            monthStart: monthStart,
+            ledgerScopeID: currentLedgerScopeID,
+            thresholdPercent: thresholdPercent
+        )
+        if let cached = monthlyAnomalyCache[key] {
+            return cached
+        }
+        let alerts = monthlyInsightService.detectAnomalies(
+            transactions: visibleTransactions,
+            referenceDate: referenceDate,
+            thresholdPercent: thresholdPercent
+        )
+        monthlyAnomalyCache[key] = alerts
+        return alerts
+    }
+
+    func reportMonthOptions() -> [Date] {
+        let ledgerScopeID = currentLedgerScopeID
+        if let cached = reportMonthOptionsCache[ledgerScopeID] {
+            return cached
+        }
+
+        let calendar = AppFormatters.calendar
+        var monthStarts = Set<Date>()
+        if let currentMonthStart = calendar.dateInterval(of: .month, for: .now)?.start {
+            monthStarts.insert(currentMonthStart)
+        }
+        for transaction in visibleTransactions {
+            if let monthStart = calendar.dateInterval(of: .month, for: transaction.occurredAt)?.start {
+                monthStarts.insert(monthStart)
+            }
+        }
+
+        let sortedMonths = monthStarts.sorted(by: >)
+        reportMonthOptionsCache[ledgerScopeID] = sortedMonths
+        return sortedMonths
     }
 
     var todaySpendingSummary: TodaySpendingSummary {
@@ -188,6 +268,19 @@ final class LedgerStore: ObservableObject {
             ledgerID: currentLedgerScopeID,
             ledgerName: currentLedgerScopeName
         )
+    }
+
+    private func monthlyReportCacheKey(for referenceDate: Date) -> MonthlyReportCacheKey? {
+        guard let monthStart = AppFormatters.calendar.dateInterval(of: .month, for: referenceDate)?.start else {
+            return nil
+        }
+        return MonthlyReportCacheKey(monthStart: monthStart, ledgerScopeID: currentLedgerScopeID)
+    }
+
+    private func invalidateMonthlyReportCaches() {
+        monthlySnapshotCache.removeAll()
+        monthlyAnomalyCache.removeAll()
+        reportMonthOptionsCache.removeAll()
     }
 
     var activeLedgerProfiles: [LedgerProfile] {
@@ -906,12 +999,14 @@ final class LedgerStore: ObservableObject {
         if let sqlStore = transactionStore as? SQLiteTransactionStore {
             do {
                 try sqlStore.permanentlyDeleteTransaction(id: transaction.id)
+                try sqlStore.deleteDebugEvents(transactionID: transaction.id)
             } catch {
                 lastImportSummary = "彻底删除失败：\(error.localizedDescription)"
                 return
             }
         }
         deletedTransactions.removeAll { $0.id == transaction.id }
+        debugRecords.removeAll { $0.transactionID == transaction.id }
         lastImportSummary = "已彻底删除 \(transaction.merchant) 的记录。"
         reloadWidgets()
         requestAutomaticBackup()
@@ -3234,27 +3329,26 @@ extension LedgerStore {
             )
         )
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
-        let folderName = "AutoLedger_monthly_export_\(formatter.string(from: package.generatedAt))"
+        let exportToken = Self.monthlyExportFileToken(for: package.generatedAt)
+        let folderName = "AutoLedger_monthly_export_\(exportToken)"
         let folderURL = FileManager.default.temporaryDirectory.appendingPathComponent(folderName, isDirectory: true)
         if FileManager.default.fileExists(atPath: folderURL.path) {
             try FileManager.default.removeItem(at: folderURL)
         }
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-        let urls = try package.files.map { file in
+        for file in package.files {
             let exportFile = monthlyExportWritableFile(from: file)
             let url = folderURL.appendingPathComponent(exportFile.fileName)
             try exportFile.data.write(to: url, options: [.atomic])
-            return url
         }
         lastBackupSummary = String(
             format: String(localized: "report.monthly_export.status_ready_format"),
-            urls.count
+            1
         )
-        return urls
+        let zipURL = try zipMonthlyExportPackage(at: folderURL, exportToken: exportToken)
+        try? FileManager.default.removeItem(at: folderURL)
+        return [zipURL]
     }
 
     private func monthlyExportWritableFile(from file: MonthlyExportPackageFile) -> (fileName: String, data: Data) {
@@ -3274,6 +3368,32 @@ extension LedgerStore {
         case .excelCSV, .hotelAttachmentIndex:
             return (file.fileName, file.data)
         }
+    }
+
+    private static func monthlyExportFileToken(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        return formatter.string(from: date)
+    }
+
+    private func zipMonthlyExportPackage(at folderURL: URL, exportToken: String) throws -> URL {
+        let zipURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedger_monthly_export_\(exportToken).zip")
+        try? FileManager.default.removeItem(at: zipURL)
+
+        var coordinatorError: NSError?
+        var innerError: Error?
+        NSFileCoordinator().coordinate(readingItemAt: folderURL, options: .forUploading, error: &coordinatorError) { tempZip in
+            do {
+                try FileManager.default.copyItem(at: tempZip, to: zipURL)
+            } catch {
+                innerError = error
+            }
+        }
+        if let coordinatorError { throw coordinatorError }
+        if let innerError { throw innerError }
+        return zipURL
     }
 
     #if canImport(UIKit)

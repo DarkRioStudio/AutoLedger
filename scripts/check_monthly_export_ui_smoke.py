@@ -26,6 +26,8 @@ def main() -> int:
     require(report, '"report.monthly_export.redact_toggle"', "ReportView", failures)
     require(store, "writeMonthlyExportPackage", "LedgerStore", failures)
     require(store, "MonthlyExportPackageBuilder", "LedgerStore", failures)
+    require(store, "zipMonthlyExportPackage", "LedgerStore", failures)
+    require(store, ".zip", "LedgerStore", failures)
     require(store, "renderMonthlyExportPDF", "LedgerStore", failures)
     require(store, 'replacingOccurrences(of: ".md", with: ".pdf")', "LedgerStore", failures)
 

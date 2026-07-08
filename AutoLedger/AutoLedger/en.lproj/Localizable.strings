@@ -613,13 +613,15 @@
 "report.trend.accessibility_item_format" = "%@, %@, %@";
 "report.merchant.accessibility_format" = "Rank %d, %@, %@, %@, %@";
 "report.monthly_export.title" = "Monthly Export";
-"report.monthly_export.body_format" = "Package %@ entries, category summary, and hotel folio index into shareable files.";
+"report.monthly_export.body_format" = "Package %@ entries, category summary, and hotel folio index into one ZIP.";
 "report.monthly_export.redact_toggle" = "Hide merchant and hotel names before export";
 "report.monthly_export.export_action" = "Export Package";
 "report.monthly_export.pro.action" = "View Pro";
 "report.monthly_export.accessibility_label" = "Export monthly package";
-"report.monthly_export.status_ready_format" = "%d files are ready to share or save.";
+"report.monthly_export.status_ready_format" = "%d ZIP package is ready to share or save.";
 "report.monthly_export.status_failed_format" = "Monthly export failed: %@";
+"report.month_picker.current_month" = "This Month";
+"report.month_picker.accessibility_label" = "Choose report month";
 
 "merchant_alias.title" = "Merchant Aliases";
 "merchant_alias.add_mapping" = "Add Mapping";
@@ -949,11 +951,11 @@
 "language.footer" = "These settings only affect the local interface and bills with no visible currency. Saved ledger data is not changed.";
 
 "pro.title" = "AutoLedger Pro";
-"pro.description" = "Pro only unlocks time-saving automation: email folio scanning, a dedicated folio inbox, batch candidates, and advanced dedupe. Everyday bookkeeping, manual import, and history stay accessible.";
+"pro.description" = "Pro unlocks time-saving automation: email folios, a dedicated inbox, batch candidates, advanced search, subscription alerts, monthly packages, and rules. Everyday bookkeeping, manual import, and history stay accessible.";
 "pro.hero.badge" = "Pro";
 "pro.hero.crown" = "Member";
 "pro.hero.title" = "Free bookkeeping stays. Pro automates the sorting.";
-"pro.hero.subtitle" = "AutoLedger can find email folios, receive forwarded folios at your dedicated address, organize batch candidates, and flag possible duplicates. You still review before anything is saved.";
+"pro.hero.subtitle" = "AutoLedger can find email folios, receive forwarded folios, organize batch candidates, and add advanced search, subscription alerts, monthly packages, and rule cleanup. You still review before anything is saved.";
 "pro.hero.price_line_format" = "Monthly %@. Launch annual %@.";
 "pro.hero.price_monthly_format" = "Monthly %@";
 "pro.hero.price_yearly_format" = "Launch annual %@";
@@ -964,7 +966,7 @@
 "pro.preview.folio" = "Email folios to review";
 "pro.preview.batch" = "Batch candidates pending";
 "pro.preview.duplicates" = "Possible duplicates pending";
-"pro.features.title" = "Current Pro automation";
+"pro.features.title" = "Available Pro automation";
 "pro.feature.email.title" = "Local Email Scan";
 "pro.feature.email.body" = "Scan the mailbox you authorize on this device to find hotel folio and PDF candidates.";
 "pro.feature.cloud_inbox.title" = "Dedicated Folio Inbox";
@@ -984,8 +986,16 @@
 "pro.feature.rules.title" = "Advanced Rules";
 "pro.feature.rules.body" = "Apply merchant aliases, category corrections, and low-confidence review queues across past and future records.";
 "pro.roadmap.title" = "Pro Roadmap Preview";
-"pro.roadmap.subtitle" = "These are not part of the current public release; they are planned for a future version as broader Pro automation.";
-"pro.roadmap.item_badge" = "1.6.0";
+"pro.roadmap.subtitle" = "These are the next Pro automation directions. Each one will ship after it is stable enough for everyday use.";
+"pro.roadmap.item_badge" = "Planned";
+"pro.roadmap.cloud_assist.title" = "Cloud-Assisted Cleanup";
+"pro.roadmap.cloud_assist.body" = "Use redacted summaries to help find merchant normalization suggestions.";
+"pro.roadmap.review_queue.title" = "Smart Review Queue";
+"pro.roadmap.review_queue.body" = "Review low-confidence records, duplicates, rate mismatches, and subscription changes in one place.";
+"pro.roadmap.share_templates.title" = "Advanced Share Templates";
+"pro.roadmap.share_templates.body" = "More monthly and stay-card templates, story-style exports, and watermark controls.";
+"pro.roadmap.cross_device.title" = "Cross-Device Automation";
+"pro.roadmap.cross_device.body" = "Keep Pro status, cloud inbox, and automation queues more consistent across platforms.";
 "pro.assurance.title" = "Clear safety boundaries";
 "pro.assurance.local.title" = "Local-first";
 "pro.assurance.local.body" = "Ledger data stays device-first, and email credentials are not uploaded.";
@@ -1002,10 +1012,10 @@
 "pro.legal.privacy" = "Privacy Policy";
 "pro.legal.terms" = "Terms of Use (EULA)";
 "pro.active.title" = "Pro is active";
-"pro.active.body" = "Local email scanning, the dedicated folio inbox, batch candidates, and advanced dedupe are available.";
+"pro.active.body" = "Email folios, batch candidates, advanced search, subscription alerts, monthly packages, and rule cleanup are available.";
 "pro.status.active.title" = "Pro is active";
 "pro.status.active.badge" = "Active";
-"pro.status.active.body" = "Local email scanning, the dedicated folio inbox, batch candidates, and advanced dedupe are available. You still review before anything is saved.";
+"pro.status.active.body" = "Email folios, batch candidates, advanced search, subscription alerts, monthly packages, and rule cleanup are available. You still review before anything is saved.";
 "pro.status.inactive.title" = "Free plan";
 "pro.status.inactive.badge" = "Free";
 "pro.status.inactive.body" = "Manual bookkeeping, single-item recognition, manual hotel folio import, and history remain available. Pro only unlocks new automation.";
@@ -1016,10 +1026,10 @@
 "pro.status.product_format" = "%@ subscribed";
 "pro.status.verified_format" = "Last checked: %@";
 "pro.product.monthly.title" = "Pro Monthly";
-"pro.product.monthly.description_format" = "%@ / month. Best for trying email scan, the dedicated inbox, and batch candidates first.";
+"pro.product.monthly.description_format" = "%@ / month. Best for trying email scan, advanced search, and monthly packages first.";
 "pro.product.monthly.action" = "Choose Monthly";
 "pro.product.yearly.title" = "Pro Yearly";
-"pro.product.yearly.description_format" = "Launch price %@ / year. Best for ongoing hotel folios, frequent expenses, and duplicate cleanup.";
+"pro.product.yearly.description_format" = "Launch price %@ / year. Best for ongoing hotel folios, subscription alerts, and rule automation.";
 "pro.product.yearly.action" = "Choose Yearly";
 "pro.product.choose" = "Choose Plan";
 "pro.product.recommended" = "Recommended";
