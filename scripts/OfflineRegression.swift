@@ -4524,6 +4524,30 @@ struct OfflineRegression {
             ),
             "DataCleaningAssistPayload is deterministic across transaction ordering"
         )
+
+        let duplicateNormalizedPayload = DataCleaningAssistPayloadBuilder(now: { base }).build(
+            transactions: [variant],
+            merchantAliases: [
+                "Private Coffee West Gate": "Private Coffee",
+                "private-coffee west gate": "Private Coffee Main"
+            ],
+            categoryCorrections: [
+                "Private Coffee West Gate": .dining,
+                "private-coffee west gate": .shopping
+            ]
+        )
+        reporter.check(
+            duplicateNormalizedPayload.merchantFeatures.count == 1,
+            "DataCleaningAssistPayload tolerates duplicate normalized alias keys"
+        )
+        reporter.check(
+            duplicateNormalizedPayload.merchantFeatures.first?.aliasTargetHash != nil,
+            "DataCleaningAssistPayload keeps an alias target when normalized alias keys collide"
+        )
+        reporter.check(
+            duplicateNormalizedPayload.merchantFeatures.first?.correctedCategory != nil,
+            "DataCleaningAssistPayload keeps a category correction when normalized correction keys collide"
+        )
     }
 
     private static func verifyDataCleaningAssistResponseMapping(reporter: RegressionReporter) {

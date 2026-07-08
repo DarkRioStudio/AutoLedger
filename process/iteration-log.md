@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-400 永久删除后 OCR 重导入回归修复）
+更新日期：2026-07-08（ITER-401 数据清洗别名 hash 冲突崩溃修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-401 数据清洗别名 hash 冲突崩溃修复
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Data Cleaning / TestFlight Crash
+- 类型：Bugfix / 测试
+- 目标：修复 TestFlight 真机点击“数据清洗”时，`DataCleaningAssistPayloadBuilder.hashedAliasTargets(_:)` 构造 Dictionary 因重复归一化 key 触发崩溃的问题。
+- 改动范围：`DataCleaningAssistPayloadBuilder` 的商户别名 hash 和分类修正 hash 改为重复 key 稳定合并；`scripts/OfflineRegression.swift` 新增重复归一化商户别名 / 分类修正用例。
+- 未改动范围：未修改数据清洗 UI、Pro gate、云端辅助开关语义、Worker endpoint、common-api、SQLite / CloudKit schema、StoreKit、ASC metadata、构建号或 tag。
+- 完成内容：真实用户数据中多个原始商户名经大小写、空格、符号清洗后落到同一归一化 key 时，数据清洗页不会因 payload 构造而崩溃；冲突值用稳定字典序规则选择，保证 payload 可重复生成。
+- 未完成内容：未做商户别名冲突可视化治理、冲突清理 UI 或云端辅助请求接入。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_data_cleaning_ios_entry_smoke.py` PASS；`bash scripts/run_offline_regression.sh` PASS，新增重复归一化商户别名 / 分类修正用例通过；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS，仍有既有 formatter `nonisolated(unsafe)` 等 warning。
+- 风险与注意事项：冲突合并只影响未来云端辅助 payload 的 hash 摘要字段，不会直接修改本地商户别名、交易、分类或已采纳规则。
+- 回滚方式：回退 `DataCleaningAssistPayloadBuilder` 的重复 key 合并逻辑和离线回归用例，即可恢复旧行为，但真实重复归一化别名仍会触发崩溃。
+- 结论：本轮完成，TestFlight 崩溃栈指向的 `Dictionary(uniqueKeysWithValues:)` 重复 key 崩溃已修复并通过离线回归与 iOS workspace 构建。
+- 下一步建议：如果后续要把云端辅助正式接入 Worker，可在 UI 层增加“别名冲突整理”提示，帮助用户清理重复规则。
 
 ### ITER-400 永久删除后 OCR 重导入回归修复
 - 日期：2026-07-08

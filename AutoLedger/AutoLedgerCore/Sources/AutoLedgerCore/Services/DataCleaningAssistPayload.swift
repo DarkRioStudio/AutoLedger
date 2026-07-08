@@ -365,24 +365,29 @@ public struct DataCleaningAssistPayloadBuilder: Sendable {
     }
 
     private func hashedAliasTargets(_ aliases: [String: String]) -> [String: String] {
-        Dictionary(
-            uniqueKeysWithValues: aliases.compactMap { original, alias in
-                let originalKey = DataCleaningAssistFingerprint.normalizedMerchantKey(original)
-                let aliasKey = DataCleaningAssistFingerprint.normalizedMerchantKey(alias)
-                guard !originalKey.isEmpty, !aliasKey.isEmpty else { return nil }
-                return (DataCleaningAssistFingerprint.stableHashID(originalKey), DataCleaningAssistFingerprint.stableHashID(aliasKey))
-            }
-        )
+        let pairs: [(String, String)] = aliases.compactMap { original, alias in
+            let originalKey = DataCleaningAssistFingerprint.normalizedMerchantKey(original)
+            let aliasKey = DataCleaningAssistFingerprint.normalizedMerchantKey(alias)
+            guard !originalKey.isEmpty, !aliasKey.isEmpty else { return nil }
+            return (
+                DataCleaningAssistFingerprint.stableHashID(originalKey),
+                DataCleaningAssistFingerprint.stableHashID(aliasKey)
+            )
+        }
+        return Dictionary(pairs, uniquingKeysWith: stablePreferredValue)
     }
 
     private func hashedCategoryCorrections(_ corrections: [String: TransactionCategory]) -> [String: String] {
-        Dictionary(
-            uniqueKeysWithValues: corrections.compactMap { merchant, category in
-                let key = DataCleaningAssistFingerprint.normalizedMerchantKey(merchant)
-                guard !key.isEmpty else { return nil }
-                return (DataCleaningAssistFingerprint.stableHashID(key), category.rawValue)
-            }
-        )
+        let pairs: [(String, String)] = corrections.compactMap { merchant, category in
+            let key = DataCleaningAssistFingerprint.normalizedMerchantKey(merchant)
+            guard !key.isEmpty else { return nil }
+            return (DataCleaningAssistFingerprint.stableHashID(key), category.rawValue)
+        }
+        return Dictionary(pairs, uniquingKeysWith: stablePreferredValue)
+    }
+
+    private func stablePreferredValue(_ lhs: String, _ rhs: String) -> String {
+        lhs <= rhs ? lhs : rhs
     }
 
     private func prefixHashes(for normalizedKey: String) -> [DataCleaningMerchantPrefixHash] {
