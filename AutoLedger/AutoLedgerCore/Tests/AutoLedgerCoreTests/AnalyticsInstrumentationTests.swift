@@ -174,4 +174,109 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         XCTAssertEqual(violationEvents.first?.payload["blocked_field_category"], .string("financial"))
         XCTAssertNil(violationEvents.first?.payload["amount"])
     }
+
+    func testUploadClientPostsAllowedEventsToCommonAPI() async throws {
+        let event = try AutoLedgerAnalyticsEvent.make(.appLaunchPerformance, payload: [
+            "event_id": .string("launch-1"),
+            "app_version": .string("1.6.0"),
+            "build_number": .string("160"),
+            "os_major": .string("26"),
+            "device_class": .string("phone"),
+            "launch_type": .string("foreground"),
+            "duration_ms_bucket": .string("not_measured"),
+            "result": .string("success"),
+            "error_code": .string("none")
+        ])
+        let requestCapture = AnalyticsUploadRequestCapture()
+        let client = AutoLedgerAnalyticsUploadClient(
+            endpointURL: URL(string: "https://example.test/v1/analytics/events")!,
+            transport: { request in
+                await requestCapture.set(request)
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 202,
+                    httpVersion: nil,
+                    headerFields: ["content-type": "application/json"]
+                )!
+                return (Data(#"{"ok":true,"accepted":1}"#.utf8), response)
+            }
+        )
+
+        try await client.upload(
+            events: [event],
+            appVersion: "1.6.0",
+            buildNumber: "160",
+            osMajor: "26",
+            deviceClass: "phone"
+        )
+
+        let capturedRequest = await requestCapture.capturedRequest()
+        let request = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.absoluteString, "https://example.test/v1/analytics/events")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "content-type"), "application/json")
+        let bodyData = try XCTUnwrap(request.httpBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: bodyData) as? [String: Any])
+        let events = try XCTUnwrap(body["events"] as? [[String: Any]])
+        let uploadedEvent = try XCTUnwrap(events.first)
+        let payload = try XCTUnwrap(uploadedEvent["payload"] as? [String: Any])
+
+        XCTAssertEqual(body["app"] as? String, "autoledger")
+        XCTAssertEqual(uploadedEvent["eventName"] as? String, "al_perf_app_launch")
+        XCTAssertEqual(uploadedEvent["appVersion"] as? String, "1.6.0")
+        XCTAssertEqual(payload["result"] as? String, "success")
+        XCTAssertNil(payload["amount"])
+        XCTAssertNil(payload["merchant"])
+    }
+
+    func testUploadClientThrowsOnHTTPFailure() async throws {
+        let event = try AutoLedgerAnalyticsEvent.make(.appLaunchPerformance, payload: [
+            "event_id": .string("launch-2"),
+            "app_version": .string("1.6.0"),
+            "build_number": .string("160"),
+            "os_major": .string("26"),
+            "device_class": .string("phone"),
+            "launch_type": .string("foreground"),
+            "duration_ms_bucket": .string("not_measured"),
+            "result": .string("success"),
+            "error_code": .string("none")
+        ])
+        let client = AutoLedgerAnalyticsUploadClient(
+            endpointURL: URL(string: "https://example.test/v1/analytics/events")!,
+            transport: { request in
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 500,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!
+                return (Data(), response)
+            }
+        )
+
+        do {
+            try await client.upload(
+                events: [event],
+                appVersion: "1.6.0",
+                buildNumber: "160",
+                osMajor: "26",
+                deviceClass: "phone"
+            )
+            XCTFail("Expected upload failure")
+        } catch let error as AutoLedgerAnalyticsUploadError {
+            XCTAssertEqual(error, .httpFailure(statusCode: 500))
+        }
+    }
+}
+
+private actor AnalyticsUploadRequestCapture {
+    private var request: URLRequest?
+
+    func set(_ request: URLRequest) {
+        self.request = request
+    }
+
+    func capturedRequest() -> URLRequest? {
+        request
+    }
 }

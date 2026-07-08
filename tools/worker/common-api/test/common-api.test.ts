@@ -113,6 +113,40 @@ class MemoryD1Database {
   }
 }
 
+class AnalyticsCaptureD1Database {
+  readonly analyticsInserts: unknown[][] = [];
+
+  constructor(private readonly rows: ReleaseNoteFixture[]) {}
+
+  prepare(sql: string): MemoryD1PreparedStatement | AnalyticsCaptureD1PreparedStatement {
+    if (sql.includes("autoledger_analytics_events")) {
+      return new AnalyticsCaptureD1PreparedStatement(sql, this.analyticsInserts);
+    }
+    return new MemoryD1PreparedStatement(sql, this.rows);
+  }
+}
+
+class AnalyticsCaptureD1PreparedStatement {
+  private readonly params: unknown[];
+
+  constructor(
+    private readonly sql: string,
+    private readonly inserts: unknown[][],
+    params: unknown[] = []
+  ) {
+    this.params = params;
+  }
+
+  bind(...params: unknown[]): AnalyticsCaptureD1PreparedStatement {
+    return new AnalyticsCaptureD1PreparedStatement(this.sql, this.inserts, params);
+  }
+
+  async run(): Promise<{ success: boolean }> {
+    this.inserts.push(this.params);
+    return { success: true };
+  }
+}
+
 class MemoryD1PreparedStatement {
   private readonly params: unknown[];
 
@@ -213,6 +247,92 @@ describe("common api worker contract", () => {
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.service).toBe("darkrio-common-api");
+  });
+
+  it("accepts privacy-safe AutoLedger analytics events into D1", async () => {
+    const analyticsDB = new AnalyticsCaptureD1Database(releaseNotesFixtures);
+    const analyticsEnv = {
+      ...env,
+      COMMON_API_DB: analyticsDB as unknown as D1Database
+    } as unknown as Env;
+    const response = await routeFetch(new Request("https://example.test/v1/analytics/events", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        app: "autoledger",
+        events: [
+          {
+            eventName: "al_import_flow_completed",
+            appVersion: "1.6.0",
+            buildNumber: "160",
+            osMajor: "26",
+            deviceClass: "phone",
+            payload: {
+              event_id: "event-1",
+              app_version: "1.6.0",
+              flow_type: "receipt_scan",
+              input_type: "camera",
+              status: "success",
+              duration_ms_bucket: "1s_3s",
+              retry_count_bucket: "0",
+              error_code: "none"
+            }
+          }
+        ]
+      })
+    }), analyticsEnv);
+    const body = await jsonBody(response);
+
+    expect(response.status).toBe(202);
+    expect(body).toMatchObject({ ok: true, accepted: 1 });
+    expect(analyticsDB.analyticsInserts).toHaveLength(1);
+    const insert = analyticsDB.analyticsInserts[0];
+    expect(insert).toBeDefined();
+    expect(insert![1]).toBe("autoledger");
+    expect(insert![2]).toBe("al_import_flow_completed");
+    const payloadJSON = String(insert![8]);
+    expect(payloadJSON).toContain("receipt_scan");
+    expect(payloadJSON).not.toContain("amount");
+    expect(payloadJSON).not.toContain("merchant");
+  });
+
+  it("rejects analytics payloads with financial or document fields", async () => {
+    const analyticsDB = new AnalyticsCaptureD1Database(releaseNotesFixtures);
+    const analyticsEnv = {
+      ...env,
+      COMMON_API_DB: analyticsDB as unknown as D1Database
+    } as unknown as Env;
+    const response = await routeFetch(new Request("https://example.test/v1/analytics/events", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        schemaVersion: 1,
+        app: "autoledger",
+        events: [
+          {
+            eventName: "al_import_flow_completed",
+            payload: {
+              event_id: "event-2",
+              app_version: "1.6.0",
+              flow_type: "receipt_scan",
+              input_type: "camera",
+              status: "success",
+              duration_ms_bucket: "1s_3s",
+              retry_count_bucket: "0",
+              error_code: "none",
+              amount: 88.8,
+              merchant: "Cafe Example"
+            }
+          }
+        ]
+      })
+    }), analyticsEnv);
+    const body = await jsonBody(response);
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({ error: { code: "analytics_forbidden_field" } });
+    expect(analyticsDB.analyticsInserts).toEqual([]);
   });
 
   it("publishes a manifest for the five-locale places catalog", async () => {

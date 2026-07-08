@@ -63,6 +63,82 @@ public struct AutoLedgerAnalyticsEvent: Equatable, Sendable {
     }
 }
 
+public enum AutoLedgerAnalyticsUploadError: Error, Equatable, Sendable {
+    case invalidResponse
+    case httpFailure(statusCode: Int)
+}
+
+public struct AutoLedgerAnalyticsUploadClient: Sendable {
+    public typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
+    public let endpointURL: URL
+    private let transport: Transport
+
+    public init(
+        endpointURL: URL = URL(string: "https://api.darkrio326.top/v1/analytics/events")!,
+        transport: @escaping Transport = { request in
+            try await URLSession.shared.data(for: request)
+        }
+    ) {
+        self.endpointURL = endpointURL
+        self.transport = transport
+    }
+
+    public func upload(
+        events: [AutoLedgerAnalyticsEvent],
+        appVersion: String,
+        buildNumber: String,
+        osMajor: String,
+        deviceClass: String
+    ) async throws {
+        guard !events.isEmpty else { return }
+
+        var request = URLRequest(url: endpointURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 8
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody(
+            events: events,
+            appVersion: appVersion,
+            buildNumber: buildNumber,
+            osMajor: osMajor,
+            deviceClass: deviceClass
+        ))
+
+        let (_, response) = try await transport(request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AutoLedgerAnalyticsUploadError.invalidResponse
+        }
+        guard 200...299 ~= httpResponse.statusCode else {
+            throw AutoLedgerAnalyticsUploadError.httpFailure(statusCode: httpResponse.statusCode)
+        }
+    }
+
+    private func requestBody(
+        events: [AutoLedgerAnalyticsEvent],
+        appVersion: String,
+        buildNumber: String,
+        osMajor: String,
+        deviceClass: String
+    ) -> [String: Any] {
+        [
+            "schemaVersion": 1,
+            "app": "autoledger",
+            "events": events.map { event in
+                [
+                    "eventName": event.eventName,
+                    "appVersion": appVersion,
+                    "buildNumber": buildNumber,
+                    "osMajor": osMajor,
+                    "deviceClass": deviceClass,
+                    "payload": event.payload.mapValues(\.jsonValue)
+                ]
+            }
+        ]
+    }
+}
+
 public struct AutoLedgerAnalyticsEventDefinition: Equatable, Sendable {
     public let eventName: String
     public let purpose: String
@@ -336,6 +412,21 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
 private extension AutoLedgerAnalyticsEvent {
     func stringPayload(_ key: String) -> String? {
         payload[key]?.stringValue
+    }
+}
+
+private extension AutoLedgerAnalyticsPayloadValue {
+    var jsonValue: Any {
+        switch self {
+        case let .string(value):
+            return value
+        case let .int(value):
+            return value
+        case let .double(value):
+            return value
+        case let .bool(value):
+            return value
+        }
     }
 }
 

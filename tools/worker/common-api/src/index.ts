@@ -16,6 +16,7 @@ import {
   defaultCurrencyCode,
   type CurrencyRecord
 } from "./currencies-catalog";
+import { analyticsEventsEndpoint } from "./analytics";
 import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
 import {
   releaseNotesSchemaVersion,
@@ -128,6 +129,10 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
     return responseForMethod(request, json(result.body, result.status, result.cacheControl ?? "no-store"));
   }
 
+  if (request.method === "POST" && url.pathname === "/v1/analytics/events") {
+    return withCommonHeaders(await analyticsEventsEndpoint(request, env));
+  }
+
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
     return json(error("method_not_allowed", "This endpoint currently accepts read-only GET or HEAD requests."), 405);
   }
@@ -199,6 +204,13 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
             optional: ["locale"]
           },
           privacy: "The App should send app id, app version, and locale only; no ledger, receipt, hotel, subscription, or user account data is needed."
+        },
+        analyticsEvents: {
+          status: env.COMMON_API_DB ? "available" : "configuration_required",
+          endpoint: `${baseURL}/v1/analytics/events`,
+          method: "POST",
+          maxEventsPerRequest: 25,
+          privacy: "The App may send anonymous workflow state, performance buckets, error codes, and purchase flow status only. Ledger amounts, merchants, screenshots, PDFs, emails, hotel identifiers, room numbers, precise location, OCR text, StoreKit transaction identifiers, receipts, and payment data are rejected."
         },
         hotelWeather: {
           status: weatherProviderConfigured(env) ? "available" : "configuration_required",
@@ -451,7 +463,7 @@ function json(body: unknown, status = 200, cacheControl = "no-store", extraHeade
 function withCommonHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("access-control-allow-origin", "*");
-  headers.set("access-control-allow-methods", "GET, HEAD, OPTIONS");
+  headers.set("access-control-allow-methods", "GET, HEAD, POST, OPTIONS");
   headers.set("access-control-allow-headers", "content-type, if-none-match");
   headers.set("x-content-type-options", "nosniff");
   return new Response(response.body, {

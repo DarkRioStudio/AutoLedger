@@ -98,6 +98,7 @@ private struct AutoLedgerRootView: View {
     @AppStorage(AppThemeCustomTheme.accentHexKey) private var customThemeAccentHex = AppThemeCustomTheme.defaultAccentHex
     @AppStorage(AppThemeCustomTheme.secondaryHexKey) private var customThemeSecondaryHex = AppThemeCustomTheme.defaultSecondaryHex
     @State private var didScheduleLaunchSync = false
+    @State private var didScheduleAnalyticsUpload = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
 
     private var themeRefreshID: String {
@@ -142,6 +143,7 @@ private struct AutoLedgerRootView: View {
                 ProEntitlementManager.shared.startTransactionListener()
                 scheduleLaunchCloudSyncIfNeeded()
                 scheduleCommonAPIRefresh()
+                scheduleAnalyticsUploadIfNeeded()
                 scheduleGemmaWarmupIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
@@ -170,6 +172,7 @@ private struct AutoLedgerRootView: View {
                     }
                     scheduleLaunchCloudSyncIfNeeded()
                     scheduleCommonAPIRefresh()
+                    scheduleAnalyticsUploadIfNeeded()
                     Task {
                         await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
                     }
@@ -236,6 +239,16 @@ private struct AutoLedgerRootView: View {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
             await CommonAPICatalogService.refreshIfNeeded()
+        }
+    }
+
+    private func scheduleAnalyticsUploadIfNeeded() {
+        guard !didScheduleAnalyticsUpload else { return }
+        didScheduleAnalyticsUpload = true
+        Task(priority: .background) {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            await CommonAPIAnalyticsService.uploadLaunchEvent()
         }
     }
 
