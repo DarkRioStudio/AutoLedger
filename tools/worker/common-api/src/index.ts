@@ -17,6 +17,7 @@ import {
   type CurrencyRecord
 } from "./currencies-catalog";
 import { analyticsEventsEndpoint } from "./analytics";
+import { autoLedgerDashboardDataResponse, autoLedgerDashboardHTMLResponse } from "./dashboard";
 import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
 import {
   releaseNotesSchemaVersion,
@@ -71,6 +72,14 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
       version: serviceResourceVersion,
       checkedAt: new Date().toISOString()
     }));
+  }
+
+  if (isReadRequest(request) && (url.pathname === "/dashboard" || url.pathname === "/dashboard/")) {
+    return responseForMethod(request, withCommonHeaders(autoLedgerDashboardHTMLResponse()));
+  }
+
+  if (isReadRequest(request) && (url.pathname === "/dashboard/data" || url.pathname === "/dashboard/data/")) {
+    return responseForMethod(request, withCommonHeaders(await autoLedgerDashboardDataResponse(env)));
   }
 
   if (isReadRequest(request) && url.pathname === "/v1/manifest") {
@@ -211,6 +220,12 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           method: "POST",
           maxEventsPerRequest: 25,
           privacy: "The App may send anonymous workflow state, performance buckets, error codes, and purchase flow status only. Ledger amounts, merchants, screenshots, PDFs, emails, hotel identifiers, room numbers, precise location, OCR text, StoreKit transaction identifiers, receipts, and payment data are rejected."
+        },
+        analyticsDashboard: {
+          status: env.COMMON_API_DB ? "available" : "configuration_required",
+          url: "https://getautoledger.app/dashboard",
+          dataEndpoint: "https://getautoledger.app/dashboard/data",
+          privacy: "The dashboard exposes aggregate counts and rates only; raw event rows and payload JSON are not returned."
         },
         hotelWeather: {
           status: weatherProviderConfigured(env) ? "available" : "configuration_required",

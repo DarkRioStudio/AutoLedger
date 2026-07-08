@@ -18,6 +18,17 @@ type ReleaseNoteFixture = {
   status: "published" | "draft" | "archived";
 };
 
+type AnalyticsDashboardFixture = {
+  event_name: string;
+  event_id: string;
+  app_version: string;
+  build_number: string;
+  os_major: string;
+  device_class: string;
+  payload_json: string;
+  received_at: string;
+};
+
 const releaseNotesFixtures: ReleaseNoteFixture[] = [
   {
     app_id: "autoledger",
@@ -126,6 +137,20 @@ class AnalyticsCaptureD1Database {
   }
 }
 
+class AnalyticsDashboardD1Database {
+  constructor(
+    private readonly rows: ReleaseNoteFixture[],
+    private readonly analyticsRows: AnalyticsDashboardFixture[]
+  ) {}
+
+  prepare(sql: string): MemoryD1PreparedStatement | AnalyticsDashboardD1PreparedStatement {
+    if (sql.includes("autoledger_analytics_events")) {
+      return new AnalyticsDashboardD1PreparedStatement(sql, this.analyticsRows);
+    }
+    return new MemoryD1PreparedStatement(sql, this.rows);
+  }
+}
+
 class AnalyticsCaptureD1PreparedStatement {
   private readonly params: unknown[];
 
@@ -144,6 +169,22 @@ class AnalyticsCaptureD1PreparedStatement {
   async run(): Promise<{ success: boolean }> {
     this.inserts.push(this.params);
     return { success: true };
+  }
+}
+
+class AnalyticsDashboardD1PreparedStatement {
+  constructor(
+    private readonly sql: string,
+    private readonly rows: AnalyticsDashboardFixture[],
+    private readonly params: unknown[] = []
+  ) {}
+
+  bind(...params: unknown[]): AnalyticsDashboardD1PreparedStatement {
+    return new AnalyticsDashboardD1PreparedStatement(this.sql, this.rows, params);
+  }
+
+  async all<T>(): Promise<{ results: T[] }> {
+    return { results: this.rows as T[] };
   }
 }
 
@@ -333,6 +374,109 @@ describe("common api worker contract", () => {
     expect(response.status).toBe(400);
     expect(body).toMatchObject({ error: { code: "analytics_forbidden_field" } });
     expect(analyticsDB.analyticsInserts).toEqual([]);
+  });
+
+  it("serves AutoLedger dashboard data as aggregate metrics without raw event rows", async () => {
+    const dashboardDB = new AnalyticsDashboardD1Database(releaseNotesFixtures, [
+      {
+        event_name: "al_perf_app_launch",
+        event_id: "launch-success",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ result: "success", duration_ms_bucket: "not_measured" }),
+        received_at: "2026-07-08T08:08:39.470Z"
+      },
+      {
+        event_name: "al_perf_app_launch",
+        event_id: "launch-failed",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ result: "failed", error_code: "timeout" }),
+        received_at: "2026-07-08T08:09:39.470Z"
+      },
+      {
+        event_name: "al_import_flow_started",
+        event_id: "import-started",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ flow_type: "receipt_scan", input_type: "camera" }),
+        received_at: "2026-07-08T08:10:39.470Z"
+      },
+      {
+        event_name: "al_import_flow_completed",
+        event_id: "import-completed",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ status: "success", flow_type: "receipt_scan" }),
+        received_at: "2026-07-08T08:11:39.470Z"
+      },
+      {
+        event_name: "al_purchase_flow_status",
+        event_id: "purchase-failed",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ product_tier: "pro", storekit_status: "failed", error_code: "network_error" }),
+        received_at: "2026-07-08T08:12:39.470Z"
+      },
+      {
+        event_name: "al_privacy_payload_guard_violation",
+        event_id: "privacy-violation",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ violation_type: "forbidden_field", blocked_field_category: "financial" }),
+        received_at: "2026-07-08T08:13:39.470Z"
+      }
+    ]);
+    const dashboardEnv = {
+      ...env,
+      COMMON_API_DB: dashboardDB as unknown as D1Database
+    } as unknown as Env;
+
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard/data"), dashboardEnv);
+    const body = await jsonBody(response);
+    const metrics = body.metrics as Array<Record<string, unknown>>;
+    const byID = new Map(metrics.map((metric) => [metric.metricID, metric]));
+    const serialized = JSON.stringify(body);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      schemaVersion: 1,
+      app: "autoledger",
+      windowDays: 30
+    });
+    expect(byID.get("total_events_count")).toMatchObject({ value: 6, unit: "count" });
+    expect(byID.get("launch_success_rate")).toMatchObject({ value: 50, unit: "percent", numerator: 1, denominator: 2 });
+    expect(byID.get("import_completion_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
+    expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
+    expect(byID.get("privacy_payload_violation_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(body).not.toHaveProperty("events");
+    expect(body).not.toHaveProperty("rows");
+    expect(serialized).not.toContain("payload_json");
+    expect(serialized).not.toContain("amount");
+    expect(serialized).not.toContain("merchant");
+  });
+
+  it("serves an AutoLedger dashboard HTML shell", async () => {
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard"), env);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(html).toContain("AutoLedger Ops Dashboard");
+    expect(html).toContain("/dashboard/data");
+    expect(html).not.toContain("payload_json");
   });
 
   it("publishes a manifest for the five-locale places catalog", async () => {

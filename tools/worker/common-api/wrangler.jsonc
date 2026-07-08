@@ -43,6 +43,10 @@
         {
           "pattern": "api.darkrio326.top",
           "custom_domain": true
+        },
+        {
+          "pattern": "getautoledger.app/dashboard*",
+          "zone_name": "getautoledger.app"
         }
       ],
       "vars": {
