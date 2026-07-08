@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-07（ITER-394 Notification History 补偿第一版）
+更新日期：2026-07-08（ITER-395 分享图片第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-395 分享图片第一版
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Share Cards / Free Growth
+- 类型：能力增强 / UI / 测试
+- 目标：让用户可以把月度总结和酒店入住记录生成本地 PNG，并通过系统 Share Sheet 分享出去。
+- 改动范围：新增 `Features/ShareCards/` 下的月报分享卡、酒店入住分享卡、导出服务和预览 sheet；`ReportView` 新增“生成分享图”入口；`HotelStayDetailView` 新增“分享入住卡”入口；补齐中简、繁中、英语、日语、韩语本地化；新增分享图 smoke 并接入离线回归。
+- 未改动范围：未新增服务器上传、HTML 分享页、公开网页、模板系统、复杂编辑器、Pro gate、StoreKit、SQLite / CloudKit schema、月结导出包合同、ASC metadata、截图 / App Preview、Xcode Cloud 脚本或构建 tag。
+- 完成内容：月报分享图展示月份、本月账单数量、分类 Top 3、可选总支出、一句简单总结和 AutoLedger 水印；酒店入住分享图展示酒店名、城市 / 国家和地区、入住 / 退房日期、晚数、房型、可选价格、用户可编辑评价和 AutoLedger 水印。金额 / 房费默认隐藏，PNG 只写入本机临时目录后交给系统分享。
+- 未完成内容：第一版没有高级模板、去水印、HTML 分享页、公开访问链接、分享历史或跨设备同步；视觉细节后续可按真实截图反馈再调。
+- 测试情况：`python3 scripts/check_share_cards_smoke.py` PASS；五语 `Localizable.strings` `plutil -lint` PASS；`git diff --check` PASS；XcodeBuildMCP iPhone 17 Pro Max Simulator Debug build-run PASS；`bash scripts/run_offline_regression.sh` PASS。
+- 风险与注意事项：分享图是用户主动触发的本地导出；酒店分享卡静态检查禁止引用房号、订单号、支付方式、PDF、rawText 或 source PDF 字段，后续改动需要继续保持该隐私边界。
+- 回滚方式：回退 `Features/ShareCards/`、`ReportView` 分享入口、`HotelStayArchiveView` 分享入口、五语 `share_card.*` 文案、`check_share_cards_smoke.py` 和离线回归接入，即可恢复到无分享图功能。
+- 结论：本轮完成，基础分享图片第一版具备工程闭环，且作为免费传播入口不进入 Pro gate。
+- 下一步建议：保留真实用户截图反馈后再做视觉细节调优；高级模板、去水印和 HTML 分享页可单独进入后续 Pro 方案评估。
 
 ### ITER-394 Notification History 补偿第一版
 - 日期：2026-07-07

@@ -24,6 +24,7 @@ struct ReportView: View {
     @State private var shouldRedactMonthlyExport = true
     @State private var monthlyExportStatusMessage: String?
     @State private var monthlyExportSharePayload: MonthlyExportSharePayload?
+    @State private var shareCardPreviewMode: ShareCardPreviewSheet.Mode?
     @State private var isPresentingProSheet = false
     private let insightService = MonthlyInsightService()
 
@@ -52,6 +53,8 @@ struct ReportView: View {
                     AutoLedgerPageTitle("tab.report")
 
                     summaryCard(snapshot)
+
+                    shareCardSection(snapshot)
 
                     monthlyExportSection(snapshot)
 
@@ -95,6 +98,9 @@ struct ReportView: View {
             .sheet(item: $monthlyExportSharePayload) { payload in
                 ActivityShareSheet(activityItems: payload.urls.map { $0 as Any })
             }
+            .sheet(item: $shareCardPreviewMode) { mode in
+                ShareCardPreviewSheet(mode: mode)
+            }
             .sheet(isPresented: $isPresentingProSheet) {
                 NavigationStack {
                     AutoLedgerProView()
@@ -130,6 +136,56 @@ struct ReportView: View {
                 }
             }
         }
+    }
+
+    private func shareCardSection(_ snapshot: MonthlySnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(AppTheme.accent.opacity(0.12))
+                    )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("share_card.monthly.entry_title")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                    Text("share_card.monthly.entry_body")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Button {
+                shareCardPreviewMode = .monthly(monthlyShareCardData(from: snapshot))
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("share_card.monthly.action")
+                    Spacer()
+                    Text(transactionCountText(snapshot.transactionCount))
+                        .font(.caption.weight(.semibold))
+                        .opacity(0.78)
+                }
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.accent)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("share_card.monthly.accessibility_label"))
+        }
+        .padding(18)
+        .autoLedgerCardSurface(cornerRadius: 22)
     }
 
     private func monthlyExportSection(_ snapshot: MonthlySnapshot) -> some View {
@@ -558,6 +614,43 @@ struct ReportView: View {
                 error.localizedDescription
             )
         }
+    }
+
+    private func monthlyShareCardData(from snapshot: MonthlySnapshot) -> MonthlySummaryShareCardData {
+        let categories = snapshot.categoryBreakdown.prefix(3).map { metric in
+            MonthlySummaryShareCardData.CategoryItem(
+                id: metric.id,
+                title: metric.title,
+                amountText: AppFormatters.currency(metric.total),
+                percentText: percentageText(metric.ratio),
+                iconName: metric.iconName
+            )
+        }
+
+        return MonthlySummaryShareCardData(
+            monthLabel: snapshot.monthLabel,
+            transactionCountText: transactionCountText(snapshot.transactionCount),
+            totalAmountText: AppFormatters.currency(snapshot.totalExpense),
+            categories: categories,
+            summary: monthlyShareSummary(for: snapshot)
+        )
+    }
+
+    private func monthlyShareSummary(for snapshot: MonthlySnapshot) -> String {
+        if snapshot.transactionCount == 0 {
+            return String(localized: "share_card.monthly.summary_empty")
+        }
+        if let topCategory = snapshot.categoryBreakdown.first {
+            return String(
+                format: String(localized: "share_card.monthly.summary_top_category_format"),
+                topCategory.title,
+                transactionCountText(snapshot.transactionCount)
+            )
+        }
+        return String(
+            format: String(localized: "share_card.monthly.summary_simple_format"),
+            transactionCountText(snapshot.transactionCount)
+        )
     }
 
     private func withOptionalAnimation(_ animation: Animation, _ body: () -> Void) {

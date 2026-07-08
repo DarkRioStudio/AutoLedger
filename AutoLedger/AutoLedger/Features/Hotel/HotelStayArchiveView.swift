@@ -647,6 +647,7 @@ struct HotelStayDetailView: View {
     @State private var saveMessageIsSuccess = false
     @State private var showsDeleteConfirmation = false
     @State private var weatherSummaryState: HotelWeatherSummaryState = .idle
+    @State private var shareCardPreviewMode: ShareCardPreviewSheet.Mode?
 
     let record: HotelStayRecord
     let transactions: [Transaction]
@@ -687,6 +688,7 @@ struct HotelStayDetailView: View {
     var body: some View {
         List {
             detailHeader
+            shareStayCardSection
             identityEditorSection
             stayEditorSection
             hotelWeatherCard
@@ -700,6 +702,9 @@ struct HotelStayDetailView: View {
         .navigationTitle(detailNavigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .autoLedgerNavigationBarChrome()
+        .sheet(item: $shareCardPreviewMode) { mode in
+            ShareCardPreviewSheet(mode: mode)
+        }
         .toolbar {
             if onUpdateRecord != nil || onDeleteRecord != nil {
                 ToolbarItemGroup(placement: .primaryAction) {
@@ -747,6 +752,22 @@ struct HotelStayDetailView: View {
             Button("common.cancel", role: .cancel) {}
         } message: {
             Text("hotel_stay.delete.confirm.message")
+        }
+    }
+
+    private var shareStayCardSection: some View {
+        Section {
+            Button {
+                shareCardPreviewMode = .hotel(hotelShareCardData())
+            } label: {
+                Label("share_card.hotel.action", systemImage: "photo.on.rectangle.angled")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .accessibilityLabel(Text("share_card.hotel.accessibility_label"))
+            .autoLedgerSelectableRowBackground(false)
+        } footer: {
+            Text("share_card.hotel.privacy_note")
         }
     }
 
@@ -1268,6 +1289,30 @@ struct HotelStayDetailView: View {
             saveMessage = localized("hotel_stay.detail.save.failed")
             saveMessageIsSuccess = false
         }
+    }
+
+    private func hotelShareCardData() -> HotelStayShareCardData {
+        HotelStayShareCardData(
+            hotelName: form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? record.hotelName,
+            locationText: form.locationText ?? localized("share_card.hotel.location_empty"),
+            dateRangeText: "\(shareDateText(form.checkInDateValue)) - \(shareDateText(form.checkOutDateValue))",
+            nightsText: shareNightsText,
+            roomTypeText: form.roomType.trimmingCharacters(in: .whitespacesAndNewlines),
+            priceText: form.displayTotalAmountText(using: presenter),
+            reviewText: localized("share_card.hotel.default_review")
+        )
+    }
+
+    private var shareNightsText: String {
+        let nights = form.nightsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if nights.isEmpty {
+            return localized("share_card.hotel.nights_empty")
+        }
+        return String(format: localized("hotel_stay.list.nights_format"), nights)
+    }
+
+    private func shareDateText(_ date: Date) -> String {
+        date.formatted(.dateTime.year().month().day())
     }
 
     private static func linkedTransaction(
