@@ -18,10 +18,12 @@ def main() -> int:
     service_path = APP / "Domain" / "Services" / "CommonAPIHotelWeatherService.swift"
     detail_path = APP / "Features" / "Hotel" / "HotelStayArchiveView.swift"
     catalog_path = APP / "Features" / "Hotel" / "HotelStayLocationCatalog.swift"
+    memory_path = APP / "Features" / "Hotel" / "HotelStayJourneyMemoryComposer.swift"
 
     service = service_path.read_text(encoding="utf-8") if service_path.exists() else ""
     detail = detail_path.read_text(encoding="utf-8")
     catalog = catalog_path.read_text(encoding="utf-8")
+    memory = memory_path.read_text(encoding="utf-8") if memory_path.exists() else ""
 
     for snippet in [
         "enum CommonAPIHotelWeatherService",
@@ -43,8 +45,33 @@ def main() -> int:
         "hotel_stay.detail.weather.title",
         "hotel_stay.detail.weather.unavailable",
         ".task(id: weatherTaskID)",
+        "hotelJourneyMemoryCard",
+        "journeyMemoryText",
+        "hotel_stay.detail.memory.title",
+        "hotelShareCardData(reviewText: text)",
     ]:
         require(detail, snippet, "HotelStayArchiveView.swift", failures)
+
+    for snippet in [
+        "enum HotelStayJourneyMemoryComposer",
+        "weatherDays",
+        "hotel_stay.detail.memory.weather_format",
+        "hotel_stay.detail.memory.weather_only_format",
+        "hotel_stay.detail.memory.simple_format",
+        "temperature_range_format",
+    ]:
+        require(memory, snippet, "HotelStayJourneyMemoryComposer.swift", failures)
+
+    for forbidden in [
+        "roomNumber",
+        "confirmationNumber",
+        "paymentMethod",
+        "rawText",
+        "sourcePDF",
+        "sourcePDFData",
+    ]:
+        if forbidden in memory:
+            failures.append(f"HotelStayJourneyMemoryComposer.swift should not reference sensitive field: {forbidden}")
 
     for snippet in [
         "struct WeatherLocation",
@@ -66,6 +93,19 @@ def main() -> int:
             "hotel_stay.detail.weather.temperature_format",
             "hotel_stay.detail.weather.precipitation_format",
             "hotel_stay.detail.weather.provider_format",
+            "hotel_stay.detail.memory.title",
+            "hotel_stay.detail.memory.subtitle",
+            "hotel_stay.detail.memory.privacy_note",
+            "hotel_stay.detail.memory.share_action",
+            "hotel_stay.detail.memory.accessibility_label",
+            "hotel_stay.detail.memory.default_hotel",
+            "hotel_stay.detail.memory.default_location",
+            "hotel_stay.detail.memory.default_dates",
+            "hotel_stay.detail.memory.weather_separator",
+            "hotel_stay.detail.memory.temperature_range_format",
+            "hotel_stay.detail.memory.weather_format",
+            "hotel_stay.detail.memory.weather_only_format",
+            "hotel_stay.detail.memory.simple_format",
         ]:
             require(strings, f'"{key}"', f"{locale} Localizable.strings", failures)
 

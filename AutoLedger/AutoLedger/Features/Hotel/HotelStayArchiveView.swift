@@ -692,6 +692,9 @@ struct HotelStayDetailView: View {
             identityEditorSection
             stayEditorSection
             hotelWeatherCard
+            if let journeyMemoryText {
+                hotelJourneyMemoryCard(journeyMemoryText)
+            }
             chargeEditorSection
             linkedTransactionEditorSection
             fieldSection(titleKey: "hotel_stay.detail.source", fields: snapshot.sourceFields)
@@ -883,6 +886,42 @@ struct HotelStayDetailView: View {
         }
     }
 
+    private func hotelJourneyMemoryCard(_ text: String) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                Label {
+                    Text("hotel_stay.detail.memory.subtitle")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                } icon: {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                Text(text)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(AppTheme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    shareCardPreviewMode = .hotel(hotelShareCardData(reviewText: text))
+                } label: {
+                    Label("hotel_stay.detail.memory.share_action", systemImage: "photo.on.rectangle.angled")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("hotel_stay.detail.memory.accessibility_label"))
+            }
+            .padding(.vertical, 4)
+            .autoLedgerSelectableRowBackground(false)
+        } header: {
+            Text("hotel_stay.detail.memory.title")
+        } footer: {
+            Text("hotel_stay.detail.memory.privacy_note")
+        }
+    }
+
     private var chargeEditorSection: some View {
         Section("hotel_stay.detail.charges") {
             Picker("hotel_stay.review.currency", selection: $form.currency) {
@@ -991,6 +1030,18 @@ struct HotelStayDetailView: View {
             format: localized("hotel_stay.detail.weather.subtitle_format"),
             Self.weatherDateText(form.checkInDateValue),
             Self.weatherDateText(form.checkOutDateValue)
+        )
+    }
+
+    private var journeyMemoryText: String? {
+        guard case .loaded(let response) = weatherSummaryState else { return nil }
+        return HotelStayJourneyMemoryComposer.memoryText(
+            hotelName: form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? record.hotelName,
+            locationText: form.locationText ?? localized("share_card.hotel.location_empty"),
+            dateRangeText: "\(shareDateText(form.checkInDateValue)) - \(shareDateText(form.checkOutDateValue))",
+            weatherDays: response.data.days,
+            localized: { key, fallback in localized(key, fallback: fallback) },
+            temperatureFormatter: formattedTemperature(_:)
         )
     }
 
@@ -1291,7 +1342,7 @@ struct HotelStayDetailView: View {
         }
     }
 
-    private func hotelShareCardData() -> HotelStayShareCardData {
+    private func hotelShareCardData(reviewText: String? = nil) -> HotelStayShareCardData {
         HotelStayShareCardData(
             hotelName: form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? record.hotelName,
             locationText: form.locationText ?? localized("share_card.hotel.location_empty"),
@@ -1299,7 +1350,9 @@ struct HotelStayDetailView: View {
             nightsText: shareNightsText,
             roomTypeText: form.roomType.trimmingCharacters(in: .whitespacesAndNewlines),
             priceText: form.displayTotalAmountText(using: presenter),
-            reviewText: localized("share_card.hotel.default_review")
+            reviewText: reviewText?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+                ?? journeyMemoryText
+                ?? localized("share_card.hotel.default_review")
         )
     }
 

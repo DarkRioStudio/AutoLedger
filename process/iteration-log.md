@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-395 分享图片第一版）
+更新日期：2026-07-08（ITER-396 酒店旅程回忆文案第一版）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-396 酒店旅程回忆文案第一版
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：GOAL-2309 / Promotional Polish
+- 类型：能力增强 / UI / 测试
+- 目标：把酒店历史天气从单纯摘要卡片推进到可感知的端上旅程回忆文案，让 ASC 1.6.0 主宣传版的酒店模块更有记忆点。
+- 改动范围：新增 `HotelStayJourneyMemoryComposer`；酒店消费详情在历史天气加载成功后展示“旅程回忆”卡片；旅程回忆可一键带入“入住分享卡”作为默认评价；补齐中简、繁中、英语、日语、韩语文案；扩展 `check_hotel_weather_ui_smoke.py`。
+- 未改动范围：未新增 LLM、未新增网络请求、未上传酒店名称、金额、PDF、rawText、房号、订单号、支付方式或个人备注；未修改 Common API 端点、WeatherKit provider、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview、Xcode Cloud 脚本或构建 tag。
+- 完成内容：回忆文案只使用当前本机酒店记录的酒店名、地点、日期和已加载的天气事实，按本地化模板生成一段可读小记；详情页展示隐私说明，分享按钮会打开现有入住卡预览并带入该文案，用户仍可在预览页编辑。
+- 未完成内容：未做 AI 叙事生成、用户长期记忆库、天气卡片视觉重构、旅行故事多模板或跨设备同步；这些留给后续更重的体验设计。
+- 测试情况：`python3 scripts/check_hotel_weather_ui_smoke.py` PASS；五语 `Localizable.strings` `plutil -lint` PASS；旅程回忆格式化占位符 parity 检查 PASS；XcodeBuildMCP iPhone 17 Pro Max Simulator Debug build-run PASS，构建通过，仅剩既有 warning 和本轮新增 warning 修正后的二次门禁待最终执行。
+- 风险与注意事项：回忆文案依赖天气摘要已加载；天气不可用时不会编造当前或未来天气。模板为轻量端上文案，后续如果接入更复杂生成能力，仍需保持服务端不接收酒店内容和个人备注。
+- 回滚方式：回退 `HotelStayJourneyMemoryComposer.swift`、酒店详情 `hotelJourneyMemoryCard` / `journeyMemoryText` / 分享卡联动、五语 `hotel_stay.detail.memory.*` 文案和 smoke 扩展，即可恢复到仅显示天气摘要卡片。
+- 结论：本轮完成，酒店模块增加了主宣传版可展示的端上旅程回忆能力。
+- 下一步建议：继续做 1.7.0 发布前真机 smoke，重点验证实时 OCR、酒店详情天气 / 回忆 / 分享卡、多币种确认和韩语主路径。
 
 ### ITER-395 分享图片第一版
 - 日期：2026-07-08

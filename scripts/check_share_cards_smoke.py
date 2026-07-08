@@ -38,7 +38,7 @@ def main() -> int:
     require(report, "ShareCardPreviewSheet(mode: mode)", "ReportView", failures)
     require(report, "monthlyShareCardData(from:", "ReportView", failures)
     require(hotel, "shareStayCardSection", "HotelStayDetailView", failures)
-    require(hotel, "hotelShareCardData()", "HotelStayDetailView", failures)
+    require(hotel, "hotelShareCardData(", "HotelStayDetailView", failures)
     require(share_text, "ImageRenderer", "ShareCardExportService", failures)
     require(share_text, "FileManager.default.temporaryDirectory", "ShareCardExportService", failures)
     require(share_text, "ActivityShareSheet(activityItems:", "ShareCardPreviewSheet", failures)
@@ -58,7 +58,7 @@ def main() -> int:
             failures.append(f"ShareCards should not reference sensitive field: {token}")
 
     hotel_data_match = re.search(
-        r"private func hotelShareCardData\(\) -> HotelStayShareCardData \{(?P<body>.*?)\n    \}",
+        r"private func hotelShareCardData\([^\)]*\) -> HotelStayShareCardData \{(?P<body>.*?)\n    \}",
         hotel,
         re.S,
     )
