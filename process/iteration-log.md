@@ -55,12 +55,12 @@
 - 完成内容：production `/dashboard/data` 现在要求 Cloudflare Access 保护 host 上的允许邮箱头或有效 Access JWT；`api.darkrio326.top/dashboard/data` 等未保护 host 即使伪造 `cf-access-authenticated-user-email` 也会被拒绝。
 - 完成内容：analytics 写入返回 90 天默认保留期，并在 Worker 运行时通过 `waitUntil` 异步清理过期 `autoledger_analytics_events`；dashboard JSON / manifest 返回 Access 和保留期说明。
 - 完成内容：文档明确 dashboard 仍只展示聚合指标，不返回 raw rows、payload JSON、金额、商户、截图、PDF、邮箱、酒店标识、OCR 文本、StoreKit transaction id 或支付数据。
-- 未完成内容：本轮没有部署 Worker，没有执行 production D1 migration，也没有做线上 dashboard smoke；这些仍需要作为发布证据单独确认。
-- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 35 个 Vitest 合同测试；执行 `git diff --check` 通过。
+- 未完成内容：本轮没有通过浏览器完成已登录 Cloudflare Access 后的 dashboard 人工查看；ASC App Privacy、官网隐私政策和 Review Notes 的 analytics 口径仍需发布前人工确认。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 35 个 Vitest 合同测试；执行 `git diff --check` 通过。远端执行 `npm run d1:migrate:staging` 成功应用 `0002_autoledger_analytics_events.sql`，`npm run d1:migrate:production` 返回无待迁移项。已部署 staging Version ID `36d60c5a-d317-4667-a215-3693b996427e`、production Version ID `8dd2fd62-06e2-46cc-8b64-43deb2cefbbf`。线上 smoke 确认 staging / production manifest HTTP 200 且 `analyticsDashboard.retentionDays=90`；production `POST /v1/analytics/events` 返回 HTTP 202、`accepted=1`、`retentionDays=90`；`https://api.darkrio326.top/dashboard/data` 即使携带伪造 `cf-access-authenticated-user-email` 也返回 HTTP 403；`https://getautoledger.app/dashboard/data` 未登录返回 HTTP 302 到 Cloudflare Access login。
 - 风险与注意事项：Cloudflare Access 应继续作为主防线；Worker 侧邮箱头信任只在 `ACCESS_TRUST_EMAIL_HEADER=true` 且请求 host 属于 `ACCESS_PROTECTED_HOSTS` 时生效。若后续要完全依赖 JWT 强校验，需要补充当前 Access application 的 `ACCESS_AUD`。
 - 回滚方式：回退本轮 `tools/worker/common-api` 代码和 wrangler vars，以及对应文档 / 日志改动即可；无 D1 schema 迁移。
 - 结论：本轮完成，Common API analytics dashboard 已补齐 production Access host guard、防伪造邮箱头和默认保留期。
-- 下一步建议：部署前执行 `npm run check`，部署后确认 Zero Trust Access 登录路径、未保护 host 403、D1 migration 和线上 smoke。
+- 下一步建议：用浏览器登录 Cloudflare Access 后确认 dashboard 数据页可见，并在 ASC App Privacy、官网隐私政策和 Review Notes 中保持 Performance Data / Analytics、not linked、not tracking 的一致口径。
 
 ### ITER-403 个人 Pro 文档与产品口径收口
 - 日期：2026-07-08
