@@ -258,67 +258,252 @@ function error(code: string, message: string): APIError {
 const dashboardHTML = `<!doctype html>
 <html lang="zh-Hans">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>AutoLedger 运营观测面板</title>
   <style>
     :root {
-      color-scheme: light;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f6f7f9;
-      color: #152238;
+      color-scheme: light dark;
+      --bg: #f3f7fb;
+      --surface: rgba(255,255,255,.86);
+      --surface-strong: #ffffff;
+      --text: #152234;
+      --muted: #65748a;
+      --border: rgba(88,112,138,.18);
+      --accent: #118b75;
+      --accent-strong: #0f766e;
+      --good: #0f8f60;
+      --warn: #b77905;
+      --bad: #bd3d36;
+      --shadow: 0 20px 60px rgba(21,34,52,.10);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1726;
+        --surface: rgba(22,31,47,.88);
+        --surface-strong: #172133;
+        --text: #edf4ff;
+        --muted: #9fb0c5;
+        --border: rgba(180,200,230,.16);
+        --accent: #5ed6c4;
+        --accent-strong: #45c7b3;
+        --good: #5ed6a0;
+        --warn: #f0ba55;
+        --bad: #ff7b72;
+        --shadow: 0 20px 60px rgba(0,0,0,.26);
+      }
     }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; }
-    main { width: min(1120px, calc(100vw - 32px)); margin: 0 auto; padding: 32px 0 48px; }
-    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
-    h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 44px); line-height: 1.05; letter-spacing: 0; }
-    p { margin: 0; color: #526173; line-height: 1.55; }
-    .badge { display: inline-flex; align-items: center; min-height: 32px; border: 1px solid #cbd5e1; border-radius: 999px; padding: 0 12px; color: #334155; background: #fff; font-size: 13px; white-space: nowrap; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .metric, .panel { border: 1px solid #d9e0ea; border-radius: 8px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 5%); }
-    .metric { padding: 18px; min-height: 136px; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; }
-    .metric h2 { margin: 0; font-size: 14px; font-weight: 650; color: #334155; letter-spacing: 0; }
-    .value { font-size: 34px; line-height: 1; font-weight: 760; color: #0f172a; }
-    .detail { font-size: 13px; color: #64748b; }
-    .section-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 16px; margin-top: 16px; }
-    .panel { padding: 18px; }
-    .panel h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: 0; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(17,139,117,.18), transparent 34rem),
+        radial-gradient(circle at 88% 10%, rgba(53,132,214,.14), transparent 30rem),
+        var(--bg);
+      color: var(--text);
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; }
+    .shell { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 34px 0 48px; }
+    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .mark {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(145deg, #14a085, #0b6f65);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 16px 36px rgba(17,139,117,.24);
+      display: grid; place-items: center; color: white;
+    }
+    .mark svg { width: 30px; height: 30px; }
+    h1 { margin: 0; font-size: clamp(30px, 4vw, 48px); line-height: 1.02; }
+    .lead { margin: 8px 0 0; max-width: 780px; color: var(--muted); font-size: 15px; line-height: 1.7; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px;
+      min-width: min(100%, 420px);
+    }
+    .control {
+      height: 40px; border: 1px solid var(--border); background: var(--surface);
+      border-radius: 10px; color: var(--text); padding: 0 12px;
+    }
+    .control:disabled { color: var(--muted); opacity: .82; }
+    .button {
+      height: 40px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+      padding: 0 15px; font-weight: 700; cursor: pointer;
+    }
+    .button.secondary { color: var(--accent); background: var(--surface); border: 1px solid var(--border); }
+    .status { width: 100%; text-align: right; color: var(--muted); font-size: 13px; min-height: 18px; }
+    .status.error { color: var(--bad); }
+    .grid { display: grid; gap: 14px; }
+    .summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .content { grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr); align-items: start; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+    .widget { overflow: hidden; margin-bottom: 14px; }
+    .widget > summary.section-head {
+      list-style: none;
+      cursor: pointer;
+      padding: 18px;
+      margin: 0;
+      align-items: center;
+    }
+    .widget > summary.section-head::-webkit-details-marker { display: none; }
+    .widget > summary.section-head::after {
+      content: "收起";
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-left: auto;
+    }
+    .widget:not([open]) > summary.section-head::after { content: "展开"; }
+    .widget-body { padding: 0 18px 18px; }
+    .metric {
+      padding: 18px; min-height: 126px; display: flex; flex-direction: column; justify-content: space-between;
+      background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px;
+    }
+    .metric span { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .metric strong { font-size: 34px; line-height: 1; }
+    .metric small { color: var(--muted); line-height: 1.45; }
+    section { padding: 18px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    h2 { margin: 0; font-size: 18px; }
+    .section-head span { color: var(--muted); font-size: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-    th { color: #475569; font-weight: 650; }
-    .muted { color: #64748b; }
-    .error { color: #b42318; }
-    @media (max-width: 760px) {
-      header, .section-grid { display: block; }
-      header .badge { margin-top: 16px; }
-      .panel { margin-top: 16px; overflow-x: auto; }
+    th, td { padding: 11px 8px; border-top: 1px solid var(--border); vertical-align: top; text-align: left; }
+    th { color: var(--muted); font-size: 12px; font-weight: 800; }
+    td { font-size: 13px; line-height: 1.45; }
+    .title { font-weight: 800; font-size: 14px; }
+    .muted { color: var(--muted); }
+    .nowrap { white-space: nowrap; }
+    .table-scroll { overflow-x: auto; }
+    .pill {
+      display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 999px;
+      background: rgba(17,139,117,.11); color: var(--accent); font-size: 12px; font-weight: 800;
+      margin-right: 6px; white-space: nowrap;
+    }
+    .pill.sent { background: rgba(15,143,96,.12); color: var(--good); }
+    .pill.warning { background: rgba(183,121,5,.13); color: var(--warn); }
+    .pill.failed { background: rgba(189,61,54,.12); color: var(--bad); }
+    .bars { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(140px, 2fr) 52px; gap: 10px; align-items: center; }
+    .bar-label { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-track { height: 10px; background: rgba(101,116,138,.14); border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), #2f80ed); border-radius: inherit; }
+    .bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+    .empty { color: var(--muted); padding: 16px 0; }
+    .footer-note { margin-top: 18px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    @media (max-width: 900px) {
+      header { display: block; }
+      .toolbar { justify-content: stretch; margin-top: 18px; }
+      .summary, .content, .split { grid-template-columns: 1fr; }
+      .status { text-align: left; }
     }
   </style>
 </head>
 <body>
-  <main>
+  <main class="shell">
     <header>
       <div>
-        <h1>AutoLedger 运营观测面板</h1>
-        <p>匿名聚合指标，用于上线前检查。这里不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
+        <div class="brand">
+          <div class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M6.8 4.5h10.4a2.3 2.3 0 0 1 2.3 2.3v10.4a2.3 2.3 0 0 1-2.3 2.3H6.8a2.3 2.3 0 0 1-2.3-2.3V6.8a2.3 2.3 0 0 1 2.3-2.3Z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8 9h8M8 12h5M8 15h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M17.2 3.4v3.2M6.8 3.4v3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1>AutoLedger 运营观测面板</h1>
+            <p class="lead">匿名聚合指标，用于上线前检查。这里只展示导入、启动、汇率、购买和隐私 guard 的聚合状态，不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
+          </div>
+        </div>
       </div>
-      <span class="badge" id="status">正在加载</span>
+      <div class="toolbar">
+        <select id="window" class="control" aria-label="时间范围" disabled>
+          <option value="30">最近 30 天</option>
+        </select>
+        <button id="load" class="button" type="button">刷新</button>
+        <div id="status" class="status">通过 Cloudflare Access 登录后自动加载。</div>
+      </div>
     </header>
-    <section class="grid" id="metrics"></section>
-    <section class="section-grid">
-      <div class="panel">
-        <h2>事件分布</h2>
-        <table>
-          <thead><tr><th>事件</th><th>次数</th><th>最近接收</th></tr></thead>
-          <tbody id="eventBreakdown"><tr><td colspan="3" class="muted">正在加载</td></tr></tbody>
-        </table>
+
+    <details class="card widget" data-widget="overview" open>
+      <summary class="section-head">
+        <h2>总览</h2>
+        <span>导入、启动、购买与隐私边界</span>
+      </summary>
+      <div class="widget-body">
+        <div class="grid summary" id="summary"></div>
       </div>
-      <div class="panel">
-        <h2>隐私边界</h2>
-        <p id="privacy" class="muted">正在加载</p>
+    </details>
+
+    <details class="card widget" data-widget="metrics" open>
+      <summary class="section-head">
+        <h2>最小指标</h2>
+        <span>推广前观测口径</span>
+      </summary>
+      <div class="widget-body" id="metrics"></div>
+    </details>
+
+    <div class="grid content">
+      <details class="card widget" data-widget="events" open>
+        <summary class="section-head">
+          <h2>事件分布</h2>
+          <span id="eventsRange">最近 30 天</span>
+        </summary>
+        <div class="widget-body table-scroll">
+          <table>
+            <thead><tr><th>事件</th><th>次数</th><th>最近接收</th></tr></thead>
+            <tbody id="eventBreakdown"><tr><td colspan="3" class="muted">正在加载</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div class="grid">
+        <details class="card widget" data-widget="versions" open>
+          <summary class="section-head">
+            <h2>版本分布</h2>
+            <span>按 App 版本聚合</span>
+          </summary>
+          <div class="widget-body bars" id="versionBreakdown"></div>
+        </details>
+        <details class="card widget" data-widget="privacy" open>
+          <summary class="section-head">
+            <h2>隐私边界</h2>
+            <span>只读聚合面板</span>
+          </summary>
+          <div class="widget-body" id="privacy"></div>
+        </details>
       </div>
-    </section>
+    </div>
+
+    <div class="grid split">
+      <details class="card widget" data-widget="import-errors" open>
+        <summary class="section-head">
+          <h2>导入错误</h2>
+          <span>错误码聚合</span>
+        </summary>
+        <div class="widget-body bars" id="importErrors"></div>
+      </details>
+      <details class="card widget" data-widget="privacy-blocks" open>
+        <summary class="section-head">
+          <h2>隐私拦截</h2>
+          <span>禁止字段类别</span>
+        </summary>
+        <div class="widget-body bars" id="privacyBlocks"></div>
+      </details>
+    </div>
+
+    <div class="footer-note">
+      后续可在 dashboard.darkrio326.top 做跨 App 总面板，把 AutoLedger、AutoNotice 和其他 App 的匿名聚合指标汇总到同一个受 Cloudflare Access 保护的入口；当前页面仍只读，只展示 AutoLedger Common API D1 聚合结果。
+    </div>
   </main>
   <script>
     const metricOrder = [
@@ -331,10 +516,165 @@ const dashboardHTML = `<!doctype html>
       "confirmation_discard_rate",
       "import_error_code_top_n"
     ];
+    const els = {
+      load: document.getElementById("load"),
+      status: document.getElementById("status"),
+      summary: document.getElementById("summary"),
+      metrics: document.getElementById("metrics"),
+      eventBreakdown: document.getElementById("eventBreakdown"),
+      versionBreakdown: document.getElementById("versionBreakdown"),
+      importErrors: document.getElementById("importErrors"),
+      privacyBlocks: document.getElementById("privacyBlocks"),
+      privacy: document.getElementById("privacy"),
+      eventsRange: document.getElementById("eventsRange")
+    };
+
+    els.load.addEventListener("click", loadDashboard);
+    loadDashboard();
+
+    async function loadDashboard() {
+      setStatus("正在读取 D1 聚合数据...");
+      try {
+        const response = await fetch("/dashboard/data", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("请求失败。请确认 Cloudflare Access 已放行当前邮箱。");
+        }
+        const data = await response.json();
+        render(data);
+        setStatus("已更新：" + formatTime(data.generatedAt));
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : String(error), true);
+        renderUnavailable();
+      }
+    }
+
+    function render(data) {
+      const byID = new Map((data.metrics || []).map((metric) => [metric.metricID, metric]));
+      renderSummary([
+        ["匿名事件", metricValue(byID.get("total_events_count")), "最近接收 " + formatTime(data.latestReceivedAt)],
+        ["启动成功率", metricValue(byID.get("launch_success_rate")), metricRatio(byID.get("launch_success_rate"))],
+        ["导入完成率", metricValue(byID.get("import_completion_rate")), metricRatio(byID.get("import_completion_rate"))],
+        ["隐私拦截", metricValue(byID.get("privacy_payload_violation_count")), "禁止字段 guard"]
+      ]);
+      els.eventsRange.textContent = "最近 " + (data.windowDays || 30) + " 天";
+      renderMetricTable((data.metrics || []).slice().sort((left, right) => metricOrder.indexOf(left.metricID) - metricOrder.indexOf(right.metricID)));
+      renderEventBreakdown(data.eventBreakdown || []);
+      renderBars(els.versionBreakdown, objectEntries(data.appVersionBreakdown || {}));
+      renderBars(els.importErrors, objectEntries((byID.get("import_error_code_top_n") || {}).breakdown || {}));
+      renderBars(els.privacyBlocks, objectEntries((byID.get("privacy_payload_violation_count") || {}).breakdown || {}));
+      renderPrivacy(data);
+    }
+
+    function renderSummary(items) {
+      els.summary.innerHTML = items.map(([label, value, note]) => (
+        '<section class="metric"><span>' + escapeHTML(label) + '</span><strong>' + escapeHTML(value) + '</strong><small>' + escapeHTML(note) + '</small></section>'
+      )).join("");
+    }
+
+    function renderMetricTable(metrics) {
+      if (!metrics.length) {
+        els.metrics.innerHTML = '<div class="empty">当前没有最小指标数据。</div>';
+        return;
+      }
+      els.metrics.innerHTML = '<div class="table-scroll"><table><thead><tr><th>指标</th><th>数值</th><th>样本</th><th>状态</th></tr></thead><tbody>' + metrics.map((metric) => (
+        '<tr>'
+          + '<td><div class="title">' + escapeHTML(metric.label || metric.metricID) + '</div><div class="muted">' + escapeHTML(metric.metricID) + '</div></td>'
+          + '<td class="nowrap"><span class="pill ' + metricClass(metric) + '">' + escapeHTML(formatMetric(metric)) + '</span></td>'
+          + '<td class="muted nowrap">' + escapeHTML(metricRatio(metric)) + '</td>'
+          + '<td class="muted">' + escapeHTML(statusText(metric.status)) + '</td>'
+        + '</tr>'
+      )).join("") + '</tbody></table></div>';
+    }
+
+    function renderEventBreakdown(rows) {
+      els.eventBreakdown.innerHTML = rows.length
+        ? rows.map((row) => '<tr><td><div class="title">' + escapeHTML(row.eventName) + '</div></td><td class="nowrap">' + escapeHTML(row.count) + '</td><td class="muted nowrap">' + escapeHTML(formatTime(row.latestReceivedAt)) + '</td></tr>').join("")
+        : '<tr><td colspan="3" class="muted">当前窗口内没有事件。</td></tr>';
+    }
+
+    function renderBars(container, rows) {
+      if (!rows.length) {
+        container.innerHTML = '<div class="empty">当前范围内没有数据。</div>';
+        return;
+      }
+      const max = Math.max(...rows.map((row) => Number(row.value) || 0), 1);
+      container.innerHTML = rows.map((row) => {
+        const value = Number(row.value) || 0;
+        const width = Math.max(4, Math.round((value / max) * 100));
+        return '<div class="bar-row">'
+          + '<div class="bar-label" title="' + escapeHTML(row.label) + '">' + escapeHTML(row.label) + '</div>'
+          + '<div class="bar-track"><div class="bar-fill" style="width:' + width + '%"></div></div>'
+          + '<div class="bar-value">' + escapeHTML(value) + '</div>'
+          + '</div>';
+      }).join("");
+    }
+
+    function renderPrivacy(data) {
+      const privacy = data.privacy || {};
+      const access = data.access || {};
+      const rows = [
+        ["数据边界", privacy.summary || "此面板只展示聚合计数和比率。"],
+        ["数据类别", Array.isArray(privacy.dataCategories) ? privacy.dataCategories.join(" / ") : "-"],
+        ["关联用户", privacy.linked ? "是" : "否"],
+        ["用于追踪", privacy.tracking ? "是" : "否"],
+        ["访问保护", access.protection || "cloudflare_access"],
+        ["保留期", String(data.retentionDays || "-") + " 天"]
+      ];
+      els.privacy.innerHTML = '<div class="table-scroll"><table><tbody>' + rows.map(([label, value]) => (
+        '<tr><th>' + escapeHTML(label) + '</th><td class="muted">' + escapeHTML(value) + '</td></tr>'
+      )).join("") + '</tbody></table></div>';
+    }
+
+    function renderUnavailable() {
+      renderSummary([
+        ["面板暂不可用", "-", "请确认 Access、Worker 和 D1 绑定"],
+        ["启动成功率", "-", "暂无数据"],
+        ["导入完成率", "-", "暂无数据"],
+        ["隐私拦截", "-", "暂无数据"]
+      ]);
+      els.metrics.innerHTML = '<div class="empty">暂时无法读取指标。</div>';
+      els.eventBreakdown.innerHTML = '<tr><td colspan="3" class="muted">暂时无法读取事件分布。</td></tr>';
+      els.versionBreakdown.innerHTML = '<div class="empty">暂时无法读取版本分布。</div>';
+      els.importErrors.innerHTML = '<div class="empty">暂时无法读取导入错误。</div>';
+      els.privacyBlocks.innerHTML = '<div class="empty">暂时无法读取隐私拦截。</div>';
+      els.privacy.innerHTML = '<div class="empty">请在 Worker 和 D1 绑定恢复后刷新。</div>';
+    }
+
+    function objectEntries(record) {
+      return Object.entries(record)
+        .map(([label, value]) => ({ label, value }))
+        .sort((left, right) => Number(right.value) - Number(left.value) || left.label.localeCompare(right.label));
+    }
+
+    function metricValue(metric) {
+      return metric ? formatMetric(metric) : "-";
+    }
 
     function formatMetric(metric) {
-      if (metric.value === null) return "暂无数据";
+      if (!metric || metric.value === null || metric.value === undefined) {
+        return "暂无数据";
+      }
       return metric.unit === "percent" ? metric.value + "%" : String(metric.value);
+    }
+
+    function metricRatio(metric) {
+      if (!metric) {
+        return "-";
+      }
+      return String(metric.numerator) + " / " + String(metric.denominator);
+    }
+
+    function metricClass(metric) {
+      if (!metric || metric.status !== "available") {
+        return "warning";
+      }
+      if (metric.metricID === "privacy_payload_violation_count" && Number(metric.value) > 0) {
+        return "failed";
+      }
+      if (metric.unit === "percent" && Number(metric.value) < 80) {
+        return "warning";
+      }
+      return "sent";
     }
 
     function statusText(status) {
@@ -343,6 +683,22 @@ const dashboardHTML = `<!doctype html>
         case "insufficient_data": return "数据不足";
         default: return status || "-";
       }
+    }
+
+    function formatTime(value) {
+      if (!value) {
+        return "暂无数据";
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function setStatus(message, isError) {
+      els.status.textContent = message;
+      els.status.className = isError ? "status error" : "status";
     }
 
     function escapeHTML(value) {
@@ -354,34 +710,6 @@ const dashboardHTML = `<!doctype html>
         "'": "&#39;"
       }[char]));
     }
-
-    async function loadDashboard() {
-      const status = document.getElementById("status");
-      try {
-        const response = await fetch("/dashboard/data", { cache: "no-store" });
-        if (!response.ok) throw new Error("Dashboard data unavailable");
-        const data = await response.json();
-        status.textContent = "最近更新 " + new Date(data.generatedAt).toLocaleString("zh-CN", { hour12: false });
-        document.getElementById("privacy").textContent = data.privacy.summary + " 数据" + (data.privacy.linked ? "会关联用户" : "不关联用户") + "，" + (data.privacy.tracking ? "用于追踪。" : "不用于追踪。");
-
-        const byID = new Map(data.metrics.map((metric) => [metric.metricID, metric]));
-        document.getElementById("metrics").innerHTML = metricOrder
-          .map((metricID) => byID.get(metricID))
-          .filter(Boolean)
-          .map((metric) => '<article class="metric"><h2>' + escapeHTML(metric.label) + '</h2><div><div class="value">' + escapeHTML(formatMetric(metric)) + '</div><div class="detail">' + escapeHTML(metric.numerator + ' / ' + metric.denominator + ' · ' + statusText(metric.status)) + '</div></div></article>')
-          .join("");
-
-        document.getElementById("eventBreakdown").innerHTML = data.eventBreakdown.length
-          ? data.eventBreakdown.map((row) => '<tr><td>' + escapeHTML(row.eventName) + '</td><td>' + escapeHTML(row.count) + '</td><td class="muted">' + escapeHTML(row.latestReceivedAt || "暂无数据") + '</td></tr>').join("")
-          : '<tr><td colspan="3" class="muted">当前窗口内没有事件。</td></tr>';
-      } catch (error) {
-        status.textContent = "暂不可用";
-        status.className = "badge error";
-        document.getElementById("metrics").innerHTML = '<article class="metric"><h2>面板暂不可用</h2><div class="detail">请在 Worker 和 D1 绑定恢复后刷新。</div></article>';
-      }
-    }
-
-    loadDashboard();
   </script>
 </body>
 </html>`;

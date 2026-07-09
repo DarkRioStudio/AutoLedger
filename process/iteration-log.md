@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-09（ITER-404 Common API analytics dashboard Access 收口）
+更新日期：2026-07-09（ITER-405 Common API dashboard 入口与样式收口）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-405 Common API dashboard 入口与样式收口
+- 日期：2026-07-09
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Governance / Common API
+- 类型：Bugfix / Worker 安全 / UI 对齐
+- 目标：修复 `getautoledger.app/dashboard` 裸路径没有命中 Cloudflare Zero Trust `dashboard/*` 规则时，面板壳可直接加载但数据接口被 Access 拦截导致“暂不可用”的问题，并把 AutoLedger dashboard 页面风格与 AutoNotice dashboard 统一。
+- 改动范围：`tools/worker/common-api` dashboard 路由、dashboard HTML / CSS、manifest dashboard URL、Worker 合同测试、版本计划、CHANGELOG。
+- 未改动范围：未修改 App Swift 业务代码、App 端 analytics 采集面、D1 schema、CloudKit schema、StoreKit Product ID、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、entitlement、订阅价格或构建 tag。
+- 完成内容：`GET /dashboard` 和 `HEAD /dashboard` 现在返回 302 到 `/dashboard/`；`/dashboard/` 继续服务 HTML shell；manifest `analyticsDashboard.url` 改为 `https://getautoledger.app/dashboard/`。
+- 完成内容：dashboard HTML 改为与 AutoNotice 统一的浅色渐变背景、应用图标、顶部工具栏、折叠卡片、总览四卡、最小指标表、版本分布、导入错误、隐私拦截和隐私边界布局；仍只读取既有 `/dashboard/data` 聚合合同。
+- 完成内容：测试明确覆盖裸路径跳转、trailing-slash HTML shell 分离和新版页面结构，避免 Access 规则只覆盖 `dashboard/*` 时再次出现裸路径绕过。
+- 完成内容：`v1.7.0-plan` 记录后续可在 `dashboard.darkrio326.top` 建立跨 App 总面板，汇总 AutoLedger、AutoNotice 和其他 App 的匿名聚合指标；该方向仍必须沿用 Cloudflare Access、聚合口径和各 App 独立数据边界。
+- 未完成内容：本轮尚未记录新的 Cloudflare staging / production Worker Version ID；部署后需要补线上 smoke 结果。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 36 个 Vitest 合同测试；执行 `git diff --check` 通过。
+- 风险与注意事项：Cloudflare Access 仍是主防线；裸路径跳转只是让入口路径和 Zero Trust 规则保持一致，不替代 `/dashboard/data` 的 Worker 侧 host guard。跨 App 总面板只是后续方向，本轮不新增跨 App 数据聚合接口。
+- 回滚方式：回退本轮 Worker 路由、测试和文档改动即可；无 D1 schema 或远端数据迁移。
+- 结论：代码改动已准备，需通过测试并部署后收口。
+- 下一步建议：部署后用未登录命令行确认 `/dashboard` 302 到 `/dashboard/`，`/dashboard/` 和 `/dashboard/data` 均被 Cloudflare Access 302 拦截。
 
 ### ITER-404 Common API analytics dashboard Access 收口
 - 日期：2026-07-09

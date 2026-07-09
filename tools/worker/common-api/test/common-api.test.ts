@@ -540,16 +540,29 @@ describe("common api worker contract", () => {
     expect(allowedResponse.status).toBe(200);
   });
 
-  it("serves an AutoLedger dashboard HTML shell", async () => {
+  it("redirects the bare AutoLedger dashboard path to the Access-protected prefix", async () => {
     const response = await routeFetch(new Request("https://getautoledger.app/dashboard"), env);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/dashboard/");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("serves an AutoLedger dashboard HTML shell from the trailing-slash path", async () => {
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard/"), env);
     const html = await response.text();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
     expect(html).toContain("AutoLedger 运营观测面板");
     expect(html).toContain("匿名聚合指标，用于上线前检查");
+    expect(html).toContain("总览");
+    expect(html).toContain("最小指标");
+    expect(html).toContain("刷新");
     expect(html).toContain("事件分布");
+    expect(html).toContain("版本分布");
     expect(html).toContain("隐私边界");
+    expect(html).toContain("dashboard.darkrio326.top");
     expect(html).toContain("/dashboard/data");
     expect(html).not.toContain("AutoLedger Ops Dashboard");
     expect(html).not.toContain("Anonymous aggregate metrics");

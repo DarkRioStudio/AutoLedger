@@ -75,7 +75,11 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
     }));
   }
 
-  if (isReadRequest(request) && (url.pathname === "/dashboard" || url.pathname === "/dashboard/")) {
+  if (isReadRequest(request) && url.pathname === "/dashboard") {
+    return responseForMethod(request, withCommonHeaders(redirectResponse("/dashboard/")));
+  }
+
+  if (isReadRequest(request) && url.pathname === "/dashboard/") {
     return responseForMethod(request, withCommonHeaders(autoLedgerDashboardHTMLResponse()));
   }
 
@@ -227,7 +231,7 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
         },
         analyticsDashboard: {
           status: env.COMMON_API_DB ? "available" : "configuration_required",
-          url: "https://getautoledger.app/dashboard",
+          url: "https://getautoledger.app/dashboard/",
           dataEndpoint: "https://getautoledger.app/dashboard/data",
           access: "Dashboard data is intended to be served behind Cloudflare Zero Trust Access. Production data requests are accepted only with a verified Access identity on the protected dashboard host or a valid Access JWT.",
           retentionDays: analyticsRetentionDays(env),
@@ -436,6 +440,16 @@ function responseForMethod(request: Request, response: Response): Response {
       headers: response.headers
     })
   );
+}
+
+function redirectResponse(location: string): Response {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location,
+      "cache-control": "no-store"
+    }
+  });
 }
 
 async function sha256Hex(value: string): Promise<string> {
