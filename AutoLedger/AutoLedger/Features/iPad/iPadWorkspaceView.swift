@@ -2852,6 +2852,13 @@ struct HotelStayWorkspaceView: View {
 
     @MainActor
     private func importSelectedPDF(_ result: Result<[URL], Error>) async {
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "hotel_manual_pdf_import",
+            inputType: "file_picker",
+            entrySurface: "hotel_stays",
+            isProSurface: false
+        )
         isImporting = true
         statusMessage = String(localized: "hotel_stay.import.status.extracting")
         defer {
@@ -2861,6 +2868,19 @@ struct HotelStayWorkspaceView: View {
         do {
             guard let url = try result.get().first else {
                 statusMessage = String(localized: "hotel_stay.import.error.no_file")
+                CommonAPIAnalyticsService.trackImportCompleted(
+                    flowType: "hotel_manual_pdf_import",
+                    inputType: "file_picker",
+                    status: "cancelled",
+                    startedAt: startedAt,
+                    errorCode: "no_file"
+                )
+                CommonAPIAnalyticsService.trackHotelPDF(
+                    flowType: "manual_file_picker",
+                    status: "cancelled",
+                    startedAt: startedAt,
+                    errorCode: "no_file"
+                )
                 return
             }
 
@@ -2886,11 +2906,35 @@ struct HotelStayWorkspaceView: View {
             }
             let draft = try await importTask.value
             statusMessage = String(localized: "hotel_stay.import.status.parsing")
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "hotel_manual_pdf_import",
+                inputType: "file_picker",
+                status: "success",
+                startedAt: startedAt
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "manual_file_picker",
+                status: "success",
+                startedAt: startedAt
+            )
             await prepareDraftForReview(draft, managesImportingState: false)
         } catch {
             statusMessage = String(
                 format: String(localized: "hotel_stay.import.status.failed_format"),
                 error.localizedDescription
+            )
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "hotel_manual_pdf_import",
+                inputType: "file_picker",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "manual_file_picker",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
             )
         }
     }

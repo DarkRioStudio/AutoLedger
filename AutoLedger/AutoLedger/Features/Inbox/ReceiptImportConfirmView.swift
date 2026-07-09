@@ -143,6 +143,13 @@ struct ReceiptImportConfirmView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") {
+                        CommonAPIAnalyticsService.trackConfirmationState(
+                            flowType: "receipt_scan",
+                            requiredFieldCount: requiredReviewFieldCount,
+                            editedFieldCount: editedReviewFieldCount,
+                            confirmStatus: "discarded",
+                            discardReasonCode: "user_cancelled"
+                        )
                         store.clearPendingReceiptReview()
                         dismiss()
                     }
@@ -179,10 +186,54 @@ struct ReceiptImportConfirmView: View {
             conversionQuote: usableConversionQuote
         )
         if didSave {
+            CommonAPIAnalyticsService.trackConfirmationState(
+                flowType: "receipt_scan",
+                requiredFieldCount: requiredReviewFieldCount,
+                editedFieldCount: editedReviewFieldCount,
+                confirmStatus: "saved"
+            )
             dismiss()
         } else {
+            CommonAPIAnalyticsService.trackConfirmationState(
+                flowType: "receipt_scan",
+                requiredFieldCount: requiredReviewFieldCount,
+                editedFieldCount: editedReviewFieldCount,
+                confirmStatus: "failed",
+                discardReasonCode: "save_failed"
+            )
             saveErrorMessage = String(localized: "transaction_editor.save_failed.message")
         }
+    }
+
+    private var requiredReviewFieldCount: Int {
+        5
+    }
+
+    private var editedReviewFieldCount: Int {
+        var count = 0
+        let initialAmountText = String(format: "%.2f", draft.receipt.amount)
+        if merchant.trimmingCharacters(in: .whitespacesAndNewlines) != draft.receipt.merchant.trimmingCharacters(in: .whitespacesAndNewlines) {
+            count += 1
+        }
+        if amountText.trimmingCharacters(in: .whitespacesAndNewlines) != initialAmountText {
+            count += 1
+        }
+        if currencyCode != LedgerCurrencyOption.supportedCode(matching: draft.receipt.currencyCode ?? ExpenseCurrencyPreference.currentCode) {
+            count += 1
+        }
+        if source != draft.receipt.source {
+            count += 1
+        }
+        if category != draft.receipt.suggestedCategory {
+            count += 1
+        }
+        if abs(occurredAt.timeIntervalSince(draft.receipt.occurredAt)) > 60 {
+            count += 1
+        }
+        if note.trimmingCharacters(in: .whitespacesAndNewlines) != draft.notePrefix.trimmingCharacters(in: .whitespacesAndNewlines) {
+            count += 1
+        }
+        return count
     }
 
     private func retryConversionPreview() {

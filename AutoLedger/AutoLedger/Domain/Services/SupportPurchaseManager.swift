@@ -130,6 +130,7 @@ final class SupportPurchaseManager: ObservableObject {
     func purchase(_ product: Product) async {
         guard purchasingProductID == nil else { return }
 
+        let startedAt = Date()
         purchasingProductID = product.id
         defer { purchasingProductID = nil }
 
@@ -138,23 +139,67 @@ final class SupportPurchaseManager: ObservableObject {
             switch result {
             case .success(let verification):
                 await handleTransaction(verification, source: .directPurchase)
+                let status: String
+                let errorCode: String
+                switch verification {
+                case .verified(_):
+                    status = "success"
+                    errorCode = "none"
+                case .unverified(_, _):
+                    status = "failed"
+                    errorCode = "unverified_transaction"
+                }
+                CommonAPIAnalyticsService.trackPurchaseFlow(
+                    productTier: "support_developer",
+                    storeKitStep: "purchase",
+                    storeKitStatus: status,
+                    startedAt: startedAt,
+                    errorCode: errorCode
+                )
             case .pending:
                 notice = SupportPurchaseNotice(
                     title: String(localized: "support.purchase.pending.title"),
                     message: String(localized: "support.purchase.pending.message")
                 )
+                CommonAPIAnalyticsService.trackPurchaseFlow(
+                    productTier: "support_developer",
+                    storeKitStep: "purchase",
+                    storeKitStatus: "pending",
+                    startedAt: startedAt
+                )
             case .userCancelled:
+                CommonAPIAnalyticsService.trackPurchaseFlow(
+                    productTier: "support_developer",
+                    storeKitStep: "purchase",
+                    storeKitStatus: "cancelled",
+                    startedAt: startedAt,
+                    errorCode: "user_cancelled"
+                )
                 break
             @unknown default:
                 notice = SupportPurchaseNotice(
                     title: String(localized: "support.purchase.error.title"),
                     message: String(localized: "support.purchase.unknown")
                 )
+                CommonAPIAnalyticsService.trackPurchaseFlow(
+                    productTier: "support_developer",
+                    storeKitStep: "purchase",
+                    storeKitStatus: "unknown",
+                    startedAt: startedAt,
+                    errorCode: "unknown_result"
+                )
             }
         } catch {
             notice = SupportPurchaseNotice(
                 title: String(localized: "support.purchase.error.title"),
                 message: String(localized: "support.purchase.failed")
+            )
+            CommonAPIAnalyticsService.trackPurchaseFlow(
+                productTier: "support_developer",
+                storeKitStep: "purchase",
+                storeKitStatus: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
             )
         }
     }

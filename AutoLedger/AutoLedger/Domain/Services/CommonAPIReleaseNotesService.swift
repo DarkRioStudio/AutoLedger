@@ -32,8 +32,16 @@ enum CommonAPIReleaseNotesService {
     }
 
     nonisolated static func refreshReleaseNotes(appVersion: String) async -> ReleaseNotes? {
+        let startedAt = Date()
         do {
             let notes = try await fetchReleaseNotes(appVersion: appVersion)
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "release_notes",
+                httpStatusBucket: "2xx",
+                startedAt: startedAt,
+                errorCode: "none",
+                cacheStatus: "miss"
+            )
             try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
             if let cacheURL = cacheURL(appVersion: appVersion) {
                 let data = try JSONEncoder().encode(notes)
@@ -42,7 +50,24 @@ enum CommonAPIReleaseNotesService {
             return notes
         } catch {
             commonAPIReleaseNotesLogger.warning("[CommonAPI] release notes refresh skipped: \(error.localizedDescription)")
-            return cachedReleaseNotes(appVersion: appVersion)
+            if let cached = cachedReleaseNotes(appVersion: appVersion) {
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "release_notes",
+                    httpStatusBucket: "network_error",
+                    startedAt: startedAt,
+                    errorCode: CommonAPIAnalyticsService.errorCode(for: error),
+                    cacheStatus: "stale"
+                )
+                return cached
+            }
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "release_notes",
+                httpStatusBucket: httpStatusBucket(for: error),
+                startedAt: startedAt,
+                errorCode: errorCode(for: error),
+                cacheStatus: "miss"
+            )
+            return nil
         }
     }
 
@@ -79,6 +104,20 @@ enum CommonAPIReleaseNotesService {
         guard (200...299).contains(http.statusCode) else {
             throw ReleaseNotesError.httpFailure(statusCode: http.statusCode)
         }
+    }
+
+    nonisolated private static func httpStatusBucket(for error: Error) -> String {
+        if case let ReleaseNotesError.httpFailure(statusCode) = error {
+            return CommonAPIAnalyticsService.httpStatusBucket(statusCode)
+        }
+        return "network_error"
+    }
+
+    nonisolated private static func errorCode(for error: Error) -> String {
+        if case let ReleaseNotesError.httpFailure(statusCode) = error {
+            return "http_\(statusCode)"
+        }
+        return CommonAPIAnalyticsService.errorCode(for: error)
     }
 
     nonisolated private static func cacheURL(appVersion: String) -> URL? {

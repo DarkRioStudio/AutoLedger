@@ -105,11 +105,26 @@ enum CommonAPICatalogService {
             return
         }
 
+        let startedAt = Date()
         do {
             try await refresh()
             UserDefaults.standard.set(Date(), forKey: lastRefreshKey)
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "catalog_refresh",
+                httpStatusBucket: "2xx",
+                startedAt: startedAt,
+                errorCode: "none",
+                cacheStatus: "miss"
+            )
         } catch {
             commonAPICatalogLogger.warning("[CommonAPI] catalog refresh skipped: \(error.localizedDescription)")
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "catalog_refresh",
+                httpStatusBucket: httpStatusBucket(for: error),
+                startedAt: startedAt,
+                errorCode: errorCode(for: error),
+                cacheStatus: "miss"
+            )
         }
     }
 
@@ -231,6 +246,26 @@ enum CommonAPICatalogService {
             case .integrityCheckFailed(let resourceVersion):
                 return "Common API catalog integrity check failed: \(resourceVersion)"
             }
+        }
+    }
+
+    nonisolated private static func httpStatusBucket(for error: Error) -> String {
+        if case let CatalogError.httpFailure(_, statusCode) = error {
+            return CommonAPIAnalyticsService.httpStatusBucket(statusCode)
+        }
+        return "network_error"
+    }
+
+    nonisolated private static func errorCode(for error: Error) -> String {
+        switch error {
+        case CatalogError.invalidURL(_):
+            return "invalid_url"
+        case let CatalogError.httpFailure(_, statusCode):
+            return "http_\(statusCode)"
+        case CatalogError.integrityCheckFailed(_):
+            return "integrity_check_failed"
+        default:
+            return CommonAPIAnalyticsService.errorCode(for: error)
         }
     }
 }

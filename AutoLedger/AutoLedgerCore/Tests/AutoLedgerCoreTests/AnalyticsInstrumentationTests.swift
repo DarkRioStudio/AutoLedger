@@ -81,10 +81,32 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         ]))
     }
 
+    func testFeatureSurfaceEventUsesOnlyAnonymousEnums() throws {
+        let event = try AutoLedgerAnalyticsEvent.make(
+            .featureSurfaceOpened,
+            payload: [
+                "event_id": .string("surface-1"),
+                "app_version": .string("1.6.0"),
+                "surface": .string("tab_report"),
+                "entry_surface": .string("tab_bar"),
+                "is_pro_surface": .bool(false),
+                "open_reason": .string("tab_selection")
+            ]
+        )
+
+        XCTAssertEqual(event.eventName, "al_feature_surface_opened")
+        XCTAssertEqual(event.payload["surface"], .string("tab_report"))
+        XCTAssertThrowsError(try AutoLedgerAnalyticsEvent.make(.featureSurfaceOpened, payload: [
+            "event_id": .string("surface-2"),
+            "hotel_name": .string("Demo Hotel")
+        ]))
+    }
+
     func testCatalogCoversPlanEventsAndMinimalDashboardMetrics() {
         let eventNames = Set(AutoLedgerAnalyticsCatalog.eventDefinitions.map(\.eventName))
         XCTAssertTrue(eventNames.isSuperset(of: [
             "al_perf_app_launch",
+            "al_feature_surface_opened",
             "al_import_flow_started",
             "al_import_flow_completed",
             "al_confirmation_state",
@@ -98,11 +120,14 @@ final class AnalyticsInstrumentationTests: XCTestCase {
 
         let metrics = Set(AutoLedgerAnalyticsCatalog.minimalDashboardMetrics.map(\.metricID))
         XCTAssertTrue(metrics.isSuperset(of: [
+            "feature_surface_open_count",
             "launch_success_rate",
             "import_completion_rate",
             "import_error_code_top_n",
             "confirmation_discard_rate",
             "currency_lookup_success_rate",
+            "hotel_pdf_completion_rate",
+            "common_api_status_top_n",
             "pro_gate_boundary_risk",
             "purchase_flow_failure_rate",
             "privacy_payload_violation_count"
@@ -112,6 +137,14 @@ final class AnalyticsInstrumentationTests: XCTestCase {
     func testRecorderBuildsMinimalDashboardSnapshotFromAllowedEvents() throws {
         var recorder = AutoLedgerAnalyticsRecorder()
 
+        try recorder.record(.featureSurfaceOpened, payload: [
+            "event_id": .string("surface-1"),
+            "app_version": .string("1.6.0"),
+            "surface": .string("tab_inbox"),
+            "entry_surface": .string("tab_bar"),
+            "is_pro_surface": .bool(false),
+            "open_reason": .string("tab_selection")
+        ])
         try recorder.record(.importFlowStarted, payload: [
             "event_id": .string("start-1"),
             "app_version": .string("1.6.0"),
@@ -155,6 +188,7 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         XCTAssertEqual(snapshot.metric(id: "import_completion_rate")?.value, 50)
         XCTAssertEqual(snapshot.metric(id: "purchase_flow_failure_rate")?.value, 100)
         XCTAssertEqual(snapshot.metric(id: "privacy_payload_violation_count")?.value, 0)
+        XCTAssertEqual(snapshot.metric(id: "feature_surface_open_count")?.breakdown["tab_inbox"], 1)
         XCTAssertEqual(snapshot.metric(id: "import_error_code_top_n")?.breakdown["none"], 1)
     }
 

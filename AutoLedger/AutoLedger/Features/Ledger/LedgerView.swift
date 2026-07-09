@@ -403,8 +403,20 @@ struct LedgerView: View {
 
     private func presentAdvancedSearch() {
         if proEntitlement.canUse(.advancedSearch) {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "advanced_search",
+                entrySurface: "ledger",
+                isProSurface: true,
+                openReason: "button_tap"
+            )
             isPresentingAdvancedSearch = true
         } else {
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "ledger",
+                featureArea: "advanced_search",
+                userAction: "view_plans",
+                dismissReasonCode: "requires_pro"
+            )
             isPresentingProSheet = true
         }
     }

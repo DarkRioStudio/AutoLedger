@@ -320,6 +320,21 @@ describe("common api worker contract", () => {
               retry_count_bucket: "0",
               error_code: "none"
             }
+          },
+          {
+            eventName: "al_feature_surface_opened",
+            appVersion: "1.6.0",
+            buildNumber: "160",
+            osMajor: "26",
+            deviceClass: "phone",
+            payload: {
+              event_id: "event-2",
+              app_version: "1.6.0",
+              surface: "tab_report",
+              entry_surface: "tab_bar",
+              is_pro_surface: false,
+              open_reason: "tab_selection"
+            }
           }
         ]
       })
@@ -327,8 +342,8 @@ describe("common api worker contract", () => {
     const body = await jsonBody(response);
 
     expect(response.status).toBe(202);
-    expect(body).toMatchObject({ ok: true, accepted: 1 });
-    expect(analyticsDB.analyticsInserts).toHaveLength(1);
+    expect(body).toMatchObject({ ok: true, accepted: 2 });
+    expect(analyticsDB.analyticsInserts).toHaveLength(2);
     const insert = analyticsDB.analyticsInserts[0];
     expect(insert).toBeDefined();
     expect(insert![1]).toBe("autoledger");
@@ -337,6 +352,7 @@ describe("common api worker contract", () => {
     expect(payloadJSON).toContain("receipt_scan");
     expect(payloadJSON).not.toContain("amount");
     expect(payloadJSON).not.toContain("merchant");
+    expect(analyticsDB.analyticsInserts[1]![2]).toBe("al_feature_surface_opened");
   });
 
   it("rejects analytics payloads with financial or document fields", async () => {
@@ -379,6 +395,16 @@ describe("common api worker contract", () => {
 
   it("serves AutoLedger dashboard data as aggregate metrics without raw event rows", async () => {
     const dashboardDB = new AnalyticsDashboardD1Database(releaseNotesFixtures, [
+      {
+        event_name: "al_feature_surface_opened",
+        event_id: "feature-report",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ surface: "tab_report", entry_surface: "tab_bar" }),
+        received_at: "2026-07-08T08:09:10.470Z"
+      },
       {
         event_name: "al_perf_app_launch",
         event_id: "launch-success",
@@ -430,6 +456,16 @@ describe("common api worker contract", () => {
         received_at: "2026-07-08T08:12:39.470Z"
       },
       {
+        event_name: "al_common_api_request_status",
+        event_id: "api-weather",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ endpoint_group: "weather_hotel", http_status_bucket: "2xx", latency_ms_bucket: "1s_3s" }),
+        received_at: "2026-07-08T08:12:59.470Z"
+      },
+      {
         event_name: "al_privacy_payload_guard_violation",
         event_id: "privacy-violation",
         app_version: "1.6.0",
@@ -462,11 +498,14 @@ describe("common api worker contract", () => {
       protection: "cloudflare_access",
       emailHeaderTrustedOnlyOnProtectedHosts: true
     });
-    expect(byID.get("total_events_count")).toMatchObject({ value: 6, unit: "count" });
+    expect(byID.get("total_events_count")).toMatchObject({ value: 8, unit: "count" });
     expect(byID.get("total_events_count")).toMatchObject({ label: "已接收匿名事件总数" });
+    expect(byID.get("feature_surface_open_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("feature_surface_open_count")).toMatchObject({ label: "功能入口打开分布" });
     expect(byID.get("launch_success_rate")).toMatchObject({ value: 50, unit: "percent", numerator: 1, denominator: 2 });
     expect(byID.get("launch_success_rate")).toMatchObject({ label: "启动成功率" });
     expect(byID.get("import_completion_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
+    expect(byID.get("common_api_status_top_n")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("privacy_payload_violation_count")).toMatchObject({ value: 1, unit: "count" });
     expect(body.privacy).toMatchObject({

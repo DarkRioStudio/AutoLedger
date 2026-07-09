@@ -16,6 +16,7 @@ public enum AutoLedgerAnalyticsPayloadValue: Equatable, Sendable {
 
 public enum AutoLedgerAnalyticsEventName: String, CaseIterable, Sendable {
     case appLaunchPerformance = "al_perf_app_launch"
+    case featureSurfaceOpened = "al_feature_surface_opened"
     case importFlowStarted = "al_import_flow_started"
     case importFlowCompleted = "al_import_flow_completed"
     case confirmationState = "al_confirmation_state"
@@ -256,6 +257,9 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
         let confirmationDiscards = confirmationEvents.filter { $0.stringPayload("confirm_status") == "discarded" }.count
         let currencyEvents = events(named: .currencyLookupStatus)
         let currencySuccesses = currencyEvents.filter { $0.stringPayload("rate_lookup_status") == "success" }.count
+        let hotelPDFEvents = events(named: .hotelPDFFlowStatus)
+        let hotelPDFSuccesses = hotelPDFEvents.filter { $0.stringPayload("status") == "success" }.count
+        let commonAPIEvents = events(named: .commonAPIRequestStatus)
         let purchaseEvents = events(named: .purchaseFlowStatus)
         let purchaseFailures = purchaseEvents.filter { event in
             switch event.stringPayload("storekit_status") {
@@ -268,6 +272,11 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
         let privacyViolations = events(named: .privacyPayloadGuardViolation).count
 
         return AutoLedgerAnalyticsDashboardSnapshot(metrics: [
+            countMetric(
+                "feature_surface_open_count",
+                value: events(named: .featureSurfaceOpened).count,
+                breakdown: breakdown(events(named: .featureSurfaceOpened), field: "surface")
+            ),
             percentMetric(
                 "launch_success_rate",
                 numerator: launchSuccesses,
@@ -292,6 +301,16 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 "currency_lookup_success_rate",
                 numerator: currencySuccesses,
                 denominator: currencyEvents.count
+            ),
+            percentMetric(
+                "hotel_pdf_completion_rate",
+                numerator: hotelPDFSuccesses,
+                denominator: hotelPDFEvents.count
+            ),
+            countMetric(
+                "common_api_status_top_n",
+                value: commonAPIEvents.count,
+                breakdown: breakdown(commonAPIEvents, field: "http_status_bucket")
             ),
             countMetric(
                 "pro_gate_boundary_risk",
@@ -457,6 +476,13 @@ public enum AutoLedgerAnalyticsCatalog {
             dashboard: "启动成功率、冷启动 p50 / p95 bucket、启动错误码排行。"
         ),
         definition(
+            .featureSurfaceOpened,
+            purpose: "观察用户主要打开哪些 App 功能入口，辅助判断导航、功能命名和年度产品复盘。",
+            fields: ["event_id", "app_version", "surface", "entry_surface", "is_pro_surface", "open_reason"],
+            privacy: "Usage Data / Product Interaction；not linked；not tracking。",
+            dashboard: "Tab / 页面入口分布、Pro 自动化入口热度、容易被忽略的功能面。"
+        ),
+        definition(
             .importFlowStarted,
             purpose: "观察导入入口使用分布，判断 marketing 是否过度强调某个路径。",
             fields: ["event_id", "app_version", "flow_type", "input_type", "entry_surface", "is_pro_surface", "start_status"],
@@ -523,10 +549,13 @@ public enum AutoLedgerAnalyticsCatalog {
 
     public static let minimalDashboardMetrics: [AutoLedgerAnalyticsDashboardMetric] = [
         metric("launch_success_rate", "启动成功事件占启动事件比例。", [.appLaunchPerformance], "低于目标阈值则暂停扩大推广。"),
+        metric("feature_surface_open_count", "匿名功能入口打开次数，按固定 surface 枚举聚合。", [.featureSurfaceOpened], "只用于产品体验判断，不做用户画像。"),
         metric("import_completion_rate", "导入开始到导入成功完成的比例。", [.importFlowStarted, .importFlowCompleted], "主路径异常下降需调整文案或暂缓。"),
         metric("import_error_code_top_n", "导入失败事件按错误码聚合。", [.importFlowCompleted], "新增高频错误需进入 launch blocker review。"),
         metric("confirmation_discard_rate", "确认页放弃事件占确认页状态事件比例。", [.confirmationState], "高放弃率时不要强调自动化已顺滑。"),
         metric("currency_lookup_success_rate", "跨币种查询成功占比。", [.currencyLookupStatus], "未稳定前 ASC 文案继续用发布准备。"),
+        metric("hotel_pdf_completion_rate", "酒店 PDF 导入流程成功完成占比。", [.hotelPDFFlowStatus], "失败率升高时暂停放大酒店水单卖点。"),
+        metric("common_api_status_top_n", "Common API 请求按 HTTP 状态 bucket 聚合。", [.commonAPIRequestStatus], "4xx / 5xx 或 network_error 异常时先修基础设施。"),
         metric("pro_gate_boundary_risk", "Pro gate 关闭原因和 Pro confusion 反馈对照。", [.proGateViewed], "出现 Pro 锁数据误解时先改文案。"),
         metric("purchase_flow_failure_rate", "StoreKit failed / canceled / unknown 状态占比。", [.purchaseFlowStatus], "错误码异常时暂停付费转化文案。"),
         metric("privacy_payload_violation_count", "被 guard 拦截的 forbidden field 次数。", [.privacyPayloadGuardViolation], "非零即阻塞 marketing。")

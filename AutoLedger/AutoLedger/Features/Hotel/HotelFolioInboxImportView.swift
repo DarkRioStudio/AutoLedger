@@ -126,6 +126,14 @@ struct HotelFolioInboxImportView: View {
                 }
             }
         }
+        .onAppear {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "cloud_folio_inbox",
+                entrySurface: "hotel_stays",
+                isProSurface: true,
+                openReason: "view_appear"
+            )
+        }
         .task {
             await refreshProAndCloudInboxAccess()
             await registerRemoteDeviceTokenIfAvailable()
@@ -396,6 +404,12 @@ struct HotelFolioInboxImportView: View {
         await refreshCloudInboxAccess()
         guard canClaimCloudInboxAddress else {
             statusMessage = String(localized: "hotel_stay.cloud_inbox.status.server_verification_required")
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "cloud_folio_inbox",
+                featureArea: "cloud_folio_inbox",
+                userAction: "claim_blocked",
+                dismissReasonCode: "server_verification_required"
+            )
             return
         }
 
@@ -460,6 +474,13 @@ struct HotelFolioInboxImportView: View {
     private func refreshCandidates() async {
         guard !isRefreshing, !isImporting else { return }
 
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "cloud_folio_candidate_refresh",
+            inputType: "cloud_inbox",
+            entrySurface: "cloud_folio_inbox",
+            isProSurface: true
+        )
         isRefreshing = true
         statusMessage = String(localized: "hotel_stay.cloud_inbox.refreshing")
         recordCloudInboxDebug("云端酒店水单收件箱：开始拉取候选")
@@ -478,9 +499,22 @@ struct HotelFolioInboxImportView: View {
             statusMessage = fetched.isEmpty
                 ? String(localized: "hotel_stay.cloud_inbox.status.no_results")
                 : String(format: String(localized: "hotel_stay.cloud_inbox.status.results_format"), fetched.count)
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "cloud_folio_candidate_refresh",
+                inputType: "cloud_inbox",
+                status: "success",
+                startedAt: startedAt
+            )
             recordCloudInboxDebug("云端酒店水单收件箱：候选已显示 · candidates=\(fetched.count)")
         } catch {
             statusMessage = error.localizedDescription
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "cloud_folio_candidate_refresh",
+                inputType: "cloud_inbox",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
             recordCloudInboxDebug("云端酒店水单收件箱拉取失败：\(error.localizedDescription)")
         }
     }
@@ -495,10 +529,23 @@ struct HotelFolioInboxImportView: View {
         }
         guard canUseCloudInbox else {
             statusMessage = String(localized: "hotel_stay.cloud_inbox.status.pro_required")
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "cloud_folio_inbox",
+                featureArea: "cloud_folio_inbox",
+                userAction: "view_plans",
+                dismissReasonCode: "requires_server_verified_pro"
+            )
             isPresentingProSheet = true
             return
         }
 
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "cloud_folio_pdf_import",
+            inputType: "cloud_inbox",
+            entrySurface: "cloud_folio_inbox",
+            isProSurface: true
+        )
         isImporting = true
         statusMessage = String(localized: "hotel_stay.cloud_inbox.importing")
         recordCloudInboxDebug("云端酒店水单收件箱：开始导入 · selected=\(selection.count)")
@@ -542,12 +589,38 @@ struct HotelFolioInboxImportView: View {
 
         if drafts.isEmpty {
             statusMessage = failures.first ?? String(localized: "hotel_stay.cloud_inbox.status.no_results")
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "cloud_folio_pdf_import",
+                inputType: "cloud_inbox",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: "no_drafts"
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "cloud_inbox",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: "no_drafts"
+            )
             return
         }
 
         statusMessage = failures.isEmpty
             ? String(format: String(localized: "hotel_stay.cloud_inbox.status.imported_format"), drafts.count)
             : String(format: String(localized: "hotel_stay.email.status.import_partial_format"), drafts.count, failures.count)
+        CommonAPIAnalyticsService.trackImportCompleted(
+            flowType: "cloud_folio_pdf_import",
+            inputType: "cloud_inbox",
+            status: failures.isEmpty ? "success" : "partial",
+            startedAt: startedAt,
+            errorCode: failures.isEmpty ? "none" : "partial_failure"
+        )
+        CommonAPIAnalyticsService.trackHotelPDF(
+            flowType: "cloud_inbox",
+            status: failures.isEmpty ? "success" : "partial",
+            startedAt: startedAt,
+            errorCode: failures.isEmpty ? "none" : "partial_failure"
+        )
         recordCloudInboxDebug("云端酒店水单收件箱：完成 · drafts=\(drafts.count) · failures=\(failures.count)")
         onDraftsReady(drafts)
         dismiss()

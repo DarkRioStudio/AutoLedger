@@ -102,6 +102,14 @@ struct HotelFolioEmailImportView: View {
         .onChange(of: settings.emailAddress) { _, _ in
             refreshStoredCredentialState()
         }
+        .onAppear {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "local_folio_import",
+                entrySurface: "hotel_stays",
+                isProSurface: true,
+                openReason: "view_appear"
+            )
+        }
         .task {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()
@@ -606,6 +614,13 @@ struct HotelFolioEmailImportView: View {
 
     private func scanMailbox() async {
         guard !isScanning, !isImportingSelection else { return }
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "local_folio_scan",
+            inputType: "imap",
+            entrySurface: "hotel_stays",
+            isProSurface: true
+        )
         isScanning = true
         statusMessage = String(localized: "hotel_stay.email.status.scanning")
         recordEmailScanDebug("邮箱水单扫描：用户手动触发扫描")
@@ -638,9 +653,22 @@ struct HotelFolioEmailImportView: View {
             statusMessage = candidates.isEmpty
                 ? String(localized: "hotel_stay.email.status.no_results")
                 : String(format: String(localized: "hotel_stay.email.status.results_format"), candidates.count)
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "local_folio_scan",
+                inputType: "imap",
+                status: "success",
+                startedAt: startedAt
+            )
             recordEmailScanDebug("邮箱水单扫描：结果已显示 · candidates=\(candidates.count) · attachments=\(allAttachmentIDs.count) · selected=\(selectedAttachmentIDs.count)")
         } catch {
             statusMessage = error.localizedDescription
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "local_folio_scan",
+                inputType: "imap",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
             recordEmailScanDebug("邮箱水单扫描失败：\(error.localizedDescription)")
         }
     }
@@ -654,9 +682,22 @@ struct HotelFolioEmailImportView: View {
         }
         guard canImportSelectedEmailFolio else {
             statusMessage = String(localized: "hotel_stay.email.status.free_quota_used")
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "local_folio_import",
+                featureArea: "local_folio_scan",
+                userAction: "view_plans",
+                dismissReasonCode: "free_quota_used"
+            )
             isPresentingProSheet = true
             return
         }
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "local_folio_pdf_import",
+            inputType: "local_attachment",
+            entrySurface: "local_folio_import",
+            isProSurface: true
+        )
         isImportingSelection = true
         statusMessage = String(localized: "hotel_stay.email.importing_selected")
         recordEmailScanDebug("邮箱水单批量导入：开始 · selected=\(selection.count)")
@@ -684,6 +725,19 @@ struct HotelFolioEmailImportView: View {
 
         if drafts.isEmpty {
             statusMessage = failures.first ?? String(localized: "hotel_stay.email.status.no_selection")
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "local_folio_pdf_import",
+                inputType: "local_attachment",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: "no_drafts"
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "local_folio",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: "no_drafts"
+            )
             return
         }
 
@@ -694,6 +748,19 @@ struct HotelFolioEmailImportView: View {
             message = String(format: String(localized: "hotel_stay.email.status.import_partial_format"), drafts.count, failures.count)
         }
         statusMessage = message
+        CommonAPIAnalyticsService.trackImportCompleted(
+            flowType: "local_folio_pdf_import",
+            inputType: "local_attachment",
+            status: failures.isEmpty ? "success" : "partial",
+            startedAt: startedAt,
+            errorCode: failures.isEmpty ? "none" : "partial_failure"
+        )
+        CommonAPIAnalyticsService.trackHotelPDF(
+            flowType: "local_folio",
+            status: failures.isEmpty ? "success" : "partial",
+            startedAt: startedAt,
+            errorCode: failures.isEmpty ? "none" : "partial_failure"
+        )
         if !hasUnlimitedLocalEmailImport, !drafts.isEmpty {
             let updatedAllowance = normalizedImportAllowance.consumingSuccessfulImport(
                 isProActive: false,
@@ -750,9 +817,22 @@ struct HotelFolioEmailImportView: View {
     private func importAttachment(_ attachment: HotelFolioEmailAttachment, from message: HotelFolioEmailMessage) async {
         guard canImportSelectedEmailFolio else {
             statusMessage = String(localized: "hotel_stay.email.status.free_quota_used")
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "local_folio_import",
+                featureArea: "local_folio_scan",
+                userAction: "view_plans",
+                dismissReasonCode: "free_quota_used"
+            )
             isPresentingProSheet = true
             return
         }
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "local_folio_pdf_import",
+            inputType: "local_attachment",
+            entrySurface: "local_folio_import",
+            isProSurface: true
+        )
         do {
             let draft = try HotelFolioEmailAttachmentImporter().makeDraft(
                 message: message,
@@ -768,9 +848,33 @@ struct HotelFolioEmailImportView: View {
                 HotelFolioEmailImportAllowanceStore.save(updatedAllowance)
             }
             onDraftsReady([draft])
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "local_folio_pdf_import",
+                inputType: "local_attachment",
+                status: "success",
+                startedAt: startedAt
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "local_folio",
+                status: "success",
+                startedAt: startedAt
+            )
             dismiss()
         } catch {
             statusMessage = error.localizedDescription
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "local_folio_pdf_import",
+                inputType: "local_attachment",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
+            CommonAPIAnalyticsService.trackHotelPDF(
+                flowType: "local_folio",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
         }
     }
 

@@ -111,6 +111,13 @@ struct ReportView: View {
                         }
                 }
             }
+            .onAppear {
+                CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                    surface: "report",
+                    entrySurface: "tab_bar",
+                    openReason: "view_appear"
+                )
+            }
             .task {
                 await proEntitlement.loadProducts()
                 await proEntitlement.refreshEntitlements()
@@ -157,6 +164,11 @@ struct ReportView: View {
 
     private func toolbarShareButton(_ snapshot: MonthlySnapshot) -> some View {
         Button {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "monthly_share_card",
+                entrySurface: "report",
+                openReason: "toolbar_share"
+            )
             shareCardPreviewMode = .monthly(monthlyShareCardData(from: snapshot))
         } label: {
             Image(systemName: "square.and.arrow.up")
@@ -595,10 +607,29 @@ struct ReportView: View {
 
     private func exportMonthlyPackage() {
         guard proEntitlement.canUse(.monthlyExportPackage) else {
+            CommonAPIAnalyticsService.trackProGateViewed(
+                surface: "report",
+                featureArea: "monthly_export_package",
+                userAction: "view_plans",
+                dismissReasonCode: "requires_pro"
+            )
             isPresentingProSheet = true
             return
         }
 
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+            surface: "monthly_export_package",
+            entrySurface: "report",
+            isProSurface: true,
+            openReason: "export_tap"
+        )
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "monthly_export_package",
+            inputType: "local_ledger",
+            entrySurface: "report",
+            isProSurface: true
+        )
         do {
             let urls = try store.writeMonthlyExportPackage(
                 referenceDate: selectedMonth,
@@ -609,10 +640,23 @@ struct ReportView: View {
                 urls.count
             )
             monthlyExportSharePayload = MonthlyExportSharePayload(urls: urls)
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "monthly_export_package",
+                inputType: "local_ledger",
+                status: "success",
+                startedAt: startedAt
+            )
         } catch {
             monthlyExportStatusMessage = String(
                 format: String(localized: "report.monthly_export.status_failed_format"),
                 error.localizedDescription
+            )
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "monthly_export_package",
+                inputType: "local_ledger",
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
             )
         }
     }

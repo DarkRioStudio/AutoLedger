@@ -30,6 +30,14 @@ struct AutoLedgerProView: View {
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
         .navigationTitle("pro.title")
+        .onAppear {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "pro_page",
+                entrySurface: "settings_or_gate",
+                isProSurface: true,
+                openReason: "view_appear"
+            )
+        }
         .task {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()

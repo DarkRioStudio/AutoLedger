@@ -53,9 +53,23 @@ enum CommonAPIExchangeRateService {
         let base = normalizedCurrencyCode(baseCurrencyCode)
         let quote = normalizedCurrencyCode(quoteCurrencyCode)
         guard base.count == 3, quote.count == 3 else {
+            CommonAPIAnalyticsService.trackCurrencyLookup(
+                lookupContext: "transaction_conversion",
+                hasForeignCurrency: false,
+                status: "failed",
+                errorCode: "invalid_currency",
+                cacheStatus: "bypass"
+            )
             throw ExchangeRateError.invalidCurrency
         }
         if base == quote {
+            CommonAPIAnalyticsService.trackCurrencyLookup(
+                lookupContext: "transaction_conversion",
+                hasForeignCurrency: false,
+                status: "success",
+                errorCode: "none",
+                cacheStatus: "identity"
+            )
             return Quote(
                 baseCurrencyCode: base,
                 quoteCurrencyCode: quote,
@@ -73,6 +87,13 @@ enum CommonAPIExchangeRateService {
             allowExpired: false
         ) {
             commonAPIExchangeRateLogger.info("[CommonAPI] exchange rate cache hit: \(base)->\(quote) date=\(requestedDate)")
+            CommonAPIAnalyticsService.trackCurrencyLookup(
+                lookupContext: "transaction_conversion",
+                hasForeignCurrency: true,
+                status: "success",
+                errorCode: "none",
+                cacheStatus: "hit"
+            )
             return cached
         }
 
@@ -92,15 +113,53 @@ enum CommonAPIExchangeRateService {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 8
 
+        let startedAt = Date()
+        var didTrackFailure = false
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
+                didTrackFailure = true
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "exchange_rates",
+                    httpStatusBucket: "invalid_response",
+                    startedAt: startedAt,
+                    errorCode: "invalid_response",
+                    cacheStatus: "miss"
+                )
+                CommonAPIAnalyticsService.trackCurrencyLookup(
+                    lookupContext: "transaction_conversion",
+                    hasForeignCurrency: true,
+                    status: "failed",
+                    startedAt: startedAt,
+                    errorCode: "invalid_response",
+                    cacheStatus: "miss"
+                )
                 throw ExchangeRateError.invalidResponse
             }
             guard (200...299).contains(http.statusCode) else {
+                let errorCode: String
                 if let body = try? JSONDecoder().decode(ErrorBody.self, from: data) {
                     commonAPIExchangeRateLogger.warning("[CommonAPI] exchange rate failed: \(body.error.code) \(body.error.message)")
+                    errorCode = body.error.code
+                } else {
+                    errorCode = "http_\(http.statusCode)"
                 }
+                didTrackFailure = true
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "exchange_rates",
+                    httpStatusBucket: CommonAPIAnalyticsService.httpStatusBucket(http.statusCode),
+                    startedAt: startedAt,
+                    errorCode: errorCode,
+                    cacheStatus: "miss"
+                )
+                CommonAPIAnalyticsService.trackCurrencyLookup(
+                    lookupContext: "transaction_conversion",
+                    hasForeignCurrency: true,
+                    status: "failed",
+                    startedAt: startedAt,
+                    errorCode: errorCode,
+                    cacheStatus: "miss"
+                )
                 throw ExchangeRateError.httpFailure(http.statusCode)
             }
 
@@ -113,6 +172,21 @@ enum CommonAPIExchangeRateService {
                 provider: body.provider
             )
             writeCachedQuote(result, requestedDate: requestedDate)
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "exchange_rates",
+                httpStatusBucket: CommonAPIAnalyticsService.httpStatusBucket(http.statusCode),
+                startedAt: startedAt,
+                errorCode: "none",
+                cacheStatus: "miss"
+            )
+            CommonAPIAnalyticsService.trackCurrencyLookup(
+                lookupContext: "transaction_conversion",
+                hasForeignCurrency: true,
+                status: "success",
+                startedAt: startedAt,
+                errorCode: "none",
+                cacheStatus: "miss"
+            )
             return result
         } catch {
             if let cached = cachedQuote(
@@ -122,7 +196,32 @@ enum CommonAPIExchangeRateService {
                 allowExpired: true
             ) {
                 commonAPIExchangeRateLogger.warning("[CommonAPI] exchange rate request failed, using cached rate: \(base)->\(quote) date=\(requestedDate)")
+                CommonAPIAnalyticsService.trackCurrencyLookup(
+                    lookupContext: "transaction_conversion",
+                    hasForeignCurrency: true,
+                    status: "success",
+                    startedAt: startedAt,
+                    errorCode: CommonAPIAnalyticsService.errorCode(for: error),
+                    cacheStatus: "stale"
+                )
                 return cached
+            }
+            if !didTrackFailure {
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "exchange_rates",
+                    httpStatusBucket: "network_error",
+                    startedAt: startedAt,
+                    errorCode: CommonAPIAnalyticsService.errorCode(for: error),
+                    cacheStatus: "miss"
+                )
+                CommonAPIAnalyticsService.trackCurrencyLookup(
+                    lookupContext: "transaction_conversion",
+                    hasForeignCurrency: true,
+                    status: "failed",
+                    startedAt: startedAt,
+                    errorCode: CommonAPIAnalyticsService.errorCode(for: error),
+                    cacheStatus: "miss"
+                )
             }
             throw error
         }

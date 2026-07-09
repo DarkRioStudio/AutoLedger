@@ -16,7 +16,11 @@ struct HomeView: View {
             .tint(AppTheme.accent)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .onAppear {
+                trackSelectedTab(openReason: "initial")
                 consumeQuickLedgerPendingNavigationIfNeeded()
+            }
+            .onChange(of: navigationState.selectedHomeTab) { _, _ in
+                trackSelectedTab(openReason: "tab_selection")
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.quickLedgerOpenLedgerEvent)) { _ in
                 consumeQuickLedgerPendingNavigationIfNeeded()
@@ -68,6 +72,31 @@ struct HomeView: View {
     private func consumeQuickLedgerPendingNavigationIfNeeded() {
         guard QuickLedgerNavigationState.shared.consumeOpenLedgerPending() else { return }
         navigationState.openLedgerTab()
+    }
+
+    private func trackSelectedTab(openReason: String) {
+        CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+            surface: analyticsSurfaceName(for: navigationState.selectedHomeTab),
+            entrySurface: "tab_bar",
+            openReason: openReason
+        )
+    }
+
+    private func analyticsSurfaceName(for rawValue: Int) -> String {
+        switch AutoLedgerHomeTab(rawValue: rawValue) {
+        case .inbox:
+            return "tab_inbox"
+        case .ledger:
+            return "tab_ledger"
+        case .hotelStays:
+            return "tab_hotel_stays"
+        case .report:
+            return "tab_report"
+        case .settings:
+            return "tab_settings"
+        case .none:
+            return "tab_unknown"
+        }
     }
 }
 

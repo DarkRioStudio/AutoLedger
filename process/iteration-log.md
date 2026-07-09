@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-09（ITER-405 Common API dashboard 入口与样式收口）
+更新日期：2026-07-09（ITER-406 匿名观测事件扩展）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-406 匿名观测事件扩展
+- 日期：2026-07-09
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Governance / Observability
+- 类型：能力增强 / 治理 / Worker 合同
+- 目标：补全隐私安全匿名观测事件，让 dashboard 能判断大家怎么用 App、主要卡点在哪里，并为未来年度总结提供不指向个人的 App 层综合数据。
+- 改动范围：`AutoLedgerAnalyticsInstrumentation` 事件目录与指标快照；`CommonAPIAnalyticsService`；首页 / 实时 OCR / 截图导入 / 确认页 / 酒店水单 / 月报 / 账本搜索 / 数据清洗 / Pro 页面 / Pro 与 Support 购买 / iPad PDF 导入等 App 端匿名事件接入；`common-api` analytics allow-list、dashboard 聚合和 Worker 合同测试；`PrivacyInfo.xcprivacy`；README、`v1.7.0-plan`、CHANGELOG。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、ASC metadata、Worker D1 schema、entitlement、订阅价格、Xcode Cloud workflow、截图 / App Preview 或构建 tag。
+- 完成内容：App 端新增 fire-and-forget 匿名事件：功能入口、导入开始 / 完成、确认页保存 / 放弃、汇率查询、酒店 PDF、Common API 状态、Pro gate、Pro / Support 购买、月结包、月报分享和数据清洗入口；上传失败只写本地 log，不阻断用户流程。
+- 完成内容：Worker analytics allow-list 新增 `al_feature_surface_opened`，dashboard 聚合新增 `feature_surface_open_count`、`hotel_pdf_completion_rate`、`common_api_status_top_n` 和 `pro_gate_action_count`，用于定位入口使用、酒店导入完成率、基础设施状态和 Pro gate 行为分布。
+- 完成内容：隐私边界继续禁止金额、商户、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR / rawText、交易 ID、StoreKit transaction id、支付数据和任何可还原个人账本的信息；`PrivacyInfo.xcprivacy` 已补充 Product Interaction / Analytics，not linked，not tracking。
+- 完成内容：文档明确个人年度总结仍以本机账本和用户主动生成内容为主体；服务端 analytics 只可引用全体匿名聚合口径作为 App 层综合背景，不做个人画像、跨 App 识别或自动化决策输入。
+- 未完成内容：本轮没有做已登录 dashboard 人工截图复核；ASC App Privacy、官网隐私政策和 Review Notes 的 Product Interaction / Analytics 文案仍需发布前人工同步确认。
+- 测试情况：`git diff --check` PASS；`plutil -lint AutoLedger/AutoLedger/PrivacyInfo.xcprivacy` PASS；`cd tools/worker/common-api && npm run check` PASS，覆盖 `wrangler types`、`tsc --noEmit` 和 36 个 Vitest 合同测试；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` PASS。已部署 staging Version ID `0f1e2505-4116-4c9d-a6f9-8767d7531475`、production Version ID `bad6f789-d8fd-49d2-abf3-5e332a2b2a2c`；线上 smoke 确认 production manifest 200、新 `al_feature_surface_opened` 写入 202、`getautoledger.app/dashboard/data` 未登录被 Cloudflare Access 302 拦截、`api.darkrio326.top/dashboard/data` 未保护 host 返回 403。
+- 风险与注意事项：当前事件面已包含 Product Interaction，发布前必须确保 ASC App Privacy、官网隐私政策和 Review Notes 不再只写 Performance Data；dashboard 只应在 Cloudflare Access 保护下查看聚合数据，不导出 raw event rows 或 payload JSON。
+- 回滚方式：回退本轮 App 端事件调用、`CommonAPIAnalyticsService` 扩展、Core catalog / tests、Worker allow-list / dashboard 聚合 / tests、`PrivacyInfo.xcprivacy` 与文档即可；无数据库 schema 或远端数据迁移。
+- 结论：本轮完成，AutoLedger 已具备第一版匿名 App 层观测闭环，可支撑发布前卡点判断和未来年度总结的综合背景数据。
+- 下一步建议：用 Zero Trust 会话查看 dashboard 真实数据；同步 ASC App Privacy / 官网隐私政策 / Review Notes，再决定是否把跨 App 总面板放到 `dashboard.darkrio326.top`。
 
 ### ITER-405 Common API dashboard 入口与样式收口
 - 日期：2026-07-09

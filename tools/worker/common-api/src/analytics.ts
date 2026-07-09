@@ -67,6 +67,14 @@ const allowedFieldsByEventName: Record<string, Set<string>> = {
     "result",
     "error_code"
   ]),
+  al_feature_surface_opened: new Set([
+    "event_id",
+    "app_version",
+    "surface",
+    "entry_surface",
+    "is_pro_surface",
+    "open_reason"
+  ]),
   al_import_flow_started: new Set([
     "event_id",
     "app_version",

@@ -80,6 +80,22 @@ struct DataCleaningSuggestionsView: View {
         .background(AppTheme.screenGradient.ignoresSafeArea())
         .navigationTitle("ipad.cleaning.title")
         .autoLedgerSolidNavigationBarChrome()
+        .onAppear {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "data_cleaning",
+                entrySurface: "settings_or_ledger",
+                isProSurface: true,
+                openReason: "view_appear"
+            )
+        }
+        .onChange(of: cloudAssistEnabled) { _, isEnabled in
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                surface: "data_cleaning_cloud_assist",
+                entrySurface: "data_cleaning",
+                isProSurface: true,
+                openReason: isEnabled ? "enabled" : "disabled"
+            )
+        }
         .task {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()
@@ -164,6 +180,12 @@ struct DataCleaningSuggestionsView: View {
                     .foregroundStyle(AppTheme.mutedInk)
             } else {
                 Button {
+                    CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                        surface: "data_cleaning_rules",
+                        entrySurface: "data_cleaning",
+                        isProSurface: true,
+                        openReason: "apply_rules"
+                    )
                     pendingPreviews = advancedRulePlan.previewItems
                     showsApplyConfirmation = true
                 } label: {
@@ -400,6 +422,12 @@ struct DataCleaningSuggestionsView: View {
             }
 
             Button {
+                CommonAPIAnalyticsService.trackProGateViewed(
+                    surface: "data_cleaning",
+                    featureArea: "advanced_rule_automation",
+                    userAction: "view_plans",
+                    dismissReasonCode: "requires_pro"
+                )
                 isPresentingProSheet = true
             } label: {
                 Label("pro.cta.view_plans", systemImage: "sparkles")
@@ -455,6 +483,12 @@ struct DataCleaningSuggestionsView: View {
 
             HStack(spacing: 10) {
                 Button {
+                    CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                        surface: "data_cleaning_suggestion",
+                        entrySurface: "data_cleaning",
+                        isProSurface: true,
+                        openReason: "ignore_\(analyticsKind(item.kind))"
+                    )
                     store.ignoreDataCleaningPreview(id: item.id)
                 } label: {
                     Label("ipad.cleaning.ignore", systemImage: "eye.slash")
@@ -463,6 +497,12 @@ struct DataCleaningSuggestionsView: View {
                 .buttonStyle(.bordered)
 
                 Button {
+                    CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                        surface: "data_cleaning_suggestion",
+                        entrySurface: "data_cleaning",
+                        isProSurface: true,
+                        openReason: "apply_\(analyticsKind(item.kind))"
+                    )
                     pendingPreviews = [item]
                     showsApplyConfirmation = true
                 } label: {
@@ -522,7 +562,20 @@ struct DataCleaningSuggestionsView: View {
 
     private func applyPendingPreviews() {
         guard !pendingPreviews.isEmpty else { return }
+        let startedAt = Date()
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "data_cleaning",
+            inputType: "local_ledger",
+            entrySurface: "data_cleaning",
+            isProSurface: true
+        )
         _ = store.applyDataCleaningPreviews(pendingPreviews)
+        CommonAPIAnalyticsService.trackImportCompleted(
+            flowType: "data_cleaning",
+            inputType: "local_ledger",
+            status: "success",
+            startedAt: startedAt
+        )
         pendingPreviews = []
     }
 
@@ -546,6 +599,17 @@ struct DataCleaningSuggestionsView: View {
             return String(localized: "ipad.cleaning.reason.category")
         case .duplicateCandidate:
             return String(localized: "ipad.cleaning.reason.duplicate")
+        }
+    }
+
+    private func analyticsKind(_ kind: DataCleaningPreviewKind) -> String {
+        switch kind {
+        case .merchantAlias:
+            return "alias"
+        case .categoryCorrection:
+            return "category_correction"
+        case .duplicateCandidate:
+            return "duplicate_candidate"
         }
     }
 

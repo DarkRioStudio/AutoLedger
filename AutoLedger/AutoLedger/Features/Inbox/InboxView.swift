@@ -912,6 +912,13 @@ struct InboxView: View {
     }
 
     private func importImageData(_ data: Data, imageSource: ImageSource) async {
+        let startedAt = Date()
+        let inputType = analyticsInputType(for: imageSource)
+        CommonAPIAnalyticsService.trackImportStarted(
+            flowType: "receipt_scan",
+            inputType: inputType,
+            entrySurface: "inbox"
+        )
         switch imageSource {
         case .camera:
             isImportingCamera = true
@@ -940,8 +947,46 @@ struct InboxView: View {
                 ocrMinConfidence: ocrResult.minimumWordConfidence,
                 requiresConfirmation: true
             )
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "receipt_scan",
+                inputType: inputType,
+                status: "success",
+                startedAt: startedAt
+            )
         } catch {
             store.setImportError(error.localizedDescription, imageSource: imageSource)
+            CommonAPIAnalyticsService.trackImportCompleted(
+                flowType: "receipt_scan",
+                inputType: inputType,
+                status: "failed",
+                startedAt: startedAt,
+                errorCode: CommonAPIAnalyticsService.errorCode(for: error)
+            )
+        }
+    }
+
+    private func analyticsInputType(for imageSource: ImageSource) -> String {
+        switch imageSource {
+        case .camera:
+            return "camera"
+        case .photoLibrary:
+            return "photo_library"
+        case .shareExtension:
+            return "share_extension"
+        case .clipboard:
+            return "clipboard"
+        case .shortcutIntent:
+            return "shortcut_intent"
+        case .voiceIntent:
+            return "voice_intent"
+        case .documentPDF:
+            return "document_pdf"
+        case .emailAttachment:
+            return "local_attachment"
+        case .cloudWorker:
+            return "cloud_worker"
+        case .unknown:
+            return "unknown"
         }
     }
 

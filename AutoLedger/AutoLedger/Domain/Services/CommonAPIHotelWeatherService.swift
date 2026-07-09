@@ -79,19 +79,66 @@ enum CommonAPIHotelWeatherService {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 8
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw HotelWeatherError.invalidResponse
-        }
-        guard (200...299).contains(http.statusCode) else {
-            if let body = try? JSONDecoder().decode(ErrorBody.self, from: data) {
-                commonAPIHotelWeatherLogger.warning("[CommonAPI] hotel weather failed: \(body.error.code) \(body.error.message)")
-                throw HotelWeatherError.apiFailure(code: body.error.code)
+        let startedAt = Date()
+        var didTrackFailure = false
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                didTrackFailure = true
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "hotel_weather",
+                    httpStatusBucket: "invalid_response",
+                    startedAt: startedAt,
+                    errorCode: "invalid_response",
+                    cacheStatus: "bypass"
+                )
+                throw HotelWeatherError.invalidResponse
             }
-            throw HotelWeatherError.httpFailure(http.statusCode)
-        }
+            guard (200...299).contains(http.statusCode) else {
+                if let body = try? JSONDecoder().decode(ErrorBody.self, from: data) {
+                    commonAPIHotelWeatherLogger.warning("[CommonAPI] hotel weather failed: \(body.error.code) \(body.error.message)")
+                    didTrackFailure = true
+                    CommonAPIAnalyticsService.trackCommonAPIRequest(
+                        endpointGroup: "hotel_weather",
+                        httpStatusBucket: CommonAPIAnalyticsService.httpStatusBucket(http.statusCode),
+                        startedAt: startedAt,
+                        errorCode: body.error.code,
+                        cacheStatus: "bypass"
+                    )
+                    throw HotelWeatherError.apiFailure(code: body.error.code)
+                }
+                didTrackFailure = true
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "hotel_weather",
+                    httpStatusBucket: CommonAPIAnalyticsService.httpStatusBucket(http.statusCode),
+                    startedAt: startedAt,
+                    errorCode: "http_\(http.statusCode)",
+                    cacheStatus: "bypass"
+                )
+                throw HotelWeatherError.httpFailure(http.statusCode)
+            }
 
-        return try JSONDecoder().decode(Response.self, from: data)
+            let decoded = try JSONDecoder().decode(Response.self, from: data)
+            CommonAPIAnalyticsService.trackCommonAPIRequest(
+                endpointGroup: "hotel_weather",
+                httpStatusBucket: CommonAPIAnalyticsService.httpStatusBucket(http.statusCode),
+                startedAt: startedAt,
+                errorCode: "none",
+                cacheStatus: decoded.cached ? "hit" : "miss"
+            )
+            return decoded
+        } catch {
+            if !didTrackFailure {
+                CommonAPIAnalyticsService.trackCommonAPIRequest(
+                    endpointGroup: "hotel_weather",
+                    httpStatusBucket: httpStatusBucket(for: error),
+                    startedAt: startedAt,
+                    errorCode: errorCode(for: error),
+                    cacheStatus: "bypass"
+                )
+            }
+            throw error
+        }
     }
 
     nonisolated private static func formattedCoordinate(_ value: Double) -> String {
@@ -115,6 +162,32 @@ enum CommonAPIHotelWeatherService {
             case .apiFailure(let code):
                 return "Common API hotel weather failed: \(code)"
             }
+        }
+    }
+
+    nonisolated private static func httpStatusBucket(for error: Error) -> String {
+        switch error {
+        case HotelWeatherError.invalidResponse:
+            return "invalid_response"
+        case let HotelWeatherError.httpFailure(statusCode):
+            return CommonAPIAnalyticsService.httpStatusBucket(statusCode)
+        default:
+            return "network_error"
+        }
+    }
+
+    nonisolated private static func errorCode(for error: Error) -> String {
+        switch error {
+        case HotelWeatherError.invalidEndpoint:
+            return "invalid_endpoint"
+        case HotelWeatherError.invalidResponse:
+            return "invalid_response"
+        case let HotelWeatherError.httpFailure(statusCode):
+            return "http_\(statusCode)"
+        case let HotelWeatherError.apiFailure(code):
+            return code
+        default:
+            return CommonAPIAnalyticsService.errorCode(for: error)
         }
     }
 }

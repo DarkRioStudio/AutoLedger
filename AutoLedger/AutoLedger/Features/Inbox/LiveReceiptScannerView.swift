@@ -50,7 +50,19 @@ struct LiveReceiptScannerView: View {
                 }
             }
             .onAppear {
-                availability = LiveReceiptScannerCapability.currentAvailability()
+                let currentAvailability = LiveReceiptScannerCapability.currentAvailability()
+                availability = currentAvailability
+                CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+                    surface: "live_receipt_scanner",
+                    entrySurface: "inbox",
+                    openReason: "sheet_presented"
+                )
+                CommonAPIAnalyticsService.trackImportStarted(
+                    flowType: "receipt_scan",
+                    inputType: "live_ocr",
+                    entrySurface: "inbox",
+                    startStatus: currentAvailability.analyticsStartStatus
+                )
             }
             .task(id: latestText) {
                 await stabilizeLatestText()
@@ -285,6 +297,11 @@ struct LiveReceiptScannerView: View {
     private func confirmLiveText() {
         let text = stableText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        CommonAPIAnalyticsService.trackImportCompleted(
+            flowType: "receipt_scan",
+            inputType: "live_ocr",
+            status: "success"
+        )
         onRecognizedText(text)
         dismiss()
     }
@@ -311,6 +328,15 @@ struct LiveReceiptScannerView: View {
 private enum LiveReceiptScannerAvailability: Equatable {
     case available(languages: [String])
     case unavailable(LiveReceiptScannerUnavailableReason)
+
+    var analyticsStartStatus: String {
+        switch self {
+        case .available:
+            return "started"
+        case .unavailable(let reason):
+            return reason.analyticsCode
+        }
+    }
 }
 
 private enum LiveReceiptScannerUnavailableReason: Equatable {
@@ -337,6 +363,17 @@ private enum LiveReceiptScannerUnavailableReason: Equatable {
             return String(localized: "live_receipt_scan.unavailable.camera_restricted")
         case .systemUnavailable:
             return String(localized: "live_receipt_scan.unavailable.system")
+        }
+    }
+
+    var analyticsCode: String {
+        switch self {
+        case .unsupported:
+            return "unavailable_unsupported"
+        case .cameraRestricted:
+            return "unavailable_camera_restricted"
+        case .systemUnavailable:
+            return "unavailable_system"
         }
     }
 }

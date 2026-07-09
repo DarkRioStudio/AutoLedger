@@ -105,15 +105,25 @@ export function autoLedgerDashboardHTMLResponse(): Response {
 
 function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePayload }>): DashboardMetric[] {
   const launchEvents = events.filter((event) => event.eventName === "al_perf_app_launch");
+  const featureSurfaceEvents = events.filter((event) => event.eventName === "al_feature_surface_opened");
   const importStarts = events.filter((event) => event.eventName === "al_import_flow_started");
   const importCompletions = events.filter((event) => event.eventName === "al_import_flow_completed");
   const confirmationEvents = events.filter((event) => event.eventName === "al_confirmation_state");
   const currencyEvents = events.filter((event) => event.eventName === "al_currency_lookup_status");
+  const hotelPDFEvents = events.filter((event) => event.eventName === "al_hotel_pdf_flow_status");
+  const commonAPIEvents = events.filter((event) => event.eventName === "al_common_api_request_status");
+  const proGateEvents = events.filter((event) => event.eventName === "al_pro_gate_viewed");
   const purchaseEvents = events.filter((event) => event.eventName === "al_purchase_flow_status");
   const privacyEvents = events.filter((event) => event.eventName === "al_privacy_payload_guard_violation");
 
   return [
     countMetric("total_events_count", "已接收匿名事件总数", events.length),
+    countMetric(
+      "feature_surface_open_count",
+      "功能入口打开分布",
+      featureSurfaceEvents.length,
+      breakdown(featureSurfaceEvents.map((event) => stringPayload(event.payload, "surface") ?? "unknown"))
+    ),
     percentMetric(
       "launch_success_rate",
       "启动成功率",
@@ -143,6 +153,24 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       "汇率查询成功率",
       currencyEvents.filter((event) => stringPayload(event.payload, "rate_lookup_status") === "success").length,
       currencyEvents.length
+    ),
+    percentMetric(
+      "hotel_pdf_completion_rate",
+      "酒店 PDF 完成率",
+      hotelPDFEvents.filter((event) => stringPayload(event.payload, "status") === "success").length,
+      hotelPDFEvents.length
+    ),
+    countMetric(
+      "common_api_status_top_n",
+      "Common API 状态分布",
+      commonAPIEvents.length,
+      breakdown(commonAPIEvents.map((event) => stringPayload(event.payload, "http_status_bucket") ?? "unknown"))
+    ),
+    countMetric(
+      "pro_gate_action_count",
+      "Pro 入口行为分布",
+      proGateEvents.length,
+      breakdown(proGateEvents.map((event) => stringPayload(event.payload, "user_action") ?? "unknown"))
     ),
     percentMetric(
       "purchase_flow_failure_rate",
@@ -508,8 +536,12 @@ const dashboardHTML = `<!doctype html>
   <script>
     const metricOrder = [
       "total_events_count",
+      "feature_surface_open_count",
       "launch_success_rate",
       "import_completion_rate",
+      "hotel_pdf_completion_rate",
+      "common_api_status_top_n",
+      "pro_gate_action_count",
       "purchase_flow_failure_rate",
       "privacy_payload_violation_count",
       "currency_lookup_success_rate",
