@@ -167,6 +167,64 @@ enum CommonAPIAnalyticsService {
         ])
     }
 
+    nonisolated static func trackCrashDiagnostic(
+        diagnosticType: String,
+        signalSource: String,
+        severity: String,
+        count: Int = 1,
+        terminationState: String = "unknown",
+        errorCode: String = "none"
+    ) {
+        fireAndForget(.crashDiagnostic, payload: [
+            "diagnostic_type": .string(safeEnum(diagnosticType)),
+            "signal_source": .string(safeEnum(signalSource)),
+            "severity": .string(safeEnum(severity)),
+            "count_bucket": .string(countBucket(count)),
+            "termination_state": .string(safeEnum(terminationState)),
+            "error_code": .string(safeErrorCode(errorCode))
+        ])
+    }
+
+    nonisolated static func trackPerformanceDiagnostic(
+        diagnosticType: String,
+        surface: String,
+        operation: String,
+        startedAt: Date? = nil,
+        count: Int = 1,
+        severity: String = "info",
+        result: String = "completed",
+        errorCode: String = "none"
+    ) {
+        fireAndForget(.performanceDiagnostic, payload: [
+            "diagnostic_type": .string(safeEnum(diagnosticType)),
+            "surface": .string(safeEnum(surface)),
+            "operation": .string(safeEnum(operation)),
+            "duration_ms_bucket": .string(durationBucket(since: startedAt)),
+            "count_bucket": .string(countBucket(count)),
+            "severity": .string(safeEnum(severity)),
+            "result": .string(safeEnum(result)),
+            "error_code": .string(safeErrorCode(errorCode))
+        ])
+    }
+
+    nonisolated static func trackUIResponsiveness(
+        surface: String,
+        operation: String,
+        startedAt: Date
+    ) {
+        Task { @MainActor in
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(120))
+            trackPerformanceDiagnostic(
+                diagnosticType: "ui_response",
+                surface: surface,
+                operation: operation,
+                startedAt: startedAt,
+                severity: severity(forDurationSince: startedAt)
+            )
+        }
+    }
+
     nonisolated static func httpStatusBucket(_ statusCode: Int) -> String {
         switch statusCode {
         case 200...299:
@@ -196,6 +254,20 @@ enum CommonAPIAnalyticsService {
             return "10s_30s"
         default:
             return "over_30s"
+        }
+    }
+
+    nonisolated private static func severity(forDurationSince startedAt: Date) -> String {
+        let milliseconds = max(0, Int(Date().timeIntervalSince(startedAt) * 1000))
+        switch milliseconds {
+        case 0..<1_000:
+            return "info"
+        case 1_000..<3_000:
+            return "notice"
+        case 3_000..<10_000:
+            return "warning"
+        default:
+            return "critical"
         }
     }
 

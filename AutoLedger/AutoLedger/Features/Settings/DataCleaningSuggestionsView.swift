@@ -81,11 +81,17 @@ struct DataCleaningSuggestionsView: View {
         .navigationTitle("ipad.cleaning.title")
         .autoLedgerSolidNavigationBarChrome()
         .onAppear {
+            let startedAt = Date()
             CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
                 surface: "data_cleaning",
                 entrySurface: "settings_or_ledger",
                 isProSurface: true,
                 openReason: "view_appear"
+            )
+            CommonAPIAnalyticsService.trackUIResponsiveness(
+                surface: "data_cleaning",
+                operation: "surface_ready",
+                startedAt: startedAt
             )
         }
         .onChange(of: cloudAssistEnabled) { _, isEnabled in

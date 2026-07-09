@@ -75,11 +75,20 @@ struct HomeView: View {
     }
 
     private func trackSelectedTab(openReason: String) {
+        let startedAt = Date()
+        let surface = analyticsSurfaceName(for: navigationState.selectedHomeTab)
         CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
-            surface: analyticsSurfaceName(for: navigationState.selectedHomeTab),
+            surface: surface,
             entrySurface: "tab_bar",
             openReason: openReason
         )
+        if openReason == "tab_selection" {
+            CommonAPIAnalyticsService.trackUIResponsiveness(
+                surface: surface,
+                operation: "tab_switch",
+                startedAt: startedAt
+            )
+        }
     }
 
     private func analyticsSurfaceName(for rawValue: Int) -> String {

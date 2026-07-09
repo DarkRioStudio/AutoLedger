@@ -179,11 +179,17 @@ struct ReportView: View {
 
     private func selectMonth(_ month: Date) {
         guard let monthStart = monthStart(for: month) else { return }
+        let startedAt = Date()
         withOptionalAnimation(.easeInOut(duration: 0.18)) {
             selectedMonth = monthStart
             selectedCategoryID = nil
             selectedTrendLabel = nil
         }
+        CommonAPIAnalyticsService.trackUIResponsiveness(
+            surface: "report",
+            operation: "month_switch",
+            startedAt: startedAt
+        )
     }
 
     private func monthStart(for date: Date) -> Date? {

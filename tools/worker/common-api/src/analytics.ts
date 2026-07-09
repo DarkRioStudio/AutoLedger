@@ -149,6 +149,28 @@ const allowedFieldsByEventName: Record<string, Set<string>> = {
     "error_code",
     "duration_ms_bucket"
   ]),
+  al_crash_diagnostic: new Set([
+    "event_id",
+    "app_version",
+    "diagnostic_type",
+    "signal_source",
+    "severity",
+    "count_bucket",
+    "termination_state",
+    "error_code"
+  ]),
+  al_performance_diagnostic: new Set([
+    "event_id",
+    "app_version",
+    "diagnostic_type",
+    "surface",
+    "operation",
+    "duration_ms_bucket",
+    "count_bucket",
+    "severity",
+    "result",
+    "error_code"
+  ]),
   al_privacy_payload_guard_violation: new Set([
     "event_id",
     "app_version",

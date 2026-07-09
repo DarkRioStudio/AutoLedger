@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-09（ITER-406 匿名观测事件扩展）
+更新日期：2026-07-09（ITER-407 崩溃与性能观测补齐）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-407 崩溃与性能观测补齐
+- 日期：2026-07-09
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Governance / Observability
+- 类型：能力增强 / Worker 合同 / 隐私治理
+- 目标：在现有产品交互匿名事件基础上，补齐 App 崩溃数据和性能数据埋点，并让 Common API dashboard 能展示崩溃信号、慢操作和性能操作分布，帮助定位真机卡顿与 App Review / TestFlight 崩溃问题。
+- 改动范围：新增 `AppDiagnosticsAnalyticsMonitor`；扩展 `CommonAPIAnalyticsService`、`AutoLedgerAnalyticsInstrumentation`、`PrivacyInfo.xcprivacy`、关键 App 生命周期 / Tab / 月报 / 数据清洗 / store refresh 调用点；扩展 `common-api` analytics allow-list、dashboard 聚合、HTML 模块和 Worker 合同测试；更新 `v1.7.0-plan` 与 CHANGELOG。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、ASC metadata、Worker D1 schema、entitlement、订阅价格、Xcode Cloud workflow、截图 / App Preview 或构建 tag。
+- 完成内容：App 端通过 MetricKit 订阅崩溃、hang、CPU exception、disk write exception 和每日 metric payload；通过会话状态标记识别上次 active session 未正常进入 background / terminate 的恢复信号。
+- 完成内容：Tab 切换、月报月份切换、数据清洗页面打开和前台 / 外部入口 store refresh 记录性能诊断事件，只上传 surface、operation、duration bucket、count bucket、severity、result 和 error code，不上传金额、商户、账单、OCR、PDF 或设备标识。
+- 完成内容：Worker allow-list 新增 `al_crash_diagnostic` 和 `al_performance_diagnostic`；dashboard 新增崩溃诊断、慢操作和性能操作分布模块；manifest 继续声明 analytics 只接受匿名 workflow / performance bucket / error code。
+- 完成内容：`PrivacyInfo.xcprivacy` 已声明 Crash Data、Performance Data 和 Product Interaction 均用于 Analytics，not linked，not tracking。
+- 未完成内容：本轮没有运行 Instruments，也没有做真机性能剖析；dashboard 已登录后的真实数据视觉复核仍需用户在 Cloudflare Access 会话下查看。
+- 测试情况：`git diff --check` PASS；`plutil -lint AutoLedger/AutoLedger/PrivacyInfo.xcprivacy` PASS；`cd tools/worker/common-api && npm run check` PASS，覆盖 `wrangler types`、`tsc --noEmit` 和 36 个 Vitest 合同测试；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO build` PASS。已部署 staging Version ID `fa4beb82-b11d-4092-8a98-8845374376be`、production Version ID `adf28663-7b67-430b-bd21-df0929c52fbe`；线上 smoke 确认 production manifest HTTP 200、新 crash / performance synthetic 事件写入 HTTP 202、production D1 可查到 `al_crash_diagnostic` 和 `al_performance_diagnostic`，`getautoledger.app/dashboard/data` 未登录返回 Cloudflare Access 302，`api.darkrio326.top/dashboard/data` 未保护 host 伪造邮箱头返回 403。
+- 风险与注意事项：MetricKit 诊断存在系统延迟，无法替代 Xcode Organizer / Instruments 的精确崩溃和性能分析；当前事件只用于聚合诊断和发布判断，不应用于用户画像、广告追踪、跨 App 识别或自动化决策。
+- 回滚方式：回退新增 App 诊断 monitor、App 调用点、Core catalog / tests、Worker allow-list / dashboard / tests、`PrivacyInfo.xcprivacy` 与文档即可；无数据库 schema 或远端数据迁移。
+- 结论：本轮完成，AutoLedger dashboard 已能接收并聚合崩溃和性能诊断信号，为后续真机卡顿排查提供最小闭环。
+- 下一步建议：在最新 TestFlight build 上复测卡顿路径；如果 dashboard 显示 `month_switch`、`tab_switch` 或 `refresh_from_foreground` 慢操作升高，再用 Instruments 的 Time Profiler / SwiftUI 模板针对性抓样。
 
 ### ITER-406 匿名观测事件扩展
 - 日期：2026-07-09

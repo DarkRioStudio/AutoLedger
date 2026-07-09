@@ -154,9 +154,21 @@ struct IPadWorkspaceView: View {
 
     private func select(_ section: IPadWorkspaceSection) {
         guard selection != section else { return }
+        let startedAt = Date()
         resetDetailColumn(leaving: selection)
         selection = section
         sidebarSelection = section
+        CommonAPIAnalyticsService.trackUIResponsiveness(
+            surface: "ipad_workspace",
+            operation: "section_switch",
+            startedAt: startedAt
+        )
+        CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
+            surface: "workspace_\(section.rawValue)",
+            entrySurface: "sidebar",
+            isProSurface: section == .cleaning,
+            openReason: "section_selection"
+        )
     }
 
     private func resetDetailColumn(leaving oldSection: IPadWorkspaceSection) {

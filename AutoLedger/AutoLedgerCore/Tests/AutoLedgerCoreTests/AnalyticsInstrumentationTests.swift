@@ -102,6 +102,48 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         ]))
     }
 
+    func testCrashAndPerformanceDiagnosticsUseOnlyBucketsAndEnums() throws {
+        let crashEvent = try AutoLedgerAnalyticsEvent.make(
+            .crashDiagnostic,
+            payload: [
+                "event_id": .string("crash-1"),
+                "app_version": .string("1.6.0"),
+                "diagnostic_type": .string("crash"),
+                "signal_source": .string("metrickit"),
+                "severity": .string("critical"),
+                "count_bucket": .string("1"),
+                "termination_state": .string("unknown"),
+                "error_code": .string("none")
+            ]
+        )
+        let performanceEvent = try AutoLedgerAnalyticsEvent.make(
+            .performanceDiagnostic,
+            payload: [
+                "event_id": .string("perf-1"),
+                "app_version": .string("1.6.0"),
+                "diagnostic_type": .string("ui_response"),
+                "surface": .string("tab_report"),
+                "operation": .string("tab_switch"),
+                "duration_ms_bucket": .string("3s_10s"),
+                "count_bucket": .string("1"),
+                "severity": .string("warning"),
+                "result": .string("completed"),
+                "error_code": .string("none")
+            ]
+        )
+
+        XCTAssertEqual(crashEvent.eventName, "al_crash_diagnostic")
+        XCTAssertEqual(performanceEvent.eventName, "al_performance_diagnostic")
+        XCTAssertThrowsError(try AutoLedgerAnalyticsEvent.make(.crashDiagnostic, payload: [
+            "event_id": .string("crash-2"),
+            "stack_trace": .string("raw stack")
+        ]))
+        XCTAssertThrowsError(try AutoLedgerAnalyticsEvent.make(.performanceDiagnostic, payload: [
+            "event_id": .string("perf-2"),
+            "merchant": .string("Cafe Example")
+        ]))
+    }
+
     func testCatalogCoversPlanEventsAndMinimalDashboardMetrics() {
         let eventNames = Set(AutoLedgerAnalyticsCatalog.eventDefinitions.map(\.eventName))
         XCTAssertTrue(eventNames.isSuperset(of: [
@@ -115,6 +157,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "al_common_api_request_status",
             "al_pro_gate_viewed",
             "al_purchase_flow_status",
+            "al_crash_diagnostic",
+            "al_performance_diagnostic",
             "al_privacy_payload_guard_violation"
         ]))
 
@@ -130,6 +174,9 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "common_api_status_top_n",
             "pro_gate_boundary_risk",
             "purchase_flow_failure_rate",
+            "crash_diagnostic_count",
+            "slow_operation_count",
+            "performance_operation_top_n",
             "privacy_payload_violation_count"
         ]))
     }
@@ -182,11 +229,36 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "error_code": .string("network_error"),
             "duration_ms_bucket": .string("1s_3s")
         ])
+        try recorder.record(.crashDiagnostic, payload: [
+            "event_id": .string("crash-1"),
+            "app_version": .string("1.6.0"),
+            "diagnostic_type": .string("crash"),
+            "signal_source": .string("metrickit"),
+            "severity": .string("critical"),
+            "count_bucket": .string("1"),
+            "termination_state": .string("unknown"),
+            "error_code": .string("none")
+        ])
+        try recorder.record(.performanceDiagnostic, payload: [
+            "event_id": .string("perf-1"),
+            "app_version": .string("1.6.0"),
+            "diagnostic_type": .string("ui_response"),
+            "surface": .string("tab_report"),
+            "operation": .string("month_switch"),
+            "duration_ms_bucket": .string("3s_10s"),
+            "count_bucket": .string("1"),
+            "severity": .string("warning"),
+            "result": .string("completed"),
+            "error_code": .string("none")
+        ])
 
         let snapshot = recorder.makeMinimalDashboardSnapshot()
 
         XCTAssertEqual(snapshot.metric(id: "import_completion_rate")?.value, 50)
         XCTAssertEqual(snapshot.metric(id: "purchase_flow_failure_rate")?.value, 100)
+        XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.value, 1)
+        XCTAssertEqual(snapshot.metric(id: "slow_operation_count")?.value, 1)
+        XCTAssertEqual(snapshot.metric(id: "performance_operation_top_n")?.breakdown["month_switch"], 1)
         XCTAssertEqual(snapshot.metric(id: "privacy_payload_violation_count")?.value, 0)
         XCTAssertEqual(snapshot.metric(id: "feature_surface_open_count")?.breakdown["tab_inbox"], 1)
         XCTAssertEqual(snapshot.metric(id: "import_error_code_top_n")?.breakdown["none"], 1)

@@ -147,7 +147,7 @@ private struct AutoLedgerRootView: View {
                 scheduleGemmaWarmupIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
-                store.refreshFromStore()
+                refreshStoreWithPerformanceTracking(operation: "refresh_from_intent_notification")
                 Task {
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
@@ -165,8 +165,9 @@ private struct AutoLedgerRootView: View {
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
+                    AppSessionDiagnosticsService.markActive()
                     consumeStructuredJSONHandoffIfNeeded()
-                    store.refreshFromStore()
+                    refreshStoreWithPerformanceTracking(operation: "refresh_from_foreground")
                     Task {
                         await ProEntitlementManager.shared.refreshEntitlements()
                     }
@@ -193,6 +194,7 @@ private struct AutoLedgerRootView: View {
                         NotificationService.shared.scheduleUpcomingChargeReminders(for: store.subscriptions)
                     }
                 } else if newPhase == .background {
+                    AppSessionDiagnosticsService.markCleanBackground()
                     store.backupOnAppBackground()
                 }
             }
@@ -283,8 +285,20 @@ private struct AutoLedgerRootView: View {
         }
 
         defaults.removeObject(forKey: Self.hotelFolioDraftReviewKey)
-        store.refreshFromStore()
+        refreshStoreWithPerformanceTracking(operation: "refresh_from_hotel_handoff")
         navigationState.openHotelReviewQueue(draftID: request.draftID)
+    }
+
+    @MainActor
+    private func refreshStoreWithPerformanceTracking(operation: String) {
+        let startedAt = Date()
+        store.refreshFromStore()
+        CommonAPIAnalyticsService.trackPerformanceDiagnostic(
+            diagnosticType: "store_operation",
+            surface: "ledger_store",
+            operation: operation,
+            startedAt: startedAt
+        )
     }
 
     @MainActor

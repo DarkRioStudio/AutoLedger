@@ -26,6 +26,8 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
     ) -> Bool {
         if !ProcessInfo.processInfo.arguments.contains("--screenshot-mode") {
             UNUserNotificationCenter.current().delegate = self
+            AppDiagnosticsAnalyticsMonitor.shared.startIfNeeded()
+            AppSessionDiagnosticsService.recordLaunchRecoveryIfNeeded()
         }
         configureHomeQuickActions(for: application)
         return true
@@ -47,6 +49,10 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         completionHandler: @escaping (Bool) -> Void
     ) {
         completionHandler(Self.handleHomeQuickAction(shortcutItem))
+    }
+
+    func applicationWillTerminate(_ application: UIApplication) {
+        AppSessionDiagnosticsService.markCleanBackground()
     }
 
     func application(

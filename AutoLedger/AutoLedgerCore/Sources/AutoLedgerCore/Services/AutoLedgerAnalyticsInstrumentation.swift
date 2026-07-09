@@ -25,6 +25,8 @@ public enum AutoLedgerAnalyticsEventName: String, CaseIterable, Sendable {
     case commonAPIRequestStatus = "al_common_api_request_status"
     case proGateViewed = "al_pro_gate_viewed"
     case purchaseFlowStatus = "al_purchase_flow_status"
+    case crashDiagnostic = "al_crash_diagnostic"
+    case performanceDiagnostic = "al_performance_diagnostic"
     case privacyPayloadGuardViolation = "al_privacy_payload_guard_violation"
 }
 
@@ -269,6 +271,16 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 return false
             }
         }.count
+        let crashEvents = events(named: .crashDiagnostic)
+        let performanceEvents = events(named: .performanceDiagnostic)
+        let slowPerformanceEvents = performanceEvents.filter { event in
+            switch event.stringPayload("duration_ms_bucket") {
+            case "3s_10s", "10s_30s", "over_30s":
+                return true
+            default:
+                return event.stringPayload("severity") == "warning" || event.stringPayload("severity") == "critical"
+            }
+        }
         let privacyViolations = events(named: .privacyPayloadGuardViolation).count
 
         return AutoLedgerAnalyticsDashboardSnapshot(metrics: [
@@ -321,6 +333,21 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 "purchase_flow_failure_rate",
                 numerator: purchaseFailures,
                 denominator: purchaseEvents.count
+            ),
+            countMetric(
+                "crash_diagnostic_count",
+                value: crashEvents.count,
+                breakdown: breakdown(crashEvents, field: "diagnostic_type")
+            ),
+            countMetric(
+                "slow_operation_count",
+                value: slowPerformanceEvents.count,
+                breakdown: breakdown(slowPerformanceEvents, field: "operation")
+            ),
+            countMetric(
+                "performance_operation_top_n",
+                value: performanceEvents.count,
+                breakdown: breakdown(performanceEvents, field: "operation")
             ),
             countMetric(
                 "privacy_payload_violation_count",
@@ -539,6 +566,20 @@ public enum AutoLedgerAnalyticsCatalog {
             dashboard: "购买流程失败率、StoreKit 错误码、是否需要调整 Review Notes 或 Pro 文案。"
         ),
         definition(
+            .crashDiagnostic,
+            purpose: "观察真机崩溃、hang 和异常退出信号是否影响可用性，不上传堆栈或用户内容。",
+            fields: ["event_id", "app_version", "diagnostic_type", "signal_source", "severity", "count_bucket", "termination_state", "error_code"],
+            privacy: "Diagnostics / Crash Data；not linked；not tracking。",
+            dashboard: "崩溃 / 异常退出计数、MetricKit crash / hang 分布和发布阻断判断。"
+        ),
+        definition(
+            .performanceDiagnostic,
+            purpose: "观察真机卡顿和关键操作耗时 bucket，定位 Tab 切换、月报和数据清洗等高频卡点。",
+            fields: ["event_id", "app_version", "diagnostic_type", "surface", "operation", "duration_ms_bucket", "count_bucket", "severity", "result", "error_code"],
+            privacy: "Diagnostics / Performance Data；not linked；not tracking。",
+            dashboard: "慢操作次数、操作耗时 bucket、MetricKit hang / CPU / disk write 诊断分布。"
+        ),
+        definition(
             .privacyPayloadGuardViolation,
             purpose: "在测试和预发布中发现埋点 payload 越界，阻止 marketing 放大。",
             fields: ["event_id", "app_version", "event_name_checked", "violation_type", "blocked_field_category", "build_number"],
@@ -558,6 +599,9 @@ public enum AutoLedgerAnalyticsCatalog {
         metric("common_api_status_top_n", "Common API 请求按 HTTP 状态 bucket 聚合。", [.commonAPIRequestStatus], "4xx / 5xx 或 network_error 异常时先修基础设施。"),
         metric("pro_gate_boundary_risk", "Pro gate 关闭原因和 Pro confusion 反馈对照。", [.proGateViewed], "出现 Pro 锁数据误解时先改文案。"),
         metric("purchase_flow_failure_rate", "StoreKit failed / canceled / unknown 状态占比。", [.purchaseFlowStatus], "错误码异常时暂停付费转化文案。"),
+        metric("crash_diagnostic_count", "MetricKit crash / hang / 异常退出信号按诊断类型聚合。", [.crashDiagnostic], "任何新增崩溃信号都进入发布前 review。"),
+        metric("slow_operation_count", "关键操作超过 3 秒或系统诊断标记 warning / critical 的次数。", [.performanceDiagnostic], "高频慢操作先做 Instruments 和局部优化。"),
+        metric("performance_operation_top_n", "关键操作耗时事件按 operation 枚举聚合。", [.performanceDiagnostic], "用于判断用户主要卡在哪些路径。"),
         metric("privacy_payload_violation_count", "被 guard 拦截的 forbidden field 次数。", [.privacyPayloadGuardViolation], "非零即阻塞 marketing。")
     ]
 

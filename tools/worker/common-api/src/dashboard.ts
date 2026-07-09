@@ -114,6 +114,9 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const commonAPIEvents = events.filter((event) => event.eventName === "al_common_api_request_status");
   const proGateEvents = events.filter((event) => event.eventName === "al_pro_gate_viewed");
   const purchaseEvents = events.filter((event) => event.eventName === "al_purchase_flow_status");
+  const crashEvents = events.filter((event) => event.eventName === "al_crash_diagnostic");
+  const performanceEvents = events.filter((event) => event.eventName === "al_performance_diagnostic");
+  const slowPerformanceEvents = performanceEvents.filter((event) => isSlowPerformanceEvent(event.payload));
   const privacyEvents = events.filter((event) => event.eventName === "al_privacy_payload_guard_violation");
 
   return [
@@ -177,6 +180,24 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       "购买流程失败率",
       purchaseEvents.filter((event) => isPurchaseFailure(stringPayload(event.payload, "storekit_status"))).length,
       purchaseEvents.length
+    ),
+    countMetric(
+      "crash_diagnostic_count",
+      "崩溃诊断信号",
+      crashEvents.length,
+      breakdown(crashEvents.map((event) => stringPayload(event.payload, "diagnostic_type") ?? "unknown"))
+    ),
+    countMetric(
+      "slow_operation_count",
+      "慢操作与卡顿信号",
+      slowPerformanceEvents.length,
+      breakdown(slowPerformanceEvents.map((event) => stringPayload(event.payload, "operation") ?? "unknown"))
+    ),
+    countMetric(
+      "performance_operation_top_n",
+      "性能操作分布",
+      performanceEvents.length,
+      breakdown(performanceEvents.map((event) => stringPayload(event.payload, "operation") ?? "unknown"))
     ),
     countMetric(
       "privacy_payload_violation_count",
@@ -263,6 +284,15 @@ function stringPayload(payload: PrimitivePayload, key: string): string | null {
 
 function isPurchaseFailure(status: string | null): boolean {
   return status === "failed" || status === "cancelled" || status === "canceled" || status === "unknown";
+}
+
+function isSlowPerformanceEvent(payload: PrimitivePayload): boolean {
+  const durationBucket = stringPayload(payload, "duration_ms_bucket");
+  if (durationBucket === "3s_10s" || durationBucket === "10s_30s" || durationBucket === "over_30s") {
+    return true;
+  }
+  const severity = stringPayload(payload, "severity");
+  return severity === "warning" || severity === "critical";
 }
 
 function roundPercent(numerator: number, denominator: number): number {
@@ -364,7 +394,7 @@ const dashboardHTML = `<!doctype html>
     .status { width: 100%; text-align: right; color: var(--muted); font-size: 13px; min-height: 18px; }
     .status.error { color: var(--bad); }
     .grid { display: grid; gap: 14px; }
-    .summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .summary { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
     .split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .content { grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr); align-items: start; }
     .card {
@@ -502,6 +532,13 @@ const dashboardHTML = `<!doctype html>
           </summary>
           <div class="widget-body bars" id="versionBreakdown"></div>
         </details>
+        <details class="card widget" data-widget="crash-diagnostics" open>
+          <summary class="section-head">
+            <h2>崩溃诊断</h2>
+            <span>MetricKit 与恢复信号</span>
+          </summary>
+          <div class="widget-body bars" id="crashDiagnostics"></div>
+        </details>
         <details class="card widget" data-widget="privacy" open>
           <summary class="section-head">
             <h2>隐私边界</h2>
@@ -513,6 +550,13 @@ const dashboardHTML = `<!doctype html>
     </div>
 
     <div class="grid split">
+      <details class="card widget" data-widget="performance-ops" open>
+        <summary class="section-head">
+          <h2>性能操作</h2>
+          <span>Tab / 月报 / 数据清洗</span>
+        </summary>
+        <div class="widget-body bars" id="performanceOps"></div>
+      </details>
       <details class="card widget" data-widget="import-errors" open>
         <summary class="section-head">
           <h2>导入错误</h2>
@@ -538,11 +582,14 @@ const dashboardHTML = `<!doctype html>
       "total_events_count",
       "feature_surface_open_count",
       "launch_success_rate",
+      "crash_diagnostic_count",
+      "slow_operation_count",
       "import_completion_rate",
       "hotel_pdf_completion_rate",
       "common_api_status_top_n",
       "pro_gate_action_count",
       "purchase_flow_failure_rate",
+      "performance_operation_top_n",
       "privacy_payload_violation_count",
       "currency_lookup_success_rate",
       "confirmation_discard_rate",
@@ -555,6 +602,8 @@ const dashboardHTML = `<!doctype html>
       metrics: document.getElementById("metrics"),
       eventBreakdown: document.getElementById("eventBreakdown"),
       versionBreakdown: document.getElementById("versionBreakdown"),
+      crashDiagnostics: document.getElementById("crashDiagnostics"),
+      performanceOps: document.getElementById("performanceOps"),
       importErrors: document.getElementById("importErrors"),
       privacyBlocks: document.getElementById("privacyBlocks"),
       privacy: document.getElementById("privacy"),
@@ -585,6 +634,8 @@ const dashboardHTML = `<!doctype html>
       renderSummary([
         ["匿名事件", metricValue(byID.get("total_events_count")), "最近接收 " + formatTime(data.latestReceivedAt)],
         ["启动成功率", metricValue(byID.get("launch_success_rate")), metricRatio(byID.get("launch_success_rate"))],
+        ["崩溃信号", metricValue(byID.get("crash_diagnostic_count")), "MetricKit / 恢复检测"],
+        ["慢操作", metricValue(byID.get("slow_operation_count")), "超过 3 秒或 warning"],
         ["导入完成率", metricValue(byID.get("import_completion_rate")), metricRatio(byID.get("import_completion_rate"))],
         ["隐私拦截", metricValue(byID.get("privacy_payload_violation_count")), "禁止字段 guard"]
       ]);
@@ -592,6 +643,8 @@ const dashboardHTML = `<!doctype html>
       renderMetricTable((data.metrics || []).slice().sort((left, right) => metricOrder.indexOf(left.metricID) - metricOrder.indexOf(right.metricID)));
       renderEventBreakdown(data.eventBreakdown || []);
       renderBars(els.versionBreakdown, objectEntries(data.appVersionBreakdown || {}));
+      renderBars(els.crashDiagnostics, objectEntries((byID.get("crash_diagnostic_count") || {}).breakdown || {}));
+      renderBars(els.performanceOps, objectEntries((byID.get("performance_operation_top_n") || {}).breakdown || {}));
       renderBars(els.importErrors, objectEntries((byID.get("import_error_code_top_n") || {}).breakdown || {}));
       renderBars(els.privacyBlocks, objectEntries((byID.get("privacy_payload_violation_count") || {}).breakdown || {}));
       renderPrivacy(data);
@@ -661,12 +714,16 @@ const dashboardHTML = `<!doctype html>
       renderSummary([
         ["面板暂不可用", "-", "请确认 Access、Worker 和 D1 绑定"],
         ["启动成功率", "-", "暂无数据"],
+        ["崩溃信号", "-", "暂无数据"],
+        ["慢操作", "-", "暂无数据"],
         ["导入完成率", "-", "暂无数据"],
         ["隐私拦截", "-", "暂无数据"]
       ]);
       els.metrics.innerHTML = '<div class="empty">暂时无法读取指标。</div>';
       els.eventBreakdown.innerHTML = '<tr><td colspan="3" class="muted">暂时无法读取事件分布。</td></tr>';
       els.versionBreakdown.innerHTML = '<div class="empty">暂时无法读取版本分布。</div>';
+      els.crashDiagnostics.innerHTML = '<div class="empty">暂时无法读取崩溃诊断。</div>';
+      els.performanceOps.innerHTML = '<div class="empty">暂时无法读取性能操作。</div>';
       els.importErrors.innerHTML = '<div class="empty">暂时无法读取导入错误。</div>';
       els.privacyBlocks.innerHTML = '<div class="empty">暂时无法读取隐私拦截。</div>';
       els.privacy.innerHTML = '<div class="empty">请在 Worker 和 D1 绑定恢复后刷新。</div>';
