@@ -56,12 +56,12 @@
 - 完成内容：dashboard HTML 改为与 AutoNotice 统一的浅色渐变背景、应用图标、顶部工具栏、折叠卡片、总览四卡、最小指标表、版本分布、导入错误、隐私拦截和隐私边界布局；仍只读取既有 `/dashboard/data` 聚合合同。
 - 完成内容：测试明确覆盖裸路径跳转、trailing-slash HTML shell 分离和新版页面结构，避免 Access 规则只覆盖 `dashboard/*` 时再次出现裸路径绕过。
 - 完成内容：`v1.7.0-plan` 记录后续可在 `dashboard.darkrio326.top` 建立跨 App 总面板，汇总 AutoLedger、AutoNotice 和其他 App 的匿名聚合指标；该方向仍必须沿用 Cloudflare Access、聚合口径和各 App 独立数据边界。
-- 未完成内容：本轮尚未记录新的 Cloudflare staging / production Worker Version ID；部署后需要补线上 smoke 结果。
-- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 36 个 Vitest 合同测试；执行 `git diff --check` 通过。
+- 未完成内容：本轮没有做已登录浏览器截图复核；需要用户在 Cloudflare Access 会话下人工确认新版页面视觉是否满足预期。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 36 个 Vitest 合同测试；执行 `git diff --check` 通过。已部署 staging Version ID `73d1f00f-5c1b-490e-9e8f-83cee91da34b`、production Version ID `8e0aa74b-06ad-4f5e-a1d4-db2a303f5894`。线上 smoke 确认 `https://getautoledger.app/dashboard` 返回 HTTP 302 并跳转 `/dashboard/`，`https://getautoledger.app/dashboard/` 和 `https://getautoledger.app/dashboard/data` 未登录均返回 HTTP 302 到 Cloudflare Access login；`https://api.darkrio326.top/dashboard/data` 即使携带伪造 `cf-access-authenticated-user-email` 也返回 HTTP 403；production manifest 返回 `analyticsDashboard.url=https://getautoledger.app/dashboard/` 和 `retentionDays=90`。
 - 风险与注意事项：Cloudflare Access 仍是主防线；裸路径跳转只是让入口路径和 Zero Trust 规则保持一致，不替代 `/dashboard/data` 的 Worker 侧 host guard。跨 App 总面板只是后续方向，本轮不新增跨 App 数据聚合接口。
 - 回滚方式：回退本轮 Worker 路由、测试和文档改动即可；无 D1 schema 或远端数据迁移。
-- 结论：代码改动已准备，需通过测试并部署后收口。
-- 下一步建议：部署后用未登录命令行确认 `/dashboard` 302 到 `/dashboard/`，`/dashboard/` 和 `/dashboard/data` 均被 Cloudflare Access 302 拦截。
+- 结论：本轮完成，AutoLedger dashboard 入口、Access 覆盖和页面风格已收口到与 AutoNotice 一致的运营面板形态。
+- 下一步建议：用浏览器登录 Cloudflare Access 后查看 `https://getautoledger.app/dashboard/`，确认真实数据下的视觉密度和模块顺序；后续若建设 `dashboard.darkrio326.top`，先设计跨 App manifest / summary 合同，不直接打通 raw event rows。
 
 ### ITER-404 Common API analytics dashboard Access 收口
 - 日期：2026-07-09
