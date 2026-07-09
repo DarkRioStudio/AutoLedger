@@ -183,7 +183,11 @@ const forbiddenKeyFragments = [
   "billing_address"
 ];
 
-export async function analyticsEventsEndpoint(request: Request, env: Env): Promise<Response> {
+const defaultAnalyticsRetentionDays = 90;
+const minAnalyticsRetentionDays = 7;
+const maxAnalyticsRetentionDays = 180;
+
+export async function analyticsEventsEndpoint(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   if (!env.COMMON_API_DB) {
     return json(error("analytics_database_unconfigured", "Analytics database is not configured."), 503);
   }
@@ -225,9 +229,12 @@ export async function analyticsEventsEndpoint(request: Request, env: Env): Promi
       ).run();
     }
 
+    scheduleAnalyticsRetentionPrune(env, ctx);
+
     return json({
       ok: true,
       accepted: events.length,
+      retentionDays: analyticsRetentionDays(env),
       privacy: "Accepted payloads are validated against the AutoLedger analytics allow-list. Ledger amounts, merchants, documents, emails, hotel identifiers, precise location, OCR text, StoreKit identifiers, and payment data are rejected."
     }, 202);
   } catch (caught) {
@@ -237,6 +244,35 @@ export async function analyticsEventsEndpoint(request: Request, env: Env): Promi
     const message = caught instanceof Error ? caught.message : "Unknown analytics ingestion error.";
     return json(error("analytics_ingest_failed", message), 500);
   }
+}
+
+export function analyticsRetentionDays(env: Env): number {
+  const configuredValue = integerValue(env.ANALYTICS_RETENTION_DAYS);
+  if (configuredValue == null) {
+    return defaultAnalyticsRetentionDays;
+  }
+  return Math.min(Math.max(configuredValue, minAnalyticsRetentionDays), maxAnalyticsRetentionDays);
+}
+
+export async function pruneOldAutoLedgerAnalyticsEvents(env: Env, referenceDate: Date = new Date()): Promise<{ deletedBefore: string; retentionDays: number } | null> {
+  if (!env.COMMON_API_DB) {
+    return null;
+  }
+  const retentionDays = analyticsRetentionDays(env);
+  const deletedBefore = new Date(referenceDate.getTime() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  await env.COMMON_API_DB.prepare(`
+    DELETE FROM autoledger_analytics_events
+    WHERE received_at < ?
+  `).bind(deletedBefore).run();
+  return { deletedBefore, retentionDays };
+}
+
+function scheduleAnalyticsRetentionPrune(env: Env, ctx?: ExecutionContext): void {
+  if (!ctx) {
+    return;
+  }
+  const prune = pruneOldAutoLedgerAnalyticsEvents(env).catch(() => null);
+  ctx.waitUntil(prune);
 }
 
 async function parseAnalyticsBody(request: Request): Promise<AnalyticsRequestBody> {

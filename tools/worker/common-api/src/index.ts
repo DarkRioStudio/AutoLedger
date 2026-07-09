@@ -16,7 +16,7 @@ import {
   defaultCurrencyCode,
   type CurrencyRecord
 } from "./currencies-catalog";
-import { analyticsEventsEndpoint } from "./analytics";
+import { analyticsEventsEndpoint, analyticsRetentionDays } from "./analytics";
 import { autoLedgerDashboardDataResponse, autoLedgerDashboardHTMLResponse } from "./dashboard";
 import { exchangeRateEndpoint, exchangeRateTestInternals } from "./exchange-rates/routes";
 import {
@@ -26,6 +26,7 @@ import {
   supportedReleaseNoteVersions,
 } from "./release-notes-store";
 import { currentWeatherEndpoint, forecastWeatherEndpoint, hotelStayWeatherEndpoint } from "./weather/routes";
+import { canViewAutoLedgerDashboard } from "./security/cloudflareAccess";
 
 type APIError = {
   error: {
@@ -79,6 +80,9 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
   }
 
   if (isReadRequest(request) && (url.pathname === "/dashboard/data" || url.pathname === "/dashboard/data/")) {
+    if (!(await canViewAutoLedgerDashboard(request, env))) {
+      return responseForMethod(request, withCommonHeaders(json(error("forbidden", "Dashboard data requires Cloudflare Access."), 403)));
+    }
     return responseForMethod(request, withCommonHeaders(await autoLedgerDashboardDataResponse(env)));
   }
 
@@ -139,7 +143,7 @@ export async function routeFetch(request: Request, env: Env, ctx?: ExecutionCont
   }
 
   if (request.method === "POST" && url.pathname === "/v1/analytics/events") {
-    return withCommonHeaders(await analyticsEventsEndpoint(request, env));
+    return withCommonHeaders(await analyticsEventsEndpoint(request, env, ctx));
   }
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
@@ -225,6 +229,8 @@ async function manifestResponse(request: Request, env: Env): Promise<Response> {
           status: env.COMMON_API_DB ? "available" : "configuration_required",
           url: "https://getautoledger.app/dashboard",
           dataEndpoint: "https://getautoledger.app/dashboard/data",
+          access: "Dashboard data is intended to be served behind Cloudflare Zero Trust Access. Production data requests are accepted only with a verified Access identity on the protected dashboard host or a valid Access JWT.",
+          retentionDays: analyticsRetentionDays(env),
           privacy: "The dashboard exposes aggregate counts and rates only; raw event rows and payload JSON are not returned."
         },
         hotelWeather: {

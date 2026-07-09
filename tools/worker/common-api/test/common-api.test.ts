@@ -3,6 +3,7 @@ import { currencies, currenciesCatalog, defaultCurrencyCode } from "../src/curre
 import { exchangeRateEndpoint } from "../src/exchange-rates/routes";
 import { cities, countries, placesCatalog, supportedLocales } from "../src/places-catalog";
 import { routeFetch, testInternals } from "../src/index";
+import { isCloudflareAccessEmailHeaderAllowed } from "../src/security/cloudflareAccess";
 import { weatherProviderTestInternals } from "../src/weather/providers";
 
 type ReleaseNoteFixture = {
@@ -454,7 +455,12 @@ describe("common api worker contract", () => {
     expect(body).toMatchObject({
       schemaVersion: 1,
       app: "autoledger",
-      windowDays: 30
+      windowDays: 30,
+      retentionDays: 90
+    });
+    expect(body.access).toMatchObject({
+      protection: "cloudflare_access",
+      emailHeaderTrustedOnlyOnProtectedHosts: true
     });
     expect(byID.get("total_events_count")).toMatchObject({ value: 6, unit: "count" });
     expect(byID.get("total_events_count")).toMatchObject({ label: "已接收匿名事件总数" });
@@ -471,6 +477,67 @@ describe("common api worker contract", () => {
     expect(serialized).not.toContain("payload_json");
     expect(serialized).not.toContain("amount");
     expect(serialized).not.toContain("merchant");
+  });
+
+  it("allows Cloudflare Access email headers only on protected AutoLedger dashboard hosts", () => {
+    const accessEnv = {
+      ENVIRONMENT: "production",
+      ACCESS_ALLOWED_EMAILS: "darkrio326@gmail.com",
+      ACCESS_PROTECTED_HOSTS: "getautoledger.app",
+      ACCESS_TRUST_EMAIL_HEADER: "true"
+    } as unknown as Env;
+    const defaultEnv = {
+      ENVIRONMENT: "production",
+      ACCESS_ALLOWED_EMAILS: "darkrio326@gmail.com",
+      ACCESS_PROTECTED_HOSTS: "getautoledger.app"
+    } as unknown as Env;
+    const allowedRequest = new Request("https://getautoledger.app/dashboard/data", {
+      headers: {
+        "cf-access-authenticated-user-email": "darkrio326@gmail.com"
+      }
+    });
+    const wrongHostRequest = new Request("https://api.darkrio326.top/dashboard/data", {
+      headers: {
+        "cf-access-authenticated-user-email": "darkrio326@gmail.com"
+      }
+    });
+    const wrongEmailRequest = new Request("https://getautoledger.app/dashboard/data", {
+      headers: {
+        "cf-access-authenticated-user-email": "someone@example.com"
+      }
+    });
+
+    expect(isCloudflareAccessEmailHeaderAllowed(allowedRequest, accessEnv)).toBe(true);
+    expect(isCloudflareAccessEmailHeaderAllowed(allowedRequest, defaultEnv)).toBe(false);
+    expect(isCloudflareAccessEmailHeaderAllowed(wrongHostRequest, accessEnv)).toBe(false);
+    expect(isCloudflareAccessEmailHeaderAllowed(wrongEmailRequest, accessEnv)).toBe(false);
+  });
+
+  it("blocks production AutoLedger dashboard data without a verified Access identity", async () => {
+    const dashboardDB = new AnalyticsDashboardD1Database(releaseNotesFixtures, []);
+    const dashboardEnv = {
+      ...env,
+      ENVIRONMENT: "production",
+      ACCESS_ALLOWED_EMAILS: "darkrio326@gmail.com",
+      ACCESS_PROTECTED_HOSTS: "getautoledger.app",
+      ACCESS_TRUST_EMAIL_HEADER: "true",
+      COMMON_API_DB: dashboardDB as unknown as D1Database
+    } as unknown as Env;
+
+    const unprotectedResponse = await routeFetch(new Request("https://api.darkrio326.top/dashboard/data", {
+      headers: {
+        "cf-access-authenticated-user-email": "darkrio326@gmail.com"
+      }
+    }), dashboardEnv);
+    const allowedResponse = await routeFetch(new Request("https://getautoledger.app/dashboard/data", {
+      headers: {
+        "cf-access-authenticated-user-email": "darkrio326@gmail.com"
+      }
+    }), dashboardEnv);
+
+    expect(unprotectedResponse.status).toBe(403);
+    expect(await jsonBody(unprotectedResponse)).toMatchObject({ error: { code: "forbidden" } });
+    expect(allowedResponse.status).toBe(200);
   });
 
   it("serves an AutoLedger dashboard HTML shell", async () => {

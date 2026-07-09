@@ -1,3 +1,5 @@
+import { analyticsRetentionDays } from "./analytics";
+
 type APIError = {
   error: {
     code: string;
@@ -69,7 +71,12 @@ export async function autoLedgerDashboardDataResponse(env: Env): Promise<Respons
     generatedAt: new Date().toISOString(),
     windowDays: dashboardWindowDays,
     rowLimit: dashboardMaxRows,
+    retentionDays: analyticsRetentionDays(env),
     source: "autoledger_analytics_events",
+    access: {
+      protection: "cloudflare_access",
+      emailHeaderTrustedOnlyOnProtectedHosts: true
+    },
     privacy: {
       summary: "此面板只展示聚合计数和比率，不返回原始事件行或 payload JSON。",
       dataCategories: ["Diagnostics", "Usage Data"],

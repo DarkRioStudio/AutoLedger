@@ -9,10 +9,16 @@
     "head_sampling_rate": 1
   },
   "vars": {
+    "ENVIRONMENT": "local",
     "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
     "EXCHANGE_RATE_PROVIDER": "frankfurter",
     "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
-    "WEATHER_PROVIDER": "disabled"
+    "WEATHER_PROVIDER": "disabled",
+    "ANALYTICS_RETENTION_DAYS": "90",
+    "ACCESS_ALLOWED_EMAILS": "darkrio326@gmail.com",
+    "ACCESS_PROTECTED_HOSTS": "getautoledger.app",
+    "ACCESS_TRUST_EMAIL_HEADER": "true",
+    "ACCESS_TEAM_DOMAIN": "darkrio.cloudflareaccess.com"
   },
   "env": {
     "staging": {
@@ -24,10 +30,16 @@
         }
       ],
       "vars": {
+        "ENVIRONMENT": "staging",
         "PUBLIC_API_ORIGIN": "https://staging-api.darkrio326.top",
         "EXCHANGE_RATE_PROVIDER": "frankfurter",
         "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
-        "WEATHER_PROVIDER": "weatherkit"
+        "WEATHER_PROVIDER": "weatherkit",
+        "ANALYTICS_RETENTION_DAYS": "90",
+        "ACCESS_ALLOWED_EMAILS": "darkrio326@gmail.com",
+        "ACCESS_PROTECTED_HOSTS": "getautoledger.app",
+        "ACCESS_TRUST_EMAIL_HEADER": "true",
+        "ACCESS_TEAM_DOMAIN": "darkrio.cloudflareaccess.com"
       },
       "d1_databases": [
         {
@@ -50,10 +62,16 @@
         }
       ],
       "vars": {
+        "ENVIRONMENT": "production",
         "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
         "EXCHANGE_RATE_PROVIDER": "frankfurter",
         "EXCHANGE_RATE_BASE_URL": "https://api.frankfurter.dev/v2",
-        "WEATHER_PROVIDER": "weatherkit"
+        "WEATHER_PROVIDER": "weatherkit",
+        "ANALYTICS_RETENTION_DAYS": "90",
+        "ACCESS_ALLOWED_EMAILS": "darkrio326@gmail.com",
+        "ACCESS_PROTECTED_HOSTS": "getautoledger.app",
+        "ACCESS_TRUST_EMAIL_HEADER": "true",
+        "ACCESS_TEAM_DOMAIN": "darkrio.cloudflareaccess.com"
       },
       "d1_databases": [
         {

@@ -15,6 +15,9 @@
 - `GET /v1/weather/current?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/weather/forecast?lat=35.68&lon=139.76&locale=ja&timezone=Asia/Tokyo`
 - `GET /v1/weather/hotel-stay-summary?lat=35.68&lon=139.76&checkIn=2026-07-01&checkOut=2026-07-03&locale=ja&timezone=Asia/Tokyo`
+- `POST /v1/analytics/events`
+- `GET /dashboard`
+- `GET /dashboard/data`
 
 The places catalog is intentionally curated, not exhaustive. It covers common countries, large cities, and hotel or travel-heavy cities with five display locales:
 
@@ -27,6 +30,8 @@ The places catalog is intentionally curated, not exhaustive. It covers common co
 For country and city selection, client UI should label the first level as `Country/Region` in English and `国家和地区` in Simplified Chinese unless a jurisdiction-specific requirement calls for different wording. Hong Kong, Macau, and Taiwan must be displayed at the country/region level as `香港（中国）` / `Hong Kong (China)`, `澳门（中国）` / `Macau (China)`, and `台湾（中国）` / `Taiwan (China)`; city records remain plain city names such as `香港`, `澳门`, and `台北`.
 
 The Worker does not receive receipts, folio PDFs, hotel names, merchant names, transaction amounts, inbox content, or user ledger data. Exchange-rate endpoints receive only base currency, quote currency, and optional rate date. Weather endpoints receive coordinates, locale, timezone, and, for hotel stay summaries, stay dates and units only.
+
+AutoLedger analytics accepts only anonymous allow-list event fields for release health checks. It rejects ledger amounts, merchants, screenshots, PDFs, emails, hotel identifiers, precise location, OCR text, StoreKit transaction identifiers, receipts, and payment data. Dashboard data is intended to be viewed through the Cloudflare Zero Trust Access rule for `getautoledger.app/dashboard/*`; production `/dashboard/data` additionally checks that the Access email header is present only on the protected dashboard host, or that a valid Access JWT is provided. This prevents callers from bypassing Access through another Worker route and spoofing `cf-access-authenticated-user-email`. Analytics rows are retained for 90 days by default, while the dashboard reads a 30-day aggregate window.
 
 The currency catalog is also curated for app UI and conversion preparation. It publishes supported currency codes, symbols, localized names, and minor-unit digits so client apps can keep manual currency pickers and future exchange-rate flows aligned.
 
@@ -77,6 +82,8 @@ npm run d1:seed:autonotice:production
 ```
 
 The legacy `MyWeatherLine/Api` current and forecast weather provider structure has been migrated into this Worker. Staging and production are configured with the Common API WeatherKit service identity and `WEATHER_PROVIDER=weatherkit`; weather endpoints only receive coordinates, dates, locale, timezone, and units.
+
+AutoLedger dashboard access uses Cloudflare Zero Trust Access outside this Worker. Keep `ACCESS_ALLOWED_EMAILS`, `ACCESS_PROTECTED_HOSTS`, and `ACCESS_TRUST_EMAIL_HEADER=true` aligned with the Access application. If you add `ACCESS_AUD`, the Worker can also verify `cf-access-jwt-assertion` against `ACCESS_TEAM_DOMAIN`. Do not commit Access secrets or tokens.
 
 WeatherKit secrets:
 

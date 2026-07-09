@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-403 个人 Pro 文档与产品口径收口）
+更新日期：2026-07-09（ITER-404 Common API analytics dashboard Access 收口）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-404 Common API analytics dashboard Access 收口
+- 日期：2026-07-09
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Governance / Common API
+- 类型：治理 / Worker 安全
+- 目标：在 Cloudflare Zero Trust Access 已保护 `getautoledger.app/dashboard/*` 的基础上，补齐 Worker 侧防伪造邮箱头和 analytics 数据保留期，收口 `GOAL-2360` 发布门禁。
+- 改动范围：`tools/worker/common-api` analytics 写入、dashboard data guard、Cloudflare Access helper、wrangler public vars、Worker 合同测试和 Common API README；同步更新 `versions/v1.7.0-plan.md` 与 CHANGELOG。
+- 未改动范围：未修改 App Swift 业务代码、App 端 analytics 采集面、SQLite / CloudKit schema、StoreKit Product ID、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、entitlement、订阅价格或构建 tag。
+- 完成内容：production `/dashboard/data` 现在要求 Cloudflare Access 保护 host 上的允许邮箱头或有效 Access JWT；`api.darkrio326.top/dashboard/data` 等未保护 host 即使伪造 `cf-access-authenticated-user-email` 也会被拒绝。
+- 完成内容：analytics 写入返回 90 天默认保留期，并在 Worker 运行时通过 `waitUntil` 异步清理过期 `autoledger_analytics_events`；dashboard JSON / manifest 返回 Access 和保留期说明。
+- 完成内容：文档明确 dashboard 仍只展示聚合指标，不返回 raw rows、payload JSON、金额、商户、截图、PDF、邮箱、酒店标识、OCR 文本、StoreKit transaction id 或支付数据。
+- 未完成内容：本轮没有部署 Worker，没有执行 production D1 migration，也没有做线上 dashboard smoke；这些仍需要作为发布证据单独确认。
+- 测试情况：在 `tools/worker/common-api` 执行 `npm run check` 通过，覆盖 `wrangler types`、`tsc --noEmit` 和 35 个 Vitest 合同测试；执行 `git diff --check` 通过。
+- 风险与注意事项：Cloudflare Access 应继续作为主防线；Worker 侧邮箱头信任只在 `ACCESS_TRUST_EMAIL_HEADER=true` 且请求 host 属于 `ACCESS_PROTECTED_HOSTS` 时生效。若后续要完全依赖 JWT 强校验，需要补充当前 Access application 的 `ACCESS_AUD`。
+- 回滚方式：回退本轮 `tools/worker/common-api` 代码和 wrangler vars，以及对应文档 / 日志改动即可；无 D1 schema 迁移。
+- 结论：本轮完成，Common API analytics dashboard 已补齐 production Access host guard、防伪造邮箱头和默认保留期。
+- 下一步建议：部署前执行 `npm run check`，部署后确认 Zero Trust Access 登录路径、未保护 host 403、D1 migration 和线上 smoke。
 
 ### ITER-403 个人 Pro 文档与产品口径收口
 - 日期：2026-07-08
