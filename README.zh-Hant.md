@@ -62,7 +62,7 @@ Free 會長期保留可用的日常記帳能力。AutoLedger 不會把既有核�
 
 Free 包括手動記帳、單張截圖 / 拍照匯入、語音 / 文字輸入、手動飯店水單 PDF 匯入、飯店歷史查看、基礎訂閱管理、基礎月報、Widget / Share Extension、JSON 匯入匯出、備份，以及歷史記錄的查看、編輯和刪除。
 
-Pro 的定位是節省時間的自動化，而不是帳本存取權限。Pro 包括或將包括本機郵件水單掃描、批次候選匯入、進階去重，以及專屬雲端水單收件箱。
+Pro 的定位是節省時間的自動化，而不是帳本存取權限。Pro 目前涵蓋本機郵件水單掃描、批次候選匯入、進階去重、專屬雲端水單收件箱、進階搜尋、訂閱異常提醒、月結包、自動化規則和智能整理建議；後續會繼續推進雲端輔助整理、智能複核佇列、進階分享模板和多設備自動化同步。
 
 ## 本地優先與雲端自動化
 
@@ -189,8 +189,8 @@ bash scripts/run_golden_regression.sh
 - App Store `1.4.0` 已發布；內部 `v1.5.1` 是該發布線的最終收口版本，`v1.5.0` 作為實作基線併入發布。
 - `v1.6.2` 已完成，收口 SDK 適配階段二、酒店郵件匯入、Deep link / Widget / App Intents、資料可靠性、日文發布材料審校和 `GOAL-1960` release smoke。
 - `v1.6.3` 已完成目前範圍：酒店 C1 AutoLedger 專屬收件箱第一版 App/Core 工程骨架、審核說明和回歸 baseline；C2 Worker 登入使用者信箱自動掃描僅保留為個人自用或未來實驗路線。
-- `v1.6.4` 已進入發布收口階段，`GOAL-2200` 完成 Free / Pro 邊界凍結，新增平台無關 Pro 存取策略合同；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API 和 App 端 PDFKit 本地轉換入口已落地。Cloudflare production 的 App Store Server API / APNs secret 名稱已驗證存在；2026-06-29 人工 smoke 已測通訂閱開通、APNs 推送、Worker 雲收件箱、雲端候選轉酒店消費並入帳。訂閱元資料、審核材料、生命週期截圖和證據歸檔繼續收口。
-- `v1.7.0` 規劃為 ASC / App Store `1.6.0`：首頁「票據掃描」優先升級為即時 OCR 掃描，不支援時回退拍照識別照片 / 相簿匯入；新增韓語 App UI 和韓語帳單識別包；建設可複用 `common-api`，用於中簡 / 繁中 / 英 / 日 / 韓五語國家城市目錄熱更新、按日期查詢匯率和酒店入住日期歷史天氣摘要；同時把 Pro 從酒店水單自動化擴展到全帳本效率層，計畫實作進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用。
+- `v1.6.4` 已完成 ASC / App Store `1.5.0` 發布收口基線，`GOAL-2200` 完成 Free / Pro 邊界凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 端 PDFKit 本地轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口。
+- `v1.7.0` 正在作為 ASC / App Store `1.6.0` 開發：即時 OCR 掃描、韓語 UI 和 `ko` 識別包、i18n 發布矩陣、可複用 `common-api` 地點 / 貨幣 / 匯率 / 天氣 / release notes、App Store Server Notifications 程式碼、ASC metadata-as-code、Pro 進階搜尋、訂閱異常、月結 ZIP 包、進階規則、智能整理建議、基礎分享圖、酒店旅程回憶和隱私安全 analytics / dashboard 已進入主線；後續繼續補真實樣本、商店素材、營運門禁、雲端輔助整理、智能複核佇列、進階分享模板和多設備自動化同步。
 
 | 內部版本 | App Store | 狀態 | 主要內容 |
 |---|---|---|---|
@@ -200,8 +200,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.1 | 1.5.0 | 已完成 | 酒店水單識別、多帳本基礎能力、日文支援、跨平台 App Icon 重繪、iOS 27 可拉伸布局階段一 |
 | v1.6.2 | 1.5.0 預設沿用 | 已完成 | SDK 適配階段二、酒店郵件草稿佇列 / 去重 / 候選批次匯入、Deep link Router、Widget / App Intents 第一段、資料可靠性、日文發布材料審校和 release smoke |
 | v1.6.3 | 1.5.0 預設沿用 | 已完成 | 酒店水單 C1 專屬收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、雲端候選模型、deep link、PDFKit 本地轉換入口、審核說明和回歸 baseline |
-| v1.6.4 | 1.5.0 預設沿用 | 收口中 | Personal Pro 訂閱基礎：Free / Pro 邊界已凍結並落地 `AutoLedgerProAccessPolicy`；`ProEntitlementManager`、Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API 和 App 端 PDFKit 轉換已落地；production secret 名稱已驗證，2026-06-29 人工 smoke 已測通訂閱開通、APNs 推送和雲收件箱到入帳鏈路；訂閱元資料、審核材料、生命週期截圖和證據歸檔繼續收口 |
-| v1.7.0 | 1.6.0 | 規劃中 | 首頁即時 OCR 票據掃描：支援時優先即時識別，不支援時回退拍照識別照片 / 相簿匯入；韓語 App UI 與 `ko` 識別包；`common-api` 中簡 / 繁中 / 英 / 日 / 韓五語地點目錄熱更新、按日期匯率和酒店歷史天氣摘要；Pro 自動化擴展：進階搜尋、訂閱異常提醒、月結匯出包和進階規則自動套用；基礎搜尋、基礎訂閱、基礎匯出和歷史資料仍保持免費 |
+| v1.6.4 | 1.5.0 預設沿用 | 已完成 | Personal Pro 訂閱基礎和 ASC 1.5.0 收口基線：Free / Pro 邊界已凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 雲端候選下載與 PDFKit 轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口 |
+| v1.7.0 | 1.6.0 | 開發中 | 即時 OCR 票據掃描與拍照 / 相簿 fallback；韓語 UI 與 `ko` 識別包；i18n 發布矩陣；`common-api` 五語地點目錄、貨幣目錄、按日期匯率、酒店歷史天氣、release notes 和隱私安全 analytics；App Store Server Notifications；ASC metadata-as-code；Pro 進階搜尋、訂閱異常提醒、月結 ZIP 包、進階規則、智能整理建議；基礎 PNG 分享圖和酒店旅程回憶；後續繼續推進雲端輔助整理、智能複核佇列、進階分享模板和多設備自動化同步 |
 
 ## License
 

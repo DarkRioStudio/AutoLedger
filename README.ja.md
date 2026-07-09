@@ -62,7 +62,7 @@ Free は日常の記帳に使い続けられます。AutoLedger は既存の主�
 
 Free には、手動記帳、単一スクリーンショット / 写真取り込み、音声 / テキスト入力、手動ホテル明細 PDF 取り込み、ホテル履歴の確認、基本的なサブスクリプション管理、基本レポート、Widget / Share Extension、エクスポート / インポート、バックアップ、履歴記録の表示、編集、削除が含まれます。
 
-Pro は台帳へのアクセス制限ではなく、時間を節約する自動化です。Pro には、ローカルメール明細スキャン、候補の一括取り込み、高度な重複排除、専用クラウド明細受信箱が含まれる、または今後含まれます。
+Pro は台帳へのアクセス制限ではなく、時間を節約する自動化です。現在の Pro には、ローカルメール明細スキャン、候補の一括取り込み、高度な重複排除、専用クラウド明細受信箱、高度な検索、サブスク異常通知、月次パッケージ、高度なルール、スマート整理提案が含まれます。今後はクラウド補助整理、スマート確認キュー、高度な共有テンプレート、複数デバイス自動化同期を進めます。
 
 ## ローカルファーストとクラウド自動化
 
@@ -189,8 +189,8 @@ bash scripts/run_golden_regression.sh
 - App Store `1.4.0` はリリース済みです。内部 `v1.5.1` がこのリリースラインの最終クローズアウトで、`v1.5.0` は実装ベースラインとして含まれます。
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
-- `v1.6.4` はリリース closeout 段階です。`GOAL-2200` で Free / Pro 境界を固定し、プラットフォーム非依存の Pro access policy contract を追加しました。Pro ページ、購入復元 / サブスクリプション管理、ローカルメールの月次無料枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit ローカル変換入口は実装済みです。Cloudflare production の App Store Server API / APNs secret 名称は確認済みです。2026-06-29 の手動 smoke では、サブスクリプション有効化、APNs push、Worker cloud inbox、クラウド候補からホテル明細、最終的な台帳登録まで通過しました。サブスクリプション metadata、レビュー資料、ライフサイクル screenshot、証跡の整理は引き続き closeout 対象です。
-- `v1.7.0` は ASC / App Store `1.6.0` として計画しています。ホームの「レシートスキャン」はライブ OCR を優先し、非対応環境では写真撮影 / ライブラリ取り込みへ戻します。韓国語 UI と `ko` 認識パックを追加し、再利用可能な `common-api` で `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` の五言語対応国 / 都市カタログ更新、日付別為替レート、ホテル滞在日の過去天気サマリーを扱います。Pro はホテル明細の自動化から台帳全体の効率化へ広げ、高度な検索、サブスク異常通知、月次エクスポートパッケージ、高度なルール自動化を実装予定です。
+- `v1.6.4` は ASC / App Store `1.5.0` の closeout baseline として完了しました。`GOAL-2200` で Free / Pro 境界を固定し、Pro ページ、購入復元 / サブスクリプション管理、ローカルメール月次枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit 変換、レビュー条項、visionOS / macOS hotfix、最終 baseline tag まで収束しています。
+- `v1.7.0` は ASC / App Store `1.6.0` として開発中です。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、再利用可能な `common-api` の地点 / 通貨 / 為替 / 天気 / release notes、App Store Server Notifications コード、ASC metadata-as-code、Pro の高度な検索、サブスク異常、月次 ZIP パッケージ、高度なルール、スマート整理提案、基本共有画像、ホテル旅程メモリー、privacy-safe analytics / dashboard が main line に入っています。次は実サンプル、ストア素材、運用 gate、クラウド補助整理、スマート確認キュー、高度な共有テンプレート、複数デバイス自動化同期を進めます。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -200,8 +200,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.1 | 1.5.0 | Completed | Hotel folio archive, foundational multi-ledger support, Japanese localization, cross-platform App Icon redraw, iOS 27 resizable-layout phase 1 |
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
-| v1.6.4 | 1.5.0 by default | In closeout | Personal Pro foundation: Free / Pro boundaries now land in `AutoLedgerProAccessPolicy`; `ProEntitlementManager`, Pro page, restore / manage subscriptions, local email monthly free allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, and App-side PDFKit conversion have landed; production secret names are verified, and the 2026-06-29 manual smoke passed subscription activation, APNs push, and cloud inbox to ledger posting; subscription metadata, review material, lifecycle screenshots, and evidence archiving remain |
-| v1.7.0 | 1.6.0 | Planned | Live OCR receipt scanning with photo / library fallback; Korean UI localization and `ko` recognition pack; `common-api` five-language (`zh-Hans` / `zh-Hant` / `en` / `ja` / `ko`) location-catalog updates, date-based exchange rates, and hotel historical weather summaries; Pro automation expansion with advanced search, subscription anomaly alerts, monthly export packages, and advanced rule automation while basic search, subscriptions, export, and history remain free |
+| v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundation and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
+| v1.7.0 | 1.6.0 | In development | Live OCR receipt scanning with photo / library fallback; Korean UI and `ko` recognition; i18n release matrix; `common-api` five-language location catalog, currency catalog, date-based exchange rates, hotel historical weather, release notes, and privacy-safe analytics; App Store Server Notifications; ASC metadata-as-code; Pro advanced search, subscription anomalies, monthly ZIP packages, advanced rules, smart cleanup suggestions; local PNG share cards and hotel journey memories; later cloud-assisted cleanup, smart review queues, advanced share templates, and cross-device automation sync |
 
 ## License
 

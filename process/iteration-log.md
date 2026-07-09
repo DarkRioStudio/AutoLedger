@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-08（ITER-402 个人 Pro 文档与产品口径收口）
+更新日期：2026-07-08（ITER-403 个人 Pro 文档与产品口径收口）
 
 ## 记录规则
 
@@ -44,7 +44,7 @@
 
 ## 日志条目
 
-### ITER-402 个人 Pro 文档与产品口径收口
+### ITER-403 个人 Pro 文档与产品口径收口
 - 日期：2026-07-08
 - 所属版本：v1.7.0 / ASC 1.6.0
 - 所属阶段：Docs / Product Positioning
@@ -55,10 +55,29 @@
 - 完成内容：免费版完整手动路径、当前 9 项 Pro 自动化能力、Pro 到期不锁历史数据、云端水单收件箱服务端验证和后续 P0 / P1 / P2 路线图已经在文档中对齐。
 - 未完成内容：未重新生成 App Store 截图 / App Preview，未提交 ASC 元数据，未做 UI 真机截图。
 - 测试情况：`git diff --check` PASS。本轮只改 Markdown / 文案源文件，不运行完整 Xcode build。
-- 风险与注意事项：当前操作在 `/tmp/AutoLedgerRio-docs-work` 临时副本中完成，因为原工作树 `/Users/darkrio/Downloads/ProjectRios/AutoLedgerRio` 读取文件时持续返回 `Interrupted system call`；需要原目录恢复后再同步或以临时副本结果为准提交。
+- 风险与注意事项：本轮最初在 `/tmp/AutoLedgerRio-docs-work` 临时副本中完成并推送，因为原工作树读取文件时持续返回 `Interrupted system call`；2026-07-09 原目录恢复后已 fast-forward 到远端提交并合并回本地未提交文档更新。
 - 回滚方式：回退本轮 Markdown / 文案源文件改动，删除新增 `docs/autoledger-personal-pro-roadmap.md` 即可。
 - 结论：文档口径完成收口，未引入功能或数据结构变更。
-- 下一步建议：原工作区恢复后，把临时副本的文档 diff 合回主工作区并按常规路径提交；若继续卡住，优先修复本机文件服务 / 原仓库目录状态。
+- 下一步建议：后续 Pro 页面、ASC 文案和 v1.7.0 计划变更继续同步回 `docs/autoledger-personal-pro-roadmap.md` 和 `docs/pro-access-audit.md`。
+
+### ITER-402 v1.7.0 文档与工程现状对齐
+- 日期：2026-07-08
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Documentation / Release Governance
+- 类型：文档 / 治理
+- 目标：把新的后续方向和当前工程状态回填到当前版本文档，避免 Pro 页面、analytics 代码、数据清洗实现状态和 `v1.7.0-plan` 脱节。
+- 改动范围：更新 `versions/v1.7.0-plan.md`、四语 README、`CHANGELOG.md` 和本迭代日志。
+- 未改动范围：未修改 App / Worker 代码、SQLite / CloudKit schema、StoreKit、ASC metadata、截图 / App Preview、Xcode Cloud 脚本、MARKETING_VERSION、build number、commit tag 或 Cloudflare 配置。
+- 完成内容：`v1.7.0-plan` 新增隐私安全发布观测主线和 `GOAL-2360`，补齐 analytics allow-list、Common API D1 写入、聚合 dashboard、PrivacyInfo / ASC 隐私门禁、测试验收和非目标边界。
+- 完成内容：数据清洗章节补齐当前状态：本地建议、忽略 / 批量采纳 / 历史记录、脱敏 payload / hash-only response / 请求策略和 iOS 云端辅助授权已完成；真正 Worker 上传仍未接入，当前不上传账本数据。
+- 完成内容：Pro 页面里的后续方向同步写回版本计划：云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步均为后续规划，非当前已完成能力。
+- 完成内容：执行记录补录 analytics / dashboard 第一版和 TestFlight 数据清洗 hash 冲突崩溃修复；四语 README 将 `v1.6.4` 调整为已完成、`v1.7.0` 调整为开发中，并同步当前 Pro 自动化和后续方向。
+- 未完成内容：未补新的截图、ASC metadata、Review Notes、Privacy Policy 正文、Cloudflare production smoke 或 Instruments 性能证据。
+- 测试情况：`git diff --check` PASS。本轮为文档对齐，未重新执行 App / Worker 构建。
+- 风险与注意事项：analytics dashboard 代码已存在，但生产 D1 migration、面板访问控制、保留周期和真实线上 smoke 仍需在发布流程中确认；文档已明确当前 App 端实际采集面只有匿名启动事件。
+- 回滚方式：回退本轮文档文件即可恢复到上一版计划，不涉及数据迁移或运行时代码。
+- 结论：本轮完成，当前版本文档已对齐 v1.7.0 最新工程状态和后续方向。
+- 下一步建议：发布前按新增 `GOAL-2360` 门禁确认 PrivacyInfo / ASC App Privacy / 官网隐私政策 / Review Notes 是否一致，并执行 Common API analytics dashboard 线上 smoke。
 
 ### ITER-401 数据清洗别名 hash 冲突崩溃修复
 - 日期：2026-07-08
