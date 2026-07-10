@@ -13,6 +13,7 @@ type CandidateStatus =
 
 type TokenRow = {
   token_hash: string;
+  access_token_hash: string | null;
   user_id: string;
   inbox_email: string;
   status: string;
@@ -355,7 +356,7 @@ export async function receiveEmail(
   }
 
   const tokenHash = await sha256Hex(inbox.token);
-  const token = await loadActiveToken(env, tokenHash);
+  const token = await loadActiveRoutingToken(env, tokenHash);
   if (!token) {
     message.setReject("AutoLedger inbox token is inactive.");
     return;
@@ -434,7 +435,7 @@ async function authenticateRequest(
   }
 
   const tokenHash = await sha256Hex(normalizeToken(rawToken));
-  const token = await loadActiveToken(env, tokenHash);
+  const token = await loadActiveAccessToken(env, tokenHash);
   if (!token) {
     return { ok: false, error: "inactive_or_unknown_inbox_token" };
   }
@@ -448,9 +449,7 @@ function authToken(request: Request): string | null {
   if (bearer) {
     return bearer;
   }
-
-  const url = new URL(request.url);
-  return url.searchParams.get("token")?.trim() || null;
+  return null;
 }
 
 function parseInboxAddress(address: string): { token: string; normalized: string } | null {
@@ -509,6 +508,25 @@ function generateInboxToken(): string {
   return characters.join("");
 }
 
+async function makeInboxCredentialPair(): Promise<{
+  routingToken: string;
+  accessToken: string;
+  routingTokenHash: string;
+  accessTokenHash: string;
+}> {
+  const routingToken = generateInboxToken();
+  let accessToken = generateInboxToken();
+  while (accessToken === routingToken) {
+    accessToken = generateInboxToken();
+  }
+  return {
+    routingToken,
+    accessToken,
+    routingTokenHash: await sha256Hex(routingToken),
+    accessTokenHash: await sha256Hex(accessToken)
+  };
+}
+
 async function claimInboxToken(request: Request, env: Env): Promise<Response> {
   const body = await request.json().catch(() => ({})) as Partial<{
     clientID: string;
@@ -556,16 +574,20 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     : `client:${clientID}`;
   const now = new Date().toISOString();
   const proExpiresAt = serverEntitlement?.expiresAt ?? unverifiedTokenExpirationDate(env, new Date()).toISOString();
-  const token = generateInboxToken();
-  const tokenHash = await sha256Hex(token);
-  const inboxEmail = inboxEmailForToken(token);
+  const {
+    routingToken,
+    accessToken,
+    routingTokenHash: tokenHash,
+    accessTokenHash
+  } = await makeInboxCredentialPair();
+  const inboxEmail = inboxEmailForToken(routingToken);
 
   await env.DB.prepare(
     `INSERT INTO pro_inbox_tokens (
-        token_hash, user_id, inbox_email, status, pro_expires_at, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+        token_hash, access_token_hash, user_id, inbox_email, status, pro_expires_at, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(tokenHash, userID, inboxEmail, "active", proExpiresAt, now, now)
+    .bind(tokenHash, accessTokenHash, userID, inboxEmail, "active", proExpiresAt, now, now)
     .run();
 
   await env.DB.prepare(
@@ -580,9 +602,9 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     .run();
 
   const payload: InboxTokenClaimDTO = {
-    token,
+    token: accessToken,
     inboxEmail,
-    tokenHash,
+    tokenHash: accessTokenHash,
     userID,
     status: "active",
     proExpiresAt
@@ -1836,13 +1858,37 @@ function unverifiedTokenExpirationDate(env: Env, now: Date = new Date()): Date {
   return new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
-async function loadActiveToken(env: Env, tokenHash: string): Promise<TokenRow | null> {
+async function loadActiveRoutingToken(env: Env, tokenHash: string): Promise<TokenRow | null> {
   const row = await env.DB.prepare(
-    `SELECT token_hash, user_id, inbox_email, status, pro_expires_at
+    `SELECT token_hash, access_token_hash, user_id, inbox_email, status, pro_expires_at
        FROM pro_inbox_tokens
       WHERE token_hash = ?`
   )
     .bind(tokenHash)
+    .first<TokenRow>();
+
+  if (!row || row.status !== "active") {
+    return null;
+  }
+
+  if (row.pro_expires_at) {
+    const expiresAt = Date.parse(row.pro_expires_at);
+    if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+      return null;
+    }
+  }
+
+  return row;
+}
+
+async function loadActiveAccessToken(env: Env, accessTokenHash: string): Promise<TokenRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT token_hash, access_token_hash, user_id, inbox_email, status, pro_expires_at
+       FROM pro_inbox_tokens
+      WHERE access_token_hash = ?
+         OR (access_token_hash IS NULL AND token_hash = ?)`
+  )
+    .bind(accessTokenHash, accessTokenHash)
     .first<TokenRow>();
 
   if (!row || row.status !== "active") {
@@ -2681,6 +2727,7 @@ export const testInternals = {
   inboxEmailForToken,
   normalizeClientID,
   generateInboxToken,
+  makeInboxCredentialPair,
   normalizeDeviceToken,
   normalizeAPNSEnvironment,
   redactMetadata,

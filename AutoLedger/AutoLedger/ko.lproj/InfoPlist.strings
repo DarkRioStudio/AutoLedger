@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "AutoLedger";
 "NSCameraUsageDescription" = "카메라로 결제 영수증을 인식합니다.";
+"NSMicrophoneUsageDescription" = "App에서 음성으로 지출을 기록하기 위해 마이크를 사용합니다.";
+"NSSpeechRecognitionUsageDescription" = "음성 장부 내용을 텍스트로 변환하고 지출 기록으로 분석합니다.";

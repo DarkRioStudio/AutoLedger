@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "AutoLedger";
 "NSCameraUsageDescription" = "用於拍照識別支付帳單。";
+"NSMicrophoneUsageDescription" = "用於在 App 內透過語音輸入記錄支出。";
+"NSSpeechRecognitionUsageDescription" = "用於將語音記帳內容轉成文字並解析為支出記錄。";

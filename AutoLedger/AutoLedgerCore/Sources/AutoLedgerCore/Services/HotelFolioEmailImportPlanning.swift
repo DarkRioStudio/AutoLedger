@@ -117,6 +117,7 @@ public struct HotelEmailAccountSettings: Codable, Equatable, Sendable {
         copy.emailAddress = emailAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.imapHost = imapHost.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.imapPort = min(max(imapPort, 1), 65_535)
+        copy.useTLS = true
         copy.searchDays = min(max(searchDays, 0), 365)
         copy.maxMessages = min(max(maxMessages, 0), 100)
         return copy

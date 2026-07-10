@@ -260,7 +260,8 @@ struct HotelFolioEmailImportView: View {
                 .keyboardType(.numberPad)
                 #endif
 
-            Toggle("hotel_stay.email.tls", isOn: $settings.useTLS)
+            Label("hotel_stay.email.tls_required", systemImage: "lock.shield.fill")
+                .foregroundStyle(AppTheme.mutedInk)
 
             if shouldShowScanScopeFields {
                 macScanScopeFields

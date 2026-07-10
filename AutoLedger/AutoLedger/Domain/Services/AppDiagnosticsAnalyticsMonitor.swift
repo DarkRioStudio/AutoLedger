@@ -102,14 +102,15 @@ extension AppDiagnosticsAnalyticsMonitor: MXMetricManagerSubscriber {
 }
 
 enum AppSessionDiagnosticsService {
-    private static let stateKey = "appDiagnostics.sessionState.v1"
-    private static let timestampKey = "appDiagnostics.sessionTimestamp.v1"
+    nonisolated private static let stateKey = "appDiagnostics.sessionState.v1"
+    nonisolated private static let timestampKey = "appDiagnostics.sessionTimestamp.v1"
 
     nonisolated static func recordLaunchRecoveryIfNeeded() {
         let defaults = UserDefaults.standard
         let previousState = defaults.string(forKey: stateKey) ?? "unknown"
         let previousTimestamp = defaults.object(forKey: timestampKey) as? Date
         if previousState == "active", isRecent(previousTimestamp) {
+            CommonAPIAnalyticsService.trackRecoveredUncleanLaunch()
             CommonAPIAnalyticsService.trackCrashDiagnostic(
                 diagnosticType: "unclean_active_session",
                 signalSource: "session_marker",

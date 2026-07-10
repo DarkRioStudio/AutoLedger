@@ -7,23 +7,37 @@ struct DataCleaningSuggestionsView: View {
     @State private var pendingPreviews: [DataCleaningPreviewItem] = []
     @State private var showsApplyConfirmation = false
     @State private var isPresentingProSheet = false
+    @State private var snapshot = DataCleaningPreviewSnapshot()
+    @State private var advancedRulePlan = AdvancedRuleAutomationPlan(rules: [])
+    @State private var isAnalyzing = true
     @AppStorage("dataCleaningCloudAssistEnabled") private var cloudAssistEnabled = false
-
-    private var snapshot: DataCleaningPreviewSnapshot {
-        store.dataCleaningPreviewSnapshot()
-    }
 
     private var previews: [DataCleaningPreviewItem] {
         snapshot.items
     }
 
-    private var advancedRulePlan: AdvancedRuleAutomationPlan {
-        AdvancedRuleAutomationPlanner().buildPlan(
-            transactions: store.visibleTransactions,
-            merchantAliases: store.merchantAliases,
-            categoryCorrections: store.categoryCorrections,
-            ignoredRuleIDs: store.ignoredDataCleaningPreviewIDs
-        )
+    private var analysisRevision: Int {
+        var hasher = Hasher()
+        for transaction in store.visibleTransactions {
+            hasher.combine(transaction.id)
+            hasher.combine(transaction.merchant)
+            hasher.combine(transaction.amount)
+            hasher.combine(transaction.occurredAt)
+            hasher.combine(transaction.category)
+            hasher.combine(transaction.note)
+        }
+        for (key, value) in store.merchantAliases.sorted(by: { $0.key < $1.key }) {
+            hasher.combine(key)
+            hasher.combine(value)
+        }
+        for (key, value) in store.categoryCorrections.sorted(by: { $0.key < $1.key }) {
+            hasher.combine(key)
+            hasher.combine(value.rawValue)
+        }
+        for id in store.ignoredDataCleaningPreviewIDs.sorted() {
+            hasher.combine(id)
+        }
+        return hasher.finalize()
     }
 
     private var cloudAssistDecision: DataCleaningAssistRequestDecision {
@@ -51,7 +65,10 @@ struct DataCleaningSuggestionsView: View {
                     advancedRuleAutomationCard
                     cloudAssistAuthorizationCard
 
-                    if previews.isEmpty {
+                    if isAnalyzing {
+                        ProgressView("ipad.cleaning.analyzing")
+                            .frame(maxWidth: .infinity, minHeight: 160)
+                    } else if previews.isEmpty {
                         emptyState
                     } else {
                         applyAllRow
@@ -105,6 +122,9 @@ struct DataCleaningSuggestionsView: View {
         .task {
             await proEntitlement.loadProducts()
             await proEntitlement.refreshEntitlements()
+        }
+        .task(id: analysisRevision) {
+            await refreshAnalysis()
         }
         .confirmationDialog(
             "ipad.cleaning.apply_confirm_title",
@@ -555,6 +575,7 @@ struct DataCleaningSuggestionsView: View {
 
             Button {
                 _ = store.undoLastDataCleaningApplication()
+                Task { await refreshAnalysis() }
             } label: {
                 Label("ipad.cleaning.undo_last", systemImage: "arrow.uturn.backward")
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -583,6 +604,29 @@ struct DataCleaningSuggestionsView: View {
             startedAt: startedAt
         )
         pendingPreviews = []
+        Task { await refreshAnalysis() }
+    }
+
+    private func refreshAnalysis() async {
+        isAnalyzing = true
+        let transactions = store.visibleTransactions
+        let merchantAliases = store.merchantAliases
+        let categoryCorrections = store.categoryCorrections
+        let ignoredIDs = store.ignoredDataCleaningPreviewIDs
+        let result = await Task.detached(priority: .userInitiated) {
+            let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
+                transactions: transactions,
+                merchantAliases: merchantAliases,
+                categoryCorrections: categoryCorrections,
+                ignoredPreviewIDs: ignoredIDs
+            )
+            let plan = AdvancedRuleAutomationPlanner().buildPlan(snapshot: snapshot)
+            return (snapshot, plan)
+        }.value
+        guard !Task.isCancelled else { return }
+        snapshot = result.0
+        advancedRulePlan = result.1
+        isAnalyzing = false
     }
 
     private func applyButtonTitle(for kind: DataCleaningPreviewKind) -> LocalizedStringKey {

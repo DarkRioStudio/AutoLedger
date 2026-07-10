@@ -21,8 +21,10 @@ public enum SQLiteTransactionStoreError: LocalizedError {
 public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable {
     private var db: OpaquePointer?
     private let syncDeviceID: String
-    private static let busyTimeoutMilliseconds: Int32 = 2_500
-    private static let busyRetryDelays: [TimeInterval] = [0.05, 0.15, 0.35]
+    // LedgerStore currently exposes synchronous writes. Keep lock recovery bounded below one second
+    // so a Share Extension writer cannot freeze the MainActor for multiple seconds.
+    private static let busyTimeoutMilliseconds: Int32 = 200
+    private static let busyRetryDelays: [TimeInterval] = [0.025, 0.05, 0.1]
     private static let transactionReadColumns = """
     id, merchant, amount, occurred_at, category, source, note, ledger_id, hotel_stay_record_id,
     ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider

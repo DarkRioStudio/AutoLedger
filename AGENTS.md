@@ -1,12 +1,14 @@
 # AutoLedger — Agent Instructions
 
-AutoLedger 是一款 iOS 26 / Swift 6 截图记账应用。所有识别与 LLM 推理在设备本地完成，零数据上传。
+AutoLedger 是一款以本地优先个人账本、自动化导入和酒店水单归档为核心的多平台应用。工程使用 Swift 6 编译器与严格并发检查能力，主 App 和扩展当前仍处于 Swift 5 语言模式的渐进迁移阶段。
+
+OCR 与本地模型推理默认在设备端完成；用户主动使用专属云收件箱、Common API、天气或服务端权益校验时会访问对应云端服务。不要在代码或文档中使用“零上传”之类的绝对隐私表述。
 
 ## Quick Links
 
 - 产品特性 & 架构概览 → [README.md](README.md)
 - 迭代工作流（必读） → [process/agent-iteration-workflow.md](process/agent-iteration-workflow.md)
-- 版本计划 → `versions/v*.md`，最新版本 → [versions/v1.3.5-plan.md](versions/v1.3.5-plan.md)
+- 版本计划 → `versions/v*.md`，最新版本 → [versions/v1.7.0-plan.md](versions/v1.7.0-plan.md)
 - CHANGELOG → [CHANGELOG.md](CHANGELOG.md)
 
 ---

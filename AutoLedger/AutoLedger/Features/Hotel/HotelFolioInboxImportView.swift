@@ -429,6 +429,7 @@ struct HotelFolioInboxImportView: View {
             }
             let updatedSettings = HotelFolioInboxSettings(endpoint: endpoint, token: normalizedToken)
             try updatedSettings.save()
+            HotelFolioInboxSettings.saveInboxEmail(claim.inboxEmail)
             token = normalizedToken
             statusMessage = String(localized: "hotel_stay.cloud_inbox.status.address_claimed")
             recordCloudInboxDebug("云端酒店水单收件箱：专属地址已领取 · tokenHash=\(claim.tokenHash)")

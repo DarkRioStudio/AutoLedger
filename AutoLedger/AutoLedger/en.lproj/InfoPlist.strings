@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "AutoLedger";
 "NSCameraUsageDescription" = "Use the camera to recognize payment receipts.";
+"NSMicrophoneUsageDescription" = "Use the microphone to record expenses by voice in the app.";
+"NSSpeechRecognitionUsageDescription" = "Convert spoken ledger entries into text and expense records.";

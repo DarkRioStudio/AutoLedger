@@ -21,6 +21,18 @@ enum CommonAPIAnalyticsService {
         commonAPIAnalyticsLogger.info("[CommonAPI] anonymous launch analytics uploaded")
     }
 
+    nonisolated static func trackRecoveredUncleanLaunch() {
+        fireAndForget(.appLaunchPerformance, payload: [
+            "build_number": .string(buildNumber),
+            "os_major": .string("\(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"),
+            "device_class": .string(deviceClass),
+            "launch_type": .string("previous_session_recovery"),
+            "duration_ms_bucket": .string("not_measured"),
+            "result": .string("failure"),
+            "error_code": .string("unclean_previous_session")
+        ])
+    }
+
     nonisolated static func trackFeatureSurfaceOpened(
         surface: String,
         entrySurface: String,

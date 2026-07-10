@@ -27,7 +27,7 @@ type AnalyticsRequestBody = {
 
 type ValidAnalyticsEvent = {
   eventName: string;
-  eventID: string | null;
+  eventID: string;
   appVersion: string | null;
   buildNumber: string | null;
   osMajor: string | null;
@@ -41,7 +41,8 @@ type AnalyticsValidationErrorCode =
   | "analytics_invalid_event"
   | "analytics_forbidden_field"
   | "analytics_unsupported_field"
-  | "analytics_payload_too_large";
+  | "analytics_payload_too_large"
+  | "analytics_rate_limited";
 
 class AnalyticsValidationError extends Error {
   constructor(
@@ -222,6 +223,17 @@ export async function analyticsEventsEndpoint(request: Request, env: Env, ctx?: 
     return json(error("analytics_database_unconfigured", "Analytics database is not configured."), 503);
   }
 
+  const rateLimiter = (env as Env & {
+    ANALYTICS_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  }).ANALYTICS_RATE_LIMITER;
+  if (rateLimiter) {
+    const networkKey = request.headers.get("cf-connecting-ip")?.trim() || "unknown-network";
+    const { success } = await rateLimiter.limit({ key: `autoledger-analytics:${networkKey}` });
+    if (!success) {
+      return json(error("analytics_rate_limited", "Analytics request rate limit exceeded."), 429);
+    }
+  }
+
   try {
     const body = await parseAnalyticsBody(request);
     const events = validateAnalyticsRequest(body);
@@ -230,7 +242,7 @@ export async function analyticsEventsEndpoint(request: Request, env: Env, ctx?: 
 
     for (const event of events) {
       await env.COMMON_API_DB.prepare(`
-        INSERT INTO autoledger_analytics_events (
+        INSERT OR IGNORE INTO autoledger_analytics_events (
           id,
           app_id,
           event_name,
@@ -371,9 +383,14 @@ function validateAnalyticsEvent(rawEvent: unknown): ValidAnalyticsEvent {
     sanitizedPayload[key] = value;
   }
 
+  const eventID = stringValue(sanitizedPayload.event_id)?.trim();
+  if (!eventID || eventID.length > 128) {
+    throw new AnalyticsValidationError("analytics_invalid_event", "Analytics events require a bounded event_id.");
+  }
+
   return {
     eventName,
-    eventID: stringValue(sanitizedPayload.event_id),
+    eventID,
     appVersion: stringValue(event.appVersion) ?? stringValue(event.app_version) ?? stringValue(sanitizedPayload.app_version),
     buildNumber: stringValue(event.buildNumber) ?? stringValue(event.build_number) ?? stringValue(sanitizedPayload.build_number),
     osMajor: stringValue(event.osMajor) ?? stringValue(event.os_major) ?? stringValue(sanitizedPayload.os_major),

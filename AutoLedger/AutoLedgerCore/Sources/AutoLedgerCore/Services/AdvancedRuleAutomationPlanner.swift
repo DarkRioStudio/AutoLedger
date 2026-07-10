@@ -72,6 +72,10 @@ public struct AdvancedRuleAutomationPlanner: Sendable {
             categoryCorrections: categoryCorrections,
             ignoredPreviewIDs: ignoredRuleIDs
         )
+        return buildPlan(snapshot: snapshot)
+    }
+
+    public func buildPlan(snapshot: DataCleaningPreviewSnapshot) -> AdvancedRuleAutomationPlan {
         let rules = snapshot.items.compactMap(rule)
         return AdvancedRuleAutomationPlan(rules: rules)
     }

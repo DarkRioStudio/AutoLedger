@@ -10,6 +10,27 @@ typealias Subscription = AutoLedgerCore.Subscription
 
 private let logger = Logger(subsystem: "top.darkrio326.AutoLedger", category: "LedgerStore")
 
+private struct LedgerPersistenceUnavailableError: LocalizedError, Sendable {
+    let underlyingDescription: String
+
+    var errorDescription: String? {
+        String(
+            format: String(localized: "ledger.persistence.unavailable_format"),
+            underlyingDescription
+        )
+    }
+}
+
+private struct UnavailableTransactionStore: TransactionStore {
+    let error: LedgerPersistenceUnavailableError
+
+    func loadTransactions() throws -> [Transaction] { throw error }
+    func save(transaction: Transaction) throws { throw error }
+    func update(transaction: Transaction) throws { throw error }
+    func delete(transactionID: UUID) throws { throw error }
+    func bootstrapIfNeeded(with transactions: [Transaction]) throws -> [Transaction] { throw error }
+}
+
 struct DataCleaningApplicationResult: Identifiable, Equatable {
     let id = UUID()
     let previewID: String
@@ -141,6 +162,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
+    @Published private(set) var persistenceInitializationErrorMessage: String?
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
     @Published private(set) var dataCleaningApplicationHistory: [DataCleaningApplicationHistoryEntry] = []
     @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = []
@@ -163,14 +185,34 @@ final class LedgerStore: ObservableObject {
     private var monthlyAnomalyCache: [MonthlyAnomalyCacheKey: [AnomalyAlert]] = [:]
     private var reportMonthOptionsCache: [String: [Date]] = [:]
 
+    convenience init() {
+        do {
+            self.init(transactionStore: try SQLiteTransactionStore())
+        } catch {
+            let unavailableError = LedgerPersistenceUnavailableError(
+                underlyingDescription: error.localizedDescription
+            )
+            self.init(
+                transactionStore: UnavailableTransactionStore(error: unavailableError),
+                persistenceInitializationErrorMessage: unavailableError.localizedDescription
+            )
+        }
+    }
+
+    func dismissPersistenceInitializationError() {
+        persistenceInitializationErrorMessage = nil
+    }
+
     init(
         parser: ReceiptParser = ReceiptParser(),
         sampleProvider: SampleReceiptProviding = SampleReceiptProvider(),
-        transactionStore: TransactionStore? = try? SQLiteTransactionStore()
+        transactionStore: TransactionStore?,
+        persistenceInitializationErrorMessage: String? = nil
     ) {
         self.parser = parser
         self.sampleReceipts = sampleProvider.samples
         self.transactionStore = transactionStore
+        self.persistenceInitializationErrorMessage = persistenceInitializationErrorMessage
         self.transactions = LedgerStore.loadInitialTransactions(using: transactionStore)
         self.deletedTransactions = LedgerStore.loadInitialDeletedTransactions(using: transactionStore)
         self.subscriptions = LedgerStore.loadInitialSubscriptions(using: transactionStore)
@@ -427,7 +469,11 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
         let updatedCount = applyMerchantAliasesToExistingTransactions()
         if updatedCount > 0 {
-            lastImportSummary = "已更新商户别名，并刷新 \(updatedCount) 笔历史账单。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.aliases_refreshed_format",
+                fallback: "已更新商户别名，并刷新 %d 笔历史账单。",
+                updatedCount
+            )
             scheduleCloudKitPushAfterLocalLedgerChange()
         }
         markLedgerConfigurationChanged()
@@ -600,7 +646,7 @@ final class LedgerStore: ObservableObject {
             source: source,
             fallbackMerchant: sample.title
         ) else {
-            lastImportSummary = "示例解析失败。"
+            lastImportSummary = localizedMessage("ledger.status.sample_parse_failed", fallback: "示例解析失败。")
             return
         }
 
@@ -657,7 +703,13 @@ final class LedgerStore: ObservableObject {
 
             case .subscription(let subscription, _, _):
                 upsertSubscription(subscription)
-                lastImportSummary = "已识别为订阅：\(subscription.merchant) \(AppFormatters.currency(subscription.amount, code: subscription.currencyCode))/\(subscription.period.title)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.subscription_recognized_format",
+                    fallback: "已识别为订阅：%@ %@/%@",
+                    subscription.merchant,
+                    AppFormatters.currency(subscription.amount, code: subscription.currencyCode),
+                    subscription.period.title
+                )
 
             case .parseFailed(let normalizedText, let source):
                 let summary = "OCR 已完成，但还没解析出可入账字段。"
@@ -938,7 +990,7 @@ final class LedgerStore: ObservableObject {
             if deletedTransactions.count > 50 {
                 deletedTransactions = Array(deletedTransactions.prefix(50))
             }
-            lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+            lastImportSummary = localizedFormat("ledger.status.deleted_format", fallback: "已删除 %@ 的记录。", transaction.merchant)
             reloadWidgets()
             return
         }
@@ -946,7 +998,7 @@ final class LedgerStore: ObservableObject {
         do {
             try store.delete(transactionID: transaction.id)
         } catch {
-            lastImportSummary = "删除失败：\(error.localizedDescription)"
+            lastImportSummary = localizedFormat("ledger.status.delete_failed_format", fallback: "删除失败：%@", error.localizedDescription)
             return
         }
 
@@ -956,7 +1008,7 @@ final class LedgerStore: ObservableObject {
         if deletedTransactions.count > 50 {
             deletedTransactions = Array(deletedTransactions.prefix(50))
         }
-        lastImportSummary = "已删除 \(transaction.merchant) 的记录。"
+        lastImportSummary = localizedFormat("ledger.status.deleted_format", fallback: "已删除 %@ 的记录。", transaction.merchant)
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -969,7 +1021,7 @@ final class LedgerStore: ObservableObject {
             deletedTransactions.removeAll { $0.id == transaction.id }
             transactions.insert(transaction, at: 0)
             sortTransactions()
-            lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+            lastImportSummary = localizedFormat("ledger.status.restored_format", fallback: "已恢复 %@ 的记录。", transaction.merchant)
             reloadWidgets()
             return
         }
@@ -981,14 +1033,14 @@ final class LedgerStore: ObservableObject {
                 try store.save(transaction: transaction)
             }
         } catch {
-            lastImportSummary = "恢复失败：\(error.localizedDescription)"
+            lastImportSummary = localizedFormat("ledger.status.restore_failed_format", fallback: "恢复失败：%@", error.localizedDescription)
             return
         }
 
         deletedTransactions.removeAll { $0.id == transaction.id }
         transactions.insert(transaction, at: 0)
         sortTransactions()
-        lastImportSummary = "已恢复 \(transaction.merchant) 的记录。"
+        lastImportSummary = localizedFormat("ledger.status.restored_format", fallback: "已恢复 %@ 的记录。", transaction.merchant)
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -1001,13 +1053,13 @@ final class LedgerStore: ObservableObject {
                 try sqlStore.permanentlyDeleteTransaction(id: transaction.id)
                 try sqlStore.deleteDebugEvents(transactionID: transaction.id)
             } catch {
-                lastImportSummary = "彻底删除失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat("ledger.status.permanent_delete_failed_format", fallback: "彻底删除失败：%@", error.localizedDescription)
                 return
             }
         }
         deletedTransactions.removeAll { $0.id == transaction.id }
         debugRecords.removeAll { $0.transactionID == transaction.id }
-        lastImportSummary = "已彻底删除 \(transaction.merchant) 的记录。"
+        lastImportSummary = localizedFormat("ledger.status.permanently_deleted_format", fallback: "已彻底删除 %@ 的记录。", transaction.merchant)
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -1027,7 +1079,12 @@ final class LedgerStore: ObservableObject {
             // 无持久化层（预览/测试场景）：直接更新内存
             transactions.insert(resolvedTransaction, at: 0)
             sortTransactions()
-            lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.manual_saved_format",
+                fallback: "已手动记账：%@ %@。",
+                resolvedTransaction.merchant,
+                AppFormatters.currency(resolvedTransaction.amount)
+            )
             reloadWidgets()
             return true
         }
@@ -1035,13 +1092,18 @@ final class LedgerStore: ObservableObject {
         do {
             try store.save(transaction: resolvedTransaction)
         } catch {
-            lastImportSummary = "记账失败：\(error.localizedDescription)"
+            lastImportSummary = localizedFormat("ledger.status.save_failed_format", fallback: "记账失败：%@", error.localizedDescription)
             return false
         }
 
         transactions.insert(resolvedTransaction, at: 0)
         sortTransactions()
-        lastImportSummary = "已手动记账：\(resolvedTransaction.merchant) \(AppFormatters.currency(resolvedTransaction.amount))。"
+        lastImportSummary = localizedFormat(
+            "ledger.status.manual_saved_format",
+            fallback: "已手动记账：%@ %@。",
+            resolvedTransaction.merchant,
+            AppFormatters.currency(resolvedTransaction.amount)
+        )
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -1634,7 +1696,12 @@ final class LedgerStore: ObservableObject {
                 suggestedCategory: TransactionCategory(rawValue: categoryRaw) ?? .other
             )
             lastParsedReceipt = receipt
-            lastImportSummary = "已导入 \(merchant)，金额 \(AppFormatters.currency(amount))。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.imported_format",
+                fallback: "已导入 %@，金额 %@。",
+                merchant,
+                AppFormatters.currency(amount)
+            )
         }
     }
 
@@ -1645,7 +1712,10 @@ final class LedgerStore: ObservableObject {
         saveMerchantAlias: Bool = false
     ) -> Bool {
         guard let index = transactions.firstIndex(where: { $0.id == transaction.id }) else {
-            lastImportSummary = "账单保存失败：未找到要更新的账单。"
+            lastImportSummary = localizedMessage(
+                "ledger.status.update_missing",
+                fallback: "账单保存失败：未找到要更新的账单。"
+            )
             return false
         }
 
@@ -1666,7 +1736,11 @@ final class LedgerStore: ObservableObject {
         do {
             try transactionStore?.update(transaction: resolvedTransaction)
         } catch {
-            lastImportSummary = "账单保存失败：\(error.localizedDescription)"
+            lastImportSummary = localizedFormat(
+                "ledger.status.update_failed_format",
+                fallback: "账单保存失败：%@",
+                error.localizedDescription
+            )
             appendLedgerCloudSyncLog("账单编辑失败：\(shortID(resolvedTransaction.id)) \(error.localizedDescription)")
             return false
         }
@@ -1699,9 +1773,18 @@ final class LedgerStore: ObservableObject {
             : 0
         sortTransactions()
         if refreshedCount > 0 {
-            lastImportSummary = "已保存 \(resolvedTransaction.merchant) 的修正，并刷新 \(refreshedCount) 笔同商户账单分类。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.correction_refreshed_format",
+                fallback: "已保存 %@ 的修正，并刷新 %d 笔同商户账单分类。",
+                resolvedTransaction.merchant,
+                refreshedCount
+            )
         } else {
-            lastImportSummary = "已保存 \(resolvedTransaction.merchant) 的修正。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.correction_saved_format",
+                fallback: "已保存 %@ 的修正。",
+                resolvedTransaction.merchant
+            )
         }
         reloadWidgets()
         requestAutomaticBackup()
@@ -1776,12 +1859,17 @@ final class LedgerStore: ObservableObject {
                     categoryCorrectionPairs.append((nextMerchant, builtIn))
                 }
             } catch {
-                lastImportSummary = "批量更新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.batch_update_failed_format",
+                    fallback: "批量更新 %@ 时写入本地存储失败：%@",
+                    transaction.merchant,
+                    error.localizedDescription
+                )
             }
         }
 
         guard updatedCount > 0 else {
-            lastImportSummary = "没有需要批量更新的账单。"
+            lastImportSummary = localizedMessage("ledger.status.batch_update_empty", fallback: "没有需要批量更新的账单。")
             return 0
         }
 
@@ -1812,7 +1900,7 @@ final class LedgerStore: ObservableObject {
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
-        lastImportSummary = "已批量更新 \(updatedCount) 笔账单。"
+        lastImportSummary = localizedFormat("ledger.status.batch_updated_format", fallback: "已批量更新 %d 笔账单。", updatedCount)
         return updatedCount
     }
 
@@ -1834,10 +1922,19 @@ final class LedgerStore: ObservableObject {
 
         let updatedCount = applyMerchantAlias(original: trimmedOriginal, alias: alias)
         if updatedCount > 0 {
-            lastImportSummary = "已将 \(updatedCount) 笔历史账单商户名刷新为 \(alias)。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.alias_history_refreshed_format",
+                fallback: "已将 %d 笔历史账单商户名刷新为 %@。",
+                updatedCount,
+                alias
+            )
             requestAutomaticBackup()
         } else {
-            lastImportSummary = "没有需要刷新的 \(trimmedOriginal) 账单。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.alias_history_empty_format",
+                fallback: "没有需要刷新的 %@ 账单。",
+                trimmedOriginal
+            )
         }
         return updatedCount
     }
@@ -1863,7 +1960,12 @@ final class LedgerStore: ObservableObject {
                 try transactionStore?.update(transaction: updated)
                 updatedCount += 1
             } catch {
-                lastImportSummary = "商户别名已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.alias_refresh_failed_format",
+                    fallback: "商户别名已保存，但刷新 %@ 时写入本地存储失败：%@",
+                    transaction.merchant,
+                    error.localizedDescription
+                )
             }
         }
 
@@ -1877,7 +1979,12 @@ final class LedgerStore: ObservableObject {
                 try transactionStore?.update(transaction: updated)
                 updatedCount += 1
             } catch {
-                lastImportSummary = "商户别名已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.alias_deleted_refresh_failed_format",
+                    fallback: "商户别名已保存，但刷新最近删除账单 %@ 时写入本地存储失败：%@",
+                    transaction.merchant,
+                    error.localizedDescription
+                )
             }
         }
 
@@ -1911,7 +2018,12 @@ final class LedgerStore: ObservableObject {
                 try transactionStore?.update(transaction: updated)
                 updatedCount += 1
             } catch {
-                lastImportSummary = "分类偏好已保存，但刷新 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.category_refresh_failed_format",
+                    fallback: "分类偏好已保存，但刷新 %@ 时写入本地存储失败：%@",
+                    transaction.merchant,
+                    error.localizedDescription
+                )
             }
         }
 
@@ -1927,7 +2039,12 @@ final class LedgerStore: ObservableObject {
                 try transactionStore?.update(transaction: updated)
                 updatedCount += 1
             } catch {
-                lastImportSummary = "分类偏好已保存，但刷新最近删除账单 \(transaction.merchant) 时写入本地存储失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat(
+                    "ledger.status.category_deleted_refresh_failed_format",
+                    fallback: "分类偏好已保存，但刷新最近删除账单 %@ 时写入本地存储失败：%@",
+                    transaction.merchant,
+                    error.localizedDescription
+                )
             }
         }
 
@@ -1966,7 +2083,7 @@ final class LedgerStore: ObservableObject {
             )
             lastDataCleaningApplicationResult = result
             lastDataCleaningUndoSnapshot = nil
-            lastImportSummary = "没有需要应用的数据清洗项。"
+            lastImportSummary = localizedMessage("ledger.status.cleaning_empty", fallback: "没有需要应用的数据清洗项。")
             return result
         }
 
@@ -2052,7 +2169,11 @@ final class LedgerStore: ObservableObject {
                 aliases: previousMerchantAliases,
                 deletedKeys: previousMerchantAliasDeletedKeys
             )
-            lastImportSummary = "数据清洗应用失败，已尝试恢复到应用前状态：\(error.localizedDescription)"
+            lastImportSummary = localizedFormat(
+                "ledger.status.cleaning_failed_format",
+                fallback: "数据清洗应用失败，已尝试恢复到应用前状态：%@",
+                error.localizedDescription
+            )
             let result = DataCleaningApplicationResult(
                 previewID: previewID,
                 kind: kind,
@@ -2090,13 +2211,18 @@ final class LedgerStore: ObservableObject {
             )
             recordDataCleaningApplicationHistory(previews: previews, result: result)
             sortTransactions()
-            lastImportSummary = "已应用数据清洗：更新 \(updatedCount) 笔，移入最近删除 \(deletedCount) 笔。"
+            lastImportSummary = localizedFormat(
+                "ledger.status.cleaning_applied_format",
+                fallback: "已应用数据清洗：更新 %d 笔，移入最近删除 %d 笔。",
+                updatedCount,
+                deletedCount
+            )
             reloadWidgets()
             requestAutomaticBackup()
             scheduleCloudKitPushAfterLocalLedgerChange()
         } else {
             lastDataCleaningUndoSnapshot = nil
-            lastImportSummary = "没有需要应用的数据清洗项。"
+            lastImportSummary = localizedMessage("ledger.status.cleaning_empty", fallback: "没有需要应用的数据清洗项。")
         }
 
         return result
@@ -2105,7 +2231,7 @@ final class LedgerStore: ObservableObject {
     @discardableResult
     func undoLastDataCleaningApplication() -> DataCleaningApplicationResult? {
         guard let snapshot = lastDataCleaningUndoSnapshot else {
-            lastImportSummary = "没有可撤销的数据清洗操作。"
+            lastImportSummary = localizedMessage("ledger.status.cleaning_nothing_to_undo", fallback: "没有可撤销的数据清洗操作。")
             return nil
         }
 
@@ -2128,7 +2254,7 @@ final class LedgerStore: ObservableObject {
         lastDataCleaningApplicationResult = result
         lastDataCleaningUndoSnapshot = nil
         markDataCleaningApplicationHistoryUndone(previewID: snapshot.previewID)
-        lastImportSummary = "已撤销上一次数据清洗操作。"
+        lastImportSummary = localizedMessage("ledger.status.cleaning_undone", fallback: "已撤销上一次数据清洗操作。")
         reloadWidgets()
         requestAutomaticBackup()
         scheduleCloudKitPushAfterLocalLedgerChange()
@@ -2192,7 +2318,7 @@ final class LedgerStore: ObservableObject {
                 }
                 try transactionStore?.update(transaction: transaction)
             } catch {
-                lastImportSummary = "恢复数据清洗快照时写入失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat("ledger.status.cleaning_restore_failed_format", fallback: "恢复数据清洗快照时写入失败：%@", error.localizedDescription)
             }
         }
 
@@ -2203,7 +2329,7 @@ final class LedgerStore: ObservableObject {
                 try transactionStore?.update(transaction: transaction)
                 try transactionStore?.delete(transactionID: id)
             } catch {
-                lastImportSummary = "恢复最近删除状态时写入失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat("ledger.status.cleaning_restore_deleted_failed_format", fallback: "恢复最近删除状态时写入失败：%@", error.localizedDescription)
             }
         }
 
@@ -2211,7 +2337,7 @@ final class LedgerStore: ObservableObject {
             do {
                 try transactionStore?.delete(transactionID: id)
             } catch {
-                lastImportSummary = "恢复数据清洗快照时处理新增账单失败：\(error.localizedDescription)"
+                lastImportSummary = localizedFormat("ledger.status.cleaning_restore_new_failed_format", fallback: "恢复数据清洗快照时处理新增账单失败：%@", error.localizedDescription)
             }
         }
 
@@ -2379,10 +2505,6 @@ final class LedgerStore: ObservableObject {
         let transaction = usableQuote == nil
             ? transactionPreparedForLedgerCurrency(baseTransaction, sourceAmount: resolvedReceipt.amount, sourceCurrencyCode: sourceCurrencyCode)
             : baseTransaction
-        recentImports.insert(resolvedReceipt, at: 0)
-        transactions.insert(transaction, at: 0)
-        sortTransactions()
-
         do {
             try transactionStore?.save(transaction: transaction)
         } catch {
@@ -2404,6 +2526,10 @@ final class LedgerStore: ObservableObject {
             )
             return false
         }
+
+        recentImports.insert(resolvedReceipt, at: 0)
+        transactions.insert(transaction, at: 0)
+        sortTransactions()
 
         let summary = "已导入 \(resolvedReceipt.merchant)，金额 \(AppFormatters.currency(resolvedReceipt.amount, code: sourceCurrencyCode))。"
         let debugSummary = resolvedReceipt.parseDiagnostics.map { "\(summary)\n调试：\($0.debugSummary)" } ?? summary
@@ -2686,8 +2812,42 @@ final class LedgerStore: ObservableObject {
     }
 
     private func localizedMessage(_ key: String, fallback: String) -> String {
-        let value = NSLocalizedString(key, comment: "")
-        return value == key ? fallback : value
+        guard
+            let path = Bundle.main.path(forResource: ledgerStatusLanguageKey, ofType: "lproj"),
+            let bundle = Bundle(path: path)
+        else {
+            return Bundle.main.localizedString(forKey: key, value: fallback, table: nil)
+        }
+        return bundle.localizedString(forKey: key, value: fallback, table: nil)
+    }
+
+    private func localizedFormat(_ key: String, fallback: String, _ arguments: CVarArg...) -> String {
+        String(
+            format: localizedMessage(key, fallback: fallback),
+            locale: ledgerStatusLocale,
+            arguments: arguments
+        )
+    }
+
+    private var ledgerStatusLanguageKey: String {
+        let preference = UserDefaults.standard.string(forKey: "appLanguagePreference") ?? "system"
+        if ["zh-Hans", "zh-Hant", "en", "ja", "ko"].contains(preference) {
+            return preference
+        }
+        let normalized = Locale.autoupdatingCurrent.identifier
+            .replacingOccurrences(of: "_", with: "-")
+            .lowercased()
+        if normalized.hasPrefix("ja") { return "ja" }
+        if normalized.hasPrefix("ko") { return "ko" }
+        if normalized.contains("hant") || normalized.contains("-tw") || normalized.contains("-hk") || normalized.contains("-mo") {
+            return "zh-Hant"
+        }
+        if normalized.hasPrefix("zh") { return "zh-Hans" }
+        return "en"
+    }
+
+    private var ledgerStatusLocale: Locale {
+        Locale(identifier: ledgerStatusLanguageKey)
     }
 
     private func appendImportSummary(_ text: String) {
@@ -3298,7 +3458,11 @@ extension LedgerStore {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try data.write(to: url, options: [.atomic])
         recordBackupSuccess(bundle)
-        lastBackupSummary = "已生成 JSON 备份：\(summaryText(for: bundle))"
+        lastBackupSummary = localizedFormat(
+            "ledger.status.json_backup_ready_format",
+            fallback: "已生成 JSON 备份：%@",
+            summaryText(for: bundle)
+        )
         return url
     }
 
@@ -3311,7 +3475,11 @@ extension LedgerStore {
         let filename = "AutoLedger_transactions_\(formatter.string(from: Date())).csv"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try data.write(to: url, options: [.atomic])
-        lastBackupSummary = "已生成 CSV：\(transactions.count) 条正式账单"
+        lastBackupSummary = localizedFormat(
+            "ledger.status.csv_ready_format",
+            fallback: "已生成 CSV：%d 条正式账单",
+            transactions.count
+        )
         return url
     }
 
@@ -3488,7 +3656,11 @@ extension LedgerStore {
             clearCloudKitPushCheckpoint()
             refreshFromStore()
             reloadWidgets()
-            lastImportSummary = "已从备份恢复：\(summaryText(for: bundle))"
+            lastImportSummary = localizedFormat(
+                "ledger.status.backup_restored_format",
+                fallback: "已从备份恢复：%@",
+                summaryText(for: bundle)
+            )
             requestAutomaticBackup()
             scheduleCloudKitPushAfterLocalLedgerChange()
         } catch {
@@ -3507,7 +3679,11 @@ extension LedgerStore {
         let bundle = try makeBackupBundle()
         _ = try iCloudBackupService.write(bundle: bundle)
         recordBackupSuccess(bundle)
-        lastBackupSummary = "已备份到 iCloud：\(summaryText(for: bundle))"
+        lastBackupSummary = localizedFormat(
+            "ledger.status.icloud_backup_ready_format",
+            fallback: "已备份到 iCloud：%@",
+            summaryText(for: bundle)
+        )
     }
 
     func setLedgerCloudSyncEnabled(_ enabled: Bool) async {
@@ -4361,7 +4537,11 @@ extension LedgerStore {
                     try self?.backupToICloudNow()
                 } catch {
                     UserDefaults.standard.set(error.localizedDescription, forKey: Self.lastBackupErrorKey)
-                    self?.lastBackupSummary = "iCloud 自动备份失败：\(error.localizedDescription)"
+                    self?.lastBackupSummary = self?.localizedFormat(
+                        "ledger.status.icloud_backup_failed_format",
+                        fallback: "iCloud 自动备份失败：%@",
+                        error.localizedDescription
+                    )
                 }
             }
         }

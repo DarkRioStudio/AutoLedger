@@ -72,6 +72,13 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.inboxEmailForToken(` ${token.toUpperCase()} `)).toBe(`folio+${token}@getautoledger.app`);
   });
 
+  it("separates inbox routing aliases from API access credentials", async () => {
+    const credentials = await testInternals.makeInboxCredentialPair();
+    expect(credentials.routingToken).not.toBe(credentials.accessToken);
+    expect(credentials.routingTokenHash).not.toBe(credentials.accessTokenHash);
+    expect(testInternals.inboxEmailForToken(credentials.routingToken)).not.toContain(credentials.accessToken);
+  });
+
   it("normalizes client identifiers before token provisioning", () => {
     expect(testInternals.normalizeClientID(" Device:ABC-123_ / extra ")).toBe("deviceabc-123_extra");
     expect(testInternals.normalizeClientID("")).toBe("");

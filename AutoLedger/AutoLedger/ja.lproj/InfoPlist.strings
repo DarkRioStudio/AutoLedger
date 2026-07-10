@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "AutoLedger";
 "NSCameraUsageDescription" = "支払いレシートを認識するためにカメラを使用します。";
+"NSMicrophoneUsageDescription" = "App 内で音声入力から支出を記録するためにマイクを使用します。";
+"NSSpeechRecognitionUsageDescription" = "音声の記帳内容をテキストに変換し、支出記録として解析します。";

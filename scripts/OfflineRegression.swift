@@ -28,6 +28,18 @@ final class RegressionReporter {
     }
 }
 
+private struct RegressionStoreFailure: LocalizedError, Sendable {
+    var errorDescription: String? { "forced persistence failure" }
+}
+
+private struct FailingTransactionStore: TransactionStore {
+    func loadTransactions() throws -> [Transaction] { throw RegressionStoreFailure() }
+    func save(transaction: Transaction) throws { throw RegressionStoreFailure() }
+    func update(transaction: Transaction) throws { throw RegressionStoreFailure() }
+    func delete(transactionID: UUID) throws { throw RegressionStoreFailure() }
+    func bootstrapIfNeeded(with transactions: [Transaction]) throws -> [Transaction] { throw RegressionStoreFailure() }
+}
+
 @main
 struct OfflineRegression {
     static func main() async throws {
@@ -93,6 +105,7 @@ struct OfflineRegression {
         try verifyHotelStaySQLitePersistence(reporter: reporter)
         try verifyHotelStayDraftPersistence(reporter: reporter)
         try verifyLedgerStoreHotelStayPosting(reporter: reporter)
+        await verifyPersistenceFailureSafety(reporter: reporter)
         try await verifyLedgerImportFlow(using: reporter)
         try verifyLedgerCSVCodec(reporter: reporter)
         try verifyBackupRoundTrip(reporter: reporter)
@@ -589,6 +602,15 @@ struct OfflineRegression {
         ).normalized
         reporter.check(boundedSettings.searchDays == 365, "HotelEmailAccountSettings clamps scan window upper bound")
         reporter.check(boundedSettings.maxMessages == 100, "HotelEmailAccountSettings clamps message limit upper bound")
+
+        let insecureLegacySettings = HotelEmailAccountSettings(
+            emailAddress: "traveler@example.com",
+            provider: .custom,
+            imapHost: "imap.example.com",
+            imapPort: 143,
+            useTLS: false
+        ).normalized
+        reporter.check(insecureLegacySettings.useTLS, "HotelEmailAccountSettings upgrades legacy plaintext settings to TLS")
 
         let commonPresets: [(HotelEmailAccountSettings.Provider, String)] = [
             (.qq, "imap.qq.com"),
@@ -1928,6 +1950,26 @@ struct OfflineRegression {
         )
         reporter.check(allowed.canRequest, "ExternalReceiptAssistGate allows complete enabled config")
         reporter.check(allowed.reason == nil, "ExternalReceiptAssistGate has no failure reason when allowed")
+
+        let insecureRemote = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "http://api.example.com/receipt-assist",
+                hasAPIKey: true
+            ),
+            payload: payload
+        )
+        reporter.check(!insecureRemote.canRequest, "ExternalReceiptAssistGate rejects remote plaintext endpoints")
+
+        let localDevelopment = gate.evaluate(
+            configuration: ExternalReceiptAssistConfiguration(
+                isEnabled: true,
+                endpointURLString: "http://127.0.0.1:8787/receipt-assist",
+                hasAPIKey: true
+            ),
+            payload: payload
+        )
+        reporter.check(localDevelopment.canRequest, "ExternalReceiptAssistGate permits loopback development endpoints")
     }
 
     private static func verifyExternalReceiptAssistProviderPresets(reporter: RegressionReporter) {
@@ -6583,6 +6625,34 @@ struct OfflineRegression {
         }
     }
 
+    private static func verifyPersistenceFailureSafety(reporter: RegressionReporter) async {
+        let ledger = LedgerStore(transactionStore: FailingTransactionStore())
+        let manual = Transaction(
+            merchant: "Persistence Failure Merchant",
+            amount: 18.8,
+            occurredAt: .now,
+            category: .other,
+            source: .manual,
+            note: "must not remain in memory"
+        )
+        reporter.check(!ledger.addTransaction(manual), "LedgerStore rejects manual writes when persistence fails")
+        reporter.check(ledger.transactions.isEmpty, "LedgerStore does not publish failed manual writes")
+
+        ledger.importRecognizedText(
+            """
+            支付宝
+            交易成功
+            商户：持久化失败回归
+            金额：￥19.90
+            时间：2026/07/10 10:00
+            """,
+            preferredSource: .alipay
+        )
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        reporter.check(ledger.transactions.isEmpty, "LedgerStore rolls back failed OCR persistence before publishing")
+        reporter.check(ledger.recentImports.isEmpty, "LedgerStore does not publish failed OCR imports")
+    }
+
     private static func verifyLedgerCSVCodec(reporter: RegressionReporter) throws {
         let transaction = Transaction(
             merchant: "Demo Coffee",
@@ -6608,6 +6678,19 @@ struct OfflineRegression {
         let invalid = try LedgerCSVCodec.decode(data: Data(invalidCSV.utf8))
         reporter.check(invalid.rows.count == 1, "LedgerCSVCodec keeps invalid row for review")
         reporter.check(invalid.rows.first?.failureReason == .missingAmount, "LedgerCSVCodec marks invalid amount")
+
+        let duplicateHeaderCSV = """
+        occurredAt,merchant,amount,amount
+        2026-06-04T09:30:00Z,Example Market,12.50,13.50
+        """
+        do {
+            _ = try LedgerCSVCodec.decode(data: Data(duplicateHeaderCSV.utf8))
+            reporter.check(false, "LedgerCSVCodec rejects duplicate columns without crashing")
+        } catch LedgerCSVCodecError.duplicateColumns(let columns) {
+            reporter.check(columns == ["amount"], "LedgerCSVCodec rejects duplicate columns without crashing")
+        } catch {
+            reporter.check(false, "LedgerCSVCodec reports duplicate columns with the expected error")
+        }
     }
 
     private static func verifyBackupRoundTrip(reporter: RegressionReporter) throws {

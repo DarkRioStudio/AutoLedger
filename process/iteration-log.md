@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-09（ITER-407 崩溃与性能观测补齐）
+更新日期：2026-07-10（ITER-408 只读审计问题修复）
 
 ## 记录规则
 
@@ -43,6 +43,26 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-408 只读审计问题修复
+- 日期：2026-07-10
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening
+- 类型：Bugfix / 安全 / 性能 / 测试 / 治理
+- 目标：修复严格只读代码审计识别出的数据一致性、崩溃、明文传输、令牌暴露、分析事件滥用、主线程计算和产品说明偏差。
+- 改动范围：`LedgerStore`、SQLite / CSV / OCR 回归、数据清洗视图与规则计划器、外部识别和邮箱 TLS 合同、云水单收件箱 Worker、Common API analytics、五语 App / InfoPlist 文案、`AGENTS.md`、CHANGELOG 与本日志。
+- 未改动范围：未修改 App SQLite / CloudKit schema、StoreKit Product ID、ASC metadata、entitlement、订阅价格、CloudKit Production schema、Xcode Cloud workflow 或构建 tag。
+- 完成内容：SQLite 初始化失败会注入明确的不可用 store 并在根界面提示，不再伪装为空账本；手动记账和 OCR 持久化失败不会提前污染内存 / 最近导入状态；CSV 重复规范化列名改为可恢复错误。
+- 完成内容：数据清洗建议和高级规则计划改为基于单次快照在后台计算，避免 SwiftUI getter 反复扫描账本；SQLite busy timeout 和退避缩短为有界等待，降低主线程被数据库锁长时间阻塞的风险。
+- 完成内容：云收件箱邮件路由 token 与 API access token 分离，API 只接受 Bearer token；analytics 要求客户端 `event_id`，D1 使用 `INSERT OR IGNORE` 幂等写入，并增加 Cloudflare Rate Limiting binding。
+- 完成内容：外部识别远端只允许 HTTPS，HTTP 仅允许 loopback 调试；旧 IMAP 配置自动升级为 TLS，UI 不再允许关闭 TLS；麦克风、语音识别权限和账本操作状态补齐中繁英日韩本地化，App 内语言 override 可覆盖动态状态文案。
+- 完成内容：非正常会话恢复同时写入失败的 launch performance 事件，修正启动成功率只统计成功样本的问题；工程说明改为真实的 Swift 语言模式边界，未为追求名义 Swift 6 而一次性强切所有 App Intent / Extension。
+- 未完成内容：本轮未做真机 UI smoke；主 App / Extension 的 Swift 6 语言模式迁移仍需独立迭代。
+- 测试情况：`git diff --check` PASS；`bash scripts/run_offline_regression.sh` PASS；Common API `npm run typecheck && npx vitest run` PASS（38 tests）；hotel-folio-inbox `npx tsc --noEmit && npx vitest run` PASS（28 tests）；iOS Simulator Debug workspace build PASS；Mac Catalyst Debug workspace build PASS。staging / production D1 migration 均成功；production health / manifest / analytics / hotel health smoke PASS，同一 analytics `event_id` 重试后 D1 count 为 1，production 无签名 claim 返回 403，dashboard 未登录返回 Access redirect；production `access_token_hash` 列和唯一索引查询确认存在。
+- 风险与注意事项：收件箱 token 分离保留旧记录兼容读取，但新 claim 依赖 migration `0003` 的 `access_token_hash` 列；analytics 幂等与限流依赖 migration `0004` 和 `ANALYTICS_RATE_LIMITER` binding，不能只部署代码。主 App / Extension 仍是 Swift 5 语言模式，后续 Swift 6 迁移应按 target 分批完成并清零并发警告。
+- 回滚方式：App 侧可按模块回退持久化提示、后台分析和 TLS / 本地化修改；Worker 侧先回退代码再回退 binding。D1 新列和唯一索引可保留，不需要破坏性回滚。
+- 结论：审计中可在当前版本安全收口的问题已完成修复，通过本地门禁并部署到 staging / production。Common API staging Version ID `f2b113c0-6481-497c-9621-574caa1fbe34`、production `825273e1-0fde-4d6d-a318-fb7424e26b45`；酒店收件箱 staging `eaad8de3-b04d-4850-a482-490c468b6d81`、production `c0e329bb-c8d6-42d6-933f-a209ebaa6c7d`。
+- 下一步建议：在下一次 App 二进制构建中做真机回归，并另开独立迭代逐 target 推进 Swift 6 语言模式。
 
 ### ITER-407 崩溃与性能观测补齐
 - 日期：2026-07-09

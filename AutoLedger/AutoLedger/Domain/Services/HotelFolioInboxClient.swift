@@ -32,6 +32,7 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
     static let defaultEndpoint = "https://folio.getautoledger.app"
     static let endpointKey = "hotelFolioInboxEndpoint"
     static let clientIDKey = "hotelFolioInboxClientID"
+    static let inboxEmailKey = "hotelFolioInboxEmail"
 
     var endpoint: String
     var token: String
@@ -46,7 +47,11 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
     }
 
     var inboxAddress: String {
-        HotelCloudFolioInboxAddress(token: normalizedToken).emailAddress
+        let stored = UserDefaults.standard.string(forKey: Self.inboxEmailKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return stored?.isEmpty == false
+            ? stored!
+            : HotelCloudFolioInboxAddress(token: normalizedToken).emailAddress
     }
 
     var canRequest: Bool {
@@ -66,6 +71,12 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
         let clientID = UUID().uuidString.lowercased()
         UserDefaults.standard.set(clientID, forKey: clientIDKey)
         return clientID
+    }
+
+    static func saveInboxEmail(_ value: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty else { return }
+        UserDefaults.standard.set(trimmed, forKey: inboxEmailKey)
     }
 
     func save() throws {
@@ -140,6 +151,7 @@ enum HotelFolioInboxTokenStore {
             kSecAttrAccount as String: account
         ]
         SecItemDelete(query as CFDictionary)
+        UserDefaults.standard.removeObject(forKey: HotelFolioInboxSettings.inboxEmailKey)
     }
 }
 

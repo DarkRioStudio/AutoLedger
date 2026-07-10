@@ -117,6 +117,19 @@ private struct AutoLedgerRootView: View {
             .environmentObject(navigationState)
             .environment(\.autoLedgerThemeRefreshID, themeRefreshID)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
+            .alert(
+                localizedRootString("ledger.persistence.alert.title", fallback: "本地账本暂不可用"),
+                isPresented: Binding(
+                    get: { store.persistenceInitializationErrorMessage != nil },
+                    set: { if !$0 { store.dismissPersistenceInitializationError() } }
+                )
+            ) {
+                Button(localizedRootString("common.ok", fallback: "好")) {
+                    store.dismissPersistenceInitializationError()
+                }
+            } message: {
+                Text(store.persistenceInitializationErrorMessage ?? "")
+            }
             .alert("检测到 iCloud 备份", isPresented: Binding(
                 get: { store.isLocalDataEmptyForRestore && store.detectedICloudBackup != nil },
                 set: { if !$0 { store.detectedICloudBackup = nil } }
@@ -234,6 +247,14 @@ private struct AutoLedgerRootView: View {
             guard !Task.isCancelled else { return }
             await store.syncLedgerWithCloudKitOnLaunchIfNeeded()
         }
+    }
+
+    private func localizedRootString(_ key: String, fallback: String) -> String {
+        AppLanguagePreference.localizedString(
+            key,
+            languageKey: AppLanguagePreference.current.catalogLanguageKey,
+            fallback: fallback
+        )
     }
 
     private func scheduleCommonAPIRefresh() {

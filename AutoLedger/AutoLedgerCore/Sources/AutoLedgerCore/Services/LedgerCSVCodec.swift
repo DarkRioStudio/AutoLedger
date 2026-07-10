@@ -4,6 +4,7 @@ public enum LedgerCSVCodecError: Error, LocalizedError, Sendable {
     case invalidUTF8
     case missingHeader
     case missingRequiredColumns([String])
+    case duplicateColumns([String])
 
     public var errorDescription: String? {
         switch self {
@@ -13,6 +14,8 @@ public enum LedgerCSVCodecError: Error, LocalizedError, Sendable {
             return "CSV header is missing."
         case let .missingRequiredColumns(columns):
             return "CSV is missing required columns: \(columns.joined(separator: ", "))."
+        case let .duplicateColumns(columns):
+            return "CSV contains duplicate columns: \(columns.joined(separator: ", "))."
         }
     }
 }
@@ -92,6 +95,14 @@ public enum LedgerCSVCodec {
         }
         guard missing.isEmpty else {
             throw LedgerCSVCodecError.missingRequiredColumns(missing)
+        }
+
+        let duplicateColumns = Dictionary(grouping: normalizedHeader, by: { $0 })
+            .filter { !$0.key.isEmpty && $0.value.count > 1 }
+            .keys
+            .sorted()
+        guard duplicateColumns.isEmpty else {
+            throw LedgerCSVCodecError.duplicateColumns(duplicateColumns)
         }
 
         let indexByColumn = Dictionary(uniqueKeysWithValues: normalizedHeader.enumerated().map { ($0.element, $0.offset) })

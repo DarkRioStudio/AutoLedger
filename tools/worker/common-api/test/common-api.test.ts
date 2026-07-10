@@ -127,11 +127,13 @@ class MemoryD1Database {
 
 class AnalyticsCaptureD1Database {
   readonly analyticsInserts: unknown[][] = [];
+  readonly analyticsSQL: string[] = [];
 
   constructor(private readonly rows: ReleaseNoteFixture[]) {}
 
   prepare(sql: string): MemoryD1PreparedStatement | AnalyticsCaptureD1PreparedStatement {
     if (sql.includes("autoledger_analytics_events")) {
+      this.analyticsSQL.push(sql);
       return new AnalyticsCaptureD1PreparedStatement(sql, this.analyticsInserts);
     }
     return new MemoryD1PreparedStatement(sql, this.rows);
@@ -373,6 +375,57 @@ describe("common api worker contract", () => {
     expect(payloadJSON).not.toContain("merchant");
     expect(analyticsDB.analyticsInserts[1]![2]).toBe("al_feature_surface_opened");
     expect(analyticsDB.analyticsInserts[2]![2]).toBe("al_performance_diagnostic");
+    expect(analyticsDB.analyticsSQL.every((sql) => sql.includes("INSERT OR IGNORE"))).toBe(true);
+  });
+
+  it("rate limits analytics ingestion before writing to D1", async () => {
+    const analyticsDB = new AnalyticsCaptureD1Database(releaseNotesFixtures);
+    const analyticsEnv = {
+      ...env,
+      COMMON_API_DB: analyticsDB as unknown as D1Database,
+      ANALYTICS_RATE_LIMITER: {
+        limit: async () => ({ success: false })
+      }
+    } as unknown as Env;
+    const response = await routeFetch(new Request("https://example.test/v1/analytics/events", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": "192.0.2.1"
+      },
+      body: JSON.stringify({ app: "autoledger", events: [] })
+    }), analyticsEnv);
+
+    expect(response.status).toBe(429);
+    expect(analyticsDB.analyticsInserts).toEqual([]);
+  });
+
+  it("requires an event_id for analytics idempotency", async () => {
+    const analyticsDB = new AnalyticsCaptureD1Database(releaseNotesFixtures);
+    const analyticsEnv = {
+      ...env,
+      COMMON_API_DB: analyticsDB as unknown as D1Database
+    } as unknown as Env;
+    const response = await routeFetch(new Request("https://example.test/v1/analytics/events", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        app: "autoledger",
+        events: [{
+          eventName: "al_feature_surface_opened",
+          payload: {
+            app_version: "1.6.0",
+            surface: "tab_report",
+            entry_surface: "tab_bar",
+            is_pro_surface: false,
+            open_reason: "tab_selection"
+          }
+        }]
+      })
+    }), analyticsEnv);
+
+    expect(response.status).toBe(400);
+    expect(analyticsDB.analyticsInserts).toEqual([]);
   });
 
   it("rejects analytics payloads with financial or document fields", async () => {

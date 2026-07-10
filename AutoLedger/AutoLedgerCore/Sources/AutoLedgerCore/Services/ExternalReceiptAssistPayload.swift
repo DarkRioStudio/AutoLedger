@@ -541,8 +541,9 @@ public struct ExternalReceiptAssistGate: Sendable {
 
         guard let endpointURL = URL(string: endpointURLString),
               let scheme = endpointURL.scheme?.lowercased(),
-              ["https", "http"].contains(scheme),
-              endpointURL.host?.isEmpty == false else {
+              let host = endpointURL.host?.lowercased(),
+              !host.isEmpty,
+              scheme == "https" || (scheme == "http" && Self.isLoopbackHost(host)) else {
             return ExternalReceiptAssistGateDecision(canRequest: false, endpointURL: nil, reason: .invalidEndpoint)
         }
 
@@ -551,5 +552,9 @@ public struct ExternalReceiptAssistGate: Sendable {
         }
 
         return ExternalReceiptAssistGateDecision(canRequest: true, endpointURL: endpointURL, reason: nil)
+    }
+
+    private static func isLoopbackHost(_ host: String) -> Bool {
+        host == "localhost" || host == "127.0.0.1" || host == "::1"
     }
 }

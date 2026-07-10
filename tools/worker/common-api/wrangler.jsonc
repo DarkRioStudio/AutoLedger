@@ -8,6 +8,13 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "ratelimits": [
+    {
+      "name": "ANALYTICS_RATE_LIMITER",
+      "namespace_id": "3261700",
+      "simple": { "limit": 300, "period": 60 }
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "local",
     "PUBLIC_API_ORIGIN": "https://api.darkrio326.top",
@@ -23,6 +30,13 @@
   "env": {
     "staging": {
       "name": "darkrio-common-api-staging",
+      "ratelimits": [
+        {
+          "name": "ANALYTICS_RATE_LIMITER",
+          "namespace_id": "3261701",
+          "simple": { "limit": 300, "period": 60 }
+        }
+      ],
       "routes": [
         {
           "pattern": "staging-api.darkrio326.top",
@@ -51,6 +65,13 @@
     },
     "production": {
       "name": "darkrio-common-api-production",
+      "ratelimits": [
+        {
+          "name": "ANALYTICS_RATE_LIMITER",
+          "namespace_id": "3261702",
+          "simple": { "limit": 300, "period": 60 }
+        }
+      ],
       "routes": [
         {
           "pattern": "api.darkrio326.top",
