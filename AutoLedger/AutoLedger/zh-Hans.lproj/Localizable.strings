@@ -396,6 +396,24 @@
 "ledger.persistence.unavailable_format" = "本地账本存储暂不可用，已停止写入以保护数据。请重新启动 App 后重试。详情：%@";
 "ledger.persistence.alert.title" = "本地账本暂不可用";
 "common.ok" = "好";
+"pending_center.title" = "待处理";
+"pending_center.subtitle" = "集中确认、去重和整理需要关注的内容";
+"pending_center.empty.subtitle" = "目前没有需要处理的内容";
+"pending_center.accessibility_format" = "待处理，共 %d 项";
+"pending_center.loading" = "正在整理待处理内容";
+"pending_center.empty.title" = "都处理好了";
+"pending_center.empty.detail" = "新的识别结果、酒店水单或整理建议会显示在这里。";
+"pending_center.total_format" = "共 %d 项，逐项确认后再写入或整理账本。";
+"pending_center.receipt.title" = "账单待确认";
+"pending_center.receipt.subtitle" = "检查识别结果后再保存到账本";
+"pending_center.hotel.title" = "酒店水单待复核";
+"pending_center.hotel.subtitle" = "补齐酒店、日期和金额后确认入账";
+"pending_center.duplicate.title" = "疑似重复";
+"pending_center.duplicate.subtitle" = "复核相似账单，避免重复入账";
+"pending_center.subscription.title" = "订阅异常";
+"pending_center.subscription.subtitle" = "查看涨价、重复扣费和周期变化";
+"pending_center.cleaning.title" = "智能整理建议";
+"pending_center.cleaning.subtitle" = "统一商户名称并应用已确认的分类偏好";
 "ledger.status.aliases_refreshed_format" = "已更新商户别名，并刷新 %d 笔历史账单。";
 "ledger.status.sample_parse_failed" = "示例解析失败。";
 "ledger.status.subscription_recognized_format" = "已识别为订阅：%@ %@/%@";
@@ -707,6 +725,7 @@
 "ledger.advanced_search.saved" = "常用条件";
 "ledger.advanced_search.saved_empty" = "还没有保存的搜索条件。";
 "ledger.advanced_search.clear" = "清空";
+"ledger.advanced_search.apply" = "应用搜索条件";
 "ledger.advanced_search.pro.title" = "高级搜索是 Pro 自动化";
 "ledger.advanced_search.pro.body" = "基础关键词搜索永久免费；组合金额、日期、账本和水单线索属于节省时间的 Pro 能力。";
 "ledger.detail.empty.title" = "选择一笔账单";
@@ -1504,6 +1523,7 @@
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "专属水单收件箱服务暂时不可用。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "云端收件箱返回内容无法解析。";
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "领取专属水单地址失败，请稍后重试。";
+"hotel_stay.cloud_inbox.error.server_entitlement_required" = "暂时无法通过服务器确认 Pro 权益。请确认已恢复购买后重试；现有专属地址和手动导入不受影响。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "云端收件箱请求失败（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "专属水单地址保存失败（Keychain %d）。";
 

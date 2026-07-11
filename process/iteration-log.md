@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-10（ITER-408 只读审计问题修复）
+更新日期：2026-07-11（ITER-411 云端水单 TestFlight 权益环境修复）
 
 ## 记录规则
 
@@ -43,6 +43,59 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-411 云端水单 TestFlight 权益环境修复
+- 日期：2026-07-11
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Personal Pro / Cloud Inbox
+- 类型：Bugfix / Worker / UI / 部署
+- 目标：定位云端水单收件箱已开启但刷新返回 `403 server_entitlement_required` 的原因，修复 TestFlight 权益校验并确认现有专属邮件地址没有失效。
+- 改动范围：`hotel-folio-inbox` Worker App Store Server API 环境路由与测试；`HotelFolioInboxClient` 结构化错误；中繁英日韩文案；云收件箱 entitlement smoke；版本计划、CHANGELOG 和本日志。
+- 未改动范围：未修改 D1、SQLite 或 CloudKit schema，未修改 StoreKit Product ID、ASC metadata、entitlement、订阅价格、Xcode Cloud workflow 或构建 tag；未开启 production 未验证 token claim。
+- 完成内容：确认专属地址记录仍为 active，已有历史候选成功转换，Bearer API 当前返回 200；Cloudflare Email Routing、MX、SPF 和 Worker health 正常。地址本身可继续使用，当前待处理候选为 0。
+- 完成内容：确认错误根因是 TestFlight JWS 标记为 Sandbox，而 Worker 固定访问 Production App Store Server API，Apple 返回 404 后被映射为服务端权益不足。Worker 现在按 JWS `environment` 选择 Apple host，旧 payload 只在 404 时回退另一个环境。
+- 完成内容：App 不再向终端用户展示 Worker 原始 JSON，服务端暂时无法确认 Pro 时给出可操作的本地化提示；现有地址和手动导入不受该错误影响。
+- 未完成内容：没有发送一封新的测试邮件，也无法在命令行伪造用户 TestFlight 的真实 StoreKit signed transaction；最终领取复测需用户在新 App 二进制中恢复购买后重试。
+- 测试情况：Worker `npm run typecheck && npx vitest run` PASS（29 tests）；`python3 scripts/check_cloud_inbox_entitlement_smoke.py` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；production health、Email Routing、MX / SPF、现有地址 API smoke PASS；iPhone 17 Pro Simulator与 Mac Catalyst Debug workspace build 均 PASS。staging Version ID `a02365d5-87c6-4e88-9932-f224b291570a`，production Version ID `162ee8c7-db7b-48df-8cfb-3de0024b94a9`。
+- 风险与注意事项：线上 App Store Server API 仍要求有效 Apple JWS 和生产 secrets；客户端本地 Pro gate 不是服务端安全边界。旧地址没有独立 access token，但 Worker 保留兼容读取，后续可在用户主动重新领取时迁移。
+- 回滚方式：回退 Worker 环境选择 helper、客户端结构化错误和五语 key，再部署上一 Worker version；无数据迁移回滚。
+- 结论：截图中的 403 根因已修复并上线，现有专属邮件地址可继续收信和访问；剩余是真实 TestFlight JWS 的用户侧重试证据。
+- 下一步建议：新二进制安装后在 TestFlight 恢复购买并刷新一次；若仍失败，记录新的 reason 和 transaction environment，不重新领取或删除现有地址。
+
+### ITER-410 高级搜索交互收口
+- 日期：2026-07-11
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Personal Pro / Search
+- 类型：UI / 交互 / 测试
+- 目标：让高级搜索的每组筛选条件都显式启用，并通过清晰的底部按钮一次性应用，避免调整条件时结果隐式变化。
+- 改动范围：`LedgerAdvancedSearchSheet` 草稿状态、金额 / 分类 / 来源 / 账本开关、底部应用按钮、保存条件恢复、中繁英日韩文案、静态 smoke、版本计划、CHANGELOG 和本日志。
+- 未改动范围：未修改高级搜索 Core 合同、SQLite / CloudKit schema、StoreKit Product ID、ASC metadata、entitlement、订阅价格、Worker API、Xcode Cloud workflow 或构建 tag。
+- 完成内容：金额区间、分类、来源和账本默认关闭并折叠；日期起止继续独立控制；关闭的条件组在应用前清空，不会以不可见状态继续过滤。
+- 完成内容：搜索面板使用本地草稿，点击底部“应用搜索条件”后才提交并关闭；取消、返回或手势关闭不影响当前结果，清除只重置面板草稿；载入常用搜索会同步恢复开关。
+- 未完成内容：本轮未增加 Mac 专用搜索工具栏、跨设备保存条件或新的筛选字段。
+- 测试情况：`python3 scripts/check_advanced_search_ui_smoke.py` PASS；五语本地化覆盖与 `plutil -lint` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；iPhone 17 Pro Simulator与 Mac Catalyst Debug workspace build 均 PASS；`git diff --check` PASS。
+- 风险与注意事项：高级搜索继续使用本地 Pro UI gate；基础关键词搜索保持免费并始终可见。
+- 回滚方式：回退 `LedgerAdvancedSearchSheet` 草稿 / toggle / apply 改动、五语 key 和 smoke 约束即可；无数据迁移。
+- 结论：高级搜索从“修改即生效”收口为显式启用、显式应用的可预期交互。
+- 下一步建议：TestFlight 观察常用条件载入、金额区间和分类组合的操作完成率，再决定是否增加 Saved Views 快捷入口。
+
+### ITER-409 统一待处理中心第一版
+- 日期：2026-07-11
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Personal Pro / Workflow
+- 类型：能力增强 / UI / 测试
+- 目标：不新增拥挤的移动端 Tab，把现有导入、复核、去重、订阅异常和智能整理能力串成一个统一待处理入口，同时保留免费版完整手动路径。
+- 改动范围：新增 `PendingActionCenterPlanner`、iPhone 记账 Tab 待处理卡片与列表、iPad / Mac 待处理工作区、中繁英日韩文案、离线回归与静态 smoke；更新 v1.7.0 计划、CHANGELOG 和本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、ASC metadata、entitlement、订阅价格、Xcode Cloud workflow 或构建 tag。
+- 完成内容：Core 聚合本机 OCR 待确认、酒店水单待复核、疑似重复、订阅异常和智能整理建议，按优先级与固定业务顺序生成空分类已过滤的快照。
+- 完成内容：iPhone 继续复用“记账”Tab，待处理中心本身免费可见并跳转既有手动处理流程；订阅异常和智能整理等自动化分组继续显示 Pro 标记，不把基础导入或历史数据改成付费。
+- 完成内容：iPad / Mac 新增独立侧栏工作区，复用同一快照和现有导入、酒店、订阅与数据清洗页面；聚合计算基于状态快照在后台执行，避免 SwiftUI 重绘同步扫描整本账本。
+- 未完成内容：云收件箱远端候选、批量邮箱候选和月结缺资料项尚未进入统一队列；OCR 待确认仍是内存单条状态；本轮没有新增自动正式入账。
+- 测试情况：`python3 scripts/check_pending_action_center_smoke.py` PASS；五语本地化覆盖与 `plutil -lint` PASS；`bash scripts/run_offline_regression.sh` PASS；`git diff --check` PASS；iOS Simulator、iOS generic 和 Mac Catalyst generic Debug workspace build 均 PASS。验证前从同版本 DerivedData 恢复了被磁盘清理误删的 ignored CocoaPods `MediaPipeTasksGenAIC` simulator binary，源文件与恢复文件 SHA-256 一致；本轮临时 DerivedData 验证后已清理。
+- 风险与注意事项：当前 snapshot revision 使用相关集合数量、规则数量和最近导入状态触发刷新；远端队列接入前不能把待处理中心宣传成完整跨设备 Inbox。
+- 回滚方式：回退新增 Core planner、Inbox / iPad 工作区入口、五语 key、回归脚本和文档即可；无数据迁移或远端合同回滚。
+- 结论：统一待处理中心第一版完成，现有 Pro 能力从分散入口开始形成“导入 → 待确认 → 去重 → 整理 → 异常”的本机处理闭环。
+- 下一步建议：先观察 TestFlight 中待处理入口的发现率和处理完成率，再为云收件箱候选与月结检查项设计可持久化队列合同。
 
 ### ITER-408 只读审计问题修复
 - 日期：2026-07-10

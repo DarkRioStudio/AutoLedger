@@ -396,6 +396,24 @@
 "ledger.persistence.unavailable_format" = "Local ledger storage is unavailable, so writes have been stopped to protect your data. Restart the app and try again. Details: %@";
 "ledger.persistence.alert.title" = "Local Ledger Unavailable";
 "common.ok" = "OK";
+"pending_center.title" = "To Review";
+"pending_center.subtitle" = "Confirm, deduplicate, and organize items that need attention";
+"pending_center.empty.subtitle" = "Nothing needs your attention right now";
+"pending_center.accessibility_format" = "To Review, %d items";
+"pending_center.loading" = "Checking items to review";
+"pending_center.empty.title" = "All Caught Up";
+"pending_center.empty.detail" = "New recognition results, hotel folios, and cleanup suggestions will appear here.";
+"pending_center.total_format" = "%d items. Review each one before saving or organizing your ledger.";
+"pending_center.receipt.title" = "Receipts to Confirm";
+"pending_center.receipt.subtitle" = "Check recognition results before saving them";
+"pending_center.hotel.title" = "Hotel Folios to Review";
+"pending_center.hotel.subtitle" = "Confirm the hotel, dates, and amount before posting";
+"pending_center.duplicate.title" = "Possible Duplicates";
+"pending_center.duplicate.subtitle" = "Review similar transactions to avoid duplicate entries";
+"pending_center.subscription.title" = "Subscription Alerts";
+"pending_center.subscription.subtitle" = "Check price increases, duplicate charges, and billing changes";
+"pending_center.cleaning.title" = "Smart Cleanup";
+"pending_center.cleaning.subtitle" = "Normalize merchant names and apply confirmed category preferences";
 "ledger.status.aliases_refreshed_format" = "Merchant aliases updated and %d past transactions refreshed.";
 "ledger.status.sample_parse_failed" = "The sample could not be parsed.";
 "ledger.status.subscription_recognized_format" = "Subscription recognized: %@ %@/%@";
@@ -707,6 +725,7 @@
 "ledger.advanced_search.saved" = "Saved Filters";
 "ledger.advanced_search.saved_empty" = "No saved filters yet.";
 "ledger.advanced_search.clear" = "Clear";
+"ledger.advanced_search.apply" = "Apply Search Filters";
 "ledger.advanced_search.pro.title" = "Advanced Search is Pro automation";
 "ledger.advanced_search.pro.body" = "Basic keyword search stays free. Combining amount, date, ledger, and folio clues saves time with Pro.";
 "ledger.detail.empty.title" = "Select a transaction";
@@ -1504,6 +1523,7 @@
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "The dedicated folio inbox service is temporarily unavailable.";
 "hotel_stay.cloud_inbox.error.invalid_response" = "The cloud inbox response could not be parsed.";
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "Could not claim the dedicated folio address. Please try again later.";
+"hotel_stay.cloud_inbox.error.server_entitlement_required" = "Pro could not be verified by the server right now. Restore purchases and try again; your existing address and manual import remain available.";
 "hotel_stay.cloud_inbox.error.http_status_format" = "Cloud inbox request failed (%d): %@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "Could not save the dedicated folio address (Keychain %d).";
 

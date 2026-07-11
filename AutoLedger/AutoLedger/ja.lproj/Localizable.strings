@@ -396,6 +396,24 @@
 "ledger.persistence.unavailable_format" = "データ保護のため、ローカル台帳ストレージへの書き込みを停止しました。App を再起動してもう一度お試しください。詳細：%@";
 "ledger.persistence.alert.title" = "ローカル台帳を利用できません";
 "common.ok" = "OK";
+"pending_center.title" = "確認待ち";
+"pending_center.subtitle" = "確認、重複整理、データ整理が必要な項目をまとめます";
+"pending_center.empty.subtitle" = "現在、確認が必要な項目はありません";
+"pending_center.accessibility_format" = "確認待ち、%d 件";
+"pending_center.loading" = "確認項目を整理しています";
+"pending_center.empty.title" = "すべて確認済みです";
+"pending_center.empty.detail" = "新しい認識結果、ホテル明細、整理候補がここに表示されます。";
+"pending_center.total_format" = "%d 件あります。台帳へ保存または整理する前に確認してください。";
+"pending_center.receipt.title" = "レシートの確認";
+"pending_center.receipt.subtitle" = "認識結果を確認してから台帳へ保存します";
+"pending_center.hotel.title" = "ホテル明細の確認";
+"pending_center.hotel.subtitle" = "ホテル、日付、金額を補完して記帳します";
+"pending_center.duplicate.title" = "重複の可能性";
+"pending_center.duplicate.subtitle" = "類似した取引を確認して二重記帳を防ぎます";
+"pending_center.subscription.title" = "サブスクリプション異常";
+"pending_center.subscription.subtitle" = "値上げ、重複請求、請求周期の変化を確認します";
+"pending_center.cleaning.title" = "スマート整理候補";
+"pending_center.cleaning.subtitle" = "加盟店名を統一し、確認済みのカテゴリ設定を適用します";
 "ledger.status.aliases_refreshed_format" = "加盟店エイリアスを更新し、過去の取引 %d 件を更新しました。";
 "ledger.status.sample_parse_failed" = "サンプルを解析できませんでした。";
 "ledger.status.subscription_recognized_format" = "サブスクリプションとして認識：%@ %@/%@";
@@ -707,6 +725,7 @@
 "ledger.advanced_search.saved" = "保存済み条件";
 "ledger.advanced_search.saved_empty" = "保存済みの検索条件はありません。";
 "ledger.advanced_search.clear" = "クリア";
+"ledger.advanced_search.apply" = "検索条件を適用";
 "ledger.advanced_search.pro.title" = "高度な検索は Pro 自動化です";
 "ledger.advanced_search.pro.body" = "基本のキーワード検索は無料です。金額、日付、台帳、明細手がかりの組み合わせは Pro で使えます。";
 "ledger.detail.empty.title" = "取引を選択";
@@ -1504,6 +1523,7 @@
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "専用明細受信箱サービスは一時的に利用できません。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "クラウド受信箱の応答を解析できません。";
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "専用明細アドレスを取得できませんでした。しばらくしてからもう一度お試しください。";
+"hotel_stay.cloud_inbox.error.server_entitlement_required" = "現在サーバーで Pro を確認できません。購入を復元してから再試行してください。既存の専用アドレスと手動読み込みは引き続き利用できます。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "クラウド受信箱リクエスト失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "専用明細アドレスを保存できませんでした（Keychain %d）。";
 

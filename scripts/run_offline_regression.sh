@@ -16,7 +16,9 @@ python3 "$ROOT/scripts/check_long_list_performance_smoke.py"
 python3 "$ROOT/scripts/check_l10n_release_smoke.py"
 python3 "$ROOT/scripts/check_visionos_review_smoke.py"
 python3 "$ROOT/scripts/check_data_cleaning_ios_entry_smoke.py"
+python3 "$ROOT/scripts/check_pending_action_center_smoke.py"
 python3 "$ROOT/scripts/check_advanced_search_ui_smoke.py"
+python3 "$ROOT/scripts/check_cloud_inbox_entitlement_smoke.py"
 python3 "$ROOT/scripts/check_subscription_anomaly_ui_smoke.py"
 python3 "$ROOT/scripts/check_monthly_export_ui_smoke.py"
 python3 "$ROOT/scripts/check_share_cards_smoke.py"
@@ -402,6 +404,7 @@ swiftc \
   "$CORE/Services/LedgerAdvancedSearch.swift" \
   "$CORE/Services/DataCleaningPreviewPlanner.swift" \
   "$CORE/Services/AdvancedRuleAutomationPlanner.swift" \
+  "$CORE/Services/PendingActionCenterPlanner.swift" \
   "$CORE/Services/DataCleaningAssistPayload.swift" \
   "$CORE/Services/MerchantAliasResolver.swift" \
   "$CORE/Services/LedgerCSVCodec.swift" \

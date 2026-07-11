@@ -396,6 +396,24 @@
 "ledger.persistence.unavailable_format" = "本機帳本儲存暫時無法使用，已停止寫入以保護資料。請重新啟動 App 後再試。詳情：%@";
 "ledger.persistence.alert.title" = "本機帳本暫時無法使用";
 "common.ok" = "好";
+"pending_center.title" = "待處理";
+"pending_center.subtitle" = "集中確認、去重並整理需要留意的內容";
+"pending_center.empty.subtitle" = "目前沒有需要處理的內容";
+"pending_center.accessibility_format" = "待處理，共 %d 項";
+"pending_center.loading" = "正在整理待處理內容";
+"pending_center.empty.title" = "都處理好了";
+"pending_center.empty.detail" = "新的識別結果、酒店水單或整理建議會顯示在這裡。";
+"pending_center.total_format" = "共 %d 項，逐項確認後再寫入或整理帳本。";
+"pending_center.receipt.title" = "帳單待確認";
+"pending_center.receipt.subtitle" = "檢查識別結果後再儲存至帳本";
+"pending_center.hotel.title" = "酒店水單待覆核";
+"pending_center.hotel.subtitle" = "補齊酒店、日期和金額後確認入帳";
+"pending_center.duplicate.title" = "疑似重複";
+"pending_center.duplicate.subtitle" = "覆核相似帳單，避免重複入帳";
+"pending_center.subscription.title" = "訂閱異常";
+"pending_center.subscription.subtitle" = "查看漲價、重複扣款和週期變化";
+"pending_center.cleaning.title" = "智能整理建議";
+"pending_center.cleaning.subtitle" = "統一商戶名稱並套用已確認的分類偏好";
 "ledger.status.aliases_refreshed_format" = "已更新商戶別名，並重新整理 %d 筆歷史帳單。";
 "ledger.status.sample_parse_failed" = "範例解析失敗。";
 "ledger.status.subscription_recognized_format" = "已識別為訂閱：%@ %@/%@";
@@ -710,6 +728,7 @@
 "ledger.advanced_search.saved" = "常用條件";
 "ledger.advanced_search.saved_empty" = "還沒有儲存的搜尋條件。";
 "ledger.advanced_search.clear" = "清空";
+"ledger.advanced_search.apply" = "套用搜尋條件";
 "ledger.advanced_search.pro.title" = "進階搜尋是 Pro 自動化";
 "ledger.advanced_search.pro.body" = "基礎關鍵字搜尋永久免费；組合金額、日期、帳本和水單線索屬於節省時間的 Pro 能力。";
 "ledger.detail.empty.title" = "選擇一筆帳單";
@@ -1507,6 +1526,7 @@
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "專屬水單收件箱服務暫時無法使用。";
 "hotel_stay.cloud_inbox.error.invalid_response" = "雲端收件箱返回內容無法解析。";
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "領取專屬水單地址失敗，請稍後再試。";
+"hotel_stay.cloud_inbox.error.server_entitlement_required" = "暫時無法透過伺服器確認 Pro 權益。請確認已恢復購買後再試；現有專屬地址和手動匯入不受影響。";
 "hotel_stay.cloud_inbox.error.http_status_format" = "雲端收件箱請求失敗（%d）：%@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "專屬水單地址儲存失敗（Keychain %d）。";
 

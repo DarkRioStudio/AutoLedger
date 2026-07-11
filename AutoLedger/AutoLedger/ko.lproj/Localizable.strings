@@ -396,6 +396,24 @@
 "ledger.persistence.unavailable_format" = "데이터 보호를 위해 로컬 장부 저장소 쓰기를 중지했습니다. App을 다시 시작한 후 재시도하세요. 세부 정보: %@";
 "ledger.persistence.alert.title" = "로컬 장부를 사용할 수 없음";
 "common.ok" = "확인";
+"pending_center.title" = "검토할 항목";
+"pending_center.subtitle" = "확인, 중복 제거, 정리가 필요한 항목을 한곳에서 봅니다";
+"pending_center.empty.subtitle" = "현재 검토할 항목이 없습니다";
+"pending_center.accessibility_format" = "검토할 항목 %d개";
+"pending_center.loading" = "검토할 항목을 확인하는 중";
+"pending_center.empty.title" = "모두 처리했습니다";
+"pending_center.empty.detail" = "새 인식 결과, 호텔 명세서, 정리 제안이 여기에 표시됩니다.";
+"pending_center.total_format" = "%d개 항목이 있습니다. 장부에 저장하거나 정리하기 전에 확인하세요.";
+"pending_center.receipt.title" = "영수증 확인";
+"pending_center.receipt.subtitle" = "인식 결과를 확인한 후 장부에 저장합니다";
+"pending_center.hotel.title" = "호텔 명세서 검토";
+"pending_center.hotel.subtitle" = "호텔, 날짜, 금액을 확인한 후 기록합니다";
+"pending_center.duplicate.title" = "중복 가능성";
+"pending_center.duplicate.subtitle" = "비슷한 거래를 검토하여 중복 기록을 방지합니다";
+"pending_center.subscription.title" = "구독 이상";
+"pending_center.subscription.subtitle" = "가격 인상, 중복 청구, 결제 주기 변화를 확인합니다";
+"pending_center.cleaning.title" = "스마트 정리 제안";
+"pending_center.cleaning.subtitle" = "가맹점 이름을 통일하고 확인된 카테고리 설정을 적용합니다";
 "ledger.status.aliases_refreshed_format" = "가맹점 별칭을 업데이트하고 이전 거래 %d건을 새로 고쳤습니다.";
 "ledger.status.sample_parse_failed" = "샘플을 분석하지 못했습니다.";
 "ledger.status.subscription_recognized_format" = "구독으로 인식됨: %@ %@/%@";
@@ -707,6 +725,7 @@
 "ledger.advanced_search.saved" = "저장된 조건";
 "ledger.advanced_search.saved_empty" = "저장된 검색 조건이 없습니다.";
 "ledger.advanced_search.clear" = "지우기";
+"ledger.advanced_search.apply" = "검색 조건 적용";
 "ledger.advanced_search.pro.title" = "고급 검색은 Pro 자동화입니다";
 "ledger.advanced_search.pro.body" = "기본 키워드 검색은 무료입니다. 금액, 날짜, 원장, 영수증 단서 조합은 Pro에서 시간을 절약합니다.";
 "ledger.detail.empty.title" = "거래를 선택하세요";
@@ -1504,6 +1523,7 @@
 "hotel_stay.cloud_inbox.error.invalid_endpoint" = "전용 Folio 받은 편지함 서비스를 일시적으로 사용할 수 없습니다.";
 "hotel_stay.cloud_inbox.error.invalid_response" = "클라우드 받은 편지함 응답을 구문 분석할 수 없습니다.";
 "hotel_stay.cloud_inbox.error.invalid_token_claim_response" = "전용 Folio 주소를 요청할 수 없습니다. 나중에 다시 시도해 주세요.";
+"hotel_stay.cloud_inbox.error.server_entitlement_required" = "현재 서버에서 Pro를 확인할 수 없습니다. 구매 복원 후 다시 시도하세요. 기존 전용 주소와 수동 가져오기는 계속 사용할 수 있습니다.";
 "hotel_stay.cloud_inbox.error.http_status_format" = "클라우드 받은편지함 요청 실패(%d): %@";
 "hotel_stay.cloud_inbox.error.keychain_format" = "전용 Folio 주소(Keychain %d)를 저장할 수 없습니다.";
 
