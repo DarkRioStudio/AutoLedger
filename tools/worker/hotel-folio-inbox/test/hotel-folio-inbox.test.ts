@@ -331,6 +331,13 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.appStoreServerAPIHost("sandbox")).toBe("https://api.storekit-sandbox.itunes.apple.com");
   });
 
+  it("uses the StoreKit transaction environment for entitlement lookup", () => {
+    expect(testInternals.appStoreServerLookupEnvironments("production", { environment: "Sandbox" })).toEqual(["sandbox"]);
+    expect(testInternals.appStoreServerLookupEnvironments("sandbox", { environment: "Production" })).toEqual(["production"]);
+    expect(testInternals.appStoreServerLookupEnvironments("production", {})).toEqual(["production", "sandbox"]);
+    expect(testInternals.appStoreServerLookupEnvironments("sandbox", {})).toEqual(["sandbox", "production"]);
+  });
+
   it("builds an App Store notification history compensation request window", () => {
     const now = new Date("2026-07-07T12:00:00.000Z");
     const request = testInternals.appStoreNotificationHistoryRequestBody(now, 72);

@@ -7,6 +7,7 @@ enum HotelFolioInboxClientError: LocalizedError, Sendable {
     case invalidEndpoint
     case invalidHTTPResponse
     case invalidTokenClaimResponse
+    case serverEntitlementRequired
     case httpStatus(Int, String)
     case keychainStatus(OSStatus)
 
@@ -20,6 +21,8 @@ enum HotelFolioInboxClientError: LocalizedError, Sendable {
             return String(localized: "hotel_stay.cloud_inbox.error.invalid_response")
         case .invalidTokenClaimResponse:
             return String(localized: "hotel_stay.cloud_inbox.error.invalid_token_claim_response")
+        case .serverEntitlementRequired:
+            return String(localized: "hotel_stay.cloud_inbox.error.server_entitlement_required")
         case .httpStatus(let status, let message):
             return String(format: String(localized: "hotel_stay.cloud_inbox.error.http_status_format"), status, message)
         case .keychainStatus(let status):
@@ -156,6 +159,10 @@ enum HotelFolioInboxTokenStore {
 }
 
 struct HotelFolioInboxClient: Sendable {
+    private struct ServerErrorResponse: Decodable {
+        var error: String?
+    }
+
     private struct CandidateListResponse: Decodable {
         var candidates: [CloudHotelFolioCandidate]
     }
@@ -317,7 +324,11 @@ struct HotelFolioInboxClient: Sendable {
             throw HotelFolioInboxClientError.invalidHTTPResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+            let serverError = try? decoder.decode(ServerErrorResponse.self, from: data)
+            if serverError?.error == "server_entitlement_required" {
+                throw HotelFolioInboxClientError.serverEntitlementRequired
+            }
+            let message = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
             throw HotelFolioInboxClientError.httpStatus(httpResponse.statusCode, message)
         }
         return data

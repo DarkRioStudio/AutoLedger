@@ -85,6 +85,7 @@ type AppStoreTransactionPayload = {
   productID?: string;
   bundleId?: string;
   bundleID?: string;
+  environment?: string;
   expiresDate?: number | string | null;
   revocationDate?: number | string | null;
 };
@@ -1180,17 +1181,24 @@ async function verifyAppStoreEntitlement(env: Env, signedTransactionInfo: string
   }
 
   const jwt = await appStoreServerJWT(config);
-  const response = await fetch(`${appStoreServerAPIHost(config.environment)}/inApps/v1/transactions/${encodeURIComponent(transactionID)}`, {
-    headers: {
-      authorization: `Bearer ${jwt}`,
-      accept: "application/json"
+  const lookupEnvironments = appStoreServerLookupEnvironments(config.environment, clientPayload);
+  let response: Response | null = null;
+  for (const environment of lookupEnvironments) {
+    response = await fetch(`${appStoreServerAPIHost(environment)}/inApps/v1/transactions/${encodeURIComponent(transactionID)}`, {
+      headers: {
+        authorization: `Bearer ${jwt}`,
+        accept: "application/json"
+      }
+    });
+    if (response.status !== 404) {
+      break;
     }
-  });
+  }
 
-  if (!response.ok) {
+  if (!response?.ok) {
     return {
       allowed: false,
-      reason: `app_store_server_api_status_${response.status}`
+      reason: `app_store_server_api_status_${response?.status ?? 503}`
     };
   }
 
@@ -1310,6 +1318,20 @@ function appStoreServerAPIHost(environment: AppStoreServerEnvironment): string {
   return environment === "sandbox"
     ? "https://api.storekit-sandbox.itunes.apple.com"
     : "https://api.storekit.itunes.apple.com";
+}
+
+function appStoreServerLookupEnvironments(
+  configuredEnvironment: AppStoreServerEnvironment,
+  transactionPayload: AppStoreTransactionPayload
+): AppStoreServerEnvironment[] {
+  const rawEnvironment = transactionPayload.environment?.trim().toLowerCase();
+  if (rawEnvironment === "sandbox" || rawEnvironment === "production") {
+    return [rawEnvironment];
+  }
+
+  const fallbackEnvironment: AppStoreServerEnvironment =
+    configuredEnvironment === "production" ? "sandbox" : "production";
+  return [configuredEnvironment, fallbackEnvironment];
 }
 
 function appStoreNotificationHistoryLookbackHours(env: Env): number {
@@ -2752,6 +2774,7 @@ export const testInternals = {
   allowsUnsignedAppStoreNotifications,
   normalizeAppStoreNotificationType,
   normalizeAppStoreEnvironment,
+  appStoreServerLookupEnvironments,
   appStoreNotificationTransactionScope,
   appStoreServerAPIHost,
   appStoreNotificationHistoryRequestBody,
