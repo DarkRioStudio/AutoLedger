@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case overview
     case capture
+    case pendingActions
     case ledger
     case hotelStays
     case reports
@@ -21,6 +22,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .overview: return "ipad.workspace.overview"
         case .capture: return "ipad.workspace.capture"
+        case .pendingActions: return "pending_center.title"
         case .ledger: return "ipad.workspace.ledger"
         case .hotelStays: return "hotel_stay.list.title"
         case .reports: return "ipad.workspace.reports"
@@ -34,6 +36,7 @@ enum IPadWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .overview: return "rectangle.grid.2x2.fill"
         case .capture: return "tray.full.fill"
+        case .pendingActions: return "checklist"
         case .ledger: return "list.bullet.rectangle"
         case .hotelStays: return "bed.double.fill"
         case .reports: return "chart.pie.fill"
@@ -129,6 +132,16 @@ struct IPadWorkspaceView: View {
                 initialFilter: .all,
                 showsImportActions: true,
                 openReviewQueue: { select(.reviewQueue) }
+            )
+        case .pendingActions:
+            IPadPendingActionWorkspaceView(
+                openCapture: { select(.capture) },
+                openHotelReview: { select(.hotelStays) },
+                openCleaning: { select(.cleaning) },
+                openSubscriptions: {
+                    navigationState.settingsPath = [.subscriptions]
+                    select(.settings)
+                }
             )
         case .ledger:
             LedgerView {

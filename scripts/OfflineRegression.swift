@@ -83,6 +83,7 @@ struct OfflineRegression {
         verifyLedgerAdvancedSearch(reporter: reporter)
         verifyDataCleaningPreviewPlanner(reporter: reporter)
         verifyAdvancedRuleAutomationPlanner(reporter: reporter)
+        verifyPendingActionCenterPlanner(reporter: reporter)
         verifyDataCleaningAssistPayload(reporter: reporter)
         verifyDataCleaningAssistResponseMapping(reporter: reporter)
         verifyDataCleaningAssistRequestPolicy(reporter: reporter)
@@ -137,6 +138,52 @@ struct OfflineRegression {
         42
         30
         """
+    }
+
+    private static func verifyPendingActionCenterPlanner(reporter: RegressionReporter) {
+        let duplicate = DataCleaningPreviewItem(
+            id: "duplicate:1",
+            kind: .duplicateCandidate,
+            title: "Duplicate",
+            subtitle: "2",
+            currentValue: "A",
+            proposedValue: "B",
+            affectedTransactionIDs: [UUID(), UUID()],
+            reason: "duplicate"
+        )
+        let cleaning = DataCleaningPreviewItem(
+            id: "alias:1",
+            kind: .merchantAlias,
+            title: "Alias",
+            subtitle: "1",
+            currentValue: "A",
+            proposedValue: "B",
+            affectedTransactionIDs: [UUID()],
+            reason: "merchant alias"
+        )
+        let snapshot = PendingActionCenterPlanner().buildSnapshot(
+            receiptReviewCount: 1,
+            hotelReviewCount: 2,
+            cleaningSnapshot: DataCleaningPreviewSnapshot(items: [duplicate, cleaning]),
+            subscriptionAnomalyCount: 3
+        )
+
+        reporter.check(snapshot.totalCount == 8, "Pending action center totals all actionable items")
+        reporter.check(snapshot.groups.first?.category == .receiptReview, "Pending action center prioritizes receipt review")
+        reporter.check(snapshot.count(for: .hotelReview) == 2, "Pending action center counts hotel reviews")
+        reporter.check(snapshot.count(for: .duplicateReview) == 1, "Pending action center separates duplicate reviews")
+        reporter.check(snapshot.count(for: .cleaningSuggestion) == 1, "Pending action center separates cleaning suggestions")
+        reporter.check(
+            snapshot.groups.first { $0.category == .subscriptionAnomaly }?.isProAutomation == true,
+            "Pending action center marks Pro automation without gating the center"
+        )
+        let empty = PendingActionCenterPlanner().buildSnapshot(
+            receiptReviewCount: 0,
+            hotelReviewCount: 0,
+            cleaningSnapshot: DataCleaningPreviewSnapshot(),
+            subscriptionAnomalyCount: 0
+        )
+        reporter.check(empty.isEmpty && empty.groups.isEmpty, "Pending action center omits empty groups")
     }
 
     private static func verifyVoiceLedgerParsing(reporter: RegressionReporter) {

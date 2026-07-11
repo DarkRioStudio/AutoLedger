@@ -6,6 +6,7 @@ import UIKit
 struct InboxView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject private var store: LedgerStore
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.autoLedgerThemeRefreshID) private var themeRefreshID
     @Environment(\.locale) private var locale
@@ -20,6 +21,10 @@ struct InboxView: View {
     @State private var isQuickSetupExpanded = false
     @State private var isPresentingManualEntry = false
     @State private var isPresentingVoiceEntry = false
+    @State private var pendingActionSnapshot = PendingActionCenterSnapshot()
+    @State private var isRefreshingPendingActions = false
+    @State private var isPresentingPendingActionCenter = false
+    @State private var isPresentingDataCleaning = false
 
     private var hasShortcutEntries: Bool {
         !shortcutTransactions.isEmpty
@@ -38,6 +43,12 @@ struct InboxView: View {
                     AutoLedgerPageTitle("tab.inbox")
 
                     captureCommandCenter
+
+                    PendingActionCenterCard(
+                        snapshot: pendingActionSnapshot,
+                        isRefreshing: isRefreshingPendingActions,
+                        onOpen: { isPresentingPendingActionCenter = true }
+                    )
 
                     quickImportButtonRow
 
@@ -82,6 +93,29 @@ struct InboxView: View {
                 VoiceLedgerConfirmView()
                     .environmentObject(store)
             }
+            .sheet(isPresented: $isPresentingPendingActionCenter) {
+                NavigationStack {
+                    PendingActionCenterListView(
+                        snapshot: pendingActionSnapshot,
+                        isRefreshing: isRefreshingPendingActions,
+                        onSelect: openPendingAction
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("common.close") {
+                                isPresentingPendingActionCenter = false
+                            }
+                        }
+                    }
+                }
+                .tint(AppTheme.accent)
+            }
+            .sheet(isPresented: $isPresentingDataCleaning) {
+                NavigationStack {
+                    DataCleaningSuggestionsView()
+                        .environmentObject(store)
+                }
+            }
             .sheet(isPresented: $showCamera) {
                 CameraPicker(imageData: $capturedImageData)
             }
@@ -103,11 +137,49 @@ struct InboxView: View {
                 capturedImageData = nil
                 await importCapturedPhoto(data)
             }
+            .task(id: pendingActionRevision) {
+                await refreshPendingActions()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     quickEntryActionMenu
                 }
             }
+        }
+    }
+
+    private var pendingActionRevision: String {
+        PendingActionCenterLoader.revision(for: store)
+    }
+
+    @MainActor
+    private func refreshPendingActions() async {
+        isRefreshingPendingActions = true
+        let snapshot = await PendingActionCenterLoader.load(from: store)
+        guard !Task.isCancelled else { return }
+        pendingActionSnapshot = snapshot
+        isRefreshingPendingActions = false
+    }
+
+    @MainActor
+    private func openPendingAction(_ category: PendingActionCategory) {
+        isPresentingPendingActionCenter = false
+        switch category {
+        case .receiptReview:
+            break
+        case .hotelReview:
+            let draftID = store.hotelStayDrafts.first {
+                ![HotelStayDraftStatus.confirmed, .rejected, .postedToLedger].contains($0.status)
+            }?.id
+            navigationState.openHotelReviewQueue(draftID: draftID)
+        case .duplicateReview, .cleaningSuggestion:
+            Task { @MainActor in
+                await Task.yield()
+                isPresentingDataCleaning = true
+            }
+        case .subscriptionAnomaly:
+            selectedTab = AutoLedgerHomeTab.settings.rawValue
+            navigationState.settingsPath = [.subscriptions]
         }
     }
 
