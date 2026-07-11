@@ -26,6 +26,15 @@ def main() -> int:
     require(ledger, '"ledger.advanced_search.title"', "LedgerView", failures)
     require(ledger, '"ledger.advanced_search.save_current"', "LedgerView", failures)
     require(ledger, '"ledger.advanced_search.hotel_folio"', "LedgerView", failures)
+    require(ledger, "@State private var draftQuery", "LedgerView draft search", failures)
+    require(ledger, "@State private var isAmountFilterEnabled", "LedgerView amount toggle", failures)
+    require(ledger, "@State private var isCategoryFilterEnabled", "LedgerView category toggle", failures)
+    require(ledger, "@State private var isSourceFilterEnabled", "LedgerView source toggle", failures)
+    require(ledger, "@State private var isLedgerFilterEnabled", "LedgerView ledger toggle", failures)
+    require(ledger, "normalizedDraftQuery", "LedgerView disabled-filter normalization", failures)
+    require(ledger, ".safeAreaInset(edge: .bottom)", "LedgerView apply action", failures)
+    require(ledger, 'Label("ledger.advanced_search.apply"', "LedgerView apply action", failures)
+    require(ledger, "onApply(snapshot, snapshot.keyword)", "LedgerView explicit apply", failures)
 
     for locale in ["zh-Hans", "zh-Hant", "en", "ja", "ko"]:
         strings = (APP / f"{locale}.lproj" / "Localizable.strings").read_text(encoding="utf-8")
@@ -42,6 +51,7 @@ def main() -> int:
             "ledger.advanced_search.save_current",
             "ledger.advanced_search.saved",
             "ledger.advanced_search.clear",
+            "ledger.advanced_search.apply",
             "ledger.advanced_search.pro.title",
             "ledger.advanced_search.pro.body",
         ]:

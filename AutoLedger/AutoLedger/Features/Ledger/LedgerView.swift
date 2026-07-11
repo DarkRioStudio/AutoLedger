@@ -357,21 +357,22 @@ struct LedgerView: View {
     private var advancedSearchSheet: some View {
         NavigationStack {
             LedgerAdvancedSearchSheet(
-                query: $advancedSearchQuery,
-                searchText: $searchText,
+                query: advancedSearchQuery,
+                searchText: searchText,
                 savedAdvancedSearches: $savedAdvancedSearches,
                 categoryOptions: advancedCategoryOptions,
                 sourceOptions: advancedSourceOptions,
                 ledgerOptions: advancedLedgerOptions,
-                onPersistSavedSearches: persistSavedAdvancedSearches
-            )
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.close") {
-                        isPresentingAdvancedSearch = false
-                    }
+                onPersistSavedSearches: persistSavedAdvancedSearches,
+                onApply: { appliedQuery, appliedKeyword in
+                    advancedSearchQuery = appliedQuery
+                    searchText = appliedKeyword
+                    isPresentingAdvancedSearch = false
+                },
+                onCancel: {
+                    isPresentingAdvancedSearch = false
                 }
-            }
+            )
         }
     }
 
@@ -682,36 +683,54 @@ private struct LedgerAdvancedSearchOption: Identifiable, Hashable {
 }
 
 private struct LedgerAdvancedSearchSheet: View {
-    @Binding var query: LedgerAdvancedSearchQuery
-    @Binding var searchText: String
     @Binding var savedAdvancedSearches: [LedgerSavedSearch]
     let categoryOptions: [LedgerAdvancedSearchOption]
     let sourceOptions: [LedgerAdvancedSearchOption]
     let ledgerOptions: [LedgerAdvancedSearchOption]
     let onPersistSavedSearches: () -> Void
+    let onApply: (LedgerAdvancedSearchQuery, String) -> Void
+    let onCancel: () -> Void
 
+    @State private var draftQuery: LedgerAdvancedSearchQuery
+    @State private var draftSearchText: String
     @State private var minAmountText: String
     @State private var maxAmountText: String
     @State private var savedSearchName = ""
+    @State private var isAmountFilterEnabled: Bool
+    @State private var isCategoryFilterEnabled: Bool
+    @State private var isSourceFilterEnabled: Bool
+    @State private var isLedgerFilterEnabled: Bool
 
     init(
-        query: Binding<LedgerAdvancedSearchQuery>,
-        searchText: Binding<String>,
+        query: LedgerAdvancedSearchQuery,
+        searchText: String,
         savedAdvancedSearches: Binding<[LedgerSavedSearch]>,
         categoryOptions: [LedgerAdvancedSearchOption],
         sourceOptions: [LedgerAdvancedSearchOption],
         ledgerOptions: [LedgerAdvancedSearchOption],
-        onPersistSavedSearches: @escaping () -> Void
+        onPersistSavedSearches: @escaping () -> Void,
+        onApply: @escaping (LedgerAdvancedSearchQuery, String) -> Void,
+        onCancel: @escaping () -> Void
     ) {
-        self._query = query
-        self._searchText = searchText
         self._savedAdvancedSearches = savedAdvancedSearches
         self.categoryOptions = categoryOptions
         self.sourceOptions = sourceOptions
         self.ledgerOptions = ledgerOptions
         self.onPersistSavedSearches = onPersistSavedSearches
-        self._minAmountText = State(initialValue: Self.text(for: query.wrappedValue.minAmount))
-        self._maxAmountText = State(initialValue: Self.text(for: query.wrappedValue.maxAmount))
+        self.onApply = onApply
+        self.onCancel = onCancel
+
+        var initialQuery = query
+        let initialKeyword = searchText.isEmpty ? query.keyword : searchText
+        initialQuery.keyword = initialKeyword
+        self._draftQuery = State(initialValue: initialQuery)
+        self._draftSearchText = State(initialValue: initialKeyword)
+        self._minAmountText = State(initialValue: Self.text(for: query.minAmount))
+        self._maxAmountText = State(initialValue: Self.text(for: query.maxAmount))
+        self._isAmountFilterEnabled = State(initialValue: query.minAmount != nil || query.maxAmount != nil)
+        self._isCategoryFilterEnabled = State(initialValue: !query.categoryIDs.isEmpty)
+        self._isSourceFilterEnabled = State(initialValue: !query.sourceIDs.isEmpty)
+        self._isLedgerFilterEnabled = State(initialValue: !query.ledgerIDs.isEmpty)
     }
 
     var body: some View {
@@ -721,63 +740,84 @@ private struct LedgerAdvancedSearchSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.mutedInk)
 
-                TextField("ledger.search.prompt", text: $searchText)
+                TextField("ledger.search.prompt", text: $draftSearchText)
             } header: {
                 Text("ledger.advanced_search.title")
             }
 
-            Section("ledger.advanced_search.amount_range") {
-                TextField("ledger.advanced_search.min_amount", text: $minAmountText)
-                    .onChange(of: minAmountText) { _, newValue in
-                        query.minAmount = Self.amount(from: newValue)
-                    }
-                TextField("ledger.advanced_search.max_amount", text: $maxAmountText)
-                    .onChange(of: maxAmountText) { _, newValue in
-                        query.maxAmount = Self.amount(from: newValue)
-                    }
+            Section {
+                Toggle("ledger.advanced_search.amount_range", isOn: $isAmountFilterEnabled)
+
+                if isAmountFilterEnabled {
+                    TextField("ledger.advanced_search.min_amount", text: $minAmountText)
+                        .keyboardType(.decimalPad)
+                        .onChange(of: minAmountText) { _, newValue in
+                            draftQuery.minAmount = Self.amount(from: newValue)
+                        }
+                    TextField("ledger.advanced_search.max_amount", text: $maxAmountText)
+                        .keyboardType(.decimalPad)
+                        .onChange(of: maxAmountText) { _, newValue in
+                            draftQuery.maxAmount = Self.amount(from: newValue)
+                        }
+                }
             }
 
             Section("ledger.advanced_search.date_range") {
                 Toggle("ledger.advanced_search.start_date", isOn: Binding(
-                    get: { query.startDate != nil },
-                    set: { query.startDate = $0 ? (query.startDate ?? .now) : nil }
+                    get: { draftQuery.startDate != nil },
+                    set: { draftQuery.startDate = $0 ? (draftQuery.startDate ?? .now) : nil }
                 ))
-                if query.startDate != nil {
+                if draftQuery.startDate != nil {
                     DatePicker(
                         "ledger.advanced_search.start_date",
                         selection: Binding(
-                            get: { query.startDate ?? .now },
-                            set: { query.startDate = $0 }
+                            get: { draftQuery.startDate ?? .now },
+                            set: { draftQuery.startDate = $0 }
                         ),
                         displayedComponents: .date
                     )
                 }
 
                 Toggle("ledger.advanced_search.end_date", isOn: Binding(
-                    get: { query.endDate != nil },
-                    set: { query.endDate = $0 ? (query.endDate ?? .now) : nil }
+                    get: { draftQuery.endDate != nil },
+                    set: { draftQuery.endDate = $0 ? (draftQuery.endDate ?? .now) : nil }
                 ))
-                if query.endDate != nil {
+                if draftQuery.endDate != nil {
                     DatePicker(
                         "ledger.advanced_search.end_date",
                         selection: Binding(
-                            get: { query.endDate ?? .now },
-                            set: { query.endDate = $0 }
+                            get: { draftQuery.endDate ?? .now },
+                            set: { draftQuery.endDate = $0 }
                         ),
                         displayedComponents: .date
                     )
                 }
             }
 
-            optionSection("ledger.advanced_search.category", options: categoryOptions, selection: $query.categoryIDs)
-            optionSection("ledger.advanced_search.source", options: sourceOptions, selection: $query.sourceIDs)
-            optionSection("ledger.advanced_search.ledger", options: ledgerOptions, selection: $query.ledgerIDs)
+            optionSection(
+                "ledger.advanced_search.category",
+                isEnabled: $isCategoryFilterEnabled,
+                options: categoryOptions,
+                selection: $draftQuery.categoryIDs
+            )
+            optionSection(
+                "ledger.advanced_search.source",
+                isEnabled: $isSourceFilterEnabled,
+                options: sourceOptions,
+                selection: $draftQuery.sourceIDs
+            )
+            optionSection(
+                "ledger.advanced_search.ledger",
+                isEnabled: $isLedgerFilterEnabled,
+                options: ledgerOptions,
+                selection: $draftQuery.ledgerIDs
+            )
 
             Section {
-                Toggle("ledger.advanced_search.hotel_folio", isOn: $query.requiresHotelFolioLink)
+                Toggle("ledger.advanced_search.hotel_folio", isOn: $draftQuery.requiresHotelFolioLink)
                 Toggle("ledger.advanced_search.original_currency", isOn: Binding(
-                    get: { query.requiresOriginalCurrency == true },
-                    set: { query.requiresOriginalCurrency = $0 ? true : nil }
+                    get: { draftQuery.requiresOriginalCurrency == true },
+                    set: { draftQuery.requiresOriginalCurrency = $0 ? true : nil }
                 ))
             }
 
@@ -788,10 +828,7 @@ private struct LedgerAdvancedSearchSheet: View {
                 } else {
                     ForEach(savedAdvancedSearches) { saved in
                         Button {
-                            query = saved.query
-                            searchText = saved.query.keyword
-                            minAmountText = Self.text(for: saved.query.minAmount)
-                            maxAmountText = Self.text(for: saved.query.maxAmount)
+                            loadSavedSearch(saved.query)
                         } label: {
                             Label(saved.name, systemImage: "bookmark")
                         }
@@ -814,31 +851,57 @@ private struct LedgerAdvancedSearchSheet: View {
         }
         .navigationTitle("ledger.advanced_search.title")
         .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("common.cancel", action: onCancel)
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button("ledger.advanced_search.clear") {
                     clearSearch()
                 }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Divider()
+
+                Button(action: applySearch) {
+                    Label("ledger.advanced_search.apply", systemImage: "line.3.horizontal.decrease.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(AppTheme.accent)
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+            }
+            .background(.regularMaterial)
+        }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private func optionSection(
         _ titleKey: LocalizedStringKey,
+        isEnabled: Binding<Bool>,
         options: [LedgerAdvancedSearchOption],
         selection: Binding<Set<String>>
     ) -> some View {
-        Section(titleKey) {
-            ForEach(options) { option in
-                Toggle(option.title, isOn: Binding(
-                    get: { selection.wrappedValue.contains(option.id) },
-                    set: { isSelected in
-                        if isSelected {
-                            selection.wrappedValue.insert(option.id)
-                        } else {
-                            selection.wrappedValue.remove(option.id)
+        Section {
+            Toggle(titleKey, isOn: isEnabled)
+
+            if isEnabled.wrappedValue {
+                ForEach(options) { option in
+                    Toggle(option.title, isOn: Binding(
+                        get: { selection.wrappedValue.contains(option.id) },
+                        set: { isSelected in
+                            if isSelected {
+                                selection.wrappedValue.insert(option.id)
+                            } else {
+                                selection.wrappedValue.remove(option.id)
+                            }
                         }
-                    }
-                ))
+                    ))
+                }
             }
         }
     }
@@ -846,8 +909,7 @@ private struct LedgerAdvancedSearchSheet: View {
     private func saveCurrentSearch() {
         let trimmed = savedSearchName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        var snapshot = query
-        snapshot.keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let snapshot = normalizedDraftQuery
         let now = Date()
         if let existingIndex = savedAdvancedSearches.firstIndex(where: { $0.name == trimmed }) {
             let existing = savedAdvancedSearches[existingIndex]
@@ -867,11 +929,50 @@ private struct LedgerAdvancedSearchSheet: View {
         onPersistSavedSearches()
     }
 
+    private func applySearch() {
+        let snapshot = normalizedDraftQuery
+        onApply(snapshot, snapshot.keyword)
+    }
+
+    private var normalizedDraftQuery: LedgerAdvancedSearchQuery {
+        var snapshot = draftQuery
+        snapshot.keyword = draftSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !isAmountFilterEnabled {
+            snapshot.minAmount = nil
+            snapshot.maxAmount = nil
+        }
+        if !isCategoryFilterEnabled {
+            snapshot.categoryIDs = []
+        }
+        if !isSourceFilterEnabled {
+            snapshot.sourceIDs = []
+        }
+        if !isLedgerFilterEnabled {
+            snapshot.ledgerIDs = []
+        }
+        return snapshot
+    }
+
+    private func loadSavedSearch(_ savedQuery: LedgerAdvancedSearchQuery) {
+        draftQuery = savedQuery
+        draftSearchText = savedQuery.keyword
+        minAmountText = Self.text(for: savedQuery.minAmount)
+        maxAmountText = Self.text(for: savedQuery.maxAmount)
+        isAmountFilterEnabled = savedQuery.minAmount != nil || savedQuery.maxAmount != nil
+        isCategoryFilterEnabled = !savedQuery.categoryIDs.isEmpty
+        isSourceFilterEnabled = !savedQuery.sourceIDs.isEmpty
+        isLedgerFilterEnabled = !savedQuery.ledgerIDs.isEmpty
+    }
+
     private func clearSearch() {
-        query = LedgerAdvancedSearchQuery()
-        searchText = ""
+        draftQuery = LedgerAdvancedSearchQuery()
+        draftSearchText = ""
         minAmountText = ""
         maxAmountText = ""
+        isAmountFilterEnabled = false
+        isCategoryFilterEnabled = false
+        isSourceFilterEnabled = false
+        isLedgerFilterEnabled = false
     }
 
     private static func amount(from text: String) -> Double? {
