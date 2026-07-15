@@ -36,7 +36,10 @@ def main() -> int:
     require(cleaning, "cloudAssistAuthorizationCard", "DataCleaningSuggestionsView", failures)
     require(cleaning, "DataCleaningAssistRequestPolicy", "DataCleaningSuggestionsView", failures)
     require(cleaning, "DataCleaningAssistRequestContext", "DataCleaningSuggestionsView", failures)
-    require(cleaning, "userEnabledCloudAssist: cloudAssistEnabled", "DataCleaningSuggestionsView", failures)
+    require(cleaning, "if !isCloudAssistEnabled", "DataCleaningSuggestionsView", failures)
+    require(cleaning, "reason: .disabledByUser", "DataCleaningSuggestionsView", failures)
+    require(cleaning, "reason: .requiresPro", "DataCleaningSuggestionsView", failures)
+    require(cleaning, "userEnabledCloudAssist: true", "DataCleaningSuggestionsView", failures)
     require(cleaning, "cloud_assist", "DataCleaningSuggestionsView", failures)
 
     for locale in ["zh-Hans", "zh-Hant", "en", "ja", "ko"]:

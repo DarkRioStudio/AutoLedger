@@ -46,6 +46,11 @@ REQUIRED_SNIPPETS = {
     ],
     IPAD_WORKSPACE: [
         "private var previewList: some View",
+        "@State private var snapshot = DataCleaningPreviewSnapshot()",
+        ".task(id: analysisRevision)",
+        "await refreshAnalysis()",
+        "DataCleaningPreviewPlanner().buildDuplicateCandidates(transactions: transactions)",
+        "case .dateDescending:\n            return source",
         "ScrollView {",
         "LazyVStack(alignment: .leading, spacing: 12)",
         "ForEach(DataCleaningPreviewKind.allCases, id: \\.rawValue)",
@@ -56,6 +61,10 @@ REQUIRED_SNIPPETS = {
 FORBIDDEN_SNIPPETS = {
     HOTEL_VIEW: [
         "records.first(where:",
+    ],
+    IPAD_WORKSPACE: [
+        "private var snapshot: DataCleaningPreviewSnapshot {\n        store.dataCleaningPreviewSnapshot()",
+        "case .dateDescending:\n            return source.sorted",
     ],
 }
 

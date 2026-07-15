@@ -4434,6 +4434,23 @@ struct OfflineRegression {
             },
             "DataCleaningPreviewPlanner detects same-source similar-note duplicate candidates"
         )
+        let duplicateCandidates = DataCleaningPreviewPlanner().buildDuplicateCandidates(
+            transactions: [
+                aliasTransaction,
+                categoryTransaction,
+                duplicateA,
+                duplicateB,
+                textDuplicateA,
+                textDuplicateB,
+                normalizationBaseA,
+                normalizationBaseB,
+                normalizationVariant
+            ]
+        )
+        reporter.check(
+            duplicateCandidates.count == 2,
+            "DataCleaningPreviewPlanner exposes duplicate-only analysis without rebuilding other suggestion kinds"
+        )
         reporter.check(
             snapshot.items(kind: .merchantAlias).contains {
                 $0.currentValue == "Cafe Roma Terminal 2" &&

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-15（ITER-415 待处理中心大账本降耗）
+更新日期：2026-07-15（ITER-416 iPad / Mac 大账本渲染降耗）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-416 iPad / Mac 大账本渲染降耗
+- 日期：2026-07-15
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance / Cross-platform QA
+- 类型：性能 / 重构 / 测试
+- 目标：完成构建前性能代码审计，消除 iPad / Mac 在 20,000 条账本下仍会由 SwiftUI `body` 触发的全量清洗、排序和索引工作。
+- 改动范围：`LedgerStore` 数据清洗修订号、iPhone / iPad 数据清洗异步快照、Mac 疑似重复面板、iPad 最近账单与 Mac 默认日期排序、`DataCleaningPreviewPlanner` 重复候选专用入口，以及对应离线回归和静态性能门禁。
+- 未改动范围：未修改数据清洗规则、重复判定阈值、免费 / Pro 权益边界、用户数据、SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、订阅价格、ASC metadata 或 Xcode Cloud workflow。
+- 完成内容：以单调 `dataCleaningRevision` 替代数据清洗页面每次重绘时对全部可见账单、别名、分类修正和忽略项执行的同步 `Hasher`；交易、账本范围和学习配置变化仍会使分析任务失效并刷新。
+- 完成内容：iPhone / iPad 数据清洗改为后台构造一次 `DataCleaningPreviewSnapshot`，高级规则直接复用该快照；iPad 受影响账单改为 ID 字典查找。云端辅助关闭或当前非 Pro 时不再构造整份脱敏聚合 payload。
+- 完成内容：Mac 账本的疑似重复面板只计算重复候选并在后台刷新，不再为该面板同时构造商户别名、分类和归一化建议；默认日期倒序与 iPad 最近账单复用 `LedgerStore` 已保证的时间顺序，避免重复排序。
+- 未完成内容：实体 iPad 当前离线，Mac 主机验证阶段处于锁屏，因而没有补出本轮新的实体 iPad 或可交互 Mac SwiftUI / Animation Hitches trace。该限制保留为 TestFlight 验收项，不把模拟器和构建通过描述为全部真机性能达标。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_long_list_performance_smoke.py` PASS；完整 `bash scripts/run_offline_regression.sh` PASS，包含 20,000 条全量清洗快照与重复候选专用入口；全新 DerivedData 的 iPad Pro 13-inch Simulator Debug workspace build 和 Mac Catalyst Debug workspace build 均 PASS。iPad 以 20,000 条隔离夹具启动后约 3 秒取得首页截图，待处理卡已结束加载。此前同一基线的 Mac Catalyst Time Profiler 已覆盖分析页和连续月份切换，未记录超过 250 ms 的 potential hang；本轮 Mac 进程抽样显示主线程处于空闲事件循环，但锁屏下未把它当作交互验收。
+- 风险与注意事项：数据清洗仍需在真实密集导入账本和实体设备上观察 CPU、内存与滚动帧率；后台 detached 分析避免阻塞主线程，但不能消除总计算成本。若 TestFlight dashboard 继续出现 `data_cleaning_open`、`tab_switch` 或 `month_switch` 慢操作，应按对应真实路径补 Time Profiler / SwiftUI / Animation Hitches trace。
+- 回滚方式：回退修订号、异步分析状态、重复候选专用入口和排序复用即可；不涉及数据迁移或远端状态。
+- 结论：本轮静态性能审计和当前可用的 20,000 条跨平台回归已收口，可以触发下一版 TestFlight 构建；实体 iPad / 解锁 Mac 的交互性能仍需在新构建上完成 Acceptance Pending。
+- 下一步建议：新构建先在 iPad 与 Mac 分别复测账本 Tab、数据清洗、月报月份切换和酒店列表；有卡顿再按 dashboard 操作枚举定点采样，不继续无证据横向重构。
 
 ### ITER-415 待处理中心大账本降耗
 - 日期：2026-07-15

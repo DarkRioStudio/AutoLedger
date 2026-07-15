@@ -11,6 +11,7 @@ enum PendingActionCenterLoader {
             String(store.merchantAliases.count),
             String(store.categoryCorrections.count),
             String(store.ignoredDataCleaningPreviewIDs.count),
+            String(store.dataCleaningRevision),
             store.pendingReceiptReview?.id.uuidString ?? "none",
             store.lastImportSummary ?? ""
         ].joined(separator: "|")

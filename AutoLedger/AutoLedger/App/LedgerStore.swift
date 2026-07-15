@@ -122,11 +122,16 @@ final class LedgerStore: ObservableObject {
     static var watchSyncHandler: (() -> Void)?
 
     @Published private(set) var transactions: [Transaction] {
-        didSet { invalidateMonthlyReportCaches() }
+        didSet {
+            invalidateMonthlyReportCaches()
+            dataCleaningRevision &+= 1
+        }
     }
     @Published private(set) var deletedTransactions: [Transaction] = []
     @Published private(set) var subscriptions: [Subscription] = []
-    @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:]
+    @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:] {
+        didSet { dataCleaningRevision &+= 1 }
+    }
     @Published private(set) var recentImports: [ImportedReceipt] = []
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
@@ -140,12 +145,15 @@ final class LedgerStore: ObservableObject {
     @Published var detectedICloudBackup: BackupBundle?
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
-    @Published private(set) var merchantAliases: [String: String] = [:]
+    @Published private(set) var merchantAliases: [String: String] = [:] {
+        didSet { dataCleaningRevision &+= 1 }
+    }
     @Published private(set) var ledgerProfiles: [LedgerProfile] = []
     @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID {
         didSet {
             if oldValue != selectedLedgerID {
                 invalidateMonthlyReportCaches()
+                dataCleaningRevision &+= 1
             }
         }
     }
@@ -154,6 +162,7 @@ final class LedgerStore: ObservableObject {
         didSet {
             if oldValue != isShowingAllLedgers {
                 invalidateMonthlyReportCaches()
+                dataCleaningRevision &+= 1
             }
         }
     }
@@ -165,7 +174,11 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var persistenceInitializationErrorMessage: String?
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
     @Published private(set) var dataCleaningApplicationHistory: [DataCleaningApplicationHistoryEntry] = []
-    @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = []
+    @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = [] {
+        didSet { dataCleaningRevision &+= 1 }
+    }
+
+    private(set) var dataCleaningRevision: UInt64 = 0
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()

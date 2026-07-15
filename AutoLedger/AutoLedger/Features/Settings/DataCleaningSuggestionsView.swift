@@ -9,6 +9,10 @@ struct DataCleaningSuggestionsView: View {
     @State private var isPresentingProSheet = false
     @State private var snapshot = DataCleaningPreviewSnapshot()
     @State private var advancedRulePlan = AdvancedRuleAutomationPlan(rules: [])
+    @State private var cloudAssistDecision = DataCleaningAssistRequestDecision(
+        isAllowed: false,
+        reason: .disabledByUser
+    )
     @State private var isAnalyzing = true
     @AppStorage("dataCleaningCloudAssistEnabled") private var cloudAssistEnabled = false
 
@@ -16,43 +20,12 @@ struct DataCleaningSuggestionsView: View {
         snapshot.items
     }
 
-    private var analysisRevision: Int {
-        var hasher = Hasher()
-        for transaction in store.visibleTransactions {
-            hasher.combine(transaction.id)
-            hasher.combine(transaction.merchant)
-            hasher.combine(transaction.amount)
-            hasher.combine(transaction.occurredAt)
-            hasher.combine(transaction.category)
-            hasher.combine(transaction.note)
-        }
-        for (key, value) in store.merchantAliases.sorted(by: { $0.key < $1.key }) {
-            hasher.combine(key)
-            hasher.combine(value)
-        }
-        for (key, value) in store.categoryCorrections.sorted(by: { $0.key < $1.key }) {
-            hasher.combine(key)
-            hasher.combine(value.rawValue)
-        }
-        for id in store.ignoredDataCleaningPreviewIDs.sorted() {
-            hasher.combine(id)
-        }
-        return hasher.finalize()
-    }
-
-    private var cloudAssistDecision: DataCleaningAssistRequestDecision {
-        let payload = DataCleaningAssistPayloadBuilder().build(
-            transactions: store.transactions,
-            merchantAliases: store.merchantAliases,
-            categoryCorrections: store.categoryCorrections
-        )
-        return DataCleaningAssistRequestPolicy().evaluate(
-            payload: payload,
-            context: DataCleaningAssistRequestContext(
-                userEnabledCloudAssist: cloudAssistEnabled,
-                isProActive: proEntitlement.isProActive
-            )
-        )
+    private var analysisRevision: String {
+        [
+            String(store.dataCleaningRevision),
+            cloudAssistEnabled ? "cloud-on" : "cloud-off",
+            proEntitlement.isProActive ? "pro" : "free"
+        ].joined(separator: "|")
     }
 
     var body: some View {
@@ -613,6 +586,9 @@ struct DataCleaningSuggestionsView: View {
         let merchantAliases = store.merchantAliases
         let categoryCorrections = store.categoryCorrections
         let ignoredIDs = store.ignoredDataCleaningPreviewIDs
+        let allTransactions = store.transactions
+        let isCloudAssistEnabled = cloudAssistEnabled
+        let isProActive = proEntitlement.isProActive
         let result = await Task.detached(priority: .userInitiated) {
             let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
                 transactions: transactions,
@@ -621,11 +597,37 @@ struct DataCleaningSuggestionsView: View {
                 ignoredPreviewIDs: ignoredIDs
             )
             let plan = AdvancedRuleAutomationPlanner().buildPlan(snapshot: snapshot)
-            return (snapshot, plan)
+            let cloudDecision: DataCleaningAssistRequestDecision
+            if !isCloudAssistEnabled {
+                cloudDecision = DataCleaningAssistRequestDecision(
+                    isAllowed: false,
+                    reason: .disabledByUser
+                )
+            } else if !isProActive {
+                cloudDecision = DataCleaningAssistRequestDecision(
+                    isAllowed: false,
+                    reason: .requiresPro
+                )
+            } else {
+                let payload = DataCleaningAssistPayloadBuilder().build(
+                    transactions: allTransactions,
+                    merchantAliases: merchantAliases,
+                    categoryCorrections: categoryCorrections
+                )
+                cloudDecision = DataCleaningAssistRequestPolicy().evaluate(
+                    payload: payload,
+                    context: DataCleaningAssistRequestContext(
+                        userEnabledCloudAssist: true,
+                        isProActive: true
+                    )
+                )
+            }
+            return (snapshot, plan, cloudDecision)
         }.value
         guard !Task.isCancelled else { return }
         snapshot = result.0
         advancedRulePlan = result.1
+        cloudAssistDecision = result.2
         isAnalyzing = false
     }
 

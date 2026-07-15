@@ -253,10 +253,7 @@ private struct IPadWorkspaceOverviewView: View {
     }
 
     private var recentTransactions: [Transaction] {
-        store.visibleTransactions
-            .sorted { $0.occurredAt > $1.occurredAt }
-            .prefix(6)
-            .map { $0 }
+        Array(store.visibleTransactions.prefix(6))
     }
 
     var body: some View {
@@ -522,22 +519,20 @@ private struct IPadCleaningPreviewWorkspaceView: View {
     @State private var previewPendingApplication: [DataCleaningPreviewItem] = []
     @State private var showsApplyConfirmation = false
     @State private var isPresentingProSheet = false
-
-    private var snapshot: DataCleaningPreviewSnapshot {
-        store.dataCleaningPreviewSnapshot()
-    }
+    @State private var snapshot = DataCleaningPreviewSnapshot()
+    @State private var advancedRulePlan = AdvancedRuleAutomationPlan(rules: [])
+    @State private var transactionsByID: [UUID: Transaction] = [:]
+    @State private var isAnalyzing = true
 
     private var previews: [DataCleaningPreviewItem] {
         snapshot.items
     }
 
-    private var advancedRulePlan: AdvancedRuleAutomationPlan {
-        AdvancedRuleAutomationPlanner().buildPlan(
-            transactions: store.visibleTransactions,
-            merchantAliases: store.merchantAliases,
-            categoryCorrections: store.categoryCorrections,
-            ignoredRuleIDs: store.ignoredDataCleaningPreviewIDs
-        )
+    private var analysisRevision: String {
+        [
+            String(store.dataCleaningRevision),
+            proEntitlement.canUse(.advancedRuleAutomation) ? "pro" : "free"
+        ].joined(separator: "|")
     }
 
     private var selectedPreview: DataCleaningPreviewItem? {
@@ -550,9 +545,8 @@ private struct IPadCleaningPreviewWorkspaceView: View {
 
     private var affectedTransactions: [Transaction] {
         guard let selectedPreview else { return [] }
-        let ids = Set(selectedPreview.affectedTransactionIDs)
-        return store.visibleTransactions
-            .filter { ids.contains($0.id) }
+        return selectedPreview.affectedTransactionIDs
+            .compactMap { transactionsByID[$0] }
             .sorted { $0.occurredAt > $1.occurredAt }
     }
 
@@ -575,14 +569,12 @@ private struct IPadCleaningPreviewWorkspaceView: View {
             }
             .background(AppTheme.screenGradient.ignoresSafeArea())
             .navigationTitle("ipad.workspace.cleaning")
-            .onAppear {
-                if selectedPreviewID == nil {
-                    selectedPreviewID = previews.first?.id
-                }
-            }
             .task {
                 await proEntitlement.loadProducts()
                 await proEntitlement.refreshEntitlements()
+            }
+            .task(id: analysisRevision) {
+                await refreshAnalysis()
             }
             .confirmationDialog(
                 "ipad.cleaning.apply_confirm_title",
@@ -674,7 +666,10 @@ private struct IPadCleaningPreviewWorkspaceView: View {
             summaryRow
             advancedRuleAutomationPanel
 
-            if previews.isEmpty {
+            if isAnalyzing {
+                ProgressView("ipad.cleaning.analyzing")
+                    .frame(maxWidth: .infinity, minHeight: 220)
+            } else if previews.isEmpty {
                 emptyPreview
             } else {
                 applyAllRow
@@ -1018,6 +1013,47 @@ private struct IPadCleaningPreviewWorkspaceView: View {
         _ = store.applyDataCleaningPreviews(previewPendingApplication)
         previewPendingApplication = []
         selectedPreviewID = previews.first?.id
+    }
+
+    private func refreshAnalysis() async {
+        guard proEntitlement.canUse(.advancedRuleAutomation) else {
+            snapshot = DataCleaningPreviewSnapshot()
+            advancedRulePlan = AdvancedRuleAutomationPlan(rules: [])
+            transactionsByID = [:]
+            isAnalyzing = false
+            return
+        }
+
+        isAnalyzing = true
+        let transactions = store.visibleTransactions
+        let merchantAliases = store.merchantAliases
+        let categoryCorrections = store.categoryCorrections
+        let ignoredIDs = store.ignoredDataCleaningPreviewIDs
+        let result = await Task.detached(priority: .userInitiated) {
+            let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
+                transactions: transactions,
+                merchantAliases: merchantAliases,
+                categoryCorrections: categoryCorrections,
+                ignoredPreviewIDs: ignoredIDs
+            )
+            let plan = AdvancedRuleAutomationPlanner().buildPlan(snapshot: snapshot)
+            let transactionsByID = transactions.reduce(into: [UUID: Transaction]()) { result, transaction in
+                result[transaction.id] = transaction
+            }
+            return (snapshot, plan, transactionsByID)
+        }.value
+        guard !Task.isCancelled else { return }
+
+        snapshot = result.0
+        advancedRulePlan = result.1
+        transactionsByID = result.2
+        if let selectedPreviewID,
+           result.0.items.contains(where: { $0.id == selectedPreviewID }) {
+            self.selectedPreviewID = selectedPreviewID
+        } else {
+            selectedPreviewID = result.0.items.first?.id
+        }
+        isAnalyzing = false
     }
 
     private func applyButtonTitle(for kind: DataCleaningPreviewKind) -> LocalizedStringKey {
@@ -3552,6 +3588,7 @@ private struct IPadLedgerWorkspaceView: View {
     @State private var selectedDuplicatePreviewID: String?
     @State private var pendingDuplicatePreview: DataCleaningPreviewItem?
     @State private var showsDuplicateApplyConfirmation = false
+    @State private var macDuplicatePreviews: [DataCleaningPreviewItem] = []
 
     private var transactions: [Transaction] {
         sortedTransactions(store.visibleTransactions)
@@ -3592,16 +3629,6 @@ private struct IPadLedgerWorkspaceView: View {
 
     private var batchCategoryTitle: String {
         TransactionCategory(rawValue: batchCategory)?.title ?? batchCategory
-    }
-
-    private var macDuplicatePreviews: [DataCleaningPreviewItem] {
-        DataCleaningPreviewPlanner()
-            .buildSnapshot(
-                transactions: store.visibleTransactions,
-                merchantAliases: store.merchantAliases,
-                categoryCorrections: store.categoryCorrections
-            )
-            .items(kind: .duplicateCandidate)
     }
 
     private var selectedDuplicatePreview: DataCleaningPreviewItem? {
@@ -3659,6 +3686,11 @@ private struct IPadLedgerWorkspaceView: View {
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
                 consumePendingNewTransactionIfNeeded()
             }
+            #if targetEnvironment(macCatalyst)
+            .task(id: store.dataCleaningRevision) {
+                await refreshMacDuplicatePreviews()
+            }
+            #endif
             .sheet(item: $editingTransaction) { transaction in
                 TransactionEditorView(
                     transaction: transaction,
@@ -3878,6 +3910,22 @@ private struct IPadLedgerWorkspaceView: View {
     }
 
     #if targetEnvironment(macCatalyst)
+    private func refreshMacDuplicatePreviews() async {
+        let transactions = store.visibleTransactions
+        let previews = await Task.detached(priority: .utility) {
+            DataCleaningPreviewPlanner().buildDuplicateCandidates(transactions: transactions)
+        }.value
+        guard !Task.isCancelled else { return }
+
+        macDuplicatePreviews = previews
+        if let selectedDuplicatePreviewID,
+           previews.contains(where: { $0.id == selectedDuplicatePreviewID }) {
+            self.selectedDuplicatePreviewID = selectedDuplicatePreviewID
+        } else {
+            selectedDuplicatePreviewID = previews.first?.id
+        }
+    }
+
     private var macLedgerWorkspace: some View {
         GeometryReader { geometry in
             let showsInspector = geometry.size.width >= 1_220
@@ -4132,7 +4180,7 @@ private struct IPadLedgerWorkspaceView: View {
     private func sortedTransactions(_ source: [Transaction]) -> [Transaction] {
         switch macSortMode {
         case .dateDescending:
-            return source.sorted { $0.occurredAt > $1.occurredAt }
+            return source
         case .amountDescending:
             return source.sorted {
                 if $0.amount == $1.amount { return $0.occurredAt > $1.occurredAt }

@@ -85,6 +85,12 @@ public struct DataCleaningPreviewPlanner: Sendable {
         return DataCleaningPreviewSnapshot(items: visibleItems)
     }
 
+    public func buildDuplicateCandidates(
+        transactions: [Transaction]
+    ) -> [DataCleaningPreviewItem] {
+        duplicateItems(transactions: transactions.sorted { $0.occurredAt > $1.occurredAt })
+    }
+
     private func merchantAliasItems(
         transactions: [Transaction],
         merchantAliases: [String: String]
