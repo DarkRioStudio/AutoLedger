@@ -2,6 +2,10 @@ import AutoLedgerCore
 import CloudKit
 import Foundation
 
+#if os(macOS) || targetEnvironment(macCatalyst)
+import Security
+#endif
+
 enum LedgerCloudKitSyncMode: Equatable {
     case disabled
     case dryRun
@@ -86,6 +90,26 @@ struct LedgerCloudKitPushResult: Equatable {
 @MainActor
 struct LedgerCloudKitSyncAdapter {
     private static let operationRecordLimit = 100
+    private static let iCloudContainerIdentifier = "iCloud.top.darkrio326.AutoLedger"
+
+    static var hasDefaultContainerEntitlement: Bool {
+#if os(macOS) || targetEnvironment(macCatalyst)
+        guard let task = SecTaskCreateFromSelf(nil),
+              let identifiers = SecTaskCopyValueForEntitlement(
+                task,
+                "com.apple.developer.icloud-container-identifiers" as CFString,
+                nil
+              ) as? [String] else {
+            return false
+        }
+        return identifiers.contains(iCloudContainerIdentifier)
+#else
+        // Native iOS builds are always code signed before they can launch.
+        // SecTask entitlement inspection is only public in the macOS SDK, and
+        // the direct-launch failure this guard addresses is Mac-specific.
+        return true
+#endif
+    }
 
     let mode: LedgerCloudKitSyncMode
     let allowsLiveCloudKitWrites: Bool

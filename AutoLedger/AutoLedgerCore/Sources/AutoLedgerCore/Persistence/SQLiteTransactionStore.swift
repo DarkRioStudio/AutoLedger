@@ -2264,45 +2264,99 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     private static func makeDatabaseURL(baseDirectoryURL: URL? = nil, filename: String) throws -> URL {
         let fileManager = FileManager.default
 
-        // 优先使用 App Group 共享容器（Share Extension 也能访问）
-        let base: URL
         if let provided = baseDirectoryURL {
-            base = provided
-        } else if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            base = groupURL
-        } else {
-            base = try fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
+            return try makeDatabaseURL(
+                in: provided,
+                filename: filename,
+                fileManager: fileManager,
+                migrateLegacyDatabase: false
             )
         }
 
+        // 优先使用 App Group 共享容器（Share Extension 也能访问）。
+        // A locally launched unsigned Debug build can receive the Group Container
+        // URL while sandboxing still denies writes to it. Verify that the
+        // container is writable before accepting it as the database location.
+        if let groupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
+            do {
+                return try makeDatabaseURL(
+                    in: groupURL,
+                    filename: filename,
+                    fileManager: fileManager,
+                    migrateLegacyDatabase: true
+                )
+            } catch {
+                guard isUnavailableAppGroupContainer(error) else {
+                    throw error
+                }
+            }
+        }
+
+        let applicationSupportURL = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return try makeDatabaseURL(
+            in: applicationSupportURL,
+            filename: filename,
+            fileManager: fileManager,
+            migrateLegacyDatabase: true
+        )
+    }
+
+    private static func makeDatabaseURL(
+        in base: URL,
+        filename: String,
+        fileManager: FileManager,
+        migrateLegacyDatabase: Bool
+    ) throws -> URL {
         let folder = base.appendingPathComponent("AutoLedger", isDirectory: true)
 
         if !fileManager.fileExists(atPath: folder.path) {
             try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         }
+        try verifyWritableDirectory(folder, fileManager: fileManager)
 
-        // 迁移旧数据：从 Application Support 迁移到 App Group 容器
         let targetURL = folder.appendingPathComponent(filename)
-        if !fileManager.fileExists(atPath: targetURL.path) {
-            let legacyBase = try fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: false
-            )
-            let legacyURL = legacyBase
-                .appendingPathComponent("AutoLedger", isDirectory: true)
-                .appendingPathComponent(filename)
-            if fileManager.fileExists(atPath: legacyURL.path) {
-                try? fileManager.moveItem(at: legacyURL, to: targetURL)
-            }
+        guard migrateLegacyDatabase, !fileManager.fileExists(atPath: targetURL.path) else {
+            return targetURL
         }
 
+        // 迁移旧数据：从 Application Support 迁移到 App Group 容器。
+        let legacyBase = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        )
+        let legacyURL = legacyBase
+            .appendingPathComponent("AutoLedger", isDirectory: true)
+            .appendingPathComponent(filename)
+        if fileManager.fileExists(atPath: legacyURL.path), legacyURL != targetURL {
+            try? fileManager.moveItem(at: legacyURL, to: targetURL)
+        }
         return targetURL
+    }
+
+    private static func verifyWritableDirectory(_ folder: URL, fileManager: FileManager) throws {
+        let probeURL = folder.appendingPathComponent(".autoledger-write-probe-\(UUID().uuidString)")
+        defer { try? fileManager.removeItem(at: probeURL) }
+        try Data().write(to: probeURL, options: .withoutOverwriting)
+    }
+
+    private static func isUnavailableAppGroupContainer(_ error: Error) -> Bool {
+        let error = error as NSError
+        if error.domain == NSCocoaErrorDomain {
+            return error.code == NSFileNoSuchFileError
+                || error.code == NSFileReadNoPermissionError
+                || error.code == NSFileWriteNoPermissionError
+        }
+        if error.domain == NSPOSIXErrorDomain {
+            return error.code == Int(EACCES) || error.code == Int(EPERM) || error.code == Int(ENOENT)
+        }
+        return false
     }
 
     private static let syncDeviceIDKey = "top.darkrio326.AutoLedger.syncDeviceID"

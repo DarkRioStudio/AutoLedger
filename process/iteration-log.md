@@ -44,6 +44,24 @@
 
 ## 日志条目
 
+### ITER-412 非 entitlement Debug 构建账本与 CloudKit 启动兜底
+- 日期：2026-07-15
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening / Local Debug
+- 类型：Bugfix / 可靠性 / 测试
+- 目标：修复本地直接启动的 Debug 包在未具备 App Group 或 iCloud entitlement 时，账本打不开并可能在启动后 CloudKit 同步崩溃的问题。
+- 改动范围：`SQLiteTransactionStore` 的默认目录选择与可写性验证；`LedgerCloudKitSyncAdapter` 的 macOS / Mac Catalyst iCloud container entitlement 检查；`LedgerStore` 的 CloudKit 创建前 guard；离线回归中的 CloudKit adapter stub；CHANGELOG 与本日志。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、ASC metadata、entitlement 配置、订阅定价、Xcode Cloud workflow 或构建 tag。
+- 完成内容：默认 SQLite 目录仍优先使用 App Group；但对于 `containerURL` 可返回、实际 sandbox 写入却被拒绝的未签名 Debug 包，会在文件夹创建或最小写入探测报 `EACCES` / `EPERM` / `ENOENT` 等容器不可用错误时，回退到该包独立的 Application Support 目录。磁盘满、数据库损坏等其他错误不会被静默掩盖。
+- 完成内容：macOS / Mac Catalyst 上所有实际创建 `CKContainer.default()` 的账本同步路径均先检查 `com.apple.developer.icloud-container-identifiers` 是否包含默认 container；缺失 entitlement 时仅保留本地账本并跳过 CloudKit，而不是触发 Objective-C exception 导致进程退出。原生 iOS 沿用正常代码签名构建路径，因为 `SecTask` entitlement inspection 不在 iOS SDK 的公开接口中。
+- 完成内容：带开发签名的 Mac Catalyst Debug 包继续打开 App Group 中既有 520 条账本数据；未签名 Debug 包可首次启动、等待启动同步超过 7 秒、退出并再次启动，均不再出现数据库提示或崩溃，且使用独立开发账本，不读取或修改正式 App Group 数据。
+- 未完成内容：未执行真机 iPhone Debug 运行态验证；应在正常开发签名或下一次 Xcode Cloud 构建中补一条 iOS 实机证据。
+- 测试情况：`bash scripts/run_offline_regression.sh` PASS；未签名 Mac Catalyst Debug workspace build PASS，并完成首次与二次启动运行态验证；带开发签名 Mac Catalyst Debug workspace build PASS，并验证 App Group 账本读取；两个 iOS generic 无签名构建最初均在 Xcode beta 的无诊断 `SwiftCompile` exit 65 处失败。将 `SecTask` 限定为 macOS / Mac Catalyst 后，最终 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build` PASS；`git diff --check` 待本日志写入后最终复核。
+- 风险与注意事项：未签名 Debug 的独立 Application Support 数据不是生产账本迁移目标，也不会自动同步到 iCloud；具备正式 App Group / iCloud entitlement 的 Development、TestFlight 与 App Store 构建继续按原路径运行。若新的目标新增 CloudKit container，需同步更新该 identifier 检查。
+- 回滚方式：回退本轮 SQLite 目录探测、CloudKit entitlement guard 与离线 stub 即可；无数据迁移或远端状态需要回滚。
+- 结论：本轮已把“本地账本暂不可用”和启动后 CloudKit abort 的两个独立根因收口为可恢复的 Debug 路径，正式签名数据路径保持不变。
+- 下一步建议：用户用本轮新的 Debug 包再复测一次账本 tab、设置页与启动后的 iCloud 状态；若仍出现崩溃，保留对应 `.ips` 报告以确认是否为不同调用链。
+
 ### ITER-411 云端水单 TestFlight 权益环境修复
 - 日期：2026-07-11
 - 所属版本：v1.7.0 / ASC 1.6.0

@@ -3694,6 +3694,7 @@ extension LedgerStore {
 
         if enabled {
             clearCloudKitPushCheckpoint()
+            guard canUseCloudKitInCurrentBuild() else { return }
             updateLedgerCloudSyncStatus("iCloud 同步已启用，开始首次全量同步。")
             await syncLedgerWithCloudKitNow(forceFull: true)
         } else {
@@ -3703,6 +3704,7 @@ extension LedgerStore {
 
     func syncLedgerWithCloudKitOnLaunchIfNeeded() async {
         guard isLedgerCloudSyncEnabled else { return }
+        guard canUseCloudKitInCurrentBuild() else { return }
         guard !didRunLaunchCloudKitSync else { return }
         didRunLaunchCloudKitSync = true
         let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: "App 启动，先推送本地增量到 iCloud。")
@@ -3715,6 +3717,7 @@ extension LedgerStore {
     }
 
     func syncLedgerWithCloudKitNow(forceFull: Bool = false) async {
+        guard canUseCloudKitInCurrentBuild() else { return }
         guard !isLedgerCloudSyncRunning else { return }
         isLedgerCloudSyncRunning = true
         updateLedgerCloudSyncStatus(forceFull ? "正在强制刷新 iCloud 数据..." : "正在同步 iCloud...")
@@ -3761,6 +3764,10 @@ extension LedgerStore {
 
     func pullLedgerFromCloudKitIfEnabled(reason: String = "正在拉取 iCloud 数据...") async {
         guard isLedgerCloudSyncEnabled else {
+            refreshFromStore()
+            return
+        }
+        guard canUseCloudKitInCurrentBuild() else {
             refreshFromStore()
             return
         }
@@ -3884,6 +3891,7 @@ extension LedgerStore {
     @discardableResult
     func pushLedgerChangesToCloudKitIfEnabled(reason: String = "本地账单已变化，开始增量推送。") async -> Bool {
         guard isLedgerCloudSyncEnabled else { return false }
+        guard canUseCloudKitInCurrentBuild() else { return false }
         guard !isLedgerCloudSyncRunning else {
             updateLedgerCloudSyncStatus("已有 iCloud 同步正在运行，稍后重试推送本地变更。")
             Task { [weak self] in
@@ -3917,6 +3925,14 @@ extension LedgerStore {
             updateLedgerCloudSyncStatus("iCloud 推送失败：\(LedgerCloudKitSyncAdapter.describe(error))")
             return false
         }
+    }
+
+    private func canUseCloudKitInCurrentBuild() -> Bool {
+        guard LedgerCloudKitSyncAdapter.hasDefaultContainerEntitlement else {
+            updateLedgerCloudSyncStatus("当前构建未配置 iCloud 同步权限，已保留本地账本并跳过同步。")
+            return false
+        }
+        return true
     }
 
     private func sqliteStoreForCloudSync() throws -> SQLiteTransactionStore {

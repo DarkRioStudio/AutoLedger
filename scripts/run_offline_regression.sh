@@ -288,6 +288,8 @@ struct LedgerCloudKitPushResult {
 }
 
 struct LedgerCloudKitSyncAdapter {
+    static let hasDefaultContainerEntitlement = false
+
     init(mode: LedgerCloudKitSyncMode = .disabled, allowsLiveCloudKitWrites: Bool = false) {}
 
     static func describe(_ error: Error) -> String {
