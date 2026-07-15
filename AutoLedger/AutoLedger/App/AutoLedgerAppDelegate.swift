@@ -24,7 +24,8 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        if !ProcessInfo.processInfo.arguments.contains("--screenshot-mode") {
+        if !ProcessInfo.processInfo.arguments.contains("--screenshot-mode")
+            && !PerformanceFixtureConfiguration.isEnabled {
             UNUserNotificationCenter.current().delegate = self
             AppDiagnosticsAnalyticsMonitor.shared.startIfNeeded()
             AppSessionDiagnosticsService.recordLaunchRecoveryIfNeeded()

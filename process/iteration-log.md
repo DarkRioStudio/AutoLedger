@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-15（ITER-413 启动观测纠偏与性能专项第一轮）
+更新日期：2026-07-15（ITER-414 iPad / Mac 隔离性能夹具）
 
 ## 记录规则
 
@@ -43,6 +43,21 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-414 iPad / Mac 隔离性能夹具
+- 日期：2026-07-15
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance / Cross-platform QA
+- 类型：测试基础设施 / 性能验证
+- 目标：为 iPad、Mac Catalyst 与真机性能专项提供可重复的 500、5,000、20,000 条脱敏交易数据负载，避免用空账本或用户正式 SQLite 数据判断性能。
+- 改动范围：新增 `PerformanceFixtureConfiguration` 与仅 Debug 生效的内存 `TransactionStore`；根视图按启动参数注入夹具账本，并在夹具模式下跳过 CloudKit、Watch、StoreKit、Common API、通知、analytics、剪贴板和外部 handoff 后台流程；新增 `check_performance_fixture_smoke.py` 并纳入离线回归；回填 CHANGELOG 与 v1.7.0 计划。
+- 未改动范围：不修改任何 SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、定价、ASC metadata、构建 tag 或用户可见业务流程。
+- 完成内容：仅在 Debug 启动参数 `--performance-fixture-count 500|5000|20000` 合法时启用确定性内存交易集；夹具不写 SQLite，也不加载 `LedgerStore` 的商户别名、数据清洗历史、账本选择或同步配置，不启动云同步或远端上传，正常启动路径和 Release 构建均保持原行为。
+- 未完成内容：尚未获得实体 iPad / Mac Time Profiler、SwiftUI 与 Animation Hitches 的可导出 trace；尚未基于三档数据形成发布级帧率、主线程和内存基线。20,000 条 Simulator 首页截图中的待处理摘要仍显示计算中，需作为下一轮热点单独剖析。
+- 测试情况：`git diff --check` PASS；`python3 scripts/check_performance_fixture_smoke.py` PASS；`bash scripts/run_offline_regression.sh` PASS；iPad Pro 13-inch Simulator Debug workspace 单并发完整构建 PASS，并分别以 500 / 5,000 / 20,000 条参数启动到正常首页；Mac Catalyst Debug workspace 单并发完整构建 PASS，并以 5,000 条参数启动运行后主动结束临时进程。Xcode beta 的增量编译曾出现无源码诊断的 `command failed with exit code 0 but produced no further output`，使用全新 DerivedData 完整重编后两平台均取得明确 `BUILD SUCCEEDED`。
+- 风险与注意事项：夹具用于性能采样，不代表真实用户账本结构、附件数量或 iCloud 状态；Simulator RSS 波动明显，本轮未把 `ps` 数字作为性能结论。后续结果必须标明数据规模、设备、OS、Instruments 模板和操作路径，不能把 Simulator 可启动性当成真机发布验收。
+- 回滚方式：移除 `PerformanceFixtureConfiguration`、根视图的 Debug 注入、`LedgerStore` 的持久配置隔离参数与 smoke 脚本即可；不涉及数据迁移或远端状态。
+- 结论：本轮完成，三档隔离负载已可在 iPad 与 Mac 正常 App 界面复用；下一轮直接定位 20,000 条下待处理中心的长时间计算，并补 Time Profiler / SwiftUI / Animation Hitches 证据。
 
 ### ITER-413 启动观测纠偏与性能专项第一轮
 - 日期：2026-07-15

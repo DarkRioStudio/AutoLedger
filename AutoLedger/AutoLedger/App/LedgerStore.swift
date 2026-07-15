@@ -207,7 +207,8 @@ final class LedgerStore: ObservableObject {
         parser: ReceiptParser = ReceiptParser(),
         sampleProvider: SampleReceiptProviding = SampleReceiptProvider(),
         transactionStore: TransactionStore?,
-        persistenceInitializationErrorMessage: String? = nil
+        persistenceInitializationErrorMessage: String? = nil,
+        loadsPersistedConfiguration: Bool = true
     ) {
         self.parser = parser
         self.sampleReceipts = sampleProvider.samples
@@ -221,26 +222,46 @@ final class LedgerStore: ObservableObject {
         self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
         self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
         self.ledgerSyncConflictRecords = LedgerStore.loadInitialLedgerSyncConflictRecords(using: transactionStore)
-        self.dataCleaningApplicationHistory = Self.loadDataCleaningApplicationHistory()
-        self.customSources = UserDefaults.standard.stringArray(forKey: "customSources") ?? []
-        let storedCustomCategories = UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+        self.dataCleaningApplicationHistory = loadsPersistedConfiguration
+            ? Self.loadDataCleaningApplicationHistory()
+            : []
+        self.customSources = loadsPersistedConfiguration
+            ? UserDefaults.standard.stringArray(forKey: "customSources") ?? []
+            : []
+        let storedCustomCategories = loadsPersistedConfiguration
+            ? UserDefaults.standard.stringArray(forKey: "customCategories") ?? []
+            : []
         let normalizedCustomCategories = Self.normalizedCustomCategories(storedCustomCategories)
         self.customCategories = normalizedCustomCategories
-        if normalizedCustomCategories != storedCustomCategories {
+        if loadsPersistedConfiguration && normalizedCustomCategories != storedCustomCategories {
             UserDefaults.standard.set(normalizedCustomCategories, forKey: "customCategories")
         }
-        self.merchantAliases = LedgerStore.loadInitialMerchantAliases(using: transactionStore)
-        self.merchantAliasDeletedKeys = Self.loadMerchantAliasDeletedKeys()
-        self.ignoredDataCleaningPreviewIDs = Self.loadIgnoredDataCleaningPreviewIDs()
-        let initialLedgerProfiles = LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
+        self.merchantAliases = loadsPersistedConfiguration
+            ? LedgerStore.loadInitialMerchantAliases(using: transactionStore)
+            : [:]
+        self.merchantAliasDeletedKeys = loadsPersistedConfiguration ? Self.loadMerchantAliasDeletedKeys() : []
+        self.ignoredDataCleaningPreviewIDs = loadsPersistedConfiguration ? Self.loadIgnoredDataCleaningPreviewIDs() : []
+        let initialLedgerProfiles = loadsPersistedConfiguration
+            ? LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
+            : [LedgerProfile.defaultLocal()]
         self.ledgerProfiles = initialLedgerProfiles
-        self.selectedLedgerID = LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
-        self.defaultWriteLedgerID = LedgerStore.loadInitialDefaultWriteLedgerID(from: initialLedgerProfiles)
-        self.isShowingAllLedgers = UserDefaults.standard.bool(forKey: Self.showAllLedgersKey)
-        self.isLedgerCloudSyncEnabled = UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
+        self.selectedLedgerID = loadsPersistedConfiguration
+            ? LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
+            : TodaySpendingSummary.defaultLedgerID
+        self.defaultWriteLedgerID = loadsPersistedConfiguration
+            ? LedgerStore.loadInitialDefaultWriteLedgerID(from: initialLedgerProfiles)
+            : TodaySpendingSummary.defaultLedgerID
+        self.isShowingAllLedgers = loadsPersistedConfiguration
+            ? UserDefaults.standard.bool(forKey: Self.showAllLedgersKey)
+            : false
+        self.isLedgerCloudSyncEnabled = loadsPersistedConfiguration
+            ? UserDefaults.standard.bool(forKey: Self.ledgerCloudSyncEnabledKey)
+            : false
         self.lastPasteboardChangeCount = UIPasteboard.general.changeCount
-        seedLegacyLedgerConfigurationTimestampIfNeeded()
-        normalizeHotelLinkedTransactionCategories(persist: true)
+        if loadsPersistedConfiguration {
+            seedLegacyLedgerConfigurationTimestampIfNeeded()
+        }
+        normalizeHotelLinkedTransactionCategories(persist: loadsPersistedConfiguration)
         LedgerStore.shared = self
     }
 

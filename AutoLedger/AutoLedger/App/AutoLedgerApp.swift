@@ -34,10 +34,11 @@ struct AutoLedgerApp: App {
         ScreenshotModeConfig.installRuntimeOverrides()
 
         ClipboardImportIntent.handler = {
+            guard !PerformanceFixtureConfiguration.isEnabled else { return }
             LedgerStore.shared?.attemptClipboardImport(force: true)
         }
 
-        if !ScreenshotModeConfig.isEnabled {
+        if !ScreenshotModeConfig.isEnabled && !PerformanceFixtureConfiguration.isEnabled {
             // 激活 WatchConnectivity 会话（Watch 端连接前预备）
             LedgerStore.watchSyncHandler = {
                 WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
@@ -89,7 +90,7 @@ private struct AutoLedgerRootView: View {
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
     private static let hotelFolioDraftReviewKey = "share_pendingHotelFolioDraftReview.v1"
 
-    @StateObject private var store = LedgerStore()
+    @StateObject private var store: LedgerStore
     @StateObject private var navigationState = AutoLedgerNavigationState()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppThemePreset.userDefaultsKey) private var themeRawValue = AppThemePreset.fresh.rawValue
@@ -100,6 +101,12 @@ private struct AutoLedgerRootView: View {
     @State private var didScheduleLaunchSync = false
     @State private var didScheduleAnalyticsUpload = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
+
+    init() {
+        _store = StateObject(
+            wrappedValue: PerformanceFixtureConfiguration.makeLedgerStoreIfRequested() ?? LedgerStore()
+        )
+    }
 
     private var themeRefreshID: String {
         [
@@ -152,6 +159,7 @@ private struct AutoLedgerRootView: View {
                 }
             }
             .task {
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 SupportPurchaseManager.shared.startTransactionListener()
                 ProEntitlementManager.shared.startTransactionListener()
                 scheduleLaunchCloudSyncIfNeeded()
@@ -160,12 +168,14 @@ private struct AutoLedgerRootView: View {
                 scheduleGemmaWarmupIfNeeded()
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 refreshStoreWithPerformanceTracking(operation: "refresh_from_intent_notification")
                 Task {
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.openDeepLinkEvent)) { _ in
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 consumeNotificationDeepLinkHandoffIfNeeded()
             }
             .sheet(item: $pendingStructuredJSONHandoff) { handoff in
@@ -173,10 +183,12 @@ private struct AutoLedgerRootView: View {
                     .environmentObject(store)
             }
             .onOpenURL { url in
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 _ = navigationState.openDeepLink(url, store: store)
                 consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
             }
             .onChange(of: scenePhase) { _, newPhase in
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 if newPhase == .active {
                     AppSessionDiagnosticsService.markActive()
                     consumeStructuredJSONHandoffIfNeeded()
@@ -212,6 +224,7 @@ private struct AutoLedgerRootView: View {
                 }
             }
             .onAppear {
+                guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 consumeAppIntentNavigationHandoffIfNeeded()
                 consumeNotificationDeepLinkHandoffIfNeeded()
                 consumeStructuredJSONHandoffIfNeeded()
