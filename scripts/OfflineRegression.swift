@@ -4308,6 +4308,12 @@ struct OfflineRegression {
         let basicResults = service.search(transactions: [coffee, store, hotel], query: basicKeyword)
         reporter.check(basicResults.map(\.id) == [coffee.id], "LedgerAdvancedSearch keeps basic keyword search free-compatible")
         reporter.check(basicKeyword.requiresProAccess == false, "LedgerAdvancedSearch does not mark basic keyword as Pro")
+
+        let defaultResults = service.search(transactions: [store, coffee, hotel], query: LedgerAdvancedSearchQuery())
+        reporter.check(
+            defaultResults.map(\.id) == [store.id, coffee.id, hotel.id],
+            "LedgerAdvancedSearch preserves already-sorted transactions when no search criteria are active"
+        )
     }
 
     private static func verifyDataCleaningPreviewPlanner(reporter: RegressionReporter) {

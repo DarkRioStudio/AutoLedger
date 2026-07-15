@@ -102,6 +102,9 @@ public struct LedgerAdvancedSearchService: Sendable {
         defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID
     ) -> [Transaction] {
         let tokens = query.normalizedKeywordTokens
+        if tokens.isEmpty && !query.hasAdvancedFilters {
+            return transactions
+        }
         let filtered = transactions.filter { transaction in
             matchesKeyword(transaction, tokens: tokens) &&
                 matchesAmount(transaction, query: query) &&

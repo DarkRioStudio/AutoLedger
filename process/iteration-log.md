@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-11（ITER-411 云端水单 TestFlight 权益环境修复）
+更新日期：2026-07-15（ITER-413 启动观测纠偏与性能专项第一轮）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-413 启动观测纠偏与性能专项第一轮
+- 日期：2026-07-15
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening / iPad-Mac-Performance
+- 类型：可观测性 / 性能 / 可靠性 / 测试
+- 目标：核实 dashboard 显示的 71% 启动成功率是否为真实启动故障，并先消除已经确认的账本刷新和默认搜索冗余，为后续 iPad / Mac Instruments 专项建立可信基线。
+- 改动范围：`CommonAPIAnalyticsService`、`AppSessionDiagnosticsService`、Core analytics dashboard snapshot、Common API dashboard 聚合和合同测试；`LedgerStore.refreshFromStore()`、`LedgerAdvancedSearchService`、`LedgerView`；离线回归、CHANGELOG、本日志和 v1.7.0 计划。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、客户端可见 Common API endpoint 合同、entitlement、订阅定价、ASC metadata、Xcode Cloud workflow 或构建 tag；本轮未部署 Worker dashboard，也未改动用户账本数据。
+- 完成内容：检查 production D1 聚合样本后确认，旧 dashboard 的 44 次前台启动成功与 18 条 `previous_session_recovery` 事件被同一个“启动成功率”分母混算，才显示 70.967%。这 18 条并非当前启动失败，而是前次 active 会话未写入 background / terminate 标记的恢复提示；同一窗口没有可归类为实际 MetricKit 崩溃的 iOS 诊断信号。
+- 完成内容：恢复提示不再伪装为 `al_perf_app_launch` 失败，而保留为 `al_crash_diagnostic` 的 `unclean_active_session/session_marker` 诊断；dashboard 和 Core snapshot 现在分别输出启动完成、异常会话恢复、系统崩溃与挂起。面板明确恢复信号可能来自调试器停止或系统回收，不可当作崩溃率或总启动成功率。
+- 完成内容：Debug 与截图模式不再上传 anonymous analytics，避免本机 build、截图管线和 smoke 继续污染 production D1。Release / TestFlight 的正常 upload 路径保持不变。
+- 完成内容：`LedgerStore.refreshFromStore()` 对 SQLite store 改为只读取一次 transactions；无关键词且无高级条件的 `LedgerAdvancedSearchService` 直接返回既有已排序数组；账本列表将搜索结果单次计算后复用到 List 和 footer，减少 Tab 切换、前台刷新和 SwiftUI 重绘时的同步工作。
+- 未完成内容：尚未完成真实 iPad / Mac Instruments capture，也未建立 500、5,000、20,000 条脱敏数据集的操作基线；因此本轮只能证明观测口径与两处静态热点已修正，不能声称设备级卡顿已完全解决。
+- 测试情况：`git diff --check` PASS；`tools/worker/common-api` 执行 `npm run check` PASS（38 tests）；`bash scripts/run_offline_regression.sh` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath /tmp/autoledger-perf-ios build` PASS；`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -configuration Debug -destination 'platform=macOS,variant=Mac Catalyst' -derivedDataPath /tmp/autoledger-perf-mac build` PASS。
+- 风险与注意事项：新的 dashboard 代码尚未部署，线上页面暂时仍会显示旧的 71% 指标；部署后也需要等待新的 Release / TestFlight 样本累积，历史 Debug / legacy recovery 行不会自动消失。会话恢复仍是有价值的稳定性预警，但应结合 MetricKit、用户实际日志和 Instruments 判断，不能独立作为 crash KPI。
+- 回滚方式：可分别回退 dashboard metric 映射、Debug analytics guard 和三处本地性能优化；不涉及数据迁移、D1 schema 或远端状态回滚。
+- 结论：71% 不是确认的 App 启动成功率问题，而是仪表盘语义错误。专项的下一实际门槛是 iPad / Mac 真机性能采样与大数据量回归，而非根据旧单一百分比继续推断崩溃率。
+- 下一步建议：先部署 Common API dashboard 纠偏并等待 Release 样本；同时在 iPhone / iPad 使用 Time Profiler、SwiftUI 和 Animation Hitches，Mac Catalyst 使用 Time Profiler、SwiftUI，分别采集冷启动、账本 Tab、月报月份切换、酒店消费、数据清洗和前台刷新；对 500 / 5,000 / 20,000 条脱敏交易记录建立 p50 / p95 基线后，再决定是否做 debug records 分页或 SQLite 投影优化。
 
 ### ITER-412 非 entitlement Debug 构建账本与 CloudKit 启动兜底
 - 日期：2026-07-15

@@ -165,7 +165,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         let metrics = Set(AutoLedgerAnalyticsCatalog.minimalDashboardMetrics.map(\.metricID))
         XCTAssertTrue(metrics.isSuperset(of: [
             "feature_surface_open_count",
-            "launch_success_rate",
+            "launch_completion_count",
+            "unclean_session_recovery_count",
             "import_completion_rate",
             "import_error_code_top_n",
             "confirmation_discard_rate",
@@ -183,6 +184,18 @@ final class AnalyticsInstrumentationTests: XCTestCase {
 
     func testRecorderBuildsMinimalDashboardSnapshotFromAllowedEvents() throws {
         var recorder = AutoLedgerAnalyticsRecorder()
+
+        try recorder.record(.appLaunchPerformance, payload: [
+            "event_id": .string("launch-1"),
+            "app_version": .string("1.6.0"),
+            "build_number": .string("160"),
+            "os_major": .string("26"),
+            "device_class": .string("ios"),
+            "launch_type": .string("foreground"),
+            "duration_ms_bucket": .string("under_1s"),
+            "result": .string("success"),
+            "error_code": .string("none")
+        ])
 
         try recorder.record(.featureSurfaceOpened, payload: [
             "event_id": .string("surface-1"),
@@ -239,6 +252,16 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "termination_state": .string("unknown"),
             "error_code": .string("none")
         ])
+        try recorder.record(.crashDiagnostic, payload: [
+            "event_id": .string("session-marker-1"),
+            "app_version": .string("1.6.0"),
+            "diagnostic_type": .string("unclean_active_session"),
+            "signal_source": .string("session_marker"),
+            "severity": .string("warning"),
+            "count_bucket": .string("1"),
+            "termination_state": .string("active"),
+            "error_code": .string("none")
+        ])
         try recorder.record(.performanceDiagnostic, payload: [
             "event_id": .string("perf-1"),
             "app_version": .string("1.6.0"),
@@ -255,6 +278,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         let snapshot = recorder.makeMinimalDashboardSnapshot()
 
         XCTAssertEqual(snapshot.metric(id: "import_completion_rate")?.value, 50)
+        XCTAssertEqual(snapshot.metric(id: "launch_completion_count")?.value, 1)
+        XCTAssertEqual(snapshot.metric(id: "unclean_session_recovery_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "purchase_flow_failure_rate")?.value, 100)
         XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "slow_operation_count")?.value, 1)

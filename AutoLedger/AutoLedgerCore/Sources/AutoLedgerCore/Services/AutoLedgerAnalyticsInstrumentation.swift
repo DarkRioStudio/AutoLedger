@@ -251,7 +251,9 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
 
     public func makeMinimalDashboardSnapshot() -> AutoLedgerAnalyticsDashboardSnapshot {
         let launchEvents = events(named: .appLaunchPerformance)
-        let launchSuccesses = launchEvents.filter { $0.stringPayload("result") == "success" }.count
+        let launchCompletionEvents = launchEvents.filter {
+            $0.stringPayload("launch_type") == "foreground" && $0.stringPayload("result") == "success"
+        }
         let importStarts = events(named: .importFlowStarted).count
         let importSuccesses = events(named: .importFlowCompleted).filter { $0.stringPayload("status") == "success" }.count
         let importCompletions = events(named: .importFlowCompleted)
@@ -272,6 +274,14 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             }
         }.count
         let crashEvents = events(named: .crashDiagnostic)
+        let uncleanSessionRecoveryEvents = crashEvents.filter {
+            $0.stringPayload("diagnostic_type") == "unclean_active_session" &&
+            $0.stringPayload("signal_source") == "session_marker"
+        }
+        let systemCrashEvents = crashEvents.filter {
+            !($0.stringPayload("diagnostic_type") == "unclean_active_session" &&
+              $0.stringPayload("signal_source") == "session_marker")
+        }
         let performanceEvents = events(named: .performanceDiagnostic)
         let slowPerformanceEvents = performanceEvents.filter { event in
             switch event.stringPayload("duration_ms_bucket") {
@@ -289,11 +299,8 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 value: events(named: .featureSurfaceOpened).count,
                 breakdown: breakdown(events(named: .featureSurfaceOpened), field: "surface")
             ),
-            percentMetric(
-                "launch_success_rate",
-                numerator: launchSuccesses,
-                denominator: launchEvents.count
-            ),
+            countMetric("launch_completion_count", value: launchCompletionEvents.count),
+            countMetric("unclean_session_recovery_count", value: uncleanSessionRecoveryEvents.count),
             percentMetric(
                 "import_completion_rate",
                 numerator: importSuccesses,
@@ -336,8 +343,8 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             ),
             countMetric(
                 "crash_diagnostic_count",
-                value: crashEvents.count,
-                breakdown: breakdown(crashEvents, field: "diagnostic_type")
+                value: systemCrashEvents.count,
+                breakdown: breakdown(systemCrashEvents, field: "diagnostic_type")
             ),
             countMetric(
                 "slow_operation_count",
@@ -500,7 +507,7 @@ public enum AutoLedgerAnalyticsCatalog {
             purpose: "观察 1.6.0 推广前启动性能是否影响首次体验。",
             fields: ["event_id", "app_version", "build_number", "os_major", "device_class", "launch_type", "duration_ms_bucket", "result", "error_code"],
             privacy: "Diagnostics / Performance Data；not linked；not tracking。",
-            dashboard: "启动成功率、冷启动 p50 / p95 bucket、启动错误码排行。"
+            dashboard: "启动完成信号与启动耗时 bucket；前次会话恢复只进入诊断信号，不作为启动失败。"
         ),
         definition(
             .featureSurfaceOpened,
@@ -589,7 +596,8 @@ public enum AutoLedgerAnalyticsCatalog {
     ]
 
     public static let minimalDashboardMetrics: [AutoLedgerAnalyticsDashboardMetric] = [
-        metric("launch_success_rate", "启动成功事件占启动事件比例。", [.appLaunchPerformance], "低于目标阈值则暂停扩大推广。"),
+        metric("launch_completion_count", "已到达前台启动上报的次数，不推断总启动成功率。", [.appLaunchPerformance], "用于确认启动上报覆盖，不作为发布成功率。"),
+        metric("unclean_session_recovery_count", "前次 active 会话在下次启动时被恢复检测到的次数。", [.crashDiagnostic], "含系统回收和调试器停止；不等同崩溃率。"),
         metric("feature_surface_open_count", "匿名功能入口打开次数，按固定 surface 枚举聚合。", [.featureSurfaceOpened], "只用于产品体验判断，不做用户画像。"),
         metric("import_completion_rate", "导入开始到导入成功完成的比例。", [.importFlowStarted, .importFlowCompleted], "主路径异常下降需调整文案或暂缓。"),
         metric("import_error_code_top_n", "导入失败事件按错误码聚合。", [.importFlowCompleted], "新增高频错误需进入 launch blocker review。"),

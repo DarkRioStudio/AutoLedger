@@ -224,12 +224,12 @@ struct LedgerView: View {
     }
 
     private var ledgerList: some View {
-        ScrollViewReader { proxy in
+        let results = searchFilteredTransactions
+        return ScrollViewReader { proxy in
             List(selection: $navigationState.selectedLedgerTransactionID) {
                 filterSection
 
                 Section {
-                    let results = searchFilteredTransactions
                     if results.isEmpty && !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                         Text("ledger.search.no_results")
                             .font(.subheadline)
@@ -273,8 +273,7 @@ struct LedgerView: View {
                 } header: {
                     Text(filterLabel)
                 } footer: {
-                    let count = searchFilteredTransactions.count
-                    Text(String(format: String(localized: "ledger.footer_format"), count))
+                    Text(String(format: String(localized: "ledger.footer_format"), results.count))
                 }
             }
             .autoLedgerListChrome()

@@ -913,13 +913,14 @@ final class LedgerStore: ObservableObject {
     /// 从 SQLite 重新加载全部账单和调试记录（用于 App 回到前台后同步 Intent 入账记录）
     func refreshFromStore() {
         guard let store = transactionStore else { return }
-        do {
-            transactions = try store.loadTransactions()
-        } catch {
-            // 静默失败，保留内存中的数据
-        }
         if let sqlStore = store as? SQLiteTransactionStore {
             refreshFromSQLiteStore(sqlStore)
+        } else {
+            do {
+                transactions = try store.loadTransactions()
+            } catch {
+                // 静默失败，保留内存中的数据
+            }
         }
         if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
             reloadWidgets()

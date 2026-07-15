@@ -9,6 +9,7 @@ nonisolated private let commonAPIAnalyticsLogger = Logger(
 
 enum CommonAPIAnalyticsService {
     nonisolated static func uploadLaunchEvent() async {
+        guard allowsAnalyticsUpload else { return }
         await uploadEvent(.appLaunchPerformance, payload: [
             "build_number": .string(buildNumber),
             "os_major": .string("\(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"),
@@ -19,18 +20,6 @@ enum CommonAPIAnalyticsService {
             "error_code": .string("none")
         ])
         commonAPIAnalyticsLogger.info("[CommonAPI] anonymous launch analytics uploaded")
-    }
-
-    nonisolated static func trackRecoveredUncleanLaunch() {
-        fireAndForget(.appLaunchPerformance, payload: [
-            "build_number": .string(buildNumber),
-            "os_major": .string("\(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"),
-            "device_class": .string(deviceClass),
-            "launch_type": .string("previous_session_recovery"),
-            "duration_ms_bucket": .string("not_measured"),
-            "result": .string("failure"),
-            "error_code": .string("unclean_previous_session")
-        ])
     }
 
     nonisolated static func trackFeatureSurfaceOpened(
@@ -309,6 +298,7 @@ enum CommonAPIAnalyticsService {
         _ name: AutoLedgerAnalyticsEventName,
         payload: [String: AutoLedgerAnalyticsPayloadValue]
     ) {
+        guard allowsAnalyticsUpload else { return }
         Task.detached(priority: .utility) {
             await uploadEvent(name, payload: payload)
         }
@@ -318,6 +308,7 @@ enum CommonAPIAnalyticsService {
         _ name: AutoLedgerAnalyticsEventName,
         payload: [String: AutoLedgerAnalyticsPayloadValue]
     ) async {
+        guard allowsAnalyticsUpload else { return }
         let appVersion = appVersion
         let buildNumber = buildNumber
         let osMajor = "\(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
@@ -421,6 +412,14 @@ enum CommonAPIAnalyticsService {
         return "ios"
         #else
         return "unknown"
+        #endif
+    }
+
+    nonisolated private static var allowsAnalyticsUpload: Bool {
+        #if DEBUG
+        return false
+        #else
+        return !ProcessInfo.processInfo.arguments.contains("--screenshot-mode")
         #endif
     }
 }

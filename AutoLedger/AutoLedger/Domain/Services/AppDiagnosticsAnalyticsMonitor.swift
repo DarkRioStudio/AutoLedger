@@ -110,7 +110,7 @@ enum AppSessionDiagnosticsService {
         let previousState = defaults.string(forKey: stateKey) ?? "unknown"
         let previousTimestamp = defaults.object(forKey: timestampKey) as? Date
         if previousState == "active", isRecent(previousTimestamp) {
-            CommonAPIAnalyticsService.trackRecoveredUncleanLaunch()
+            // This is a recovery hint for the preceding session, not a failed current launch.
             CommonAPIAnalyticsService.trackCrashDiagnostic(
                 diagnosticType: "unclean_active_session",
                 signalSource: "session_marker",

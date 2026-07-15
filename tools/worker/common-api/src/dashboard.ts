@@ -104,7 +104,11 @@ export function autoLedgerDashboardHTMLResponse(): Response {
 }
 
 function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePayload }>): DashboardMetric[] {
-  const launchEvents = events.filter((event) => event.eventName === "al_perf_app_launch");
+  const launchCompletionEvents = events.filter((event) => (
+    event.eventName === "al_perf_app_launch" &&
+    stringPayload(event.payload, "launch_type") === "foreground" &&
+    stringPayload(event.payload, "result") === "success"
+  ));
   const featureSurfaceEvents = events.filter((event) => event.eventName === "al_feature_surface_opened");
   const importStarts = events.filter((event) => event.eventName === "al_import_flow_started");
   const importCompletions = events.filter((event) => event.eventName === "al_import_flow_completed");
@@ -115,6 +119,11 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const proGateEvents = events.filter((event) => event.eventName === "al_pro_gate_viewed");
   const purchaseEvents = events.filter((event) => event.eventName === "al_purchase_flow_status");
   const crashEvents = events.filter((event) => event.eventName === "al_crash_diagnostic");
+  const uncleanSessionRecoveryEvents = crashEvents.filter((event) => (
+    stringPayload(event.payload, "diagnostic_type") === "unclean_active_session" &&
+    stringPayload(event.payload, "signal_source") === "session_marker"
+  ));
+  const systemCrashEvents = crashEvents.filter((event) => !uncleanSessionRecoveryEvents.includes(event));
   const performanceEvents = events.filter((event) => event.eventName === "al_performance_diagnostic");
   const slowPerformanceEvents = performanceEvents.filter((event) => isSlowPerformanceEvent(event.payload));
   const privacyEvents = events.filter((event) => event.eventName === "al_privacy_payload_guard_violation");
@@ -127,11 +136,11 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       featureSurfaceEvents.length,
       breakdown(featureSurfaceEvents.map((event) => stringPayload(event.payload, "surface") ?? "unknown"))
     ),
-    percentMetric(
-      "launch_success_rate",
-      "启动成功率",
-      launchEvents.filter((event) => stringPayload(event.payload, "result") === "success").length,
-      launchEvents.length
+    countMetric("launch_completion_count", "启动完成信号", launchCompletionEvents.length),
+    countMetric(
+      "unclean_session_recovery_count",
+      "异常会话恢复信号",
+      uncleanSessionRecoveryEvents.length
     ),
     percentMetric(
       "import_completion_rate",
@@ -183,9 +192,9 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
     ),
     countMetric(
       "crash_diagnostic_count",
-      "崩溃诊断信号",
-      crashEvents.length,
-      breakdown(crashEvents.map((event) => stringPayload(event.payload, "diagnostic_type") ?? "unknown"))
+      "系统崩溃与挂起信号",
+      systemCrashEvents.length,
+      breakdown(systemCrashEvents.map((event) => stringPayload(event.payload, "diagnostic_type") ?? "unknown"))
     ),
     countMetric(
       "slow_operation_count",
@@ -479,7 +488,7 @@ const dashboardHTML = `<!doctype html>
           </div>
           <div>
             <h1>AutoLedger 运营观测面板</h1>
-            <p class="lead">匿名聚合指标，用于上线前检查。这里只展示导入、启动、汇率、购买和隐私 guard 的聚合状态，不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
+            <p class="lead">匿名聚合指标，用于上线前检查。启动完成、异常会话恢复和系统崩溃分开统计；异常会话恢复可包含调试器停止或系统回收，不等同于崩溃率。这里不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
           </div>
         </div>
       </div>
@@ -535,7 +544,7 @@ const dashboardHTML = `<!doctype html>
         <details class="card widget" data-widget="crash-diagnostics" open>
           <summary class="section-head">
             <h2>崩溃诊断</h2>
-            <span>MetricKit 与恢复信号</span>
+            <span>仅系统诊断，恢复信号单列</span>
           </summary>
           <div class="widget-body bars" id="crashDiagnostics"></div>
         </details>
@@ -581,7 +590,8 @@ const dashboardHTML = `<!doctype html>
     const metricOrder = [
       "total_events_count",
       "feature_surface_open_count",
-      "launch_success_rate",
+      "launch_completion_count",
+      "unclean_session_recovery_count",
       "crash_diagnostic_count",
       "slow_operation_count",
       "import_completion_rate",
@@ -633,11 +643,11 @@ const dashboardHTML = `<!doctype html>
       const byID = new Map((data.metrics || []).map((metric) => [metric.metricID, metric]));
       renderSummary([
         ["匿名事件", metricValue(byID.get("total_events_count")), "最近接收 " + formatTime(data.latestReceivedAt)],
-        ["启动成功率", metricValue(byID.get("launch_success_rate")), metricRatio(byID.get("launch_success_rate"))],
-        ["崩溃信号", metricValue(byID.get("crash_diagnostic_count")), "MetricKit / 恢复检测"],
+        ["启动完成", metricValue(byID.get("launch_completion_count")), "存活至启动事件上报"],
+        ["会话恢复", metricValue(byID.get("unclean_session_recovery_count")), "非崩溃率，含系统回收"],
+        ["系统崩溃", metricValue(byID.get("crash_diagnostic_count")), "MetricKit / 系统诊断"],
         ["慢操作", metricValue(byID.get("slow_operation_count")), "超过 3 秒或 warning"],
-        ["导入完成率", metricValue(byID.get("import_completion_rate")), metricRatio(byID.get("import_completion_rate"))],
-        ["隐私拦截", metricValue(byID.get("privacy_payload_violation_count")), "禁止字段 guard"]
+        ["导入完成率", metricValue(byID.get("import_completion_rate")), metricRatio(byID.get("import_completion_rate"))]
       ]);
       els.eventsRange.textContent = "最近 " + (data.windowDays || 30) + " 天";
       renderMetricTable((data.metrics || []).slice().sort((left, right) => metricOrder.indexOf(left.metricID) - metricOrder.indexOf(right.metricID)));
@@ -713,11 +723,11 @@ const dashboardHTML = `<!doctype html>
     function renderUnavailable() {
       renderSummary([
         ["面板暂不可用", "-", "请确认 Access、Worker 和 D1 绑定"],
-        ["启动成功率", "-", "暂无数据"],
-        ["崩溃信号", "-", "暂无数据"],
+        ["启动完成", "-", "暂无数据"],
+        ["会话恢复", "-", "暂无数据"],
+        ["系统崩溃", "-", "暂无数据"],
         ["慢操作", "-", "暂无数据"],
-        ["导入完成率", "-", "暂无数据"],
-        ["隐私拦截", "-", "暂无数据"]
+        ["导入完成率", "-", "暂无数据"]
       ]);
       els.metrics.innerHTML = '<div class="empty">暂时无法读取指标。</div>';
       els.eventBreakdown.innerHTML = '<tr><td colspan="3" class="muted">暂时无法读取事件分布。</td></tr>';

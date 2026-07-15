@@ -485,17 +485,17 @@ describe("common api worker contract", () => {
         build_number: "160",
         os_major: "26",
         device_class: "ios",
-        payload_json: JSON.stringify({ result: "success", duration_ms_bucket: "not_measured" }),
+        payload_json: JSON.stringify({ launch_type: "foreground", result: "success", duration_ms_bucket: "not_measured" }),
         received_at: "2026-07-08T08:08:39.470Z"
       },
       {
         event_name: "al_perf_app_launch",
-        event_id: "launch-failed",
+        event_id: "legacy-session-recovery",
         app_version: "1.6.0",
         build_number: "160",
         os_major: "26",
         device_class: "ios",
-        payload_json: JSON.stringify({ result: "failed", error_code: "timeout" }),
+        payload_json: JSON.stringify({ launch_type: "previous_session_recovery", result: "failure", error_code: "unclean_previous_session" }),
         received_at: "2026-07-08T08:09:39.470Z"
       },
       {
@@ -549,6 +549,16 @@ describe("common api worker contract", () => {
         received_at: "2026-07-08T08:13:09.470Z"
       },
       {
+        event_name: "al_crash_diagnostic",
+        event_id: "session-marker",
+        app_version: "1.6.0",
+        build_number: "160",
+        os_major: "26",
+        device_class: "ios",
+        payload_json: JSON.stringify({ diagnostic_type: "unclean_active_session", signal_source: "session_marker", severity: "warning", count_bucket: "1" }),
+        received_at: "2026-07-08T08:13:14.470Z"
+      },
+      {
         event_name: "al_performance_diagnostic",
         event_id: "perf-month-switch",
         app_version: "1.6.0",
@@ -591,12 +601,15 @@ describe("common api worker contract", () => {
       protection: "cloudflare_access",
       emailHeaderTrustedOnlyOnProtectedHosts: true
     });
-    expect(byID.get("total_events_count")).toMatchObject({ value: 10, unit: "count" });
+    expect(byID.get("total_events_count")).toMatchObject({ value: 11, unit: "count" });
     expect(byID.get("total_events_count")).toMatchObject({ label: "已接收匿名事件总数" });
     expect(byID.get("feature_surface_open_count")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("feature_surface_open_count")).toMatchObject({ label: "功能入口打开分布" });
-    expect(byID.get("launch_success_rate")).toMatchObject({ value: 50, unit: "percent", numerator: 1, denominator: 2 });
-    expect(byID.get("launch_success_rate")).toMatchObject({ label: "启动成功率" });
+    expect(byID.get("launch_completion_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("launch_completion_count")).toMatchObject({ label: "启动完成信号" });
+    expect(byID.get("unclean_session_recovery_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("unclean_session_recovery_count")).toMatchObject({ label: "异常会话恢复信号" });
+    expect(byID.has("launch_success_rate")).toBe(false);
     expect(byID.get("import_completion_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("common_api_status_top_n")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
