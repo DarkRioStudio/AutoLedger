@@ -208,19 +208,19 @@ public struct DataCleaningPreviewPlanner: Sendable {
 
     private func duplicateItems(transactions: [Transaction]) -> [DataCleaningPreviewItem] {
         var items: [DataCleaningPreviewItem] = []
-        var seenPairs = Set<String>()
+        let maximumDuplicateWindow = max(duplicateWindow, textDuplicateWindow)
 
         for lhsIndex in transactions.indices {
             for rhsIndex in transactions.index(after: lhsIndex)..<transactions.endIndex {
                 let lhs = transactions[lhsIndex]
                 let rhs = transactions[rhsIndex]
+                let timeDelta = lhs.occurredAt.timeIntervalSince(rhs.occurredAt)
+                if timeDelta >= maximumDuplicateWindow {
+                    break
+                }
                 guard isDuplicateCandidate(lhs, rhs) else { continue }
 
                 let pairID = [lhs.id.uuidString, rhs.id.uuidString].sorted().joined(separator: ":")
-                guard !seenPairs.contains(pairID) else { continue }
-                seenPairs.insert(pairID)
-
-                let timeDelta = abs(lhs.occurredAt.timeIntervalSince(rhs.occurredAt))
                 let textSimilarity = noteSimilarity(lhs, rhs)
                 let score = duplicateScore(timeDelta: timeDelta, textSimilarity: textSimilarity)
                 items.append(

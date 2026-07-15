@@ -4464,6 +4464,26 @@ struct OfflineRegression {
             !ignoredSnapshot.items.contains { $0.currentValue == "Cafe Roma Terminal 2" },
             "DataCleaningPreviewPlanner hides ignored suggestions"
         )
+
+        let largeSeparatedLedger = (0..<20_000).map { index in
+            Transaction(
+                merchant: "Fixture Merchant \(index % 8)",
+                amount: Double(10 + (index % 300)),
+                occurredAt: base.addingTimeInterval(Double(index) * -5_400),
+                category: .other,
+                source: .manual,
+                note: ""
+            )
+        }
+        let largeSnapshot = DataCleaningPreviewPlanner().buildSnapshot(
+            transactions: largeSeparatedLedger,
+            merchantAliases: [:],
+            categoryCorrections: [:]
+        )
+        reporter.check(
+            largeSnapshot.items(kind: .duplicateCandidate).isEmpty,
+            "DataCleaningPreviewPlanner bounds duplicate scans by the maximum time window"
+        )
     }
 
     private static func verifyAdvancedRuleAutomationPlanner(reporter: RegressionReporter) {

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-15（ITER-414 iPad / Mac 隔离性能夹具）
+更新日期：2026-07-15（ITER-415 待处理中心大账本降耗）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-415 待处理中心大账本降耗
+- 日期：2026-07-15
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance / Cross-platform QA
+- 类型：性能 / Bugfix / 测试
+- 目标：解决 20,000 条隔离账本下 iPhone / iPad 首页待处理摘要持续显示加载、Mac 待处理工作区迟迟没有结果的问题。
+- 改动范围：`DataCleaningPreviewPlanner` 的疑似重复候选扫描；`OfflineRegression` 的 20,000 条长列表回归；CHANGELOG、v1.7.0 计划和本日志。
+- 未改动范围：未修改重复判定时间窗、文本相似度阈值、待处理分类、用户数据、SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、订阅价格、ASC metadata、Xcode Cloud workflow 或构建 tag。
+- 完成内容：确认热点来自 `duplicateItems` 对全部交易执行两两比较；20,000 条会形成约 2 亿个组合。交易进入 planner 前已经按时间倒序，现于时间差达到 `max(duplicateWindow, textDuplicateWindow)` 时停止当前内层扫描，因此只检查仍可能命中现有重复规则的邻近时间记录；同时移除每个 pair 只生成一次却仍维护的 `seenPairs` 集合。
+- 完成内容：新增 20,000 条、每条相隔 90 分钟的离线回归数据，验证大账本不会产生错误重复候选，也约束后续实现继续按最长重复窗口结束扫描。
+- 未完成内容：尚未取得实体 iPad / Mac 的 Time Profiler、SwiftUI 与 Animation Hitches trace；真实账本可能具有密集批量导入、更多唯一商户和附件，仍需在真机专项中分别采样。
+- 测试情况：`git diff --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；iPad Pro 13-inch Simulator Debug workspace build PASS，以 `--performance-fixture-count 20000` 启动约 2 秒后待处理卡显示无待处理内容；Mac Catalyst Debug workspace build PASS，以同一 20,000 条夹具启动后打开“待处理”，显示“都处理好了”。构建仅出现工程既有并发迁移警告。
+- 风险与注意事项：提前停止依赖传入 `duplicateItems` 的交易已按时间倒序，该约束当前由 `buildSnapshot` 固定排序保证；本轮运行态证据证明该热点消失，但不代表 Tab 切换、月报、酒店归档和数据清洗明细在真机上均已达到发布性能目标。
+- 回滚方式：回退 `duplicateItems` 的最长时间窗提前停止和 20,000 条离线回归即可；不涉及数据迁移或远端状态。
+- 结论：20,000 条下统一待处理中心的持续加载已在 iPad Simulator 与 Mac Catalyst 收口，且不改变重复识别业务口径。
+- 下一步建议：使用实体 iPad / Mac 对账本 Tab、月份切换、数据清洗明细、酒店消费和前台刷新执行 Time Profiler / SwiftUI / Animation Hitches 采样；按 trace 结果决定下一处优化，而不是继续凭主观卡顿重构。
 
 ### ITER-414 iPad / Mac 隔离性能夹具
 - 日期：2026-07-15
