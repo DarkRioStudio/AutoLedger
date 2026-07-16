@@ -28,6 +28,8 @@ import {
 import { currentWeatherEndpoint, forecastWeatherEndpoint, hotelStayWeatherEndpoint } from "./weather/routes";
 import { canViewAutoLedgerDashboard } from "./security/cloudflareAccess";
 
+export { AdminMetricsEntrypoint } from "./admin-metrics-entrypoint";
+
 type APIError = {
   error: {
     code: string;

@@ -33,6 +33,10 @@ The Worker does not receive receipts, folio PDFs, hotel names, merchant names, t
 
 AutoLedger analytics accepts only anonymous allow-list event fields for release health checks. It rejects ledger amounts, merchants, screenshots, PDFs, emails, hotel identifiers, precise location, OCR text, StoreKit transaction identifiers, receipts, and payment data. Dashboard data is intended to be viewed through the Cloudflare Zero Trust Access rule for `getautoledger.app/dashboard/*`; production `/dashboard/data` additionally checks that the Access email header is present only on the protected dashboard host, or that a valid Access JWT is provided. This prevents callers from bypassing Access through another Worker route and spoofing `cf-access-authenticated-user-email`. Analytics rows are retained for 90 days by default, while the dashboard reads a 30-day aggregate window.
 
+The production Worker also exports a named `AdminMetricsEntrypoint` for account-internal Service
+Bindings. It accepts only `GET /internal/admin/metrics`, reuses the same privacy-safe aggregate, and is
+not registered on the public fetch router.
+
 The currency catalog is also curated for app UI and conversion preparation. It publishes supported currency codes, symbols, localized names, and minor-unit digits so client apps can keep manual currency pickers and future exchange-rate flows aligned.
 
 Exchange rates are read-only and intended for local client-side conversion preparation. Production and staging use the public Frankfurter API by default and require no secret. The Worker caches normalized `base + quote + date + provider` responses with the Cloudflare Cache API; clients may inspect `x-common-api-cache` for `hit`, `miss`, or `bypass`. App clients should still persist the provider, rate date, source currency, target currency, and rate alongside any converted amount when conversion is implemented.
