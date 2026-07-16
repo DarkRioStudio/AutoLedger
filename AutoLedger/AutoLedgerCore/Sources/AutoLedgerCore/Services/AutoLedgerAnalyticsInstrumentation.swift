@@ -344,17 +344,17 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             countMetric(
                 "crash_diagnostic_count",
                 value: systemCrashEvents.count,
-                breakdown: breakdown(systemCrashEvents, field: "diagnostic_type")
+                breakdown: diagnosticBreakdown(systemCrashEvents, field: "diagnostic_type")
             ),
             countMetric(
                 "slow_operation_count",
                 value: slowPerformanceEvents.count,
-                breakdown: breakdown(slowPerformanceEvents, field: "operation")
+                breakdown: diagnosticBreakdown(slowPerformanceEvents, field: "operation")
             ),
             countMetric(
                 "performance_operation_top_n",
                 value: performanceEvents.count,
-                breakdown: breakdown(performanceEvents, field: "operation")
+                breakdown: diagnosticBreakdown(performanceEvents, field: "operation")
             ),
             countMetric(
                 "privacy_payload_violation_count",
@@ -433,6 +433,24 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
     ) -> [String: Int] {
         events.reduce(into: [:]) { result, event in
             let key = event.stringPayload(field) ?? "unknown"
+            result[key, default: 0] += 1
+        }
+    }
+
+    private func diagnosticBreakdown(
+        _ events: [AutoLedgerAnalyticsEvent],
+        field: String
+    ) -> [String: Int] {
+        events.reduce(into: [:]) { result, event in
+            let value = event.stringPayload(field) ?? "unknown"
+            let sourceVersion = event.stringPayload("diagnostic_app_version")
+            let sourceBuild = event.stringPayload("diagnostic_build_number")
+            let key: String
+            if let sourceVersion, let sourceBuild {
+                key = "\(value)@\(sourceVersion)(\(sourceBuild))"
+            } else {
+                key = value
+            }
             result[key, default: 0] += 1
         }
     }
@@ -575,16 +593,16 @@ public enum AutoLedgerAnalyticsCatalog {
         definition(
             .crashDiagnostic,
             purpose: "观察真机崩溃、hang 和异常退出信号是否影响可用性，不上传堆栈或用户内容。",
-            fields: ["event_id", "app_version", "diagnostic_type", "signal_source", "severity", "count_bucket", "termination_state", "error_code"],
+            fields: ["event_id", "app_version", "diagnostic_type", "signal_source", "severity", "count_bucket", "termination_state", "error_code", "diagnostic_app_version", "diagnostic_build_number"],
             privacy: "Diagnostics / Crash Data；not linked；not tracking。",
-            dashboard: "崩溃 / 异常退出计数、MetricKit crash / hang 分布和发布阻断判断。"
+            dashboard: "崩溃 / 异常退出计数、MetricKit crash / hang 按诊断源版本分布和发布阻断判断。"
         ),
         definition(
             .performanceDiagnostic,
             purpose: "观察真机卡顿和关键操作耗时 bucket，定位 Tab 切换、月报和数据清洗等高频卡点。",
-            fields: ["event_id", "app_version", "diagnostic_type", "surface", "operation", "duration_ms_bucket", "count_bucket", "severity", "result", "error_code"],
+            fields: ["event_id", "app_version", "diagnostic_type", "surface", "operation", "duration_ms_bucket", "count_bucket", "severity", "result", "error_code", "diagnostic_app_version", "diagnostic_build_number"],
             privacy: "Diagnostics / Performance Data；not linked；not tracking。",
-            dashboard: "慢操作次数、操作耗时 bucket、MetricKit hang / CPU / disk write 诊断分布。"
+            dashboard: "慢操作次数、操作耗时 bucket、MetricKit hang / CPU / disk write 按诊断源版本分布。"
         ),
         definition(
             .privacyPayloadGuardViolation,

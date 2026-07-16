@@ -395,6 +395,7 @@
 "ipad.cleaning.analyzing" = "正在分析帳本…";
 "ledger.persistence.unavailable_format" = "本機帳本儲存暫時無法使用，已停止寫入以保護資料。請重新啟動 App 後再試。詳情：%@";
 "ledger.persistence.alert.title" = "本機帳本暫時無法使用";
+"ledger.persistence.loading" = "正在載入本機帳本…";
 "common.ok" = "好";
 "pending_center.title" = "待處理";
 "pending_center.subtitle" = "集中確認、去重並整理需要留意的內容";

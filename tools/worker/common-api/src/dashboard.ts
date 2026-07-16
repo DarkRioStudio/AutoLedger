@@ -194,19 +194,19 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       "crash_diagnostic_count",
       "系统崩溃与挂起信号",
       systemCrashEvents.length,
-      breakdown(systemCrashEvents.map((event) => stringPayload(event.payload, "diagnostic_type") ?? "unknown"))
+      breakdown(systemCrashEvents.map((event) => diagnosticBreakdownKey(event.payload, "diagnostic_type")))
     ),
     countMetric(
       "slow_operation_count",
       "慢操作与卡顿信号",
       slowPerformanceEvents.length,
-      breakdown(slowPerformanceEvents.map((event) => stringPayload(event.payload, "operation") ?? "unknown"))
+      breakdown(slowPerformanceEvents.map((event) => diagnosticBreakdownKey(event.payload, "operation")))
     ),
     countMetric(
       "performance_operation_top_n",
       "性能操作分布",
       performanceEvents.length,
-      breakdown(performanceEvents.map((event) => stringPayload(event.payload, "operation") ?? "unknown"))
+      breakdown(performanceEvents.map((event) => diagnosticBreakdownKey(event.payload, "operation")))
     ),
     countMetric(
       "privacy_payload_violation_count",
@@ -293,6 +293,15 @@ function stringPayload(payload: PrimitivePayload, key: string): string | null {
 
 function isPurchaseFailure(status: string | null): boolean {
   return status === "failed" || status === "cancelled" || status === "canceled" || status === "unknown";
+}
+
+function diagnosticBreakdownKey(payload: PrimitivePayload, field: string): string {
+  const value = stringPayload(payload, field) ?? "unknown";
+  const sourceVersion = stringPayload(payload, "diagnostic_app_version");
+  const sourceBuild = stringPayload(payload, "diagnostic_build_number");
+  return sourceVersion && sourceBuild
+    ? `${value}@${sourceVersion}(${sourceBuild})`
+    : value;
 }
 
 function isSlowPerformanceEvent(payload: PrimitivePayload): boolean {

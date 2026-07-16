@@ -347,14 +347,16 @@ describe("common api worker contract", () => {
             payload: {
               event_id: "event-3",
               app_version: "1.6.0",
-              diagnostic_type: "ui_response",
-              surface: "tab_report",
-              operation: "tab_switch",
-              duration_ms_bucket: "3s_10s",
+              diagnostic_type: "hang",
+              surface: "system",
+              operation: "system_hang",
+              duration_ms_bucket: "not_measured",
               count_bucket: "1",
               severity: "warning",
-              result: "completed",
-              error_code: "none"
+              result: "reported_by_metrickit",
+              error_code: "none",
+              diagnostic_app_version: "1.6.0",
+              diagnostic_build_number: "109"
             }
           }
         ]
@@ -545,7 +547,7 @@ describe("common api worker contract", () => {
         build_number: "160",
         os_major: "26",
         device_class: "ios",
-        payload_json: JSON.stringify({ diagnostic_type: "crash", signal_source: "metrickit", severity: "critical", count_bucket: "1" }),
+        payload_json: JSON.stringify({ diagnostic_type: "crash", signal_source: "metrickit", severity: "critical", count_bucket: "1", diagnostic_app_version: "1.6.0", diagnostic_build_number: "109" }),
         received_at: "2026-07-08T08:13:09.470Z"
       },
       {
@@ -565,7 +567,7 @@ describe("common api worker contract", () => {
         build_number: "160",
         os_major: "26",
         device_class: "ios",
-        payload_json: JSON.stringify({ diagnostic_type: "ui_response", surface: "tab_report", operation: "month_switch", duration_ms_bucket: "3s_10s", severity: "warning", result: "completed" }),
+        payload_json: JSON.stringify({ diagnostic_type: "hang", surface: "system", operation: "system_hang", duration_ms_bucket: "not_measured", severity: "warning", result: "reported_by_metrickit", diagnostic_app_version: "1.6.0", diagnostic_build_number: "109" }),
         received_at: "2026-07-08T08:13:19.470Z"
       },
       {
@@ -614,8 +616,10 @@ describe("common api worker contract", () => {
     expect(byID.get("common_api_status_top_n")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("crash_diagnostic_count")).toMatchObject({ value: 1, unit: "count" });
+    expect((byID.get("crash_diagnostic_count")?.breakdown as Record<string, number>)["crash@1.6.0(109)"]).toBe(1);
     expect(byID.get("slow_operation_count")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("performance_operation_top_n")).toMatchObject({ value: 1, unit: "count" });
+    expect((byID.get("performance_operation_top_n")?.breakdown as Record<string, number>)["system_hang@1.6.0(109)"]).toBe(1);
     expect(byID.get("privacy_payload_violation_count")).toMatchObject({ value: 1, unit: "count" });
     expect(body.privacy).toMatchObject({
       summary: "此面板只展示聚合计数和比率，不返回原始事件行或 payload JSON。"

@@ -102,6 +102,7 @@ struct OfflineRegression {
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
+        try await verifyDeferredSQLiteLedgerStoreHydration(reporter: reporter)
         try verifySQLiteBusyRetry(reporter: reporter)
         try verifyHotelStaySQLitePersistence(reporter: reporter)
         try verifyHotelStayDraftPersistence(reporter: reporter)
@@ -5690,6 +5691,93 @@ struct OfflineRegression {
         reporter.check(
             loadedSubscriptions.first { $0.id == editedSubscription.id }?.status == .paused,
             "SQLite subscription update persists paused status"
+        )
+
+        try store.saveCategoryCorrection(merchant: "Snapshot Merchant", category: .shopping)
+        try store.saveMerchantAlias(original: "Snapshot Original", alias: "Snapshot Alias")
+        let snapshotReader = try store.makeSnapshotReader()
+        let snapshot = try snapshotReader.loadLedgerSnapshot(seedTransactions: [])
+        reporter.check(
+            snapshot.transactions.contains { $0.id == batchInsertID },
+            "SQLite snapshot reader hydrates active transactions through an independent connection"
+        )
+        reporter.check(
+            snapshot.subscriptions.contains(editedSubscription),
+            "SQLite snapshot reader hydrates subscriptions"
+        )
+        reporter.check(
+            snapshot.categoryCorrections["Snapshot Merchant"] == .shopping,
+            "SQLite snapshot reader hydrates category corrections"
+        )
+        reporter.check(
+            snapshot.merchantAliases["Snapshot Original"] == "Snapshot Alias",
+            "SQLite snapshot reader hydrates merchant aliases"
+        )
+        reporter.check(
+            !snapshot.ledgerProfiles.isEmpty,
+            "SQLite snapshot reader hydrates ledger profiles"
+        )
+    }
+
+    private static func verifyDeferredSQLiteLedgerStoreHydration(reporter: RegressionReporter) async throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerDeferredSQLiteHydration-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: rootURL)
+        }
+
+        let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "deferred.sqlite3")
+        let transaction = Transaction(
+            merchant: "Deferred Snapshot Coffee",
+            amount: 25.5,
+            occurredAt: Date(timeIntervalSince1970: 1_780_320_000),
+            category: .dining,
+            source: .manual,
+            note: "deferred hydration"
+        )
+        let subscription = Subscription(
+            merchant: "Deferred Snapshot Subscription",
+            planName: "Monthly",
+            period: .monthly,
+            amount: 12,
+            lastChargedAt: Date(timeIntervalSince1970: 1_780_320_000)
+        )
+        try store.save(transaction: transaction)
+        try store.saveSubscription(subscription)
+        try store.saveCategoryCorrection(merchant: "Deferred Snapshot Coffee", category: .shopping)
+        try store.saveMerchantAlias(original: "Deferred Original", alias: "Deferred Alias")
+
+        let ledger = LedgerStore(
+            transactionStore: store,
+            loadsPersistedConfiguration: false,
+            deferSQLiteStateHydration: true
+        )
+        await ledger.refreshFromStoreInBackground()
+
+        reporter.check(
+            !ledger.isPersistentStateLoading,
+            "LedgerStore completes deferred SQLite hydration before foreground work continues"
+        )
+        reporter.check(
+            ledger.transactions.contains(transaction),
+            "LedgerStore publishes transactions from deferred SQLite hydration"
+        )
+        reporter.check(
+            ledger.subscriptions.contains {
+                $0.id == subscription.id &&
+                    $0.merchant == subscription.merchant &&
+                    abs($0.amount - subscription.amount) < 0.001
+            },
+            "LedgerStore publishes subscriptions from deferred SQLite hydration"
+        )
+        reporter.check(
+            ledger.categoryCorrections["Deferred Snapshot Coffee"] == .shopping,
+            "LedgerStore publishes category corrections from deferred SQLite hydration"
+        )
+        reporter.check(
+            ledger.merchantAliases["Deferred Original"] == "Deferred Alias",
+            "LedgerStore publishes merchant aliases from deferred SQLite hydration"
         )
     }
 

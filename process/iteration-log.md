@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-16（ITER-418 Release 性能夹具隔离修复）
+更新日期：2026-07-16（ITER-420 账本 SQLite 后台水合）
 
 ## 记录规则
 
@@ -43,6 +43,44 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-420 账本 SQLite 后台水合
+- 日期：2026-07-16
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance / Release Hardening
+- 类型：性能 / Bugfix / 测试
+- 目标：依据 build 114 的 iPhone / iPad 真机 trace，消除账本首次加载和前台刷新把 SQLite 全量读取、日期解码和 SwiftUI 状态发布堆在主线程上的阻塞。
+- 改动范围：`LedgerStore` 的正式 App 根实例初始化与后台刷新、`AutoLedgerRootView` 生命周期协调、`SQLiteTransactionStore` 独立快照 reader、五语加载文案，以及离线性能夹具 / 回归。
+- 未改动范围：未修改 SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、D1 schema、entitlement、定价、ASC metadata、Xcode Cloud workflow、构建 tag 或用户账本数据。
+- 完成内容：复核实体 build 114 trace：iPhone 15 Pro 进入账本出现一次约 461.67 ms 主线程 microhang；iPad mini 6 新鲜账本路由出现 5 次约 562-723 ms 主线程 hang。样本调用栈集中在 `sqlite3_step`、`NSISO8601DateFormatter.dateFromString` 和 SwiftUI / ObservableObject 更新，故不再以 iPad 结果替代 iPhone 验收。
+- 完成内容：正式根视图改为 `LedgerStore(deferSQLiteStateHydration: true)`；测试、预览和临时 Store 默认保留同步初始化语义。后台 reader 使用已解析的精确 SQLite 文件 URL 建立独立连接，避免与 live store 共用 `db`，读取交易、删除记录、调试记录、订阅、分类修正、商户别名、酒店记录 / 草稿、同步冲突和账本配置后一次性发布到 UI。
+- 完成内容：启动、前台、Intent 通知、URL / 酒店 handoff 统一等待 `refreshFromStoreInBackground()`；加载期间显示五语本地化遮罩并禁止空状态交互，iCloud 恢复检查、Watch snapshot、订阅提醒和外部入口处理在水合完成后继续，避免临时空账本被误判为待恢复状态。
+- 完成内容：离线回归新增独立 reader 对同一 SQLite 文件的事务、订阅、分类修正、商户别名和账本配置验证，并新增延迟水合 `LedgerStore` 的端到端验证。性能夹具 smoke 同步要求正式根实例启用延迟水合而夹具继续优先使用自身 Store。
+- 未完成内容：下一版 TestFlight 仍需在 iPhone 与 iPad 分别采集冷启动、账本 Tab、月报月份切换、数据清洗和 OCR 固定路径 trace；Mac 仍需解锁后补可交互 Time Profiler / SwiftUI / Animation Hitches。当前代码和构建通过不等于真机性能验收完成。
+- 测试情况：`git diff --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；无签名 iOS generic Debug workspace build PASS；无签名 Mac Catalyst Debug workspace build PASS。构建仅出现工程既有 Swift 6 迁移、弃用和 MediaPipe Catalyst slice 警告。
+- 风险与注意事项：后台读取降低 UI actor 阻塞，但不消除数据量、SQLite I/O 或日期解码的总成本；首次完成前会短暂显示加载状态。若下一版仍出现 slow operation 或 MetricKit hang，须按对应真机路径再次取样，不应继续凭猜测横向重构。
+- 回滚方式：将根实例恢复为默认 `LedgerStore()`，并回退后台 snapshot reader / lifecycle await / 加载遮罩与对应回归即可；不涉及用户数据迁移或远端状态回滚。
+- 结论：账本全量持久化读取的主线程路径已在正式根实例收口，最小回归与双平台编译通过；下一版已具备进入真机性能验收的条件，Acceptance Pending 保留到 iPhone / iPad / Mac 的实际 trace 完成。
+- 下一步建议：以新 TestFlight build 在 iPhone 和 iPad 各自复测同一条固定清单，并将 dashboard 的 source build、慢操作和 MetricKit 诊断与 Instruments trace 对齐后再判断是否移动构建 tag。
+
+### ITER-419 MetricKit 诊断源构建归因
+- 日期：2026-07-16
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening / Performance Observability
+- 类型：Bugfix / 可观测性 / 测试 / 部署
+- 目标：确认 Xcode Cloud 第 114 次构建后的性能状态，并修正 MetricKit 延迟上传诊断被错误归到当前上传构建的问题。
+- 改动范围：`AppDiagnosticsAnalyticsMonitor`、`CommonAPIAnalyticsService`、Core analytics allow-list / 聚合、Common API analytics allow-list / Dashboard 聚合、对应测试和发布文档。
+- 未改动范围：未修改 SQLite / CloudKit / D1 schema、StoreKit Product ID、Worker API 路径或响应合同、entitlement、签名、定价、ASC metadata、Xcode Cloud workflow、构建 tag 或用户账本数据。
+- 完成内容：确认 `xcbuild-v1.7.0` 指向 `8d395c3` 的 Xcode Cloud 第 114 次构建四平台 Archive 与外部 TestFlight 后操作全部成功。production build 114 样本中的 Tab 切换多数低于 1 秒、前台 refresh 均低于 1 秒；另有一条 MetricKit hang，但 Apple 的 payload 会包含前一使用周期诊断，旧事件没有保留每条诊断自己的版本和构建号，因此不能据此判定 build 114 发生挂起。
+- 完成内容：MetricKit crash、hang、CPU exception 和 disk write exception 现按每条 `MXDiagnostic.applicationVersion` 与 `metaData.applicationBuildVersion` 分组上报；上传事件仍保留当前 envelope 版本，同时新增 allow-list 字段 `diagnostic_app_version` / `diagnostic_build_number`。Core 与 Worker Dashboard 在诊断类型或操作后显示源版本，例如 `system_hang@1.6.0(109)`，旧事件继续以原有无版本标签展示。
+- 完成内容：实体 iPad 已确认在线但安装的仍是 build 109；iPhone 15 Pro 已安装 build 114，但采样时设备由 connected 变为 paired / disconnected；Mac 当时锁屏，无法完成可交互点击。直接启动当前提交的 Mac Catalyst Debug 20,000 条夹具并附加 20.99 秒 Time Profiler，目标路径确认正确，`potential-hangs` 没有超过 250 ms 的记录；该稳态样本不替代 Tab、月份切换和数据清洗的交互 trace。
+- 完成内容：Common API staging 已部署 Version ID `cdb33987-e22f-45e2-8476-63ce1e72823d`，staging analytics POST 返回 202，D1 确认同时保留上传 build 114 与诊断源 build 109；production 已部署 Version ID `fadacea8-282e-4849-872d-e52b7176c691`，health 返回 200，受保护 Dashboard 未登录返回 Access 302，未保护 host 返回 403，production D1 读取正常。
+- 未完成内容：iPad 需先更新到 build 114，再分别在 iPad 与 iPhone 真机复测冷启动、Tab 切换、月报月份切换、数据清洗和 OCR；Mac 解锁后仍需补可交互 Time Profiler / SwiftUI / Animation Hitches。iPad 结果只作为大屏与大账本参考，不能替代 iPhone 的发布性能门禁。
+- 测试情况：`tools/worker/common-api` 执行 `npm run check` PASS（38 tests）；完整 `bash scripts/run_offline_regression.sh` PASS；全新 DerivedData 的 iOS Debug workspace build PASS；全新 DerivedData 的 Mac Catalyst Debug workspace build PASS；`git diff --check` 在提交前最终复核。
+- 风险与注意事项：新源版本字段只会出现在新二进制收到并上报的后续 MetricKit payload 中，无法反向补全历史 687 条 production 事件。MetricKit、匿名 duration bucket 和 Instruments 分别回答不同问题，不能只看任一单项宣称性能完全收口。
+- 回滚方式：回退两个诊断源字段、MetricKit 分组和 Dashboard key 拼接即可；不涉及数据库迁移或用户数据回滚。
+- 结论：构建链路和诊断归因缺陷已收口，现有证据没有证明 build 114 出现系统挂起，但 iPhone / iPad / Mac 的真实交互性能仍保持 Acceptance Pending。
+- 下一步建议：iPad 更新至 build 114、iPhone 重新连接且 Mac 解锁后，按设备分别完成固定路径采样；若新 Dashboard 按源构建继续出现慢操作或 hang，再对对应操作做定点优化。
 
 ### ITER-418 Release 性能夹具隔离修复
 - 日期：2026-07-16

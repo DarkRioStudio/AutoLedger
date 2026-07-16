@@ -4,6 +4,11 @@ import OSLog
 
 @MainActor
 final class AppDiagnosticsAnalyticsMonitor: NSObject {
+    private struct DiagnosticSource: Hashable {
+        let appVersion: String
+        let buildNumber: String
+    }
+
     static let shared = AppDiagnosticsAnalyticsMonitor()
 
     private static let logger = Logger(
@@ -39,52 +44,70 @@ final class AppDiagnosticsAnalyticsMonitor: NSObject {
         }
     }
 
-    nonisolated private static func trackDiagnostic(
+    nonisolated private static func trackDiagnostics<T: MXDiagnostic>(
         type: String,
-        count: Int,
+        diagnostics: [T],
         severity: String
     ) {
-        guard count > 0 else { return }
-        CommonAPIAnalyticsService.trackCrashDiagnostic(
-            diagnosticType: type,
-            signalSource: "metrickit",
-            severity: severity,
-            count: count,
-            terminationState: "unknown"
-        )
+        for (source, count) in diagnosticSourceCounts(diagnostics) {
+            CommonAPIAnalyticsService.trackCrashDiagnostic(
+                diagnosticType: type,
+                signalSource: "metrickit",
+                severity: severity,
+                count: count,
+                terminationState: "unknown",
+                diagnosticAppVersion: source.appVersion,
+                diagnosticBuildNumber: source.buildNumber
+            )
+        }
     }
 
-    nonisolated private static func trackPerformance(
+    nonisolated private static func trackPerformanceDiagnostics<T: MXDiagnostic>(
         type: String,
         operation: String,
-        count: Int,
+        diagnostics: [T],
         severity: String
     ) {
-        guard count > 0 else { return }
-        CommonAPIAnalyticsService.trackPerformanceDiagnostic(
-            diagnosticType: type,
-            surface: "system",
-            operation: operation,
-            count: count,
-            severity: severity,
-            result: "reported_by_metrickit"
-        )
+        for (source, count) in diagnosticSourceCounts(diagnostics) {
+            CommonAPIAnalyticsService.trackPerformanceDiagnostic(
+                diagnosticType: type,
+                surface: "system",
+                operation: operation,
+                count: count,
+                severity: severity,
+                result: "reported_by_metrickit",
+                diagnosticAppVersion: source.appVersion,
+                diagnosticBuildNumber: source.buildNumber
+            )
+        }
+    }
+
+    nonisolated private static func diagnosticSourceCounts<T: MXDiagnostic>(
+        _ diagnostics: [T]
+    ) -> [DiagnosticSource: Int] {
+        diagnostics.reduce(into: [:]) { counts, diagnostic in
+            let source = DiagnosticSource(
+                appVersion: diagnostic.applicationVersion,
+                buildNumber: diagnostic.metaData.applicationBuildVersion
+            )
+            counts[source, default: 0] += 1
+        }
     }
 }
 
 extension AppDiagnosticsAnalyticsMonitor: MXMetricManagerSubscriber {
     nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
         for payload in payloads {
-            let crashCount = payload.crashDiagnostics?.count ?? 0
-            let hangCount = payload.hangDiagnostics?.count ?? 0
-            let cpuExceptionCount = payload.cpuExceptionDiagnostics?.count ?? 0
-            let diskWriteExceptionCount = payload.diskWriteExceptionDiagnostics?.count ?? 0
+            let crashDiagnostics = payload.crashDiagnostics ?? []
+            let hangDiagnostics = payload.hangDiagnostics ?? []
+            let cpuExceptionDiagnostics = payload.cpuExceptionDiagnostics ?? []
+            let diskWriteExceptionDiagnostics = payload.diskWriteExceptionDiagnostics ?? []
 
-            Self.trackDiagnostic(type: "crash", count: crashCount, severity: "critical")
-            Self.trackDiagnostic(type: "hang", count: hangCount, severity: "warning")
-            Self.trackPerformance(type: "hang", operation: "system_hang", count: hangCount, severity: "warning")
-            Self.trackPerformance(type: "cpu_exception", operation: "system_cpu_exception", count: cpuExceptionCount, severity: "warning")
-            Self.trackPerformance(type: "disk_write_exception", operation: "system_disk_write_exception", count: diskWriteExceptionCount, severity: "warning")
+            Self.trackDiagnostics(type: "crash", diagnostics: crashDiagnostics, severity: "critical")
+            Self.trackDiagnostics(type: "hang", diagnostics: hangDiagnostics, severity: "warning")
+            Self.trackPerformanceDiagnostics(type: "hang", operation: "system_hang", diagnostics: hangDiagnostics, severity: "warning")
+            Self.trackPerformanceDiagnostics(type: "cpu_exception", operation: "system_cpu_exception", diagnostics: cpuExceptionDiagnostics, severity: "warning")
+            Self.trackPerformanceDiagnostics(type: "disk_write_exception", operation: "system_disk_write_exception", diagnostics: diskWriteExceptionDiagnostics, severity: "warning")
         }
     }
 

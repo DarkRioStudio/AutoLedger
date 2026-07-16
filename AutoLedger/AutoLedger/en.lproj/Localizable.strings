@@ -395,6 +395,7 @@
 "ipad.cleaning.analyzing" = "Analyzing your ledger…";
 "ledger.persistence.unavailable_format" = "Local ledger storage is unavailable, so writes have been stopped to protect your data. Restart the app and try again. Details: %@";
 "ledger.persistence.alert.title" = "Local Ledger Unavailable";
+"ledger.persistence.loading" = "Loading local ledger…";
 "common.ok" = "OK";
 "pending_center.title" = "To Review";
 "pending_center.subtitle" = "Confirm, deduplicate, and organize items that need attention";

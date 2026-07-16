@@ -40,7 +40,8 @@ def main() -> int:
 
     for snippet in [
         "@StateObject private var store: LedgerStore",
-        "PerformanceFixtureConfiguration.makeLedgerStoreIfRequested() ?? LedgerStore()",
+        "PerformanceFixtureConfiguration.makeLedgerStoreIfRequested()",
+        "LedgerStore(deferSQLiteStateHydration: true)",
         "!ScreenshotModeConfig.isEnabled && !PerformanceFixtureConfiguration.isEnabled",
         "guard !PerformanceFixtureConfiguration.isEnabled else { return }",
     ]:

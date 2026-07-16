@@ -395,6 +395,7 @@
 "ipad.cleaning.analyzing" = "장부를 분석하는 중…";
 "ledger.persistence.unavailable_format" = "데이터 보호를 위해 로컬 장부 저장소 쓰기를 중지했습니다. App을 다시 시작한 후 재시도하세요. 세부 정보: %@";
 "ledger.persistence.alert.title" = "로컬 장부를 사용할 수 없음";
+"ledger.persistence.loading" = "로컬 장부를 불러오는 중…";
 "common.ok" = "확인";
 "pending_center.title" = "검토할 항목";
 "pending_center.subtitle" = "확인, 중복 제거, 정리가 필요한 항목을 한곳에서 봅니다";

@@ -113,7 +113,9 @@ final class AnalyticsInstrumentationTests: XCTestCase {
                 "severity": .string("critical"),
                 "count_bucket": .string("1"),
                 "termination_state": .string("unknown"),
-                "error_code": .string("none")
+                "error_code": .string("none"),
+                "diagnostic_app_version": .string("1.6.0"),
+                "diagnostic_build_number": .string("109")
             ]
         )
         let performanceEvent = try AutoLedgerAnalyticsEvent.make(
@@ -121,14 +123,16 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             payload: [
                 "event_id": .string("perf-1"),
                 "app_version": .string("1.6.0"),
-                "diagnostic_type": .string("ui_response"),
-                "surface": .string("tab_report"),
-                "operation": .string("tab_switch"),
-                "duration_ms_bucket": .string("3s_10s"),
+                "diagnostic_type": .string("hang"),
+                "surface": .string("system"),
+                "operation": .string("system_hang"),
+                "duration_ms_bucket": .string("not_measured"),
                 "count_bucket": .string("1"),
                 "severity": .string("warning"),
-                "result": .string("completed"),
-                "error_code": .string("none")
+                "result": .string("reported_by_metrickit"),
+                "error_code": .string("none"),
+                "diagnostic_app_version": .string("1.6.0"),
+                "diagnostic_build_number": .string("109")
             ]
         )
 
@@ -250,7 +254,9 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "severity": .string("critical"),
             "count_bucket": .string("1"),
             "termination_state": .string("unknown"),
-            "error_code": .string("none")
+            "error_code": .string("none"),
+            "diagnostic_app_version": .string("1.6.0"),
+            "diagnostic_build_number": .string("109")
         ])
         try recorder.record(.crashDiagnostic, payload: [
             "event_id": .string("session-marker-1"),
@@ -282,6 +288,7 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         XCTAssertEqual(snapshot.metric(id: "unclean_session_recovery_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "purchase_flow_failure_rate")?.value, 100)
         XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.value, 1)
+        XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.breakdown["crash@1.6.0(109)"], 1)
         XCTAssertEqual(snapshot.metric(id: "slow_operation_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "performance_operation_top_n")?.breakdown["month_switch"], 1)
         XCTAssertEqual(snapshot.metric(id: "privacy_payload_violation_count")?.value, 0)

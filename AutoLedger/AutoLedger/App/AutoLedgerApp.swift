@@ -104,7 +104,8 @@ private struct AutoLedgerRootView: View {
 
     init() {
         _store = StateObject(
-            wrappedValue: PerformanceFixtureConfiguration.makeLedgerStoreIfRequested() ?? LedgerStore()
+            wrappedValue: PerformanceFixtureConfiguration.makeLedgerStoreIfRequested()
+                ?? LedgerStore(deferSQLiteStateHydration: true)
         )
     }
 
@@ -123,6 +124,22 @@ private struct AutoLedgerRootView: View {
             .environmentObject(store)
             .environmentObject(navigationState)
             .environment(\.autoLedgerThemeRefreshID, themeRefreshID)
+            .overlay {
+                if store.isPersistentStateLoading {
+                    ZStack {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .ignoresSafeArea()
+
+                        ProgressView(localizedRootString("ledger.persistence.loading", fallback: "正在加载本地账本…"))
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .allowsHitTesting(!store.isPersistentStateLoading)
             .autoLedgerMotion(AppMotion.theme, value: themeRefreshID)
             .alert(
                 localizedRootString("ledger.persistence.alert.title", fallback: "本地账本暂不可用"),
@@ -169,8 +186,8 @@ private struct AutoLedgerRootView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
-                refreshStoreWithPerformanceTracking(operation: "refresh_from_intent_notification")
-                Task {
+                Task { @MainActor in
+                    await refreshStoreWithPerformanceTracking(operation: "refresh_from_intent_notification")
                     await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
                 }
             }
@@ -185,38 +202,16 @@ private struct AutoLedgerRootView: View {
             .onOpenURL { url in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 _ = navigationState.openDeepLink(url, store: store)
-                consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
+                Task { @MainActor in
+                    await consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 if newPhase == .active {
                     AppSessionDiagnosticsService.markActive()
-                    consumeStructuredJSONHandoffIfNeeded()
-                    refreshStoreWithPerformanceTracking(operation: "refresh_from_foreground")
-                    Task {
-                        await ProEntitlementManager.shared.refreshEntitlements()
-                    }
-                    scheduleLaunchCloudSyncIfNeeded()
-                    scheduleCommonAPIRefresh()
-                    scheduleAnalyticsUploadIfNeeded()
-                    Task {
-                        await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
-                    }
-                    WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
-                    if store.isLocalDataEmptyForRestore {
-                        store.detectICloudBackupForRestore()
-                    }
-                    if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
-                        store.attemptClipboardImport()
-                    }
-                    consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
-                    consumeAppIntentNavigationHandoffIfNeeded()
-                    consumeNotificationDeepLinkHandoffIfNeeded()
-                    consumeClipboardImportIntentHandoffIfNeeded()
-                    // 订阅提醒通知调度
-                    if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
-                        NotificationService.shared.requestPermissionIfNeeded()
-                        NotificationService.shared.scheduleUpcomingChargeReminders(for: store.subscriptions)
+                    Task { @MainActor in
+                        await handleSceneBecameActive()
                     }
                 } else if newPhase == .background {
                     AppSessionDiagnosticsService.markCleanBackground()
@@ -225,11 +220,14 @@ private struct AutoLedgerRootView: View {
             }
             .onAppear {
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
-                consumeAppIntentNavigationHandoffIfNeeded()
-                consumeNotificationDeepLinkHandoffIfNeeded()
-                consumeStructuredJSONHandoffIfNeeded()
-                consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
-                consumeClipboardImportIntentHandoffIfNeeded()
+                Task { @MainActor in
+                    await store.refreshFromStoreInBackground()
+                    consumeAppIntentNavigationHandoffIfNeeded()
+                    consumeNotificationDeepLinkHandoffIfNeeded()
+                    consumeStructuredJSONHandoffIfNeeded()
+                    await consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
+                    consumeClipboardImportIntentHandoffIfNeeded()
+                }
             }
     }
 
@@ -268,6 +266,34 @@ private struct AutoLedgerRootView: View {
             languageKey: AppLanguagePreference.current.catalogLanguageKey,
             fallback: fallback
         )
+    }
+
+    @MainActor
+    private func handleSceneBecameActive() async {
+        consumeStructuredJSONHandoffIfNeeded()
+        await refreshStoreWithPerformanceTracking(operation: "refresh_from_foreground")
+        await ProEntitlementManager.shared.refreshEntitlements()
+        scheduleLaunchCloudSyncIfNeeded()
+        scheduleCommonAPIRefresh()
+        scheduleAnalyticsUploadIfNeeded()
+        await store.pushPendingIntentLedgerSaveIfNeeded(reason: "App 回到前台，开始补推外部入口账单。")
+        WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
+
+        if store.isLocalDataEmptyForRestore {
+            store.detectICloudBackupForRestore()
+        }
+        if UserDefaults.standard.bool(forKey: "autoClipboardImport") {
+            store.attemptClipboardImport()
+        }
+        await consumeSharedHotelFolioDraftReviewHandoffIfNeeded()
+        consumeAppIntentNavigationHandoffIfNeeded()
+        consumeNotificationDeepLinkHandoffIfNeeded()
+        consumeClipboardImportIntentHandoffIfNeeded()
+
+        if UserDefaults.standard.bool(forKey: "subscriptionReminder") {
+            NotificationService.shared.requestPermissionIfNeeded()
+            NotificationService.shared.scheduleUpcomingChargeReminders(for: store.subscriptions)
+        }
     }
 
     private func scheduleCommonAPIRefresh() {
@@ -311,7 +337,7 @@ private struct AutoLedgerRootView: View {
     }
 
     @MainActor
-    private func consumeSharedHotelFolioDraftReviewHandoffIfNeeded() {
+    private func consumeSharedHotelFolioDraftReviewHandoffIfNeeded() async {
         guard let defaults = UserDefaults(suiteName: Self.appGroupIdentifier),
               let data = defaults.data(forKey: Self.hotelFolioDraftReviewKey),
               let request = try? JSONDecoder().decode(HotelFolioDraftReviewRequest.self, from: data) else {
@@ -319,14 +345,14 @@ private struct AutoLedgerRootView: View {
         }
 
         defaults.removeObject(forKey: Self.hotelFolioDraftReviewKey)
-        refreshStoreWithPerformanceTracking(operation: "refresh_from_hotel_handoff")
+        await refreshStoreWithPerformanceTracking(operation: "refresh_from_hotel_handoff")
         navigationState.openHotelReviewQueue(draftID: request.draftID)
     }
 
     @MainActor
-    private func refreshStoreWithPerformanceTracking(operation: String) {
+    private func refreshStoreWithPerformanceTracking(operation: String) async {
         let startedAt = Date()
-        store.refreshFromStore()
+        await store.refreshFromStoreInBackground()
         CommonAPIAnalyticsService.trackPerformanceDiagnostic(
             diagnosticType: "store_operation",
             surface: "ledger_store",

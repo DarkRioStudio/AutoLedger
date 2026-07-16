@@ -174,16 +174,24 @@ enum CommonAPIAnalyticsService {
         severity: String,
         count: Int = 1,
         terminationState: String = "unknown",
-        errorCode: String = "none"
+        errorCode: String = "none",
+        diagnosticAppVersion: String? = nil,
+        diagnosticBuildNumber: String? = nil
     ) {
-        fireAndForget(.crashDiagnostic, payload: [
+        var payload: [String: AutoLedgerAnalyticsPayloadValue] = [
             "diagnostic_type": .string(safeEnum(diagnosticType)),
             "signal_source": .string(safeEnum(signalSource)),
             "severity": .string(safeEnum(severity)),
             "count_bucket": .string(countBucket(count)),
             "termination_state": .string(safeEnum(terminationState)),
             "error_code": .string(safeErrorCode(errorCode))
-        ])
+        ]
+        appendDiagnosticSource(
+            to: &payload,
+            appVersion: diagnosticAppVersion,
+            buildNumber: diagnosticBuildNumber
+        )
+        fireAndForget(.crashDiagnostic, payload: payload)
     }
 
     nonisolated static func trackPerformanceDiagnostic(
@@ -194,9 +202,11 @@ enum CommonAPIAnalyticsService {
         count: Int = 1,
         severity: String = "info",
         result: String = "completed",
-        errorCode: String = "none"
+        errorCode: String = "none",
+        diagnosticAppVersion: String? = nil,
+        diagnosticBuildNumber: String? = nil
     ) {
-        fireAndForget(.performanceDiagnostic, payload: [
+        var payload: [String: AutoLedgerAnalyticsPayloadValue] = [
             "diagnostic_type": .string(safeEnum(diagnosticType)),
             "surface": .string(safeEnum(surface)),
             "operation": .string(safeEnum(operation)),
@@ -205,7 +215,13 @@ enum CommonAPIAnalyticsService {
             "severity": .string(safeEnum(severity)),
             "result": .string(safeEnum(result)),
             "error_code": .string(safeErrorCode(errorCode))
-        ])
+        ]
+        appendDiagnosticSource(
+            to: &payload,
+            appVersion: diagnosticAppVersion,
+            buildNumber: diagnosticBuildNumber
+        )
+        fireAndForget(.performanceDiagnostic, payload: payload)
     }
 
     nonisolated static func trackUIResponsiveness(
@@ -366,6 +382,19 @@ enum CommonAPIAnalyticsService {
             return "3_5"
         default:
             return "6_plus"
+        }
+    }
+
+    nonisolated private static func appendDiagnosticSource(
+        to payload: inout [String: AutoLedgerAnalyticsPayloadValue],
+        appVersion: String?,
+        buildNumber: String?
+    ) {
+        if let appVersion, !appVersion.isEmpty {
+            payload["diagnostic_app_version"] = .string(safeEnum(appVersion))
+        }
+        if let buildNumber, !buildNumber.isEmpty {
+            payload["diagnostic_build_number"] = .string(safeEnum(buildNumber))
         }
     }
 

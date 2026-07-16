@@ -395,6 +395,7 @@
 "ipad.cleaning.analyzing" = "正在分析账本…";
 "ledger.persistence.unavailable_format" = "本地账本存储暂不可用，已停止写入以保护数据。请重新启动 App 后重试。详情：%@";
 "ledger.persistence.alert.title" = "本地账本暂不可用";
+"ledger.persistence.loading" = "正在加载本地账本…";
 "common.ok" = "好";
 "pending_center.title" = "待处理";
 "pending_center.subtitle" = "集中确认、去重和整理需要关注的内容";

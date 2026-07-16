@@ -171,6 +171,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = []
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
+    @Published private(set) var isPersistentStateLoading = false
     @Published private(set) var persistenceInitializationErrorMessage: String?
     @Published private(set) var lastDataCleaningApplicationResult: DataCleaningApplicationResult?
     @Published private(set) var dataCleaningApplicationHistory: [DataCleaningApplicationHistoryEntry] = []
@@ -188,6 +189,8 @@ final class LedgerStore: ObservableObject {
     private var lastPasteboardChangeCount: Int
     private var pendingBackupTask: Task<Void, Never>?
     private var pendingCloudKitPushTask: Task<Void, Never>?
+    private var pendingSQLiteSnapshotTask: Task<Void, Never>?
+    private var hasCompletedInitialPersistenceLoad = false
     private var didRunLaunchCloudKitSync = false
     private var recentlyEditedTransactionIDs: [UUID: Date] = [:]
     private var merchantAliasDeletedKeys: Set<String> = []
@@ -198,9 +201,12 @@ final class LedgerStore: ObservableObject {
     private var monthlyAnomalyCache: [MonthlyAnomalyCacheKey: [AnomalyAlert]] = [:]
     private var reportMonthOptionsCache: [String: [Date]] = [:]
 
-    convenience init() {
+    convenience init(deferSQLiteStateHydration: Bool = false) {
         do {
-            self.init(transactionStore: try SQLiteTransactionStore())
+            self.init(
+                transactionStore: try SQLiteTransactionStore(),
+                deferSQLiteStateHydration: deferSQLiteStateHydration
+            )
         } catch {
             let unavailableError = LedgerPersistenceUnavailableError(
                 underlyingDescription: error.localizedDescription
@@ -221,20 +227,39 @@ final class LedgerStore: ObservableObject {
         sampleProvider: SampleReceiptProviding = SampleReceiptProvider(),
         transactionStore: TransactionStore?,
         persistenceInitializationErrorMessage: String? = nil,
-        loadsPersistedConfiguration: Bool = true
+        loadsPersistedConfiguration: Bool = true,
+        deferSQLiteStateHydration: Bool = false
     ) {
+        let shouldDeferSQLiteStateHydration =
+            deferSQLiteStateHydration && transactionStore is SQLiteTransactionStore
         self.parser = parser
         self.sampleReceipts = sampleProvider.samples
         self.transactionStore = transactionStore
         self.persistenceInitializationErrorMessage = persistenceInitializationErrorMessage
-        self.transactions = LedgerStore.loadInitialTransactions(using: transactionStore)
-        self.deletedTransactions = LedgerStore.loadInitialDeletedTransactions(using: transactionStore)
-        self.subscriptions = LedgerStore.loadInitialSubscriptions(using: transactionStore)
-        self.categoryCorrections = LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
-        self.debugRecords = LedgerStore.loadInitialDebugRecords(using: transactionStore)
-        self.hotelStayRecords = LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
-        self.hotelStayDrafts = LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
-        self.ledgerSyncConflictRecords = LedgerStore.loadInitialLedgerSyncConflictRecords(using: transactionStore)
+        self.transactions = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialTransactions(using: transactionStore)
+        self.deletedTransactions = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialDeletedTransactions(using: transactionStore)
+        self.subscriptions = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialSubscriptions(using: transactionStore)
+        self.categoryCorrections = shouldDeferSQLiteStateHydration
+            ? [:]
+            : LedgerStore.loadInitialCategoryCorrections(using: transactionStore)
+        self.debugRecords = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialDebugRecords(using: transactionStore)
+        self.hotelStayRecords = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialHotelStayRecords(using: transactionStore)
+        self.hotelStayDrafts = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialHotelStayDrafts(using: transactionStore)
+        self.ledgerSyncConflictRecords = shouldDeferSQLiteStateHydration
+            ? []
+            : LedgerStore.loadInitialLedgerSyncConflictRecords(using: transactionStore)
         self.dataCleaningApplicationHistory = loadsPersistedConfiguration
             ? Self.loadDataCleaningApplicationHistory()
             : []
@@ -250,19 +275,25 @@ final class LedgerStore: ObservableObject {
             UserDefaults.standard.set(normalizedCustomCategories, forKey: "customCategories")
         }
         self.merchantAliases = loadsPersistedConfiguration
-            ? LedgerStore.loadInitialMerchantAliases(using: transactionStore)
+            ? (shouldDeferSQLiteStateHydration
+                ? UserDefaults.standard.dictionary(forKey: "merchantAliases") as? [String: String] ?? [:]
+                : LedgerStore.loadInitialMerchantAliases(using: transactionStore))
             : [:]
         self.merchantAliasDeletedKeys = loadsPersistedConfiguration ? Self.loadMerchantAliasDeletedKeys() : []
         self.ignoredDataCleaningPreviewIDs = loadsPersistedConfiguration ? Self.loadIgnoredDataCleaningPreviewIDs() : []
-        let initialLedgerProfiles = loadsPersistedConfiguration
+        let initialLedgerProfiles = loadsPersistedConfiguration && !shouldDeferSQLiteStateHydration
             ? LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
             : [LedgerProfile.defaultLocal()]
         self.ledgerProfiles = initialLedgerProfiles
         self.selectedLedgerID = loadsPersistedConfiguration
-            ? LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles)
+            ? (shouldDeferSQLiteStateHydration
+                ? UserDefaults.standard.string(forKey: Self.selectedLedgerIDKey) ?? TodaySpendingSummary.defaultLedgerID
+                : LedgerStore.loadInitialSelectedLedgerID(from: initialLedgerProfiles))
             : TodaySpendingSummary.defaultLedgerID
         self.defaultWriteLedgerID = loadsPersistedConfiguration
-            ? LedgerStore.loadInitialDefaultWriteLedgerID(from: initialLedgerProfiles)
+            ? (shouldDeferSQLiteStateHydration
+                ? UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey) ?? TodaySpendingSummary.defaultLedgerID
+                : LedgerStore.loadInitialDefaultWriteLedgerID(from: initialLedgerProfiles))
             : TodaySpendingSummary.defaultLedgerID
         self.isShowingAllLedgers = loadsPersistedConfiguration
             ? UserDefaults.standard.bool(forKey: Self.showAllLedgersKey)
@@ -274,8 +305,17 @@ final class LedgerStore: ObservableObject {
         if loadsPersistedConfiguration {
             seedLegacyLedgerConfigurationTimestampIfNeeded()
         }
-        normalizeHotelLinkedTransactionCategories(persist: loadsPersistedConfiguration)
+        if !shouldDeferSQLiteStateHydration {
+            normalizeHotelLinkedTransactionCategories(persist: loadsPersistedConfiguration)
+        }
         LedgerStore.shared = self
+        hasCompletedInitialPersistenceLoad = !shouldDeferSQLiteStateHydration
+
+        if shouldDeferSQLiteStateHydration,
+           let sqlStore = transactionStore as? SQLiteTransactionStore {
+            isPersistentStateLoading = true
+            startSQLiteSnapshotLoadIfNeeded(from: sqlStore)
+        }
     }
 
     var monthlySnapshot: MonthlySnapshot {
@@ -956,6 +996,93 @@ final class LedgerStore: ObservableObject {
                 // 静默失败，保留内存中的数据
             }
         }
+        if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
+            reloadWidgets()
+            scheduleCloudKitPushAfterLocalLedgerChange()
+        }
+        loadShareExtensionResult()
+    }
+
+    /// Refreshes persisted SQLite state through an independent reader so that
+    /// row decoding and date parsing do not block the UI actor on launch or
+    /// when the app returns to the foreground.
+    func refreshFromStoreInBackground() async {
+        guard let store = transactionStore else { return }
+        guard let sqlStore = store as? SQLiteTransactionStore else {
+            refreshFromStore()
+            return
+        }
+
+        startSQLiteSnapshotLoadIfNeeded(from: sqlStore)
+        if let task = pendingSQLiteSnapshotTask {
+            await task.value
+        }
+    }
+
+    private func startSQLiteSnapshotLoadIfNeeded(from sqlStore: SQLiteTransactionStore) {
+        guard pendingSQLiteSnapshotTask == nil else { return }
+
+        let seedTransactions = Self.seedTransactions
+        pendingSQLiteSnapshotTask = Task { [weak self] in
+            let snapshot = await Task.detached(priority: .userInitiated) { () -> SQLiteLedgerSnapshot? in
+                do {
+                    let reader = try sqlStore.makeSnapshotReader()
+                    return try reader.loadLedgerSnapshot(seedTransactions: seedTransactions)
+                } catch {
+                    return nil
+                }
+            }.value
+
+            guard let self else { return }
+            self.finishSQLiteSnapshotLoad(snapshot, using: sqlStore)
+        }
+    }
+
+    private func finishSQLiteSnapshotLoad(
+        _ snapshot: SQLiteLedgerSnapshot?,
+        using sqlStore: SQLiteTransactionStore
+    ) {
+        defer {
+            hasCompletedInitialPersistenceLoad = true
+            isPersistentStateLoading = false
+            pendingSQLiteSnapshotTask = nil
+        }
+
+        guard let snapshot else {
+            logger.error("[Ledger] Background SQLite snapshot hydration failed; keeping the current in-memory state.")
+            return
+        }
+
+        let isInitialHydration = !hasCompletedInitialPersistenceLoad
+        let legacyMerchantAliases = merchantAliases
+
+        transactions = snapshot.transactions
+        deletedTransactions = snapshot.deletedTransactions
+        debugRecords = snapshot.debugRecords
+        subscriptions = snapshot.subscriptions
+        categoryCorrections = snapshot.categoryCorrections
+        hotelStayRecords = snapshot.hotelStayRecords
+        hotelStayDrafts = snapshot.hotelStayDrafts
+        ledgerSyncConflictRecords = snapshot.ledgerSyncConflictRecords
+
+        if isInitialHydration,
+           snapshot.merchantAliases.isEmpty,
+           !legacyMerchantAliases.isEmpty {
+            for (original, alias) in legacyMerchantAliases {
+                try? sqlStore.saveMerchantAlias(original: original, alias: alias)
+            }
+            merchantAliases = legacyMerchantAliases
+        } else {
+            merchantAliases = snapshot.merchantAliases
+        }
+
+        ledgerProfiles = snapshot.ledgerProfiles.isEmpty
+            ? [LedgerProfile.defaultLocal()]
+            : snapshot.ledgerProfiles
+        sortLedgerProfiles()
+        normalizeDefaultWriteLedger()
+        normalizeLedgerSelection()
+
         if normalizeHotelLinkedTransactionCategories(persist: true) > 0 {
             reloadWidgets()
             scheduleCloudKitPushAfterLocalLedgerChange()
@@ -3374,6 +3501,7 @@ extension LedgerStore {
     }
 
     var isLocalDataEmptyForRestore: Bool {
+        !isPersistentStateLoading &&
         transactions.isEmpty &&
         deletedTransactions.isEmpty &&
         subscriptions.isEmpty &&

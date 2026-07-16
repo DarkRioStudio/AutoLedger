@@ -158,7 +158,9 @@ const allowedFieldsByEventName: Record<string, Set<string>> = {
     "severity",
     "count_bucket",
     "termination_state",
-    "error_code"
+    "error_code",
+    "diagnostic_app_version",
+    "diagnostic_build_number"
   ]),
   al_performance_diagnostic: new Set([
     "event_id",
@@ -170,7 +172,9 @@ const allowedFieldsByEventName: Record<string, Set<string>> = {
     "count_bucket",
     "severity",
     "result",
-    "error_code"
+    "error_code",
+    "diagnostic_app_version",
+    "diagnostic_build_number"
   ]),
   al_privacy_payload_guard_violation: new Set([
     "event_id",

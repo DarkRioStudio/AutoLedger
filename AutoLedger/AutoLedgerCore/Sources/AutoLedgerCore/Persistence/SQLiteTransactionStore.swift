@@ -18,8 +18,26 @@ public enum SQLiteTransactionStoreError: LocalizedError {
     }
 }
 
+/// A complete in-memory view of the persisted ledger state for UI hydration.
+///
+/// Callers that need to keep the main thread responsive should create a separate
+/// reader with `makeSnapshotReader()` and load this value off the main actor.
+public struct SQLiteLedgerSnapshot: Sendable {
+    public let transactions: [Transaction]
+    public let deletedTransactions: [Transaction]
+    public let debugRecords: [ImportDebugRecord]
+    public let subscriptions: [Subscription]
+    public let categoryCorrections: [String: TransactionCategory]
+    public let merchantAliases: [String: String]
+    public let hotelStayRecords: [HotelStayRecord]
+    public let hotelStayDrafts: [HotelStayDraft]
+    public let ledgerSyncConflictRecords: [TransactionSyncRecord]
+    public let ledgerProfiles: [LedgerProfile]
+}
+
 public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable {
     private var db: OpaquePointer?
+    private let databaseURL: URL
     private let syncDeviceID: String
     // LedgerStore currently exposes synchronous writes. Keep lock recovery bounded below one second
     // so a Share Extension writer cannot freeze the MainActor for multiple seconds.
@@ -30,15 +48,20 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     ledger_currency_code, original_amount, original_currency_code, exchange_rate, exchange_rate_date, exchange_rate_provider
     """
 
-    public init(
+    public convenience init(
         baseDirectoryURL: URL? = nil,
         filename: String = "autoledger.sqlite3",
         syncDeviceID: String? = nil
     ) throws {
-        self.syncDeviceID = syncDeviceID ?? Self.localSyncDeviceID()
         let url = try Self.makeDatabaseURL(baseDirectoryURL: baseDirectoryURL, filename: filename)
+        try self.init(databaseURL: url, syncDeviceID: syncDeviceID ?? Self.localSyncDeviceID())
+    }
 
-        if sqlite3_open(url.path, &db) != SQLITE_OK {
+    private init(databaseURL: URL, syncDeviceID: String) throws {
+        self.syncDeviceID = syncDeviceID
+        self.databaseURL = databaseURL
+
+        if sqlite3_open(databaseURL.path, &db) != SQLITE_OK {
             throw SQLiteTransactionStoreError.openDatabase
         }
 
@@ -48,6 +71,32 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
 
     deinit {
         sqlite3_close(db)
+    }
+
+    /// Opens an independent SQLite connection to the same database for a
+    /// background snapshot read. The original store remains owned by the caller.
+    public func makeSnapshotReader() throws -> SQLiteTransactionStore {
+        try SQLiteTransactionStore(databaseURL: databaseURL, syncDeviceID: syncDeviceID)
+    }
+
+    /// Loads every persisted collection needed to hydrate `LedgerStore`.
+    ///
+    /// This intentionally uses one dedicated connection so row decoding and
+    /// date parsing can run outside the UI actor without sharing `db` with
+    /// synchronous writes from the live store.
+    public func loadLedgerSnapshot(seedTransactions: [Transaction]) throws -> SQLiteLedgerSnapshot {
+        SQLiteLedgerSnapshot(
+            transactions: try bootstrapIfNeeded(with: seedTransactions),
+            deletedTransactions: try loadDeletedTransactions(),
+            debugRecords: try loadDebugEvents(),
+            subscriptions: try loadSubscriptions(),
+            categoryCorrections: try loadCategoryCorrections(),
+            merchantAliases: try loadMerchantAliases(),
+            hotelStayRecords: try loadHotelStayRecords(),
+            hotelStayDrafts: try loadHotelStayDrafts(),
+            ledgerSyncConflictRecords: try loadConflictedTransactionSyncRecords(),
+            ledgerProfiles: try loadLedgerProfiles(includeArchived: true)
+        )
     }
 
     public func loadTransactions() throws -> [Transaction] {
