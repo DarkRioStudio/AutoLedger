@@ -13,6 +13,7 @@ DELETED_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Ledger/DeletedTransactions
 HOTEL_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Hotel/HotelStayArchiveView.swift"
 SUBSCRIPTION_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Settings/SubscriptionListView.swift"
 IPAD_WORKSPACE = ROOT / "AutoLedger/AutoLedger/Features/iPad/iPadWorkspaceView.swift"
+PERFORMANCE_FIXTURE = ROOT / "AutoLedger/AutoLedger/App/PerformanceFixtureConfiguration.swift"
 
 REQUIRED_SNIPPETS = {
     LEDGER_VIEW: [
@@ -55,6 +56,11 @@ REQUIRED_SNIPPETS = {
         "LazyVStack(alignment: .leading, spacing: 12)",
         "ForEach(DataCleaningPreviewKind.allCases, id: \\.rawValue)",
         "ForEach(kindItems)",
+    ],
+    PERFORMANCE_FIXTURE: [
+        "static func makeLedgerStoreIfRequested() -> LedgerStore? {\n        #if DEBUG",
+        "transactionStore: PerformanceFixtureTransactionStore(count: transactionCount)",
+        "#else\n        return nil\n        #endif",
     ],
 }
 

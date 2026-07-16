@@ -16,11 +16,15 @@ enum PerformanceFixtureConfiguration {
 
     @MainActor
     static func makeLedgerStoreIfRequested() -> LedgerStore? {
+        #if DEBUG
         guard let transactionCount else { return nil }
         return LedgerStore(
             transactionStore: PerformanceFixtureTransactionStore(count: transactionCount),
             loadsPersistedConfiguration: false
         )
+        #else
+        return nil
+        #endif
     }
 
     private static var transactionCount: Int? {

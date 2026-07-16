@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-16（ITER-417 Xcode Cloud CocoaPods 基线同步）
+更新日期：2026-07-16（ITER-418 Release 性能夹具隔离修复）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-418 Release 性能夹具隔离修复
+- 日期：2026-07-16
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release / Xcode Cloud
+- 类型：Bugfix / 测试
+- 目标：修复 Xcode Cloud 第 112 次构建中 iOS 与 macOS Archive 的共同 Release 编译错误，同时保持 Debug 性能夹具行为不变。
+- 改动范围：`PerformanceFixtureConfiguration.makeLedgerStoreIfRequested()` 的编译条件，以及长列表静态 smoke 对该 Release 隔离边界的检查。
+- 未改动范围：未修改性能夹具数据、正式账本初始化、SQLite / CloudKit schema、StoreKit Product ID、Worker API、entitlement、签名、ASC metadata、定价或 Xcode Cloud workflow。
+- 完成内容：通过 ASC API 确认 tvOS 与 visionOS Archive 已成功，iOS 与 macOS 均失败于 `PerformanceFixtureConfiguration.swift:21` 的 `Cannot find 'PerformanceFixtureTransactionStore' in scope`；该 store 仅在 `#if DEBUG` 下声明，但调用点此前仍参与 Release 编译。
+- 完成内容：将 Debug-only store 的构造引用纳入同一 `#if DEBUG`，Release 固定返回 `nil`；Debug 的 `--performance-fixture-count` 路径和正式启动逻辑均保持原样。
+- 未完成内容：修复提交推送并移动构建标签后，仍需等待 Xcode Cloud 新一轮四平台 Archive 与 TestFlight 后操作结果。
+- 测试情况：完整 `bash scripts/run_offline_regression.sh` PASS（含长列表与性能夹具 smoke）；关闭本地签名后，iOS generic Release archive PASS，Mac Catalyst generic Release archive PASS。构建仅出现工程既有的 Swift 6 迁移、弃用和 MediaPipe Catalyst slice 警告。
+- 风险与注意事项：Debug-only 工具必须同时隔离声明和所有类型引用；仅跑 Debug build 无法发现此类 Release 编译错误。
+- 回滚方式：回退 `makeLedgerStoreIfRequested()` 的编译条件与对应 smoke 即可；不涉及数据或远端状态。
+- 结论：iOS / macOS 的共同 Archive 编译 blocker 已在本地 Release 配置收口，可以重新触发 Xcode Cloud。
+- 下一步建议：确认新构建的 iOS 与 macOS Archive 越过 `PerformanceFixtureConfiguration.swift`，并继续观察四平台 TestFlight 后操作。
 
 ### ITER-417 Xcode Cloud CocoaPods 基线同步
 - 日期：2026-07-16
