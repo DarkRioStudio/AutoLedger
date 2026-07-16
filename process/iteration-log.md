@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-15（ITER-416 iPad / Mac 大账本渲染降耗）
+更新日期：2026-07-16（ITER-417 Xcode Cloud CocoaPods 基线同步）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-417 Xcode Cloud CocoaPods 基线同步
+- 日期：2026-07-16
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release / Xcode Cloud
+- 类型：Bugfix / 构建治理
+- 目标：修复四个平台在 Xcode Cloud `Run ci_post_clone.sh` 阶段同时失败，恢复构建触发链路。
+- 改动范围：仅将 `Podfile.lock` 的 CocoaPods 生成器版本从 `1.16.2` 同步到 Xcode Cloud 当前镜像提供的 `1.17.0`。
+- 未改动范围：未修改 Pod 依赖版本、spec checksum、Podfile checksum、Swift 业务代码、SQLite / CloudKit schema、StoreKit Product ID、Worker API、entitlement、签名、ASC metadata、定价或 Xcode Cloud workflow。
+- 完成内容：确认失败不是性能提交或平台编译造成，而是 CocoaPods `1.17.0` 在 `--deployment` 模式下拒绝使用由 `1.16.2` 生成的锁文件；重试和 `--repo-update` 均无法解决生成器版本元数据差异。
+- 未完成内容：修复提交推送并移动构建标签后，仍需等待 Xcode Cloud 四个平台的新一轮 archive 结果。
+- 测试情况：本机升级至 CocoaPods `1.17.0` 后重新生成锁文件，Git diff 仅包含 `COCOAPODS` 版本一行；按 Xcode Cloud 的 `CI_PRIMARY_REPOSITORY_PATH` 和脚本路径原样执行 `ci_post_clone.sh` PASS，`pod install --deployment` 报告 `Verifying no changes` 并完成集成。
+- 风险与注意事项：未来 Xcode Cloud 再次升级 CocoaPods 时，deployment 模式仍可能要求同步锁文件生成器版本；应先读取首条失败原因，不对确定性版本不匹配进行无效网络重试。
+- 回滚方式：回退 `Podfile.lock` 的 `COCOAPODS` 版本即可；不会改变用户数据或依赖版本。
+- 结论：本轮根因和最小修复均已验证，可以重新推送 `main` 并移动 `xcbuild-v1.7.0` 触发构建。
+- 下一步建议：确认四个平台均越过 `Run ci_post_clone.sh` 后，再判断是否存在真正的 archive 或签名问题。
 
 ### ITER-416 iPad / Mac 大账本渲染降耗
 - 日期：2026-07-15
