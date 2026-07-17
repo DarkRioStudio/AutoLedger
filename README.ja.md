@@ -62,7 +62,7 @@ Free は日常の記帳に使い続けられます。AutoLedger は既存の主�
 
 Free には、手動記帳、単一スクリーンショット / 写真取り込み、音声 / テキスト入力、手動ホテル明細 PDF 取り込み、ホテル履歴の確認、基本的なサブスクリプション管理、基本レポート、Widget / Share Extension、エクスポート / インポート、バックアップ、履歴記録の表示、編集、削除が含まれます。
 
-Pro は台帳へのアクセス制限ではなく、時間を節約する自動化です。現在の Pro には、ローカルメール明細スキャン、候補の一括取り込み、高度な重複排除、専用クラウド明細受信箱、高度な検索、サブスク異常通知、月次パッケージ、高度なルール、スマート整理提案が含まれます。今後はクラウド補助整理、スマート確認キュー、高度な共有テンプレート、複数デバイス自動化同期を進めます。
+Pro は台帳へのアクセス制限ではなく、時間を節約する自動化です。現在の Pro には、ローカルメール明細スキャン、候補の一括取り込み、高度な重複排除、専用クラウド明細受信箱、高度な検索、サブスク異常通知、月次パッケージ、高度なルール、スマート整理提案、明示的な同意後に匿名化された集計特徴を使う第一版クラウド加盟店別名提案が含まれます。今後は統一確認キュー、月末チェック、ルールセンター、高度な共有テンプレート、複数デバイス自動化同期を進めます。
 
 ## ローカルファーストとクラウド自動化
 
@@ -183,6 +183,8 @@ bash scripts/run_golden_regression.sh
 
 ## Roadmap
 
+現在のリリース段階と gate は [PROJECT_STATUS.md](PROJECT_STATUS.md)、複数バージョンにまたがる製品方針は [docs/ROADMAP.md](docs/ROADMAP.md) を正本とします。この節は公開向けの要約です。
+
 現在の主な状態:
 
 - `v1.6.0` と `v1.6.1` は完了しており、ASC / App Store `1.5.0` のリリースラインに対応しています。
@@ -190,7 +192,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
 - `v1.6.4` は ASC / App Store `1.5.0` の closeout baseline として完了しました。`GOAL-2200` で Free / Pro 境界を固定し、Pro ページ、購入復元 / サブスクリプション管理、ローカルメール月次枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit 変換、レビュー条項、visionOS / macOS hotfix、最終 baseline tag まで収束しています。
-- `v1.7.0` は ASC / App Store `1.6.0` として開発中です。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、再利用可能な `common-api` の地点 / 通貨 / 為替 / 天気 / release notes、App Store Server Notifications コード、ASC metadata-as-code、Pro の高度な検索、サブスク異常、月次 ZIP パッケージ、高度なルール、スマート整理提案、基本共有画像、ホテル旅程メモリー、privacy-safe analytics / dashboard が main line に入っています。次は実サンプル、ストア素材、運用 gate、クラウド補助整理、スマート確認キュー、高度な共有テンプレート、複数デバイス自動化同期を進めます。
+- `v1.7.0` は ASC / App Store `1.6.0` 候補を収束中です。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro の検索 / サブスク異常 / 月次 ZIP / 高度なルール / スマート整理、第一版クラウド加盟店別名提案、共有画像、ホテル旅程メモリー、privacy-safe analytics が main line に入っています。残る重点は複数デバイス TestFlight、iCloud、5 言語ストア素材、プライバシー、ASC release gate です。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -201,7 +203,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundation and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
-| v1.7.0 | 1.6.0 | In development | Live OCR receipt scanning with photo / library fallback; Korean UI and `ko` recognition; i18n release matrix; `common-api` five-language location catalog, currency catalog, date-based exchange rates, hotel historical weather, release notes, and privacy-safe analytics; App Store Server Notifications; ASC metadata-as-code; Pro advanced search, subscription anomalies, monthly ZIP packages, advanced rules, smart cleanup suggestions; local PNG share cards and hotel journey memories; later cloud-assisted cleanup, smart review queues, advanced share templates, and cross-device automation sync |
+| v1.7.0 | 1.6.0 | Candidate closeout | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, subscription anomalies, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics; final cross-device, iCloud, store-asset, and privacy gates remain |
 
 ## License
 

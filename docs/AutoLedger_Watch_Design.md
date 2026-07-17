@@ -1,5 +1,10 @@
 # AutoLedger Apple Watch 设计草案
 
+> 文档状态：Reference
+> 真源范围：Apple Watch 首版产品与交互设计背景；当前实现以 Watch 代码和回归为准
+> 文档分类核验：2026-07-17
+> 上位路线图：[ROADMAP.md](ROADMAP.md)
+
 日期：2026-04-27
 目标版本：v1.4 / v1.5
 目录建议：`AutoLedgerWatch/`

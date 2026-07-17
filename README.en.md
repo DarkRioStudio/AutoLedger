@@ -48,7 +48,7 @@ Free remains useful for everyday bookkeeping. AutoLedger does not move existing 
 
 Free includes manual entries, single screenshot / photo import, voice / text input, manual hotel folio PDF import, hotel history review, basic subscription management, basic reports, widgets / Share Extension, export / import, backup, and editing or deleting historical records.
 
-Pro is positioned as time-saving automation, not as a lock on the ledger. Pro now covers local email folio scan, batch candidate import, advanced deduplication, the dedicated cloud folio inbox, advanced search, subscription anomaly alerts, monthly packages, advanced rules, and smart cleanup suggestions. Later Pro directions include cloud-assisted cleanup, smart review queues, advanced share templates, and more reliable cross-device automation sync.
+Pro is positioned as time-saving automation, not as a lock on the ledger. Pro now covers local email folio scan, batch candidate import, advanced deduplication, the dedicated cloud folio inbox, advanced search, subscription anomaly alerts, monthly packages, advanced rules, smart cleanup suggestions, and the first opt-in cloud merchant-alias suggestions based on redacted aggregate features. Later directions include a unified review queue, month-end checklists, smart review, advanced share templates, and more reliable cross-device automation sync.
 
 ## Local-First And Cloud Automation
 
@@ -205,6 +205,8 @@ The `main` branch is intended to remain the real AutoLedger development and rele
 
 ## Roadmap
 
+See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current release stage and gates, and [docs/ROADMAP.md](docs/ROADMAP.md) for the canonical cross-version product direction. This section is a public summary.
+
 Current repository status:
 
 - `v1.6.0` and `v1.6.1` are complete and continue to map to the ASC / App Store `1.5.0` release line.
@@ -212,7 +214,7 @@ Current repository status:
 - `v1.6.2` is complete. It closed SDK adaptation phase 2, hotel email import hardening, deep links, Widgets, App Intents, data reliability, Japanese release-material review, and the GOAL-1960 release-smoke baseline.
 - `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. C2 Worker login to user mailboxes stays personal-use / future experimental only.
 - `v1.6.4` has closed out as the ASC / App Store `1.5.0` baseline. `GOAL-2200` froze the Free / Pro boundary; the Pro page, restore / manage subscription entry points, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue resources, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are now settled.
-- `v1.7.0` is in active development as ASC / App Store `1.6.0`: live OCR, Korean UI and `ko` recognition, the i18n release matrix, reusable `common-api` location / currency / exchange-rate / weather / release-note infrastructure, App Store Server Notifications code, ASC metadata-as-code, Pro advanced search, subscription anomalies, monthly ZIP packages, advanced rules, smart cleanup suggestions, local share cards, hotel journey memories, and privacy-safe analytics / dashboard are on the main line. Next work continues with real samples, store assets, release gates, cloud-assisted cleanup, smart review queues, advanced share templates, and cross-device automation sync.
+- `v1.7.0` is closing its ASC / App Store `1.6.0` candidate: live OCR, Korean UI and `ko` recognition, the i18n release matrix, reusable `common-api` infrastructure, App Store Server Notifications, ASC metadata-as-code, Pro search / anomaly / monthly ZIP / advanced rule / smart-cleanup features, the first cloud merchant-alias suggestions, local share cards, hotel journey memories, and privacy-safe analytics are on the main line. The remaining focus is cross-device TestFlight, iCloud, five-language store assets, privacy, and ASC release gates.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -224,7 +226,7 @@ Current repository status:
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents first pass, CSV / JSON and backup-restore smoke, Japanese release-material review, and GOAL-1960 release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundations and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; the Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
-| v1.7.0 | 1.6.0 | In development | Live OCR receipt scanning with photo / library fallback; Korean UI and `ko` recognition; i18n release matrix; `common-api` five-language location catalog, currency catalog, date-based exchange rates, hotel historical weather, release notes, and privacy-safe analytics; App Store Server Notifications; ASC metadata-as-code; Pro advanced search, subscription anomalies, monthly ZIP packages, advanced rules, smart cleanup suggestions; local PNG share cards and hotel journey memories; later cloud-assisted cleanup, smart review queues, advanced share templates, and cross-device automation sync |
+| v1.7.0 | 1.6.0 | Candidate closeout | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, anomaly detection, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics; final cross-device, iCloud, store-asset, and privacy gates remain |
 
 ## License
 

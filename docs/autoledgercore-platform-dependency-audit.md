@@ -1,5 +1,10 @@
 # AutoLedgerCore 平台依赖审计
 
+> 文档状态：Historical
+> 真源范围：2026-06-11 平台依赖审计快照；不替代当前 Package.swift、工程配置或构建结果
+> 文档分类核验：2026-07-17
+> 上位路线图：[ROADMAP.md](ROADMAP.md)
+
 更新日期：2026-06-11
 所属版本：v1.5.1
 关联 GOAL：GOAL-1601

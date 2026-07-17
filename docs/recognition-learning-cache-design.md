@@ -1,5 +1,10 @@
 # AutoLedger Recognition Learning Cache Design
 
+> 文档状态：Active
+> 真源范围：识别学习缓存的职责、分层、隐私和演进设计；执行行为以 Core 代码和回归为准
+> 文档分类核验：2026-07-17
+> 上位路线图：[ROADMAP.md](ROADMAP.md)
+
 更新日期：2026-06-19
 关联版本：`v1.6.0`
 关联 GOAL：`GOAL-1730`

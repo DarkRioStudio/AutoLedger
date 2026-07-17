@@ -1,4 +1,9 @@
-AutoLedger App Intent 一键记账 MVP 实施方案
+# AutoLedger App Intent 一键记账 MVP 实施方案
+
+> 文档状态：Historical
+> 真源范围：早期一键记账 MVP 决策背景，不代表当前 App Intent、OCR 或确认流程
+> 文档分类核验：2026-07-17
+> 当前状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
 
 目标非常明确：
 

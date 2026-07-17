@@ -73,7 +73,7 @@ Free 会长期保留可用的日常记账能力。AutoLedger 不会把现有核�
 
 Free 包括手动记账、单张截图 / 拍照导入、语音 / 文本输入、手动酒店水单 PDF 导入、酒店历史查看、基础订阅管理、基础月报、Widget / Share Extension、JSON 导入导出、备份，以及历史记录的查看、编辑和删除。
 
-Pro 的定位是省时间自动化，而不是账本访问权限。当前 Pro 能力包括本地邮箱水单扫描、专属云端水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议和高级规则自动应用；后续继续推进统一待处理中心、月结检查清单、规则中心、智能视图 / Saved Views、订阅省钱看板、云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步。
+Pro 的定位是省时间自动化，而不是账本访问权限。当前 Pro 能力包括本地邮箱水单扫描、专属云端水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议、高级规则自动应用，以及用户显式开启后使用脱敏聚合特征生成的第一版云端商户别名建议；后续继续推进统一待处理队列、月结检查清单、规则中心、智能视图 / Saved Views、订阅省钱看板、智能复核队列、高级分享模板和多设备自动化同步。
 
 ## 本地优先与云端自动化
 
@@ -223,6 +223,8 @@ bash scripts/run_golden_regression.sh
 
 ## Roadmap
 
+当前开发与发布门禁以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；产品跨版本方向以 [docs/ROADMAP.md](docs/ROADMAP.md) 为准。本节只保留面向公开协作者的摘要。
+
 当前仓库主线状态：
 
 - `v1.6.0` 与 `v1.6.1` 已完成并继续对应 ASC / App Store `1.5.0` 大版本口径。
@@ -230,7 +232,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 发布收口基线，`GOAL-2200` 完成 Free / Pro 边界冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API、App 侧 PDFKit 本地转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口。
-- `v1.7.0` 正在作为 ASC / App Store `1.6.0` 开发：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications 代码、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP 包、高级规则、智能整理建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已进入主线；analytics 只做匿名 App 层聚合，用于发布观测、使用卡点和未来年度总结的综合背景，不上传个人账本内容；后续继续补真实样本、商店资产、运营门禁、云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步。
+- `v1.7.0` 正在作为 ASC / App Store `1.6.0` 候选收口：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已进入主线；当前重点是跨设备 TestFlight、iCloud、五语商店资产、隐私和 ASC 发布门禁。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -252,7 +254,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | ✅ 已完成 | Personal Pro 订阅基础和 ASC 1.5.0 收口基线：Free / Pro 边界已冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口 |
-| v1.7.0 | **1.6.0** | 🚧 开发中 | 实时 OCR 票据扫描与拍照 / 相册 fallback；韩语 UI 与 `ko` 识别包；i18n 发布矩阵；`common-api` 五语地点目录、货币目录、按日期汇率、酒店历史天气、release notes 和隐私安全 analytics；App Store Server Notifications；ASC metadata-as-code；Pro 高级搜索、订阅异常提醒、月结 ZIP 包、高级规则、智能整理建议；基础 PNG 分享图和酒店旅程回忆；后续继续推进云端辅助整理、智能复核队列、高级分享模板和多设备自动化同步 |
+| v1.7.0 | **1.6.0** | 🧪 候选收口 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测；发布前完成跨设备、iCloud、商店资产与隐私门禁 |
 
 ## License
 

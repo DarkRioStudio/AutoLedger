@@ -1,5 +1,10 @@
 # AutoLedger tvOS 看板实现评估
 
+> 文档状态：Historical
+> 真源范围：tvOS 第一版实现评估快照；当前状态以代码、构建和 `PROJECT_STATUS.md` 为准
+> 文档分类核验：2026-07-17
+> 上位路线图：[ROADMAP.md](ROADMAP.md)
+
 更新日期：2026-06-06
 适用目标：`GOAL-1581` / `GOAL-1740`
 当前状态：`GOAL-1740` 第一版只读 UI 已落地，CloudKit 只读数据入口待后续实现

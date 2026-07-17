@@ -1,5 +1,10 @@
 # AutoLedger iCloud 数据备份设计草案
 
+> 文档状态：Reference
+> 真源范围：单文件备份 / 恢复设计背景；不作为当前 CloudKit 多设备同步完整真源
+> 文档分类核验：2026-07-17
+> 当前同步状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
+
 版本：v0.1
 目标版本：AutoLedger v1.x
 设计目标：本地优先、轻量备份、防止卸载丢数据，并为后续跨设备同步预留空间。

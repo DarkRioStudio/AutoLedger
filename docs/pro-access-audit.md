@@ -1,6 +1,12 @@
 # Pro Access Audit
 
-Date: 2026-07-08
+> Document status: Active
+> Document role: point-in-time audit snapshot
+> Source-of-truth scope: explanation of the current client / server Pro boundary; executable truth remains code and regression tests
+> Last verified: 2026-07-17
+> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+
+Date: 2026-07-17
 
 This audit records the current Pro entitlement boundary after the source-available and Worker token-claim hardening pass. The goal is to keep local Free / Pro UX intact while making clear that server-cost features require server-side verification.
 
@@ -28,12 +34,12 @@ Risk: public source can be forked and local client checks can be modified. This 
 - Defines `AutoLedgerCapability`, `ProAccessTier`, and `AutoLedgerProAccessPolicy`.
 - Free/core capabilities remain free: `manualTransactionEntry`, `singleReceiptScan`, `manualHotelFolioImport`, `hotelStayArchiveAccess`, basic subscription/report/widget/export/backup, history edit/delete, and support donation.
 - Current P0 Pro capabilities are `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, `cloudFolioInbox`, `advancedSearch`, `subscriptionAnomalyDetection`, `monthlyExportPackage`, and `advancedRuleAutomation`.
-- v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro gates full-ledger analysis, merchant normalization suggestions, batch preview/application, low-confidence review queues, and optional future Worker-assisted suggestion generation.
+- v1.7.0 merchant normalization keeps single-record merchant edits, basic merchant aliases, category learning, and already accepted rules in the free/core layer. Pro gates full-ledger analysis, merchant normalization suggestions, batch preview/application, low-confidence review queues, and the opt-in first Worker-assisted alias suggestion loop.
 - New `ProSecurityBoundary` classifies capabilities as `localUIGate`, `serverVerified`, or `planned`.
 - `cloudFolioInbox` is `serverVerified`; local email scan, batch import, advanced deduplication, merchant normalization suggestions, advanced search, subscription anomaly detection, monthly export packages, and advanced rule automation are still `localUIGate`.
-- `DataCleaningAssistPayloadBuilder` defines the first local-only Worker assist contract for future merchant normalization suggestions. It emits hashed aggregate merchant features, category/source distributions, amount buckets, and prefix hashes; it does not include raw merchant names, notes, OCR text, transaction ids, or exact amounts. No current call site uploads this payload.
-- `DataCleaningAssistSuggestionMapper` defines the matching local-only response mapping contract. Future Worker responses may carry hash-only merchant normalization suggestions, but the client must resolve those hashes against local transactions before any user-readable preview exists. Unknown hashes, low-confidence suggestions, duplicate/ignored suggestions, and insufficiently supported targets are filtered locally. No current call site requests these suggestions from a Worker, and the response contract cannot directly mutate the ledger.
-- `DataCleaningAssistRequestPolicy` defines the local-only request eligibility contract for future Worker-assisted suggestions. It requires explicit user opt-in, active Pro access, enough local history to make a useful aggregate payload, cooldown throttling, and failure backoff. Explicit refresh can bypass cooldown but not user opt-in, Pro access, insufficient history, or backoff. No current call site sends a request to `common-api` or any Worker endpoint.
+- `DataCleaningAssistPayloadBuilder` defines the payload contract used by the first Worker-assisted merchant alias loop. It emits merchant-key hashes, aggregate counts, category/source distributions, amount buckets, and prefix hashes; it does not include raw merchant names, notes, OCR text, transaction ids, or exact amounts.
+- `DataCleaningAssistSuggestionMapper` resolves hash-only Worker responses against local transactions before any user-readable preview exists. Unknown hashes, low-confidence suggestions, duplicate/ignored suggestions, and insufficiently supported targets are filtered locally. The response contract cannot directly mutate the ledger.
+- `DataCleaningAssistRequestPolicy` requires explicit user opt-in, active Pro access, enough local history to make a useful aggregate payload, cooldown throttling, and failure backoff. `DataCleaningSuggestionsView` now evaluates this policy and calls `DataCleaningAssistClient` when allowed. The first implementation does not yet persist successful-response cache, cooldown, or backoff state across launches.
 
 Risk: policy is useful for consistency and regression tests, but it is still client code in a public repo.
 
@@ -58,7 +64,7 @@ Risk: fine for UI, purchase messaging, and local allowance. Not sufficient for W
 - `IPadBatchImportWorkspaceView` uses `canUse(.batchCandidateImport)` to gate new multi-file batch import, drag-and-drop import, Mac import-file commands, retry, and recognition execution; existing candidates and queue review remain reachable.
 - `IPadCleaningPreviewWorkspaceView` uses `canUse(.advancedDeduplication)` for local data cleaning and deduplication UI.
 - `DataCleaningSuggestionsView` uses `canUse(.merchantNormalizationSuggestions)` for the iPhone smart cleanup suggestions page. Pro users can preview, ignore, apply, batch-apply, undo local cleanup suggestions, and review recent local application history; accepted aliases and rules remain usable after Pro expires.
-- `DataCleaningSuggestionsView` also exposes the first cloud-assist opt-in card through local `dataCleaningCloudAssistEnabled` preference and `DataCleaningAssistRequestPolicy` status messaging. This is a local authorization preference only in the current build; it does not call `common-api`, does not call a Worker endpoint, and does not upload ledger data.
+- `DataCleaningSuggestionsView` exposes the cloud-assist opt-in card through local `dataCleaningCloudAssistEnabled` preference and `DataCleaningAssistRequestPolicy` status messaging. When the policy allows a request, it sends the signed StoreKit transaction plus the hashed aggregate payload to the hotel-folio-inbox Worker's `/v1/data-cleaning-assist` endpoint. A failure keeps local suggestions available and only shows a non-blocking warning.
 
 Risk: local UI gates can be bypassed in forks. The impact for local features is limited to local experience; server-cost features must not depend on this.
 
@@ -71,7 +77,7 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 - Policy definitions and regression references use all capabilities.
 - Version docs and iteration logs reference `cloudFolioInbox`, P0 Pro gates, and planned v1.7.0 merchant normalization / data-cleaning gates.
 - UI call sites currently use `localEmailFolioScan`, `batchCandidateImport`, `advancedDeduplication`, `merchantNormalizationSuggestions`, `cloudFolioInbox`, `advancedSearch`, `subscriptionAnomalyDetection`, `monthlyExportPackage`, and `advancedRuleAutomation`.
-- Core regression references `DataCleaningAssistPayloadBuilder`, `DataCleaningAssistSuggestionMapper`, and `DataCleaningAssistRequestPolicy` only as local privacy / mapping / request-eligibility contracts; they are not wired to `common-api` or any Worker endpoint yet.
+- Core regression covers `DataCleaningAssistPayloadBuilder`, `DataCleaningAssistSuggestionMapper`, and `DataCleaningAssistRequestPolicy` as privacy, mapping, and request-eligibility contracts. App code wires them to `DataCleaningAssistClient`; the current endpoint belongs to the hotel-folio-inbox Worker, not `common-api`.
 
 ## Worker Side
 
@@ -92,6 +98,8 @@ Risk: local UI gates can be bypassed in forks. The impact for local features is 
 - Production claims set `pro_expires_at` from the verified subscription expiry and bind `user_id` to a SHA-256 hash of the App Store original transaction ID.
 - `loadActiveToken` continues to require `status = active` and rejects expired `pro_expires_at`, which is the right direction for server-side gating.
 - The current production authorization path is App Store Server API transaction verification. A separate short-lived signed entitlement token can be added later, but is not accepted by the current token claim route.
+- `POST /v1/data-cleaning-assist` independently verifies the signed StoreKit transaction before accepting the hashed aggregate payload. It returns only hash-based merchant normalization suggestions from the first explainable alias catalog and cannot directly write to the user's ledger.
+- Token claim can renew an existing active access token after successful entitlement verification, which lets the App recover from an expired credential without changing the dedicated inbox routing address. The App retries a candidate list request once after a `401` renewal.
 
 Risk: App Store Server API secrets must be configured in Cloudflare before production token claim works. Production must keep unauthenticated bootstrap disabled.
 
@@ -116,3 +124,4 @@ Risk: the column is nullable for compatibility, so production provisioning must 
 - Public source means client gates can be forked and changed.
 - Bypassing local gates affects local user experience only.
 - Cloud inbox, Worker APIs, APNs, future hosted model parsing, quotas, and other server-cost features must rely on server-side entitlement verification and service-side token state.
+- The first cloud data-cleaning assist loop is opt-in and server-verified, sends hashed aggregate features rather than raw ledger rows, and still requires local user confirmation before a rule is applied.

@@ -1,5 +1,10 @@
 # AutoLedger visionOS Spatial Design
 
+> Document status: Reference
+> Source-of-truth scope: visionOS spatial product design; current implementation lives in the target code and build evidence
+> Classification verified: 2026-07-17
+> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+
 ## Goal
 
 `GOAL-1582` 的目标不是把 visionOS 变成另一个可写账本端，而是定义 AutoLedger 在空间计算设备上的第一版展示形态：它应该比 tvOS 更沉浸、比 iPad 更轻交互、比 Widget 更完整，但仍然保持只读和低负担。

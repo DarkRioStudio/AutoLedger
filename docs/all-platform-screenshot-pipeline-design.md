@@ -1,5 +1,10 @@
 # AutoLedger All-Platform Screenshot Pipeline Design
 
+> Document status: Reference
+> Source-of-truth scope: original cross-platform screenshot pipeline design; executable behavior lives under `tools/appstore-screenshots/`
+> Classification verified: 2026-07-17
+> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+
 ## Goal
 
 `GOAL-1590` 的目标不是立刻实现全平台截图，而是给现有 `tools/appstore-screenshots/` 管线补一个明确的扩展设计，保证后续把 iPad、Mac、tvOS、visionOS 接进来时，不会破坏已经稳定的 iPhone / Watch 导出链路。

@@ -1,5 +1,10 @@
 # Shortcuts JSON 账单导入
 
+> 文档状态：Active
+> 真源范围：Shortcuts JSON 账单导入合同和用户确认边界
+> 文档分类核验：2026-07-17
+> 上位路线图：[ROADMAP.md](ROADMAP.md)
+
 更新日期：2026-06-09
 状态：v1.5.1 功能说明
 

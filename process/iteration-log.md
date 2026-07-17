@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-427 Dashboard 口径、云收件箱续签与云端别名建议）
+更新日期：2026-07-17（ITER-428 项目文档真源与路线图治理）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-428 项目文档真源与路线图治理
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Documentation / Governance
+- 类型：文档 / 治理 / 测试
+- 目标：在版本发布前建立唯一的当前状态与跨版本产品路线图真源，整理 `docs/` 文档的生命周期和入口，并让根 README、版本计划与专题文档不再争夺“当前状态”解释权。
+- 改动范围：新增根目录 `PROJECT_STATUS.md` 与 `docs/ROADMAP.md`；重建 `docs/README.md` 索引；为 `docs/*.md` 补充生命周期元数据；更新四语 README、`AGENTS.md`、Pro 专题文档与 `versions/v1.7.0-plan.md`；新增文档真源 smoke 并接入完整离线回归；同步本日志与 CHANGELOG。
+- 未改动范围：未修改 App、AutoLedgerCore、Worker、SQLite / CloudKit / D1 schema、StoreKit、ASC metadata、签名、entitlements、Xcode 工程配置、版本号、构建号、构建 tag 或线上部署；发布候选期不移动既有文档路径。
+- 完成内容：`PROJECT_STATUS.md` 成为当前发布阶段、已验证产品代码基线、发布门禁、已知风险和下一动作的唯一真源；`docs/ROADMAP.md` 成为 Now / Next / Later / Not Planned 与产品主线依赖关系的唯一真源；README 和版本计划只保留派生摘要并链接回真源。
+- 完成内容：`docs/README.md` 现在完整索引 `docs/*.md`，并以 `Canonical / Active / Reference / Historical` 标记生命周期；所有现有专题文档均在文件头声明状态、事实边界、替代真源或维护触发条件。物理归档推迟到发布后，避免发布候选期产生大规模路径噪音。
+- 完成内容：修正 Pro 文档中已经过期的“云端辅助尚未接入 / 只保存授权偏好”口径，记录当前 hash-only 商户别名建议、StoreKit 服务端权益校验、401 续签重试、本地确认和失败降级边界；不使用“零上传”等绝对隐私表述。
+- 完成内容：新增 `scripts/check_documentation_truth_smoke.py`，检查真源文件与必需章节、全部 `docs/*.md` 生命周期元数据、文档索引完整性、四语 README 真源链接、关键陈旧表述和本地 Markdown 链接，并纳入 `scripts/run_offline_regression.sh`。
+- 未完成内容：既有历史 / 参考文档尚未物理迁移到子目录，待 v1.7 发布后单独执行；当前 TestFlight 精确构建号与外部验收证据没有从本地推断，仍需以 Xcode Cloud / ASC 和真机结果回填；iCloud、四平台构建、商店与隐私等发布门禁仍按状态文档逐项关闭。
+- 测试情况：`python3 scripts/check_documentation_truth_smoke.py` PASS；`git diff --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS，且运行中再次执行文档真源 smoke PASS。`git ls-remote` 确认 `origin/main` 与远端 `xcbuild-v1.7.0` 均指向产品代码基线 `9414b91694d4`。回归仅出现既有 `AppFormatters` `nonisolated(unsafe)` 编译警告，无失败。
+- 风险与注意事项：产品代码和外部发布证据高于文档描述；旧版本计划中的带日期执行记录作为历史事实保留，不能被当作当前状态；发布门禁或产品方向变化时必须先更新各自真源，再刷新派生摘要。
+- 回滚方式：回退本轮新增真源、索引、元数据、README / 版本计划口径、文档 smoke 及日志条目；由于未移动文件和未修改产品代码，不涉及数据迁移或运行时回滚。
+- 结论：当前状态、产品路线图和专题文档生命周期已形成单一责任真源，并通过可持续自动门禁约束；本轮未改变发布候选产品行为。
+- 下一步建议：发布收口期间只在 `PROJECT_STATUS.md` 回填外部证据和门禁结果；v1.7 发布后再按 `docs/README.md` 的逻辑分类执行物理目录迁移，并单独校验外链和历史引用。
 
 ### ITER-427 Dashboard 口径、云收件箱续签与云端别名建议
 - 日期：2026-07-17
