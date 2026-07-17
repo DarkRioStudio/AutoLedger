@@ -7,7 +7,21 @@ nonisolated private let commonAPIAnalyticsLogger = Logger(
     category: "CommonAPIAnalytics"
 )
 
+enum DeveloperDiagnosticsSettings {
+    private static let performanceDiagnosticsKey = "developerPerformanceDiagnosticsEnabled"
+
+    nonisolated static var isPerformanceDiagnosticsEnabled: Bool {
+        UserDefaults.standard.bool(forKey: performanceDiagnosticsKey)
+    }
+
+    nonisolated static func setPerformanceDiagnosticsEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: performanceDiagnosticsKey)
+    }
+}
+
 enum CommonAPIAnalyticsService {
+    @MainActor private static var developerSurfaceTransitionStarts: [String: Date] = [:]
+
     nonisolated static func uploadLaunchEvent() async {
         guard allowsAnalyticsUpload else { return }
         await uploadEvent(.appLaunchPerformance, payload: [
@@ -238,6 +252,61 @@ enum CommonAPIAnalyticsService {
                 operation: operation,
                 startedAt: startedAt,
                 severity: severity(forDurationSince: startedAt)
+            )
+        }
+    }
+
+    @MainActor
+    static func beginDeveloperSurfaceTransition(surface: String) {
+        guard DeveloperDiagnosticsSettings.isPerformanceDiagnosticsEnabled else { return }
+        let safeSurface = safeEnum(surface)
+        let startedAt = Date()
+        developerSurfaceTransitionStarts[safeSurface] = startedAt
+        trackDeveloperUIResponsiveness(
+            surface: safeSurface,
+            operation: "tab_selection_settle",
+            startedAt: startedAt
+        )
+    }
+
+    @MainActor
+    static func markDeveloperSurfaceReady(surface: String) {
+        guard DeveloperDiagnosticsSettings.isPerformanceDiagnosticsEnabled else { return }
+        let safeSurface = safeEnum(surface)
+        guard let startedAt = developerSurfaceTransitionStarts.removeValue(forKey: safeSurface) else { return }
+        Task { @MainActor in
+            await Task.yield()
+            trackPerformanceDiagnostic(
+                diagnosticType: "developer_ui_phase",
+                surface: safeSurface,
+                operation: "tab_surface_appear",
+                startedAt: startedAt,
+                severity: severity(forDurationSince: startedAt),
+                result: "developer_mode",
+                diagnosticAppVersion: appVersion,
+                diagnosticBuildNumber: buildNumber
+            )
+        }
+    }
+
+    nonisolated private static func trackDeveloperUIResponsiveness(
+        surface: String,
+        operation: String,
+        startedAt: Date
+    ) {
+        Task { @MainActor in
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(120))
+            guard DeveloperDiagnosticsSettings.isPerformanceDiagnosticsEnabled else { return }
+            trackPerformanceDiagnostic(
+                diagnosticType: "developer_ui_phase",
+                surface: surface,
+                operation: operation,
+                startedAt: startedAt,
+                severity: severity(forDurationSince: startedAt),
+                result: "developer_mode",
+                diagnosticAppVersion: appVersion,
+                diagnosticBuildNumber: buildNumber
             )
         }
     }

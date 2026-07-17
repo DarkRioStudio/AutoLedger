@@ -126,6 +126,9 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const systemCrashEvents = crashEvents.filter((event) => !uncleanSessionRecoveryEvents.includes(event));
   const performanceEvents = events.filter((event) => event.eventName === "al_performance_diagnostic");
   const slowPerformanceEvents = performanceEvents.filter((event) => isSlowPerformanceEvent(event.payload));
+  const developerPerformanceEvents = performanceEvents.filter((event) => (
+    stringPayload(event.payload, "result") === "developer_mode"
+  ));
   const privacyEvents = events.filter((event) => event.eventName === "al_privacy_payload_guard_violation");
 
   return [
@@ -207,6 +210,17 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       "性能操作分布",
       performanceEvents.length,
       breakdown(performanceEvents.map((event) => diagnosticBreakdownKey(event.payload, "operation")))
+    ),
+    countMetric(
+      "developer_performance_sample_count",
+      "开发者性能样本",
+      developerPerformanceEvents.length
+    ),
+    countMetric(
+      "developer_performance_breakdown",
+      "开发者性能阶段分布",
+      developerPerformanceEvents.length,
+      breakdown(developerPerformanceEvents.map((event) => developerPerformanceBreakdownKey(event.payload)))
     ),
     countMetric(
       "privacy_payload_violation_count",
@@ -302,6 +316,16 @@ function diagnosticBreakdownKey(payload: PrimitivePayload, field: string): strin
   return sourceVersion && sourceBuild
     ? `${value}@${sourceVersion}(${sourceBuild})`
     : value;
+}
+
+function developerPerformanceBreakdownKey(payload: PrimitivePayload): string {
+  const surface = stringPayload(payload, "surface") ?? "unknown";
+  const operation = stringPayload(payload, "operation") ?? "unknown";
+  const duration = stringPayload(payload, "duration_ms_bucket") ?? "not_measured";
+  const sourceVersion = stringPayload(payload, "diagnostic_app_version");
+  const sourceBuild = stringPayload(payload, "diagnostic_build_number");
+  const source = sourceVersion && sourceBuild ? `@${sourceVersion}(${sourceBuild})` : "";
+  return `${surface}/${operation}/${duration}${source}`;
 }
 
 function isSlowPerformanceEvent(payload: PrimitivePayload): boolean {
@@ -571,9 +595,13 @@ const dashboardHTML = `<!doctype html>
       <details class="card widget" data-widget="performance-ops" open>
         <summary class="section-head">
           <h2>性能操作</h2>
-          <span>Tab / 月报 / 数据清洗</span>
+          <span>常规操作与开发者阶段 / 构建</span>
         </summary>
-        <div class="widget-body bars" id="performanceOps"></div>
+        <div class="widget-body">
+          <div class="bars" id="performanceOps"></div>
+          <div class="eyebrow">开发者模式阶段 · 页面 / 阶段 / 耗时 / 构建</div>
+          <div class="bars" id="developerPerformance"></div>
+        </div>
       </details>
       <details class="card widget" data-widget="import-errors" open>
         <summary class="section-head">
@@ -609,6 +637,8 @@ const dashboardHTML = `<!doctype html>
       "pro_gate_action_count",
       "purchase_flow_failure_rate",
       "performance_operation_top_n",
+      "developer_performance_sample_count",
+      "developer_performance_breakdown",
       "privacy_payload_violation_count",
       "currency_lookup_success_rate",
       "confirmation_discard_rate",
@@ -623,6 +653,7 @@ const dashboardHTML = `<!doctype html>
       versionBreakdown: document.getElementById("versionBreakdown"),
       crashDiagnostics: document.getElementById("crashDiagnostics"),
       performanceOps: document.getElementById("performanceOps"),
+      developerPerformance: document.getElementById("developerPerformance"),
       importErrors: document.getElementById("importErrors"),
       privacyBlocks: document.getElementById("privacyBlocks"),
       privacy: document.getElementById("privacy"),
@@ -664,6 +695,7 @@ const dashboardHTML = `<!doctype html>
       renderBars(els.versionBreakdown, objectEntries(data.appVersionBreakdown || {}));
       renderBars(els.crashDiagnostics, objectEntries((byID.get("crash_diagnostic_count") || {}).breakdown || {}));
       renderBars(els.performanceOps, objectEntries((byID.get("performance_operation_top_n") || {}).breakdown || {}));
+      renderBars(els.developerPerformance, objectEntries((byID.get("developer_performance_breakdown") || {}).breakdown || {}));
       renderBars(els.importErrors, objectEntries((byID.get("import_error_code_top_n") || {}).breakdown || {}));
       renderBars(els.privacyBlocks, objectEntries((byID.get("privacy_payload_violation_count") || {}).breakdown || {}));
       renderPrivacy(data);

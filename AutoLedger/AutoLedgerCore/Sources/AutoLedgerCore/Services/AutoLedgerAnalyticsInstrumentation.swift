@@ -283,6 +283,9 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
               $0.stringPayload("signal_source") == "session_marker")
         }
         let performanceEvents = events(named: .performanceDiagnostic)
+        let developerPerformanceEvents = performanceEvents.filter {
+            $0.stringPayload("result") == "developer_mode"
+        }
         let slowPerformanceEvents = performanceEvents.filter { event in
             switch event.stringPayload("duration_ms_bucket") {
             case "3s_10s", "10s_30s", "over_30s":
@@ -355,6 +358,15 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 "performance_operation_top_n",
                 value: performanceEvents.count,
                 breakdown: diagnosticBreakdown(performanceEvents, field: "operation")
+            ),
+            countMetric(
+                "developer_performance_sample_count",
+                value: developerPerformanceEvents.count
+            ),
+            countMetric(
+                "developer_performance_breakdown",
+                value: developerPerformanceEvents.count,
+                breakdown: developerPerformanceBreakdown(developerPerformanceEvents)
             ),
             countMetric(
                 "privacy_payload_violation_count",
@@ -452,6 +464,22 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 key = value
             }
             result[key, default: 0] += 1
+        }
+    }
+
+    private func developerPerformanceBreakdown(
+        _ events: [AutoLedgerAnalyticsEvent]
+    ) -> [String: Int] {
+        events.reduce(into: [:]) { result, event in
+            let surface = event.stringPayload("surface") ?? "unknown"
+            let operation = event.stringPayload("operation") ?? "unknown"
+            let duration = event.stringPayload("duration_ms_bucket") ?? "not_measured"
+            let sourceVersion = event.stringPayload("diagnostic_app_version")
+            let sourceBuild = event.stringPayload("diagnostic_build_number")
+            let source = sourceVersion.flatMap { version in
+                sourceBuild.map { build in "@\(version)(\(build))" }
+            } ?? ""
+            result["\(surface)/\(operation)/\(duration)\(source)", default: 0] += 1
         }
     }
 
@@ -628,6 +656,8 @@ public enum AutoLedgerAnalyticsCatalog {
         metric("crash_diagnostic_count", "MetricKit crash / hang / 异常退出信号按诊断类型聚合。", [.crashDiagnostic], "任何新增崩溃信号都进入发布前 review。"),
         metric("slow_operation_count", "关键操作超过 3 秒或系统诊断标记 warning / critical 的次数。", [.performanceDiagnostic], "高频慢操作先做 Instruments 和局部优化。"),
         metric("performance_operation_top_n", "关键操作耗时事件按 operation 枚举聚合。", [.performanceDiagnostic], "用于判断用户主要卡在哪些路径。"),
+        metric("developer_performance_sample_count", "开发者模式主动采集的页面阶段性能样本。", [.performanceDiagnostic], "仅用于预发布真机定点分析，不代表普通用户总体分布。"),
+        metric("developer_performance_breakdown", "开发者模式样本按页面、阶段、耗时 bucket 和源构建聚合。", [.performanceDiagnostic], "用于定位 Tab 选择提交与目标页面出现之间的延迟阶段。"),
         metric("privacy_payload_violation_count", "被 guard 拦截的 forbidden field 次数。", [.privacyPayloadGuardViolation], "非零即阻塞 marketing。")
     ]
 

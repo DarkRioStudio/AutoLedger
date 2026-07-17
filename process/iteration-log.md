@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-16（ITER-420 账本 SQLite 后台水合）
+更新日期：2026-07-17（ITER-423 开发者性能埋点 TestFlight 构建触发）
 
 ## 记录规则
 
@@ -43,6 +43,57 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-423 开发者性能埋点 TestFlight 构建触发
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening / TestFlight Trigger
+- 类型：发布 / 构建 / 治理
+- 目标：把 ITER-421 iCloud 冲突复活修复与 ITER-422 开发者模式性能阶段埋点推送到主线，并移动现有 `xcbuild-v1.7.0` tag 触发下一次 Xcode Cloud 四平台构建。
+- 改动范围：提交当前已验证的 App / Core / Common API / 回归 / 文档变更，推送 `main`，强制更新唯一构建触发 tag，并核对远端 tag 解引用目标。
+- 未改动范围：未修改 `MARKETING_VERSION`、`CURRENT_PROJECT_VERSION`、Bundle ID、签名、entitlement、CloudKit / SQLite / D1 schema、StoreKit、ASC metadata 或 Xcode Cloud workflow；未删除任何 Worker，也未移动内部发布版本 tag。
+- 完成内容：实现提交包含“保留本机”后旧冲突标记不再复活、开发者模式 Tab 选择 / surface appear / 主线程 settle 埋点、现有 AutoLedger Dashboard 性能卡片聚合，以及对应离线与 Worker 回归；Common API production 已在上一轮提前部署，App 客户端通过本次构建进入 TestFlight 验收。
+- 测试情况：提交前 `git diff --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；无签名 iOS generic Debug workspace build PASS；Common API Wrangler types、TypeScript 与 51 项 Vitest 合同测试 PASS；Worker production health 与 Dashboard Access 边界 smoke PASS。推送后以 `git ls-remote` 验证 `origin/main` 与远端 `xcbuild-v1.7.0` 指向同一最终提交。
+- 风险与注意事项：tag 推送只代表 Xcode Cloud 已收到构建触发，不代表四平台 Archive、TestFlight processing 或真机验收已经完成。下一构建仍需先确认 Xcode Cloud 状态，再按 iPhone → iPad / Mac / 性能的既定顺序验证；不能以 Worker 已上线替代 App 埋点客户端进入 TestFlight。
+- 回滚方式：若构建失败，保留当前 main 证据并按失败日志做最小修复后再次移动同一 tag；如必须撤销功能，使用新 revert 提交而非重写 main 历史。
+- 结论：当前实现已进入主线和 Xcode Cloud 构建触发基线，等待新构建完成后采集真实开发者模式性能阶段样本。
+- 下一步建议：先确认四平台 Xcode Cloud 构建结果；新 TestFlight 可用后先在 iPhone 开启开发者模式完成固定 Tab 切换，再在 iPad 复测重庆 Moxy 冲突与相同切换路径，最后补 Mac / Instruments。
+
+### ITER-422 开发者模式性能阶段埋点与 Worker 汇总
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance Acceptance / Observability
+- 类型：性能 / 可观测性 / 测试 / 部署
+- 目标：在开发者模式开启时补齐 Tab 选择、目标页面出现和主线程短时 settle 的离散耗时证据，通过现有匿名 analytics Worker 聚合，继续分析 TS 115 上“无明显 hang / hitch 但切换仍有 1–2 秒体感”的来源。
+- 改动范围：App 开发者诊断开关、首页 Tab 阶段埋点、Core analytics 聚合、Common API dashboard 聚合与合同测试、版本记录；只读盘点 AutoLedger 现有 Cloudflare Worker 职责。
+- 未改动范围：普通用户不启用增强阶段埋点；未上传账本、金额、商户、酒店、截图、PDF、OCR、邮箱、Apple ID、设备标识或用户级轨迹；未修改 SQLite / CloudKit / D1 schema、StoreKit、entitlement、ASC metadata、Xcode Cloud workflow 或构建 tag；未删除或修改 `autoledger-hotel-folio-inbox*` 与 `autoledger-bill-parser` Worker。
+- 完成内容：设置页连续点击版本号解锁开发者模式时，持久化开启“增强性能诊断”；Debug 页面提供显式开关。开启后，首页 Tab 选择记录 `tab_selection_settle`，目标页面 `onAppear` 记录 `tab_surface_appear`，并在一次主线程 yield 与 120 ms settle 窗口后复用 `al_performance_diagnostic` 上传离散 duration bucket。关闭开发者模式时不产生这些增强事件。
+- 完成内容：Core 与 Common API 新增 `developer_performance_sample_count` 和 `developer_performance_breakdown`，按 `surface / operation / duration bucket / app version(build)` 聚合；开发者阶段明细并入现有 AutoLedger Dashboard 的“性能操作”卡片，与常规性能操作共同展示，不建立第二套 Dashboard 或独立性能卡片，也不返回原始事件行或 payload。
+- 完成内容：Cloudflare 盘点确认性能 analytics 应继续复用 `darkrio-common-api-production`，而不是图片解析或酒店收件箱 Worker。三个 folio Worker 分别是 dev / staging / production 隔离环境，拥有独立 D1、R2 与 Queue；production 还承载 `folio@getautoledger.app` Email Routing、云候选、Pro entitlement、App Store Server Notifications、APNs Queue 和定时补偿，因此本轮全部保留。`autoledger-bill-parser` 仅有 OpenAI 图片解析 fetch handler，当前 App / 仓库无调用入口，唯一部署已 38 天未更新；Cloudflare 面板过去 24 小时为 8 次调用、0 子请求、0 错误，先列为待下线候选，不在缺少长期零流量证据时直接删除。
+- 测试情况：`git diff --check` PASS；`cd tools/worker/common-api && npm run check` PASS，覆盖 Wrangler types、TypeScript 与 51 个 Vitest 合同测试；完整 `bash scripts/run_offline_regression.sh` PASS；无签名 iOS generic Debug workspace build PASS。最终部署 staging Version ID `fc204ddf-3285-4ff6-8f37-015b5b86adc4` 与 production Version ID `9906c708-332a-4abf-bb75-bf9395c3b35c`；staging 合成事件返回 202、D1 可查询，Dashboard 返回 `developer_performance_sample_count=1` 与 `tab_hotel_stays/tab_surface_appear/1s_3s@1.6.0(422)`，页面 smoke 确认只有 1 个现有 `performance-ops` 卡片、0 个独立 `developer-performance` 卡片且开发者阶段子区域存在；production health / manifest 返回 200，未保护 dashboard host 返回 403，受 Access 保护的 dashboard data 未登录返回 302。production / staging folio health 均返回 200。
+- 风险与注意事项：`onAppear` 代表目标页面进入视图树，不等同于列表数据完全绘制；`tab_selection_settle` 的 120 ms 窗口用于区分短时主线程忙碌，不是精确帧级 trace。聚合结果必须继续与 Instruments、MetricKit source build 和用户体感对照，不能仅凭 bucket 推断根因。bill-parser 的少量调用可能是公开 workers.dev 探测，也可能来自仓库外旧客户端，删除前仍需更长窗口或先禁用路由观察。
+- 回滚方式：关闭或移除 `developerPerformanceDiagnosticsEnabled`、首页 Tab modifier 与两项聚合指标即可；Worker dashboard 回退到上一版本不影响既有 analytics 表和事件写入。三个 folio Worker 与 bill-parser 本轮没有状态变更，无需资源回滚。
+- 结论：开发者模式性能阶段埋点和 Common API Worker 聚合已完成代码、测试、staging 落库聚合与 production 发布闭环；folio 三环境继续保留，bill-parser 暂不删除。下一步用下一 TestFlight 的真实开发者模式样本定位 Tab 体感阶段。
+- 下一步建议：在 iPhone / iPad 开启开发者模式后按固定顺序各切换 10 轮首页、账本、月报、酒店、设置，再按 source build 对照 `tab_selection_settle` 与 `tab_surface_appear` 分布；如 surface appear 快而 settle 慢，优先查主线程工作，如两者都快但仍有体感延迟，继续用 SwiftUI trace 检查绘制与状态提交。
+
+### ITER-421 iCloud 冲突复活修复与 iPad TS 115 复测
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Hardening / Cloud Sync / Performance Acceptance
+- 类型：Bugfix / 真机测试 / 回归
+- 目标：修复关联重庆 Moxy 酒店记录的账单在选择“保留本机”后仍反复出现同步冲突，并以已解锁 iPad mini 6 复核 TS 115 Tab 切换体感。
+- 改动范围：SQLite 远端批量合并的最近编辑保护、离线同步回归、版本记录；实体 iPad TS 115 的 Time Profiler 与 Animation Hitches 只读采样。
+- 未改动范围：未修改重庆 Moxy 的酒店或账单业务字段，未删除本地 / CloudKit 数据，未修改 SQLite / CloudKit schema、同步 record type / field / index、StoreKit、Worker、entitlement、ASC metadata、Xcode Cloud workflow 或构建 tag；未增加“使用 iCloud 版本”冲突候选存储与 UI。
+- 完成内容：定位到冲突 UI 实际对应酒店记录关联的 `Transaction`。用户选择保留本机后，本地冲突标记会清理、修订号递增并进入最近编辑保护；但旧保护只比较账单内容和删除时间，当远端账单内容相同而仍携带 `conflictPendingReview` 时，正式推送完成前的一次拉取会把旧冲突标记重新写回本地。
+- 完成内容：最近编辑保护窗口内，只要远端记录来自另一设备，就统一保留刚由本机确认的版本，避免内容相同的旧冲突元数据重新污染本地；保护窗口结束后仍继续使用既有时间戳、修订号、设备和冲突决策，不改变普通同步口径。
+- 完成内容：离线回归新增“本地冲突已保留并清理、远端同内容但旧 conflict 标记再次到达”的场景，验证结果为 `keptLocal=1`、`conflicts=0` 且本地状态保持 `clean`。完整离线回归通过。
+- 完成内容：iPad mini 6 已确认安装 `1.6.0 (115)`。production build 115 匿名数据中酒店 Tab 有 2 次、首页 Tab 有 1 次落入 `1s–3s`；实体 iPad 30 秒 Time Profiler 固定路径没有超过 250 ms 的 potential hang，45 秒 Animation Hitches 两轮切换没有系统 hitch，只有一帧 33.46 ms（render 9.41 ms、GPU 0.11 ms）。SwiftUI 模板按 TS 进程附加失败，全系统采样又因设备断开失败，因此不以当前 trace 宣称 Tab 已流畅。
+- 未完成内容：TS 115 仍只有“保留本机”，没有持久化云端候选、字段对比或“使用 iCloud 版本”；冲突复活修复需进入下一 TestFlight 才能用重庆 Moxy 真数据验收。Tab 体感仍卡，需要开发签名包 SwiftUI trace 或补目标页面 ready 埋点，区分首次 View 实例化、TabView 状态提交和数据准备延迟。
+- 测试情况：`git diff --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS；无签名 iOS generic Debug workspace build PASS；iPad TS 115 Time Profiler 与 Animation Hitches 结果如上。
+- 风险与注意事项：保护窗口会暂时忽略来自另一设备的远端版本，这是用户刚明确选择“保留本机”的预期语义；若用户需要保留云端版本，TS 115 不具备安全入口，不应通过删除本地记录或盲覆盖模拟。当前 Instruments 未捕获 hang 不等于用户体感问题不存在。
+- 回滚方式：恢复 `applyRemoteSyncRecord` 中仅在内容 / 删除状态不同时保护本地的旧条件，并移除对应回归与文档；不涉及 schema 或远端数据回滚。
+- 结论：冲突复活竞态已完成最小代码修复和离线验证；iPad 证据排除了明显主线程 hang / GPU hitch，但没有解释 Tab 的 1–2 秒体感，性能与真数据冲突验收均保持 Acceptance Pending。
+- 下一步建议：生成下一 TestFlight，用重庆 Moxy 验证“保留本机 → 推送 → 拉取”不再复活；另以开发签名包采集 SwiftUI trace并结合 ITER-422 页面阶段诊断，再决定 TabView / 页面快照的定点优化。
 
 ### ITER-420 账本 SQLite 后台水合
 - 日期：2026-07-16

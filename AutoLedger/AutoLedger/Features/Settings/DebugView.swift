@@ -8,6 +8,7 @@ struct DebugView: View {
     @State private var selectedDataTab: DataTab = .transactions
     @State private var showShareSheet = false
     @State private var diagnosticZipURL: URL?
+    @State private var performanceDiagnosticsEnabled = DeveloperDiagnosticsSettings.isPerformanceDiagnosticsEnabled
 
     enum DataTab: String, CaseIterable, Identifiable {
         case transactions = "交易"
@@ -21,6 +22,7 @@ struct DebugView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 overviewCard
+                performanceDiagnosticsCard
                 systemInfoCard
                 supportDebugCard
                 gemmaMetricsCard
@@ -105,6 +107,26 @@ struct DebugView: View {
                 ShareSheet(activityItems: [url])
             }
         }
+    }
+
+    private var performanceDiagnosticsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("增强性能诊断", isOn: $performanceDiagnosticsEnabled)
+                .font(.headline)
+                .tint(AppTheme.accent)
+                .onChange(of: performanceDiagnosticsEnabled) { _, enabled in
+                    DeveloperDiagnosticsSettings.setPerformanceDiagnosticsEnabled(enabled)
+                }
+
+            Text("开启后会把 Tab 选择提交、目标页面出现和主线程 settle 的离散耗时区间发送到隐私安全运营面板，用于定位真机卡顿。不会上传账本、金额、商户、酒店、截图、PDF、OCR 文本或设备标识。")
+                .font(.caption)
+                .foregroundStyle(AppTheme.mutedInk)
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(AppTheme.card)
+        )
     }
 
     private var overviewCard: some View {

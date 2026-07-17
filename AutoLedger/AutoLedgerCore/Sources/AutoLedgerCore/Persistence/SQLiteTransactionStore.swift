@@ -1532,8 +1532,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
 
         if protectLocal,
-           localRecord.metadata.deviceID != remote.metadata.deviceID,
-           (localRecord.transaction != remote.transaction || localRecord.metadata.deletedAt != remote.metadata.deletedAt) {
+           localRecord.metadata.deviceID != remote.metadata.deviceID {
             return .keptLocal
         }
 

@@ -182,6 +182,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "crash_diagnostic_count",
             "slow_operation_count",
             "performance_operation_top_n",
+            "developer_performance_sample_count",
+            "developer_performance_breakdown",
             "privacy_payload_violation_count"
         ]))
     }
@@ -280,6 +282,20 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "result": .string("completed"),
             "error_code": .string("none")
         ])
+        try recorder.record(.performanceDiagnostic, payload: [
+            "event_id": .string("perf-developer-1"),
+            "app_version": .string("1.6.0"),
+            "diagnostic_type": .string("developer_ui_phase"),
+            "surface": .string("tab_hotel_stays"),
+            "operation": .string("tab_surface_appear"),
+            "duration_ms_bucket": .string("1s_3s"),
+            "count_bucket": .string("1"),
+            "severity": .string("info"),
+            "result": .string("developer_mode"),
+            "error_code": .string("none"),
+            "diagnostic_app_version": .string("1.6.0"),
+            "diagnostic_build_number": .string("161")
+        ])
 
         let snapshot = recorder.makeMinimalDashboardSnapshot()
 
@@ -291,6 +307,11 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.breakdown["crash@1.6.0(109)"], 1)
         XCTAssertEqual(snapshot.metric(id: "slow_operation_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "performance_operation_top_n")?.breakdown["month_switch"], 1)
+        XCTAssertEqual(snapshot.metric(id: "developer_performance_sample_count")?.value, 1)
+        XCTAssertEqual(
+            snapshot.metric(id: "developer_performance_breakdown")?.breakdown["tab_hotel_stays/tab_surface_appear/1s_3s@1.6.0(161)"],
+            1
+        )
         XCTAssertEqual(snapshot.metric(id: "privacy_payload_violation_count")?.value, 0)
         XCTAssertEqual(snapshot.metric(id: "feature_surface_open_count")?.breakdown["tab_inbox"], 1)
         XCTAssertEqual(snapshot.metric(id: "import_error_code_top_n")?.breakdown["none"], 1)

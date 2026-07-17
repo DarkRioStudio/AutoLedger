@@ -5501,6 +5501,36 @@ struct OfflineRegression {
             "SQLite conflict resolver removes conflict from review list"
         )
 
+        guard let resolvedLocalConflictRecord = resolvedConflictRecord,
+              let resolvedLocalConflictMetadata = resolvedConflictMetadata else {
+            reporter.check(false, "SQLite resolved conflict remains available for protected pull regression")
+            return
+        }
+        let staleRemoteConflictMarker = TransactionSyncRecord(
+            transaction: resolvedLocalConflictRecord.transaction,
+            metadata: TransactionSyncMetadata(
+                transactionID: conflictID,
+                updatedAt: resolvedLocalConflictMetadata.updatedAt.addingTimeInterval(-1),
+                syncRevision: max(0, resolvedLocalConflictMetadata.syncRevision - 1),
+                deviceID: "remote-device",
+                idempotencyKey: "transaction:\(conflictID.uuidString)",
+                conflictState: .conflictPendingReview
+            )
+        )
+        let protectedConflictSummary = try store.applyRemoteSyncRecords(
+            [staleRemoteConflictMarker],
+            protectedLocalTransactionIDs: [conflictID]
+        )
+        let metadataAfterProtectedConflictPull = try store.loadTransactionSyncMetadata(transactionID: conflictID)
+        reporter.check(
+            protectedConflictSummary.keptLocal == 1 && protectedConflictSummary.conflicts == 0,
+            "SQLite protected conflict resolution rejects stale remote conflict marker"
+        )
+        reporter.check(
+            metadataAfterProtectedConflictPull?.conflictState == .clean,
+            "SQLite protected conflict resolution stays clean until local winner is pushed"
+        )
+
         let localEditID = UUID(uuidString: "00000000-0000-0000-0000-000000151503") ?? UUID()
         let localMetroOriginal = Transaction(
             id: localEditID,

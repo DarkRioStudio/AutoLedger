@@ -33,8 +33,9 @@ struct HomeView: View {
     }
 
     private var tabs: some View {
-        TabView(selection: $navigationState.selectedHomeTab) {
+        TabView(selection: developerObservedTabSelection) {
             InboxView(selectedTab: $navigationState.selectedHomeTab)
+                .developerPerformanceSurfaceReady("tab_inbox")
                 .tabItem {
                     Label("tab.inbox", systemImage: "tray.full.fill")
                 }
@@ -43,29 +44,46 @@ struct HomeView: View {
             LedgerView {
                 navigationState.openLedgerProfiles()
             }
+                .developerPerformanceSurfaceReady("tab_ledger")
                 .tabItem {
                     Label("tab.ledger", systemImage: "list.bullet.rectangle.portrait.fill")
                 }
                 .tag(AutoLedgerHomeTab.ledger.rawValue)
 
             HotelStayWorkspaceView()
+                .developerPerformanceSurfaceReady("tab_hotel_stays")
                 .tabItem {
                     Label("hotel_stay.list.title", systemImage: "building.2.fill")
                 }
                 .tag(AutoLedgerHomeTab.hotelStays.rawValue)
 
             ReportView()
+                .developerPerformanceSurfaceReady("tab_report")
                 .tabItem {
                     Label("tab.report", systemImage: "chart.bar.fill")
                 }
                 .tag(AutoLedgerHomeTab.report.rawValue)
 
             SettingsView()
+                .developerPerformanceSurfaceReady("tab_settings")
                 .tabItem {
                     Label("tab.settings", systemImage: "gearshape.fill")
                 }
                 .tag(AutoLedgerHomeTab.settings.rawValue)
         }
+    }
+
+    private var developerObservedTabSelection: Binding<Int> {
+        Binding(
+            get: { navigationState.selectedHomeTab },
+            set: { newValue in
+                guard newValue != navigationState.selectedHomeTab else { return }
+                CommonAPIAnalyticsService.beginDeveloperSurfaceTransition(
+                    surface: analyticsSurfaceName(for: newValue)
+                )
+                navigationState.selectedHomeTab = newValue
+            }
+        )
     }
 
     @MainActor
@@ -106,6 +124,22 @@ struct HomeView: View {
         case .none:
             return "tab_unknown"
         }
+    }
+}
+
+private struct DeveloperPerformanceSurfaceReadyModifier: ViewModifier {
+    let surface: String
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            CommonAPIAnalyticsService.markDeveloperSurfaceReady(surface: surface)
+        }
+    }
+}
+
+private extension View {
+    func developerPerformanceSurfaceReady(_ surface: String) -> some View {
+        modifier(DeveloperPerformanceSurfaceReadyModifier(surface: surface))
     }
 }
 

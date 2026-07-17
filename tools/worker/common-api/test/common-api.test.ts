@@ -571,6 +571,16 @@ describe("common api worker contract", () => {
         received_at: "2026-07-08T08:13:19.470Z"
       },
       {
+        event_name: "al_performance_diagnostic",
+        event_id: "perf-developer-tab-ready",
+        app_version: "1.6.0",
+        build_number: "161",
+        os_major: "27",
+        device_class: "ios",
+        payload_json: JSON.stringify({ diagnostic_type: "developer_ui_phase", surface: "tab_hotel_stays", operation: "tab_surface_appear", duration_ms_bucket: "1s_3s", severity: "info", result: "developer_mode", diagnostic_app_version: "1.6.0", diagnostic_build_number: "161" }),
+        received_at: "2026-07-08T08:13:29.470Z"
+      },
+      {
         event_name: "al_privacy_payload_guard_violation",
         event_id: "privacy-violation",
         app_version: "1.6.0",
@@ -603,7 +613,7 @@ describe("common api worker contract", () => {
       protection: "cloudflare_access",
       emailHeaderTrustedOnlyOnProtectedHosts: true
     });
-    expect(byID.get("total_events_count")).toMatchObject({ value: 11, unit: "count" });
+    expect(byID.get("total_events_count")).toMatchObject({ value: 12, unit: "count" });
     expect(byID.get("total_events_count")).toMatchObject({ label: "已接收匿名事件总数" });
     expect(byID.get("feature_surface_open_count")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("feature_surface_open_count")).toMatchObject({ label: "功能入口打开分布" });
@@ -618,8 +628,11 @@ describe("common api worker contract", () => {
     expect(byID.get("crash_diagnostic_count")).toMatchObject({ value: 1, unit: "count" });
     expect((byID.get("crash_diagnostic_count")?.breakdown as Record<string, number>)["crash@1.6.0(109)"]).toBe(1);
     expect(byID.get("slow_operation_count")).toMatchObject({ value: 1, unit: "count" });
-    expect(byID.get("performance_operation_top_n")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("performance_operation_top_n")).toMatchObject({ value: 2, unit: "count" });
     expect((byID.get("performance_operation_top_n")?.breakdown as Record<string, number>)["system_hang@1.6.0(109)"]).toBe(1);
+    expect(byID.get("developer_performance_sample_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("developer_performance_breakdown")).toMatchObject({ value: 1, unit: "count" });
+    expect((byID.get("developer_performance_breakdown")?.breakdown as Record<string, number>)["tab_hotel_stays/tab_surface_appear/1s_3s@1.6.0(161)"]).toBe(1);
     expect(byID.get("privacy_payload_violation_count")).toMatchObject({ value: 1, unit: "count" });
     expect(body.privacy).toMatchObject({
       summary: "此面板只展示聚合计数和比率，不返回原始事件行或 payload JSON。"
@@ -714,6 +727,9 @@ describe("common api worker contract", () => {
     expect(html).toContain("事件分布");
     expect(html).toContain("版本分布");
     expect(html).toContain("隐私边界");
+    expect(html).toContain("性能操作");
+    expect(html).toContain("开发者模式阶段 · 页面 / 阶段 / 耗时 / 构建");
+    expect(html).not.toContain('data-widget="developer-performance"');
     expect(html).toContain("dashboard.darkrio326.top");
     expect(html).toContain("/dashboard/data");
     expect(html).not.toContain("AutoLedger Ops Dashboard");

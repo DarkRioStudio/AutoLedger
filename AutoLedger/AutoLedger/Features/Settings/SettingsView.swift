@@ -14,6 +14,7 @@ struct SettingsView: View {
 
     init(topContentPadding: CGFloat = 20) {
         self.topContentPadding = topContentPadding
+        _showDebugUnlocked = State(initialValue: DeveloperDiagnosticsSettings.isPerformanceDiagnosticsEnabled)
     }
 
     private var appVersion: String {
@@ -270,6 +271,7 @@ struct SettingsView: View {
                             versionTapCount += 1
                             if versionTapCount >= 5 && !showDebugUnlocked {
                                 showDebugUnlocked = true
+                                DeveloperDiagnosticsSettings.setPerformanceDiagnosticsEnabled(true)
                                 versionTapCount = 0
                             }
                         }
