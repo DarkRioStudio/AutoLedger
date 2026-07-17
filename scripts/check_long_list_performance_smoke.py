@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift"
+LEDGER_STORE = ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift"
 DELETED_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Ledger/DeletedTransactionsView.swift"
 HOTEL_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Hotel/HotelStayArchiveView.swift"
 SUBSCRIPTION_VIEW = ROOT / "AutoLedger/AutoLedger/Features/Settings/SubscriptionListView.swift"
@@ -21,7 +22,16 @@ REQUIRED_SNIPPETS = {
         "ForEach(results)",
         ".refreshable",
         ".navigationSplitViewColumnWidth(min: 360, ideal: 430, max: 520)",
-        "reconcileSelection(with: visibleIDs)",
+        "reconcileSelection(with: store.visibleTransactions.map(\\.id))",
+        ".onChange(of: store.visibleTransactionsRevision)",
+    ],
+    LEDGER_STORE: [
+        "private struct VisibleTransactionsCacheKey: Equatable",
+        "private struct HotelStayListSnapshotCacheKey: Equatable",
+        "visibleTransactionsRevision &+= 1",
+        "if let visibleTransactionsCache, visibleTransactionsCache.key == key",
+        "func hotelStayListSnapshot(ledgerID: String?) -> HotelStayListSnapshot",
+        "if let hotelStayListSnapshotCache, hotelStayListSnapshotCache.key == key",
     ],
     DELETED_VIEW: [
         "List {",
@@ -32,11 +42,13 @@ REQUIRED_SNIPPETS = {
     HOTEL_VIEW: [
         "List(selection: $selectedRecordID)",
         "private var recordByID: [UUID: HotelStayRecord]",
-        "let recordsByID = recordByID",
+        "let resolvedRecordsByID = recordByID",
+        "let rowIDs = resolvedSnapshot.rows.map(\\.id)",
         "recordsByID[row.id]",
         "ForEach(snapshot.rows)",
         "ForEach(pendingDrafts)",
         ".navigationSplitViewColumnWidth(min: 340, ideal: 420, max: 520)",
+        "reconcileSelection(rowIDs: newRowIDs)",
     ],
     SUBSCRIPTION_VIEW: [
         "List(selection: $navigationState.selectedSubscriptionID)",
@@ -56,6 +68,7 @@ REQUIRED_SNIPPETS = {
         "LazyVStack(alignment: .leading, spacing: 12)",
         "ForEach(DataCleaningPreviewKind.allCases, id: \\.rawValue)",
         "ForEach(kindItems)",
+        "listSnapshot: store.hotelStayListSnapshot(ledgerID: ledgerID)",
     ],
     PERFORMANCE_FIXTURE: [
         "static func makeLedgerStoreIfRequested() -> LedgerStore? {\n        #if DEBUG",
@@ -65,6 +78,9 @@ REQUIRED_SNIPPETS = {
 }
 
 FORBIDDEN_SNIPPETS = {
+    LEDGER_VIEW: [
+        ".onChange(of: store.visibleTransactions.map(\\.id))",
+    ],
     HOTEL_VIEW: [
         "records.first(where:",
     ],

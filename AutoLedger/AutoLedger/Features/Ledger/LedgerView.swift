@@ -215,8 +215,8 @@ struct LedgerView: View {
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
             consumePendingNewTransactionIfNeeded()
         }
-        .onChange(of: store.visibleTransactions.map(\.id)) { _, visibleIDs in
-            reconcileSelection(with: visibleIDs)
+        .onChange(of: store.visibleTransactionsRevision) { _, _ in
+            reconcileSelection(with: store.visibleTransactions.map(\.id))
         }
         .onChange(of: horizontalSizeClass) { _, _ in
             ensurePersistentDetailSelectionIfNeeded()

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-424 性能卡片标题样式统一）
+更新日期：2026-07-17（ITER-425 账本与酒店 Tab 派生结果复用）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-425 账本与酒店 Tab 派生结果复用
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance Acceptance / Tab Switching
+- 类型：性能 / 重构 / 测试
+- 目标：针对 TS 116 开发者阶段样本中酒店 Tab 集中落入 `1s–3s`、账本仍有卡顿体感的问题，减少 Tab 切换和 SwiftUI 重绘时重复执行的全量内存过滤、排序、格式化与 ID 构造，同时保持现有数据和交互语义。
+- 改动范围：`LedgerStore` 当前账本交易与酒店列表 snapshot 缓存、账本选择变更监听、酒店列表派生结果传递、长列表静态门禁、离线回归与版本记录。
+- 未改动范围：未修改 SQLite 查询、初始后台水合、CloudKit、酒店 / 账本模型、搜索和排序口径、列表首屏数量、StoreKit、Worker、analytics 事件、ASC metadata 或 Xcode Cloud workflow。
+- 完成内容：`visibleTransactions` 现按交易修订号、选中账本与“全部账本”状态复用结果；交易或账本范围变化时修订号自动递增。`LedgerView` 不再在每次 `body` 更新时为 `.onChange` 全量生成 ID，而只在可见交易修订号变化后重建一次选择 ID。
+- 完成内容：酒店列表 snapshot 现按酒店记录修订号、账本范围和 Locale 缓存；`HotelStayWorkspaceView` 将缓存 snapshot 传入列表，同一次 SwiftUI 更新只解析一份 snapshot、待处理草稿和记录 ID 索引。酒店记录新增、编辑或删除后修订号变化会自动失效缓存。
+- 完成内容：未直接引入 SQLite 分页。当前 Tab 切换使用冷启动时已经后台水合到内存的集合；先消除重复派生计算，可避免分页同时牵连高级搜索、月报、CloudKit 合并和详情选择。是否继续做“首批 N 条 + 增量扩容”由下一 TestFlight 阶段样本和 Instruments 决定。
+- 未完成内容：尚未取得包含本轮优化的真机阶段样本，不能以构建和离线回归宣称 Tab 已流畅。
+- 测试情况：长列表静态门禁 PASS；完整 `bash scripts/run_offline_regression.sh` PASS，新增酒店 snapshot 重复读取一致与记录更新后缓存失效回归；无签名 iOS generic Debug workspace build PASS。首次编译暴露 Xcode 26 beta Swift 6.4 在 `@ViewBuilder` 中对 `@Binding` 同名可选绑定的编译器断言，改为显式 `selectedID` 局部变量后构建通过。
+- 风险与注意事项：缓存保存数组和展示 snapshot，会增加少量内存引用；数组使用 Swift Copy-on-Write，缓存只保留当前范围一份结果。Locale 纳入酒店缓存键，避免地区格式变化继续使用旧金额文本。实际收益仍需按同一设备、同一数据和相同路径比较。
+- 回滚方式：移除两个 cache key / cache value / revision，恢复 `visibleTransactions` 直接过滤、酒店列表直接生成 snapshot，以及账本基于完整 ID 数组的 `.onChange`。
+- 结论：账本与酒店 Tab 的重复派生计算已完成最小降耗并通过本地门禁，状态为 `Acceptance Pending`，等待下一 TestFlight 真机对照。
+- 下一步建议：iPhone 开发者模式下按“首页 → 账本 → 酒店 → 设置”固定顺序往返 10 轮，区分首次进入和重复切回；重点比较 `tab_ledger` / `tab_hotel_stays` 的 `tab_surface_appear` 与 `tab_selection_settle`。若酒店仍两阶段都慢，再用 SwiftUI / Time Profiler 定位 `NavigationSplitView` 建树和行格式化；若账本仅大数据量慢，再设计有搜索兼容的增量窗口。
 
 ### ITER-424 性能卡片标题样式统一
 - 日期：2026-07-17

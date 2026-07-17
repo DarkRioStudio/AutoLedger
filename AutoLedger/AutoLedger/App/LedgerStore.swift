@@ -106,6 +106,18 @@ private struct MonthlyAnomalyCacheKey: Hashable {
     let thresholdPercent: Double
 }
 
+private struct VisibleTransactionsCacheKey: Equatable {
+    let revision: UInt64
+    let ledgerID: String
+    let showsAllLedgers: Bool
+}
+
+private struct HotelStayListSnapshotCacheKey: Equatable {
+    let revision: UInt64
+    let ledgerID: String?
+    let localeIdentifier: String
+}
+
 struct ReceiptImportReviewDraft: Identifiable {
     let id = UUID()
     let receipt: ImportedReceipt
@@ -125,6 +137,7 @@ final class LedgerStore: ObservableObject {
         didSet {
             invalidateMonthlyReportCaches()
             dataCleaningRevision &+= 1
+            visibleTransactionsRevision &+= 1
         }
     }
     @Published private(set) var deletedTransactions: [Transaction] = []
@@ -135,7 +148,9 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var recentImports: [ImportedReceipt] = []
     @Published private(set) var debugRecords: [ImportDebugRecord] = []
     @Published private(set) var sampleReceipts: [SampleReceipt]
-    @Published private(set) var hotelStayRecords: [HotelStayRecord] = []
+    @Published private(set) var hotelStayRecords: [HotelStayRecord] = [] {
+        didSet { hotelStayRecordsRevision &+= 1 }
+    }
     @Published private(set) var hotelStayDrafts: [HotelStayDraft] = []
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
@@ -154,6 +169,7 @@ final class LedgerStore: ObservableObject {
             if oldValue != selectedLedgerID {
                 invalidateMonthlyReportCaches()
                 dataCleaningRevision &+= 1
+                visibleTransactionsRevision &+= 1
             }
         }
     }
@@ -163,6 +179,7 @@ final class LedgerStore: ObservableObject {
             if oldValue != isShowingAllLedgers {
                 invalidateMonthlyReportCaches()
                 dataCleaningRevision &+= 1
+                visibleTransactionsRevision &+= 1
             }
         }
     }
@@ -180,6 +197,7 @@ final class LedgerStore: ObservableObject {
     }
 
     private(set) var dataCleaningRevision: UInt64 = 0
+    private(set) var visibleTransactionsRevision: UInt64 = 0
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -200,6 +218,9 @@ final class LedgerStore: ObservableObject {
     private var monthlySnapshotCache: [MonthlyReportCacheKey: MonthlySnapshot] = [:]
     private var monthlyAnomalyCache: [MonthlyAnomalyCacheKey: [AnomalyAlert]] = [:]
     private var reportMonthOptionsCache: [String: [Date]] = [:]
+    private var visibleTransactionsCache: (key: VisibleTransactionsCacheKey, value: [Transaction])?
+    private var hotelStayRecordsRevision: UInt64 = 0
+    private var hotelStayListSnapshotCache: (key: HotelStayListSnapshotCacheKey, value: HotelStayListSnapshot)?
 
     convenience init(deferSQLiteStateHydration: Bool = false) {
         do {
@@ -412,7 +433,34 @@ final class LedgerStore: ObservableObject {
     }
 
     var visibleTransactions: [Transaction] {
-        transactionsForCurrentLedger(transactions)
+        let key = VisibleTransactionsCacheKey(
+            revision: visibleTransactionsRevision,
+            ledgerID: selectedLedgerID,
+            showsAllLedgers: isShowingAllLedgers
+        )
+        if let visibleTransactionsCache, visibleTransactionsCache.key == key {
+            return visibleTransactionsCache.value
+        }
+        let value = transactionsForCurrentLedger(transactions)
+        visibleTransactionsCache = (key, value)
+        return value
+    }
+
+    func hotelStayListSnapshot(ledgerID: String?) -> HotelStayListSnapshot {
+        let key = HotelStayListSnapshotCacheKey(
+            revision: hotelStayRecordsRevision,
+            ledgerID: ledgerID,
+            localeIdentifier: Locale.current.identifier
+        )
+        if let hotelStayListSnapshotCache, hotelStayListSnapshotCache.key == key {
+            return hotelStayListSnapshotCache.value
+        }
+        let value = HotelStayArchivePresenter().makeListSnapshot(
+            records: hotelStayRecords,
+            ledgerID: ledgerID
+        )
+        hotelStayListSnapshotCache = (key, value)
+        return value
     }
 
     var visibleSubscriptions: [Subscription] {

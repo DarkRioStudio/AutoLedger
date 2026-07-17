@@ -12,6 +12,7 @@ import AppKit
 struct HotelStayListView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let records: [HotelStayRecord]
+    let listSnapshot: HotelStayListSnapshot?
     let drafts: [HotelStayDraft]
     let transactions: [Transaction]
     let ledgerID: String?
@@ -30,6 +31,7 @@ struct HotelStayListView: View {
 
     init(
         records: [HotelStayRecord],
+        listSnapshot: HotelStayListSnapshot? = nil,
         drafts: [HotelStayDraft] = [],
         transactions: [Transaction] = [],
         ledgerID: String? = nil,
@@ -44,6 +46,7 @@ struct HotelStayListView: View {
         onDeleteRecord: ((HotelStayRecord) -> Bool)? = nil
     ) {
         self.records = records
+        self.listSnapshot = listSnapshot
         self.drafts = drafts
         self.transactions = transactions
         self.ledgerID = ledgerID
@@ -63,7 +66,7 @@ struct HotelStayListView: View {
     }
 
     private var snapshot: HotelStayListSnapshot {
-        presenter.makeListSnapshot(records: records, ledgerID: ledgerID)
+        listSnapshot ?? presenter.makeListSnapshot(records: records, ledgerID: ledgerID)
     }
 
     private var pendingDrafts: [HotelStayDraft] {
@@ -86,22 +89,22 @@ struct HotelStayListView: View {
             }
     }
 
-    private var hasListContent: Bool {
-        !snapshot.rows.isEmpty || !pendingDrafts.isEmpty
-    }
-
     private var recordByID: [UUID: HotelStayRecord] {
         Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0) })
     }
 
-    private var selectedRecord: HotelStayRecord? {
-        guard let selectedRecordID else { return nil }
-        return recordByID[selectedRecordID]
-    }
-
     var body: some View {
+        let resolvedSnapshot = snapshot
+        let resolvedPendingDrafts = pendingDrafts
+        let resolvedRecordsByID = recordByID
+        let rowIDs = resolvedSnapshot.rows.map(\.id)
+
         NavigationSplitView {
-            listColumn
+            listColumn(
+                snapshot: resolvedSnapshot,
+                pendingDrafts: resolvedPendingDrafts,
+                recordsByID: resolvedRecordsByID
+            )
                 .navigationTitle("hotel_stay.list.title")
                 .navigationSplitViewColumnWidth(min: 340, ideal: 420, max: 520)
                 .toolbar {
@@ -112,18 +115,18 @@ struct HotelStayListView: View {
                     }
                 }
         } detail: {
-            detailColumn
+            detailColumn(recordsByID: resolvedRecordsByID)
         }
         .navigationSplitViewStyle(.balanced)
         .autoLedgerNavigationBarChrome()
         .onAppear {
-            reconcileSelection()
+            reconcileSelection(rowIDs: rowIDs)
         }
-        .onChange(of: snapshot.rows.map(\.id)) { _, _ in
-            reconcileSelection()
+        .onChange(of: rowIDs) { _, newRowIDs in
+            reconcileSelection(rowIDs: newRowIDs)
         }
         .onChange(of: horizontalSizeClass) { _, _ in
-            reconcileSelection()
+            reconcileSelection(rowIDs: rowIDs)
         }
         .confirmationDialog(
             "hotel_stay.delete.confirm.title",
@@ -147,8 +150,12 @@ struct HotelStayListView: View {
     }
 
     @ViewBuilder
-    private var listColumn: some View {
-        if !hasListContent {
+    private func listColumn(
+        snapshot: HotelStayListSnapshot,
+        pendingDrafts: [HotelStayDraft],
+        recordsByID: [UUID: HotelStayRecord]
+    ) -> some View {
+        if snapshot.rows.isEmpty && pendingDrafts.isEmpty {
             VStack(spacing: 16) {
                 if let statusMessage {
                     statusRow(statusMessage)
@@ -168,11 +175,11 @@ struct HotelStayListView: View {
                     importSection
                 }
                 if !pendingDrafts.isEmpty {
-                    pendingDraftSection
+                    pendingDraftSection(pendingDrafts)
                 }
                 if !snapshot.rows.isEmpty {
-                    summarySection
-                    staySection
+                    summarySection(snapshot)
+                    staySection(snapshot: snapshot, recordsByID: recordsByID)
                 }
             }
             .autoLedgerListChrome()
@@ -180,8 +187,8 @@ struct HotelStayListView: View {
     }
 
     @ViewBuilder
-    private var detailColumn: some View {
-        if let record = selectedRecord {
+    private func detailColumn(recordsByID: [UUID: HotelStayRecord]) -> some View {
+        if let selectedID = selectedRecordID, let record = recordsByID[selectedID] {
             HotelStayDetailView(
                 record: record,
                 transactions: transactions,
@@ -256,7 +263,7 @@ struct HotelStayListView: View {
         }
     }
 
-    private var summarySection: some View {
+    private func summarySection(_ snapshot: HotelStayListSnapshot) -> some View {
         Section {
             HStack(spacing: 12) {
                 summaryMetric(
@@ -269,7 +276,7 @@ struct HotelStayListView: View {
                 )
                 summaryMetric(
                     titleKey: "hotel_stay.list.summary.average",
-                    value: averageNightlyRateText
+                    value: averageNightlyRateText(snapshot)
                 )
             }
             .padding(.vertical, 4)
@@ -277,7 +284,7 @@ struct HotelStayListView: View {
         }
     }
 
-    private var averageNightlyRateText: String {
+    private func averageNightlyRateText(_ snapshot: HotelStayListSnapshot) -> String {
         if snapshot.hasMixedCurrencies {
             return String(localized: "hotel_stay.list.summary.average_mixed_currency")
         }
@@ -288,9 +295,11 @@ struct HotelStayListView: View {
         return presenter.localizedAmountText(averageNightlyRate, currency: currency)
     }
 
-    private var staySection: some View {
+    private func staySection(
+        snapshot: HotelStayListSnapshot,
+        recordsByID: [UUID: HotelStayRecord]
+    ) -> some View {
         Section {
-            let recordsByID = recordByID
             ForEach(snapshot.rows) { row in
                 if let record = recordsByID[row.id] {
                     NavigationLink(value: row.id) {
@@ -318,7 +327,7 @@ struct HotelStayListView: View {
         }
     }
 
-    private var pendingDraftSection: some View {
+    private func pendingDraftSection(_ pendingDrafts: [HotelStayDraft]) -> some View {
         Section {
             ForEach(pendingDrafts) { draft in
                 Button {
@@ -361,8 +370,7 @@ struct HotelStayListView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func reconcileSelection() {
-        let rowIDs = snapshot.rows.map(\.id)
+    private func reconcileSelection(rowIDs: [UUID]) {
         guard !rowIDs.isEmpty else {
             selectedRecordID = nil
             return

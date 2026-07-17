@@ -6048,6 +6048,15 @@ struct OfflineRegression {
             ledgerStore.transactions.first?.category == TransactionCategory.hotel.rawValue,
             "LedgerStore posts linked hotel transaction into built-in hotel category"
         )
+        let initialHotelListSnapshot = ledgerStore.hotelStayListSnapshot(ledgerID: "travel-ledger")
+        reporter.check(
+            initialHotelListSnapshot == ledgerStore.hotelStayListSnapshot(ledgerID: "travel-ledger"),
+            "LedgerStore reuses an equivalent hotel list snapshot while records stay unchanged"
+        )
+        reporter.check(
+            initialHotelListSnapshot.rows.map(\.hotelName) == ["Demo Bay Hotel"],
+            "LedgerStore cached hotel list snapshot preserves the posted record"
+        )
 
         guard let postedRecord = ledgerStore.hotelStayRecords.first,
               let linkedTransaction = ledgerStore.transactions.first else {
@@ -6083,6 +6092,10 @@ struct OfflineRegression {
         reporter.check(
             ledgerStore.hotelStayRecords.first?.localizedData?.hotelName == "本地化酒店",
             "LedgerStore keeps edited localized hotel name in memory"
+        )
+        reporter.check(
+            ledgerStore.hotelStayListSnapshot(ledgerID: "travel-ledger").rows.map(\.hotelName) == ["本地化酒店"],
+            "LedgerStore invalidates the hotel list snapshot after a record update"
         )
         reporter.check(
             ledgerStore.transactions.first?.merchant == "本地化酒店",

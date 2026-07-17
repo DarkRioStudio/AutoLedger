@@ -2811,6 +2811,7 @@ struct HotelStayWorkspaceView: View {
     var body: some View {
         HotelStayListView(
             records: store.hotelStayRecords,
+            listSnapshot: store.hotelStayListSnapshot(ledgerID: ledgerID),
             drafts: store.hotelStayDrafts,
             transactions: store.visibleTransactions,
             ledgerID: ledgerID,
