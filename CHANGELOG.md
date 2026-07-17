@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.7.0）
+- [2026-07-17] 根据 TS 117 真机反馈继续收口启动 iCloud 同步：启动同步先等待首次本地 SQLite 水合完成，使本地账本成为 UI readiness 的唯一门禁；CloudKit 同步 / 拉取完成后的全量 SQLite 重载改由独立 reader 后台解码再发布。新增持久化状态修订保护，用户交互期间产生的旧快照会被丢弃并重试，避免后台刷新覆盖刚发生的本地编辑。CloudKit 静态门禁、完整离线回归与签名 iOS generic workspace build 通过；CloudKit 合并写入仍保持串行一致性，性能状态为 `Acceptance Pending`，需下一 TestFlight 同时验证冷启动交互和同步最终完成。
 - [2026-07-17] 收口账本与酒店 Tab 重复派生计算：`LedgerStore.visibleTransactions` 按交易修订号和账本范围复用，账本选择协调只在可见交易修订变化时生成一次 ID；酒店列表 snapshot 按酒店记录修订号、账本范围和 Locale 缓存，同一次 SwiftUI 更新复用 snapshot、待处理草稿与记录索引，记录新增 / 编辑 / 删除后自动失效。未改 SQLite 水合、分页、搜索、排序、CloudKit、数据模型或埋点口径。完整离线回归与 iOS generic workspace build 通过；性能仍为 `Acceptance Pending`，需下一 TestFlight 按相同路径对照 TS 116 阶段样本。
 - [2026-07-17] 统一现有 AutoLedger Dashboard“性能操作”卡片的标题样式：“开发者模式阶段”改用与卡片标题一致的标题加说明结构，统一字号、字重、间距和窄屏换行，并以分隔线区分常规操作与开发者阶段数据；不修改 TS 116 埋点、事件名、聚合字段、D1 schema、Dashboard 数据接口或 App 构建。Wrangler types、TypeScript 与 51 项 Worker 合同测试通过，已部署 staging `94296390-4950-446c-aadf-00e064cf0a95` 与 production `5791ada4-b18c-4093-8822-30ce29f4a285`，production health 和 Cloudflare Access 边界正常。
 - [2026-07-17] 将 ITER-421 iCloud 冲突复活修复与 ITER-422 开发者模式性能阶段埋点作为下一 TestFlight 基线推送到 `main`，并移动唯一 `xcbuild-v1.7.0` Xcode Cloud 构建触发 tag；不修改版本号、签名、entitlement、CloudKit / SQLite / D1 schema、StoreKit、ASC metadata 或 workflow。构建触发不等于四平台 Archive、processing 或真机性能验收通过，下一步仍按 iPhone → iPad / Mac / 性能顺序收集真实样本。

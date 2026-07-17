@@ -29,6 +29,9 @@ REQUIRED_SNIPPETS = [
 REQUIRED_STORE_SNIPPETS = [
     "sqliteStoreForCloudSync()",
     "当前同步状态未持有 SQLite 实例，正在重新打开默认本地账本。",
+    "await refreshFromStoreInBackground()\n        didRunLaunchCloudKitSync = true",
+    "didDiscardLastSQLiteSnapshot = true",
+    "persistenceStateRevision == startingRevision",
 ]
 
 FORBIDDEN_SNIPPETS = [

@@ -138,20 +138,35 @@ final class LedgerStore: ObservableObject {
             invalidateMonthlyReportCaches()
             dataCleaningRevision &+= 1
             visibleTransactionsRevision &+= 1
+            persistenceStateRevision &+= 1
         }
     }
-    @Published private(set) var deletedTransactions: [Transaction] = []
-    @Published private(set) var subscriptions: [Subscription] = []
+    @Published private(set) var deletedTransactions: [Transaction] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
+    @Published private(set) var subscriptions: [Subscription] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
     @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:] {
-        didSet { dataCleaningRevision &+= 1 }
+        didSet {
+            dataCleaningRevision &+= 1
+            persistenceStateRevision &+= 1
+        }
     }
     @Published private(set) var recentImports: [ImportedReceipt] = []
-    @Published private(set) var debugRecords: [ImportDebugRecord] = []
+    @Published private(set) var debugRecords: [ImportDebugRecord] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
     @Published private(set) var sampleReceipts: [SampleReceipt]
     @Published private(set) var hotelStayRecords: [HotelStayRecord] = [] {
-        didSet { hotelStayRecordsRevision &+= 1 }
+        didSet {
+            hotelStayRecordsRevision &+= 1
+            persistenceStateRevision &+= 1
+        }
     }
-    @Published private(set) var hotelStayDrafts: [HotelStayDraft] = []
+    @Published private(set) var hotelStayDrafts: [HotelStayDraft] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
     @Published private(set) var pendingReceiptReview: ReceiptImportReviewDraft?
@@ -161,9 +176,14 @@ final class LedgerStore: ObservableObject {
     @Published var customSources: [String] = []
     @Published var customCategories: [String] = []
     @Published private(set) var merchantAliases: [String: String] = [:] {
-        didSet { dataCleaningRevision &+= 1 }
+        didSet {
+            dataCleaningRevision &+= 1
+            persistenceStateRevision &+= 1
+        }
     }
-    @Published private(set) var ledgerProfiles: [LedgerProfile] = []
+    @Published private(set) var ledgerProfiles: [LedgerProfile] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
     @Published private(set) var selectedLedgerID = TodaySpendingSummary.defaultLedgerID {
         didSet {
             if oldValue != selectedLedgerID {
@@ -185,7 +205,9 @@ final class LedgerStore: ObservableObject {
     }
     @Published private(set) var ledgerCloudSyncStatus: String?
     @Published private(set) var ledgerCloudSyncLog: [String] = []
-    @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = []
+    @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = [] {
+        didSet { persistenceStateRevision &+= 1 }
+    }
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
     @Published private(set) var isPersistentStateLoading = false
@@ -208,6 +230,8 @@ final class LedgerStore: ObservableObject {
     private var pendingBackupTask: Task<Void, Never>?
     private var pendingCloudKitPushTask: Task<Void, Never>?
     private var pendingSQLiteSnapshotTask: Task<Void, Never>?
+    private var persistenceStateRevision: UInt64 = 0
+    private var didDiscardLastSQLiteSnapshot = false
     private var hasCompletedInitialPersistenceLoad = false
     private var didRunLaunchCloudKitSync = false
     private var recentlyEditedTransactionIDs: [UUID: Date] = [:]
@@ -1061,9 +1085,14 @@ final class LedgerStore: ObservableObject {
             return
         }
 
-        startSQLiteSnapshotLoadIfNeeded(from: sqlStore)
-        if let task = pendingSQLiteSnapshotTask {
-            await task.value
+        // A user edit can land while the independent reader is decoding a large
+        // ledger. Retry once so an older snapshot never replaces fresher UI state.
+        for _ in 0..<2 {
+            startSQLiteSnapshotLoadIfNeeded(from: sqlStore)
+            if let task = pendingSQLiteSnapshotTask {
+                await task.value
+            }
+            guard didDiscardLastSQLiteSnapshot else { return }
         }
     }
 
@@ -1071,6 +1100,8 @@ final class LedgerStore: ObservableObject {
         guard pendingSQLiteSnapshotTask == nil else { return }
 
         let seedTransactions = Self.seedTransactions
+        let startingRevision = persistenceStateRevision
+        didDiscardLastSQLiteSnapshot = false
         pendingSQLiteSnapshotTask = Task { [weak self] in
             let snapshot = await Task.detached(priority: .userInitiated) { () -> SQLiteLedgerSnapshot? in
                 do {
@@ -1082,13 +1113,18 @@ final class LedgerStore: ObservableObject {
             }.value
 
             guard let self else { return }
-            self.finishSQLiteSnapshotLoad(snapshot, using: sqlStore)
+            self.finishSQLiteSnapshotLoad(
+                snapshot,
+                using: sqlStore,
+                startingRevision: startingRevision
+            )
         }
     }
 
     private func finishSQLiteSnapshotLoad(
         _ snapshot: SQLiteLedgerSnapshot?,
-        using sqlStore: SQLiteTransactionStore
+        using sqlStore: SQLiteTransactionStore,
+        startingRevision: UInt64
     ) {
         defer {
             hasCompletedInitialPersistenceLoad = true
@@ -1102,6 +1138,11 @@ final class LedgerStore: ObservableObject {
         }
 
         let isInitialHydration = !hasCompletedInitialPersistenceLoad
+        guard isInitialHydration || persistenceStateRevision == startingRevision else {
+            didDiscardLastSQLiteSnapshot = true
+            logger.notice("[Ledger] Discarded a stale SQLite snapshot because persisted UI state changed while it was loading.")
+            return
+        }
         let legacyMerchantAliases = merchantAliases
 
         transactions = snapshot.transactions
@@ -3917,6 +3958,9 @@ extension LedgerStore {
         guard isLedgerCloudSyncEnabled else { return }
         guard canUseCloudKitInCurrentBuild() else { return }
         guard !didRunLaunchCloudKitSync else { return }
+        // The local ledger owns startup readiness. Cloud sync must not compete
+        // with its first hydration or delay the point where the UI is usable.
+        await refreshFromStoreInBackground()
         didRunLaunchCloudKitSync = true
         let didPush = await pushLedgerChangesToCloudKitIfEnabled(reason: "App 启动，先推送本地增量到 iCloud。")
         guard didPush else {
@@ -3963,7 +4007,7 @@ extension LedgerStore {
             )
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
 
-            refreshFromStore()
+            await refreshFromStoreInBackground()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()
@@ -3975,11 +4019,11 @@ extension LedgerStore {
 
     func pullLedgerFromCloudKitIfEnabled(reason: String = "正在拉取 iCloud 数据...") async {
         guard isLedgerCloudSyncEnabled else {
-            refreshFromStore()
+            await refreshFromStoreInBackground()
             return
         }
         guard canUseCloudKitInCurrentBuild() else {
-            refreshFromStore()
+            await refreshFromStoreInBackground()
             return
         }
         guard !isLedgerCloudSyncRunning else {
@@ -4014,7 +4058,7 @@ extension LedgerStore {
                 manifest: syncManifest
             )
             let configurationResult = try await pullRemoteLedgerConfiguration(sqlStore: sqlStore, adapter: adapter)
-            refreshFromStore()
+            await refreshFromStoreInBackground()
             let dashboardSnapshotSaved = await publishDashboardSnapshot(adapter: adapter)
             recordCloudKitSyncSuccess()
             reloadWidgets()

@@ -5809,6 +5809,21 @@ struct OfflineRegression {
             ledger.merchantAliases["Deferred Original"] == "Deferred Alias",
             "LedgerStore publishes merchant aliases from deferred SQLite hydration"
         )
+
+        let cloudMergedTransaction = Transaction(
+            merchant: "Background Cloud Merge",
+            amount: 88,
+            occurredAt: Date(timeIntervalSince1970: 1_780_320_100),
+            category: .hotel,
+            source: .manual,
+            note: "background refresh"
+        )
+        try store.save(transaction: cloudMergedTransaction)
+        await ledger.refreshFromStoreInBackground()
+        reporter.check(
+            ledger.transactions.contains(cloudMergedTransaction),
+            "LedgerStore publishes a post-sync SQLite merge through background hydration"
+        )
     }
 
     private static func verifySQLiteBusyRetry(reporter: RegressionReporter) throws {

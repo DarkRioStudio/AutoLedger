@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-425 账本与酒店 Tab 派生结果复用）
+更新日期：2026-07-17（ITER-426 启动 iCloud 同步让位 UI）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-426 启动 iCloud 同步让位 UI
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance Acceptance / Launch Sync
+- 类型：性能 / 数据同步 / 并发 / 测试
+- 目标：基于 TS 117 相比上一版明显改善的真机反馈，让启动 iCloud 同步在本地账本可交互后继续完成，并减少同步完成时全量 SQLite 解码对 UI actor 的占用。
+- 改动范围：`LedgerStore` 启动 CloudKit 同步顺序、同步完成后的 SQLite 快照刷新、持久化状态版本保护、CloudKit 静态门禁、离线回归与版本记录。
+- 未改动范围：未提前撤销首次本地 SQLite 水合遮罩；未修改 CloudKit / SQLite schema、冲突合并规则、同步 record、App UI、埋点口径、Worker、StoreKit、ASC metadata 或 Xcode Cloud workflow。
+- 完成内容：启动 CloudKit 同步现在先等待既有首次本地 SQLite 水合完成；本地账本成为 UI readiness 的唯一门禁，之后的云端推送 / 拉取继续在不显示启动遮罩的状态下运行。
+- 完成内容：CloudKit 全量同步和拉取完成后不再在 UI actor 同步读取全部账单、订阅、酒店记录、草稿、冲突和账本配置，改用独立 SQLite reader 后台生成完整快照，再一次性发布到 UI 状态。
+- 完成内容：后台快照加载时记录持久化状态修订号；若用户在此期间新增、编辑或删除账单、订阅、酒店数据、别名或账本配置，则丢弃旧快照并重试一次，避免云端刷新用较旧内存快照覆盖刚发生的交互结果。
+- 未完成内容：CloudKit 合并写入仍按既有串行一致性路径执行；尚未取得包含本轮改动的真机启动同步阶段样本，不能宣称 iCloud 同步对 UI 已完全零影响。
+- 测试情况：`check_cloudkit_sync_smoke.py` 与长列表性能门禁 PASS；完整 `bash scripts/run_offline_regression.sh` PASS，新增“外部合并写入 SQLite 后通过后台水合发布到 LedgerStore”回归；签名 iOS generic workspace build PASS。首次回归因新增测试误用了不存在的 `.travel` 分类而编译失败，改为内置 `.hotel` 后全量重跑通过；产品代码未因此调整。
+- 风险与注意事项：快照因用户交互变更被连续丢弃两次时，本轮不会无限重试，SQLite 中的云端合并结果仍完整保留，并会在下一次前台刷新发布；该边界优先避免后台同步与持续交互争抢。是否仍存在短时同步写入卡顿需结合下一 TestFlight 的启动、Tab settle 和 Instruments 数据判断。
+- 回滚方式：恢复 CloudKit 同步后的同步 `refreshFromStore()`，移除 `persistenceStateRevision` / stale snapshot 检查，并取消启动同步前的后台水合等待；首次本地水合逻辑可独立保留。
+- 结论：启动 iCloud 同步已调整为“本地账本先可交互、云端随后完成”，并消除同步后主线程全量重载；状态为 `Acceptance Pending`。
+- 下一步建议：下一 TestFlight 冷启动后立即往返首页、账本和酒店 Tab，同时观察 iCloud 同步状态是否最终完成；按 source build 对照 `tab_selection_settle` / `tab_surface_appear`，若同步窗口仍出现明显卡顿，再单独把 CloudKit 合并写入拆到专用后台连接。
 
 ### ITER-425 账本与酒店 Tab 派生结果复用
 - 日期：2026-07-17
