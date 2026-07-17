@@ -3,7 +3,7 @@
 > 文档状态：Reference
 > 真源范围：语音记账与 Siri 初始设计；当前行为以 App Intents / Voice 代码和回归为准
 > 文档分类核验：2026-07-17
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 版本：v0.2
 目标版本：v1.3 / v1.4

@@ -3,7 +3,7 @@
 > 文档状态：Reference
 > 真源范围：ReceiptDebugTool 实施规格背景；当前能力以 `ReceiptDebugTool/` 代码为准
 > 文档分类核验：2026-07-17
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 日期：2026-04-28
 目标版本：v1.3.3+

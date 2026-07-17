@@ -61,7 +61,7 @@ Options:
   --tvos-only      Capture and render Apple TV screenshots only.
   --visionos-only  Capture and render visionOS screenshots only.
   --render-only    Re-render store images and preview.html from existing raw screenshots.
-  --locale LOCALE  Limit capture to zh-Hans, zh-Hant, en, or ja. Can be repeated.
+  --locale LOCALE  Limit capture to zh-Hans, zh-Hant, en, ja, or ko. Can be repeated.
 EOF
       exit 0
       ;;

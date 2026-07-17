@@ -3,7 +3,7 @@
 > Document status: Reference
 > Source-of-truth scope: original cross-platform screenshot pipeline design; executable behavior lives under `tools/appstore-screenshots/`
 > Classification verified: 2026-07-17
-> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+> Parent roadmap: [ROADMAP.md](../ROADMAP.md)
 
 ## Goal
 

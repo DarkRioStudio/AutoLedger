@@ -2,7 +2,7 @@
 
 > 文档状态：Active
 > 文档角色：Pro 专项路线图
-> 真源范围：Personal Pro 自动化能力细化；全局优先级以 [ROADMAP.md](ROADMAP.md) 为准
+> 真源范围：Personal Pro 自动化能力细化；全局优先级以 [ROADMAP.md](../ROADMAP.md) 为准
 > 最后核验：2026-07-17
 
 版本：v0.2
@@ -10,8 +10,8 @@
 适用范围：AutoLedger 面向个人用户的 Pro 自动化能力规划
 关联文档：
 
-- `docs/autoledger-personal-pro-design.md`
-- `docs/pro-access-audit.md`
+- `docs/product/autoledger-personal-pro-design.md`
+- `docs/operations/pro-access-audit.md`
 - `versions/v1.7.0-plan.md`
 - `CHANGELOG.md`
 
@@ -384,18 +384,18 @@ Pro 增强：大屏批量整理、批量规则应用、批量复核和多文件�
 你在 AutoLedger 仓库中工作。请先阅读：
 
 - AGENTS.md
-- docs/autoledger-personal-pro-design.md
-- docs/autoledger-personal-pro-roadmap.md
-- docs/pro-access-audit.md
+- docs/product/autoledger-personal-pro-design.md
+- docs/product/autoledger-personal-pro-roadmap.md
+- docs/operations/pro-access-audit.md
 - versions/v1.7.0-plan.md
 - CHANGELOG.md
 
 目标：收口 AutoLedger 个人 Pro 的文档和产品口径，让 repo 中的 Pro 说明与当前实现一致。
 
 范围：
-1. 更新 docs/autoledger-personal-pro-design.md，使其从早期“6 个推荐权益”升级为当前实现状态：酒店 / 水单自动化、专属云收件箱、高级搜索、订阅异常、月结包、智能整理 / 高级规则。
+1. 更新 docs/product/autoledger-personal-pro-design.md，使其从早期“6 个推荐权益”升级为当前实现状态：酒店 / 水单自动化、专属云收件箱、高级搜索、订阅异常、月结包、智能整理 / 高级规则。
 2. 确保 README 顶层定位统一为“本地优先个人账本 + 自动化导入 + 酒店水单归档”。
-3. 检查 docs/pro-access-audit.md 与 AutoLedgerCapability / AutoLedgerProAccessPolicy 当前实现是否一致。
+3. 检查 docs/operations/pro-access-audit.md 与 AutoLedgerCapability / AutoLedgerProAccessPolicy 当前实现是否一致。
 4. 检查 Pro 页面和 ASC / StoreKit 商品描述是否仍过度偏向酒店模块；如果是，调整为“自动化效率层”口径。
 5. 在 versions/v1.7.0-plan.md 中把后续 Pro 挖掘方向整理为：统一待处理中心、月结检查清单、规则中心、智能视图、订阅省钱看板。
 6. 回填 CHANGELOG.md 和 process/iteration-log.md。

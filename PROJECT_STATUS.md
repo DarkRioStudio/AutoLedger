@@ -2,8 +2,9 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-07-17
+> 截止日期：2026-07-18
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
+> 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
 > 当前版本执行计划：[versions/v1.7.0-plan.md](versions/v1.7.0-plan.md)
 
 ## Current Snapshot
@@ -13,11 +14,12 @@
 | 内部开发线 | `v1.7.0` |
 | App Store 对外版本 | `1.6.0` |
 | 发布阶段 | TestFlight 反馈收口 -> Release Candidate 冻结前 |
-| 已验证产品代码基线 | `9414b91694d4`；后续纯文档提交不改变该产品行为基线 |
+| 已验证候选产品行为基线 | `9414b91694d4`；当前仓库后续 Swift 改动仅服务 `--screenshot-mode` / 截图 Host，不进入正式启动路径 |
 | Xcode Cloud 触发标签 | `xcbuild-v1.7.0`，基线指向 `9414b91694d4` |
 | 最近人工结论 | 当前 TestFlight 候选整体已接近发布；TS 117 起 Tab 体感明显改善 |
 | 精确 TestFlight build | 属于 App Store Connect 外部证据；未从仓库推断或写死 |
-| 文档治理 | `PROJECT_STATUS.md` 与 `docs/ROADMAP.md` 已确立为当前状态和产品路线图真源 |
+| 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
+| 下一版本 | `v1.8.0 / ASC 1.7.0` 的 Review & Close 与西语 / 巴葡计划仅为 Draft，不扩大当前发布范围 |
 
 本文件回答“项目现在在哪里”。它不替代版本计划、回归证据、CHANGELOG 或逐轮迭代日志。
 
@@ -45,8 +47,11 @@
 - 云端水单收件箱收到 `401 unauthorized` 时，App 会尝试续签原凭据并重试。
 - 数据清洗的云端辅助已形成第一版可用闭环：用户显式开启且具备 Pro 权益时，App 发送商户键哈希和聚合特征，Worker 返回 hash-only 商户别名建议，用户确认前不会改写账本。
 - 自动化规则指标已统一布局和字号，商户别名、分类修正和受影响账单说明不再截断。
+- `docs/` 已按产品、架构、能力、平台、运维和归档物理分组；核心 `ROADMAP.md` 作为唯一专项例外保留在 `docs/` 根目录。
+- 已建立每版本一组新语言的跨版本路线和 `v1.8.0` Draft；工程 `developmentRegion = en` 已核验，但 ASC Primary Language 的线上切换尚未以仓库证据确认。
+- 韩语六平台截图管线已补齐：iPhone、iPad、Mac、Watch、tvOS、visionOS 本地导出 30 张 raw 与 30 张商店尺寸成品，逐平台视觉复核后修正截图 Host 的中文 fallback；生成物按规则忽略，不等同于 ASC 已上传或韩语已通过母语审校。
 
-详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-428`。
+详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-430`。
 
 ## Release Gates
 
@@ -60,7 +65,8 @@
 
 ### P0 - Release And Privacy
 
-- 对照 [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) 完成五语状态复核；韩语未完成母语审校、真实样本和商店资产前不得标记为 Ready。
+- 对照 [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) 完成五语状态复核；韩语虽已完成本地六平台截图导出，但母语审校、真实样本、ASC 上传与 App Preview 证据未齐前不得标记为 Ready。
+- 从 ASC `1.6.0` 起以 `English (U.S.) / en-US` 为 Primary Language；执行前确认当前 App 信息可编辑、英语此前已通过审核且全平台英语截图满足切换条件，执行后归档 ASC 线上证据。Xcode `developmentRegion = en` 不能替代该证据。
 - 确认 ASC metadata、订阅本地化、截图 / App Preview、Review Notes、隐私政策和 App Privacy 口径一致。
 - 确认 Crash Data、Performance Data 与 Product Interaction 只用于 Analytics，not linked，not tracking。
 - 若最终候选包含 CloudKit record type、field 或 index 变化，必须先将 Development schema 部署到 Production 并记录证据。
@@ -78,12 +84,14 @@
 - CloudKit 合并写入继续使用串行一致性路径；当前优化重点是让网络与解码不阻塞 UI，而不是把所有同步工作并行化。
 - TestFlight build number、ASC processing 和人工设备结果属于外部证据，仓库文档不得根据 tag 或 MARKETING_VERSION 猜测。
 - Dashboard 历史数据包含旧版本和旧埋点语义，判断发布质量时必须按 source build 和新指标口径过滤。
+- 韩语截图生成物位于忽略目录，本地 30 / 30 导出与工程视觉复核只能证明素材管线可用，不能替代 ASC 上传状态、原生设备长文本检查或母语审校。
 - `versions/v1.7.0-plan.md` 保留逐阶段执行记录；其中带日期的“未完成”描述是当时事实，不能覆盖本文件的当前状态。
+- `v1.8.0` 与后续语言组是规划事实，不代表实现、ASC locale、截图、识别样本或人工审校已经完成。
 
 ## Next Actions
 
 1. 完成当前候选的 iPhone / iPad / Mac 与 iCloud 最终 smoke，并把结果回填本文件和版本回归基线。
-2. 冻结五语商店资产、图标、ASC metadata、Review Notes 与隐私声明。
+2. 冻结五语商店资产、图标、ASC metadata、Review Notes 与隐私声明；上传并核对韩语六平台截图，完成 `en-US` Primary Language 的发布操作与留证。
 3. 完成 release-readiness 审计后，再决定提交审核和移动不可变产品版本标签。
 
 ## Source Of Truth Map
@@ -92,10 +100,12 @@
 |---|---|
 | 项目现在是什么状态 | 本文件 |
 | 产品长期往哪里走 | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 每个版本扩展哪些语言、统一门禁是什么 | [docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md) |
 | v1.7.0 做什么、如何验收 | [versions/v1.7.0-plan.md](versions/v1.7.0-plan.md) |
 | 多语言是否可公开发布 | [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) |
+| 下一版本规划了什么 | [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md) 与 [versions/v1.8.0-i18n-release-matrix.md](versions/v1.8.0-i18n-release-matrix.md)；均为 Draft |
 | Free / Pro 可执行边界 | `AutoLedgerCore/Models/ProAccessPolicy.swift` 与对应回归 |
-| Free / Pro 审计解释 | [docs/pro-access-audit.md](docs/pro-access-audit.md) |
+| Free / Pro 审计解释 | [docs/operations/pro-access-audit.md](docs/operations/pro-access-audit.md) |
 | 每轮做了什么 | [process/iteration-log.md](process/iteration-log.md) |
 | 已完成变更历史 | [CHANGELOG.md](CHANGELOG.md) |
 | 对外项目介绍 | 四语根 README，内容应从以上真源提炼 |

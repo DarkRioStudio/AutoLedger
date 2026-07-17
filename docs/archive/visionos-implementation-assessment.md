@@ -3,7 +3,7 @@
 > Document status: Historical
 > Source-of-truth scope: initial visionOS implementation assessment; current behavior lives in the target code and build evidence
 > Classification verified: 2026-07-17
-> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+> Parent roadmap: [ROADMAP.md](../ROADMAP.md)
 
 ## Goal
 

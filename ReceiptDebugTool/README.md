@@ -43,8 +43,8 @@ xcodebuild -project ReceiptDebugTool/ReceiptDebugTool.xcodeproj \
 
 ## Related Docs
 
-- [../docs/ReceiptDebugTool-implementation-draft.md](../docs/ReceiptDebugTool-implementation-draft.md)
-- [../docs/LedgerTextInterpreter.md](../docs/LedgerTextInterpreter.md)
+- [../docs/capabilities/ReceiptDebugTool-implementation-draft.md](../docs/capabilities/ReceiptDebugTool-implementation-draft.md)
+- [../docs/architecture/LedgerTextInterpreter.md](../docs/architecture/LedgerTextInterpreter.md)
 - [../tools/receipt_ocr/README.md](../tools/receipt_ocr/README.md)
 
 ## Privacy

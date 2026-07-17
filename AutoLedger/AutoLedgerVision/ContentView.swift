@@ -289,6 +289,9 @@ private struct VisionDashboardCopy {
         if locale.hasPrefix("ja") {
             return VisionDashboardCopy(languageCode: "ja")
         }
+        if locale.hasPrefix("ko") {
+            return VisionDashboardCopy(languageCode: "ko")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return VisionDashboardCopy(languageCode: "zh-Hant")
         }
@@ -299,6 +302,7 @@ private struct VisionDashboardCopy {
         switch languageCode {
         case "en": return "en_US"
         case "ja": return "ja_JP"
+        case "ko": return "ko_KR"
         case "zh-Hant": return "zh_TW"
         default: return "zh_CN"
         }
@@ -319,6 +323,7 @@ private struct VisionDashboardCopy {
         switch languageCode {
         case "en": return en
         case "ja": return ja
+        case "ko": return Self.korean[zhHans] ?? en
         case "zh-Hant": return zhHant
         default: return zhHans
         }
@@ -342,13 +347,56 @@ private struct VisionDashboardCopy {
     }
 
     func checkTime(_ date: Date) -> String {
-        text(
+        if languageCode == "ko" {
+            return "확인 시간 \(VisionFormatters.time.string(from: date))"
+        }
+        return text(
             "检查时间 \(VisionFormatters.time.string(from: date))",
             "檢查時間 \(VisionFormatters.time.string(from: date))",
             "Checked at \(VisionFormatters.time.string(from: date))",
             "確認時刻 \(VisionFormatters.time.string(from: date))"
         )
     }
+
+    private static let korean: [String: String] = [
+        "月度支出空间看板": "월간 지출 공간 대시보드",
+        "分类支出卡片": "카테고리 지출 카드",
+        "年度消费时间线": "연간 지출 타임라인",
+        "显示金额": "금액 표시",
+        "隐藏金额": "금액 숨기기",
+        "刷新": "새로고침",
+        "已隐藏": "숨김",
+        "正在读取本机正式账本": "저장된 장부 데이터 불러오는 중",
+        "暂无可展示的账本数据": "표시할 장부 데이터 없음",
+        "visionOS 首版只读展示本机正式账本，不读取候选账单、OCR 原文或截图。": "visionOS에서는 후보, OCR 원문 또는 스크린샷이 아닌 저장된 장부 데이터만 읽기 전용으로 표시합니다.",
+        "账本暂时不可用": "장부를 일시적으로 사용할 수 없음",
+        "重新读取": "다시 불러오기",
+        "重试": "다시 시도",
+        "暂无": "없음",
+        "日用杂货": "식료품",
+        "餐饮": "외식",
+        "出行": "교통",
+        "酒店": "호텔",
+        "购物": "쇼핑",
+        "数字服务": "디지털 서비스",
+        "生活缴费": "공과금",
+        "娱乐": "엔터테인먼트",
+        "其他": "기타",
+        "地铁：Example Station → Example Airport": "지하철: Example Station → Example Airport",
+        "visionOS 示例看板数据": "visionOS 예시 대시보드 데이터",
+        "正式账本": "저장된 장부",
+        "今日支出": "오늘 지출",
+        "本月笔数": "이번 달 건수",
+        "年度累计": "연간 합계",
+        "Top 商户": "주요 가맹점",
+        "日均": "일평균",
+        "暂无分类数据": "카테고리 데이터 없음",
+        "年度消费时间线墙": "연간 지출 타임라인 월",
+        "最近 12 个月": "최근 12개월",
+        "最近账单悬浮列表": "최근 기록 플로팅 목록",
+        "最近账单已隐藏": "최근 기록 숨김",
+        "暂无最近账单": "최근 기록 없음",
+    ]
 }
 
 private extension ProcessInfo {

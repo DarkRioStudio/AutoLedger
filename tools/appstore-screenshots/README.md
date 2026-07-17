@@ -70,6 +70,7 @@ bash tools/appstore-screenshots/scripts/export.sh --visionos-only --locale zh-Ha
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hant
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale en
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ja
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ko
 ```
 
 Re-render from existing raw screenshots:
@@ -114,6 +115,8 @@ tools/appstore-screenshots/output/store/ios/zh-Hans
 tools/appstore-screenshots/output/raw/ios/zh-Hans
 tools/appstore-screenshots/output/store/watch/zh-Hans
 tools/appstore-screenshots/output/raw/watch/zh-Hans
+tools/appstore-screenshots/output/store/{platform}/ko/
+tools/appstore-screenshots/output/raw/{platform}/ko/
 ```
 
 Suggested App Store asset review order:
@@ -133,19 +136,19 @@ Generated files are written under `tools/appstore-screenshots/output/`, which is
 ```text
 output/
   raw/
-    ios/{zh-Hans,zh-Hant,en,ja}/
-    ipad/{zh-Hans,zh-Hant,en,ja}/
-    mac/{zh-Hans,zh-Hant,en,ja}/
-    watch/{zh-Hans,zh-Hant,en,ja}/
-    tvos/{zh-Hans,zh-Hant,en,ja}/
-    visionos/{zh-Hans,zh-Hant,en,ja}/
+    ios/{zh-Hans,zh-Hant,en,ja,ko}/
+    ipad/{zh-Hans,zh-Hant,en,ja,ko}/
+    mac/{zh-Hans,zh-Hant,en,ja,ko}/
+    watch/{zh-Hans,zh-Hant,en,ja,ko}/
+    tvos/{zh-Hans,zh-Hant,en,ja,ko}/
+    visionos/{zh-Hans,zh-Hant,en,ja,ko}/
   store/
-    ios/{zh-Hans,zh-Hant,en,ja}/
-    ipad/{zh-Hans,zh-Hant,en,ja}/
-    mac/{zh-Hans,zh-Hant,en,ja}/
-    watch/{zh-Hans,zh-Hant,en,ja}/
-    tvos/{zh-Hans,zh-Hant,en,ja}/
-    visionos/{zh-Hans,zh-Hant,en,ja}/
+    ios/{zh-Hans,zh-Hant,en,ja,ko}/
+    ipad/{zh-Hans,zh-Hant,en,ja,ko}/
+    mac/{zh-Hans,zh-Hant,en,ja,ko}/
+    watch/{zh-Hans,zh-Hant,en,ja,ko}/
+    tvos/{zh-Hans,zh-Hant,en,ja,ko}/
+    visionos/{zh-Hans,zh-Hant,en,ja,ko}/
   preview.html
 ```
 
@@ -288,7 +291,7 @@ iPad defaults to `ipad_13` (`2732x2048`). The renderer keeps the workspace scree
 
 Mac defaults to `mac_desktop` (`1440x900`). The exporter launches the built Mac Catalyst app, resizes the front window with AppleScript, and captures that window rectangle from the desktop.
 
-Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, en, and ja Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
+Watch defaults to `410x502` in `targets.watch`. The render step keeps all zh-Hans, zh-Hant, en, ja, and ko Watch store screenshots at that exact size. If the simulator produces a slightly different raw size, `render_watch.py` fits it into the configured canvas without stretching.
 
 Apple TV and visionOS default to `3840x2160` in `targets.tvos` and `targets.visionos`. The renderer places the simulator capture inside a marketing canvas with title and subtitle copy.
 
@@ -303,7 +306,7 @@ If automatic Watch launch fails, iPhone export still succeeds and `preview.html`
    - `output/raw/watch/zh-Hans/01_watch_recent.png`
    - `output/raw/watch/zh-Hans/02_watch_complication.png`
    - `output/raw/watch/zh-Hans/03_watch_sync.png`
-   - same names under `output/raw/watch/zh-Hant/` and `output/raw/watch/en/`
+   - same names under `output/raw/watch/zh-Hant/`, `output/raw/watch/en/`, `output/raw/watch/ja/`, and `output/raw/watch/ko/`
 4. Run:
 
 ```bash
@@ -328,6 +331,7 @@ The current automatic Watch pipeline does not capture a real watch face complica
 - UI text looks oversized: screenshot hosts pin Dynamic Type to the default `.large` size, independent of the simulator's Accessibility text size.
 - Permission prompts appear: screenshot host should not call camera, photo library, OCR, notifications, iCloud, or network paths; check any newly added scene for live dependencies.
 - Chinese font looks wrong: install or restore the macOS system PingFang fonts. The renderer falls back with a warning.
+- Korean font looks wrong: confirm `/System/Library/Fonts/AppleSDGothicNeo.ttc` is available. The renderer uses its Bold and Regular faces for `ko` marketing copy, then falls back to Noto Sans Gothic or Apple Gothic.
 - English copy overflows: edit `screenshots.json`; `render_marketing.py` wraps text, but very long words may still need shorter copy.
 - Raw and final Watch dimensions differ: `render_watch.py` logs the conversion and outputs the configured size.
 

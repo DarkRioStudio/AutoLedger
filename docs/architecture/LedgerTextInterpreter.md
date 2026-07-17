@@ -3,7 +3,7 @@
 > 文档状态：Reference
 > 真源范围：平台无关文本到账单解释器的设计背景；当前合同以 AutoLedgerCore 代码和回归为准
 > 文档分类核验：2026-07-17
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 ## 1. 设计背景
 

@@ -622,6 +622,9 @@ private struct ScreenshotCopy {
         if locale.hasPrefix("ja") {
             return ScreenshotCopy(languageCode: "ja")
         }
+        if locale.hasPrefix("ko") {
+            return ScreenshotCopy(languageCode: "ko")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return ScreenshotCopy(languageCode: "zh-Hant")
         }
@@ -634,12 +637,49 @@ private struct ScreenshotCopy {
             en
         case "ja":
             ja ?? en
+        case "ko":
+            Self.korean[zhHans] ?? en
         case "zh-Hant":
             zhHant
         default:
             zhHans
         }
     }
+
+    private static let korean: [String: String] = [
+        "支付截图识别": "결제 스크린샷 인식",
+        "支付截图、小票和剪贴板文字都能整理成待保存账单。": "결제 스크린샷, 영수증, 클립보드 텍스트를 저장 전 기록으로 정리해요.",
+        "支付成功": "결제 완료",
+        "商户": "가맹점",
+        "时间": "시간",
+        "今天 09:41": "오늘 09:41",
+        "来源": "출처",
+        "支付截图": "결제 스크린샷",
+        "自动生成待保存账单": "저장할 기록 자동 생성",
+        "已识别": "인식 완료",
+        "分类": "카테고리",
+        "餐饮": "외식",
+        "腕上快速记账": "손목에서 빠르게 기록",
+        "在 Apple Watch 上随手记录，回到 iPhone 继续查看和编辑。": "Apple Watch에서 기록하고 iPhone에서 계속 확인하고 편집하세요.",
+        "今日支出": "오늘 지출",
+        "2 笔": "2건",
+        "抬腕记一笔": "손목에서 기록하기",
+        "金额和最近账单会同步回 iPhone。": "금액과 최근 기록이 iPhone으로 동기화돼요.",
+        "刚刚同步": "방금 동기화됨",
+        "iPhone 继续整理": "iPhone에서 계속 정리",
+        "最近": "최근",
+        "同步": "동기화",
+        "已完成": "완료",
+        "读取支付截图和相册收据": "결제 스크린샷과 저장된 영수증 읽기",
+        "现场拍摄纸质小票": "종이 영수증 바로 촬영",
+        "一句话记账": "한마디로 기록",
+        "输入一句“午饭 28 元”，自动整理成待保存账单。": "“점심 28위안”이라고 입력하면 저장할 기록으로 정리해요.",
+        "午饭 28 元": "점심 28위안",
+        "像说一句话一样输入，AutoLedger 会准备好待保存账单。": "말하듯 입력하면 AutoLedger가 저장할 기록을 준비해요.",
+        "已生成账单": "기록 생성 완료",
+        "午饭": "점심",
+        "今天 12:20": "오늘 12:20",
+    ]
 }
 
 private func makeScreenshotLedgerStore() -> LedgerStore {

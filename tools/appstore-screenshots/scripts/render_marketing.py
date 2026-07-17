@@ -44,7 +44,23 @@ def target_size(config: dict, platform: str) -> tuple[int, int]:
     return int(target["width"]), int(target["height"])
 
 
-def font(size: int, weight: str = "regular") -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def font(
+    size: int,
+    weight: str = "regular",
+    locale: str | None = None,
+) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    if locale == "ko":
+        korean_candidates = [
+            ("/System/Library/Fonts/AppleSDGothicNeo.ttc", 6 if weight == "bold" else 0),
+            ("/System/Library/Fonts/Supplemental/NotoSansGothic-Regular.ttf", 0),
+            ("/System/Library/Fonts/Supplemental/AppleGothic.ttf", 0),
+        ]
+        for path, index in korean_candidates:
+            try:
+                return ImageFont.truetype(path, size=size, index=index)
+            except OSError:
+                continue
+
     candidates: list[str]
     if weight == "bold":
         candidates = [
@@ -228,9 +244,9 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
     if platform == "ios":
         return {
             "brandPos": (110, 96),
-            "brandFont": font(34, "bold"),
-            "titleFont": font(74 if locale != "en" else 68, "bold"),
-            "subtitleFont": font(35, "regular"),
+            "brandFont": font(34, "bold", locale),
+            "titleFont": font(74 if locale != "en" else 68, "bold", locale),
+            "subtitleFont": font(35, "regular", locale),
             "textWidth": canvas_w - 220,
             "titlePos": (110, 205),
             "lineWidth": 98,
@@ -248,9 +264,9 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
         capture_h = 1280
         return {
             "brandPos": (132, 84),
-            "brandFont": font(40, "bold"),
-            "titleFont": font(title_font_size, "bold"),
-            "subtitleFont": font(30, "regular"),
+            "brandFont": font(40, "bold", locale),
+            "titleFont": font(title_font_size, "bold", locale),
+            "subtitleFont": font(30, "regular", locale),
             "textWidth": canvas_w - 264,
             "titlePos": (132, 170),
             "lineWidth": 112,
@@ -267,9 +283,9 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
         capture_h = 1856
         return {
             "brandPos": (164, 96),
-            "brandFont": font(48, "bold"),
-            "titleFont": font(112 if locale != "en" else 96, "bold"),
-            "subtitleFont": font(48, "regular"),
+            "brandFont": font(48, "bold", locale),
+            "titleFont": font(112 if locale != "en" else 96, "bold", locale),
+            "subtitleFont": font(48, "regular", locale),
             "textWidth": canvas_w - 328,
             "titlePos": (164, 190),
             "lineWidth": 148,
@@ -286,9 +302,9 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
         capture_h = 1834
         return {
             "brandPos": (168, 90),
-            "brandFont": font(48, "bold"),
-            "titleFont": font(108 if locale != "en" else 94, "bold"),
-            "subtitleFont": font(46, "regular"),
+            "brandFont": font(48, "bold", locale),
+            "titleFont": font(108 if locale != "en" else 94, "bold", locale),
+            "subtitleFont": font(46, "regular", locale),
             "textWidth": canvas_w - 336,
             "titlePos": (168, 184),
             "lineWidth": 148,
@@ -304,9 +320,9 @@ def platform_layout(platform: str, locale: str, canvas_w: int, canvas_h: int) ->
     capture_h = 780
     return {
         "brandPos": (54, 36),
-        "brandFont": font(26, "bold"),
-        "titleFont": font(50 if locale != "en" else 46, "bold"),
-        "subtitleFont": font(22, "regular"),
+        "brandFont": font(26, "bold", locale),
+        "titleFont": font(50 if locale != "en" else 46, "bold", locale),
+        "subtitleFont": font(22, "regular", locale),
         "textWidth": canvas_w - 108,
         "titlePos": (54, 72),
         "lineWidth": 72,

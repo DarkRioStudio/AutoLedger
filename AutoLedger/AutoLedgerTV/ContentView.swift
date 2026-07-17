@@ -198,6 +198,9 @@ private struct TVDashboardCopy {
         if locale.hasPrefix("ja") {
             return TVDashboardCopy(languageCode: "ja")
         }
+        if locale.hasPrefix("ko") {
+            return TVDashboardCopy(languageCode: "ko")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return TVDashboardCopy(languageCode: "zh-Hant")
         }
@@ -208,6 +211,7 @@ private struct TVDashboardCopy {
         switch languageCode {
         case "en": return "en_US"
         case "ja": return "ja_JP"
+        case "ko": return "ko_KR"
         case "zh-Hant": return "zh_TW"
         default: return "zh_CN"
         }
@@ -235,6 +239,7 @@ private struct TVDashboardCopy {
         switch languageCode {
         case "en": return en
         case "ja": return ja
+        case "ko": return Self.korean[zhHans] ?? en
         case "zh-Hant": return zhHant
         default: return zhHans
         }
@@ -259,13 +264,17 @@ private struct TVDashboardCopy {
         switch languageCode {
         case "en": return "\(count) records"
         case "ja": return "\(count) 件"
+        case "ko": return "\(count)건"
         case "zh-Hant": return "\(count) 筆"
         default: return "\(count) 笔"
         }
     }
 
     func checkTime(_ date: Date) -> String {
-        text(
+        if languageCode == "ko" {
+            return "확인 시간 \(TVFormatters.time.string(from: date))"
+        }
+        return text(
             "检查时间 \(TVFormatters.time.string(from: date))",
             "檢查時間 \(TVFormatters.time.string(from: date))",
             "Checked at \(TVFormatters.time.string(from: date))",
@@ -282,6 +291,62 @@ private struct TVDashboardCopy {
         }
         return text("较上月少 ", "較上月少 ", "Down ", "先月より少ない ") + TVFormatters.currency(abs(delta))
     }
+
+    private static let korean: [String: String] = [
+        "家庭大屏只读账本": "거실 대화면 읽기 전용 장부",
+        "显示金额": "금액 표시",
+        "隐藏金额": "금액 숨기기",
+        "刷新": "새로고침",
+        "总览": "개요",
+        "分类": "카테고리",
+        "趋势": "추이",
+        "摘要": "요약",
+        "已隐藏": "숨김",
+        "暂无": "없음",
+        "正在读取账本快照": "장부 스냅샷 불러오는 중",
+        "tvOS 首版只展示正式账本的只读数据。": "tvOS에서는 저장된 장부 데이터를 읽기 전용으로 표시합니다.",
+        "等待账本数据": "장부 데이터 기다리는 중",
+        "当前 Apple TV 本机还没有可展示的正式账单。后续接入 iCloud 只读快照后，这里会显示同步后的月度看板。": "현재 Apple TV에 표시할 저장된 장부가 없습니다. iCloud 읽기 전용 스냅샷을 사용할 수 있게 되면 월간 대시보드가 여기에 표시됩니다.",
+        "账本快照不可用": "장부 스냅샷을 사용할 수 없음",
+        "重试": "다시 시도",
+        "重新读取": "다시 불러오기",
+        "日用杂货": "식료품",
+        "餐饮": "외식",
+        "出行": "교통",
+        "酒店": "호텔",
+        "购物": "쇼핑",
+        "数字服务": "디지털 서비스",
+        "生活缴费": "공과금",
+        "娱乐": "엔터테인먼트",
+        "其他": "기타",
+        "与上月基本持平": "지난달과 비슷함",
+        "较上月多 ": "지난달보다 많음 ",
+        "较上月少 ": "지난달보다 적음 ",
+        "地铁：Example Station → Example Airport": "지하철: Example Station → Example Airport",
+        "tvOS 模拟器演示数据": "tvOS 시뮬레이터 데모 데이터",
+        "今日支出": "오늘 지출",
+        "本月笔数": "이번 달 건수",
+        "日均支出": "일평균 지출",
+        "本月分类占比": "이번 달 카테고리 비중",
+        "按正式账单金额排序，最多展示前 6 类。": "저장된 장부 금액순으로 최대 6개 카테고리를 표시합니다.",
+        "Top 分类": "상위 카테고리",
+        "分类数量": "카테고리 수",
+        "本月总额": "이번 달 합계",
+        "最近 7 天趋势": "최근 7일 추이",
+        "只读展示正式账单，不包含候选账单和调试记录。": "저장된 장부만 읽기 전용으로 표시하며 후보와 디버그 기록은 포함하지 않습니다.",
+        "近 6 个月": "최근 6개월",
+        "年度累计": "연간 합계",
+        "本月累计": "이번 달 합계",
+        "Top 商户": "주요 가맹점",
+        "分类结构": "카테고리 구성",
+        "暂无分类数据": "카테고리 데이터 없음",
+        "常用商户": "자주 찾는 가맹점",
+        "商户信息已隐藏": "가맹점 정보 숨김",
+        "暂无商户数据": "가맹점 데이터 없음",
+        "最近账单": "최근 기록",
+        "最近账单已隐藏": "최근 기록 숨김",
+        "暂无最近账单": "최근 기록 없음",
+    ]
 }
 
 private extension ProcessInfo {

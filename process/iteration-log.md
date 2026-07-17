@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-428 项目文档真源与路线图治理）
+更新日期：2026-07-18（ITER-430 韩语六平台截图管线）
 
 ## 记录规则
 
@@ -43,6 +43,44 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-430 韩语六平台截图管线
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / Localization Assets
+- 类型：能力增强 / 测试 / 文档
+- 目标：把当前版本规划中的韩语商店截图从“缺少管线”推进为六平台可重复生成的本地资产，并消除截图画面内回退中文的问题，同时保持 ASC 上传、母语审校与真实样本门禁不被误报为完成。
+- 改动范围：更新 `tools/appstore-screenshots` 的 locale 配置、30 个 shot 文案、韩文字体选择、导出帮助、预览文档和截图本地化 smoke；仅为 iOS、Watch、tvOS、visionOS 的 screenshot mode / screenshot Host 增加韩语 copy；更新当前项目状态、v1.7.0 计划、i18n 发布矩阵、CHANGELOG 和本日志。
+- 未改动范围：未改变正常 App 启动路径、正式 UI 本地化资源、账本 / OCR / iCloud / 酒店业务逻辑、用户数据、Worker、SQLite / CloudKit / D1 schema、StoreKit Product ID、签名、entitlements、Xcode 工程版本号、构建号、ASC 线上 metadata / Primary Language、Xcode Cloud workflow 或 `xcbuild-v1.7.0` 标签。
+- 完成内容：截图配置新增 `ko` / `ko_KR`，iPhone 8 张、iPad 6 张、Mac 5 张、Watch 4 张、tvOS 4 张、visionOS 3 张均补齐韩语营销标题与副标题；渲染器为韩语优先选择 Apple SD Gothic Neo，并保留 Noto Sans Gothic / Apple Gothic fallback。
+- 完成内容：首轮全平台导出成功后，视觉复核发现 iOS、Watch、tvOS、visionOS 的营销标题虽为韩语，但画面内仍存在中文 fallback；本轮据此补齐四个平台截图 Host 的韩语 copy 并重新编译导出，最终六平台画面内主文案均使用韩语。
+- 完成内容：本地生成 30 张 raw 与 30 张商店成品，商店尺寸分别为 iPhone `1242x2688`、iPad `2732x2048`、Mac `1440x900`、Watch `410x502`、tvOS / visionOS `3840x2160`；预览页包含 30 个韩语引用，输出目录无 `.tmp` 残留。生成物按仓库规则忽略，未纳入提交。
+- 未完成内容：未上传 ASC 截图集，未生成或上传韩语 App Preview；韩语原生设备长文本 / 动态字体目检、订阅文案最终状态、母语审校、真实韩国小票 / 支付通知 / 酒店 folio 样本和 Kakao Pay / Naver Pay 地区专项仍未完成，因此 `ko` 继续保持非 Ready。
+- 测试情况：屏幕录制权限 preflight 通过；`export.sh --locale ko` 完整构建并导出六平台，修复后再次构建并重导 iOS、Watch、tvOS、visionOS；30 / 30 raw 和 30 / 30 store 数量、平台尺寸、预览引用与临时文件检查通过；六平台成品联系表完成工程视觉复核；Python 脚本编译、`python3 scripts/check_screenshot_localization_smoke.py`、`python3 scripts/check_documentation_truth_smoke.py`、`git diff HEAD --check` 和完整 `bash scripts/run_offline_regression.sh` 均通过。回归仅保留既有 `AppFormatters` `nonisolated(unsafe)` 编译 warning，无失败。
+- 风险与注意事项：本地截图成功不能替代 App Store Connect 在线截图状态或韩语母语质量；截图 Host 中保留的英文产品名、示例商户名和货币符号属于演示数据，不应误判为本地化 fallback。Watch 小屏内容仍受原生 viewport 约束，正式上传前应继续按 ASC 预览人工检查。
+- 回滚方式：回退截图配置、渲染器、导出文档、静态 smoke 与四个截图 Host 的本轮改动；输出目录为 ignored 生成物，可直接重新导出，不涉及用户数据、schema 或线上回滚。
+- 结论：韩语六平台截图管线与本地成品已补齐，截图画面内中文 fallback 已修复；完整韩语发布仍受 ASC、母语审校、真实样本和地区专项门禁约束。
+- 下一步建议：在最终候选冻结后上传并逐平台核对 ASC 韩语截图集，完成原生设备与母语审校；同时归档真实韩国样本和 App Preview / 订阅证据，再决定是否把韩语升级为 Ready。
+
+### ITER-429 文档物理分类、语言路线与 v1.8 草案
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0（发布文档收口）；v1.8.0 / ASC 1.7.0（仅规划）
+- 所属阶段：Release Documentation / Roadmap Planning / Governance
+- 类型：文档 / 治理 / 测试
+- 目标：按用户确认将混排的 `docs/` 物理分类，同时保留核心 Roadmap 在 `docs/` 根目录；固定“每个公开功能版本新增一组语言”的跨版本路线，建立 `v1.8.0` 产品与语言草案，并修订当前版本的英语主语言与语言准入门禁。
+- 改动范围：将既有文档按 `product / architecture / capabilities / platforms / operations / archive` 六组迁移；重建 `docs/README.md`；更新全仓 Markdown 引用、四语 README、`AGENTS.md`、`PROJECT_STATUS.md`、工具 README、历史版本计划、`versions/v1.7.0-plan.md` 和当前语言矩阵；新增 `docs/product/I18N_ROADMAP.md`、`versions/v1.8.0-plan.md` 与 `versions/v1.8.0-i18n-release-matrix.md`；增强文档真源 smoke；同步 CHANGELOG 和本日志。
+- 未改动范围：未修改 Swift / TypeScript 产品实现、App / Worker API、SQLite / CloudKit / D1 schema、StoreKit Product ID、签名、entitlements、Xcode 工程、版本号、构建号、Xcode Cloud tag、ASC 线上 metadata 或 Primary Language，也未构建、部署或提交审核。
+- 完成内容：`docs/` 根目录只保留 `README.md` 与核心 `ROADMAP.md`；产品专项、架构合同、用户能力、平台设计、发布运维和历史材料均进入固定目录，索引记录每份文档的生命周期和职责。
+- 完成内容：新增跨版本语言路线，固定 `v1.7.0` 韩语、`v1.8.0` 西语 + 巴葡、`v1.9.0` 法语 + 德语、`v2.0` 印尼语 + 越南语，保留 `v2.1` 印地语 + 印度英语 profile 与后续阿拉伯语 / RTL 候选；每组都受商店、UI、识别、样本、地区票据和人工审校六项门禁约束。
+- 完成内容：核心 Roadmap 将下一版本定位为 Review & Close；`v1.8.0` Draft 规划持久化待处理、统一复核生命周期、可理解同步状态、月结检查、西语 / 巴葡和有限云端辅助可靠性，不把规则中心、Saved Views 或订阅省钱看板提前扩入 P0。
+- 完成内容：当前 `v1.7.0` 计划和语言矩阵明确西语 / 巴葡不进入当前候选，并新增 ASC `1.6.0` 英语主语言门禁。仓库已确认 Xcode `developmentRegion = en`，ASC Primary Language 目标为 `English (U.S.) / en-US`；实际线上切换仍需可编辑性检查、全平台英语截图条件与 ASC 证据，不能由文档或 metadata YAML 代替。
+- 完成内容：`scripts/check_documentation_truth_smoke.py` 改为递归检查 `docs/**/*.md`，只允许六类目录及根级 README / ROADMAP 例外，并校验生命周期、索引状态、当前与下一版本真源片段、四语入口和本地 Markdown 断链。
+- 未完成内容：`v1.8.0` 尚未进入 Execution Ready，西语 / 巴葡资源、识别包、样本、截图和 ASC locale 均未实施；ASC Primary Language 尚未在线切换或留证；当前 `v1.7.0` 的 TestFlight、iCloud、韩语审校、商店资产和发布门禁仍按 `PROJECT_STATUS.md` 关闭。
+- 测试情况：`python3 scripts/check_documentation_truth_smoke.py` PASS；`python3 -m py_compile scripts/check_documentation_truth_smoke.py` PASS；`git diff HEAD --check` PASS；完整 `bash scripts/run_offline_regression.sh` PASS，并在完整回归内再次执行文档真源 smoke PASS。仅出现既有 `AppFormatters` 四处 `nonisolated(unsafe)` 编译警告，无失败。
+- 风险与注意事项：本轮物理迁移由用户在 ITER-428 的候选期保守策略之后明确授权，旧日志中“发布后再迁移”保留为当时决策；外部书签若直接指向旧文件路径会失效，仓库内引用已全部更新。未来新增文档若绕过分类或漏改索引，离线回归会失败。
+- 回滚方式：将分类目录中的文档移回原路径，恢复索引与全仓链接，删除新语言路线、v1.8 草案及对应 smoke 断言即可；无产品代码、线上配置或数据迁移回滚。
+- 结论：文档物理结构、核心 Roadmap 例外、跨版本语言节奏、当前版本门禁与下一版本 Draft 已形成清晰真源，并通过完整离线回归。
+- 下一步建议：先完成 `v1.7.0` Release Candidate 的设备、iCloud、韩语、ASC 与隐私证据；发布决定归档后，再把 `v1.8.0` Draft 升级为 Execution Ready 并从合同 / 样本阶段启动。
 
 ### ITER-428 项目文档真源与路线图治理
 - 日期：2026-07-17
@@ -497,15 +535,15 @@
 - 所属阶段：Docs / Product Positioning
 - 类型：文档 / 治理
 - 目标：让 repo 中 AutoLedger 个人 Pro 说明与当前实现一致，统一为“本地优先个人账本 + 自动化导入 + 酒店水单归档”和“免费版手动完成，Pro 自动整理”。
-- 改动范围：README 顶层定位；`docs/autoledger-personal-pro-design.md` 当前 Pro 能力与后续方向；新增 `docs/autoledger-personal-pro-roadmap.md`；`docs/pro-access-audit.md` 本地 gate / server-verified 边界；`docs/iap-support.md` Pro / Support Developer 双线说明；`versions/v1.7.0-plan.md` 个人 Pro 后续路线图；CHANGELOG 本轮记录。
+- 改动范围：README 顶层定位；`docs/product/autoledger-personal-pro-design.md` 当前 Pro 能力与后续方向；新增 `docs/product/autoledger-personal-pro-roadmap.md`；`docs/operations/pro-access-audit.md` 本地 gate / server-verified 边界；`docs/operations/iap-support.md` Pro / Support Developer 双线说明；`versions/v1.7.0-plan.md` 个人 Pro 后续路线图；CHANGELOG 本轮记录。
 - 未改动范围：未修改 Swift 业务代码、SQLite / CloudKit schema、StoreKit Product ID、Worker API 合同、entitlement、Pro 定价策略、ASC 自动提交逻辑或构建 tag。
 - 完成内容：免费版完整手动路径、当前 9 项 Pro 自动化能力、Pro 到期不锁历史数据、云端水单收件箱服务端验证和后续 P0 / P1 / P2 路线图已经在文档中对齐。
 - 未完成内容：未重新生成 App Store 截图 / App Preview，未提交 ASC 元数据，未做 UI 真机截图。
 - 测试情况：`git diff --check` PASS。本轮只改 Markdown / 文案源文件，不运行完整 Xcode build。
 - 风险与注意事项：本轮最初在 `/tmp/AutoLedgerRio-docs-work` 临时副本中完成并推送，因为原工作树读取文件时持续返回 `Interrupted system call`；2026-07-09 原目录恢复后已 fast-forward 到远端提交并合并回本地未提交文档更新。
-- 回滚方式：回退本轮 Markdown / 文案源文件改动，删除新增 `docs/autoledger-personal-pro-roadmap.md` 即可。
+- 回滚方式：回退本轮 Markdown / 文案源文件改动，删除新增 `docs/product/autoledger-personal-pro-roadmap.md` 即可。
 - 结论：文档口径完成收口，未引入功能或数据结构变更。
-- 下一步建议：后续 Pro 页面、ASC 文案和 v1.7.0 计划变更继续同步回 `docs/autoledger-personal-pro-roadmap.md` 和 `docs/pro-access-audit.md`。
+- 下一步建议：后续 Pro 页面、ASC 文案和 v1.7.0 计划变更继续同步回 `docs/product/autoledger-personal-pro-roadmap.md` 和 `docs/operations/pro-access-audit.md`。
 
 ### ITER-402 v1.7.0 文档与工程现状对齐
 - 日期：2026-07-08
@@ -788,7 +826,7 @@
 - 所属阶段：GOAL-2345G / Pro Automation
 - 类型：能力增强 / UI / 隐私边界 / 测试
 - 目标：解决 iOS 最新 build 中用户看不到数据清洗入口的问题，并把上一段 Worker 辅助请求策略接到清晰的端上授权入口，但保持当前版本零上传。
-- 改动范围：更新 iOS 设置页入口、`DataCleaningSuggestionsView` 云端辅助授权卡、五语本地化、离线静态 smoke、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 iOS 设置页入口、`DataCleaningSuggestionsView` 云端辅助授权卡、五语本地化、离线静态 smoke、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议或跨设备建议队列。
 - 完成内容：设置页在 Pro 卡片下新增独立“智能整理”分区，直接进入 `DataCleaningSuggestionsView`；旧“规则”分区里的重复入口已移除，避免入口被埋住。
 - 完成内容：`DataCleaningSuggestionsView` 新增“云端辅助建议”授权卡，使用 `@AppStorage("dataCleaningCloudAssistEnabled")` 保存本机偏好，并复用 `DataCleaningAssistRequestPolicy` 展示默认关闭、Pro gate、历史不足、冷却和失败回退状态。
@@ -807,7 +845,7 @@
 - 所属阶段：GOAL-2345F / Pro Automation
 - 类型：能力增强 / 隐私边界 / 测试
 - 目标：在真正接入 Worker 之前，先冻结云端辅助数据清洗建议的请求前置策略，确保未来不会在用户未开启、未订阅 Pro、历史不足、冷却期内或失败回退期内静默发起请求。
-- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 App UI、UserDefaults 开关、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、配额、用户授权页面或跨设备建议队列。
 - 完成内容：新增 `DataCleaningAssistRequestContext`，显式表达 `userEnabledCloudAssist`、`isProActive`、`lastRequestedAt`、`backoffUntil` 和 `forceRefresh`。
 - 完成内容：新增 `DataCleaningAssistRequestDecision` 和 `DataCleaningAssistRequestDecisionReason`，让调用方只拿到 allowed / reason / nextEligibleAt，不暴露账本明细。
@@ -844,7 +882,7 @@
 - 所属阶段：GOAL-2345E / Pro Automation
 - 类型：能力增强 / 隐私边界 / 测试
 - 目标：在 Worker 真实接入前，先冻结 hash-only 响应 schema 和本地映射规则，让服务端未来只返回不可直接展示的 hash 建议，客户端再在本机解析成用户可读预览。
-- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `AutoLedgerCore` 数据清洗辅助合同、离线回归、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 App UI、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、Pro 网络授权、配额、用户开关或跨设备建议队列。
 - 完成内容：新增 `DataCleaningAssistResponse`、`DataCleaningAssistSuggestion` 和 `DataCleaningAssistSuggestionKind`，定义 `hashed_suggestions_v1` 响应只携带 kind、候选商户 hash、目标商户 hash、confidence 和 reason code。
 - 完成内容：新增 `DataCleaningAssistSuggestionMapper`，用本机交易重新计算商户 hash，将 Worker 返回的“候选 hash -> 目标 hash”解析为 `.merchantAlias` `DataCleaningPreviewItem`；真实商户名、受影响交易和可采纳动作只在本机产生。
@@ -863,7 +901,7 @@
 - 所属阶段：GOAL-2345D / Pro Automation
 - 类型：能力增强 / 隐私边界 / 测试
 - 目标：在真正接入 Worker 辅助建议之前，先冻结本地脱敏 payload 合同，确保后续云端只看到不可还原账本明细的聚合特征。
-- 改动范围：新增 `AutoLedgerCore` `DataCleaningAssistPayload` 合同和 builder，更新离线回归和显式编译清单，并回填 `versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：新增 `AutoLedgerCore` `DataCleaningAssistPayload` 合同和 builder，更新离线回归和显式编译清单，并回填 `versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 App UI、SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未新增网络上传、Worker endpoint、服务端模型建议、返回建议 schema、Pro 网络授权、配额或用户开关。
 - 完成内容：新增 `DataCleaningAssistPayloadBuilder`，将本地交易聚合为 `hashed_aggregate_v1` payload，包含 normalized merchant hash、normalized length、交易数量、分类 / 来源分布、金额区间桶、prefix hash、已存在 alias / category correction 的 hash 或 enum 值。
 - 完成内容：payload 不包含真实商户名、备注、OCR 原文、交易 UUID、订单号、手机号、精确金额或账单日期；prefix 只暴露 hash 和长度，未来 Worker 可返回 hash 对 hash 的建议，再由客户端本地映射成用户可读建议。
@@ -882,7 +920,7 @@
 - 所属阶段：GOAL-2345C / Pro Automation
 - 类型：能力增强 / UI / 测试
 - 目标：在忽略建议和批量采纳之后，补齐数据清洗采纳历史，让用户采纳建议后仍能看到最近结果、撤销入口和本机审计记录。
-- 改动范围：更新 `LedgerStore` 本机历史记录模型与持久化、iPhone `DataCleaningSuggestionsView` 历史区域、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `LedgerStore` 本机历史记录模型与持久化、iPhone `DataCleaningSuggestionsView` 历史区域、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现跨设备建议队列、忽略项管理列表、Worker 辅助解释、脱敏特征合同或 Mac 专属历史表格 UI。
 - 完成内容：新增 `DataCleaningApplicationHistoryEntry` 和 `dataCleaningApplicationHistory`，记录采纳建议 ID、建议类型、建议标题、采纳数量、更新 / 删除 / 跳过数量和采纳时间。
 - 完成内容：历史记录使用本机 `UserDefaults` 持久化，最多保留最近 20 条；撤销上次数据清洗时将对应历史项标记为已撤销，保留审计痕迹。
@@ -919,7 +957,7 @@
 - 所属阶段：GOAL-2345B / Pro Automation
 - 类型：能力增强 / UI / 测试
 - 目标：在 `GOAL-2345A` 的本地商户归一化建议基础上，补齐用户可忽略建议和一次性采纳多个建议的闭环，让 iPhone 与 iPad / Mac 数据清洗入口使用同一份建议状态。
-- 改动范围：更新 `DataCleaningPreviewPlanner` ignored preview 过滤参数、`LedgerStore` 忽略建议持久化和批量采纳 / 撤销逻辑、iPhone `DataCleaningSuggestionsView`、iPad / Mac `IPadCleaningPreviewWorkspaceView`、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `DataCleaningPreviewPlanner` ignored preview 过滤参数、`LedgerStore` 忽略建议持久化和批量采纳 / 撤销逻辑、iPhone `DataCleaningSuggestionsView`、iPad / Mac `IPadCleaningPreviewWorkspaceView`、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、Worker、Common API、App Store Connect、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现建议历史、忽略项管理列表、跨设备建议队列、Worker 辅助解释、更复杂模糊合并或 Mac 专属批量表格 UI。
 - 完成内容：`DataCleaningPreviewPlanner.buildSnapshot` 新增默认参数 `ignoredPreviewIDs`，可过滤用户已忽略的建议，并保持旧调用兼容。
 - 完成内容：`LedgerStore` 新增 `ignoredDataCleaningPreviewIDs`，使用 `UserDefaults` 做本机持久化；新增 `dataCleaningPreviewSnapshot()`、`ignoreDataCleaningPreview(id:)` 和 `restoreIgnoredDataCleaningPreview(id:)`，让 iPhone 与 iPad / Mac 工作台读取同一份当前账本过滤快照。
@@ -938,7 +976,7 @@
 - 所属阶段：GOAL-2345A / Pro Automation
 - 类型：能力增强 / Pro 边界治理 / UI
 - 目标：优先完成 iOS 和通用平台层面的 Pro 自动化第一段，让 App 可以本地分析账本、提出商户归一化建议，并在 iPhone 上提供可采纳入口。
-- 改动范围：更新 `DataCleaningPreviewPlanner`、`AutoLedgerProAccessPolicy`、`LedgerStore` 数据清洗采纳 / 撤销逻辑、新增 `DataCleaningSuggestionsView`、设置页入口、iPad / Mac 清洗原因文案、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `DataCleaningPreviewPlanner`、`AutoLedgerProAccessPolicy`、`LedgerStore` 数据清洗采纳 / 撤销逻辑、新增 `DataCleaningSuggestionsView`、设置页入口、iPad / Mac 清洗原因文案、五语本地化、离线回归、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 SQLite / CloudKit schema、StoreKit 商品 ID、App Store Connect、Worker、截图导出、Xcode Cloud 脚本、signing、entitlements、`MARKETING_VERSION` 或 build number。未实现 Worker 辅助建议、忽略建议、建议历史、批量全选、跨设备建议队列、复杂模糊匹配或 Mac 专属新 UI。
 - 完成内容：`DataCleaningPreviewPlanner` 新增本地商户归一化建议。规则先保持保守：短商户名在账本中至少出现 2 次，长商户名以该短商户名为前缀并带有额外后缀时，生成 `.merchantAlias` 建议，适合门店、航站楼、分店等常见后缀整理。
 - 完成内容：`LedgerStore.applyDataCleaningPreview` 在采纳商户统一建议时会写入商户别名并回刷历史账单；后续 OCR、快捷指令、语音、Share Extension 和手动新增账单继续复用既有别名规则。数据清洗撤销现在会恢复采纳前的商户别名状态，避免撤销后残留自动建议规则。
@@ -956,7 +994,7 @@
 - 所属阶段：Ledger Import / Data Cleaning Planning
 - 类型：Bugfix / 文档 / Pro 边界治理
 - 目标：修复同商户、时间接近但金额不同的 OCR 账单被相似文本去重误判为重复的问题，并把 Mac / iOS 商户归一化与数据清洗建议写入 `v1.7.0` 执行计划。
-- 改动范围：更新 `ImportDuplicateDetector`、App 内 OCR / 快捷指令 / 语音 / Share Extension 去重调用点、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`docs/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
+- 改动范围：更新 `ImportDuplicateDetector`、App 内 OCR / 快捷指令 / 语音 / Share Extension 去重调用点、`scripts/OfflineRegression.swift`、`versions/v1.7.0-plan.md`、`docs/operations/pro-access-audit.md`、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 SQLite / CloudKit schema、账单解析字段、OCR UI、快捷指令参数、商户别名存储结构、分类学习实现、Common API、Worker、StoreKit、App Store Connect、截图导出、signing、entitlements、Xcode Cloud 脚本、`MARKETING_VERSION` 或 build number。
 - 完成内容：`ImportDuplicateDetector.hasOCRTextDuplicate` 新增解析金额保护：当前导入金额和历史 debug record 金额都存在且差异超过 `0.01` 时，该历史 OCR 文本不参与 Jaccard 重复判断；缺少金额的旧 debug record 继续保持兼容，避免破坏旧导入记录。`LedgerStore`、`QuickLedgerIntent`、`VoiceLedgerIntent` 和 Share Extension 传入解析金额，共享同一规则。离线回归新增同商户同时间、OCR 文本高度相似但金额不同的样例，确认 `12.50` 与 `13.50` 两笔都能入账，同时既有相同金额相似 OCR 去重仍通过。
 - 完成内容：`v1.7.0` 计划新增 `GOAL-2345` 商户归一化与数据清洗建议，明确 Mac 端继续作为大屏清洗工作台、iOS 端复用同一建议合同提供轻量采纳；基础商户别名、分类学习、单条编辑和已采纳规则后续生效继续免费，Pro 只覆盖全账本自动分析、模型辅助建议、批量预览 / 应用、低置信度集中复核和可选 Worker 辅助。计划要求采纳结果反哺 OCR、快捷指令、语音、Share Extension 和手动记账保存前规则链路。
@@ -2097,7 +2135,7 @@
 - 所属阶段：Personal Pro / App UI / Automation Gate
 - 类型：能力增强 / UI / 文档 / 测试
 - 目标：按 Pro 文案继续推进实际 Pro 功能边界，补上已定义为 P0 的“批量候选导入”门禁，同时收尾记账首页和 Pro 页面两个 UI polish 点。
-- 改动范围：更新 `InboxView`、`SupportAutoLedgerView`、`IPadWorkspaceView`、四语本地化、`docs/pro-access-audit.md`、`scripts/check_accessibility_smoke.py`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
+- 改动范围：更新 `InboxView`、`SupportAutoLedgerView`、`IPadWorkspaceView`、四语本地化、`docs/operations/pro-access-audit.md`、`scripts/check_accessibility_smoke.py`、`scripts/check_adaptive_layout_rules.py`、CHANGELOG 和本日志。
 - 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅流程、手动记账、单张截图识别、手动酒店水单导入、邮箱水单扫描、云端收件箱 Worker、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、Cloudflare secrets、Cloudflare Worker 部署或 `MARKETING_VERSION`；本轮未提交、未推送，避免触发 ASC 构建。
 - 完成内容：记账 tab 一键记账折叠态下，“相册截图”和“票据扫描”改为一行一个按钮；一键记账展开态保持一行两个按钮。`AutoLedgerProView` 首行移除“专享 / Member / 特典”标识，并给 `AutoLedger` 品牌文字增加单行缩放保护，避免折行。`IPadBatchImportWorkspaceView` 接入 `ProEntitlementManager.canUse(.batchCandidateImport)`，gate 新的多文件批量导入、拖放导入、Mac 导入文件命令、重试和识别执行；未订阅时展示“批量候选是 Pro 自动化”提示并打开 Pro 页。已有候选队列、候选复核、历史数据、CSV / JSON 数据交换、单张截图识别和手动酒店水单导入保持可用。
 - 未完成内容：当前 Codex 会话没有暴露可直接调用的 OpenDesign MCP 工具，因此未能通过 OpenDesign 工具自动审阅全 App；本轮按现有 SwiftUI 组件、截图模式和静态门禁完成本地 polish。真实 StoreKit 沙盒订阅状态下的批量候选门禁切换仍需后续 TestFlight / Sandbox smoke。
@@ -2113,7 +2151,7 @@
 - 所属阶段：Personal Pro / Cloud Inbox / Server Entitlement
 - 类型：能力增强 / 安全 / UI / 文档 / 测试
 - 目标：在不影响手动 PDF 和本地邮箱扫描的前提下，让云端水单收件箱在服务端 entitlement 未配置或校验失败时有自然 fallback，并补上生产 token claim 的最小 App Store Server API 授权链路。
-- 改动范围：更新 `ProEntitlementManager`、`ServerEntitlementVerifier`、`HotelFolioInboxClient` 和 `HotelFolioInboxImportView`；补齐四语 cloud inbox 文案；更新 Worker `src/index.ts`、tests、`wrangler.jsonc` 和 README；更新 `docs/pro-access-audit.md`、CHANGELOG 和本日志。
+- 改动范围：更新 `ProEntitlementManager`、`ServerEntitlementVerifier`、`HotelFolioInboxClient` 和 `HotelFolioInboxImportView`；补齐四语 cloud inbox 文案；更新 Worker `src/index.ts`、tests、`wrangler.jsonc` 和 README；更新 `docs/operations/pro-access-audit.md`、CHANGELOG 和本日志。
 - 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅 UI、手动酒店 PDF 导入、本地邮箱扫描免费月度额度、邮箱授权保存、酒店水单解析流水线、SQLite / CloudKit schema、APNs secrets、Cloudflare 生产部署、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - 完成内容：App 侧保存 StoreKit verified transaction 的 `jwsRepresentation`，云端水单 capability 通过 Worker `/v1/pro-entitlements/verify` 校验；未订阅时只展示 Pro 方案入口，服务端未配置或校验失败时展示服务端校验说明和手动 PDF / 本地邮箱扫描 fallback，领取/刷新云端地址保持禁用但不影响本地入口。token claim 发送同一 signed transaction JWS，Worker 生产默认调用 App Store Server API `GET /inApps/v1/transactions/{transactionId}`，校验 Bundle ID、Pro 商品、撤销状态和订阅到期后才创建 token；token `pro_expires_at` 来自服务端验证结果，`user_id` 使用原始交易号 hash，避免直接落库 Apple 原始 transaction id。`wrangler.jsonc` 增加 App Store bundle/environment 非密变量，README 记录 production secrets 配置方式。
 - 未完成内容：生产 Cloudflare secrets 尚未由本轮写入；生产 Worker 尚未部署；订阅续期 / 退款 / 到期后的既有 token 停用或续期同步、运营面板和 APNs secrets 仍需后续上线配置或定时校验补强。
@@ -2129,7 +2167,7 @@
 - 所属阶段：Personal Pro / Cloud Inbox / Governance
 - 类型：能力增强 / 安全 / 文档 / 治理 / 测试
 - 目标：在不重写现有 IAP 的前提下，明确客户端 Pro gate 与服务端安全边界，收紧云端水单 token claim，并降低 public repo + 宽松许可证带来的换皮发布风险。
-- 改动范围：更新 `AutoLedgerProAccessPolicy`、`ProEntitlementManager`、新增 `ServerEntitlementVerifier`，调整云端水单收件箱 UI 提示和四语文案；更新 Worker token claim、wrangler vars、Worker tests / README；替换根 `LICENSE`，更新 README 四语许可说明；新增 `docs/pro-access-audit.md`、`docs/brand-assets-notice.md`；补充外部酒店解析 debug 响应脱敏；更新 CHANGELOG 和本日志。
+- 改动范围：更新 `AutoLedgerProAccessPolicy`、`ProEntitlementManager`、新增 `ServerEntitlementVerifier`，调整云端水单收件箱 UI 提示和四语文案；更新 Worker token claim、wrangler vars、Worker tests / README；替换根 `LICENSE`，更新 README 四语许可说明；新增 `docs/operations/pro-access-audit.md`、`docs/operations/brand-assets-notice.md`；补充外部酒店解析 debug 响应脱敏；更新 CHANGELOG 和本日志。
 - 未改动范围：未修改 StoreKit 商品 ID、购买 / 恢复 / 管理订阅流程、手动记账、单张截图、手动酒店水单导入、酒店历史查看、SQLite / CloudKit schema、APNs secrets、真实 App Store receipt 后端、Cloudflare 生产部署、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
 - 完成内容：新增 `ProSecurityBoundary`，将本地邮箱扫描、批量候选导入和高级去重归为 `localUIGate`，将 `cloudFolioInbox` 归为 `serverVerified`，将高级搜索、订阅异常检测、月结导出包和高级规则自动化归为 `planned`；`ProEntitlementManager.resolveAccess(_:)` 返回 free / allowed / requires purchase / planned / requires server verification / verification failed 等状态，旧 `canUse(_:)` 保留为同步 UI gate 且不再允许云端能力；云端水单收件箱在服务端 verifier 未接入时禁用领取 token 并显示服务端校验提示。Worker token claim 默认关闭，未开启时返回 `403 server_entitlement_required` 且不创建 token；dev/staging 显式 `ALLOW_UNVERIFIED_TOKEN_CLAIM=true` 时写入短期 `pro_expires_at`，TTL 默认 7 天并封顶 30 天。根许可证从 MIT 改为 source-available 非商业许可证，README 四语声明未授权不得换皮上架 / 商业使用 / 绕过 Pro gate 后分发，品牌资产不随源码授权。密钥扫描未发现真实 secret；外部解析 API key 仍走 Keychain / 环境变量，酒店外部解析 debug 响应新增 Authorization / api key / token 脱敏。
 - 未完成内容：完整 App Store Server API / receipt / transaction 后端未实现；生产 Worker 尚未部署本轮配置；生产 `pro_inbox_tokens` 的续期 / 停用同步、运营面板和 APNs secrets 配置仍需后续完成；`npm install` 报告现有依赖审计问题 1 moderate / 3 high，未在本轮升级依赖以避免破坏 Worker。
@@ -2209,13 +2247,13 @@
 - 所属阶段：Personal Pro / StoreKit QA
 - 类型：配置 / 文档 / 测试
 - 目标：推进 `GOAL-2216` 第一段，为 `AutoLedger Pro` 补齐本地 StoreKit 订阅配置和审核 / 测试文档口径。
-- 改动范围：更新 `AutoLedger/AutoLedgerSupport.storekit`、`docs/iap-support.md`、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
+- 改动范围：更新 `AutoLedger/AutoLedgerSupport.storekit`、`docs/operations/iap-support.md`、`versions/v1.6.4-plan.md`、CHANGELOG 和本日志。
 - 未改动范围：未修改 `Support Developer` 赞助商品 ID、Pro 商品 ID、Swift 购买逻辑、SQLite / CloudKit schema、Worker、Cloudflare 配置、signing、entitlements、Xcode Cloud 脚本或 `MARKETING_VERSION`。
-- 完成内容：`AutoLedgerSupport.storekit` 新增 `AutoLedger Pro` subscription group，补齐月付 `top.darkrio326.AutoLedger.pro.monthly`、年付 `top.darkrio326.AutoLedger.pro.yearly`、本地价格 `$2.99` / `$19.99`、`P1M` / `P1Y` 周期和英文 / 简体中文 / 繁体中文 / 日文展示名与说明；`docs/iap-support.md` 从旧的 Support Developer-only 文档更新为 Support Developer consumables + AutoLedger Pro subscriptions 双轨说明，明确 Pro 只 gate 自动化入口，不锁基础记账、历史数据、手动水单、导入导出或编辑删除。
+- 完成内容：`AutoLedgerSupport.storekit` 新增 `AutoLedger Pro` subscription group，补齐月付 `top.darkrio326.AutoLedger.pro.monthly`、年付 `top.darkrio326.AutoLedger.pro.yearly`、本地价格 `$2.99` / `$19.99`、`P1M` / `P1Y` 周期和英文 / 简体中文 / 繁体中文 / 日文展示名与说明；`docs/operations/iap-support.md` 从旧的 Support Developer-only 文档更新为 Support Developer consumables + AutoLedger Pro subscriptions 双轨说明，明确 Pro 只 gate 自动化入口，不锁基础记账、历史数据、手动水单、导入导出或编辑删除。
 - 未完成内容：订阅生命周期截图、真实 ASC 沙盒购买、隐私政策 URL 最终检查、App Review Notes 最终提交文案和服务端订阅 entitlement 校验继续后续收口。
 - 测试情况：执行 `ruby -rjson -e 'JSON.parse(File.read("AutoLedger/AutoLedgerSupport.storekit"))'` 通过；执行 `swift -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -e 'import StoreKitTest; import Foundation; _ = try SKTestSession(contentsOf: URL(fileURLWithPath: "AutoLedger/AutoLedgerSupport.storekit")); print("storekit-session-loaded")'` 通过并输出 `storekit-session-loaded`；执行结构读取确认月付为 `P1M / 2.99 / RecurringSubscription`，年付为 `P1Y / 19.99 / RecurringSubscription`。
 - 风险与注意事项：`.storekit` 本地配置不能替代 App Store Connect 真商品和沙盒购买；真实价格、本地化展示和订阅状态仍以 ASC / StoreKit 运行环境为准。仓库中不写 APNs 私钥、StoreKit 私钥或任何真实订阅用户 token。
-- 回滚方式：回退 `AutoLedgerSupport.storekit` 中新增的 subscription group，回退 `docs/iap-support.md`、`v1.6.4` 计划、CHANGELOG 和本日志中的 Pro subscription 说明即可；既有 `Support Developer` 消耗型内购和 Pro 页面代码不受影响。
+- 回滚方式：回退 `AutoLedgerSupport.storekit` 中新增的 subscription group，回退 `docs/operations/iap-support.md`、`v1.6.4` 计划、CHANGELOG 和本日志中的 Pro subscription 说明即可；既有 `Support Developer` 消耗型内购和 Pro 页面代码不受影响。
 - 结论：`GOAL-2216` 本地 StoreKit 配置第一段已完成，可以继续做订阅生命周期截图和 ASC 沙盒购买 smoke。
 - 下一步建议：用 Xcode StoreKit 测试面板模拟购买 / 取消 / 过期 / 恢复，补齐 Review Notes 和隐私政策链接检查。
 
@@ -2401,13 +2439,13 @@
 - 所属阶段：Planning
 - 类型：文档 / 产品规划 / 订阅设计
 - 目标：分析 Personal Pro 订阅设计文档，将其归档到 `docs/`，并规划 `v1.6.4` 的可执行版本范围。
-- 改动范围：新增 `docs/autoledger-personal-pro-design.md`；新增 `versions/v1.6.4-plan.md`；更新 `docs/README.md`、根 README 四语路线图、`CHANGELOG.md` 和本日志。
+- 改动范围：新增 `docs/product/autoledger-personal-pro-design.md`；新增 `versions/v1.6.4-plan.md`；更新 `docs/README.md`、根 README 四语路线图、`CHANGELOG.md` 和本日志。
 - 未改动范围：未修改 Swift 代码、StoreKit 商品配置、订阅状态逻辑、邮箱扫描业务逻辑、SQLite / CloudKit schema、signing、entitlements、Xcode Cloud 脚本、截图资产或 `MARKETING_VERSION`。
 - 完成内容：将 Pro 设计结论收敛为“免费版手动完成，Pro 自动整理”的产品边界；明确既有手动记账、截图识别、手动 PDF 导入、历史数据查看编辑、基础导出和备份恢复不应被回收；规划 `v1.6.4` P0 为 `ProEntitlementManager`、`ProFeature` gate、Pro 页面、恢复购买、邮箱自动化 gate、邮箱授权引导、Pro 到期不锁数据和 StoreKit / App Review 验收；将高级搜索、订阅异常、月结导出包和高级规则放入 P1。
 - 未完成内容：未实现任何订阅代码；未创建 App Store Connect subscription group / product；未更新隐私政策正文、Review Notes 或 Pro 截图资产；未执行 StoreKit 本地测试。
 - 测试情况：执行 `git diff --check` 通过；本轮为文档规划，无 Swift 构建或离线回归需求。
 - 风险与注意事项：`v1.6.4` 进入实现时需要非常小心 Pro gate 边界，不能误伤手动 PDF 导入、历史数据访问、基础导出和 Support Developer 赞助线；StoreKit 商品上线前必须补隐私政策、审核说明和本地订阅状态回归。
-- 回滚方式：回退新增 `docs/autoledger-personal-pro-design.md`、`versions/v1.6.4-plan.md` 以及 `docs/README.md`、`CHANGELOG.md`、本日志的索引和记录即可；无代码或数据迁移回滚。
+- 回滚方式：回退新增 `docs/product/autoledger-personal-pro-design.md`、`versions/v1.6.4-plan.md` 以及 `docs/README.md`、`CHANGELOG.md`、本日志的索引和记录即可；无代码或数据迁移回滚。
 - 结论：Personal Pro 设计已归档，`v1.6.4` 可作为 Pro 订阅基础设施与邮箱自动化付费边界的下一条规划线。
 - 下一步建议：先做 `GOAL-2200` 冻结 Free / Pro gate 清单，再进入 StoreKit configuration 与 `ProEntitlementManager` 实现。
 
@@ -3578,7 +3616,7 @@
 - 所属阶段：Phase 2 / visionOS 展示端
 - 类型：能力增强 / UI / 平台扩展
 - 目标：把 `AutoLedgerVision` 从模板入口推进为可构建、可运行的只读空间展示窗口第一版。
-- 改动范围：`AutoLedgerVision` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerVision/ContentView.swift` 替换模板 `Model3D + Hello, world!`；新增 SwiftUI 月度空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表、隐私模式、刷新入口和 loading / empty / unavailable 状态；同步更新 `versions/v1.6.0-plan.md`、`docs/visionos-implementation-assessment.md` 和 `CHANGELOG.md`。
+- 改动范围：`AutoLedgerVision` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerVision/ContentView.swift` 替换模板 `Model3D + Hello, world!`；新增 SwiftUI 月度空间看板、分类支出卡片、年度消费时间线墙、最近账单悬浮列表、隐私模式、刷新入口和 loading / empty / unavailable 状态；同步更新 `versions/v1.6.0-plan.md`、`docs/archive/visionos-implementation-assessment.md` 和 `CHANGELOG.md`。
 - 未改动范围：未修改主 App / Watch / Extension 的 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本；未启用 immersive space 或 Volume；未新增导入、编辑、删除、数据清洗、多账本、CloudKit schema、SQLite schema 或真实样例数据。
 - 完成内容：Vision 首版保持 `WindowGroup`，读取本机正式账本并复用 `MonthlySnapshot`、`TodaySpendingSummary` 派生展示；模拟器无账本数据时展示 empty 状态，不注入假数据；按钮样式改为自绘胶囊，避免 visionOS 默认 bordered 样式造成文字不可见。
 - 未完成内容：visionOS 仍未接 CloudKit 只读拉取或 dashboard snapshot；未做 Vision Pro 真机 smoke；未接 visionOS App Store 素材和截图管线；有真实账本数据后的四区展示仍需后续环境复测。
@@ -3610,7 +3648,7 @@
 - 所属阶段：Phase 2 / tvOS 展示端
 - 类型：能力增强 / UI / 平台扩展
 - 目标：把 `AutoLedgerTV` 从模板入口推进为可构建运行的只读账本看板第一版。
-- 改动范围：`AutoLedgerTV` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerTV/ContentView.swift` 替换为 tvOS dashboard 根页面；`versions/v1.6.0-plan.md`、`docs/tvos-implementation-assessment.md` 和 `CHANGELOG.md` 回填状态。
+- 改动范围：`AutoLedgerTV` target 显式链接 `AutoLedgerCore`；`AutoLedger/AutoLedgerTV/ContentView.swift` 替换为 tvOS dashboard 根页面；`versions/v1.6.0-plan.md`、`docs/archive/tvos-implementation-assessment.md` 和 `CHANGELOG.md` 回填状态。
 - 未改动范围：未修改主 App / Watch / Extension 的 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、scheme 或 Xcode Cloud 脚本；未新增 tvOS iCloud / CloudKit capability；未接 App Store Connect 平台；未加入导入、编辑、删除、数据清洗、多账本或真实样例数据。
 - 完成内容：新增 `总览 / 分类 / 趋势 / 摘要` 四页只读 dashboard；复用 `MonthlySnapshot` 和 `TodaySpendingSummary` 计算本月总览、分类占比、最近 7 天趋势、近 6 个月趋势、年度累计、Top 商户和最近账单；提供 loading、empty、unavailable 状态、刷新入口和隐私隐藏切换。
 - 未完成内容：tvOS 仍未接 CloudKit 只读正式账本拉取或 dashboard snapshot；当前 Apple TV 只读取 tvOS 本机正式账本 SQLite；未做 tvOS 真机 smoke、截图管线或 ASC 平台素材。
@@ -3642,13 +3680,13 @@
 - 所属阶段：Phase 1 / 订阅管理补强
 - 类型：文档 / 架构设计 / 隐私边界
 - 目标：冻结商户、分类和订阅倾向学习缓存的安全边界，明确不缓存原始 OCR 和敏感字段。
-- 改动范围：新增 `docs/recognition-learning-cache-design.md`；`versions/v1.6.0-plan.md` 标记 `GOAL-1730` 完成并补充设计记录；`CHANGELOG.md` 回填本轮变更。
+- 改动范围：新增 `docs/architecture/recognition-learning-cache-design.md`；`versions/v1.6.0-plan.md` 标记 `GOAL-1730` 完成并补充设计记录；`CHANGELOG.md` 回填本轮变更。
 - 未改动范围：未实现运行时代码；未新增 SQLite schema；未改变 iCloud 同步 schema；未修改 Xcode project / workspace / scheme / target、Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本或 App Store Connect 配置。
 - 完成内容：学习缓存分层为 L1 用户确认规则、L2 商户级低风险画像、L3 短期脱敏 OCR hash 缓存；明确 L1 复用现有商户别名、分类修正和用户确认订阅；L2 只保存低风险商户级统计；L3 顺延到 `GOAL-1735`，不进入 iCloud 或 JSON 备份。
 - 未完成内容：短期脱敏 OCR hash 缓存、商户画像运行时代码、订阅提示负向学习和清除识别学习数据入口继续后续推进。
 - 测试情况：执行 `git diff --check`，结果 PASS。本轮仅文档设计，无需构建。
 - 风险与注意事项：后续实现必须继续遵守“缓存只增强候选，不覆盖金额和日期，不自动创建订阅”的边界；任何进入 iCloud 的学习数据都必须保持商户级低风险粒度。
-- 回滚方式：删除 `docs/recognition-learning-cache-design.md`，并恢复 `versions/v1.6.0-plan.md`、`CHANGELOG.md` 和本条 iteration log。
+- 回滚方式：删除 `docs/architecture/recognition-learning-cache-design.md`，并恢复 `versions/v1.6.0-plan.md`、`CHANGELOG.md` 和本条 iteration log。
 - 结论：本轮完成，GOAL-1730 已冻结设计边界。
 - 下一步建议：进入 `GOAL-1735`，实现外部辅助识别短期脱敏 OCR hash 缓存，补 TTL 和隐私回归。
 
@@ -4428,7 +4466,7 @@
   - `AutoLedger/AutoLedger/Domain/Services/LedgerTextInterpreter.swift`、`QuickLedgerIntent.swift`：补充低系统 feature gate，避免 `SmartReceiptParser.parse` 和 iOS 18-only `@Parameter` API 污染 iOS 17 主线。
   - `AutoLedger/Podfile`、`AutoLedger/Podfile.lock`：CocoaPods baseline 下调到 iOS 17。
   - `AutoLedger/Packages/RealityKitContent/Package.swift`：下调 RealityKitContent package platform。
-  - `docs/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：回填实施结果。
+  - `docs/archive/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：回填实施结果。
 - 未改动范围：未修改 Bundle ID、DEVELOPMENT_TEAM、App Group、iCloud Container、entitlements、Xcode Cloud 脚本、SQLite schema、CloudKit schema、App Store Connect 线上配置或用户可见主流程 UI。
 - 完成内容：主发布线最低系统下调到 `iOS 17.0`；Mac Catalyst 跟随 `iOS 17 / macOS 14` line；Watch App / Watch Widget 下调到 `watchOS 10.0`；tvOS 下调到 `tvOS 17.0`；visionOS 下调到 `visionOS 1.0`；`ControlWidgetExtension` 独立保留 `iOS 18.0`；Apple Foundation Models 仍作为 `iOS 26+` optional enhancement。
 - 未完成内容：尚未更新 README / App Store Connect 对外最低系统说明；尚未做真机 iOS 17 / watchOS 10 / tvOS / visionOS simulator 全量 smoke；尚未执行 Xcode Cloud validation build。
@@ -4453,8 +4491,8 @@
 - 类型：文档 / 架构审计 / 平台规划
 - 目标：审计 `AutoLedgerCore` 当前平台依赖，判断是否必须先拆 `CoreBase`，并为后续 deployment target 下调给出实施顺序。
 - 改动范围：
-  - `docs/autoledgercore-platform-dependency-audit.md`：新增 Core 平台依赖审计结论。
-  - `docs/minimum-platform-baseline-reduction-plan.md`：补充 GOAL-1601 审计结论，收紧 Phase B 顺序。
+  - `docs/archive/autoledgercore-platform-dependency-audit.md`：新增 Core 平台依赖审计结论。
+  - `docs/archive/minimum-platform-baseline-reduction-plan.md`：补充 GOAL-1601 审计结论，收紧 Phase B 顺序。
   - `versions/v1.5.1-plan.md`：将 `GOAL-1601` 标记为已完成，并补充最低系统实施结论。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录本轮审计。
 - 未改动范围：未修改 Swift 源码、Xcode target、deployment target、Bundle ID、entitlements、CloudKit 配置、Xcode Cloud 脚本或 App Store Connect 配置。
@@ -4462,7 +4500,7 @@
 - 未完成内容：尚未迁移 `ClipboardImportIntent`；尚未修改 `AutoLedgerCore/Package.swift`；尚未下调任何 Xcode target 的 deployment target；尚未运行低系统构建验证。
 - 测试情况：未运行测试。本轮仅做依赖审计与文档回填，不涉及源码或工程配置修改。
 - 风险与注意事项：`ClipboardImportIntent` 当前被 `ControlWidgetExtension/ClipboardImportControl.swift` 使用，后续迁移时必须保持 Control Widget 和剪贴板导入入口行为不变；迁移后如果 Core 仍出现低系统编译阻塞，再重新评估是否需要独立 `CoreBase`。
-- 回滚方式：删除 `docs/autoledgercore-platform-dependency-audit.md`，回退 `docs/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md` 和本条日志即可。
+- 回滚方式：删除 `docs/archive/autoledgercore-platform-dependency-audit.md`，回退 `docs/archive/minimum-platform-baseline-reduction-plan.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md` 和本条日志即可。
 - 结论：`GOAL-1601` 已完成。下一步进入 `GOAL-1602`，优先迁出 `ClipboardImportIntent`，再下调 Core package 和相关 target deployment target。
 - 下一步建议：实施 `GOAL-1602` 时先保持行为不变地迁移 Intent Adapter，再跑 iOS generic、Mac Catalyst、Watch 和离线回归。
 
@@ -4498,7 +4536,7 @@
   - `AutoLedger/AutoLedger/Domain/Services/QuickLedgerIntent.swift`：把 JSON 导入加入 App Shortcuts。
   - `AutoLedger/AutoLedger/{zh-Hans,zh-Hant,en}.lproj/Localizable.strings`：新增三语文案。
   - `scripts/OfflineRegression.swift`、`scripts/run_offline_regression.sh`：新增离线回归覆盖。
-  - `docs/shortcuts-json-ledger-import.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：补充功能说明与版本记录。
+  - `docs/capabilities/shortcuts-json-ledger-import.md`、`versions/v1.5.1-plan.md`、`CHANGELOG.md`：补充功能说明与版本记录。
 - 未改动范围：未修改 SQLite schema、Bundle ID、signing、entitlements、CloudKit 配置、Xcode Cloud 脚本、截图管线或多账本模型。
 - 完成内容：JSON 可解析金额、商户、分类、日期、备注、币种和置信度；`confidence >= 0.85` 自动保存，`0.50..<0.85` 打开确认页，`< 0.50` 或缺少金额 / 商户等关键字段时报错；缺省置信度按确认处理；币种当前不新增字段，非 `CNY` 会写入备注。
 - 未完成内容：当前只支持单笔 JSON 对象，不支持 JSON 数组批量导入；确认页还没有导入源详情和重复账单检测；Shortcuts 真机端的参数选择与剪贴板路径仍需人工 smoke。
@@ -4522,7 +4560,7 @@
 - 改动范围：
   - `versions/v1.5.1-plan.md`：新增 `v1.5.1` 版本计划，承接 `v1.5.0` 遗留 smoke、tvOS / visionOS 第一版代码、最低系统需求优化与最终全平台收口。
   - `versions/v1.5.0-plan.md`：新增 `1.1.2`，明确 `v1.5.0` 现在视为实现基线，不再单独执行最终提审 smoke。
-  - `docs/minimum-platform-baseline-reduction-plan.md`：将承接版本改为 `v1.5.1`，并补充 `AutoLedgerCore -> CoreBase + Intent Adapter` 的拆分判断。
+  - `docs/archive/minimum-platform-baseline-reduction-plan.md`：将承接版本改为 `v1.5.1`，并补充 `AutoLedgerCore -> CoreBase + Intent Adapter` 的拆分判断。
   - `README.md`：Roadmap 将 `v1.5.0` 标记为“基线完成”，新增 `v1.5.1` 当前开发线条目。
   - `CHANGELOG.md`、`process/iteration-log.md`：回填本轮版本接管记录。
 - 未改动范围：未修改任何 Swift 源码、Xcode target、deployment target、Bundle ID、entitlements、CloudKit 配置、截图脚本实现或 App Store Connect 线上配置。
@@ -4532,7 +4570,7 @@
   - PASS：`git diff --check`
   - PASS：文档自检，`README`、`v1.5.0-plan.md`、`v1.5.1-plan.md` 与最低系统规划口径一致。
 - 风险与注意事项：当前只是版本与平台规划调整，不代表最低系统已经下调成功，也不代表 tvOS / visionOS 已有可发布代码；后续真正实施时必须按 target 分层处理，不允许用全局 `@available(iOS 26.0, *)` 包裹主链路来“假降版本”。
-- 回滚方式：删除 `versions/v1.5.1-plan.md`，回退 `versions/v1.5.0-plan.md`、`docs/minimum-platform-baseline-reduction-plan.md`、`README.md`、`CHANGELOG.md` 和本条日志即可恢复到 `v1.5.0` 收口口径。
+- 回滚方式：删除 `versions/v1.5.1-plan.md`，回退 `versions/v1.5.0-plan.md`、`docs/archive/minimum-platform-baseline-reduction-plan.md`、`README.md`、`CHANGELOG.md` 和本条日志即可恢复到 `v1.5.0` 收口口径。
 - 结论：当前开发线正式切换为 `v1.5.1` 规划阶段；`v1.5.0` 作为实现基线保留，多账本继续顺延。
 - 下一步建议：先执行 `GOAL-1601`，审计 `AutoLedgerCore` 真实平台依赖并给出 `CoreBase` 拆分与 deployment target 下调实施清单。
 
@@ -4615,7 +4653,7 @@
 - 类型：文档 / 设计 / 工具链规划
 - 目标：在不破坏现有 iPhone / Watch 截图导出链路的前提下，定义 iPad / Mac / tvOS / visionOS 如何进入统一截图管线。
 - 改动范围：
-  - `docs/all-platform-screenshot-pipeline-design.md`：新增全平台截图设计稿，覆盖配置扩展、CLI flag、输出目录、preview 分组、平台场景和 `GOAL-1591` 实施顺序。
+  - `docs/operations/all-platform-screenshot-pipeline-design.md`：新增全平台截图设计稿，覆盖配置扩展、CLI flag、输出目录、preview 分组、平台场景和 `GOAL-1591` 实施顺序。
   - `versions/v1.5.0-plan.md`：将 `GOAL-1590` 状态改为已完成，并新增 `13.64` 记录本轮结论。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1590` 完成范围。
 - 未改动范围：未修改 `tools/appstore-screenshots/config/screenshots.json`、`scripts/export.sh`、`scripts/build_preview.py` 或任一 render 脚本；未新增任何 iPad / Mac / tvOS / visionOS 实际截图 scene；未生成新平台图片。
@@ -4626,7 +4664,7 @@
   - PASS：文档自检，设计稿与版本计划中的截图资产章节、GOAL 队列保持一致。
   - PASS：核对 `tools/appstore-screenshots/README.md`、`config/screenshots.json`、`scripts/export.sh`、`scripts/build_preview.py` 当前基线。
 - 风险与注意事项：如果 `GOAL-1591` 一次性同时接六个平台，调试面会过大；更稳妥的顺序是先 iPad / Mac，再 tvOS / visionOS，同时保持现有 iPhone / Watch 输出不回退。
-- 回滚方式：删除 `docs/all-platform-screenshot-pipeline-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1590` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 回滚方式：删除 `docs/operations/all-platform-screenshot-pipeline-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1590` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
 - 结论：`GOAL-1590` 设计完成，下一步可直接实现截图管线扩展，而不需要继续讨论总体方案。
 - 下一步建议：进入 `GOAL-1591`，先做配置 / flag / preview 的骨架扩展，再按 iPad / Mac → tvOS / visionOS 的顺序接入 capture。
 
@@ -4637,7 +4675,7 @@
 - 类型：文档 / 实现评估 / 平台扩展
 - 目标：确认 `AutoLedgerVision` target / simulator 是否已可用，收敛首版 scene 选择、数据入口边界和最小 smoke 定义，避免直接把范围膨胀到 immersive 空间实现。
 - 改动范围：
-  - `docs/visionos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、scene 方案对比、RealityKit 模板判断、推荐实现路径和最小 smoke 定义。
+  - `docs/archive/visionos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、scene 方案对比、RealityKit 模板判断、推荐实现路径和最小 smoke 定义。
   - `versions/v1.5.0-plan.md`：将 `GOAL-1583` 状态改为已完成，并新增 `13.63` 记录本轮实现评估结论。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1583` 完成范围。
 - 未改动范围：未修改 `AutoLedgerVision` 模板代码、未接只读 view model、未接 CloudKit 数据读链路、未移除 RealityKit 模板包、未修改 Bundle ID / signing / entitlements / App Group / iCloud Container / Xcode Cloud 脚本。
@@ -4650,7 +4688,7 @@
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`。
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'platform=visionOS Simulator,name=Apple Vision Pro' build`。
 - 风险与注意事项：如果下一轮继续保留模板 `RealityKitContent + Hello, world!` 同时叠加真实账本 UI，很容易得到一套不稳定的混合界面；更稳妥的路径是先用 SwiftUI 落首版只读四区骨架，再决定是否需要 `Volume` 或 RealityKit 增强。
-- 回滚方式：删除 `docs/visionos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1583` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 回滚方式：删除 `docs/archive/visionos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1583` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
 - 结论：`GOAL-1583` 评估完成，visionOS target / simulator 已可继续推进；下一步应实现首版只读骨架，或转入 `GOAL-1590` 统一规划全平台截图管线。
 - 下一步建议：如果继续按“第三批后段”推进，可直接进入 `GOAL-1590`；如果希望 visionOS 先落一个可见结果，也可以单开一轮仅做 `WindowGroup` 四区静态骨架，不接真实数据。
 
@@ -4661,7 +4699,7 @@
 - 类型：文档 / 设计 / 平台扩展
 - 目标：为 `AutoLedgerVision` 首版输出可直接交接到实现评估阶段的空间展示设计，明确入口 scene、空间层次、数据口径、交互密度和隐私边界。
 - 改动范围：
-  - `docs/visionos-spatial-design.md`：新增 visionOS 设计稿，覆盖平台定位、入口形态、四个展示区、空间布局原则、轻交互模型、隐私模式和 `GOAL-1583` 交接问题。
+  - `docs/platforms/visionos-spatial-design.md`：新增 visionOS 设计稿，覆盖平台定位、入口形态、四个展示区、空间布局原则、轻交互模型、隐私模式和 `GOAL-1583` 交接问题。
   - `versions/v1.5.0-plan.md`：将 `GOAL-1582` 状态改为已完成，并新增 `13.62` 记录本轮设计结论和 build smoke 结果。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1582` 完成范围。
 - 未改动范围：未修改 `AutoLedgerVision` 模板代码、未接 CloudKit 数据读模型、未实现 visionOS UI、未修改 Bundle ID / signing / App Group / iCloud Container / Xcode Cloud 脚本、未接 App Store Connect visionOS 平台。
@@ -4673,7 +4711,7 @@
   - PASS：`xcodebuild -showdestinations -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision`。
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerVision -configuration Debug -destination 'generic/platform=visionOS' build`。
 - 风险与注意事项：visionOS target 虽然已能 build，但当前仍只是模板 scene；如果下一轮直接进入 immersive / RealityKit 深度实现，范围会比首版只读展示扩大很多。更稳妥的路径是先在 `GOAL-1583` 决定首版是否仅用 SwiftUI 空间面板完成四区展示，再评估是否保留 RealityKit 模板资源。
-- 回滚方式：删除 `docs/visionos-spatial-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1582` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 回滚方式：删除 `docs/platforms/visionos-spatial-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1582` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
 - 结论：`GOAL-1582` 设计完成，visionOS 首版展示口径已定型，下一步进入 `GOAL-1583` 回答 scene / 数据入口 / 最小 smoke 的实现问题。
 - 下一步建议：继续按顺序推进 `GOAL-1583`，先把 `WindowGroup / Volume / RealityKit / 只读数据入口` 的最小实现路径评估清楚，再决定是否开始写 visionOS 骨架界面。
 
@@ -4684,7 +4722,7 @@
 - 类型：文档 / 实现评估 / 平台扩展
 - 目标：确认 `AutoLedgerTV` target / simulator 是否可用，明确 tvOS 首版 dashboard 的最小实现面和正确数据入口。
 - 改动范围：
-  - `docs/tvos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、数据入口方案对比、推荐路径、主要缺口和下一步建议。
+  - `docs/archive/tvos-implementation-assessment.md`：新增实现评估文档，记录 target 现状、build smoke、数据入口方案对比、推荐路径、主要缺口和下一步建议。
   - `versions/v1.5.0-plan.md`：将 `GOAL-1581` 状态改为已完成，并新增 `13.61` 记录本轮工程评估结论。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1581` 完成范围。
 - 未改动范围：未修改 `AutoLedgerTV` 模板代码、未新增 tvOS entitlements、未接 CloudKit capability、未实现 tvOS dashboard UI、未修改 Bundle ID / signing / App Group / iCloud Container / Xcode Cloud 脚本。
@@ -4697,7 +4735,7 @@
   - PASS：`xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedgerTV -configuration Debug -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)' build`。
   - PASS：`xcrun simctl list devices available | rg 'Apple TV'`。
 - 风险与注意事项：tvOS 首版如果直接拉全量 CloudKit 正式账单，展示端仍需自己管理 `loading / stale / empty / unavailable` 状态；若后续发现拉取成本过高，可以单独立项引入 dashboard snapshot record，不建议在这一轮顺手扩 schema。
-- 回滚方式：删除 `docs/tvos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1581` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 回滚方式：删除 `docs/archive/tvos-implementation-assessment.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1581` 恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
 - 结论：`GOAL-1581` 评估完成，tvOS target 和 simulator 已不是 blocker；下一步可直接开始 tvOS 最小骨架实现，或按顺序进入 `GOAL-1582` 完成 visionOS 设计。
 - 下一步建议：若继续沿第七批推进，进入 `GOAL-1582`；若希望 tvOS 先落一个可见成果，可单开一轮仅实现总览页 smoke，不扩到四页完整 UI。
 
@@ -4708,7 +4746,7 @@
 - 类型：文档 / 设计 / 平台扩展
 - 目标：为 tvOS 首版输出可直接交接到实现评估阶段的信息架构，明确只读边界、页面结构、遥控器焦点模型、隐私模式和同步口径。
 - 改动范围：
-  - `docs/tvos-dashboard-design.md`：新增 tvOS 设计稿，覆盖目标、页面职责、布局草案、焦点导航、隐私模式、快照状态和 `GOAL-1581` 交接建议。
+  - `docs/platforms/tvos-dashboard-design.md`：新增 tvOS 设计稿，覆盖目标、页面职责、布局草案、焦点导航、隐私模式、快照状态和 `GOAL-1581` 交接建议。
   - `versions/v1.5.0-plan.md`：将 `GOAL-1580` 状态改为已完成，并新增 `13.60` 记录本轮设计结论。
   - `CHANGELOG.md`、`process/iteration-log.md`：记录 `GOAL-1580` 文档完成范围。
 - 未改动范围：未修改 `AutoLedgerTV` target 模板代码、Bundle ID、signing、entitlements、App Group、iCloud Container、Xcode Cloud 脚本；未实现 tvOS UI、未做 tvOS build smoke、未接 App Store Connect 平台。
@@ -4718,7 +4756,7 @@
   - PASS：`git diff --check`。
   - PASS：文档自检，设计稿与 `6.6 tvOS 只读大屏看板`、`10.4 tvOS`、`13.4 推荐推进顺序` 保持一致。
 - 风险与注意事项：当前本机缺 tvOS runtime，下一轮实现评估前仍需先补 Xcode Components；设计稿已明确 tvOS 不应承接导入、清洗或写入链路，后续若新增功能应单独立项，避免再次扩张范围。
-- 回滚方式：删除 `docs/tvos-dashboard-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1580` 状态恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
+- 回滚方式：删除 `docs/platforms/tvos-dashboard-design.md`，将 `versions/v1.5.0-plan.md` 中 `GOAL-1580` 状态恢复为未完成，并移除对应 CHANGELOG / iteration-log 条目。
 - 结论：`GOAL-1580` 设计稿完成，可进入 `GOAL-1581` 的 target / scene / 数据入口实现评估。
 - 下一步建议：下一轮只做 `GOAL-1581`，先评估 `AutoLedgerTV` 最小 scene 结构、焦点导航和只读快照读取方式，再决定是否进入 tvOS UI 第一版。
 
@@ -6694,7 +6732,7 @@
   - `AutoLedger/AutoLedger/Features/Settings/SettingsView.swift`、`AutoLedger/AutoLedger/App/AutoLedgerApp.swift`：设置页接入“支持 AutoLedger”入口；App 启动时启动 transaction updates 监听。
   - `AutoLedger/AutoLedger/*.lproj/Localizable.strings`：补齐支持页面、购买状态和错误提示三语文案。
   - `AutoLedger/AutoLedgerSupport.storekit`、`AutoLedger.xcscheme`、`AutoLedger.xcodeproj/project.pbxproj`：新增本地 StoreKit 配置并挂到 Run scheme，3 个产品均覆盖英文、简体中文、繁体中文展示名 / 说明。
-  - `docs/iap-support.md`：新增本地测试、App Store Connect 配置、三语内购说明和 Review Notes 文档。
+  - `docs/operations/iap-support.md`：新增本地测试、App Store Connect 配置、三语内购说明和 Review Notes 文档。
   - `CHANGELOG.md`、`process/iteration-log.md`：补充本轮追溯记录。
 - 未改动范围：未实现订阅；未实现 Pro entitlement；未增加 restore entitlement；未改变记账、OCR、JSON 导出、iCloud、Watch、快捷指令、商户别名、分类和月报等现有免费功能边界；未引导外部支付。
 - 完成内容：3 个产品 ID 已统一为 `top.darkrio326.AutoLedger.support.coffee/lunch/sponsor`；verified support transaction 会记录本地支持次数、最近产品和最近时间并调用 `finish()`；unverified transaction 不记录支持状态；pending 会给出明确提示；取消购买不会显示成功；已处理 transaction id 会保留最近 50 条避免重复计数；UI 使用现有设置页卡片风格并支持 Dynamic Type / VoiceOver 的基础可读性。
@@ -6708,7 +6746,7 @@
   - PASS：`bash scripts/run_offline_regression.sh`
   - PASS：`bash scripts/run_golden_regression.sh`
 - 风险与注意事项：本轮是 consumable support，不提供权益恢复；如果未来扩展到一次性 Pro 或订阅，需要新增 entitlement 模型和 restore/sync 逻辑，不能复用当前“只记录支持次数”的语义。
-- 回滚方式：删除 `SupportPurchaseManager.swift`、`SupportAutoLedgerView.swift`、`AutoLedgerSupport.storekit` 和 `docs/iap-support.md`，回退设置页入口、App 启动监听、scheme/project 配置、本地化 key、CHANGELOG 与迭代日志。
+- 回滚方式：删除 `SupportPurchaseManager.swift`、`SupportAutoLedgerView.swift`、`AutoLedgerSupport.storekit` 和 `docs/operations/iap-support.md`，回退设置页入口、App 启动监听、scheme/project 配置、本地化 key、CHANGELOG 与迭代日志。
 - 结论：本轮完成，AutoLedger 已具备第一版 Support Developer consumable IAP 代码链路、本地 StoreKit 配置和 App Store Connect 配置文档；真实 IAP 购买仍需在 Xcode StoreKit / TestFlight 沙盒中人工点验。
 - 下一步建议：完成本地 StoreKit 购买点验后，在 App Store Connect 创建 3 个 consumable IAP，并随下一版 App 一起提交审核。
 
@@ -7143,7 +7181,7 @@
 - 所属版本：v1.3.3
 - 所属阶段：Phase 0
 - 类型：文档 / 架构规划 / 测试规划
-- 目标：基于 `docs/LedgerTextInterpreter.md` 与 v1.3.2 工程现状，规划下一版本将解释器抽象为平台无关核心，并建立小票图片集批量 OCR、OCR 后账单相关性判断与批量解析回归。
+- 目标：基于 `docs/architecture/LedgerTextInterpreter.md` 与 v1.3.2 工程现状，规划下一版本将解释器抽象为平台无关核心，并建立小票图片集批量 OCR、OCR 后账单相关性判断与批量解析回归。
 - 改动范围：
   - `versions/v1.3.3-plan.md`：新增版本定位、目标架构、核心类型草案、批量 OCR 工具、Golden Case 设计、阶段拆分、验收标准、风险与回滚。
   - `CHANGELOG.md`、`process/iteration-log.md`：同步规划记录。
@@ -7302,7 +7340,7 @@
 - 所属版本：v1.3.1
 - 所属阶段：Phase 0
 - 类型：文档 / 治理
-- 目标：分析 `docs/autoledger_voice_siri_design.md` 与现有 AppIntent、SQLite、分类和备份恢复能力，建立 v1.3.1 版本计划。
+- 目标：分析 `docs/capabilities/autoledger_voice_siri_design.md` 与现有 AppIntent、SQLite、分类和备份恢复能力，建立 v1.3.1 版本计划。
 - 改动范围：
   - `versions/v1.3.1-plan.md`：新增版本定位、承接输入、设计约束、In Scope / Out of Scope、Phase 0-5 阶段拆分、ITER-037-042 迭代拆分、验收标准、测试计划、风险与回滚。
   - `CHANGELOG.md`：新增 v1.3.1 / ITER-037 文档规划记录。
@@ -7348,7 +7386,7 @@
 - 所属版本：v1.3.0
 - 所属阶段：Phase 0
 - 类型：文档 / 治理
-- 目标：读取 `docs/autoledger_icloud_backup_design.md` 和现有工程进展，建立 v1.3.0 版本计划，将 iCloud 轻量备份设计拆成可执行迭代。
+- 目标：读取 `docs/architecture/autoledger_icloud_backup_design.md` 和现有工程进展，建立 v1.3.0 版本计划，将 iCloud 轻量备份设计拆成可执行迭代。
 - 改动范围：
   - `versions/v1.3.0-plan.md`：新增版本定位、承接输入、In Scope / Out of Scope、Phase 0-5 阶段拆分、ITER-030-036 迭代拆分、依赖清单、验收与回滚、文档同步要求。
   - `CHANGELOG.md`：新增 v1.3.0 / ITER-030 文档规划记录。

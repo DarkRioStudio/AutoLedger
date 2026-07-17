@@ -39,8 +39,8 @@ This is not the main AutoLedger build gate. For the shipping app and current par
 
 ## Related Docs
 
-- [../docs/LedgerTextInterpreter.md](../docs/LedgerTextInterpreter.md)
-- [../docs/autoledgercore-platform-dependency-audit.md](../docs/autoledgercore-platform-dependency-audit.md)
+- [../docs/architecture/LedgerTextInterpreter.md](../docs/architecture/LedgerTextInterpreter.md)
+- [../docs/archive/autoledgercore-platform-dependency-audit.md](../docs/archive/autoledgercore-platform-dependency-audit.md)
 - [../tools/worker/EVALUATION.md](../tools/worker/EVALUATION.md)
 
 ## Maintenance Notes

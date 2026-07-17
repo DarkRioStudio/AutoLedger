@@ -50,8 +50,8 @@ The audit prints:
 - Subscription group and subscription product localization coverage
 - Subscription product period, state, family sharing flag, and description length
 
-By default the planned ASC locales are `zh-Hans`, `zh-Hant`, `en-US`, and `ja`,
-with `ko` listed as a future locale for the v1.7.x line. Override the matrix
+By default the planned ASC locales are `zh-Hans`, `zh-Hant`, `en-US`, `ja`, and
+`ko` for `v1.7.0 / ASC 1.6.0`. Override the matrix
 when needed:
 
 ```bash
@@ -60,7 +60,7 @@ ruby tools/asc-metadata/asc_metadata.rb audit \
   --planned-locale zh-Hant \
   --planned-locale en-US \
   --planned-locale ja \
-  --future-locale ko
+  --planned-locale ko
 ```
 
 When QA intentionally excludes a screenshot from upload, exclude the same local

@@ -2,7 +2,7 @@
 
 > 文档状态：Active
 > 真源范围：Support Developer 与 AutoLedger Pro 商品 / 权益说明；可执行 gate 以代码和服务端 entitlement 为准
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 更新日期：2026-07-17
 

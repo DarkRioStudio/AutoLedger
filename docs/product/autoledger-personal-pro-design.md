@@ -3,7 +3,7 @@
 > 文档状态：Active
 > 真源范围：Personal Pro 定位、Free / Pro 原则和自动化权益设计
 > 最后核验：2026-07-17
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 版本：v0.4
 日期：2026-07-08

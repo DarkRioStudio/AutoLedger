@@ -33,7 +33,7 @@
 
 AutoLedger is source-available for learning, personal research, security review, and contributions. Commercial use, white-label publishing, SaaS / hosted redistribution, or republishing a modified app to App Store, Google Play, Steam, Microsoft Store, WeChat Mini Programs, or other public marketplaces requires prior written permission.
 
-You may not remove, bypass, or tamper with Pro / IAP / subscription gates and distribute the result. AutoLedger 名称、图标、截图、官网素材、App Store 素材、付费墙 artwork 和 README 图片不随源码授权；详见 [LICENSE](LICENSE) 与 [docs/brand-assets-notice.md](docs/brand-assets-notice.md)。
+You may not remove, bypass, or tamper with Pro / IAP / subscription gates and distribute the result. AutoLedger 名称、图标、截图、官网素材、App Store 素材、付费墙 artwork 和 README 图片不随源码授权；详见 [LICENSE](LICENSE) 与 [docs/operations/brand-assets-notice.md](docs/operations/brand-assets-notice.md)。
 
 ## 定位 / Why AutoLedger
 
@@ -127,7 +127,9 @@ AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 - **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
 - **日文账单识别**：日文包覆盖 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常见字段；OCR hint 使用 `ja-JP + en-US`，金额和商户 / 分类解析已经进入离线回归。
 - **v1.7.0 韩语范围**：已启动韩语 App UI 资源草稿和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语 ASC 文案、截图、母语审校和 golden cases 补齐前，不把 `ko` 标成公开 Ready 语言。
-- **i18n 发布矩阵**：`versions/v1.7.0-i18n-release-matrix.md` 将每个语言按商店可见（ASC 增加语言）、界面可读（App）、基础识别可用（语言识别包）、真实样本回归、地区支付 / 票据格式专项优化五项门禁管理；后续语言不只做 UI 翻译。
+- **i18n 发布矩阵**：[当前版本矩阵](versions/v1.7.0-i18n-release-matrix.md) 将每个语言按商店、界面、识别包、真实样本、地区票据和人工审校六项门禁管理；[跨版本语言路线](docs/product/I18N_ROADMAP.md) 固定每个公开功能版本同时交付一组新语言。
+- **英语主语言**：从 ASC `1.6.0` 起，工程与 App Store 主语言目标统一为英语；工程 `developmentRegion = en` 与 ASC Primary Language `English (U.S.) / en-US` 分别验证，仓库配置不替代 ASC 线上证据。
+- **下一语言组**：`v1.8.0` Draft 规划西班牙语 `es` + 巴西葡语 `pt-BR`；它们不属于当前 `v1.7.0` 候选范围。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
 ## Tech Stack
@@ -223,7 +225,7 @@ bash scripts/run_golden_regression.sh
 
 ## Roadmap
 
-当前开发与发布门禁以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；产品跨版本方向以 [docs/ROADMAP.md](docs/ROADMAP.md) 为准。本节只保留面向公开协作者的摘要。
+当前开发与发布门禁以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；核心产品方向以 [docs/ROADMAP.md](docs/ROADMAP.md) 为准；每版本语言组与准入门禁以 [docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md) 为准。本节只保留面向公开协作者的摘要。
 
 当前仓库主线状态：
 
@@ -233,6 +235,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 发布收口基线，`GOAL-2200` 完成 Free / Pro 边界冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API、App 侧 PDFKit 本地转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口。
 - `v1.7.0` 正在作为 ASC / App Store `1.6.0` 候选收口：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已进入主线；当前重点是跨设备 TestFlight、iCloud、五语商店资产、隐私和 ASC 发布门禁。
+- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、可信同步、月结闭环和西语 / 巴葡的 Draft；当前不表示已进入实施，也不扩大 `v1.7.0` 范围。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -255,6 +258,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | ✅ 已完成 | Personal Pro 订阅基础和 ASC 1.5.0 收口基线：Free / Pro 边界已冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口 |
 | v1.7.0 | **1.6.0** | 🧪 候选收口 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测；发布前完成跨设备、iCloud、商店资产与隐私门禁 |
+| v1.8.0 | **1.7.0** | 📝 规划草案 | Review & Close：持久化待处理、可理解同步状态、月结闭环；新增西班牙语 + 巴西葡语；须待 v1.7 发布决定后进入 Execution Ready |
 
 ## License
 

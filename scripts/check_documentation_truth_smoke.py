@@ -8,6 +8,15 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
+DOC_CATEGORIES = {
+    "product",
+    "architecture",
+    "capabilities",
+    "platforms",
+    "operations",
+    "archive",
+}
+ROOT_DOCS = {"README.md", "ROADMAP.md"}
 
 
 def require(text: str, snippet: str, label: str, failures: list[str]) -> None:
@@ -37,8 +46,12 @@ def main() -> int:
     required_truth_files = [
         ROOT / "PROJECT_STATUS.md",
         DOCS / "ROADMAP.md",
+        DOCS / "product" / "I18N_ROADMAP.md",
         DOCS / "README.md",
         ROOT / "versions" / "v1.7.0-plan.md",
+        ROOT / "versions" / "v1.7.0-i18n-release-matrix.md",
+        ROOT / "versions" / "v1.8.0-plan.md",
+        ROOT / "versions" / "v1.8.0-i18n-release-matrix.md",
     ]
     for path in required_truth_files:
         if not path.exists():
@@ -52,11 +65,17 @@ def main() -> int:
 
     project_status = (ROOT / "PROJECT_STATUS.md").read_text(encoding="utf-8")
     roadmap = (DOCS / "ROADMAP.md").read_text(encoding="utf-8")
+    i18n_roadmap = (DOCS / "product" / "I18N_ROADMAP.md").read_text(encoding="utf-8")
     docs_index = (DOCS / "README.md").read_text(encoding="utf-8")
+    v17_plan = (ROOT / "versions" / "v1.7.0-plan.md").read_text(encoding="utf-8")
+    v17_i18n = (ROOT / "versions" / "v1.7.0-i18n-release-matrix.md").read_text(encoding="utf-8")
+    v18_plan = (ROOT / "versions" / "v1.8.0-plan.md").read_text(encoding="utf-8")
+    v18_i18n = (ROOT / "versions" / "v1.8.0-i18n-release-matrix.md").read_text(encoding="utf-8")
 
     for snippet in [
         "文档状态：Canonical",
         "docs/ROADMAP.md",
+        "docs/product/I18N_ROADMAP.md",
         "versions/v1.7.0-plan.md",
         "## Release Gates",
         "## Source Of Truth Map",
@@ -68,14 +87,84 @@ def main() -> int:
         "../PROJECT_STATUS.md",
         "## Roadmap Horizon",
         "### Now - Ship v1.7.0 / ASC 1.6.0",
+        "### Next - Ship v1.8.0 / ASC 1.7.0: Review & Close",
+        "## Language Expansion Cadence",
         "### Not Planned",
         "## Source Of Truth Boundaries",
     ]:
         require(roadmap, snippet, "docs/ROADMAP.md", failures)
 
-    docs_files = sorted(DOCS.glob("*.md"))
+    for snippet in [
+        "文档状态：Canonical",
+        "## English Primary Language",
+        "每个公开功能版本",
+        "`v1.8.0`",
+        "西班牙语 `es` + 巴西葡语 `pt-BR`",
+        "## Six Release Gates",
+    ]:
+        require(i18n_roadmap, snippet, "docs/product/I18N_ROADMAP.md", failures)
+
+    for snippet in [
+        "docs/",
+        "├── ROADMAP.md",
+        "product/I18N_ROADMAP.md",
+        "architecture/LedgerTextInterpreter.md",
+        "operations/pro-access-audit.md",
+        "archive/MVP1.0.md",
+        "核心路线图是唯一允许",
+    ]:
+        require(docs_index, snippet, "docs/README.md", failures)
+
+    for snippet in [
+        "docs/product/I18N_ROADMAP.md",
+        "Primary Language",
+        "西班牙语 `es` + 巴西葡语 `pt-BR` 已排入 `v1.8.0`",
+        "不改变本版本只新增韩语的范围",
+    ]:
+        require(v17_plan, snippet, "versions/v1.7.0-plan.md", failures)
+
+    for snippet in [
+        "文档状态：Active",
+        "## English Primary Language Gate",
+        "`English (U.S.) / en-US`",
+        "## Scheduled Cohorts",
+        "不在 `v1.7.0` 加入西语、巴葡",
+    ]:
+        require(v17_i18n, snippet, "versions/v1.7.0-i18n-release-matrix.md", failures)
+
+    for snippet in [
+        "文档状态：Draft / Planning",
+        "Review & Close",
+        "Spanish And Brazilian Portuguese Cohort",
+        "`GOAL-2460`",
+        "`GOAL-2470`",
+    ]:
+        require(v18_plan, snippet, "versions/v1.8.0-plan.md", failures)
+
+    for snippet in [
+        "文档状态：Draft",
+        "## Locale Contract",
+        "Spanish (Spain)",
+        "Portuguese (Brazil)",
+        "## Six-Gate Matrix",
+    ]:
+        require(v18_i18n, snippet, "versions/v1.8.0-i18n-release-matrix.md", failures)
+
+    docs_files = sorted(DOCS.rglob("*.md"))
     allowed_statuses = {"Canonical", "Active", "Reference", "Draft", "Historical", "Superseded"}
     for path in docs_files:
+        relative_doc = path.relative_to(DOCS).as_posix()
+        relative_parts = Path(relative_doc).parts
+        if len(relative_parts) == 1:
+            if relative_doc not in ROOT_DOCS:
+                failures.append(
+                    f"{path.relative_to(ROOT)} must be moved into a docs category directory"
+                )
+        elif len(relative_parts) != 2 or relative_parts[0] not in DOC_CATEGORIES:
+            failures.append(
+                f"{path.relative_to(ROOT)} is outside the allowed docs category layout"
+            )
+
         header = "\n".join(path.read_text(encoding="utf-8").splitlines()[:12])
         status_match = re.search(
             r"(?:文档状态|Document status)\s*[:：]\s*([A-Za-z]+)",
@@ -89,26 +178,27 @@ def main() -> int:
                 failures.append(f"{path.relative_to(ROOT)} has unsupported lifecycle status: {status}")
             if path.name != "README.md":
                 index_row = re.compile(
-                    rf"\|\s*\[{re.escape(path.name)}\]\({re.escape(path.name)}\)\s*\|\s*{re.escape(status)}\s*\|"
+                    rf"\|\s*\[{re.escape(relative_doc)}\]\({re.escape(relative_doc)}\)\s*\|\s*{re.escape(status)}\s*\|"
                 )
                 if index_row.search(docs_index) is None:
                     failures.append(
-                        f"docs/README.md lifecycle status does not match {path.name}: {status}"
+                        f"docs/README.md lifecycle status does not match {relative_doc}: {status}"
                     )
-        if path.name != "README.md" and f"({path.name})" not in docs_index:
-            failures.append(f"docs/README.md does not index {path.name}")
+        if path.name != "README.md" and f"({relative_doc})" not in docs_index:
+            failures.append(f"docs/README.md does not index {relative_doc}")
 
     for readme_name in ["README.md", "README.zh-Hant.md", "README.en.md", "README.ja.md"]:
         readme = (ROOT / readme_name).read_text(encoding="utf-8")
         require(readme, "(PROJECT_STATUS.md)", readme_name, failures)
         require(readme, "(docs/ROADMAP.md)", readme_name, failures)
+        require(readme, "(docs/product/I18N_ROADMAP.md)", readme_name, failures)
 
     stale_checks = {
-        DOCS / "pro-access-audit.md": [
+        DOCS / "operations" / "pro-access-audit.md": [
             "No current call site uploads this payload",
             "does not call a Worker endpoint",
         ],
-        DOCS / "autoledger-personal-pro-roadmap.md": [
+        DOCS / "product" / "autoledger-personal-pro-roadmap.md": [
             "当前版本不上传账本数据",
         ],
         ROOT / "README.en.md": ["Later Pro directions include cloud-assisted cleanup"],
@@ -125,6 +215,11 @@ def main() -> int:
         ROOT / "AGENTS.md",
         ROOT / "PROJECT_STATUS.md",
         ROOT / "versions" / "v1.7.0-plan.md",
+        ROOT / "versions" / "v1.7.0-i18n-release-matrix.md",
+        ROOT / "versions" / "v1.8.0-plan.md",
+        ROOT / "versions" / "v1.8.0-i18n-release-matrix.md",
+        ROOT / "AutoLedgerCoreKit" / "README.md",
+        ROOT / "ReceiptDebugTool" / "README.md",
     ]
     link_scopes += [ROOT / name for name in ["README.md", "README.zh-Hant.md", "README.en.md", "README.ja.md"]]
     link_scopes += docs_files

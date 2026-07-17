@@ -3,7 +3,7 @@
 > Document status: Reference
 > Source-of-truth scope: visionOS spatial product design; current implementation lives in the target code and build evidence
 > Classification verified: 2026-07-17
-> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+> Parent roadmap: [ROADMAP.md](../ROADMAP.md)
 
 ## Goal
 

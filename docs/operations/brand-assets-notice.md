@@ -3,7 +3,7 @@
 > Document status: Canonical
 > Source-of-truth scope: AutoLedger brand and marketing asset licensing boundary
 > Last verified: 2026-07-17
-> Related license: [../LICENSE](../LICENSE)
+> Related license: [../../LICENSE](../../LICENSE)
 
 AutoLedger brand and marketing assets are not licensed with the source code. They may not be used for forks, derivative apps, white-label builds, App Store / Google Play / Steam / Microsoft Store / WeChat Mini Program listings, advertising, or public redistribution without prior written permission.
 

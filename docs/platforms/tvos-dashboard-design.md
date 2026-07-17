@@ -3,7 +3,7 @@
 > 文档状态：Reference
 > 真源范围：tvOS 只读看板的产品设计；当前实现以 `AutoLedgerTV` 代码和构建结果为准
 > 文档分类核验：2026-07-17
-> 上位路线图：[ROADMAP.md](ROADMAP.md)
+> 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
 更新日期：2026-06-06
 适用目标：`GOAL-1580`

@@ -35,6 +35,9 @@ private struct WatchScreenshotCopy {
         if locale.hasPrefix("ja") {
             return WatchScreenshotCopy(languageCode: "ja")
         }
+        if locale.hasPrefix("ko") {
+            return WatchScreenshotCopy(languageCode: "ko")
+        }
         if locale.hasPrefix("zh_hant") || locale.hasPrefix("zh-hant") || locale.hasPrefix("zh_tw") {
             return WatchScreenshotCopy(languageCode: "zh-Hant")
         }
@@ -47,12 +50,28 @@ private struct WatchScreenshotCopy {
             en
         case "ja":
             ja ?? en
+        case "ko":
+            Self.korean[zhHans] ?? en
         case "zh-Hant":
             zhHant
         default:
             zhHans
         }
     }
+
+    private static let korean: [String: String] = [
+        "午饭": "점심",
+        "咖啡": "커피",
+        "快速记账": "빠른 기록",
+        "表盘可见": "시계 페이스",
+        "今日支出": "오늘 지출",
+        "把今日支出和快速入口放到表盘上。": "오늘 지출과 빠른 실행을 시계 페이스에 표시하세요.",
+        "与 iPhone 保持同步": "iPhone과 동기화",
+        "手机端继续编辑和查看统计": "iPhone에서 편집하고 통계를 확인하세요",
+        "待同步": "동기화 대기",
+        "最近更新": "최근 업데이트",
+        "同步": "동기화",
+    ]
 }
 
 private enum WatchScreenshotFixtures {

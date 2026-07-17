@@ -1,14 +1,25 @@
 # AutoLedger Docs
 
 > 文档状态：Canonical
-> 真源范围：`docs/` 导航、文档生命周期和编写规则
+> 真源范围：`docs/` 导航、物理分类、文档生命周期和编写规则
 > 最后核验：2026-07-17
 > 当前状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
-> 产品路线图：[ROADMAP.md](ROADMAP.md)
+> 核心路线图：[ROADMAP.md](ROADMAP.md)
+> 跨版本语言路线：[product/I18N_ROADMAP.md](product/I18N_ROADMAP.md)
 
-`docs/` 保存产品、架构、能力、平台、审计和工具设计资料。发布前采用逻辑分类，不大规模移动既有路径；路径重组留到 `v1.7.0` 发布后单独执行，以避免外部链接和历史引用在候选冻结期发生无关变化。
+`docs/` 已按职责物理分组。根目录只保留本索引与核心产品路线图；版本执行计划放在 `versions/`，迭代流程与事实日志放在 `process/`。
 
-根目录 Markdown 只保留仓库入口和治理真源，例如 `README.md`、`PROJECT_STATUS.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md` 与 `AGENTS.md`。版本执行计划放在 `versions/`，迭代流程与事实日志放在 `process/`。
+```text
+docs/
+├── README.md          # 文档导航与治理真源
+├── ROADMAP.md         # 唯一核心产品路线图
+├── product/           # 产品专项与跨版本语言路线
+├── architecture/      # 架构、数据与识别合同
+├── capabilities/      # 用户能力与工具设计
+├── platforms/         # Watch / tvOS / visionOS 平台设计
+├── operations/        # 发布资产、权益、IAP 与运维审计
+└── archive/           # 已执行规划与历史评估
+```
 
 ## Status Definitions
 
@@ -26,79 +37,85 @@
 | 文档 | 状态 | 职责 |
 |---|---|---|
 | [../PROJECT_STATUS.md](../PROJECT_STATUS.md) | Canonical | 当前版本、发布阶段、阻断、门禁和下一步 |
-| [ROADMAP.md](ROADMAP.md) | Canonical | 产品方向、跨版本优先级、依赖和非目标 |
+| [ROADMAP.md](ROADMAP.md) | Canonical | 核心产品方向、跨版本优先级、依赖和非目标 |
+| [product/I18N_ROADMAP.md](product/I18N_ROADMAP.md) | Canonical | 每版本语言组、英语主语言策略与通用语言门禁 |
 | [../versions/v1.7.0-plan.md](../versions/v1.7.0-plan.md) | Canonical | 当前版本范围、GOAL、测试与验收 |
+| [../versions/v1.7.0-i18n-release-matrix.md](../versions/v1.7.0-i18n-release-matrix.md) | Active | 当前版本语言完成度与缺口 |
+| [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md) | Draft | 下一版本 Review & Close 产品计划 |
+| [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md) | Draft | 下一版本西语 / 巴葡实施矩阵 |
 | [../process/agent-iteration-workflow.md](../process/agent-iteration-workflow.md) | Canonical | 迭代方法、门禁与执行前检查 |
 | [../process/iteration-log.md](../process/iteration-log.md) | Canonical | 每轮实施事实、风险、验证和回滚 |
 | [../CHANGELOG.md](../CHANGELOG.md) | Canonical | 已完成变更历史 |
 
-## Product And Entitlement
+## Product
 
 | 文档 | 状态 | 说明 |
 |---|---|---|
-| [autoledger-personal-pro-design.md](autoledger-personal-pro-design.md) | Active | Personal Pro 定位、Free / Pro 原则和酒店 / 邮箱自动化设计 |
-| [autoledger-personal-pro-roadmap.md](autoledger-personal-pro-roadmap.md) | Active | Pro 专项路线图；优先级从 `ROADMAP.md` 派生，不是全局路线图 |
-| [pro-access-audit.md](pro-access-audit.md) | Active | 当前客户端与服务端权益边界审计快照；执行真源仍是代码与测试 |
-| [iap-support.md](iap-support.md) | Active | Support Developer 与 Pro IAP 支持说明 |
-| [brand-assets-notice.md](brand-assets-notice.md) | Canonical | AutoLedger 品牌与商店资产授权边界 |
+| [product/I18N_ROADMAP.md](product/I18N_ROADMAP.md) | Canonical | 跨版本语言分组、主语言策略与发布准入 |
+| [product/autoledger-personal-pro-design.md](product/autoledger-personal-pro-design.md) | Active | Personal Pro 定位、Free / Pro 原则和酒店 / 邮箱自动化设计 |
+| [product/autoledger-personal-pro-roadmap.md](product/autoledger-personal-pro-roadmap.md) | Active | Pro 专项路线；优先级由核心 `ROADMAP.md` 派生 |
 
-## Architecture And Recognition
+## Architecture
 
 | 文档 | 状态 | 说明 |
 |---|---|---|
-| [LedgerTextInterpreter.md](LedgerTextInterpreter.md) | Reference | 平台无关账单文本解释器设计；以当前 Core 代码和回归为执行真源 |
-| [recognition-learning-cache-design.md](recognition-learning-cache-design.md) | Active | 商户、分类、订阅倾向和短期识别学习缓存设计 |
-| [autoledger_icloud_backup_design.md](autoledger_icloud_backup_design.md) | Reference | 单文件备份 / 恢复设计，不是当前 CloudKit 同步完整真源 |
-| [autoledgercore-platform-dependency-audit.md](autoledgercore-platform-dependency-audit.md) | Historical | 2026-06-11 AutoLedgerCore 平台依赖审计快照 |
-| [minimum-platform-baseline-reduction-plan.md](minimum-platform-baseline-reduction-plan.md) | Historical | 已执行的最低平台基线下调规划与结果记录 |
+| [architecture/LedgerTextInterpreter.md](architecture/LedgerTextInterpreter.md) | Reference | 平台无关账单文本解释器设计 |
+| [architecture/recognition-learning-cache-design.md](architecture/recognition-learning-cache-design.md) | Active | 商户、分类、订阅倾向和短期识别学习缓存设计 |
+| [architecture/autoledger_icloud_backup_design.md](architecture/autoledger_icloud_backup_design.md) | Reference | 单文件备份 / 恢复设计，不是当前 CloudKit 同步完整真源 |
 
-## Capabilities And Tools
+## Capabilities
 
 | 文档 | 状态 | 说明 |
 |---|---|---|
-| [autoledger_voice_siri_design.md](autoledger_voice_siri_design.md) | Reference | 语音记账与 Siri 交互设计 |
-| [shortcuts-json-ledger-import.md](shortcuts-json-ledger-import.md) | Active | Shortcuts JSON 账单导入合同 |
-| [ReceiptDebugTool-implementation-draft.md](ReceiptDebugTool-implementation-draft.md) | Reference | ReceiptDebugTool 实施规格；实际能力以工具代码为准 |
-| [MVP1.0.md](MVP1.0.md) | Historical | App Intent 一键记账 MVP 初始设计 |
+| [capabilities/autoledger_voice_siri_design.md](capabilities/autoledger_voice_siri_design.md) | Reference | 语音记账与 Siri 交互设计 |
+| [capabilities/shortcuts-json-ledger-import.md](capabilities/shortcuts-json-ledger-import.md) | Active | Shortcuts JSON 账单导入合同 |
+| [capabilities/ReceiptDebugTool-implementation-draft.md](capabilities/ReceiptDebugTool-implementation-draft.md) | Reference | ReceiptDebugTool 实施规格；实际能力以工具代码为准 |
 
-## Platforms And Release Assets
+## Platforms
 
 | 文档 | 状态 | 说明 |
 |---|---|---|
-| [AutoLedger_Watch_Design.md](AutoLedger_Watch_Design.md) | Reference | Apple Watch 快速记账与摘要设计 |
-| [all-platform-screenshot-pipeline-design.md](all-platform-screenshot-pipeline-design.md) | Reference | 全平台截图管线设计；执行说明位于 `tools/appstore-screenshots/` |
-| [tvos-dashboard-design.md](tvos-dashboard-design.md) | Reference | tvOS 只读看板设计 |
-| [tvos-implementation-assessment.md](tvos-implementation-assessment.md) | Historical | tvOS 实现前评估，已被当前工程实现推进 |
-| [visionos-spatial-design.md](visionos-spatial-design.md) | Reference | visionOS 空间展示设计 |
-| [visionos-implementation-assessment.md](visionos-implementation-assessment.md) | Historical | visionOS 实现前评估，已被当前工程实现推进 |
+| [platforms/AutoLedger_Watch_Design.md](platforms/AutoLedger_Watch_Design.md) | Reference | Apple Watch 快速记账与摘要设计 |
+| [platforms/tvos-dashboard-design.md](platforms/tvos-dashboard-design.md) | Reference | tvOS 只读看板设计 |
+| [platforms/visionos-spatial-design.md](platforms/visionos-spatial-design.md) | Reference | visionOS 空间展示设计 |
+
+## Operations
+
+| 文档 | 状态 | 说明 |
+|---|---|---|
+| [operations/all-platform-screenshot-pipeline-design.md](operations/all-platform-screenshot-pipeline-design.md) | Reference | 全平台截图管线设计；执行说明位于 `tools/appstore-screenshots/` |
+| [operations/brand-assets-notice.md](operations/brand-assets-notice.md) | Canonical | AutoLedger 品牌与商店资产授权边界 |
+| [operations/iap-support.md](operations/iap-support.md) | Active | Support Developer 与 Pro IAP 支持说明 |
+| [operations/pro-access-audit.md](operations/pro-access-audit.md) | Active | 当前客户端与服务端权益边界审计快照 |
+
+## Archive
+
+| 文档 | 状态 | 说明 |
+|---|---|---|
+| [archive/MVP1.0.md](archive/MVP1.0.md) | Historical | App Intent 一键记账 MVP 初始设计 |
+| [archive/autoledgercore-platform-dependency-audit.md](archive/autoledgercore-platform-dependency-audit.md) | Historical | 2026-06-11 Core 平台依赖审计快照 |
+| [archive/minimum-platform-baseline-reduction-plan.md](archive/minimum-platform-baseline-reduction-plan.md) | Historical | 已执行的最低平台基线下调规划与结果 |
+| [archive/tvos-implementation-assessment.md](archive/tvos-implementation-assessment.md) | Historical | tvOS 实现前评估 |
+| [archive/visionos-implementation-assessment.md](archive/visionos-implementation-assessment.md) | Historical | visionOS 实现前评估 |
 
 ## Source Of Truth Rules
 
-- 同一事实只能有一个真源。README、专项设计和发布文案只能摘要或链接，不得分别维护相互冲突的状态。
+- 同一事实只能有一个真源。README、专项设计和发布文案只能摘要或链接，不得分别维护冲突状态。
 - 当前阶段、候选、阻断和下一步只写入 `PROJECT_STATUS.md`。
-- 产品方向、跨版本优先级和明确非目标只写入 `ROADMAP.md`。
+- 核心产品方向、跨版本优先级和明确非目标只写入根级 `ROADMAP.md`。
+- 语言组顺序、英语主语言策略和通用语言门禁只写入 `product/I18N_ROADMAP.md`。
 - 版本范围、GOAL、测试与验收只写入 `versions/v*.md`。
-- Free / Pro 能力的执行真源是 `ProAccessPolicy.swift`、服务端 entitlement 和回归测试；审计文档必须跟随代码更新。
+- Free / Pro 能力的执行真源是代码、服务端 entitlement 和回归测试；审计文档必须跟随实现更新。
 - 带日期的执行记录表示当时事实。后续进展应新增当前总结或明确 superseded，不静默改写历史证据。
-- 文档与可执行代码 / 测试冲突时，以代码和测试为准，并把文档失真视为需要修复的问题。
+- 文档与可执行代码 / 测试冲突时，以代码和测试为准，并把文档失真视为待修问题。
 
-## Authoring Rules
+## Authoring And Placement Rules
 
 - 新设计先写明状态、真源范围、最后核验日期、上位真源和相关实现入口。
-- 设计草案放在 `docs/`；可执行版本计划放在 `versions/`；流程和执行证据放在 `process/`。
-- 根 README 只保留面向协作者和用户的公开摘要，并链接当前状态与路线图。
+- 核心路线图是唯一允许与本索引并列在 `docs/` 根目录的专项文档；其它新增文档必须进入现有分类目录。
+- 产品方向放 `product/`；架构与数据合同放 `architecture/`；用户能力放 `capabilities/`；平台专项放 `platforms/`；发布、权益和运维放 `operations/`；已完成规划与历史快照放 `archive/`。
+- 可执行版本计划放 `versions/`；流程和执行证据放 `process/`。
+- 移动文档必须使用可追踪重命名、全仓链接检查，并同步本索引、当前状态和相关版本计划。
 - 不在路线图中记录构建号、Worker Version ID、单次测试输出或逐轮提交。
-- 不在当前状态文档中堆完整设计规格或历史变更。
 - 不使用“零上传”等绝对隐私表述；需要说明何时访问云端、发送哪些字段以及失败 fallback。
 - 不包含真实小票、支付截图、原始 OCR、邮箱授权码、API key、证书、JWT、p8、真实酒店订单或个人财务数据。
-
-## Release-Safe Reorganization
-
-`v1.7.0` 发布前只做真源、索引、状态和过期事实修正，不移动现有文档路径。发布后可单独规划以下物理目录，并通过 `git mv`、全仓链接检查和兼容说明完成迁移：
-
-- `docs/product/`
-- `docs/architecture/`
-- `docs/capabilities/`
-- `docs/platforms/`
-- `docs/operations/`
-- `docs/archive/`

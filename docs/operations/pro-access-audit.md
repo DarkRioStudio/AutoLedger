@@ -4,7 +4,7 @@
 > Document role: point-in-time audit snapshot
 > Source-of-truth scope: explanation of the current client / server Pro boundary; executable truth remains code and regression tests
 > Last verified: 2026-07-17
-> Parent roadmap: [ROADMAP.md](ROADMAP.md)
+> Parent roadmap: [ROADMAP.md](../ROADMAP.md)
 
 Date: 2026-07-17
 
