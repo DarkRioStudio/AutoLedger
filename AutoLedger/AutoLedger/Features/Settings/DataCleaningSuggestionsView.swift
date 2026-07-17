@@ -14,6 +14,7 @@ struct DataCleaningSuggestionsView: View {
         reason: .disabledByUser
     )
     @State private var isAnalyzing = true
+    @State private var cloudAssistErrorMessage: String?
     @AppStorage("dataCleaningCloudAssistEnabled") private var cloudAssistEnabled = false
 
     private var previews: [DataCleaningPreviewItem] {
@@ -157,17 +158,20 @@ struct DataCleaningSuggestionsView: View {
 
             HStack(spacing: 10) {
                 ruleMetric(
-                    String(format: String(localized: "ipad.cleaning.rules.alias_count_format"), plan.rules(kind: .merchantAlias).count),
+                    value: plan.rules(kind: .merchantAlias).count,
+                    title: "ipad.cleaning.rules.alias_label",
                     systemImage: "textformat.alt",
                     tint: AppTheme.accent
                 )
                 ruleMetric(
-                    String(format: String(localized: "ipad.cleaning.rules.category_count_format"), plan.rules(kind: .categoryCorrection).count),
+                    value: plan.rules(kind: .categoryCorrection).count,
+                    title: "ipad.cleaning.rules.category_label",
                     systemImage: "tag.fill",
                     tint: AppTheme.accentSecondary
                 )
                 ruleMetric(
-                    String(format: String(localized: "ipad.cleaning.rules.affected_count_format"), plan.affectedTransactionCount),
+                    value: plan.affectedTransactionCount,
+                    title: "ipad.cleaning.rules.affected_label",
                     systemImage: "checklist",
                     tint: AppTheme.ink
                 )
@@ -200,19 +204,31 @@ struct DataCleaningSuggestionsView: View {
         .autoLedgerCardSurface(cornerRadius: 18)
     }
 
-    private func ruleMetric(_ text: String, systemImage: String, tint: Color) -> some View {
-        Label {
-            Text(text)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.ink)
-                .lineLimit(2)
-                .minimumScaleFactor(0.76)
-        } icon: {
+    private func ruleMetric(
+        value: Int,
+        title: LocalizedStringKey,
+        systemImage: String,
+        tint: Color
+    ) -> some View {
+        VStack(spacing: 4) {
             Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
                 .foregroundStyle(tint)
+
+            Text("\(value)")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+                .monospacedDigit()
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(AppTheme.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
         }
-        .frame(maxWidth: .infinity, minHeight: 38)
-        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 68)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
         .background(tint.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -253,6 +269,13 @@ struct DataCleaningSuggestionsView: View {
                 .font(.caption)
                 .foregroundStyle(AppTheme.mutedInk)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if let cloudAssistErrorMessage {
+                Label(cloudAssistErrorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(16)
         .autoLedgerCardSurface(cornerRadius: 18)
@@ -589,6 +612,7 @@ struct DataCleaningSuggestionsView: View {
         let allTransactions = store.transactions
         let isCloudAssistEnabled = cloudAssistEnabled
         let isProActive = proEntitlement.isProActive
+        let signedTransactionInfo = proEntitlement.primaryActiveSubscription?.signedTransactionInfo
         let result = await Task.detached(priority: .userInitiated) {
             let snapshot = DataCleaningPreviewPlanner().buildSnapshot(
                 transactions: transactions,
@@ -628,6 +652,37 @@ struct DataCleaningSuggestionsView: View {
         snapshot = result.0
         advancedRulePlan = result.1
         cloudAssistDecision = result.2
+        cloudAssistErrorMessage = nil
+
+        if result.2.isAllowed, let signedTransactionInfo {
+            do {
+                let payload = await Task.detached(priority: .utility) {
+                    DataCleaningAssistPayloadBuilder().build(
+                        transactions: allTransactions,
+                        merchantAliases: merchantAliases,
+                        categoryCorrections: categoryCorrections
+                    )
+                }.value
+                let response = try await DataCleaningAssistClient().requestSuggestions(
+                    payload: payload,
+                    signedTransactionInfo: signedTransactionInfo,
+                    endpoint: HotelFolioInboxSettings.currentEndpoint
+                )
+                let cloudSnapshot = await Task.detached(priority: .userInitiated) {
+                    DataCleaningAssistSuggestionMapper().map(
+                        response: response,
+                        transactions: allTransactions,
+                        ignoredPreviewIDs: ignoredIDs
+                    )
+                }.value
+                guard !Task.isCancelled else { return }
+                let existingIDs = Set(snapshot.items.map(\.id))
+                snapshot.items.append(contentsOf: cloudSnapshot.items.filter { !existingIDs.contains($0.id) })
+                advancedRulePlan = AdvancedRuleAutomationPlanner().buildPlan(snapshot: snapshot)
+            } catch {
+                cloudAssistErrorMessage = String(localized: "ipad.cleaning.cloud_assist.status.request_failed")
+            }
+        }
         isAnalyzing = false
     }
 

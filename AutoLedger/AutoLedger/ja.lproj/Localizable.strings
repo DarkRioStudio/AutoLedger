@@ -470,6 +470,9 @@
 "ipad.cleaning.rules.empty" = "適用できる確定済みルールはありません。";
 "ipad.cleaning.rules.apply" = "ルールを適用";
 "ipad.cleaning.rules.alias_count_format" = "%d 件の加盟店別名";
+"ipad.cleaning.rules.alias_label" = "加盟店別名";
+"ipad.cleaning.rules.category_label" = "カテゴリ修正";
+"ipad.cleaning.rules.affected_label" = "更新予定";
 "ipad.cleaning.rules.category_count_format" = "%d 件のカテゴリ修正";
 "ipad.cleaning.rules.affected_count_format" = "%d 件を更新";
 "ipad.cleaning.preview" = "プレビュー";
@@ -947,14 +950,15 @@
 "settings.release_status.body" = "次は Pro のサブスクリプション体験とホテル明細フローをさらに磨きます。登録、購入の復元、受信箱の候補確認、確認後の保存をより使いやすくし、その後は検索、サブスクリプション異常通知、月末エクスポート、自動ルール整理を強化します。";
 
 "ipad.cleaning.cloud_assist.title" = "クラウド補助候補";
-"ipad.cleaning.cloud_assist.subtitle" = "有効にすると、今後のバージョンで確認後に匿名化された集計特徴を使い、整理候補を改善できます。";
-"ipad.cleaning.cloud_assist.status.allowed" = "今後のリクエスト条件を満たしています。現バージョンでは台帳データをアップロードしません。";
+"ipad.cleaning.cloud_assist.subtitle" = "有効にすると、匿名化された集計特徴から加盟店の別名候補を生成します。適用には引き続き確認が必要です。";
+"ipad.cleaning.cloud_assist.status.allowed" = "クラウド補助に接続済みです。候補は端末内の結果と一緒に表示されます。";
+"ipad.cleaning.cloud_assist.status.request_failed" = "クラウド補助は一時的に利用できません。端末内の候補は引き続き利用できます。";
 "ipad.cleaning.cloud_assist.status.disabled" = "初期状態ではオフです。本機内の整理候補のみ使用します。";
 "ipad.cleaning.cloud_assist.status.requires_pro" = "クラウド補助候補には Pro が必要です。";
 "ipad.cleaning.cloud_assist.status.insufficient_history" = "台帳履歴がまだ少ないため、まず本機内の候補を使います。";
 "ipad.cleaning.cloud_assist.status.cooling_down" = "最近リクエスト済みです。しばらくしてから更新してください。";
 "ipad.cleaning.cloud_assist.status.backoff" = "前回のリクエストは一時的に利用できません。後でお試しください。";
-"ipad.cleaning.cloud_assist.privacy_note" = "このバージョンは許可設定だけを保存し、加盟店名、金額、メモ、OCR 原文、取引 ID は送信しません。";
+"ipad.cleaning.cloud_assist.privacy_note" = "加盟店キーのハッシュと件数・分類・取得元・金額帯の集計のみを送信し、元の加盟店名、正確な金額、メモ、OCR 原文、取引 ID は送信しません。";
 
 "appearance.title" = "外観とテーマ";
 "appearance.theme_picker" = "テーマ";

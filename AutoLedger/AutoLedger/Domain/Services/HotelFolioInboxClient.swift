@@ -184,6 +184,7 @@ struct HotelFolioInboxClient: Sendable {
         var platform: String
         var environment: String
         var signedTransactionInfo: String?
+        var existingAccessToken: String?
     }
 
     private let session: URLSession
@@ -212,7 +213,8 @@ struct HotelFolioInboxClient: Sendable {
             clientID: HotelFolioInboxSettings.currentClientID,
             platform: Self.currentPlatform,
             environment: Self.currentPushEnvironment,
-            signedTransactionInfo: signedTransactionInfo
+            signedTransactionInfo: signedTransactionInfo,
+            existingAccessToken: settings.normalizedToken.isEmpty ? nil : settings.normalizedToken
         ))
 
         let data = try await data(for: request)
@@ -332,6 +334,11 @@ struct HotelFolioInboxClient: Sendable {
             throw HotelFolioInboxClientError.httpStatus(httpResponse.statusCode, message)
         }
         return data
+    }
+
+    static func isUnauthorized(_ error: Error) -> Bool {
+        guard case HotelFolioInboxClientError.httpStatus(let status, _) = error else { return false }
+        return status == 401
     }
 
     nonisolated private static func decodeISODate(_ decoder: Decoder) throws -> Date {

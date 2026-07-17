@@ -622,7 +622,8 @@ describe("common api worker contract", () => {
     expect(byID.get("unclean_session_recovery_count")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("unclean_session_recovery_count")).toMatchObject({ label: "异常会话恢复信号" });
     expect(byID.has("launch_success_rate")).toBe(false);
-    expect(byID.get("import_completion_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
+    expect(byID.get("import_task_success_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
+    expect(byID.get("live_ocr_confirmation_rate")).toMatchObject({ value: null, unit: "percent", numerator: 0, denominator: 0 });
     expect(byID.get("common_api_status_top_n")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("crash_diagnostic_count")).toMatchObject({ value: 1, unit: "count" });

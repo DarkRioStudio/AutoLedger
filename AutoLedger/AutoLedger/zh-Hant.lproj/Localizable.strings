@@ -470,6 +470,9 @@
 "ipad.cleaning.rules.empty" = "暫無可自動套用的已確認規則。";
 "ipad.cleaning.rules.apply" = "套用規則";
 "ipad.cleaning.rules.alias_count_format" = "%d 條商戶別名";
+"ipad.cleaning.rules.alias_label" = "商戶別名";
+"ipad.cleaning.rules.category_label" = "分類修正";
+"ipad.cleaning.rules.affected_label" = "會更新";
 "ipad.cleaning.rules.category_count_format" = "%d 條分類修正";
 "ipad.cleaning.rules.affected_count_format" = "%d 筆會更新";
 "ipad.cleaning.preview" = "預覽";
@@ -950,14 +953,15 @@
 "settings.release_status.body" = "接下來會繼續打磨 Pro 訂閱體驗和飯店水單流程，讓開通、恢復購買、收件箱候選和確認入帳更順手。後續版本會加入更強的搜尋、訂閱異常提醒、月結匯出和自動規則整理。";
 
 "ipad.cleaning.cloud_assist.title" = "雲端輔助建議";
-"ipad.cleaning.cloud_assist.subtitle" = "開啟後，後續版本可在你確認後使用脫敏彙總特徵輔助生成整理建議。";
-"ipad.cleaning.cloud_assist.status.allowed" = "已符合請求條件；目前版本仍不會上傳帳本資料。";
+"ipad.cleaning.cloud_assist.subtitle" = "開啟後，使用脫敏彙總特徵生成商戶別名建議；仍需你確認後才會套用。";
+"ipad.cleaning.cloud_assist.status.allowed" = "已連線雲端輔助；建議會和本機結果一起顯示。";
+"ipad.cleaning.cloud_assist.status.request_failed" = "雲端輔助暫不可用，本次仍保留本機建議。";
 "ipad.cleaning.cloud_assist.status.disabled" = "預設關閉，只使用本機整理建議。";
 "ipad.cleaning.cloud_assist.status.requires_pro" = "需要 Pro 權益後才能使用雲端輔助建議。";
 "ipad.cleaning.cloud_assist.status.insufficient_history" = "帳本記錄還不夠多，先繼續使用本機建議。";
 "ipad.cleaning.cloud_assist.status.cooling_down" = "剛剛請求過，稍後再重新整理雲端輔助建議。";
 "ipad.cleaning.cloud_assist.status.backoff" = "上次請求暫不可用，稍後再試。";
-"ipad.cleaning.cloud_assist.privacy_note" = "本版本只保存授權偏好，不會傳送商戶名、金額、備註、OCR 原文或交易 ID。";
+"ipad.cleaning.cloud_assist.privacy_note" = "僅傳送商戶鍵雜湊、次數及分類、來源、金額區間等彙總特徵；不傳送商戶原名、精確金額、備註、OCR 原文或交易 ID。";
 
 "appearance.title" = "外觀與主題";
 "appearance.theme_picker" = "主題";

@@ -470,6 +470,9 @@
 "ipad.cleaning.rules.empty" = "暂无可自动套用的已确认规则。";
 "ipad.cleaning.rules.apply" = "应用规则";
 "ipad.cleaning.rules.alias_count_format" = "%d 条商户别名";
+"ipad.cleaning.rules.alias_label" = "商户别名";
+"ipad.cleaning.rules.category_label" = "分类修正";
+"ipad.cleaning.rules.affected_label" = "会更新";
 "ipad.cleaning.rules.category_count_format" = "%d 条分类修正";
 "ipad.cleaning.rules.affected_count_format" = "%d 笔会更新";
 "ipad.cleaning.preview" = "预览";
@@ -947,14 +950,15 @@
 "settings.release_status.body" = "接下来会继续打磨 Pro 订阅体验和酒店水单流程，让开通、恢复购买、收件箱候选和确认入账更顺手。后续版本会加入更强的搜索、订阅异常提醒、月结导出和自动规则整理。";
 
 "ipad.cleaning.cloud_assist.title" = "云端辅助建议";
-"ipad.cleaning.cloud_assist.subtitle" = "开启后，后续版本可在你确认后使用脱敏聚合特征辅助生成整理建议。";
-"ipad.cleaning.cloud_assist.status.allowed" = "已满足请求条件；当前版本仍不会上传账本数据。";
+"ipad.cleaning.cloud_assist.subtitle" = "开启后，使用脱敏聚合特征生成商户别名建议；仍需你确认后才会应用。";
+"ipad.cleaning.cloud_assist.status.allowed" = "已连接云端辅助；建议会和本机结果一起显示。";
+"ipad.cleaning.cloud_assist.status.request_failed" = "云端辅助暂不可用，本次仍保留本机建议。";
 "ipad.cleaning.cloud_assist.status.disabled" = "默认关闭，只使用本机整理建议。";
 "ipad.cleaning.cloud_assist.status.requires_pro" = "需要 Pro 权益后才能使用云端辅助建议。";
 "ipad.cleaning.cloud_assist.status.insufficient_history" = "账本记录还不够多，先继续使用本机建议。";
 "ipad.cleaning.cloud_assist.status.cooling_down" = "刚刚请求过，稍后再刷新云端辅助建议。";
 "ipad.cleaning.cloud_assist.status.backoff" = "上次请求暂不可用，稍后再试。";
-"ipad.cleaning.cloud_assist.privacy_note" = "本版本只保存授权偏好，不会发送商户名、金额、备注、OCR 原文或交易 ID。";
+"ipad.cleaning.cloud_assist.privacy_note" = "仅发送商户键哈希、次数及分类、来源、金额区间等聚合特征；不发送商户原名、精确金额、备注、OCR 原文或交易 ID。";
 
 "appearance.title" = "外观与主题";
 "appearance.theme_picker" = "主题";

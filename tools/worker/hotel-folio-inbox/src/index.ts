@@ -20,6 +20,20 @@ type TokenRow = {
   pro_expires_at: string | null;
 };
 
+type DataCleaningMerchantFeature = {
+  merchantKeyHash: string;
+  transactionCount: number;
+};
+
+type DataCleaningAssistRequest = {
+  signedTransactionInfo?: string;
+  payload?: {
+    schemaVersion?: number;
+    privacyMode?: string;
+    merchantFeatures?: DataCleaningMerchantFeature[];
+  };
+};
+
 type CandidateRow = {
   id: string;
   token_hash: string;
@@ -314,6 +328,10 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
     return verifyProEntitlement(request, env);
   }
 
+  if (request.method === "POST" && url.pathname === "/v1/data-cleaning-assist") {
+    return dataCleaningAssist(request, env);
+  }
+
   if (request.method === "POST" && url.pathname === "/v1/app-store/notifications") {
     return receiveAppStoreServerNotification(request, env);
   }
@@ -534,6 +552,7 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     platform: string;
     environment: string;
     signedTransactionInfo: string;
+    existingAccessToken: string;
   }>;
   let serverEntitlement: EntitlementVerificationResult | null = null;
   if (!allowsUnverifiedTokenClaim(env)) {
@@ -575,6 +594,37 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     : `client:${clientID}`;
   const now = new Date().toISOString();
   const proExpiresAt = serverEntitlement?.expiresAt ?? unverifiedTokenExpirationDate(env, new Date()).toISOString();
+  const existingAccessToken = normalizeToken(body.existingAccessToken ?? "");
+  if (existingAccessToken) {
+    const existingAccessTokenHash = await sha256Hex(existingAccessToken);
+    const existing = await env.DB.prepare(
+      `SELECT token_hash, access_token_hash, user_id, inbox_email, status, pro_expires_at
+        FROM pro_inbox_tokens
+        WHERE access_token_hash = ?
+          AND status = 'active'`
+    )
+      .bind(existingAccessTokenHash)
+      .first<TokenRow>();
+    if (existing) {
+      await env.DB.prepare(
+        `UPDATE pro_inbox_tokens
+            SET user_id = ?,
+                pro_expires_at = ?,
+                updated_at = ?
+          WHERE access_token_hash = ?`
+      )
+        .bind(userID, proExpiresAt, now, existingAccessTokenHash)
+        .run();
+      return json({
+        token: existingAccessToken,
+        inboxEmail: existing.inbox_email,
+        tokenHash: existingAccessTokenHash,
+        userID,
+        status: "active",
+        proExpiresAt
+      } satisfies InboxTokenClaimDTO, env, 200);
+    }
+  }
   const {
     routingToken,
     accessToken,
@@ -623,6 +673,79 @@ async function verifyProEntitlement(request: Request, env: Env): Promise<Respons
   }
   const result = await verifyAppStoreEntitlement(env, body.signedTransactionInfo);
   return json({ allowed: result.allowed, reason: result.reason, expiresAt: result.expiresAt }, env);
+}
+
+async function dataCleaningAssist(request: Request, env: Env): Promise<Response> {
+  const body = await request.json().catch(() => ({})) as DataCleaningAssistRequest;
+  const entitlement = await verifyAppStoreEntitlement(env, body.signedTransactionInfo);
+  if (entitlement.allowed !== true) {
+    return json({ error: "server_entitlement_required", reason: entitlement.reason }, env, 403);
+  }
+  const payload = body.payload;
+  if (payload?.schemaVersion !== 1 || payload.privacyMode !== "hashed_aggregate_v1") {
+    return json({ error: "unsupported_data_cleaning_payload" }, env, 400);
+  }
+  const features = (payload.merchantFeatures ?? [])
+    .filter((feature) => /^m_[a-f0-9]{16}$/.test(feature.merchantKeyHash))
+    .slice(0, 500);
+  const byHash = new Map(features.map((feature) => [feature.merchantKeyHash, feature]));
+  const suggestions: Array<{
+    kind: "merchantNormalization";
+    candidateMerchantHash: string;
+    targetMerchantHash: string;
+    confidence: number;
+    reasonCode: string;
+  }> = [];
+
+  for (const aliases of dataCleaningMerchantAliasCatalog) {
+    const matches = aliases
+      .map((alias) => byHash.get(stableMerchantHash(alias)))
+      .filter((feature): feature is DataCleaningMerchantFeature => Boolean(feature));
+    if (matches.length < 2) {
+      continue;
+    }
+    const target = matches.slice().sort((left, right) => (
+      right.transactionCount - left.transactionCount || left.merchantKeyHash.localeCompare(right.merchantKeyHash)
+    ))[0]!;
+    for (const candidate of matches) {
+      if (candidate.merchantKeyHash === target.merchantKeyHash) {
+        continue;
+      }
+      suggestions.push({
+        kind: "merchantNormalization",
+        candidateMerchantHash: candidate.merchantKeyHash,
+        targetMerchantHash: target.merchantKeyHash,
+        confidence: 0.96,
+        reasonCode: "cloud_alias_catalog"
+      });
+    }
+  }
+
+  return json({ schemaVersion: 1, privacyMode: "hashed_suggestions_v1", suggestions }, env);
+}
+
+const dataCleaningMerchantAliasCatalog = [
+  ["麦当劳", "mcdonalds", "mcdonald"],
+  ["肯德基", "kfc"],
+  ["星巴克", "starbucks"],
+  ["瑞幸咖啡", "瑞幸", "luckincoffee", "luckin"],
+  ["携程", "携程旅行", "ctrip", "tripcom"],
+  ["滴滴", "滴滴出行", "didichuxing", "didi"],
+  ["美团", "美团外卖", "meituan"],
+  ["支付宝", "alipay"],
+  ["微信支付", "wechatpay"]
+] as const;
+
+function stableMerchantHash(value: string): string {
+  const normalized = [...value.trim().toLocaleLowerCase()]
+    .filter((character) => /[\p{L}\p{N}]/u.test(character))
+    .join("");
+  let hash = 14_695_981_039_346_656_037n;
+  for (const byte of encoder.encode(normalized)) {
+    hash ^= BigInt(byte);
+    hash = BigInt.asUintN(64, hash * 1_099_511_628_211n);
+  }
+  return `m_${hash.toString(16).padStart(16, "0")}`;
 }
 
 async function receiveAppStoreServerNotification(request: Request, env: Env): Promise<Response> {
@@ -2782,5 +2905,6 @@ export const testInternals = {
   collectAppStoreNotificationHistorySignedPayloads,
   processAppStoreNotificationHistory,
   appStoreUserID,
+  stableMerchantHash,
   sha256Hex
 };

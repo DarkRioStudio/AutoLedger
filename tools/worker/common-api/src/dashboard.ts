@@ -112,6 +112,15 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const featureSurfaceEvents = events.filter((event) => event.eventName === "al_feature_surface_opened");
   const importStarts = events.filter((event) => event.eventName === "al_import_flow_started");
   const importCompletions = events.filter((event) => event.eventName === "al_import_flow_completed");
+  const taskImportCompletions = importCompletions.filter((event) => (
+    stringPayload(event.payload, "flow_type") !== "live_ocr"
+  ));
+  const liveOCRStarts = importStarts.filter((event) => (
+    stringPayload(event.payload, "flow_type") === "live_ocr"
+  ));
+  const liveOCRCompletions = importCompletions.filter((event) => (
+    stringPayload(event.payload, "flow_type") === "live_ocr"
+  ));
   const confirmationEvents = events.filter((event) => event.eventName === "al_confirmation_state");
   const currencyEvents = events.filter((event) => event.eventName === "al_currency_lookup_status");
   const hotelPDFEvents = events.filter((event) => event.eventName === "al_hotel_pdf_flow_status");
@@ -146,10 +155,16 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       uncleanSessionRecoveryEvents.length
     ),
     percentMetric(
-      "import_completion_rate",
-      "导入完成率",
-      importCompletions.filter((event) => stringPayload(event.payload, "status") === "success").length,
-      importStarts.length
+      "import_task_success_rate",
+      "导入任务成功率",
+      taskImportCompletions.filter((event) => stringPayload(event.payload, "status") === "success").length,
+      taskImportCompletions.length
+    ),
+    percentMetric(
+      "live_ocr_confirmation_rate",
+      "实时扫描确认率",
+      liveOCRCompletions.filter((event) => stringPayload(event.payload, "status") === "success").length,
+      liveOCRStarts.length
     ),
     countMetric(
       "import_error_code_top_n",
@@ -641,7 +656,8 @@ const dashboardHTML = `<!doctype html>
       "unclean_session_recovery_count",
       "crash_diagnostic_count",
       "slow_operation_count",
-      "import_completion_rate",
+      "import_task_success_rate",
+      "live_ocr_confirmation_rate",
       "hotel_pdf_completion_rate",
       "common_api_status_top_n",
       "pro_gate_action_count",
@@ -697,7 +713,8 @@ const dashboardHTML = `<!doctype html>
         ["会话恢复", metricValue(byID.get("unclean_session_recovery_count")), "非崩溃率，含系统回收"],
         ["系统崩溃", metricValue(byID.get("crash_diagnostic_count")), "MetricKit / 系统诊断"],
         ["慢操作", metricValue(byID.get("slow_operation_count")), "超过 3 秒或 warning"],
-        ["导入完成率", metricValue(byID.get("import_completion_rate")), metricRatio(byID.get("import_completion_rate"))]
+        ["导入任务成功率", metricValue(byID.get("import_task_success_rate")), metricRatio(byID.get("import_task_success_rate"))],
+        ["实时扫描确认率", metricValue(byID.get("live_ocr_confirmation_rate")), metricRatio(byID.get("live_ocr_confirmation_rate"))]
       ]);
       els.eventsRange.textContent = "最近 " + (data.windowDays || 30) + " 天";
       renderMetricTable((data.metrics || []).slice().sort((left, right) => metricOrder.indexOf(left.metricID) - metricOrder.indexOf(right.metricID)));
@@ -778,7 +795,8 @@ const dashboardHTML = `<!doctype html>
         ["会话恢复", "-", "暂无数据"],
         ["系统崩溃", "-", "暂无数据"],
         ["慢操作", "-", "暂无数据"],
-        ["导入完成率", "-", "暂无数据"]
+        ["导入任务成功率", "-", "暂无数据"],
+        ["实时扫描确认率", "-", "暂无数据"]
       ]);
       els.metrics.innerHTML = '<div class="empty">暂时无法读取指标。</div>';
       els.eventBreakdown.innerHTML = '<tr><td colspan="3" class="muted">暂时无法读取事件分布。</td></tr>';

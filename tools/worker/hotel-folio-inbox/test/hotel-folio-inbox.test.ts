@@ -66,6 +66,18 @@ describe("hotel folio inbox worker contract", () => {
     expect(hash).toBe(await testInternals.sha256Hex("abc-123_"));
   });
 
+  it("matches cloud alias catalog hashes after merchant normalization", () => {
+    expect(testInternals.stableMerchantHash(" McDonald's ")).toBe(
+      testInternals.stableMerchantHash("mcdonalds")
+    );
+    expect(testInternals.stableMerchantHash("微信 支付")).toBe(
+      testInternals.stableMerchantHash("微信支付")
+    );
+    expect(testInternals.stableMerchantHash("麦当劳")).not.toBe(
+      testInternals.stableMerchantHash("mcdonalds")
+    );
+  });
+
   it("generates stable dedicated inbox addresses for claimed tokens", () => {
     const token = testInternals.generateInboxToken();
     expect(token).toMatch(/^[a-z2-9]{26}$/);

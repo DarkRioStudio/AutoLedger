@@ -490,7 +490,25 @@ struct HotelFolioInboxImportView: View {
         do {
             try settings.save()
             token = settings.normalizedToken
-            let fetched = try await client.listCandidates(settings: settings)
+            let fetched: [CloudHotelFolioCandidate]
+            do {
+                fetched = try await client.listCandidates(settings: settings)
+            } catch where HotelFolioInboxClient.isUnauthorized(error) {
+                let claim = try await client.claimInboxToken(
+                    settings: settings,
+                    signedTransactionInfo: proEntitlement.primaryActiveSubscription?.signedTransactionInfo
+                )
+                let renewedToken = HotelCloudFolioInboxAddress(token: claim.token).normalizedToken
+                guard !renewedToken.isEmpty else {
+                    throw HotelFolioInboxClientError.invalidTokenClaimResponse
+                }
+                let renewedSettings = HotelFolioInboxSettings(endpoint: endpoint, token: renewedToken)
+                try renewedSettings.save()
+                HotelFolioInboxSettings.saveInboxEmail(claim.inboxEmail)
+                token = renewedToken
+                fetched = try await client.listCandidates(settings: renewedSettings)
+                recordCloudInboxDebug("云端酒店水单收件箱：凭据已自动续签并重试")
+            }
             candidates = fetched
             if let targetCandidateID, fetched.contains(where: { $0.id == targetCandidateID }) {
                 selectedCandidateIDs = [targetCandidateID]

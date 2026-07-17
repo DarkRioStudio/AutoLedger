@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-426 启动 iCloud 同步让位 UI）
+更新日期：2026-07-17（ITER-427 Dashboard 口径、云收件箱续签与云端别名建议）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-427 Dashboard 口径、云收件箱续签与云端别名建议
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：TestFlight Feedback / Observability / Data Cleaning
+- 类型：Bugfix / 能力增强 / UI / Worker / 测试 / 部署
+- 目标：修复 AL Dashboard“导入完成率”混合任务成功与实时扫描确认漏斗导致数据不可解释的问题；处理新版 TestFlight 云端收件箱 401；修正数据清洗自动化规则指标截断与字号不一致；让已存在的云端辅助合同真正产生可确认的商户别名建议。
+- 改动范围：Common API Dashboard 聚合与页面；hotel-folio-inbox Worker token 续签、数据清洗辅助 endpoint 与别名目录；App 云端收件箱 401 重试、数据清洗辅助客户端、建议合并、授权文案、规则指标布局、截图模式；五语本地化与版本记录。
+- 未改动范围：未上传原始商户名、精确金额、备注、OCR 原文、交易 ID 或账本行；未自动应用云端建议；未修改 SQLite / CloudKit schema、冲突决策、StoreKit 产品、Bundle ID、entitlements、ASC metadata 或 Xcode Cloud workflow。
+- 完成内容：Dashboard 移除语义错误的全局“导入完成率”，改为按非实时扫描终态事件计算“导入任务成功率”，并单独用实时扫描开始数与确认成功数展示“实时扫描确认率”；历史 36.4% 不再被解释成导入失败率。
+- 完成内容：云端收件箱候选刷新遇到 401 时，以当前 StoreKit 签名交易向 Worker 续签既有 access token、更新到期时间和 App Store 用户绑定后自动重试；既有 active token 和专属收件地址保持不变，无法迁移时才走新的凭据领取合同。
+- 完成内容：数据清洗的三块自动化规则指标统一为图标、等字号数字和单行标签，`商户别名`、`分类修正`、`会更新` 在 iPhone 宽度完整显示。新增 `data_cleaning` 截图场景，并以 iPhone 17 Pro 模拟器完成可视检查。
+- 完成内容：云端辅助开启且 Pro / 最小历史条件满足时，App 向 folio Worker 发送商户键哈希及次数、分类、来源、金额区间等聚合特征；Worker 先做 App Store 服务端权益校验，再以首批中英商户别名目录返回 hash-only 建议。App 映射回本地商户并合并到现有待确认列表，网络或服务端失败只显示提示并保留本机建议。
+- 未完成内容：云端别名目录当前只覆盖首批常见品牌 / 平台，不是开放词义模型；请求冷却与失败 backoff 仍只存在 Core 合同，尚未持久化成功响应缓存和跨页面配额状态；建议仍需用户真机确认其实际命中质量。
+- 测试情况：Common API 51 项 Vitest 与 TypeScript PASS；hotel-folio-inbox 30 项 Vitest 与 TypeScript PASS；完整 `bash scripts/run_offline_regression.sh` PASS；签名 iOS generic workspace build PASS；iPhone 17 Pro / iOS 27 Simulator screenshot build PASS，截图确认三块规则指标无截断且字号一致。Common API staging / production Version ID 为 `2541d6fc-d7dd-4029-bfef-7a915f4b2a73` / `e3adaffd-9269-47c7-a853-e67fb3a8a5d7`；folio staging / production 最终 Version ID 为 `c6bd91fe-4712-40d3-8488-eb15f90129d0` / `2945e1cf-6fe6-419b-96b3-90fb9ec7a0aa`。
+- 风险与注意事项：hash-only 聚合会降低云端语义识别范围，首版通过受控别名目录换取可解释性；相同别名组以本地交易次数较多的写法作为目标，用户确认前不会改账。401 自动续签依赖有效 StoreKit 签名交易，权益失效时继续 fail closed。Dashboard 两个比率分母较小时仍应结合 numerator / denominator 解读。
+- 回滚方式：Dashboard 可恢复旧 metric ID；收件箱可移除 401 claim-and-retry 而保留手动重新领取；云端辅助可关闭 endpoint 和客户端调用并保留本机规划器；规则指标可恢复原 Label 布局。
+- 结论：四个反馈点均已实现并通过本地 / Worker / 可视门禁，线上 Worker 已发布；App 端等待下一 TestFlight 真机验收。
+- 下一步建议：下一构建先验证云收件箱原地址刷新不再 401，再用包含 `麦当劳 / McDonald's`、`星巴克 / Starbucks` 等两种写法的测试账本开启云端辅助，确认建议出现、拒绝不改账、接受后反哺后续导入；同时按 Dashboard numerator / denominator 解读新指标。
 
 ### ITER-426 启动 iCloud 同步让位 UI
 - 日期：2026-07-17

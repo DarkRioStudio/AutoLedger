@@ -10,6 +10,7 @@
 ## [Unreleased]
 
 ### 变更（v1.7.0）
+- [2026-07-17] 修正 AL Dashboard 导入指标口径：原“导入完成率”混合了任务成功与实时扫描打开→确认漏斗，现拆为“导入任务成功率”和“实时扫描确认率”，并保留分子 / 分母。修复云端水单收件箱旧凭据 / 到期凭据 401：候选刷新会以当前 StoreKit 签名交易续签既有 access token、保持专属邮箱并自动重试。数据清洗自动化规则指标统一为图标、等字号数字和完整标签，消除“商户…”截断与“0 笔会更新”字号差异。云端辅助建议正式接通 folio Worker：仅发送商户键哈希及聚合次数、分类、来源、金额区间，服务端完成 App Store 权益校验后返回首批可解释的 hash-only 商户别名建议，仍需用户确认才会写入本地规则；网络失败保留本机建议。Common API 与 folio Worker 已发布 staging / production，Worker 测试、完整离线回归、签名 iOS build 和 iPhone 模拟器可视检查通过。
 - [2026-07-17] 根据 TS 117 真机反馈继续收口启动 iCloud 同步：启动同步先等待首次本地 SQLite 水合完成，使本地账本成为 UI readiness 的唯一门禁；CloudKit 同步 / 拉取完成后的全量 SQLite 重载改由独立 reader 后台解码再发布。新增持久化状态修订保护，用户交互期间产生的旧快照会被丢弃并重试，避免后台刷新覆盖刚发生的本地编辑。CloudKit 静态门禁、完整离线回归与签名 iOS generic workspace build 通过；CloudKit 合并写入仍保持串行一致性，性能状态为 `Acceptance Pending`，需下一 TestFlight 同时验证冷启动交互和同步最终完成。
 - [2026-07-17] 收口账本与酒店 Tab 重复派生计算：`LedgerStore.visibleTransactions` 按交易修订号和账本范围复用，账本选择协调只在可见交易修订变化时生成一次 ID；酒店列表 snapshot 按酒店记录修订号、账本范围和 Locale 缓存，同一次 SwiftUI 更新复用 snapshot、待处理草稿与记录索引，记录新增 / 编辑 / 删除后自动失效。未改 SQLite 水合、分页、搜索、排序、CloudKit、数据模型或埋点口径。完整离线回归与 iOS generic workspace build 通过；性能仍为 `Acceptance Pending`，需下一 TestFlight 按相同路径对照 TS 116 阶段样本。
 - [2026-07-17] 统一现有 AutoLedger Dashboard“性能操作”卡片的标题样式：“开发者模式阶段”改用与卡片标题一致的标题加说明结构，统一字号、字重、间距和窄屏换行，并以分隔线区分常规操作与开发者阶段数据；不修改 TS 116 埋点、事件名、聚合字段、D1 schema、Dashboard 数据接口或 App 构建。Wrangler types、TypeScript 与 51 项 Worker 合同测试通过，已部署 staging `94296390-4950-446c-aadf-00e064cf0a95` 与 production `5791ada4-b18c-4093-8822-30ce29f4a285`，production health 和 Cloudflare Access 边界正常。

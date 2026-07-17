@@ -36,6 +36,8 @@ struct ScreenshotHostView: View {
                     ScreenshotHotelStaysHost()
                 case .proSubscription:
                     ScreenshotProSubscriptionHost()
+                case .dataCleaning:
+                    ScreenshotDataCleaningHost()
                 }
             case .ipad:
                 ScreenshotWorkspaceHost(section: screenshotWorkspaceSection(for: sceneIdentifier, platform: .ipad))
@@ -92,6 +94,25 @@ struct ScreenshotHostView: View {
         case .ios, .watch:
             .overview
         }
+    }
+}
+
+private struct ScreenshotDataCleaningHost: View {
+    @StateObject private var store: LedgerStore
+
+    init() {
+        ScreenshotFixtures.installUserDefaults()
+        UserDefaults.standard.set(true, forKey: "autoLedgerProDevelopmentOverride")
+        UserDefaults.standard.set(false, forKey: "dataCleaningCloudAssistEnabled")
+        _store = StateObject(wrappedValue: makeScreenshotLedgerStore())
+    }
+
+    var body: some View {
+        NavigationStack {
+            DataCleaningSuggestionsView()
+                .environmentObject(store)
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

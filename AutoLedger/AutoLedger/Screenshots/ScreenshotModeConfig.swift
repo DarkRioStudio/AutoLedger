@@ -15,6 +15,7 @@ enum ScreenshotScene: String, CaseIterable {
     case cloudFolioInbox = "cloud_folio_inbox"
     case hotelStays = "hotel_stays"
     case proSubscription = "pro_subscription"
+    case dataCleaning = "data_cleaning"
 }
 
 enum ScreenshotPlatform: String {
