@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-17（ITER-423 开发者性能埋点 TestFlight 构建触发）
+更新日期：2026-07-17（ITER-424 性能卡片标题样式统一）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-424 性能卡片标题样式统一
+- 日期：2026-07-17
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Performance Acceptance / Dashboard Polish
+- 类型：UI / 可观测性 / 测试 / 部署
+- 目标：统一现有 AutoLedger Dashboard 性能卡片中“性能操作”和“开发者模式阶段”两个标题的字号、字重、说明文本和间距层级。
+- 改动范围：Common API Dashboard 内嵌 HTML / CSS、HTML shell 合同测试、版本记录与 Worker 部署。
+- 未改动范围：未修改 App 性能埋点、事件名、耗时 bucket、聚合字段、D1 / SQLite / CloudKit schema、Dashboard 数据接口、Cloudflare Access、App 构建或 Xcode Cloud tag。
+- 完成内容：“开发者模式阶段”由无样式的单行文本改为与卡片标题一致的标题加右侧说明结构，使用同一 18px 标题层级和 12px muted 说明，并增加分隔线及窄屏换行，避免标题与首条阶段数据挤在一起。
+- 未完成内容：无。
+- 测试情况：`git diff --check` PASS；Common API Wrangler types、TypeScript 与 51 项 Vitest 合同测试 PASS。staging 页面壳返回 200 并包含统一标题结构；production `/health` 返回 200，未保护 `/dashboard/data` 返回 403，受 Cloudflare Access 保护的 `getautoledger.app/dashboard/` 未登录返回 302。已部署 staging Version ID `94296390-4950-446c-aadf-00e064cf0a95` 与 production Version ID `5791ada4-b18c-4093-8822-30ce29f4a285`。
+- 风险与注意事项：仅改变 Dashboard 静态展示，不影响已经落库和可查询的 TS 116 性能数据；窄屏下说明文本允许换行。
+- 回滚方式：恢复 `dashboard.ts` 中原单行开发者阶段标题及对应 CSS / 合同断言，然后重新部署 Worker。
+- 结论：两个标题样式已统一并发布到现有 AL Dashboard，TS 116 性能数据查询链路保持不变。
+- 下一步建议：刷新现有 AL Dashboard，在桌面和窄窗口分别确认两个标题视觉层级一致；随后只读定位账本与酒店 Tab 的首次进入 / 重复切回链路，分别评估 SwiftUI 首屏懒渲染与 SQLite 分页读取，不能只用 `LazyVStack` 代替数据层减载。
 
 ### ITER-423 开发者性能埋点 TestFlight 构建触发
 - 日期：2026-07-17

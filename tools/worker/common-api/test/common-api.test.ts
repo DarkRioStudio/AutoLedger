@@ -728,7 +728,9 @@ describe("common api worker contract", () => {
     expect(html).toContain("版本分布");
     expect(html).toContain("隐私边界");
     expect(html).toContain("性能操作");
-    expect(html).toContain("开发者模式阶段 · 页面 / 阶段 / 耗时 / 构建");
+    expect(html).toContain('<div class="performance-subhead">');
+    expect(html).toContain("<h3>开发者模式阶段</h3>");
+    expect(html).toContain("<span>页面 / 阶段 / 耗时 / 构建</span>");
     expect(html).not.toContain('data-widget="developer-performance"');
     expect(html).toContain("dashboard.darkrio326.top");
     expect(html).toContain("/dashboard/data");

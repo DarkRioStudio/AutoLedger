@@ -475,6 +475,12 @@ const dashboardHTML = `<!doctype html>
     .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
     h2 { margin: 0; font-size: 18px; }
     .section-head span { color: var(--muted); font-size: 12px; }
+    .performance-subhead {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      margin: 18px 0 14px; padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .performance-subhead h3 { margin: 0; font-size: 18px; line-height: 1.2; }
+    .performance-subhead span { color: var(--muted); font-size: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 11px 8px; border-top: 1px solid var(--border); vertical-align: top; text-align: left; }
     th { color: var(--muted); font-size: 12px; font-weight: 800; }
@@ -503,6 +509,7 @@ const dashboardHTML = `<!doctype html>
       header { display: block; }
       .toolbar { justify-content: stretch; margin-top: 18px; }
       .summary, .content, .split { grid-template-columns: 1fr; }
+      .performance-subhead { flex-wrap: wrap; }
       .status { text-align: left; }
     }
   </style>
@@ -599,7 +606,10 @@ const dashboardHTML = `<!doctype html>
         </summary>
         <div class="widget-body">
           <div class="bars" id="performanceOps"></div>
-          <div class="eyebrow">开发者模式阶段 · 页面 / 阶段 / 耗时 / 构建</div>
+          <div class="performance-subhead">
+            <h3>开发者模式阶段</h3>
+            <span>页面 / 阶段 / 耗时 / 构建</span>
+          </div>
           <div class="bars" id="developerPerformance"></div>
         </div>
       </details>
