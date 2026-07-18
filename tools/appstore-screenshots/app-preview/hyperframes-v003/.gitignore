@@ -1,0 +1,5 @@
+renders/review/
+renders/final/
+.hyperframes/
+assets/
+scripts/__pycache__/

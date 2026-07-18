@@ -1,0 +1,15 @@
+{
+  "name": "hyperframes-v003",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.6.109 preview",
+    "check": "npx --yes hyperframes@0.6.109 lint && npx --yes hyperframes@0.6.109 validate && npx --yes hyperframes@0.6.109 inspect",
+    "render": "npx --yes hyperframes@0.6.109 render",
+    "sync-assets": "node scripts/sync-assets.mjs",
+    "select": "node scripts/select-locale.mjs",
+    "render-locale": "node scripts/render-locale.mjs",
+    "render-all": "node scripts/render-all.mjs",
+    "publish": "npx --yes hyperframes@0.6.109 publish"
+  }
+}

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-18（ITER-430 韩语六平台截图管线）
+更新日期：2026-07-18（ITER-435 ASC 1.6.0 发布材料与 build 绑定收口）
 
 ## 记录规则
 
@@ -43,6 +43,96 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-435 ASC 1.6.0 发布材料与 build 绑定收口
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / App Store Connect
+- 类型：ASC 线上操作 / 发布工具 / 文档治理 / 隐私审计 / 测试
+- 目标：在不自动提审的边界内继续完成 ASC `1.6.0` 可执行发布门禁；将韩语母语审校改为有记录但不阻断的质量增强，并对主语言 fallback、Review Notes、App Privacy 和最终 build 绑定形成可回读证据。
+- 改动范围：同步显式 `en-GB` 元数据与六平台英文截图；增强截图上传终态校验；新增 Review Notes metadata profile、审计 /写入能力与 build 绑定工具；人工查看 ASC App Privacy；更新当前状态、语言矩阵、版本计划、审核说明、CHANGELOG、工具 README、smoke 和本日志；使用官方 App Store Connect API 写入 Review Notes 与四平台 build relationship。
+- 未改动范围：未提交审核、未修改发布时机、App Privacy 问卷答案、订阅已审核本地化、审核联系人、App / Worker 业务代码、用户数据、SQLite / CloudKit / D1 schema、StoreKit Product ID、signing、entitlement、版本号、构建号或 Git / Xcode Cloud tag；未在未确认时保存 ASC 网页表单。
+- 完成内容：显式 `en-GB` 的版本元数据已从 `en-US` 同步；iPhone、Watch、tvOS、visionOS 截图原已一致，旧 iPad 5 张替换为当前 6 张、旧 Mac 4 张替换为当前 5 张，最终六平台 dry-run 均与本地当前英文资产匹配。`en-GB` 不额外创建 App Preview，继续继承主英语预览。
+- 完成内容：`asc_screenshot_upload.rb` 现在遇到数量已完整但仍 processing 的截图集会等待终态，而不是删除并重传；nil `sourceFileChecksum` 不再触发排序崩溃；上传后必须轮询所有 checksum / state 为 `COMPLETE` 并逐文件验证 MD5。
+- 完成内容：`metadata.yml` 新增 `main` 与 `readonly` Review Notes profile；iOS / macOS 写入 2783 字符主说明，tvOS / visionOS 写入 1154 字符只读说明。四平台 API 回读长度与 SHA-256 均匹配，`demoAccountRequired=false`，审核联系人字段未被工具修改。
+- 完成内容：ASC App Privacy 页面显示 Crash Data、Performance Data、Product Interaction 均仅用于 Analytics，且为 not linked、not tracking，与工程隐私清单一致。取得用户对外部表单提交的明确确认后，Privacy Policy URL 已从旧地址更新并保存为 `https://getautoledger.app/privacy`；关闭弹窗后页面回读新值并显示“已编辑”，说明该变更将随下一版本发布。
+- 完成内容：新增 `asc_build_bind.rb`，只接受精确 build number 与完整 source commit；写入前验证 Xcode Cloud run 成功、源码 SHA 完全一致、版本为 `PREPARE_FOR_SUBMISSION`、每平台只有一个符合条件的 build、处理有效、未过期、`APP_STORE_ELIGIBLE` 且 `usesNonExemptEncryption=false`。build `119` 对应提交 `9414b91694d405d3e4c91edbae99d547c1684564`，iOS、macOS、tvOS、visionOS 已绑定并由独立 dry-run 确认 current relationship 等于目标 build ID。
+- 完成内容：韩语母语审校因当前找不到合适审校者，按版本负责人决定从硬门禁调整为非阻断质量证据；机器 key / placeholder 检查、离线 / golden 回归、六平台视觉复核、ASC MD5 / 处理终态和已知样本 / 地区缺口继续保留，不将缺少的母语结论标为 Ready。
+- 完成内容：用户确认最新 TestFlight 候选的 iCloud 同步 smoke 未发现问题；随后通过 Xcode Cloud API 再次确认最新成功候选仍为 build `119`、源码 `9414b91694d405d3e4c91edbae99d547c1684564`。本轮 Git 改动不含 Swift / App runtime、CloudKit schema、entitlement 或工程构建设置，因此本次推送不触发新 TestFlight build，也不移动 `xcbuild-v1.7.0`。
+- 未完成内容：未完成 iPhone / iPad / Mac 最终设备 smoke、iCloud 启动交互与重庆 Moxy 冲突复测、最终 binary 逐镜一致性检查、最终 release-readiness 审计或提审决策。
+- 测试情况：Review Notes 四平台线上长度 / SHA-256 回读通过；build binder 二次 dry-run 确认四平台 current build 均为 `119` 对应 build ID；`en-GB` 六平台截图 dry-run 全部匹配。四个 Ruby 工具语法、ASC metadata-as-code smoke（含 Review Notes 长度 / 隐私关键词 / secret marker）、App Preview v003 smoke、本地化发布 smoke、文档真源 smoke、`git diff --check` 与完整 `bash scripts/run_offline_regression.sh` 均 PASS；完整回归仅保留既有 `AppFormatters` `nonisolated(unsafe)` warning。
+- 风险与注意事项：App Privacy 页面显示“已编辑”表示新 URL 已保存并等待随下一版本发布，不代表当前线上已发布版本页面立即切换；build 已绑定不等于设备 smoke 或提审完成。韩语母语审校被明确接受为发布后质量风险，任何用户反馈仍应进入本地化修订，不得反向宣称已获母语认可。
+- 回滚方式：工具与文档可用 Git 回退；Review Notes 可由保留的 repo profile 再次写入旧文案；build relationship 可在 ASC 仍为可编辑状态时绑定回先前经验证 build。截图替换需使用上传工具和本地 MD5 清单重建；未发生提交审核或发布。
+- 结论：ASC `1.6.0` 主语言 fallback、Review Notes、App Privacy URL 与精确 build 绑定门禁已完成可审计收口；韩语母语审校不再阻断本版本。剩余重点是最终设备 / binary smoke 与提审决策。
+- 下一步建议：完成 build `119` 的最终设备 / iCloud smoke 与 release-readiness 审计，再单独决定是否提交审核。
+
+### ITER-434 ASC 1.6.0 五语 App Preview poster frame
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Materials / App Store Connect
+- 类型：ASC 线上操作 / 发布工具 / 视觉复核 / 测试 / 文档
+- 目标：为 ASC `1.6.0` 五语 iPhone App Preview v003 选择统一且稳定的 poster frame，写入后回读帧时间码和 Apple 生成图终态，不改动视频或进入提审。
+- 改动范围：从五语 v003 成片抽取候选帧并生成跨语言联系表；扩展 `asc_app_preview_upload.rb` 支持 poster frame dry-run、幂等 PATCH 与生成图轮询；更新工具 README、smoke、项目状态、语言矩阵、版本计划、CHANGELOG 和本日志；使用官方 App Store Connect API 写入五条 preview。
+- 未改动范围：未上传、替换或删除 App Preview 视频；未修改截图、`en-GB` fallback、App Privacy、Review Notes、构建绑定、提交审核、发布状态、App / Worker 业务代码、用户数据、schema、StoreKit、签名、entitlement、版本号、构建号或 Xcode Cloud tag。
+- 完成内容：在英文成片的 `0.8s` 至 `20.4s` 候选中选定 `1.4s` OCR 首屏；该帧已完全入位、演示数据声明可见、无转场残影，也不展示 Pro 价格或订阅权益。相同时间点在中简、中繁、日、韩成片均完成联系表目检，无截字或布局漂移。
+- 完成内容：ASC 回读确认 poster frame 使用 `HH:MM:SS:FF` 帧时间码，现有默认值为 `00:00:05:01`；v003 为 30 fps，因此 `1.4s` 对应 `00:00:01:12`。五次写入均只命中与本地 MD5 一致且 `videoDeliveryState=COMPLETE` 的唯一 preview。
+- 完成内容：美英、中简、中繁、日、韩五条 preview 已统一回读 `previewFrameTimeCode=00:00:01:12`，且 `previewFrameImage.state=COMPLETE`；再次 dry-run 二次确认五条视频 checksum、视频终态、时间码和生成图终态一致。
+- 未完成内容：未完成人工母语审校、Release artifact 归档、主语言 fallback 复核、与最终提交 binary 的逐镜一致性检查、App Privacy、Review Notes、最终 build 绑定或提审决策。
+- 测试情况：五语候选帧与统一时间码联系表目检通过；Ruby 语法、ASC metadata-as-code smoke、App Preview v003 smoke、文档真源 smoke、`git diff --check` 与完整 `bash scripts/run_offline_regression.sh` 均 PASS，仅保留既有 `AppFormatters` warning。ASC 写入前 dry-run、写入处理终态和写入后二次 dry-run 均通过。
+- 风险与注意事项：时间码是按当前 30 fps 交付规格计算的帧号；未来如果替换成不同帧率或不同时长的视频，必须重新选帧并计算，不能机械复用 `00:00:01:12`。远端生成图完成不替代合格母语审校或与最终 binary 的逐镜人工核验。
+- 回滚方式：工具与文档可用 Git 回退；ASC poster frame 若需回滚，应对同一 preview 显式写回经复核的旧时间码。未发生视频删除、提审或发布。
+- 结论：ASC `1.6.0` 五语 iPhone App Preview poster frame 已统一设置并完成双重 API 回读；该发布材料门禁关闭。
+- 下一步建议：完成母语 / fallback / 最终 binary 一致性复核，再进入 App Privacy、Review Notes、构建绑定和提审决策。
+
+### ITER-433 ASC 1.6.0 五语截图与 App Preview 替换
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Materials / App Store Connect
+- 类型：ASC 线上操作 / 发布工具 / 可靠性 / 测试 / 文档
+- 目标：将当前五语六平台截图与五语 iPhone App Preview v003 替换到 ASC `1.6.0`，并以远端 MD5 与 Apple 处理终态完成回读，不绑定构建、不提审。
+- 改动范围：使用官方 App Store Connect API 替换 planned 五语截图；新增 `asc_app_preview_upload.rb`；为 ASC API 与二进制上传增加有界瞬时网络重试；更新 metadata 工具默认版本 / planned locale、README、smoke、项目状态、语言矩阵、版本计划、CHANGELOG 和本日志。
+- 未改动范围：未修改 `en-GB` fallback 素材、App Privacy、Review Notes、poster frame、构建绑定、提交审核、发布状态、App / Worker 业务代码、用户数据、SQLite / CloudKit / D1 schema、StoreKit Product ID、签名、entitlement、版本号、构建号或 Xcode Cloud tag。
+- 完成内容：ASC `1.6.0` 的中简、中繁、美英、日、韩五语在 iPhone、iPad、Mac、Watch、tvOS、visionOS 共 150 张目标截图均与本地 MD5 矩阵匹配；韩语六平台截图集由缺失推进为完整。`en-GB` 保持既有 fallback 状态。
+- 完成内容：五语 iPhone `IPHONE_65` App Preview 均为 1 条；五条远端 MD5 与 v003 本地成片一致且 `videoDeliveryState=COMPLETE`。英文和简中的旧视频仅在新视频完成处理后删除；繁中、日语和韩语新建 preview set。
+- 完成内容：App Preview 上传工具采用“先上传并等待 COMPLETE、再删除旧片”的安全替换顺序；遇到 `FAILED` 会保留旧片并清理失败的新资源。截图与视频上传共享 429 / 5xx / TLS / timeout 有界重试，支持按 MD5 幂等重跑。
+- 未完成内容：未选择 poster frame，未完成人工母语审校、Release artifact 归档或与最终提交 binary 的逐镜一致性复核；这些仍是发布门禁。
+- 测试情况：截图本地化 smoke、App Preview v003 smoke、三份 Ruby 脚本语法检查通过；上传前五语 dry-run 通过；上传后 ASC 全平台 audit 确认 planned 五语所有截图集合 `match`，五次 App Preview dry-run 均显示 checksum match / `COMPLETE`；文档真源 smoke、`git diff --check` 与完整 `bash scripts/run_offline_regression.sh` 均 PASS，仅保留既有 `AppFormatters` 四处 `nonisolated(unsafe)` warning。
+- 风险与注意事项：ASC 视频转码耗时约数分钟并受本机代理瞬时 TLS 抖动影响，本轮有界重试后全部完成；远端 MD5 / COMPLETE 只证明交付文件一致和 Apple 处理成功，不替代语言质量、poster frame 和最终 binary 一致性。
+- 回滚方式：仓库工具与文档可用 Git 回退；ASC 外部素材若需回滚，必须用对应历史资产重新执行上传，不能用 Git 回滚替代。未发生提审或发布。
+- 结论：ASC `1.6.0` planned 五语截图与五语 iPhone App Preview 已完成替换并回读确认；商店素材上传门禁关闭，剩余人工审校、poster frame、隐私与最终 build 门禁继续开放。
+- 下一步建议：选择五语 poster frame，完成母语 / fallback / 最终 binary 一致性复核，再进入 App Privacy、Review Notes、构建绑定和提审决策。
+
+### ITER-432 ASC 1.6.0 五语 App Preview v003
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Materials / App Preview
+- 类型：本地化 / 视觉制作 / 原创音频 / 发布工具 / 测试 / 文档
+- 目标：用当前五语截图和统一产品叙事更新 iPhone App Preview，并补一条随六段画面切换变化、可重复生成且不依赖第三方样本的原创背景音乐。
+- 改动范围：新增 `tools/appstore-screenshots/app-preview/hyperframes-v003` 五语共享工程、manifest、模板、素材同步、语言选择、批量渲染、原创配乐生成和交付转码脚本；新增 `scripts/check_app_preview_v003_smoke.py` 并接入离线回归；更新 App Preview / 截图 README、i18n 发布矩阵、版本计划、项目状态、CHANGELOG 和本日志。
+- 完成内容：一个 22 秒时间轴依次展示 OCR、语音记账、酒店水单复核、Apple Watch、月报和 AutoLedger Pro；五语使用同一布局 / 转场顺序和各自 raw UI capture。Pro 截图中的具体价格由五语“保存前由你确认”卡片替换，同时保留“部分功能需要 AutoLedger Pro”披露。
+- 完成内容：新增原创确定性配乐 `Quiet Control`，由仓库脚本合成，不使用第三方样本、旁白或 v002 音乐；在 `3.15 / 6.52 / 9.88 / 13.24 / 16.62` 秒视觉转场点同步改变和弦、主音色与轻提示音，Watch 段稍明亮，Pro 段回到主和弦收束。母带综合响度 `-20.0 LUFS`，48 kHz 立体声，AAC 约 256 kbps。
+- 完成内容：本地生成 `en-US / zh-Hans / zh-Hant / ja / ko` 五条最终 MP4；全部为 `886x1920`、30 fps、H.264 High Profile Level 4.0、约 10.9 Mbps、AAC 256 kbps，时长 22.016 秒、约 30.7-30.8 MB。英文恢复为默认活动模板。
+- 未完成内容：生成素材与 MP4 按规则 ignored，尚未归档到 Release artifact，未上传 App Store Connect，未选择 poster frame，日语 / 韩语等正式商店文案仍需合格人工审校，也未与最终提交 binary 做人工逐镜一致性核验。
+- 测试情况：五语 Hyperframes `validate` 均无 console error 且文本通过 WCAG AA；五语 `inspect --samples 15` 均为 0 issues。日语第一次 validate 遇到一次 10 秒导航超时，单独重跑通过。五语六帧 contact sheet 目检通过；`ffprobe` 规格检查五条均 PASS；音频 `ebur128` 为 `-20.0 LUFS`；`python3 scripts/check_app_preview_v003_smoke.py`、文档真源 smoke 与完整 `bash scripts/run_offline_regression.sh` 均通过，Preview smoke 会在本地成片存在时额外校验五条交付规格。
+- 风险与注意事项：Hyperframes 静态 linter 对封装在函数中的动态 GSAP selector 继续给出 `__unresolved__` overlap / Studio edit blocked 提示，属于 v002 同类静态解析限制；浏览器 validate / inspect 与实际渲染均通过。App Preview 可静音自动播放，因此关键信息仍由本地化画面文字承担，音乐不作为理解前提。
+- 回滚方式：删除 `hyperframes-v003`、移除新增 smoke 与离线回归入口，并回退本轮发布文档即可；ASC 1.5.0 的 v002 中英文工程和历史视频不受影响。
+- 结论：ASC 1.6.0 五语 iPhone App Preview v003 已完成本地视觉、音频和交付规格门禁；下一步是人工语言审校、归档、ASC 上传与 poster frame 选择。
+
+### ITER-431 ASC 1.5.0 元数据归档与 1.6.0 第一版填充
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Metadata / Candidate Preparation
+- 类型：发布自动化 / ASC 线上操作 / 文档 / 测试
+- 目标：从 ASC 读取并归档当前 `1.5.0` 元数据，建立 `1.6.0` 四平台可编辑版本并填充五语第一版元数据，不绑定构建、不提审。
+- 改动范围：扩展 `tools/asc-metadata/asc_metadata.rb` 与 README / smoke；新增 `asc-1.5.0.yml` 和 `asc-1.6.0-first-draft.yml` 线上快照；修正英文副标题长度；更新版本计划、项目状态、CHANGELOG 和本日志；在 ASC 创建及填充新版本。
+- 完成内容：实时归档确认 `1.5.0` 的 iOS、macOS、tvOS、visionOS 均为 `READY_FOR_SALE`，四平台均有 `en-GB / en-US / ja / zh-Hans / zh-Hant`；`1.6.0` 四平台均已创建为 `PREPARE_FOR_SUBMISSION`，并具有 `en-GB / en-US / ja / ko / zh-Hans / zh-Hant`，其中 planned 五语版本字段与 repo 配置一致；韩语订阅组、月付和年付本地化已存在。
+- 完成内容：用户在 ASC 将 Primary Language 切换为 `English (U.S.)` 后，API 回读确认 `primaryLocale=en-US`；工具修正为优先选择 `PREPARE_FOR_SUBMISSION` App Info，并增加 `--locale` 定点写入。韩语 App Info 已从中文继承值更新为 `AutoLedger - 빠른 가계부` / `스크린샷, 음성, 호텔 명세서 정리`，隐私链接与 Apple TV 隐私正文同步写入并回读一致。
+- 未完成内容：ACTIVE 订阅的既有本地化不可覆盖，因此其旧显示名 / 描述按 ASC 已审核现状保留。未绑定 build，未上传截图或 App Preview，未修改 App Privacy，未提交审核或发布。
+- 测试情况：`ruby -c tools/asc-metadata/asc_metadata.rb`、`python3 scripts/check_asc_metadata_as_code_smoke.py`、ASC 字段长度校验、三个商店链接 HTTP 200、create-version dry-run / apply、push-config dry-run / apply、Primary Language API 回读、韩语 App Info 精确对账、最终 live export 和完整 `bash scripts/run_offline_regression.sh` 均通过。
+- 风险与注意事项：新版本自动保留了 `en-GB` fallback；当前配置 planned locale 为五语，不应把 `en-GB` 误算成发布完成。五语截图与 App Preview、App Privacy 和最终候选构建仍是 P0 门禁。
+- 回滚方式：仓库工具与快照可回退；ASC 新版本与已写入本地化属于外部状态，若需撤销应在 ASC 按平台逐项处理，不能用 Git 回滚替代。未发生提审或发布。
+- 结论：`1.6.0` 第一版版本文案、`en-US` Primary Language 与韩语 App Info 已完成线上填充并回读确认；最终发布资产仍未完成。
+- 下一步建议：在候选冻结后上传五语截图与 App Preview，复核主语言 fallback、App Privacy 与 Review Notes，再绑定最终 build。
 
 ### ITER-430 韩语六平台截图管线
 - 日期：2026-07-18
@@ -7602,7 +7692,8 @@
 - 类型：Bugfix / 规则
 - 目标：修复滴滴出行"先乘车后付款"微信支付扣费凭证截图商户误识别问题——OCR 文本无"行程已"和"已支付"关键词，`parseDidiTrip` 两条已有分支均未命中，商户回退为"微信支付"，分类为"其他"；实际应为商户"滴滴出行"、分类"出行"。
 - 触发调试记录（原始，未修正，完整内容）：
-  ```
+```
+
   AutoLedger 单条测试记录
   导出时间：2026-04-13 05:57:42
   记录时间：2026-04-12 17:44:18

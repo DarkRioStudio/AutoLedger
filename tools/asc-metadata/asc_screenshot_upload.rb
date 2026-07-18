@@ -31,6 +31,8 @@ module ASCScreenshotUpload
     root: "tools/appstore-screenshots/output/store",
     platforms: [],
     exclude_shots: [],
+    timeout_seconds: 600,
+    poll_seconds: 5,
     apply: false
   }.freeze
 
@@ -38,6 +40,9 @@ module ASCScreenshotUpload
 
   class DirectClient
     API_BASE = ASCMetadata::API_BASE
+    TRANSIENT_HTTP_CODES = ASCMetadata::Client::TRANSIENT_HTTP_CODES
+    TRANSIENT_ERRORS = ASCMetadata::Client::TRANSIENT_ERRORS
+    MAX_ATTEMPTS = ASCMetadata::Client::MAX_ATTEMPTS
 
     def initialize(client)
       @client = client
@@ -45,10 +50,12 @@ module ASCScreenshotUpload
 
     def delete(path)
       uri = URI("#{API_BASE}#{path}")
-      request = Net::HTTP::Delete.new(uri)
-      request["Authorization"] = "Bearer #{@client.send(:jwt)}"
-      request["Accept"] = "application/json"
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }
+      response = with_retry("delete #{path}") do
+        request = Net::HTTP::Delete.new(uri)
+        request["Authorization"] = "Bearer #{@client.send(:jwt)}"
+        request["Accept"] = "application/json"
+        perform(uri, request)
+      end
       return if response.code == "204"
 
       raise_response_error(uri, response)
@@ -62,8 +69,8 @@ module ASCScreenshotUpload
         offset = operation.fetch("offset")
         length = operation.fetch("length")
         request.body = data.byteslice(offset, length)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
-          http.request(request)
+        response = with_retry("upload operation #{index + 1}/#{operations.length}") do
+          perform(uri, request)
         end
         next if response.is_a?(Net::HTTPSuccess)
 
@@ -73,6 +80,45 @@ module ASCScreenshotUpload
     end
 
     private
+
+    def perform(uri, request)
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
+        http.open_timeout = 30
+        http.read_timeout = 180
+        http.write_timeout = 180
+        http.request(request)
+      end
+    end
+
+    def with_retry(label)
+      attempt = 0
+      loop do
+        attempt += 1
+        begin
+          response = yield
+          if TRANSIENT_HTTP_CODES.include?(response.code) && attempt < MAX_ATTEMPTS
+            delay = retry_delay(response, attempt)
+            warn "ASC transient HTTP #{response.code} during #{label}; retry #{attempt}/#{MAX_ATTEMPTS} in #{delay}s"
+            sleep delay
+            next
+          end
+          return response
+        rescue *TRANSIENT_ERRORS => e
+          raise if attempt >= MAX_ATTEMPTS
+
+          delay = [2**(attempt - 1), 8].min
+          warn "ASC transient #{e.class} during #{label}; retry #{attempt}/#{MAX_ATTEMPTS} in #{delay}s"
+          sleep delay
+        end
+      end
+    end
+
+    def retry_delay(response, attempt)
+      retry_after = response["Retry-After"].to_i
+      return retry_after if retry_after.positive?
+
+      [2**(attempt - 1), 8].min
+    end
 
     def build_upload_request(operation, uri)
       klass = case operation.fetch("method").upcase
@@ -135,6 +181,8 @@ module ASCScreenshotUpload
         opts.on("--root PATH", "Local screenshot output root") { |v| @options[:root] = v }
         opts.on("--platform PLATFORM", "Restrict platform; can be repeated") { |v| @options[:platforms] << v.upcase }
         opts.on("--exclude-shot ID", "Skip local screenshot id/stem; can be repeated") { |v| @options[:exclude_shots] << v }
+        opts.on("--timeout-seconds N", Integer, "Processing timeout, default 600") { |v| @options[:timeout_seconds] = v }
+        opts.on("--poll-seconds N", Integer, "Processing poll interval, default 5") { |v| @options[:poll_seconds] = v }
         opts.on("--apply", "Write changes to App Store Connect") { @options[:apply] = true }
         opts.on("-h", "--help", "Show help") { abort opts.to_s }
       end.parse!(argv)
@@ -208,6 +256,11 @@ module ASCScreenshotUpload
       existing = screenshots(set["id"])
       puts "  #{display_type} from #{local_dir}/#{@options[:source_locale_dir]} files=#{files.length} existing=#{existing.length}"
 
+      if existing.length == files.length && screenshots_processing?(existing)
+        puts "    waiting for #{existing.length} screenshot(s) already processing"
+        existing = wait_for_screenshot_set(set["id"], files)
+      end
+
       match = checksum_match(existing, files)
       if match
         puts "    SKIP already matches local files#{match == :set ? " (checksum set)" : ""}"
@@ -231,6 +284,13 @@ module ASCScreenshotUpload
         else
           puts "    would upload #{file.basename}"
         end
+      end
+
+      if @options[:apply]
+        verified = wait_for_screenshot_set(set["id"], files)
+        raise Error, "Screenshot set #{display_type} completed with unexpected checksums" unless checksum_match(verified, files)
+
+        puts "    verified #{display_type} files=#{verified.length} state=COMPLETE"
       end
     end
 
@@ -287,6 +347,7 @@ module ASCScreenshotUpload
     def checksum_match(existing, files)
       existing_checksums = existing.map { |screenshot| screenshot.dig("attributes", "sourceFileChecksum") }
       local_checksums = files.map { |file| Digest::MD5.file(file).hexdigest }
+      return nil if existing_checksums.any? { |checksum| checksum.to_s.empty? }
       return :ordered if existing_checksums == local_checksums
       return :set if existing_checksums.sort == local_checksums.sort
 
@@ -312,6 +373,46 @@ module ASCScreenshotUpload
       })["data"]
       state = committed.dig("attributes", "assetDeliveryState", "state")
       puts "    uploaded #{file.basename} id=#{committed["id"]} checksum=#{checksum} state=#{state}"
+      committed
+    end
+
+    def screenshots_processing?(items)
+      items.any? do |item|
+        attrs = item["attributes"] || {}
+        attrs["sourceFileChecksum"].to_s.empty? || attrs.dig("assetDeliveryState", "state") != "COMPLETE"
+      end
+    end
+
+    def wait_for_screenshot_set(set_id, files)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + @options[:timeout_seconds]
+      last_status = nil
+      loop do
+        items = screenshots(set_id)
+        states = items.map { |item| item.dig("attributes", "assetDeliveryState", "state") || "unknown" }
+        failed = items.find { |item| item.dig("attributes", "assetDeliveryState", "state") == "FAILED" }
+        if failed
+          errors = Array(failed.dig("attributes", "assetDeliveryState", "errors")).map do |error|
+            [error["code"], error["description"]].compact.join(": ")
+          end
+          raise Error, "Screenshot processing failed for #{failed["id"]}: #{errors.join("; ")}"
+        end
+
+        checksums = items.count { |item| !item.dig("attributes", "sourceFileChecksum").to_s.empty? }
+        status = "count=#{items.length}/#{files.length} checksums=#{checksums}/#{files.length} states=#{states.tally}"
+        if status != last_status
+          puts "    processing #{status}"
+          last_status = status
+        end
+
+        complete = items.length == files.length && checksums == files.length && states.all? { |state| state == "COMPLETE" }
+        return items if complete
+
+        if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+          raise Error, "Timed out waiting for screenshot set #{set_id}; last #{status}"
+        end
+
+        sleep @options[:poll_seconds]
+      end
     end
 
     def screenshot_body(set_id, file)

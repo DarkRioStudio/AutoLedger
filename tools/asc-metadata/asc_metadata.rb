@@ -15,11 +15,11 @@ require "yaml"
 module ASCMetadata
   API_BASE = "https://api.appstoreconnect.apple.com"
   DEFAULT_APP_ID = "6761892533"
-  DEFAULT_VERSION = "1.5.0"
+  DEFAULT_VERSION = "1.6.0"
   DEFAULT_SOURCE_LOCALE = "en-US"
   DEFAULT_TARGET_LOCALE = "en-GB"
-  DEFAULT_PLANNED_LOCALES = %w[zh-Hans zh-Hant en-US ja].freeze
-  DEFAULT_FUTURE_LOCALES = %w[ko].freeze
+  DEFAULT_PLANNED_LOCALES = %w[zh-Hans zh-Hant en-US ja ko].freeze
+  DEFAULT_FUTURE_LOCALES = [].freeze
   DEFAULT_SCREENSHOT_ROOT = "tools/appstore-screenshots/output/store"
   DEFAULT_METADATA_CONFIG = "tools/asc-metadata/metadata.yml"
 
@@ -73,6 +73,20 @@ module ASCMetadata
   class Error < StandardError; end
 
   class Client
+    TRANSIENT_HTTP_CODES = %w[429 500 502 503 504].freeze
+    TRANSIENT_ERRORS = [
+      EOFError,
+      IOError,
+      Net::OpenTimeout,
+      Net::ReadTimeout,
+      OpenSSL::SSL::SSLError,
+      SocketError,
+      Errno::ECONNRESET,
+      Errno::ECONNREFUSED,
+      Errno::ETIMEDOUT
+    ].freeze
+    MAX_ATTEMPTS = 5
+
     def initialize(issuer_id:, key_id:, private_key_pem:)
       @issuer_id = issuer_id
       @key_id = key_id
@@ -146,9 +160,38 @@ module ASCMetadata
     end
 
     def perform(uri, request)
-      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
-        http.request(request)
+      attempt = 0
+      loop do
+        attempt += 1
+        begin
+          response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
+            http.open_timeout = 30
+            http.read_timeout = 120
+            http.write_timeout = 120
+            http.request(request)
+          end
+          if TRANSIENT_HTTP_CODES.include?(response.code) && attempt < MAX_ATTEMPTS
+            delay = retry_delay(response, attempt)
+            warn "ASC transient HTTP #{response.code}; retry #{attempt}/#{MAX_ATTEMPTS} in #{delay}s"
+            sleep delay
+            next
+          end
+          return response
+        rescue *TRANSIENT_ERRORS => e
+          raise if attempt >= MAX_ATTEMPTS
+
+          delay = [2**(attempt - 1), 8].min
+          warn "ASC transient #{e.class}; retry #{attempt}/#{MAX_ATTEMPTS} in #{delay}s"
+          sleep delay
+        end
       end
+    end
+
+    def retry_delay(response, attempt)
+      retry_after = response["Retry-After"].to_i
+      return retry_after if retry_after.positive?
+
+      [2**(attempt - 1), 8].min
     end
 
     def parse_response(uri, response)
@@ -232,6 +275,11 @@ module ASCMetadata
         screenshot_root: ENV["ASC_SCREENSHOT_ROOT"] || DEFAULT_SCREENSHOT_ROOT,
         planned_locales: [],
         future_locales: [],
+        source_version: nil,
+        output_path: nil,
+        skip_app_info: false,
+        shared_create_only: false,
+        locales: [],
         exclude_shots: [],
         config_path: DEFAULT_METADATA_CONFIG,
         apply: false,
@@ -244,6 +292,10 @@ module ASCMetadata
       case @command
       when "audit"
         audit
+      when "export-config"
+        export_config
+      when "create-version"
+        create_version
       when "copy-locale"
         copy_locale
       when "push-config"
@@ -257,9 +309,14 @@ module ASCMetadata
 
     def parse_options(argv)
       OptionParser.new do |opts|
-        opts.banner = "Usage: #{$PROGRAM_NAME} audit|copy-locale [options]"
+        opts.banner = "Usage: #{$PROGRAM_NAME} audit|export-config|create-version|copy-locale|push-config [options]"
         opts.on("--app-id APPLE_ID", "App Apple ID, default #{DEFAULT_APP_ID}") { |v| @options[:app_id] = v }
         opts.on("--version VERSION", "Version string, default #{DEFAULT_VERSION}") { |v| @options[:version] = v }
+        opts.on("--source-version VERSION", "Source version used to infer platforms for create-version") { |v| @options[:source_version] = v }
+        opts.on("--output PATH", "Write export-config YAML to a reviewed archive path") { |v| @options[:output_path] = v }
+        opts.on("--skip-app-info", "Skip app-wide name, subtitle, and privacy localization writes") { @options[:skip_app_info] = true }
+        opts.on("--shared-create-only", "Create missing App Info/subscription locales without changing active existing locales") { @options[:shared_create_only] = true }
+        opts.on("--locale LOCALE", "Restrict config writes to one locale; can be repeated") { |v| @options[:locales] << v }
         opts.on("--source-locale LOCALE", "Source locale, default #{DEFAULT_SOURCE_LOCALE}") { |v| @options[:source_locale] = v }
         opts.on("--target-locale LOCALE", "Target locale, default #{DEFAULT_TARGET_LOCALE}") { |v| @options[:target_locale] = v }
         opts.on("--config PATH", "Metadata YAML config, default #{DEFAULT_METADATA_CONFIG}") { |v| @options[:config_path] = v }
@@ -335,8 +392,68 @@ module ASCMetadata
       versions = app_store_versions
       print_version_localizations(versions)
       print_version_asset_matrix(versions)
+      print_review_details(versions)
       print_local_screenshot_matrix
       print_subscription_matrix
+    end
+
+    def export_config
+      app_info = app_info!
+      versions = app_store_versions
+      raise Error, "No App Store versions found for #{@options[:version]}" if versions.empty?
+
+      snapshot = {
+        "app_id" => @options[:app_id],
+        "version" => @options[:version],
+        "exported_at" => Time.now.utc.iso8601,
+        "app_info" => localization_snapshot(app_info_localizations(app_info["id"]), APP_INFO_FIELDS),
+        "app_store_versions" => versions.sort_by { |item| item.dig("attributes", "platform").to_s }.map do |version|
+          attrs = version["attributes"] || {}
+          {
+            "id" => version["id"],
+            "platform" => attrs["platform"],
+            "state" => attrs["appStoreState"],
+            "version_string" => attrs["versionString"],
+            "localizations" => localization_snapshot(version_localizations(version["id"]), VERSION_FIELDS),
+            "review_detail" => review_detail_snapshot(version["id"])
+          }
+        end,
+        "subscription_groups" => subscription_snapshot
+      }
+      yaml = YAML.dump(snapshot)
+      output_path = @options[:output_path].to_s.strip
+      if output_path.empty?
+        puts yaml
+      else
+        Pathname(output_path).write(yaml)
+        puts "Exported ASC #{@options[:version]} metadata to #{output_path}"
+      end
+    end
+
+    def create_version
+      source_version = @options[:source_version].to_s.strip
+      platforms = @options[:platforms]
+      if platforms.empty?
+        raise Error, "Provide --platform or --source-version to select platforms." if source_version.empty?
+
+        platforms = app_store_versions_for(source_version).map { |item| item.dig("attributes", "platform").to_s }.reject(&:empty?).uniq.sort
+      end
+      raise Error, "No source platforms found for #{source_version}" if platforms.empty?
+
+      existing = app_store_versions_for(@options[:version])
+      mode = @options[:apply] ? "APPLY" : "DRY-RUN"
+      puts "#{mode}: create app #{@options[:app_id]} version #{@options[:version]} for #{platforms.join(", ")}"
+      platforms.each do |platform|
+        current = existing.find { |item| item.dig("attributes", "platform").to_s.upcase == platform.upcase }
+        if current
+          puts "  #{platform} #{@options[:version]} already exists (#{current["id"]}); skipped"
+          next
+        end
+
+        attrs = { "platform" => platform.upcase, "versionString" => @options[:version] }
+        relationships = { "app" => { "data" => { "type" => "apps", "id" => @options[:app_id] } } }
+        create_resource("appStoreVersions", attrs, relationships, "#{platform.upcase} #{@options[:version]}")
+      end
     end
 
     def copy_locale
@@ -360,8 +477,15 @@ module ASCMetadata
       puts
 
       app_info = app_info!
-      push_app_info_config(app_info["id"], config.fetch("app_info", {}))
+      if @options[:skip_app_info]
+        puts "App Info Config"
+        puts "  skipped by --skip-app-info"
+        puts
+      else
+        push_app_info_config(app_info["id"], config.fetch("app_info", {}))
+      end
       push_version_localization_config(config.fetch("version_localizations", {}))
+      push_review_notes_config(config.fetch("review_notes", {}))
       push_subscription_config(config)
     end
 
@@ -388,6 +512,10 @@ module ASCMetadata
       existing = app_info_localizations(app_info_id)
       each_locale_attrs(localizations) do |locale, attrs|
         target = find_locale(existing, locale)
+        if target && @options[:shared_create_only]
+          puts "  app info #{locale} exists; preserved by --shared-create-only"
+          next
+        end
         upsert_localization(
           type: "appInfoLocalizations",
           target: target,
@@ -403,7 +531,10 @@ module ASCMetadata
 
     def push_version_localization_config(localizations)
       puts "Version Localization Config"
-      app_store_versions.each do |version|
+      versions = app_store_versions
+      raise Error, "No App Store versions found for #{@options[:version]}; run create-version first." if versions.empty?
+
+      versions.each do |version|
         version_attrs = version["attributes"] || {}
         label = "#{version_attrs["platform"]} #{version_attrs["versionString"]}"
         existing = version_localizations(version["id"])
@@ -431,6 +562,10 @@ module ASCMetadata
         existing = subscription_group_localizations(group["id"])
         each_locale_attrs(group_config["localizations"]) do |locale, attrs|
           target = find_locale(existing, locale)
+          if target && @options[:shared_create_only]
+            puts "  subscription group #{locale} exists; preserved by --shared-create-only"
+            next
+          end
           upsert_localization(
             type: "subscriptionGroupLocalizations",
             target: target,
@@ -450,6 +585,10 @@ module ASCMetadata
         existing = subscription_localizations(subscription["id"])
         each_locale_attrs(product_config["localizations"]) do |locale, attrs|
           target = find_locale(existing, locale)
+          if target && @options[:shared_create_only]
+            puts "  subscription #{product_id} #{locale} exists; preserved by --shared-create-only"
+            next
+          end
           upsert_localization(
             type: "subscriptionLocalizations",
             target: target,
@@ -464,11 +603,50 @@ module ASCMetadata
       puts
     end
 
+    def push_review_notes_config(config)
+      puts "App Review Notes Config"
+      profiles = config.fetch("profiles", {}).to_h
+      platform_profiles = config.fetch("platform_profiles", {}).to_h
+      if profiles.empty? || platform_profiles.empty?
+        puts "  no review notes profiles configured; skipped"
+        puts
+        return
+      end
+
+      app_store_versions.each do |version|
+        platform = version.dig("attributes", "platform").to_s
+        profile_name = platform_profiles[platform].to_s
+        next if profile_name.empty?
+
+        notes = profiles[profile_name].to_s.strip
+        raise Error, "Missing App Review Notes profile #{profile_name.inspect} for #{platform}" if notes.empty?
+
+        detail = app_review_detail(version["id"])
+        raise Error, "Missing App Review Detail for #{platform} #{@options[:version]}" unless detail
+
+        desired = { "notes" => notes, "demoAccountRequired" => false }
+        changed = desired.each_with_object({}) do |(field, value), result|
+          result[field] = value unless detail.dig("attributes", field) == value
+        end
+        patch_resource(
+          "appStoreReviewDetails",
+          detail["id"],
+          changed,
+          "#{platform} #{@options[:version]} review notes profile=#{profile_name}"
+        )
+      end
+      puts
+    end
+
     def app_info!
       infos = client.collection("/v1/apps/#{@options[:app_id]}/appInfos", "limit" => "20")
       raise Error, "No appInfo found for app #{@options[:app_id]}" if infos.empty?
 
-      infos.first
+      editable = infos.find do |info|
+        attrs = info["attributes"] || {}
+        attrs["appStoreState"] == "PREPARE_FOR_SUBMISSION" || attrs["state"] == "PREPARE_FOR_SUBMISSION"
+      end
+      editable || infos.first
     end
 
     def app_info_localizations(app_info_id)
@@ -480,15 +658,51 @@ module ASCMetadata
     end
 
     def app_store_versions
-      versions = client.collection(
-        "/v1/apps/#{@options[:app_id]}/appStoreVersions",
-        "filter[versionString]" => @options[:version],
-        "limit" => "200"
-      )
+      versions = app_store_versions_for(@options[:version])
       platforms = @options[:platforms]
       return versions if platforms.empty?
 
       versions.select { |version| platforms.include?(version.dig("attributes", "platform").to_s.upcase) }
+    end
+
+    def app_store_versions_for(version_string)
+      client.collection(
+        "/v1/apps/#{@options[:app_id]}/appStoreVersions",
+        "filter[versionString]" => version_string,
+        "limit" => "200"
+      )
+    end
+
+    def localization_snapshot(localizations, fields)
+      localizations.sort_by { |item| item.dig("attributes", "locale").to_s }.each_with_object({}) do |item, result|
+        attrs = item["attributes"] || {}
+        locale = attrs["locale"].to_s
+        result[locale] = fields.each_with_object({ "id" => item["id"] }) do |field, values|
+          values[field] = attrs[field] unless attrs[field].nil?
+        end
+      end
+    end
+
+    def subscription_snapshot
+      subscription_groups.map do |group|
+        attrs = group["attributes"] || {}
+        {
+          "id" => group["id"],
+          "reference_name" => attrs["referenceName"],
+          "localizations" => localization_snapshot(subscription_group_localizations(group["id"]), SUBSCRIPTION_GROUP_LOCALIZATION_FIELDS),
+          "subscriptions" => subscriptions(group["id"]).sort_by { |item| item.dig("attributes", "productId").to_s }.map do |subscription|
+            subscription_attrs = subscription["attributes"] || {}
+            {
+              "id" => subscription["id"],
+              "product_id" => subscription_attrs["productId"],
+              "state" => subscription_attrs["state"],
+              "period" => subscription_attrs["subscriptionPeriod"],
+              "family_sharing" => subscription_attrs["familySharable"],
+              "localizations" => localization_snapshot(subscription_localizations(subscription["id"]), SUBSCRIPTION_LOCALIZATION_FIELDS)
+            }
+          end
+        }
+      end
     end
 
     def version_localizations(version_id)
@@ -497,6 +711,27 @@ module ASCMetadata
         "fields[appStoreVersionLocalizations]" => (VERSION_FIELDS + ["locale"]).join(","),
         "limit" => "200"
       )
+    end
+
+    def app_review_detail(version_id)
+      client.get(
+        "/v1/appStoreVersions/#{version_id}/appStoreReviewDetail",
+        "fields[appStoreReviewDetails]" => "demoAccountRequired,notes"
+      )["data"]
+    rescue Error => e
+      warn "  warning: could not read App Review Detail for #{version_id}: #{e.message}"
+      nil
+    end
+
+    def review_detail_snapshot(version_id)
+      detail = app_review_detail(version_id)
+      return nil unless detail
+
+      {
+        "id" => detail["id"],
+        "demo_account_required" => detail.dig("attributes", "demoAccountRequired"),
+        "notes" => detail.dig("attributes", "notes")
+      }
     end
 
     def print_app_info_localizations(localizations)
@@ -558,6 +793,24 @@ module ASCMetadata
         print_locale_gaps("#{platform} version", present, indent: "      ")
         localizations.sort_by { |loc| loc.dig("attributes", "locale").to_s }.each do |loc|
           print_version_asset_row(platform, loc)
+        end
+      end
+      puts
+    end
+
+    def print_review_details(versions)
+      puts "App Review Details"
+      versions.each do |version|
+        platform = version.dig("attributes", "platform").to_s
+        detail = app_review_detail(version["id"])
+        if detail
+          notes = detail.dig("attributes", "notes").to_s
+          checksum = notes.empty? ? "none" : Digest::SHA256.hexdigest(notes)
+          puts "  - #{platform} id=#{detail["id"]} " \
+               "demoAccountRequired=#{detail.dig("attributes", "demoAccountRequired")} " \
+               "notes=#{length_summary(notes)} sha256=#{checksum}"
+        else
+          puts "  - #{platform} missing"
         end
       end
       puts
@@ -908,6 +1161,8 @@ module ASCMetadata
 
     def each_locale_attrs(localizations)
       localizations.to_h.sort.each do |locale, attrs|
+        next unless @options[:locales].empty? || @options[:locales].include?(locale.to_s)
+
         yield locale.to_s, attrs.to_h
       end
     end

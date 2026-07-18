@@ -21,7 +21,7 @@ app_info:
     privacyPolicyText: "AutoLedger 會在 Apple TV 版中顯示唯讀月報、帳本摘要和最近記錄。帳本資料優先保存在裝置本機；如果使用 iCloud，同步會透過使用者自己的 iCloud 帳戶完成。AutoLedger 不出售使用者資料，也不使用第三方廣告追蹤。Apple TV 版不提供相機、麥克風、照片、信箱或飯店水單 PDF 匯入。截圖辨識、收據辨識、飯店水單匯入、本機信箱掃描和 Pro 自動化主要在 iPhone、iPad 和 Mac 上完成。"
   en-US:
     name: "AutoLedger - Quick Ledger"
-    subtitle: "Screenshots, voice, hotel folios"
+    subtitle: "Screenshots, voice & folios"
     privacyPolicyUrl: "https://getautoledger.app/privacy"
     privacyPolicyText: "AutoLedger for Apple TV shows read-only monthly reports, ledger summaries, and recent entries. Ledger data is stored on device first. If iCloud sync is enabled, syncing uses the user's own iCloud account. AutoLedger does not sell user data and does not use third-party advertising tracking. The Apple TV app does not import camera, microphone, photos, email, or hotel folio PDF content. Screenshot recognition, receipt review, hotel folio import, local email scanning, and Pro automation are mainly available on iPhone, iPad, and Mac."
   ja:
@@ -71,6 +71,43 @@ version_localizations:
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "실시간 OCR 영수증 스캔, 한국어 UI와 인식, 다중 통화 준비, 호텔 명세서 검토 개선, Pro 고급 검색·구독 이상·월간 내보내기·규칙 자동화를 추가했습니다."
+
+review_notes:
+  profiles:
+    main: |-
+      AutoLedger 1.6.0 is a local-first personal ledger for iPhone, iPad, Apple Watch, and Mac. No demo account is required.
+
+      CORE REVIEW FLOW
+      1. Open AutoLedger. Manual entries, single screenshot/photo recognition, voice/text entry, ledger history, monthly reports, and basic import/export can be tested without a subscription.
+      2. Recognition results open a confirmation flow before they are saved. AutoLedger does not silently post recognized transactions.
+      3. Open Hotel Expenses, tap +, and choose Import PDF to test hotel folio extraction and review. Manual hotel PDF import remains free.
+      4. Open Settings > AutoLedger Pro to view monthly/yearly subscriptions, restore purchases, manage the subscription, and review the Free/Pro boundary.
+
+      PRO REVIEW
+      Pro unlocks time-saving automation: local email folio scanning, a dedicated cloud folio inbox, batch candidate import, advanced search/deduplication, subscription anomaly checks, monthly export packages, smart cleanup suggestions, and advanced rule automation. Existing ledger/history data, manual entry, manual hotel PDF import, editing/deletion, basic reports, and basic export/import remain available without Pro or after Pro expires.
+
+      To test Pro, use the App Store sandbox purchase flow from Settings > AutoLedger Pro. After Pro is active, Hotel Expenses > + > Cloud Inbox can claim a dedicated folio address. The cloud inbox processes only folio messages the user forwards to that address; it does not log in to or scan the user's private mailbox. Downloaded candidates still enter local review before saving. Local Email Import is separately user-initiated, and its authorization code is stored only in the local Keychain. Reviewers may use free Manual PDF Import instead of providing mailbox credentials.
+
+      DATA AND PRIVACY
+      iCloud sync is optional and uses the user's private iCloud database for structured ledger records. Ordinary ledger sync does not include original receipt images, payment screenshots, OCR raw text, mailbox credentials, or debug bundles. Optional cloud features disclose their network use and have local/manual fallbacks.
+
+      AutoLedger sends anonymous allow-listed analytics for Crash Data, Performance Data, and Product Interaction for Analytics. It does not send ledger amounts, merchant names, receipt/OCR text, screenshots, PDFs, email addresses, hotel names, precise location, Apple ID, or StoreKit transaction identifiers in analytics. Analytics is not linked to the user, is not used for tracking, and failure never blocks bookkeeping.
+
+      PLATFORM NOTES
+      iPhone/iPad provide the primary capture, review, hotel, and subscription experience. Mac provides a larger review/import workspace. Apple Watch supports quick entry and recent records. Apple TV and Apple Vision use a separate read-only review note.
+    readonly: |-
+      AutoLedger 1.6.0 for Apple TV and Apple Vision is a read-only ledger dashboard. No demo account is required.
+
+      Open the app to review the monthly overview, category summary, trends, and recent ledger records. If the same Apple ID already has AutoLedger data in the user's private iCloud database, the dashboard can display its structured read-only snapshot. Otherwise the app shows a designed empty state. These targets do not capture receipts, import screenshots/PDF/email, edit or delete ledger records, configure Pro automation, or silently create transactions.
+
+      Primary capture, hotel folio review, subscription purchase/restore, and automation setup are available on iPhone, iPad, and Mac. The Apple TV and Apple Vision targets use standard iCloud/network access where applicable and do not require a separate AutoLedger account.
+
+      Anonymous allow-listed Crash Data, Performance Data, and Product Interaction may be used for Analytics. Analytics excludes ledger amounts, merchants, receipt/OCR content, screenshots, PDFs, email, hotel names, precise location, Apple ID, and StoreKit transaction identifiers; it is not linked and not used for tracking.
+  platform_profiles:
+    IOS: main
+    MAC_OS: main
+    TV_OS: readonly
+    VISION_OS: readonly
 
 subscription_group:
   reference_name: "Pro Subscription Group"

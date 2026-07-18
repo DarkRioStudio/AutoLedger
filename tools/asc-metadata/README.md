@@ -46,9 +46,42 @@ The audit prints:
 - A release locale matrix that marks planned, future, and stale locales
 - Screenshot set counts and checksum matches for every platform display type
 - App Preview set counts per locale when App Store Connect returns them
+- App Review Notes length / SHA-256 and demo-account requirement per platform
 - Local screenshot counts for planned / future / target locales
 - Subscription group and subscription product localization coverage
 - Subscription product period, state, family sharing flag, and description length
+
+## Archive Current Metadata
+
+Export an exact YAML snapshot of the current App Info, version localizations,
+platform states, App Review Notes, subscription group, and subscription products before starting
+a new release line:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb export-config \
+  --app-id 6761892533 \
+  --version 1.5.0 \
+  --output tools/asc-metadata/archives/asc-1.5.0.yml
+```
+
+Without `--output`, the command prints YAML to stdout. The snapshot contains no
+credentials and can be committed as release evidence.
+
+## Create App Store Version
+
+Preview creation of the next version for every platform present in the prior
+version:
+
+```bash
+ruby tools/asc-metadata/asc_metadata.rb create-version \
+  --app-id 6761892533 \
+  --source-version 1.5.0 \
+  --version 1.6.0
+```
+
+Add `--apply` only after reviewing the platform list. Existing platform/version
+pairs are detected and skipped, so the command is safe to rerun. This step does
+not select a build, upload assets, submit for review, or release the version.
 
 By default the planned ASC locales are `zh-Hans`, `zh-Hant`, `en-US`, `ja`, and
 `ko` for `v1.7.0 / ASC 1.6.0`. Override the matrix
@@ -75,7 +108,8 @@ ruby tools/asc-metadata/asc_metadata.rb audit \
 ## Push Metadata Config
 
 `metadata.yml` is the repo-owned source for app info, version localizations,
-subscription group localization, and monthly/yearly subscription localization.
+platform-specific App Review Notes profiles, subscription group localization,
+and monthly/yearly subscription localization.
 It intentionally does not contain API keys, private keys, real ledger data,
 hotel orders, email content, screenshots, or App Preview binaries.
 
@@ -94,10 +128,21 @@ ruby tools/asc-metadata/asc_metadata.rb push-config \
   --apply
 ```
 
+If App Store Connect temporarily locks app-wide name or subtitle changes while
+the prior App Info is not editable, use `--skip-app-info` to apply only version
+localizations and subscription localizations. Keep the skipped App Info diff as
+an explicit release gate instead of treating the push as fully complete.
+For active shared localizations that ASC refuses to edit, `--shared-create-only`
+preserves existing App Info and subscription locales while still creating a
+new missing locale such as Korean. Version-localization updates are unaffected.
+Use repeatable `--locale ko` filters for a scoped correction when only one
+localization should be written across App Info, version metadata, and products.
+
 The push updates or creates:
 
 - `appInfoLocalizations`: app name, subtitle, Privacy Policy URL, Apple TV privacy policy text
 - `appStoreVersionLocalizations`: description, keywords, marketing URL, promotional text, support URL, What's New
+- `appStoreReviewDetails`: notes and `demoAccountRequired=false`; existing reviewer contact fields are preserved
 - `subscriptionGroupLocalizations`: subscription group display name
 - `subscriptionLocalizations`: product display name and description
 
@@ -105,6 +150,10 @@ The push updates or creates:
 field-level changes it would make. It still requires credentials because it has
 to compare the config against current ASC resource IDs. Subscription
 descriptions must stay within ASC's 55-character limit.
+
+When ASC exposes both the released and next-version App Info resources, the
+tool selects the `PREPARE_FOR_SUBMISSION` resource for audit, export, and writes
+instead of attempting to modify the locked `READY_FOR_SALE` resource.
 
 ## Copy English (U.S.) To English (U.K.)
 
@@ -183,10 +232,75 @@ The tool currently maps:
 
 For each screenshot it creates an App Store Connect upload reservation, uploads
 the PNG using Apple's `uploadOperations`, commits the MD5 checksum, and skips
-sets whose remote checksums already match the local files.
+sets whose remote checksums already match the local files. API requests and
+binary upload operations retry bounded transient network, `429`, and `5xx`
+failures. After upload, the tool waits for every screenshot checksum and
+`assetDeliveryState=COMPLETE`; rerunning while Apple is still processing an
+already complete-sized set waits instead of deleting it. Rerun the same command
+after any terminal failure to reconcile by MD5.
 
-It does not upload App Preview videos or App Privacy nutrition label
-questionnaire answers.
+## Upload App Preview
+
+`asc_app_preview_upload.rb` safely replaces one rendered App Preview for one
+locale and display target. It uploads and waits for the new video to reach
+`COMPLETE` before deleting stale previews, so a failed transcode does not remove
+the previously usable video.
+
+Dry-run first:
+
+```bash
+ruby tools/asc-metadata/asc_app_preview_upload.rb \
+  --app-id 6761892533 \
+  --version 1.6.0 \
+  --target-locale en-US \
+  --preview-type IPHONE_65 \
+  --file tools/appstore-screenshots/app-preview/hyperframes-v003/renders/final/app_preview_iphone_en-US_asc1.6.0_v003.mp4 \
+  --poster-frame-time-code 00:00:01:12
+```
+
+Apply after reviewing the locale, set, existing count, and file:
+
+```bash
+ruby tools/asc-metadata/asc_app_preview_upload.rb \
+  --app-id 6761892533 \
+  --version 1.6.0 \
+  --target-locale en-US \
+  --preview-type IPHONE_65 \
+  --file tools/appstore-screenshots/app-preview/hyperframes-v003/renders/final/app_preview_iphone_en-US_asc1.6.0_v003.mp4 \
+  --poster-frame-time-code 00:00:01:12 \
+  --apply
+```
+
+The tool creates the locale's preview set when missing, reserves and uploads the
+MP4 using Apple's `uploadOperations`, commits the MD5 checksum, polls
+`videoDeliveryState`, and fails closed on `FAILED` or timeout. Rerunning is
+idempotent when the ASC checksum and requested poster timecode match the remote
+preview. When `--poster-frame-time-code HH:MM:SS:FF` is present, the tool waits
+for the video to complete, updates `previewFrameTimeCode`, and requires the
+generated `previewFrameImage` to reach `COMPLETE` before deleting stale files.
+For the 30 fps v003 exports, `00:00:01:12` selects the frame at 1.4 seconds.
+It does not answer App Privacy, bind a build, or submit the version.
+
+## Bind A Verified Build
+
+`asc_build_bind.rb` binds one exact Xcode Cloud / TestFlight build to every
+selected App Store platform only after verifying the Xcode Cloud run's full
+source commit, successful completion, App Store eligibility, encryption flag,
+processing state, and platform mapping.
+
+Dry-run first:
+
+```bash
+ruby tools/asc-metadata/asc_build_bind.rb \
+  --app-id 6761892533 \
+  --version 1.6.0 \
+  --build-number 119 \
+  --expected-source-commit 9414b91694d405d3e4c91edbae99d547c1684564
+```
+
+Add `--apply` only after the four platform/build IDs are expected. The tool
+reads every relationship back after writing. It does not submit the version,
+change release timing, answer App Privacy, or move Git/Xcode Cloud tags.
 
 ## Platform Filter
 
