@@ -1,0 +1,64 @@
+{
+  "version": "asc1.6.0_v003",
+  "durationSeconds": 22,
+  "locales": {
+    "en-US": {
+      "assetLocale": "en",
+      "htmlLang": "en-US",
+      "localeClass": "locale-en",
+      "demoDisclosure": "Demo data only. No real bills are shown.",
+      "proDisclosure": "Some features require AutoLedger Pro.",
+      "proMaskLabel": "You review before anything is saved.",
+      "finalTitle": "AutoLedger",
+      "finalSubtitle": "Local-first ledger. You stay in control."
+    },
+    "zh-Hans": {
+      "assetLocale": "zh-Hans",
+      "htmlLang": "zh-Hans",
+      "localeClass": "locale-zh-hans",
+      "demoDisclosure": "仅使用演示数据，不包含真实账单。",
+      "proDisclosure": "部分功能需要 AutoLedger Pro。",
+      "proMaskLabel": "保存前仍由你审核确认。",
+      "finalTitle": "AutoLedger",
+      "finalSubtitle": "本地优先记账，最终由你确认。"
+    },
+    "zh-Hant": {
+      "assetLocale": "zh-Hant",
+      "htmlLang": "zh-Hant",
+      "localeClass": "locale-zh-hant",
+      "demoDisclosure": "僅使用示範資料，不包含真實帳單。",
+      "proDisclosure": "部分功能需要 AutoLedger Pro。",
+      "proMaskLabel": "儲存前仍由你審核確認。",
+      "finalTitle": "AutoLedger",
+      "finalSubtitle": "本機優先記帳，最後由你確認。"
+    },
+    "ja": {
+      "assetLocale": "ja",
+      "htmlLang": "ja",
+      "localeClass": "locale-ja",
+      "demoDisclosure": "デモデータのみを使用し、実際の明細は含みません。",
+      "proDisclosure": "一部の機能には AutoLedger Pro が必要です。",
+      "proMaskLabel": "保存前に必ず自分で確認します。",
+      "finalTitle": "AutoLedger",
+      "finalSubtitle": "ローカル優先で記録し、最後は自分で確認。"
+    },
+    "ko": {
+      "assetLocale": "ko",
+      "htmlLang": "ko",
+      "localeClass": "locale-ko",
+      "demoDisclosure": "데모 데이터만 사용하며 실제 기록은 포함하지 않습니다.",
+      "proDisclosure": "일부 기능은 AutoLedger Pro가 필요합니다.",
+      "proMaskLabel": "저장 전에는 항상 직접 확인합니다.",
+      "finalTitle": "AutoLedger",
+      "finalSubtitle": "기기에 우선 기록하고 마지막에는 직접 확인하세요."
+    }
+  },
+  "scenes": [
+    { "key": "ocr", "shotId": "00_ocr_bill", "index": "01" },
+    { "key": "voice", "shotId": "01_voice_entry", "index": "02" },
+    { "key": "hotel", "shotId": "06_hotel_stays", "index": "03" },
+    { "key": "watch", "shotId": "02_watch_ecosystem", "index": "04" },
+    { "key": "report", "shotId": "03_monthly_report", "index": "05" },
+    { "key": "pro", "shotId": "07_autoledger_pro", "index": "06" }
+  ]
+}

@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="{{HTML_LANG}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=886, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      body {
+        color: #1d2722;
+        font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 886px;
+        height: 1920px;
+        overflow: hidden;
+        background: #f4f0e6;
+      }
+
+      .scene:not(#scene-ocr) {
+        opacity: 0;
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        padding: 96px 54px 68px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      .bg-orbit,
+      .bg-orbit-small {
+        position: absolute;
+        z-index: 0;
+        border: 2px solid rgba(47, 134, 95, 0.14);
+        border-radius: 999px;
+      }
+
+      .bg-orbit {
+        width: 1080px;
+        height: 1080px;
+        left: -430px;
+        top: -320px;
+      }
+
+      .bg-orbit-small {
+        width: 620px;
+        height: 620px;
+        right: -280px;
+        bottom: 160px;
+        border-color: rgba(215, 122, 34, 0.13);
+      }
+
+      .bg-glow {
+        position: absolute;
+        z-index: 0;
+        width: 650px;
+        height: 650px;
+        right: -250px;
+        top: 430px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(47, 134, 95, 0.17), rgba(47, 134, 95, 0));
+      }
+
+      .scene.orange .bg-glow {
+        left: -240px;
+        right: auto;
+        top: 520px;
+        background: radial-gradient(circle, rgba(215, 122, 34, 0.16), rgba(215, 122, 34, 0));
+      }
+
+      .header {
+        position: relative;
+        z-index: 4;
+        min-height: 270px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .eyebrow-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        align-self: flex-start;
+        padding: 11px 19px;
+        border-radius: 999px;
+        color: #2f865f;
+        background: rgba(47, 134, 95, 0.11);
+        font-size: 24px;
+        font-weight: 850;
+      }
+
+      .orange .eyebrow {
+        color: #b66d18;
+        background: rgba(215, 122, 34, 0.14);
+      }
+
+      .eyebrow-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #2f865f;
+      }
+
+      .orange .eyebrow-dot {
+        background: #d77a22;
+      }
+
+      .scene-index {
+        color: #62706a;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 760px;
+        color: #1d2722;
+        font-size: 72px;
+        line-height: 1.01;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 750px;
+        color: #62706a;
+        font-size: 30px;
+        line-height: 1.25;
+        font-weight: 580;
+        letter-spacing: -0.005em;
+      }
+
+      .copy-rule {
+        width: 94px;
+        height: 7px;
+        border-radius: 999px;
+        background: #2f865f;
+        transform-origin: left center;
+      }
+
+      .orange .copy-rule {
+        background: #d77a22;
+      }
+
+      .device-stage {
+        position: relative;
+        z-index: 3;
+        flex: 1;
+        min-height: 1270px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .device-shell {
+        position: relative;
+        z-index: 3;
+        width: 590px;
+        height: 1281px;
+        overflow: hidden;
+        border-radius: 58px;
+        background: #fffdf7;
+        box-shadow: 0 38px 92px rgba(29, 39, 34, 0.21);
+      }
+
+      .device-shell::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        border-radius: 58px;
+        border: 2px solid rgba(47, 134, 95, 0.12);
+        pointer-events: none;
+      }
+
+      .device-image-wrap {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .device-image {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .device-shadow-card {
+        position: absolute;
+        z-index: 1;
+        width: 520px;
+        height: 1130px;
+        border-radius: 54px;
+        background: rgba(221, 234, 223, 0.72);
+        transform: rotate(-5deg) translate(-58px, 30px);
+      }
+
+      .orange .device-shadow-card {
+        background: rgba(244, 215, 181, 0.64);
+        transform: rotate(5deg) translate(58px, 30px);
+      }
+
+      .footer-zone {
+        position: relative;
+        z-index: 5;
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .footer-note {
+        margin: 0;
+        max-width: 720px;
+        padding: 14px 18px;
+        border-radius: 22px;
+        color: #62706a;
+        background: rgba(255, 253, 247, 0.78);
+        font-size: 22px;
+        line-height: 1.22;
+        font-weight: 720;
+        box-shadow: 0 14px 38px rgba(29, 39, 34, 0.1);
+      }
+
+      .final-lockup {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 390px;
+        padding: 15px 18px;
+        border-radius: 26px;
+        background: rgba(255, 253, 247, 0.9);
+        box-shadow: 0 16px 44px rgba(29, 39, 34, 0.13);
+      }
+
+      .final-lockup img {
+        width: 62px;
+        height: 62px;
+        border-radius: 19px;
+      }
+
+      .final-title {
+        color: #1d2722;
+        font-size: 27px;
+        font-weight: 900;
+      }
+
+      .final-subtitle {
+        margin-top: 4px;
+        max-width: 500px;
+        color: #62706a;
+        font-size: 19px;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+
+      #scene-pro .device-shell {
+        width: 555px;
+        height: 1206px;
+      }
+
+      #scene-pro .device-shell::after {
+        border-radius: 54px;
+      }
+
+      .price-mask {
+        position: absolute;
+        z-index: 4;
+        left: 50%;
+        top: 644px;
+        transform: translateX(-50%);
+        width: 468px;
+        min-height: 76px;
+        padding: 0 22px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 20px;
+        color: #62706a;
+        background: rgba(255, 253, 247, 0.98);
+        backdrop-filter: blur(14px);
+        font-size: 20px;
+        line-height: 1.18;
+        font-weight: 760;
+        box-shadow: 0 8px 18px rgba(29, 39, 34, 0.05);
+      }
+
+      .price-mask::before {
+        content: "✓";
+        flex: 0 0 auto;
+        width: 29px;
+        height: 29px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: #fffdf7;
+        background: #2f865f;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      #scene-pro .footer-zone {
+        align-items: flex-end;
+      }
+
+      #scene-pro .footer-note {
+        max-width: 310px;
+        color: #9b5b15;
+        background: rgba(255, 241, 221, 0.9);
+      }
+
+      #root.locale-en h1 {
+        font-size: 63px;
+        line-height: 1.02;
+      }
+
+      #root.locale-en .subtitle {
+        font-size: 28px;
+      }
+
+      #root.locale-ja h1 {
+        font-size: 61px;
+        line-height: 1.08;
+        letter-spacing: -0.035em;
+      }
+
+      #root.locale-ja .subtitle {
+        font-size: 27px;
+        line-height: 1.32;
+      }
+
+      #root.locale-ko h1 {
+        font-size: 64px;
+        line-height: 1.07;
+        letter-spacing: -0.035em;
+      }
+
+      #root.locale-ko .subtitle {
+        font-size: 28px;
+        line-height: 1.3;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      class="{{LOCALE_CLASS}}"
+      data-active-locale="{{ACTIVE_LOCALE}}"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="22"
+      data-width="886"
+      data-height="1920"
+    >
+      <audio
+        id="music-bed"
+        class="clip"
+        data-start="0"
+        data-duration="22"
+        data-track-index="9"
+        data-volume="0.34"
+        src="assets/app_preview_bed_v003.m4a"
+      ></audio>
+
+      <section id="scene-ocr" class="scene">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger</div>
+              <div class="scene-index">{{SCENE_OCR_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_OCR_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_OCR_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_OCR_ASSET}}" alt="AutoLedger OCR interface" />
+              </div>
+            </div>
+          </div>
+          <footer class="footer-zone">
+            <p class="footer-note">{{DEMO_DISCLOSURE}}</p>
+          </footer>
+        </div>
+      </section>
+
+      <section id="scene-voice" class="scene orange">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger</div>
+              <div class="scene-index">{{SCENE_VOICE_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_VOICE_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_VOICE_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_VOICE_ASSET}}" alt="AutoLedger voice entry interface" />
+              </div>
+            </div>
+          </div>
+          <footer class="footer-zone"></footer>
+        </div>
+      </section>
+
+      <section id="scene-hotel" class="scene">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger</div>
+              <div class="scene-index">{{SCENE_HOTEL_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_HOTEL_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_HOTEL_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_HOTEL_ASSET}}" alt="AutoLedger hotel folio interface" />
+              </div>
+            </div>
+          </div>
+          <footer class="footer-zone"></footer>
+        </div>
+      </section>
+
+      <section id="scene-watch" class="scene orange">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger</div>
+              <div class="scene-index">{{SCENE_WATCH_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_WATCH_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_WATCH_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_WATCH_ASSET}}" alt="AutoLedger Apple Watch ecosystem interface" />
+              </div>
+            </div>
+          </div>
+          <footer class="footer-zone"></footer>
+        </div>
+      </section>
+
+      <section id="scene-report" class="scene">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger</div>
+              <div class="scene-index">{{SCENE_REPORT_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_REPORT_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_REPORT_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_REPORT_ASSET}}" alt="AutoLedger monthly report interface" />
+              </div>
+            </div>
+          </div>
+          <footer class="footer-zone"></footer>
+        </div>
+      </section>
+
+      <section id="scene-pro" class="scene orange">
+        <div data-layout-ignore class="bg-orbit"></div>
+        <div data-layout-ignore class="bg-orbit-small"></div>
+        <div data-layout-ignore class="bg-glow"></div>
+        <div class="scene-content">
+          <header class="header">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="eyebrow-dot"></span>AutoLedger Pro</div>
+              <div class="scene-index">{{SCENE_PRO_INDEX}} / 06</div>
+            </div>
+            <h1>{{SCENE_PRO_TITLE}}</h1>
+            <p class="subtitle">{{SCENE_PRO_SUBTITLE}}</p>
+            <div class="copy-rule"></div>
+          </header>
+          <div class="device-stage">
+            <div class="device-shadow-card"></div>
+            <div class="device-shell">
+              <div class="device-image-wrap" data-layout-allow-overflow>
+                <img class="device-image" src="{{SCENE_PRO_ASSET}}" alt="AutoLedger Pro interface" />
+              </div>
+            </div>
+            <div class="price-mask" data-layout-ignore>{{PRO_MASK_LABEL}}</div>
+          </div>
+          <footer class="footer-zone">
+            <div class="final-lockup">
+              <img src="assets/app_icon.png" alt="AutoLedger app icon" />
+              <div>
+                <div class="final-title">{{FINAL_TITLE}}</div>
+                <div class="final-subtitle">{{FINAL_SUBTITLE}}</div>
+              </div>
+            </div>
+            <p class="footer-note">{{PRO_DISCLOSURE}}</p>
+          </footer>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      function enterScene(scene, time, direction, options = {}) {
+        const horizontal = direction === "right" ? 34 : -34;
+        tl.from(`${scene} .bg-orbit`, { scale: 0.92, opacity: 0, duration: 0.82, ease: "sine.out" }, time);
+        tl.from(`${scene} .bg-orbit-small`, { scale: 1.08, opacity: 0, duration: 0.68, ease: "power1.out" }, time + 0.08);
+        tl.from(`${scene} .bg-glow`, { scale: 0.82, opacity: 0, duration: 0.9, ease: "sine.out" }, time + 0.12);
+        tl.from(`${scene} .eyebrow`, { x: horizontal, opacity: 0, duration: 0.42, ease: "power3.out" }, time + 0.04);
+        tl.from(`${scene} .scene-index`, { x: -horizontal, opacity: 0, duration: 0.36, ease: "power2.out" }, time + 0.12);
+        tl.from(`${scene} h1`, { y: 50, opacity: 0, duration: 0.62, ease: "expo.out" }, time + 0.15);
+        tl.from(`${scene} .subtitle`, { x: horizontal * 0.8, opacity: 0, duration: 0.5, ease: "power2.out" }, time + 0.34);
+        tl.from(`${scene} .copy-rule`, { scaleX: 0, opacity: 0, duration: 0.46, ease: "back.out(1.2)" }, time + 0.48);
+        tl.from(`${scene} .device-shadow-card`, { rotation: direction === "right" ? -9 : 9, y: 44, opacity: 0, duration: 0.64, ease: "power3.out" }, time + 0.28);
+        tl.from(`${scene} .device-shell`, { y: 76, scale: 0.95, opacity: 0, duration: 0.72, ease: "power4.out" }, time + 0.38);
+        tl.from(`${scene} .device-image-wrap`, { scale: 1.035, duration: 1.15, ease: "sine.out" }, time + 0.42);
+        if (options.footer) {
+          tl.from(`${scene} .footer-note`, { y: 24, opacity: 0, duration: 0.44, ease: "sine.out" }, time + 0.72);
+        }
+        if (options.finalLockup) {
+          tl.from(`${scene} .final-lockup`, { x: -42, opacity: 0, duration: 0.5, ease: "expo.out" }, time + 0.68);
+        }
+      }
+
+      function blurTransition(oldScene, newScene, time) {
+        tl.to(oldScene, { filter: "blur(14px)", scale: 1.02, opacity: 0, duration: 0.55, ease: "power2.inOut" }, time);
+        tl.fromTo(
+          newScene,
+          { filter: "blur(12px)", scale: 0.98, opacity: 0 },
+          { filter: "blur(0px)", scale: 1, opacity: 1, duration: 0.64, ease: "power2.inOut" },
+          time + 0.05
+        );
+      }
+
+      enterScene("#scene-ocr", 0.18, "left", { footer: true });
+
+      blurTransition("#scene-ocr", "#scene-voice", 3.15);
+      enterScene("#scene-voice", 3.42, "right");
+
+      blurTransition("#scene-voice", "#scene-hotel", 6.52);
+      enterScene("#scene-hotel", 6.8, "left");
+
+      blurTransition("#scene-hotel", "#scene-watch", 9.88);
+      enterScene("#scene-watch", 10.16, "right");
+
+      blurTransition("#scene-watch", "#scene-report", 13.24);
+      enterScene("#scene-report", 13.52, "left");
+
+      blurTransition("#scene-report", "#scene-pro", 16.62);
+      enterScene("#scene-pro", 16.9, "right", { footer: true, finalLockup: true });
+
+      tl.to("#scene-pro .device-image-wrap", { scale: 1.015, duration: 3.6, ease: "sine.inOut" }, 17.8);
+      tl.to("#scene-pro", { opacity: 0, duration: 0.48, ease: "power2.in" }, 21.45);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

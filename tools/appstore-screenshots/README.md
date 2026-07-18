@@ -2,7 +2,7 @@
 
 This folder contains a repeatable local pipeline for App Store screenshots and App Preview keyframe preparation. It captures deterministic screenshot-mode screens from the iOS, iPad, Mac Catalyst, tvOS, and visionOS apps, and when available the Watch app, then renders store-ready PNGs and a local `preview.html`.
 
-The same raw and store PNGs can be handed to Hyperframes or another video tool as keyframes for an App Store App Preview. This repository still does not upload assets to App Store Connect.
+The same raw and store PNGs can be handed to Hyperframes or another video tool as keyframes for an App Store App Preview. This screenshot pipeline only generates assets; reviewed outputs can be uploaded with the separate helpers in `tools/asc-metadata/`.
 
 ## Supported Output
 
@@ -13,7 +13,7 @@ The same raw and store PNGs can be handed to Hyperframes or another video tool a
 - Apple TV: zh-Hans, zh-Hant, en, and ja, default 4K landscape App Store size `3840x2160`.
 - visionOS: zh-Hans, zh-Hant, en, and ja, default landscape marketing size `3840x2160`.
 
-The pipeline does not upload to App Store Connect or directly create official App Preview videos. App Preview / Hyperframes production material lives in `tools/appstore-screenshots/app-preview/`.
+The pipeline does not itself upload to App Store Connect or directly create official App Preview videos. App Preview / Hyperframes production material lives in `tools/appstore-screenshots/app-preview/`, while upload and ASC state verification live in `tools/asc-metadata/`.
 
 ## Run
 
@@ -89,11 +89,12 @@ open tools/appstore-screenshots/output/preview.html
 
 ## App Preview / Hyperframes
 
-This repository does not directly generate the official App Preview video. It now provides production material for a 15-20 second Hyperframes workflow:
+The ASC 1.6.0 v003 project now generates one 22-second iPhone App Preview for each current release language from a shared Hyperframes composition and an original deterministic score:
 
 ```text
 tools/appstore-screenshots/app-preview/
   README.md
+  hyperframes-v003/
   preview_script_zh-Hans.md
   hyperframes_brief_zh-Hans.md
   shotlist_zh-Hans.md
@@ -106,7 +107,18 @@ Recommended source export:
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --watch-only --locale zh-Hans
 bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ja
+bash tools/appstore-screenshots/scripts/export.sh --ios-only --locale ko
 ```
+
+Current five-language render:
+
+```bash
+cd tools/appstore-screenshots/app-preview/hyperframes-v003
+npm run sync-assets
+npm run render-all
+```
+
+`sync-assets` selects OCR, voice, hotel, Watch, monthly report, and Pro captures for `en-US`, `zh-Hans`, `zh-Hant`, `ja`, and `ko`, then generates the sample-free `Quiet Control` score. Final MP4 files are `886x1920`, 22 seconds, 30 fps, H.264 High Profile Level 4.0 with target 11 Mbps video and AAC 48 kHz stereo audio. Generated assets and renders remain ignored. The five v003 files were uploaded to ASC 1.6.0 on 2026-07-18 and verified by MD5 plus `videoDeliveryState=COMPLETE`; their poster frames use the reviewed OCR frame at `1.4s / 00:00:01:12`, and all generated frame states read back as `COMPLETE`.
 
 Recommended folders to hand to Hyperframes:
 

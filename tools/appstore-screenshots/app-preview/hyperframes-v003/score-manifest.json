@@ -1,0 +1,16 @@
+{
+  "title": "Quiet Control",
+  "description": "Original deterministic underscore for the AutoLedger ASC 1.6.0 App Preview.",
+  "durationSeconds": 22,
+  "sampleRate": 48000,
+  "loudnessTargetLUFS": -20,
+  "truePeakTargetDBTP": -1.5,
+  "scenes": [
+    { "key": "ocr", "start": 0, "end": 3.15, "chordMidi": [48, 55, 59, 62, 64], "accentMidi": 76, "character": "soft pulse" },
+    { "key": "voice", "start": 3.15, "end": 6.52, "chordMidi": [45, 52, 55, 60, 64], "accentMidi": 81, "character": "airy pluck" },
+    { "key": "hotel", "start": 6.52, "end": 9.88, "chordMidi": [41, 48, 52, 57, 60], "accentMidi": 77, "character": "warm lower pad" },
+    { "key": "watch", "start": 9.88, "end": 13.24, "chordMidi": [43, 50, 55, 57, 62], "accentMidi": 86, "character": "bright bell" },
+    { "key": "report", "start": 13.24, "end": 16.62, "chordMidi": [40, 47, 50, 55, 59], "accentMidi": 79, "character": "ordered motif" },
+    { "key": "pro", "start": 16.62, "end": 22, "chordMidi": [48, 55, 59, 62, 64], "accentMidi": 88, "character": "resolved warm chord" }
+  ]
+}

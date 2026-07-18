@@ -13,11 +13,11 @@
 |---|---|
 | 内部开发线 | `v1.7.0` |
 | App Store 对外版本 | `1.6.0` |
-| 发布阶段 | TestFlight 反馈收口 -> Release Candidate 冻结前 |
+| 发布阶段 | Release Candidate 冻结与发布证据收口 |
 | 已验证候选产品行为基线 | `9414b91694d4`；当前仓库后续 Swift 改动仅服务 `--screenshot-mode` / 截图 Host，不进入正式启动路径 |
 | Xcode Cloud 触发标签 | `xcbuild-v1.7.0`，基线指向 `9414b91694d4` |
 | 最近人工结论 | 当前 TestFlight 候选整体已接近发布；TS 117 起 Tab 体感明显改善 |
-| 精确 TestFlight build | 属于 App Store Connect 外部证据；未从仓库推断或写死 |
+| 精确 TestFlight build | Xcode Cloud / TestFlight build `119`；源码 `9414b91694d405d3e4c91edbae99d547c1684564`；ASC `1.6.0` 四平台已绑定并回读 |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
 | 下一版本 | `v1.8.0 / ASC 1.7.0` 的 Review & Close 与西语 / 巴葡计划仅为 Draft，不扩大当前发布范围 |
 
@@ -48,27 +48,33 @@
 - 数据清洗的云端辅助已形成第一版可用闭环：用户显式开启且具备 Pro 权益时，App 发送商户键哈希和聚合特征，Worker 返回 hash-only 商户别名建议，用户确认前不会改写账本。
 - 自动化规则指标已统一布局和字号，商户别名、分类修正和受影响账单说明不再截断。
 - `docs/` 已按产品、架构、能力、平台、运维和归档物理分组；核心 `ROADMAP.md` 作为唯一专项例外保留在 `docs/` 根目录。
-- 已建立每版本一组新语言的跨版本路线和 `v1.8.0` Draft；工程 `developmentRegion = en` 已核验，但 ASC Primary Language 的线上切换尚未以仓库证据确认。
-- 韩语六平台截图管线已补齐：iPhone、iPad、Mac、Watch、tvOS、visionOS 本地导出 30 张 raw 与 30 张商店尺寸成品，逐平台视觉复核后修正截图 Host 的中文 fallback；生成物按规则忽略，不等同于 ASC 已上传或韩语已通过母语审校。
+- 已建立每版本一组新语言的跨版本路线和 `v1.8.0` Draft；工程 `developmentRegion = en` 已核验，ASC Primary Language 已在线回读确认为 `English (U.S.) / en-US`。
+- 五语六平台截图已完成 ASC `1.6.0` 上传与 API 回读：中简、中繁、美英、日、韩在 iPhone、iPad、Mac、Watch、tvOS、visionOS 的 150 张目标截图均与本地 MD5 矩阵匹配；显式存在的 `en-GB` 已同步 `en-US` 元数据和六平台当前英文截图，避免旧资产覆盖主语言 fallback。
+- ASC `1.5.0` 四平台元数据已从线上归档；ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 已创建并处于 `PREPARE_FOR_SUBMISSION`，planned 五语第一版版本文案已填充并回读一致。Primary Language 已确认为 `en-US`，韩语 App 名称、副标题、隐私链接与 Apple TV 隐私正文已定点写入并回读一致。
+- ASC `1.6.0` 五语 iPhone App Preview v003 已上传：五条视频均与本地 MD5 一致且 `videoDeliveryState=COMPLETE`；英文 / 简中旧片在新片完成后删除。五语 poster frame 已统一为 OCR 首屏的 `1.4s / 00:00:01:12`，API 回读时间码与生成图状态均为 `COMPLETE`。韩语母语审校按发布决定转为非阻断质量增强；最终 binary 逐镜一致性核验仍未完成。
+- 四平台 Review Notes 已从 repo profile 写入 ASC 并按长度 / SHA-256 回读一致；iOS / macOS 使用主功能说明，tvOS / visionOS 使用只读看板说明，均保持 `demoAccountRequired=false` 且未覆盖审核联系人字段。
+- Xcode Cloud build `119` 已确认运行成功且源码为 `9414b91694d405d3e4c91edbae99d547c1684564`；ASC `1.6.0` 四个平台版本均已绑定各自的有效、未过期、App Store eligible build，并完成幂等 API 回读。
+- ASC App Privacy 已人工查看：Crash Data、Performance Data、Product Interaction 均用于 Analytics，not linked，not tracking，与 `PrivacyInfo.xcprivacy` 一致；Privacy Policy URL 已保存为 `https://getautoledger.app/privacy`，页面回读新值并标记“已编辑”，该变更将随下一版本发布。
+- 用户已在最新 TestFlight 候选完成 iCloud 同步 smoke，未发现同步问题；2026-07-18 再次回读 Xcode Cloud 确认最新成功候选仍是 build `119` / `9414b91694d4`。当前待推送改动不含 App runtime、CloudKit schema、entitlement 或工程构建设置，因此不为本次文档 / ASC 工具收口另起 TestFlight build，也不移动 `xcbuild-v1.7.0`。
 
-详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-430`。
+详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-434`。
 
 ## Release Gates
 
 ### P0 - Candidate Evidence
 
-- 确认最终 Xcode Cloud 四平台构建成功，并记录 TestFlight build number 与源码 SHA 的对应关系。
+- 已确认最终 Xcode Cloud 四平台 build `119` 成功，源码 SHA 为 `9414b91694d405d3e4c91edbae99d547c1684564`，且四平台 ASC 版本绑定完成；设备 smoke 仍需使用该精确候选。
 - iPhone、iPad、Mac 分别完成冷启动、快速切 Tab、月报月份切换、数据清洗和 OCR 固定路径 smoke；单设备结果不能替代其它平台。
-- 验证启动后立即交互时 iCloud 同步仍能最终完成，且不会重新阻塞 UI。
+- 最新 TestFlight 候选的 iCloud 同步 smoke 已由用户确认未发现问题；若后续修改 App runtime、CloudKit schema、entitlement 或同步实现，必须在新候选重新执行。
 - 使用重庆 Moxy 记录复测“保留本机 -> 推送 -> 拉取”，确认并发改动冲突不再复活。
 - 在最新候选中验证云端水单收件箱 `401` 自动续签不会更换既有专属地址，并验证云端商户别名建议成功与失败 fallback。
 
 ### P0 - Release And Privacy
 
-- 对照 [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) 完成五语状态复核；韩语虽已完成本地六平台截图导出，但母语审校、真实样本、ASC 上传与 App Preview 证据未齐前不得标记为 Ready。
-- 从 ASC `1.6.0` 起以 `English (U.S.) / en-US` 为 Primary Language；执行前确认当前 App 信息可编辑、英语此前已通过审核且全平台英语截图满足切换条件，执行后归档 ASC 线上证据。Xcode `developmentRegion = en` 不能替代该证据。
-- 确认 ASC metadata、订阅本地化、截图 / App Preview、Review Notes、隐私政策和 App Privacy 口径一致。
-- 确认 Crash Data、Performance Data 与 Product Interaction 只用于 Analytics，not linked，not tracking。
+- 对照 [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) 维护五语事实状态。韩语母语审校因暂无合适审校者，按发布决定不阻断 ASC `1.6.0`；真实样本与地区专项作为已知质量缺口继续积累，不得伪装为已经完成。
+- ASC `1.6.0` 的 Primary Language 已在线确认为 `English (U.S.) / en-US`；显式 `en-GB` 元数据和六平台截图已同步当前英语资产，提交前仅剩与最终 binary 的一致性复核。
+- ASC metadata、订阅本地化、截图 / App Preview、Review Notes 与 App Privacy URL 已完成线上回读；App Privacy 数据类型口径已核对一致。
+- Crash Data、Performance Data 与 Product Interaction 已在线确认只用于 Analytics，not linked，not tracking。
 - 若最终候选包含 CloudKit record type、field 或 index 变化，必须先将 Development schema 部署到 Production 并记录证据。
 - 冻结本次商店图标：明确沿用当前图标，或完成多层图标资产后再统一重导商店素材；不能在截图完成后继续改动。
 
@@ -82,16 +88,16 @@
 
 - 云端商户辅助当前只覆盖首批可解释别名目录；成功响应缓存、持久化 cooldown / backoff、服务端配额和更广别名治理仍未完成。
 - CloudKit 合并写入继续使用串行一致性路径；当前优化重点是让网络与解码不阻塞 UI，而不是把所有同步工作并行化。
-- TestFlight build number、ASC processing 和人工设备结果属于外部证据，仓库文档不得根据 tag 或 MARKETING_VERSION 猜测。
+- TestFlight build number、ASC processing 和人工设备结果属于外部证据，仓库文档不得根据 tag 或 MARKETING_VERSION 猜测；本次 build `119` / SHA / 四平台绑定来自实时 API 回读。
 - Dashboard 历史数据包含旧版本和旧埋点语义，判断发布质量时必须按 source build 和新指标口径过滤。
-- 韩语截图生成物位于忽略目录，本地 30 / 30 导出与工程视觉复核只能证明素材管线可用，不能替代 ASC 上传状态、原生设备长文本检查或母语审校。
+- 截图与 App Preview 本地成品仍位于忽略目录；ASC MD5、视频处理状态、poster frame 时间码与生成图状态已经回读，但不会替代原生设备长文本检查或与最终提交 binary 的一致性复核。韩语母语审校是明确接受的非阻断缺口，后续反馈仍应修订文案。
 - `versions/v1.7.0-plan.md` 保留逐阶段执行记录；其中带日期的“未完成”描述是当时事实，不能覆盖本文件的当前状态。
 - `v1.8.0` 与后续语言组是规划事实，不代表实现、ASC locale、截图、识别样本或人工审校已经完成。
 
 ## Next Actions
 
 1. 完成当前候选的 iPhone / iPad / Mac 与 iCloud 最终 smoke，并把结果回填本文件和版本回归基线。
-2. 冻结五语商店资产、图标、ASC metadata、Review Notes 与隐私声明；上传并核对韩语六平台截图，完成 `en-US` Primary Language 的发布操作与留证。
+2. 复核已冻结商店资产、Review Notes、App Privacy 与最终 binary 一致性；Privacy Policy URL 已保存为当前官网地址。
 3. 完成 release-readiness 审计后，再决定提交审核和移动不可变产品版本标签。
 
 ## Source Of Truth Map
