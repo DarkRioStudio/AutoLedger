@@ -12,6 +12,7 @@ enum PendingActionCenterLoader {
             String(store.categoryCorrections.count),
             String(store.ignoredDataCleaningPreviewIDs.count),
             String(store.dataCleaningRevision),
+            String(store.subscriptionAnomalyDecisionRevision),
             store.pendingReceiptReview?.id.uuidString ?? "none",
             store.lastImportSummary ?? ""
         ].joined(separator: "|")
@@ -23,6 +24,7 @@ enum PendingActionCenterLoader {
         let merchantAliases = store.merchantAliases
         let categoryCorrections = store.categoryCorrections
         let ignoredPreviewIDs = store.ignoredDataCleaningPreviewIDs
+        let handledSubscriptionAnomalyIDs = Set(store.subscriptionAnomalyDecisions.keys)
         let receiptReviewCount = store.pendingReceiptReview == nil ? 0 : 1
         let hotelReviewCount = store.hotelStayDrafts.filter {
             ![HotelStayDraftStatus.confirmed, .rejected, .postedToLedger].contains($0.status)
@@ -38,7 +40,7 @@ enum PendingActionCenterLoader {
             let anomalySummary = SubscriptionAnomalyDetector().analyze(
                 subscriptions: subscriptions,
                 transactions: transactions
-            )
+            ).filteringHandledAnomalies(withIDs: handledSubscriptionAnomalyIDs)
             return PendingActionCenterPlanner().buildSnapshot(
                 receiptReviewCount: receiptReviewCount,
                 hotelReviewCount: hotelReviewCount,

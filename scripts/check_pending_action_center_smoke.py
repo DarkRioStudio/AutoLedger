@@ -32,6 +32,8 @@ def main() -> int:
 
     require(center, "PendingActionCenterLoader", "PendingActionCenterView", failures)
     require(center, "Task.detached", "PendingActionCenterView", failures)
+    require(center, "filteringHandledAnomalies", "PendingActionCenterView", failures)
+    require(center, "subscriptionAnomalyDecisionRevision", "PendingActionCenterView", failures)
     require(inbox, "PendingActionCenterCard(", "InboxView", failures)
     require(inbox, "PendingActionCenterListView(", "InboxView", failures)
     require(ipad, "case pendingActions", "IPadWorkspaceView", failures)

@@ -37,40 +37,226 @@ app_info:
 
 version_localizations:
   zh-Hans:
-    promotionalText: "Pro 自动化已扩展到酒店水单、订阅异常、高级搜索和月结整理。"
-    description: "AutoLedger 是一款本地优先的个人记账工具。你可以通过截图、拍照、语音、快捷指令和手动输入记录日常消费，并在确认后写入本地账本。它支持多账本、酒店消费、水单复核、订阅管理、月报统计和基础导出。AutoLedger Pro 进一步提供邮箱水单扫描、专属收件箱、批量候选整理、高级搜索、订阅异常提醒、月结资料包和规则自动化等效率能力。基础记账、历史查看、编辑、删除和基础导出不会因为 Pro 到期而被锁定。"
+    promotionalText: "截图、拍照或说一句话，AutoLedger 会先整理金额、商户和时间，等你确认后再写入本地账本。现已支持实时 OCR 与酒店水单归档。"
+    description: |-
+      AutoLedger - 一键记账
+
+      把截图、小票、语音和酒店水单整理成你的个人账本。
+
+      AutoLedger 是一款本地优先的个人账本应用，帮助你减少重复输入，轻松记录日常消费。你可以从已经存在的消费信息开始：支付截图、照片小票、语音记录、快捷指令，以及酒店水单。
+
+      实时 OCR 可以快速识别票据和账单中的金额、商户和时间。识别结果会在保存前进入确认流程，你可以检查、修改后再写入账本。AutoLedger 不会未经确认自动创建交易，让你始终掌握自己的消费记录。
+
+      快速记录
+
+      支持截图记账、拍照识别、语音记账、文本输入、快捷指令、分享扩展和 Apple Watch 快速记录。
+
+      通过多账本管理、自定义分类、消费趋势、月度报告、数据导入导出和 iCloud 同步，帮助你长期维护自己的消费历史。
+
+      酒店消费归档
+
+      旅行和商务住宿通常比普通消费包含更多信息。酒店水单可能包含入住日期、晚数、房费、税费、服务费、餐饮和其他消费。
+
+      AutoLedger 可以整理酒店水单 PDF，将住宿信息和消费记录保存为结构化酒店档案，方便回顾旅行经历和管理商务支出。
+
+      Apple 生态体验
+
+      在 iPhone、iPad、Mac 和 Apple Watch 上使用 AutoLedger。手机快速记录，大屏整理查看，随时保持自己的账本更新。
+
+      AutoLedger Pro
+
+      Pro 提供更多省时间的自动化能力，包括酒店水单自动整理、专属水单收件箱、批量候选处理、高级搜索、订阅异常提醒、月结资料整理和高级规则自动化。
+
+      基础记账能力长期可用。Pro 的目标是减少重复操作，而不是限制你的账本数据。
     keywords: "记账,账本,截图记账,酒店水单,订阅管理,月报,快捷指令,OCR"
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "新增实时 OCR 票据扫描、韩语界面与识别、多币种准备、酒店水单复核改进，以及 Pro 高级搜索、订阅异常、月结包和自动化规则。"
   zh-Hant:
-    promotionalText: "Pro 自動化已擴展到飯店水單、訂閱異常、進階搜尋和月結整理。"
-    description: "AutoLedger 是一款本機優先的個人記帳工具。你可以透過截圖、拍照、語音、捷徑和手動輸入記錄日常消費，並在確認後寫入本機帳本。它支援多帳本、飯店消費、水單複核、訂閱管理、月報統計和基礎匯出。AutoLedger Pro 進一步提供信箱水單掃描、專屬收件箱、批次候選整理、進階搜尋、訂閱異常提醒、月結資料包和規則自動化等效率能力。基礎記帳、歷史查看、編輯、刪除和基礎匯出不會因 Pro 到期而被鎖定。"
+    promotionalText: "截圖、拍照或說一句話，AutoLedger 會先整理金額、商戶和時間，等你確認後再寫入本機帳本。現已支援即時 OCR 與酒店水單歸檔。"
+    description: |-
+      AutoLedger - 一鍵記帳
+
+      把截圖、收據、語音和酒店水單整理成你的個人帳本。
+
+      AutoLedger 是一款本機優先的個人帳本 App，幫助你減少重複輸入，輕鬆記錄日常消費。你可以從已經存在的消費資訊開始：付款截圖、收據照片、語音記錄、捷徑，以及酒店水單。
+
+      即時 OCR 可以快速辨識票據和帳單中的金額、商戶和時間。辨識結果會在儲存前進入確認流程，你可以檢查、修改後再寫入帳本。AutoLedger 不會未經確認自動建立交易，讓你始終掌握自己的消費記錄。
+
+      快速記錄
+
+      支援截圖記帳、拍照辨識、語音記帳、文字輸入、捷徑、分享延伸功能和 Apple Watch 快速記錄。
+
+      透過多帳本管理、自訂分類、消費趨勢、月度報告、資料匯入匯出和 iCloud 同步，幫助你長期維護自己的消費歷史。
+
+      酒店消費歸檔
+
+      旅行和商務住宿通常比普通消費包含更多資訊。酒店水單可能包含入住日期、晚數、房費、稅費、服務費、餐飲和其他消費。
+
+      AutoLedger 可以整理酒店水單 PDF，將住宿資訊和消費記錄儲存為結構化酒店檔案，方便回顧旅行經歷和管理商務支出。
+
+      Apple 生態體驗
+
+      在 iPhone、iPad、Mac 和 Apple Watch 上使用 AutoLedger。手機快速記錄，大螢幕整理查看，隨時保持自己的帳本更新。
+
+      AutoLedger Pro
+
+      Pro 提供更多節省時間的自動化能力，包括酒店水單自動整理、專屬水單收件匣、批次候選處理、進階搜尋、訂閱異常提醒、月結資料整理和進階規則自動化。
+
+      基礎記帳能力長期可用。Pro 的目標是減少重複操作，而不是限制你的帳本資料。
     keywords: "記帳,帳本,截圖記帳,飯店水單,訂閱管理,月報,捷徑,OCR"
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "新增即時 OCR 票據掃描、韓語介面與識別、多幣種準備、飯店水單複核改進，以及 Pro 進階搜尋、訂閱異常、月結包和自動化規則。"
   en-US:
-    promotionalText: "Pro automation now covers hotel folios, anomaly checks, advanced search, and monthly cleanup."
-    description: "AutoLedger is a local-first personal ledger for everyday spending. Capture expenses from screenshots, camera photos, voice, Shortcuts, or manual entry, then review before saving them to your ledger. It supports multiple ledgers, hotel stays, folio review, subscription management, monthly reports, and basic exports. AutoLedger Pro adds automation for email folio scanning, a dedicated inbox, batch candidate cleanup, advanced search, subscription anomaly checks, monthly export packages, and rule automation. Basic ledger entries, history, editing, deletion, and basic exports stay available even when Pro expires."
+    promotionalText: "Screenshot, photo, or one sentence: AutoLedger organizes amount, merchant, and time, then saves locally after confirmation. Now with live OCR and hotel folio archiving."
+    description: |-
+      AutoLedger - Quick Ledger
+
+      Turn screenshots, receipts, voice notes, and hotel folios into your personal ledger.
+
+      AutoLedger is a local-first personal ledger app that helps reduce repetitive entry and makes everyday spending easier to record. Start from information you already have: payment screenshots, receipt photos, voice notes, Shortcuts, and hotel folios.
+
+      Live OCR quickly recognizes amounts, merchants, and times from receipts and bills. Every result enters a confirmation flow before it is saved, so you can review and edit it first. AutoLedger never creates a transaction without your confirmation, keeping you in control of your records.
+
+      Quick Capture
+
+      Record with screenshots, receipt photos, voice, text, Shortcuts, the Share Extension, and quick entry on Apple Watch.
+
+      Multiple ledgers, custom categories, spending trends, monthly reports, import and export, and iCloud sync help you maintain a useful spending history over time.
+
+      Hotel Expense Archive
+
+      Travel and business stays often contain more detail than ordinary expenses. A hotel folio may include stay dates, nights, room charges, taxes, service fees, dining, and other charges.
+
+      AutoLedger organizes hotel folio PDFs and saves stay details and expenses as structured hotel records for reviewing trips and managing business spending.
+
+      Apple Ecosystem
+
+      Use AutoLedger on iPhone, iPad, Mac, and Apple Watch. Capture quickly on your phone, organize on a larger screen, and keep your ledger up to date.
+
+      AutoLedger Pro
+
+      Pro adds time-saving automation, including hotel folio organization, a dedicated folio inbox, batch candidate processing, advanced search, subscription anomaly alerts, month-end document organization, and advanced rule automation.
+
+      Core bookkeeping remains available for the long term. Pro is designed to reduce repetitive work, not restrict access to your ledger data.
     keywords: "ledger,expense,receipt OCR,hotel folio,subscriptions,monthly report,Shortcuts"
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "Adds live OCR receipt scanning, Korean UI and recognition, multi-currency preparation, hotel folio review improvements, and Pro automation for search, subscriptions, monthly exports, and rules."
   ja:
-    promotionalText: "Pro 自動化がホテル明細、異常チェック、高度な検索、月次整理に対応しました。"
-    description: "AutoLedger はローカル優先の個人向け記帳アプリです。スクリーンショット、カメラ写真、音声、ショートカット、手入力から支出を記録し、確認してから台帳へ保存できます。複数台帳、ホテル滞在、明細確認、サブスクリプション管理、月次レポート、基本エクスポートに対応します。AutoLedger Pro では、メール内のホテル明細スキャン、専用受信箱、候補の一括整理、高度な検索、サブスクリプション異常チェック、月次エクスポートパッケージ、ルール自動化などの効率機能を利用できます。基本の記帳、履歴表示、編集、削除、基本エクスポートは Pro の期限後も利用できます。"
+    promotionalText: "スクリーンショット、撮影、または一言で入力。AutoLedger が金額、店舗、時刻を先に整理し、確認後にローカル台帳へ保存します。リアルタイム OCR とホテル明細の保管に対応しました。"
+    description: |-
+      AutoLedger - かんたん記帳
+
+      スクリーンショット、レシート、音声、ホテル明細を自分の台帳に整理します。
+
+      AutoLedger は、繰り返し入力を減らし、日々の支出を手軽に記録できるローカル優先の個人向け台帳 App です。支払い画面のスクリーンショット、レシート写真、音声メモ、ショートカット、ホテル明細など、すでにある情報から始められます。
+
+      リアルタイム OCR がレシートや請求書の金額、店舗、時刻をすばやく認識します。認識結果は保存前に確認画面へ進み、内容を確認・修正してから台帳へ保存できます。AutoLedger が確認なしに取引を自動作成することはなく、記録の管理は常に利用者の手元にあります。
+
+      すばやく記録
+
+      スクリーンショット、撮影、音声、テキスト、ショートカット、共有拡張、Apple Watch のクイック入力に対応します。
+
+      複数台帳、カスタムカテゴリ、支出傾向、月次レポート、データの読み込み・書き出し、iCloud 同期で、長期的な支出履歴を管理できます。
+
+      ホテル支出の保管
+
+      旅行や出張の宿泊記録には、通常の支出より多くの情報が含まれます。ホテル明細には、宿泊日、泊数、客室料金、税金、サービス料、飲食、その他の請求が記載されることがあります。
+
+      AutoLedger はホテル明細 PDF を整理し、宿泊情報と支出を構造化されたホテル記録として保存します。旅行の振り返りや出張費の管理に役立ちます。
+
+      Apple エコシステム
+
+      iPhone、iPad、Mac、Apple Watch で AutoLedger を利用できます。iPhone ですばやく記録し、大きな画面で整理・確認しながら、台帳を最新の状態に保てます。
+
+      AutoLedger Pro
+
+      Pro では、ホテル明細の自動整理、専用明細受信箱、候補の一括処理、高度な検索、サブスクリプション異常通知、月末資料の整理、高度なルール自動化など、時間を節約する機能を利用できます。
+
+      基本の記帳機能は長期的に利用できます。Pro は台帳データへのアクセスを制限するものではなく、繰り返し作業を減らすための機能です。
     keywords: "記帳,家計簿,レシートOCR,ホテル明細,サブスク,月次レポート,ショートカット"
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "リアルタイム OCR スキャン、韓国語 UI と認識、多通貨準備、ホテル明細確認の改善、Pro の検索・サブスク・月次出力・ルール自動化を追加しました。"
   ko:
-    promotionalText: "Pro 자동화가 호텔 명세서, 이상 확인, 고급 검색, 월간 정리로 확장되었습니다."
-    description: "AutoLedger는 로컬 우선 개인 장부 앱입니다. 스크린샷, 카메라 사진, 음성, 단축어, 직접 입력으로 지출을 기록하고 확인 후 장부에 저장할 수 있습니다. 여러 장부, 호텔 숙박, 명세서 검토, 구독 관리, 월간 보고서, 기본 내보내기를 지원합니다. AutoLedger Pro는 이메일 호텔 명세서 스캔, 전용 수신함, 후보 일괄 정리, 고급 검색, 구독 이상 확인, 월간 내보내기 패키지, 규칙 자동화 같은 효율 기능을 제공합니다. 기본 기록, 기록 보기, 편집, 삭제, 기본 내보내기는 Pro가 만료되어도 계속 사용할 수 있습니다."
+    promotionalText: "스크린샷을 찍거나 영수증을 촬영하거나 한마디로 말하세요. AutoLedger가 금액, 가맹점, 시간을 먼저 정리하고 확인 후 로컬 장부에 저장합니다. 이제 실시간 OCR과 호텔 명세서 보관을 지원합니다."
+    description: |-
+      AutoLedger - 빠른 가계부
+
+      스크린샷, 영수증, 음성, 호텔 명세서를 나만의 장부로 정리하세요.
+
+      AutoLedger는 반복 입력을 줄이고 일상 지출을 쉽게 기록할 수 있도록 돕는 로컬 우선 개인 장부 앱입니다. 결제 스크린샷, 영수증 사진, 음성 기록, 단축어, 호텔 명세서처럼 이미 있는 소비 정보에서 시작할 수 있습니다.
+
+      실시간 OCR은 영수증과 청구서의 금액, 가맹점, 시간을 빠르게 인식합니다. 인식 결과는 저장 전에 확인 단계로 이동하며, 내용을 검토하고 수정한 뒤 장부에 저장할 수 있습니다. AutoLedger는 확인 없이 거래를 자동 생성하지 않으므로 소비 기록을 항상 직접 관리할 수 있습니다.
+
+      빠른 기록
+
+      스크린샷 기록, 사진 인식, 음성 기록, 텍스트 입력, 단축어, 공유 확장, Apple Watch 빠른 기록을 지원합니다.
+
+      여러 장부, 사용자 지정 카테고리, 지출 추세, 월간 리포트, 데이터 가져오기와 내보내기, iCloud 동기화로 장기적인 소비 기록을 관리할 수 있습니다.
+
+      호텔 지출 보관
+
+      여행과 출장 숙박에는 일반 지출보다 더 많은 정보가 포함됩니다. 호텔 명세서에는 투숙 날짜, 숙박 일수, 객실 요금, 세금, 서비스 요금, 식음료와 기타 비용이 포함될 수 있습니다.
+
+      AutoLedger는 호텔 명세서 PDF를 정리하고 숙박 정보와 지출을 구조화된 호텔 기록으로 저장하여 여행을 돌아보고 출장비를 관리하기 쉽게 합니다.
+
+      Apple 생태계
+
+      iPhone, iPad, Mac, Apple Watch에서 AutoLedger를 사용하세요. 휴대폰에서 빠르게 기록하고 큰 화면에서 정리하고 확인하며 장부를 최신 상태로 유지할 수 있습니다.
+
+      AutoLedger Pro
+
+      Pro는 호텔 명세서 자동 정리, 전용 명세서 받은편지함, 후보 일괄 처리, 고급 검색, 구독 이상 알림, 월말 자료 정리, 고급 규칙 자동화 등 시간을 절약하는 자동화 기능을 제공합니다.
+
+      기본 기록 기능은 장기적으로 사용할 수 있습니다. Pro의 목적은 장부 데이터 접근을 제한하는 것이 아니라 반복 작업을 줄이는 것입니다.
     keywords: "가계부,장부,영수증OCR,호텔명세서,구독관리,월간보고서,단축어"
     supportUrl: "https://getautoledger.app/support"
     marketingUrl: "https://getautoledger.app"
     whatsNew: "실시간 OCR 영수증 스캔, 한국어 UI와 인식, 다중 통화 준비, 호텔 명세서 검토 개선, Pro 고급 검색·구독 이상·월간 내보내기·규칙 자동화를 추가했습니다."
+
+custom_product_pages:
+  - name: "截图与小票识别页"
+    screenshots:
+      iphone: ["00_ocr_bill", "05_shortcuts_import", "01_voice_entry", "07_autoledger_pro", "03_monthly_report"]
+      ipad: ["01_workspace_capture", "00_workspace_overview", "02_workspace_ledger", "03_workspace_reports"]
+    promotional_text:
+      zh-Hans: "截图或拍下小票，AutoLedger 实时整理金额、商户和时间；确认后才写入本地账本。"
+      zh-Hant: "截圖或拍下收據，AutoLedger 即時整理金額、商戶和時間；確認後才寫入本機帳本。"
+      en-US: "Capture a screenshot or receipt. AutoLedger extracts amount, merchant, and time live, then saves locally only after you confirm."
+      ja: "スクリーンショットやレシートを撮影すると、金額・店舗・時刻をリアルタイムで整理。確認後にのみローカル台帳へ保存します。"
+      ko: "스크린샷이나 영수증을 촬영하면 금액, 가맹점, 시간을 실시간으로 정리합니다. 확인한 뒤에만 로컬 장부에 저장합니다."
+  - name: "酒店水单归档页"
+    screenshots:
+      iphone: ["06_hotel_stays", "07_autoledger_pro", "00_ocr_bill", "04_icloud_sync", "03_monthly_report"]
+      ipad: ["05_workspace_hotel", "00_workspace_overview", "01_workspace_capture", "02_workspace_ledger"]
+    promotional_text:
+      zh-Hans: "把酒店 PDF、水单邮件和专属收件箱候选整理成住宿档案；所有候选都先复核，确认后才入账。"
+      zh-Hant: "把酒店 PDF、水單郵件和專屬收件匣候選整理成住宿檔案；所有候選都先複核，確認後才入帳。"
+      en-US: "Turn hotel PDFs, folio emails, and inbox candidates into stay archives. Every candidate stays in review until you confirm it."
+      ja: "ホテル PDF、明細メール、専用受信箱の候補を宿泊記録へ整理。すべて確認してから台帳に保存します。"
+      ko: "호텔 PDF, 명세서 메일, 전용 받은편지함 후보를 숙박 기록으로 정리합니다. 모든 후보는 확인 후 장부에 저장됩니다."
+  - name: "本地优先与 Apple 生态页"
+    screenshots:
+      iphone: ["02_watch_ecosystem", "04_icloud_sync", "03_monthly_report", "00_ocr_bill", "01_voice_entry"]
+      ipad: ["00_workspace_overview", "02_workspace_ledger", "03_workspace_reports", "01_workspace_capture"]
+    promotional_text:
+      zh-Hans: "账本本地优先，在 iPhone、iPad 与 Mac 整理，Apple Watch 快速记录；可选 iCloud 同步由你控制。"
+      zh-Hant: "帳本本機優先，在 iPhone、iPad 與 Mac 整理，Apple Watch 快速記錄；可選 iCloud 同步由你控制。"
+      en-US: "A local-first ledger across Apple devices: organize on iPhone, iPad, and Mac, add from Apple Watch, and choose when to use iCloud."
+      ja: "ローカル優先の台帳を Apple デバイスで。iPhone、iPad、Mac で整理し、Apple Watch から記録。iCloud は任意です。"
+      ko: "Apple 기기 전반에서 로컬 우선 장부를 사용하세요. iPhone, iPad, Mac에서 정리하고 Apple Watch에서 기록하며 iCloud는 선택할 수 있습니다."
+
+campaign_links:
+  provider_token: "119124675"
+  campaigns:
+    - "Reddit"
+    - "V2EX"
+    - "SSPAI"
+    - "Website"
+    - "QRCode"
 
 review_notes:
   profiles:

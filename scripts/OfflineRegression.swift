@@ -2656,6 +2656,35 @@ struct OfflineRegression {
         reporter.check(summary.anomalies.contains { $0.kind == .duplicateCharge && $0.subscriptionID == monthlyServiceID }, "SubscriptionAnomalyDetector detects duplicate charges")
         reporter.check(summary.anomalies.contains { $0.kind == .billingCycleDrift && $0.subscriptionID == cloudServiceID }, "SubscriptionAnomalyDetector detects billing cycle drift")
 
+        if let reviewedAnomaly = summary.anomalies.first {
+            let filtered = summary.filteringHandledAnomalies(withIDs: [reviewedAnomaly.id])
+            reporter.check(
+                !filtered.anomalies.contains { $0.id == reviewedAnomaly.id } &&
+                    filtered.anomalies.count == summary.anomalies.count - 1,
+                "SubscriptionAnomalySummary hides handled anomaly fingerprints"
+            )
+            reporter.check(
+                filtered.renewalPressure == summary.renewalPressure,
+                "SubscriptionAnomalySummary keeps renewal pressure after handling an anomaly"
+            )
+        }
+        let cycleDrift = summary.anomalies.first { $0.kind == .billingCycleDrift }
+        let changedCycleDrift = cycleDrift.map { anomaly in
+            SubscriptionAnomaly(
+                kind: anomaly.kind,
+                severity: anomaly.severity,
+                subscriptionID: anomaly.subscriptionID,
+                merchant: anomaly.merchant,
+                currencyCode: anomaly.currencyCode,
+                expectedDate: anomaly.expectedDate,
+                actualDate: anomaly.actualDate?.addingTimeInterval(86_400)
+            )
+        }
+        reporter.check(
+            cycleDrift?.id != changedCycleDrift?.id,
+            "SubscriptionAnomaly fingerprints changed billing-cycle evidence"
+        )
+
         let thirtyDayPressure = summary.renewalPressure.first { $0.windowDays == 30 && $0.currencyCode == "USD" }
         reporter.check(thirtyDayPressure?.subscriptionCount == 2, "SubscriptionAnomalyDetector counts 30-day renewal pressure")
         reporter.check(abs((thirtyDayPressure?.totalAmount ?? 0) - 41.99) < 0.001, "SubscriptionAnomalyDetector totals upcoming renewal pressure")
@@ -3947,7 +3976,15 @@ struct OfflineRegression {
                 )
             ],
             defaultWriteLedgerID: "local-wallet",
-            subscriptionMetadata: BackupSubscriptionMetadata(notes: ["sample": "local"]),
+            subscriptionMetadata: BackupSubscriptionMetadata(
+                notes: ["sample": "local"],
+                anomalyDecisions: [
+                    "shared-anomaly": SubscriptionAnomalyDecisionRecord(
+                        disposition: .confirmed,
+                        updatedAt: Date(timeIntervalSince1970: 1_780_000_100)
+                    )
+                ]
+            ),
             appSettings: appSettings
         )
         let emptyRemote = LedgerConfigurationSyncPayload(
@@ -3996,7 +4033,19 @@ struct OfflineRegression {
                 )
             ],
             defaultWriteLedgerID: "remote-wallet",
-            subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: ["remote": 88]),
+            subscriptionMetadata: BackupSubscriptionMetadata(
+                annualPriceOverrides: ["remote": 88],
+                anomalyDecisions: [
+                    "shared-anomaly": SubscriptionAnomalyDecisionRecord(
+                        disposition: .ignored,
+                        updatedAt: Date(timeIntervalSince1970: 1_780_020_100)
+                    ),
+                    "remote-anomaly": SubscriptionAnomalyDecisionRecord(
+                        disposition: .confirmed,
+                        updatedAt: Date(timeIntervalSince1970: 1_780_020_200)
+                    )
+                ]
+            ),
             appSettings: appSettings
         )
         let merged = LedgerConfigurationSyncPolicy.merge(local: local, remote: remote)
@@ -4025,6 +4074,11 @@ struct OfflineRegression {
         reporter.check(
             merged.defaultWriteLedgerID == "remote-wallet",
             "LedgerConfigurationSyncPolicy syncs default write ledger"
+        )
+        reporter.check(
+            merged.subscriptionMetadata.anomalyDecisions["shared-anomaly"]?.disposition == .ignored &&
+                merged.subscriptionMetadata.anomalyDecisions["remote-anomaly"]?.disposition == .confirmed,
+            "LedgerConfigurationSyncPolicy merges subscription anomaly decisions by latest update"
         )
 
         let legacyConfigurationData = Data("""
@@ -4063,6 +4117,10 @@ struct OfflineRegression {
         reporter.check(
             legacyConfiguration?.merchantAliasDeletedKeys == [],
             "LedgerConfigurationSyncPayload decodes legacy payload without merchant alias tombstones"
+        )
+        reporter.check(
+            legacyConfiguration?.subscriptionMetadata.anomalyDecisions == [:],
+            "LedgerConfigurationSyncPayload decodes legacy metadata without subscription anomaly decisions"
         )
     }
 
@@ -6955,6 +7013,7 @@ struct OfflineRegression {
         try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         defer {
             UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
+            UserDefaults.standard.removeObject(forKey: "subscriptionAnomalyDecisions")
             try? FileManager.default.removeItem(at: rootURL)
         }
 
@@ -6963,6 +7022,7 @@ struct OfflineRegression {
         UserDefaults.standard.removeObject(forKey: "merchantAliases")
         UserDefaults.standard.removeObject(forKey: "subscriptionAnnualPriceOverrides")
         UserDefaults.standard.removeObject(forKey: "subscriptionNotes")
+        UserDefaults.standard.removeObject(forKey: "subscriptionAnomalyDecisions")
         UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
 
         let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
@@ -7084,6 +7144,7 @@ struct OfflineRegression {
         sourceLedger.upsertSubscription(subscription)
         UserDefaults.standard.set([subscription.id.uuidString: 168.0], forKey: "subscriptionAnnualPriceOverrides")
         UserDefaults.standard.set([subscription.id.uuidString: "年度价备注"], forKey: "subscriptionNotes")
+        sourceLedger.recordSubscriptionAnomalyDecision(id: "backup-anomaly", disposition: .confirmed)
 
         let bundle = try sourceLedger.makeBackupBundle()
         reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
@@ -7149,6 +7210,10 @@ struct OfflineRegression {
         reporter.check(bundle.customCategories == ["咖啡"], "BackupBundle includes custom categories")
         reporter.check(bundle.subscriptionMetadata.annualPriceOverrides[subscription.id.uuidString] == 168.0, "BackupBundle includes subscription annual price metadata")
         reporter.check(bundle.subscriptionMetadata.notes[subscription.id.uuidString] == "年度价备注", "BackupBundle includes subscription notes metadata")
+        reporter.check(
+            bundle.subscriptionMetadata.anomalyDecisions["backup-anomaly"]?.disposition == .confirmed,
+            "BackupBundle includes subscription anomaly decisions"
+        )
 
         let restoreStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "restore.sqlite3")
         let restoreLedger = LedgerStore(transactionStore: restoreStore)
@@ -7242,6 +7307,10 @@ struct OfflineRegression {
         reporter.check(restoreLedger.defaultWriteLedgerID == ledgerID, "Backup restore keeps default write ledger")
         let restoredSubscriptionNotes = UserDefaults.standard.dictionary(forKey: "subscriptionNotes") as? [String: String]
         reporter.check(restoredSubscriptionNotes?[subscription.id.uuidString] == "年度价备注", "Backup restore keeps subscription notes metadata")
+        reporter.check(
+            restoreLedger.subscriptionAnomalyDecisions["backup-anomaly"]?.disposition == .confirmed,
+            "Backup restore keeps subscription anomaly decisions"
+        )
     }
 
     private static func sameMinute(_ lhs: Date, _ rhs: Date) -> Bool {

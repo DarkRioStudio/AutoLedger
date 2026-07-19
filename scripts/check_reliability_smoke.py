@@ -31,6 +31,7 @@ REQUIRED_OFFLINE_SNIPPETS = [
     "BackupBundle preserves deleted sync tombstone",
     "BackupBundle includes subscription annual price metadata",
     "BackupBundle includes subscription notes metadata",
+    "BackupBundle includes subscription anomaly decisions",
     "Backup restore keeps active transaction",
     "Backup restore keeps transaction ledger id",
     "Backup restore keeps hotel stay transaction link",
@@ -46,6 +47,7 @@ REQUIRED_OFFLINE_SNIPPETS = [
     "Backup restore keeps merchant aliases",
     "Backup restore keeps category corrections",
     "Backup restore keeps subscription notes metadata",
+    "Backup restore keeps subscription anomaly decisions",
 ]
 
 REQUIRED_BACKUP_SNIPPETS = [
@@ -54,6 +56,7 @@ REQUIRED_BACKUP_SNIPPETS = [
     "public let deletedAt: Date?",
     "public let syncMetadata: TransactionSyncMetadata?",
     "public let subscriptionMetadata: BackupSubscriptionMetadata",
+    "public let anomalyDecisions: [String: SubscriptionAnomalyDecisionRecord]",
     "public let appSettings: BackupAppSettings",
     "public let hotelStayRecords: [HotelStayRecord]",
     "public let hotelStayDrafts: [HotelStayDraft]",

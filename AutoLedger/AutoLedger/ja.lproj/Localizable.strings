@@ -1545,6 +1545,8 @@
 "subscriptions.anomaly.billing_cycle_drift_format" = "%@ は %@ の予定でしたが、現在の記録は %@ です。";
 "subscriptions.anomaly.pressure" = "更新負担";
 "subscriptions.anomaly.pressure_format" = "今後 %d 日：%@、%d 件のサブスク。";
+"subscriptions.anomaly.confirm" = "確認済み";
+"subscriptions.anomaly.ignore" = "無視";
 
 // MARK: - Share Cards
 "share_card.monthly.entry_title" = "共有画像を作成";

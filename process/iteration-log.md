@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-18（ITER-435 ASC 1.6.0 发布材料与 build 绑定收口）
+更新日期：2026-07-19（ITER-439 订阅异常确认 / 忽略闭环）
 
 ## 记录规则
 
@@ -43,6 +43,79 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-439 订阅异常确认 / 忽略闭环
+- 日期：2026-07-19
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / Workflow Blocking Fix
+- 类型：Bugfix / 状态持久化 / iCloud 配置同步 / SwiftUI / 测试
+- 目标：修复订阅异常虽然进入统一待处理中心，但用户只能跳转查看、无法确认或忽略，导致同一异常持续重复出现的问题。
+- 改动范围：订阅异常稳定指纹的处理决定模型、`LedgerStore` 本机持久化与现有配置同步 / 备份载荷、待处理中心过滤、订阅页五语操作按钮、离线 / 静态回归、当前版本计划、CHANGELOG 与本日志。
+- 未改动范围：未建立 `v1.8.0` 完整通用待处理表或通用生命周期；未自动修改订阅金额、扣费日期、历史账单或异常来源；未修改 SQLite / CloudKit record schema、D1、Worker、StoreKit Product ID、Pro 权益、签名、ASC、版本号、构建号或 Xcode Cloud tag。
+- 完成内容：订阅异常行新增“已确认”和“忽略”操作；两种决定都只处理当前异常指纹并立即从订阅页和待处理中心移除，未来新交易或订阅字段变化产生新指纹时仍会重新提示，避免永久屏蔽真实新异常。
+- 完成内容：异常决定使用带更新时间的 `confirmed / ignored` 记录写入 UserDefaults，并加入 `BackupSubscriptionMetadata`；现有 CloudKit 配置 JSON 不新增字段或 record type，只在既有 payload 内增加可选数据，跨设备合并时同一异常采用更新时间较新的决定。
+- 完成内容：旧备份和旧 CloudKit 配置缺少异常决定字段时默认解码为空，不提高备份 schema version；远端配置拉取、手动备份恢复和本机决定都会刷新待处理快照。
+- 未完成内容：没有提供通用已处理历史、撤销列表、延后、批量操作或来源双向修改；这些仍属于 `v1.8.0` 通用待处理生命周期。尚未在替换 TestFlight 上做 iPhone / iPad 跨设备实测。
+- 测试情况：订阅异常 UI、待处理中心、CloudKit sync、可靠性 smoke、完整 `run_offline_regression.sh`、`git diff --check` 与 iOS generic workspace build 通过；新增回归覆盖异常指纹过滤、续费压力保留、旧配置兼容和按更新时间合并决定。构建只保留工程既有 Swift 6 迁移 / deprecated warning。
+- 风险与注意事项：“已确认”当前表示用户已核对本次信号，不会自动接受涨价、删除重复账单或调整周期；“忽略”也只针对当前指纹，新的扣费证据仍会提醒。配置 JSON 为向后兼容增量，但旧 App 不会理解或显示处理决定。
+- 回滚方式：回退异常决定模型、LedgerStore 持久化 / 同步字段、两个操作按钮和对应 smoke；旧客户端会忽略新增 JSON 字段，无需 CloudKit schema 回滚。
+- 结论：用户现在可以完成订阅异常的最小处理闭环，待处理中心不再把已确认或已忽略的同一异常永久重复计数。
+- 下一步建议：在替换 TestFlight 上分别确认一条异常和忽略另一条，返回待处理中心验证计数下降；再在 iPad 同步后确认两条均不复活。
+
+### ITER-438 订阅卡片下次扣费时间窄屏排版修复
+- 日期：2026-07-19
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / UI Blocking Fix
+- 类型：SwiftUI / 自适应布局 / 无障碍 / 测试
+- 目标：修复 iPhone 订阅管理卡片中“每月 · 下次扣费时间”在长商户名下被拆成三行的问题，并让周期信息向左对齐。
+- 改动范围：`SubscriptionListView` 订阅列表行与复用日期摘要、窄屏静态门禁、CHANGELOG 与本日志。
+- 未改动范围：未修改订阅模型、扣费日期计算、金额、状态、编辑 / 暂停 / 删除行为、本地化 key、SQLite / CloudKit / D1 schema、StoreKit、Worker、ASC、签名、entitlement、版本号、构建号或 Xcode Cloud tag。
+- 完成内容：卡片顶部改为商户 / 方案与金额 / 状态的双列布局；周期和下次扣费时间移至顶部内容下方的独立整行，从商户左边界开始显示，因此“每月”不再被日期换行挤到中间。
+- 完成内容：周期、分隔符和下次扣费时间合并为一个本地化摘要，保持单行并允许 `allowsTightening` 与最小 0.82 缩放；金额列使用布局优先级而非固定横向尺寸，避免破坏动态字体和无障碍布局。
+- 未完成内容：尚未在新 TestFlight 真机上对同一“海南有趣科技有限公司”样本截图复核；当前只完成代码、静态门禁和 generic iOS build。
+- 测试情况：`check_adaptive_layout_rules.py`、`check_accessibility_smoke.py`、`git diff --check` 与 iOS generic workspace build 通过；构建只保留工程既有并发 / deprecated warning。
+- 风险与注意事项：极端大号动态字体仍可能触发系统更高层级的列表行扩展，但不会再由三个独立 Text 产生交错断行；五语继续复用原本地化文案。
+- 回滚方式：回退 `SubscriptionListView` 的列表行结构和自适应 smoke 新断言即可；不涉及数据迁移。
+- 结论：截图中的日期错位已在布局层修复，下一替换 TestFlight 可与云端水单地址稳定性一起做真机 smoke。
+- 下一步建议：安装替换 TestFlight 后用同一长商户名检查简中界面，并快速切换繁中、英语、日语和韩语确认日期摘要没有截断。
+
+### ITER-437 云端水单刷新地址稳定性修复
+- 日期：2026-07-19
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / Blocking Fix
+- 类型：Bugfix / App-Worker 合同 / 生产诊断 / 测试 / 文档治理
+- 目标：定位并修复刷新云端水单时专属邮箱偶发变化，保证 access token 更新不会影响 routing inbox address，并让旧版本已经丢失的本地邮箱在首次刷新时自动恢复。
+- 改动范围：`HotelFolioInboxClient` Keychain / 邮箱持久化边界、云收件箱刷新 UI、folio Worker 候选列表响应与隐私安全领取日志、Worker 合同测试、云收件箱 smoke、当前状态、版本计划、CHANGELOG 与本日志。
+- 未改动范围：未修改用户水单、R2 PDF、D1 schema、SQLite / CloudKit schema、StoreKit Product ID、entitlement、签名、版本号、构建号、ASC 元数据 / 截图 / App Preview 或 Xcode Cloud tag；线上 D1 仅执行聚合和时间戳只读查询。
+- 完成内容：Cloudflare Workers Logs 还原 2026-07-19 05:30 现场链路：候选列表先返回 401，token claim 返回 200，随后 05:30:17 至 05:30:57 的候选列表请求均为 200。D1 只读查询确认被续签的 active 行创建于 2026-07-15，本次只更新 `updated_at`，没有创建新凭据或新地址。
+- 完成内容：根因是 `HotelFolioInboxTokenStore.saveToken()` 通过语义为“删除整套凭据”的 `deleteToken()` 替换 Keychain 值，连带删除了 `UserDefaults` 中真实邮箱；正常 200 刷新不会重新写回邮箱，UI 随即用独立 access token 拼出错误地址，而 401 续签会再次保存 Worker 返回的真实地址，因此表现为偶发变化。
+- 完成内容：Keychain token 的内部替换与用户删除整套凭据已拆分；App 不再从 access token 派生邮箱，只有真实 routing address 才能显示和复制。认证后的候选列表新增可选 `inboxEmail`，新版首次成功刷新会自动恢复旧版本已删掉的本地地址，旧 App 可忽略新增字段保持兼容。
+- 完成内容：Worker token claim 新增只记录 `reused / created` 的结构化日志，不记录邮箱、token、token hash、用户 ID 或交易标识；已部署 staging `bfaacd81-396a-435d-93a3-93e5a13df02b` 与 production `2b1dd061-648c-446b-bcce-45c5e12daf65`，两端 health 均返回正常。
+- 未完成内容：App 修复尚未提交、推送或触发替换 TestFlight；build `119` 已因本缺陷失去最终候选资格，ASC 当前 build relationship 尚未更新。
+- 测试情况：folio Worker 31 项 Vitest、Wrangler types、TypeScript、staging / production dry-run、云收件箱静态门禁、`git diff --check`、完整 `bash scripts/run_offline_regression.sh` 和 iOS generic workspace build 通过；Worker 两端部署和 production health 通过。构建只保留工程既有并发 / deprecated warning。
+- 风险与注意事项：Worker 合同新增字段向后兼容；真实地址仍只返回给持有有效 Bearer access token 的客户端。新 TestFlight 必须覆盖连续正常刷新和 401 自动续签，不能以 Worker 生产部署代替 App 真机验收。
+- 回滚方式：Worker 可回滚到上一 deployment；App 可回退本轮四个 runtime / smoke 文件。回滚会重新暴露旧版本邮箱丢失问题，不涉及数据迁移或 schema 回滚。
+- 结论：生产日志证明刚才的 Worker 续签本身没有换地址，App 本地凭据保存边界才是根因；代码、合同、生产 Worker 和自动恢复路径均已修复，发布门禁转为替换 TestFlight 真机 smoke。
+- 下一步建议：仅提交本轮修复与已经确认的宣传材料改动，推送 main 并移动 `xcbuild-v1.7.0`；替换构建安装后连续刷新至少 5 次，确认显示与复制地址稳定，再完成 ASC 重新绑定和提审前最终审计。
+
+### ITER-436 第一版宣传语、自定义产品页与渠道 Campaign
+- 日期：2026-07-18
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Materials / Promotion Preparation
+- 类型：ASC 线上操作 / 发布工具 / 官网部署 / 文档治理 / 测试
+- 目标：统一五语 App 描述与第一版推广文本，建立三张主题明确的自定义产品页和五个渠道 Campaign Link，并让官网使用同一宣传口径；保持不提审、不发布 App 版本。
+- 改动范围：`metadata.yml` 五语版本描述与推广文本、自定义产品页及截图顺序、Campaign 配置；ASC metadata / 自定义页 / 截图工具与 smoke；AutoLedger 官网五语 meta / hero 文案和 Cloudflare Pages 部署；项目状态、版本计划、CHANGELOG 与本日志。
+- 未改动范围：未修改 App / Worker runtime、默认产品页截图、App Preview、App Privacy 答案、订阅本地化、Review Notes、build relationship、用户数据、SQLite / CloudKit / D1 schema、StoreKit、签名、entitlement、版本号、构建号或 Xcode Cloud tag；未提交自定义产品页审核或 App 版本审核。
+- 完成内容：ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 五语 Promotional Text 与结构化 App Description 已按统一源文案写入；中文描述使用版本负责人给定全文，其余四语保持相同信息结构与本地优先 / 可选云端边界。
+- 完成内容：创建“截图与小票识别页”“酒店水单归档页”“本地优先与 Apple 生态页”三张自定义产品页，每页均有中简、中繁、美英、日、韩本地化，当前保持 `PREPARE_FOR_SUBMISSION`。最初从默认产品页模板复制的截图顺序与完整素材集合相同；本轮随后重建并裁剪 30 个受支持截图集，每页每语言仅保留各自主题的 iPhone 5 张 / iPad 4 张，分别以 OCR、酒店、Apple 生态为首屏，集合内容和顺序均不再相同，最终全量 dry-run 均为 ordered checksum match。Apple API 拒绝自定义产品页 Apple Watch display type，因此未创建不受支持的 Watch 截图集。
+- 完成内容：生成 Reddit、V2EX、SSPAI、Website、QRCode 五个 ASC Campaign Link；Campaign 名称与 provider token 进入 repo 配置，链接不包含 API credential。官网中简、中繁、美英、日、韩 meta description 与 hero lead 统一为同一宣传语，并以正确的 `public/autoledger` 目录部署到 Cloudflare Pages `autoledger-home`；正式域名缓存穿透 smoke 回读新首页和五语脚本。
+- 完成内容：新增 `asc_custom_product_pages.rb` 与 `asc_custom_product_page_screenshots.rb`；前者幂等创建 / 审计页面并输出 Campaign Link，后者先验证五语本地资产，只替换顺序不匹配的自定义页截图集，等待 `COMPLETE` 并验证有序 MD5。`asc_metadata.rb` 新增 App Info、Review Notes、订阅分区跳过参数，避免推广文案写入扩大到无关 ASC 字段。
+- 未完成内容：三张自定义产品页尚未提交审核或获得批准，因此自定义 URL 还不能作为正式可见落地页；Campaign / 自定义页 Analytics 尚无真实渠道样本。
+- 测试情况：三页五语共 30 个 iPhone / iPad 自定义截图集全量 API dry-run 均为 `SKIP ordered checksums match`，页面 version 均为 `PREPARE_FOR_SUBMISSION`；四平台五语版本文案最终 dry-run 全部 already matches source。Ruby 语法、ASC metadata-as-code smoke、YAML 长度检查、官网 `node --check`、正式域名 cache-bust smoke、`git diff --check` 和完整 `bash scripts/run_offline_regression.sh` 通过；完整回归仅保留既有 `AppFormatters` warning，首次沙箱运行因系统 ModuleCache 无写权限失败，授权环境原命令重跑通过。
+- 风险与注意事项：自定义产品页必须另行提交并获批后才会公开；Campaign 与自定义页分析需达到 Apple 隐私阈值后才显示。官网旧 `marketing.js` 无查询参数时可能短时命中边缘缓存，带 cache-bust 已确认新部署内容；不使用“零上传”等绝对隐私表述。
+- 回滚方式：ASC 文案可由 repo 旧配置定点写回；自定义截图可按旧顺序重建；草稿自定义页可在未提审时删除；官网可从上一 Cloudflare Pages deployment 回滚。未发生提审或 App 发布。
+- 结论：第一版宣传文案、三张差异化自定义产品页、五个渠道 Campaign Link 与官网已完成可审计准备；下一外部状态门禁是单独决定是否提交三张自定义产品页审核。
+- 下一步建议：先在 ASC 人工预览三张页面的各语言首屏与裁切，再单独确认是否提交自定义产品页审核；获批后再把渠道 Campaign 与对应 `ppid` 落地页组合投入 Reddit、V2EX、少数派、官网和二维码。
 
 ### ITER-435 ASC 1.6.0 发布材料与 build 绑定收口
 - 日期：2026-07-18

@@ -91,6 +91,14 @@ describe("hotel folio inbox worker contract", () => {
     expect(testInternals.inboxEmailForToken(credentials.routingToken)).not.toContain(credentials.accessToken);
   });
 
+  it("returns the authenticated routing address with candidate lists", () => {
+    const inboxEmail = "folio+routing-token@getautoledger.app";
+    expect(testInternals.candidateListEnvelope([{ id: "candidate-1" }], inboxEmail)).toEqual({
+      candidates: [{ id: "candidate-1" }],
+      inboxEmail
+    });
+  });
+
   it("normalizes client identifiers before token provisioning", () => {
     expect(testInternals.normalizeClientID(" Device:ABC-123_ / extra ")).toBe("deviceabc-123_extra");
     expect(testInternals.normalizeClientID("")).toBe("");

@@ -23,6 +23,9 @@ def main() -> int:
     require(view, "AutoLedgerProView()", "SubscriptionListView", failures)
     require(view, '"subscriptions.anomaly.title"', "SubscriptionListView", failures)
     require(view, '"subscriptions.anomaly.pressure_format"', "SubscriptionListView", failures)
+    require(view, "recordSubscriptionAnomalyDecision", "SubscriptionListView", failures)
+    require(view, ".confirmed", "SubscriptionListView", failures)
+    require(view, ".ignored", "SubscriptionListView", failures)
 
     for locale in ["zh-Hans", "zh-Hant", "en", "ja", "ko"]:
         strings = (APP / f"{locale}.lproj" / "Localizable.strings").read_text(encoding="utf-8")
@@ -38,6 +41,8 @@ def main() -> int:
             "subscriptions.anomaly.billing_cycle_drift_format",
             "subscriptions.anomaly.pressure",
             "subscriptions.anomaly.pressure_format",
+            "subscriptions.anomaly.confirm",
+            "subscriptions.anomaly.ignore",
         ]:
             require(strings, f'"{key}"', f"{locale} Localizable.strings", failures)
 

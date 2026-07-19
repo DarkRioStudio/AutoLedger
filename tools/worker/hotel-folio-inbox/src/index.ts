@@ -343,7 +343,7 @@ export async function routeFetch(request: Request, env: Env): Promise<Response> 
 
   if (request.method === "GET" && url.pathname === "/v1/cloud-hotel-folio-candidates") {
     const rows = await listCandidates(env, auth.token.token_hash);
-    return json({ candidates: rows.map(candidateDTO) }, env);
+    return json(candidateListEnvelope(rows.map(candidateDTO), auth.token.inbox_email), env);
   }
 
   if (request.method === "POST" && url.pathname === "/v1/cloud-hotel-folio-devices") {
@@ -615,6 +615,7 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
       )
         .bind(userID, proExpiresAt, now, existingAccessTokenHash)
         .run();
+      console.info({ event: "cloud_folio_token_claim", result: "reused" });
       return json({
         token: existingAccessToken,
         inboxEmail: existing.inbox_email,
@@ -660,6 +661,7 @@ async function claimInboxToken(request: Request, env: Env): Promise<Response> {
     status: "active",
     proExpiresAt
   };
+  console.info({ event: "cloud_folio_token_claim", result: "created" });
   return json(payload, env, 201);
 }
 
@@ -2602,6 +2604,13 @@ function candidateDTO(row: CandidateRow): CloudHotelFolioCandidateDTO {
   };
 }
 
+function candidateListEnvelope<T>(candidates: T[], inboxEmail: string): {
+  candidates: T[];
+  inboxEmail: string;
+} {
+  return { candidates, inboxEmail };
+}
+
 function candidatePDFInputs(
   parsed: { attachments: Array<{ filename?: string | null; mimeType?: string | null; content?: unknown }>; text?: string | null; html?: string | null },
   subject: string | null
@@ -2884,6 +2893,7 @@ export const testInternals = {
   isPDFAttachment,
   isVisibleInboxCandidateStatus,
   candidateDTO,
+  candidateListEnvelope,
   makeAPNSNotificationBody,
   notificationPayloadFromQueueBody,
   retentionDate,

@@ -217,9 +217,13 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var ignoredDataCleaningPreviewIDs: Set<String> = [] {
         didSet { dataCleaningRevision &+= 1 }
     }
+    @Published private(set) var subscriptionAnomalyDecisions: [String: SubscriptionAnomalyDecisionRecord] = [:] {
+        didSet { subscriptionAnomalyDecisionRevision &+= 1 }
+    }
 
     private(set) var dataCleaningRevision: UInt64 = 0
     private(set) var visibleTransactionsRevision: UInt64 = 0
+    private(set) var subscriptionAnomalyDecisionRevision: UInt64 = 0
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -326,6 +330,7 @@ final class LedgerStore: ObservableObject {
             : [:]
         self.merchantAliasDeletedKeys = loadsPersistedConfiguration ? Self.loadMerchantAliasDeletedKeys() : []
         self.ignoredDataCleaningPreviewIDs = loadsPersistedConfiguration ? Self.loadIgnoredDataCleaningPreviewIDs() : []
+        self.subscriptionAnomalyDecisions = loadsPersistedConfiguration ? Self.loadSubscriptionAnomalyDecisions() : [:]
         let initialLedgerProfiles = loadsPersistedConfiguration && !shouldDeferSQLiteStateHydration
             ? LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
             : [LedgerProfile.defaultLocal()]
@@ -516,6 +521,25 @@ final class LedgerStore: ObservableObject {
             return
         }
         persistIgnoredDataCleaningPreviewIDs()
+    }
+
+    func recordSubscriptionAnomalyDecision(
+        id: String,
+        disposition: SubscriptionAnomalyDisposition
+    ) {
+        let trimmedID = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedID.isEmpty else { return }
+        subscriptionAnomalyDecisions[trimmedID] = SubscriptionAnomalyDecisionRecord(
+            disposition: disposition
+        )
+        persistSubscriptionAnomalyDecisions()
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+    }
+
+    func unresolvedSubscriptionAnomalySummary(_ summary: SubscriptionAnomalySummary) -> SubscriptionAnomalySummary {
+        summary.filteringHandledAnomalies(withIDs: Set(subscriptionAnomalyDecisions.keys))
     }
 
     var targetLedgerIDForNewTransactions: String {
@@ -3344,6 +3368,22 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(ignoredDataCleaningPreviewIDs.sorted(), forKey: Self.ignoredDataCleaningPreviewIDsKey)
     }
 
+    private static func loadSubscriptionAnomalyDecisions() -> [String: SubscriptionAnomalyDecisionRecord] {
+        guard let data = UserDefaults.standard.data(forKey: Self.subscriptionAnomalyDecisionsKey),
+              let decisions = try? JSONDecoder().decode(
+                  [String: SubscriptionAnomalyDecisionRecord].self,
+                  from: data
+              ) else {
+            return [:]
+        }
+        return decisions
+    }
+
+    private func persistSubscriptionAnomalyDecisions() {
+        guard let data = try? JSONEncoder().encode(subscriptionAnomalyDecisions) else { return }
+        UserDefaults.standard.set(data, forKey: Self.subscriptionAnomalyDecisionsKey)
+    }
+
     private static func loadDataCleaningApplicationHistory() -> [DataCleaningApplicationHistoryEntry] {
         guard let data = UserDefaults.standard.data(forKey: Self.dataCleaningApplicationHistoryKey),
               let entries = try? JSONDecoder().decode([DataCleaningApplicationHistoryEntry].self, from: data) else {
@@ -3581,6 +3621,7 @@ extension LedgerStore {
     private static let hotelStayDraftTombstonesKey = "hotelStayDraftCloudTombstones"
     private static let merchantAliasDeletedKeysKey = "merchantAliasDeletedKeys"
     private static let ignoredDataCleaningPreviewIDsKey = "ignoredDataCleaningPreviewIDs"
+    private static let subscriptionAnomalyDecisionsKey = "subscriptionAnomalyDecisions"
     private static let dataCleaningApplicationHistoryKey = "dataCleaningApplicationHistory"
     private static let dataCleaningApplicationHistoryLimit = 20
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
@@ -3685,7 +3726,11 @@ extension LedgerStore {
             merchantAliases: merchantAliases,
             ledgerProfiles: ledgerProfiles,
             defaultWriteLedgerID: defaultWriteLedgerID,
-            subscriptionMetadata: BackupSubscriptionMetadata(annualPriceOverrides: annualPrices, notes: subscriptionNotes),
+            subscriptionMetadata: BackupSubscriptionMetadata(
+                annualPriceOverrides: annualPrices,
+                notes: subscriptionNotes,
+                anomalyDecisions: subscriptionAnomalyDecisions
+            ),
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
                 monthlyAnomalyThresholdPercent: UserDefaults.standard.double(forKey: "monthlyAnomalyThresholdPercent"),
@@ -4579,6 +4624,8 @@ extension LedgerStore {
         persistMerchantAliasDeletedKeys()
         UserDefaults.standard.set(merged.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
         UserDefaults.standard.set(merged.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
+        subscriptionAnomalyDecisions = merged.subscriptionMetadata.anomalyDecisions
+        persistSubscriptionAnomalyDecisions()
         UserDefaults.standard.set(merged.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
         UserDefaults.standard.set(merged.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
         UserDefaults.standard.set(merged.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
@@ -4627,7 +4674,8 @@ extension LedgerStore {
             defaultWriteLedgerID: defaultWriteLedgerID,
             subscriptionMetadata: BackupSubscriptionMetadata(
                 annualPriceOverrides: annualPrices,
-                notes: subscriptionNotes
+                notes: subscriptionNotes,
+                anomalyDecisions: subscriptionAnomalyDecisions
             ),
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
@@ -4832,6 +4880,8 @@ extension LedgerStore {
         UserDefaults.standard.set(merchantAliases, forKey: "merchantAliases")
         UserDefaults.standard.set(bundle.subscriptionMetadata.annualPriceOverrides, forKey: Self.annualPriceKey)
         UserDefaults.standard.set(bundle.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
+        subscriptionAnomalyDecisions = bundle.subscriptionMetadata.anomalyDecisions
+        persistSubscriptionAnomalyDecisions()
         UserDefaults.standard.set(bundle.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
         UserDefaults.standard.set(bundle.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
         UserDefaults.standard.set(bundle.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")

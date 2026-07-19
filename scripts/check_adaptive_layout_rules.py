@@ -118,6 +118,8 @@ REQUIRED_SNIPPETS = {
         "isPresented: $isPresentingPhotoPicker",
         "uploadSubscriptionScreenshot()",
         "SubscriptionThemedIconButton",
+        "subscriptionScheduleLabel(sub)",
+        ".allowsTightening(true)",
         "autoLedgerListChrome",
         "autoLedgerFormChrome",
     ],

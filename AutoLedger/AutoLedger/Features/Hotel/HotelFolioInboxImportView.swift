@@ -206,7 +206,7 @@ struct HotelFolioInboxImportView: View {
 
     private var addressSection: some View {
         Section {
-            if settings.normalizedToken.isEmpty {
+            if settings.inboxAddress.isEmpty {
                 Label {
                     Text("hotel_stay.cloud_inbox.address_not_claimed")
                         .font(.body.weight(.semibold))
@@ -242,7 +242,7 @@ struct HotelFolioInboxImportView: View {
                     titleKey: "hotel_stay.cloud_inbox.copy_address",
                     systemImage: "doc.on.doc",
                     isPrimary: false,
-                    isDisabled: settings.normalizedToken.isEmpty
+                    isDisabled: settings.inboxAddress.isEmpty
                 ) {
                     copyInboxAddress()
                 }
@@ -458,6 +458,7 @@ struct HotelFolioInboxImportView: View {
 
     private func copyInboxAddress() {
         #if canImport(UIKit)
+        guard !settings.inboxAddress.isEmpty else { return }
         UIPasteboard.general.string = settings.inboxAddress
         statusMessage = String(localized: "hotel_stay.cloud_inbox.status.address_copied")
         #endif
@@ -492,7 +493,11 @@ struct HotelFolioInboxImportView: View {
             token = settings.normalizedToken
             let fetched: [CloudHotelFolioCandidate]
             do {
-                fetched = try await client.listCandidates(settings: settings)
+                let response = try await client.listCandidates(settings: settings)
+                if let inboxEmail = response.inboxEmail {
+                    HotelFolioInboxSettings.saveInboxEmail(inboxEmail)
+                }
+                fetched = response.candidates
             } catch where HotelFolioInboxClient.isUnauthorized(error) {
                 let claim = try await client.claimInboxToken(
                     settings: settings,
@@ -506,7 +511,11 @@ struct HotelFolioInboxImportView: View {
                 try renewedSettings.save()
                 HotelFolioInboxSettings.saveInboxEmail(claim.inboxEmail)
                 token = renewedToken
-                fetched = try await client.listCandidates(settings: renewedSettings)
+                let response = try await client.listCandidates(settings: renewedSettings)
+                if let inboxEmail = response.inboxEmail {
+                    HotelFolioInboxSettings.saveInboxEmail(inboxEmail)
+                }
+                fetched = response.candidates
                 recordCloudInboxDebug("云端酒店水单收件箱：凭据已自动续签并重试")
             }
             candidates = fetched

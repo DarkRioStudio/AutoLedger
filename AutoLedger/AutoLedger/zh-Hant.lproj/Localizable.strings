@@ -1548,6 +1548,8 @@
 "subscriptions.anomaly.billing_cycle_drift_format" = "%@ 預計 %@，目前記錄為 %@。";
 "subscriptions.anomaly.pressure" = "續費壓力";
 "subscriptions.anomaly.pressure_format" = "未來 %d 天：%@，共 %d 個訂閱。";
+"subscriptions.anomaly.confirm" = "已確認";
+"subscriptions.anomaly.ignore" = "忽略";
 
 // MARK: - Share Cards
 "share_card.monthly.entry_title" = "產生分享圖";

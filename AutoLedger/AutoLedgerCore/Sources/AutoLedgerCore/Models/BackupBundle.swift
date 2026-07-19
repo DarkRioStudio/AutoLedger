@@ -304,10 +304,32 @@ public struct BackupCategoryCorrection: Codable, Equatable, Sendable {
 public struct BackupSubscriptionMetadata: Codable, Equatable, Sendable {
     public let annualPriceOverrides: [String: Double]
     public let notes: [String: String]
+    public let anomalyDecisions: [String: SubscriptionAnomalyDecisionRecord]
 
-    public init(annualPriceOverrides: [String: Double] = [:], notes: [String: String] = [:]) {
+    public init(
+        annualPriceOverrides: [String: Double] = [:],
+        notes: [String: String] = [:],
+        anomalyDecisions: [String: SubscriptionAnomalyDecisionRecord] = [:]
+    ) {
         self.annualPriceOverrides = annualPriceOverrides
         self.notes = notes
+        self.anomalyDecisions = anomalyDecisions
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case annualPriceOverrides
+        case notes
+        case anomalyDecisions
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        annualPriceOverrides = try container.decodeIfPresent([String: Double].self, forKey: .annualPriceOverrides) ?? [:]
+        notes = try container.decodeIfPresent([String: String].self, forKey: .notes) ?? [:]
+        anomalyDecisions = try container.decodeIfPresent(
+            [String: SubscriptionAnomalyDecisionRecord].self,
+            forKey: .anomalyDecisions
+        ) ?? [:]
     }
 }
 

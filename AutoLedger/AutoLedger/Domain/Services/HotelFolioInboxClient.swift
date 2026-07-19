@@ -52,9 +52,7 @@ struct HotelFolioInboxSettings: Equatable, Sendable {
     var inboxAddress: String {
         let stored = UserDefaults.standard.string(forKey: Self.inboxEmailKey)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return stored?.isEmpty == false
-            ? stored!
-            : HotelCloudFolioInboxAddress(token: normalizedToken).emailAddress
+        return stored?.isEmpty == false ? stored! : ""
     }
 
     var canRequest: Bool {
@@ -106,6 +104,11 @@ struct HotelFolioInboxTokenClaim: Equatable, Sendable {
 
 extension HotelFolioInboxTokenClaim: Decodable {}
 
+struct HotelFolioInboxCandidateList: Equatable, Sendable {
+    var candidates: [CloudHotelFolioCandidate]
+    var inboxEmail: String?
+}
+
 enum HotelFolioInboxTokenStore {
     private static let service = "top.darkrio326.AutoLedger.hotelFolioInbox"
     private static let account = "inboxToken"
@@ -113,7 +116,7 @@ enum HotelFolioInboxTokenStore {
     static func saveToken(_ value: String) throws {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        deleteToken()
+        deleteKeychainToken()
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -148,13 +151,17 @@ enum HotelFolioInboxTokenStore {
     }
 
     static func deleteToken() {
+        deleteKeychainToken()
+        UserDefaults.standard.removeObject(forKey: HotelFolioInboxSettings.inboxEmailKey)
+    }
+
+    private static func deleteKeychainToken() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account
         ]
         SecItemDelete(query as CFDictionary)
-        UserDefaults.standard.removeObject(forKey: HotelFolioInboxSettings.inboxEmailKey)
     }
 }
 
@@ -165,6 +172,7 @@ struct HotelFolioInboxClient: Sendable {
 
     private struct CandidateListResponse: Decodable {
         var candidates: [CloudHotelFolioCandidate]
+        var inboxEmail: String?
     }
 
     private struct StatusUpdatePayload: Encodable {
@@ -226,16 +234,19 @@ struct HotelFolioInboxClient: Sendable {
         return claim
     }
 
-    func listCandidates(settings: HotelFolioInboxSettings) async throws -> [CloudHotelFolioCandidate] {
+    func listCandidates(settings: HotelFolioInboxSettings) async throws -> HotelFolioInboxCandidateList {
         let request = try makeRequest(
             path: "/v1/cloud-hotel-folio-candidates",
             settings: settings
         )
         let data = try await data(for: request)
-        return try decoder
-            .decode(CandidateListResponse.self, from: data)
-            .candidates
-            .filter(\.isVisibleInInboxImportList)
+        let response = try decoder.decode(CandidateListResponse.self, from: data)
+        return HotelFolioInboxCandidateList(
+            candidates: response.candidates.filter(\.isVisibleInInboxImportList),
+            inboxEmail: response.inboxEmail?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+        )
     }
 
     func downloadPDF(candidate: CloudHotelFolioCandidate, settings: HotelFolioInboxSettings) async throws -> Data {

@@ -14,6 +14,10 @@ For v1.7.0 and later, the preferred flow is metadata-as-code:
 4. Run `push-config --apply` only after the diff is expected.
 5. Run `audit` again before submitting the version.
 
+Use `--skip-app-info`, `--skip-review-notes`, or `--skip-subscriptions` when a release-material change is intentionally limited to version-localized fields.
+
+`asc_custom_product_pages.rb` creates configured custom product pages from the current iOS version, audits existing drafts, and prints stable Campaign Links. It never submits a page for review.
+
 ## Credentials
 
 Do not commit `.p8` keys or `.env` files. Provide credentials through your shell:
@@ -238,6 +242,46 @@ failures. After upload, the tool waits for every screenshot checksum and
 `assetDeliveryState=COMPLETE`; rerunning while Apple is still processing an
 already complete-sized set waits instead of deleting it. Rerun the same command
 after any terminal failure to reconcile by MD5.
+
+## Create Custom Product Pages And Campaign Links
+
+Define `custom_product_pages` and `campaign_links` in `metadata.yml`, then dry-run first:
+
+```bash
+ruby tools/asc-metadata/asc_custom_product_pages.rb \
+  --app-id 6761892533 \
+  --version 1.6.0
+```
+
+Create only missing pages after reviewing the localized copy:
+
+```bash
+ruby tools/asc-metadata/asc_custom_product_pages.rb \
+  --app-id 6761892533 \
+  --version 1.6.0 \
+  --apply
+```
+
+The tool clones the editable iOS product page as the visual template, adds all configured localizations in one API request, and leaves each page editable. Existing page names are audited instead of recreated. Campaign data appears after Apple's privacy threshold is met.
+
+Because cloning also copies the template screenshot order, define a distinct
+`screenshots` order for every page and reconcile it before review submission:
+
+```bash
+ruby tools/asc-metadata/asc_custom_product_page_screenshots.rb \
+  --app-id 6761892533
+
+ruby tools/asc-metadata/asc_custom_product_page_screenshots.rb \
+  --app-id 6761892533 \
+  --apply
+```
+
+The screenshot tool validates all five-language assets before making remote
+changes, trims an already-matching prefix when a page uses a focused subset,
+replaces other nonmatching custom-page screenshot sets, waits for every asset
+to reach `COMPLETE`, and verifies the ordered MD5 list. `--page`,
+`--locale`, and `--display iphone|ipad` can be repeated for a scoped run.
+It never submits a custom product page for review.
 
 ## Upload App Preview
 

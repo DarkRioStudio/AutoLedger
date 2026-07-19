@@ -1545,6 +1545,8 @@
 "subscriptions.anomaly.billing_cycle_drift_format" = "%@ was expected on %@, current record is %@.";
 "subscriptions.anomaly.pressure" = "Renewal pressure";
 "subscriptions.anomaly.pressure_format" = "Next %d days: %@ across %d subscriptions.";
+"subscriptions.anomaly.confirm" = "Reviewed";
+"subscriptions.anomaly.ignore" = "Ignore";
 
 // MARK: - Share Cards
 "share_card.monthly.entry_title" = "Create share image";

@@ -12,6 +12,21 @@ public enum SubscriptionAnomalySeverity: String, Codable, Sendable {
     case critical
 }
 
+public enum SubscriptionAnomalyDisposition: String, Codable, Sendable {
+    case confirmed
+    case ignored
+}
+
+public struct SubscriptionAnomalyDecisionRecord: Codable, Equatable, Sendable {
+    public let disposition: SubscriptionAnomalyDisposition
+    public let updatedAt: Date
+
+    public init(disposition: SubscriptionAnomalyDisposition, updatedAt: Date = .now) {
+        self.disposition = disposition
+        self.updatedAt = updatedAt
+    }
+}
+
 public struct SubscriptionAnomaly: Identifiable, Codable, Equatable, Sendable {
     public let kind: SubscriptionAnomalyKind
     public let severity: SubscriptionAnomalySeverity
@@ -26,11 +41,16 @@ public struct SubscriptionAnomaly: Identifiable, Codable, Equatable, Sendable {
     public let detectedAt: Date
 
     public var id: String {
-        [
+        var components = [
             kind.rawValue,
             subscriptionID.uuidString,
             relatedTransactionIDs.map(\.uuidString).joined(separator: "-")
-        ].joined(separator: ":")
+        ]
+        if kind == .billingCycleDrift {
+            components.append(expectedDate.map { String(Int($0.timeIntervalSince1970)) } ?? "none")
+            components.append(actualDate.map { String(Int($0.timeIntervalSince1970)) } ?? "none")
+        }
+        return components.joined(separator: ":")
     }
 
     public init(
@@ -87,6 +107,14 @@ public struct SubscriptionAnomalySummary: Codable, Equatable, Sendable {
     public init(anomalies: [SubscriptionAnomaly], renewalPressure: [SubscriptionRenewalPressure]) {
         self.anomalies = anomalies
         self.renewalPressure = renewalPressure
+    }
+
+    public func filteringHandledAnomalies(withIDs handledIDs: Set<String>) -> SubscriptionAnomalySummary {
+        guard !handledIDs.isEmpty else { return self }
+        return SubscriptionAnomalySummary(
+            anomalies: anomalies.filter { !handledIDs.contains($0.id) },
+            renewalPressure: renewalPressure
+        )
     }
 }
 

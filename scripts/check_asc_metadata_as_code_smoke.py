@@ -38,6 +38,10 @@ def main() -> int:
     preview_uploader = preview_uploader_path.read_text(encoding="utf-8") if preview_uploader_path.exists() else ""
     build_binder_path = TOOL / "asc_build_bind.rb"
     build_binder = build_binder_path.read_text(encoding="utf-8") if build_binder_path.exists() else ""
+    custom_pages_path = TOOL / "asc_custom_product_pages.rb"
+    custom_pages = custom_pages_path.read_text(encoding="utf-8") if custom_pages_path.exists() else ""
+    custom_page_screenshots_path = TOOL / "asc_custom_product_page_screenshots.rb"
+    custom_page_screenshots = custom_page_screenshots_path.read_text(encoding="utf-8") if custom_page_screenshots_path.exists() else ""
     readme = (TOOL / "README.md").read_text(encoding="utf-8")
     config_path = TOOL / "metadata.yml"
 
@@ -76,6 +80,8 @@ def main() -> int:
         "--source-version",
         "--output",
         "--skip-app-info",
+        "--skip-review-notes",
+        "--skip-subscriptions",
         "--shared-create-only",
         "--locale",
         "metadata.yml",
@@ -85,6 +91,8 @@ def main() -> int:
         "asc_app_preview_upload.rb",
         "videoDeliveryState",
         "asc_build_bind.rb",
+        "asc_custom_product_pages.rb",
+        "asc_custom_product_page_screenshots.rb",
     ]:
         require(readme, snippet, "ASC metadata README", failures)
 
@@ -103,11 +111,38 @@ def main() -> int:
         "top.darkrio326.AutoLedger.pro.monthly",
         "top.darkrio326.AutoLedger.pro.yearly",
         "ko:",
+        "custom_product_pages:",
+        "campaign_links:",
+        "screenshots:",
     ]:
         require(config, snippet, "metadata.yml", failures)
 
     for locale in ["zh-Hans", "zh-Hant", "en-US", "ja", "ko"]:
         require(config, f"{locale}:", "metadata.yml", failures)
+
+    for snippet in [
+        "appCustomProductPages",
+        "appCustomProductPageVersions",
+        "appCustomProductPageLocalizations",
+        "appStoreVersionTemplate",
+        "DRY-RUN",
+        "Campaign Links",
+        "--apply",
+    ]:
+        require(custom_pages, snippet, "ASC custom product pages", failures)
+
+    for snippet in [
+        "appCustomProductPageLocalizations",
+        "appScreenshotSets",
+        "appScreenshots",
+        "APP_IPHONE_65",
+        "APP_IPAD_PRO_3GEN_129",
+        "ordered checksums match",
+        "wait_for_set",
+        "PREPARE_FOR_SUBMISSION",
+        "--apply",
+    ]:
+        require(custom_page_screenshots, snippet, "ASC custom page screenshot uploader", failures)
 
     for snippet in [
         "TRANSIENT_HTTP_CODES",

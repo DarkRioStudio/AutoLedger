@@ -233,7 +233,11 @@ public enum LedgerConfigurationSyncPolicy {
                     local.subscriptionMetadata.annualPriceOverrides,
                     remote.subscriptionMetadata.annualPriceOverrides
                 ),
-                notes: mergeDictionaries(local.subscriptionMetadata.notes, remote.subscriptionMetadata.notes)
+                notes: mergeDictionaries(local.subscriptionMetadata.notes, remote.subscriptionMetadata.notes),
+                anomalyDecisions: mergeSubscriptionAnomalyDecisions(
+                    local.subscriptionMetadata.anomalyDecisions,
+                    remote.subscriptionMetadata.anomalyDecisions
+                )
             ),
             appSettings: remote.appSettings
         )
@@ -398,6 +402,23 @@ public enum LedgerConfigurationSyncPolicy {
         return merged
     }
 
+    private static func mergeSubscriptionAnomalyDecisions(
+        _ local: [String: SubscriptionAnomalyDecisionRecord],
+        _ remote: [String: SubscriptionAnomalyDecisionRecord]
+    ) -> [String: SubscriptionAnomalyDecisionRecord] {
+        var merged = local
+        for (id, remoteDecision) in remote {
+            guard let localDecision = merged[id] else {
+                merged[id] = remoteDecision
+                continue
+            }
+            if remoteDecision.updatedAt >= localDecision.updatedAt {
+                merged[id] = remoteDecision
+            }
+        }
+        return merged
+    }
+
     private static func mergeMerchantAliases(
         _ local: [String: String],
         _ remote: [String: String],
@@ -435,7 +456,8 @@ public extension LedgerConfigurationSyncPayload {
             } ||
             (defaultWriteLedgerID != nil && defaultWriteLedgerID != TodaySpendingSummary.defaultLedgerID) ||
             !subscriptionMetadata.annualPriceOverrides.isEmpty ||
-            !subscriptionMetadata.notes.isEmpty
+            !subscriptionMetadata.notes.isEmpty ||
+            !subscriptionMetadata.anomalyDecisions.isEmpty
     }
 }
 

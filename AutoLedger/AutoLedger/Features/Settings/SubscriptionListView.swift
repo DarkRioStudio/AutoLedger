@@ -164,9 +164,11 @@ struct SubscriptionListView: View {
     }
 
     private var subscriptionAnomalySummary: SubscriptionAnomalySummary {
-        SubscriptionAnomalyDetector().analyze(
-            subscriptions: scopedSubscriptions,
-            transactions: store.visibleTransactions
+        store.unresolvedSubscriptionAnomalySummary(
+            SubscriptionAnomalyDetector().analyze(
+                subscriptions: scopedSubscriptions,
+                transactions: store.visibleTransactions
+            )
         )
     }
 
@@ -250,6 +252,30 @@ struct SubscriptionListView: View {
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
                     .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 10) {
+                    Button("subscriptions.anomaly.confirm") {
+                        store.recordSubscriptionAnomalyDecision(
+                            id: anomaly.id,
+                            disposition: .confirmed
+                        )
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.accent)
+                    .frame(minHeight: 44)
+
+                    Button("subscriptions.anomaly.ignore") {
+                        store.recordSubscriptionAnomalyDecision(
+                            id: anomaly.id,
+                            disposition: .ignored
+                        )
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.mutedInk)
+                    .frame(minHeight: 44)
+                }
+                .font(.caption.weight(.semibold))
+                .padding(.top, 4)
             }
         }
         .padding(.vertical, 6)
@@ -413,48 +439,65 @@ struct SubscriptionListView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(sub.merchant)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.ink)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(sub.merchant)
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
 
-                if !sub.planName.isEmpty {
-                    Text(sub.planName)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.mutedInk)
+                        if !sub.planName.isEmpty {
+                            Text(sub.planName)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.mutedInk)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(AppFormatters.currency(sub.amount, code: sub.currencyCode))
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                            .lineLimit(1)
+
+                        Text(sub.status.title)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(statusTint(for: sub.status))
+
+                        if highlight {
+                            Text(daysUntil(sub.nextChargedAt))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(AppTheme.accentSecondary))
+                        }
+                    }
+                    .layoutPriority(2)
                 }
 
-                HStack(spacing: 8) {
-                    Text(sub.period.title)
-                    Text("·")
-                    Text(String(format: String(localized: "subscriptions.next_charge_format"), AppFormatters.shortDateTime(sub.nextChargedAt)))
-                }
-                .font(.caption)
-                .foregroundStyle(AppTheme.mutedInk)
+                subscriptionScheduleLabel(sub)
             }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(AppFormatters.currency(sub.amount, code: sub.currencyCode))
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(AppTheme.ink)
-
-                Text(sub.status.title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(statusTint(for: sub.status))
-
-                if highlight {
-                    Text(daysUntil(sub.nextChargedAt))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(AppTheme.accentSecondary))
-                }
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .opacity(sub.status.isActive ? 1 : 0.72)
+    }
+
+    private func subscriptionScheduleLabel(_ sub: Subscription) -> some View {
+        Text(
+            "\(sub.period.title) · "
+                + String(
+                    format: String(localized: "subscriptions.next_charge_format"),
+                    AppFormatters.shortDateTime(sub.nextChargedAt)
+                )
+        )
+        .font(.caption)
+        .foregroundStyle(AppTheme.mutedInk)
+        .lineLimit(1)
+        .minimumScaleFactor(0.82)
+        .allowsTightening(true)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -643,13 +686,7 @@ struct SubscriptionListView: View {
                         .foregroundStyle(AppTheme.mutedInk)
                 }
 
-                HStack(spacing: 8) {
-                    Text(sub.period.title)
-                    Text("·")
-                    Text(String(format: String(localized: "subscriptions.next_charge_format"), AppFormatters.shortDateTime(sub.nextChargedAt)))
-                }
-                .font(.caption)
-                .foregroundStyle(AppTheme.mutedInk)
+                subscriptionScheduleLabel(sub)
             }
 
             Spacer()

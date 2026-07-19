@@ -278,6 +278,8 @@ module ASCMetadata
         source_version: nil,
         output_path: nil,
         skip_app_info: false,
+        skip_review_notes: false,
+        skip_subscriptions: false,
         shared_create_only: false,
         locales: [],
         exclude_shots: [],
@@ -315,6 +317,8 @@ module ASCMetadata
         opts.on("--source-version VERSION", "Source version used to infer platforms for create-version") { |v| @options[:source_version] = v }
         opts.on("--output PATH", "Write export-config YAML to a reviewed archive path") { |v| @options[:output_path] = v }
         opts.on("--skip-app-info", "Skip app-wide name, subtitle, and privacy localization writes") { @options[:skip_app_info] = true }
+        opts.on("--skip-review-notes", "Skip App Review Notes writes") { @options[:skip_review_notes] = true }
+        opts.on("--skip-subscriptions", "Skip subscription metadata writes") { @options[:skip_subscriptions] = true }
         opts.on("--shared-create-only", "Create missing App Info/subscription locales without changing active existing locales") { @options[:shared_create_only] = true }
         opts.on("--locale LOCALE", "Restrict config writes to one locale; can be repeated") { |v| @options[:locales] << v }
         opts.on("--source-locale LOCALE", "Source locale, default #{DEFAULT_SOURCE_LOCALE}") { |v| @options[:source_locale] = v }
@@ -485,8 +489,20 @@ module ASCMetadata
         push_app_info_config(app_info["id"], config.fetch("app_info", {}))
       end
       push_version_localization_config(config.fetch("version_localizations", {}))
-      push_review_notes_config(config.fetch("review_notes", {}))
-      push_subscription_config(config)
+      if @options[:skip_review_notes]
+        puts "App Review Notes Config"
+        puts "  skipped by --skip-review-notes"
+        puts
+      else
+        push_review_notes_config(config.fetch("review_notes", {}))
+      end
+      if @options[:skip_subscriptions]
+        puts "Subscription Config"
+        puts "  skipped by --skip-subscriptions"
+        puts
+      else
+        push_subscription_config(config)
+      end
     end
 
     def load_metadata_config
