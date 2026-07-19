@@ -13,11 +13,11 @@
 |---|---|
 | 内部开发线 | `v1.7.0` |
 | App Store 对外版本 | `1.6.0` |
-| 发布阶段 | Release Candidate 阻断修复完成，等待替换 TestFlight 候选 |
-| 已验证候选产品行为基线 | build `119` / `9414b91694d4` 已被水单邮箱本地状态缺陷否决；替换候选尚未触发 |
-| Xcode Cloud 触发标签 | `xcbuild-v1.7.0` 仍指向旧基线 `9414b91694d4`，需在修复提交后移动 |
+| 发布阶段 | Release Candidate 替换构建已触发，等待 Xcode Cloud / TestFlight 处理 |
+| 已验证候选产品行为基线 | build `119` / `9414b91694d4` 已被否决；替换候选 runtime 基线为 `e620b51`，构建与设备证据待回读 |
+| Xcode Cloud 触发标签 | `xcbuild-v1.7.0` 已移动到包含 runtime 基线与发布证据文档的最新 `main` |
 | 最近人工结论 | 当前 TestFlight 候选整体已接近发布；TS 117 起 Tab 体感明显改善 |
-| 精确 TestFlight build | 最近成功 build 仍为 `119` / `9414b91694d4`，但不再是最终候选；ASC 现有四平台绑定需在替换 build 成功后更新 |
+| 精确 TestFlight build | 新构建号、四平台完成状态和 ASC eligible 状态尚待 Xcode Cloud / ASC 实时回读；现有 build `119` 绑定仍需替换 |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
 | 下一版本 | `v1.8.0 / ASC 1.7.0` 的 Review & Close 与西语 / 巴葡计划仅为 Draft，不扩大当前发布范围 |
 
@@ -57,15 +57,15 @@
 - Xcode Cloud build `119` 已确认运行成功且源码为 `9414b91694d405d3e4c91edbae99d547c1684564`；ASC `1.6.0` 四个平台版本均已绑定各自的有效、未过期、App Store eligible build，并完成幂等 API 回读。
 - ASC App Privacy 已人工查看：Crash Data、Performance Data、Product Interaction 均用于 Analytics，not linked，not tracking，与 `PrivacyInfo.xcprivacy` 一致；Privacy Policy URL 已保存为 `https://getautoledger.app/privacy`，页面回读新值并标记“已编辑”，该变更将随下一版本发布。
 - ASC `1.6.0` 四平台五语 Promotional Text 与结构化 App Description 已统一；“截图与小票识别”“酒店水单归档”“本地优先与 Apple 生态”三张五语自定义产品页已创建为草稿。三页五语 iPhone / iPad 共 30 个截图集已按 OCR、酒店、Apple 生态分别裁剪为 iPhone 5 张 / iPad 4 张的不同主题集合，并全量有序 MD5 回读匹配；Reddit、V2EX、SSPAI、Website、QRCode Campaign Link 已生成，官网五语宣传语已部署。自定义页尚未提交审核或公开。
-- 用户已在 build `119` 完成 iCloud 同步 smoke且未发现同步问题；但 2026-07-19 的水单刷新现场日志暴露 App runtime 缺陷，因此该 build 已失去最终候选资格。修复不修改 CloudKit schema 或 entitlement，但必须生成替换 TestFlight build，并重新验证水单连续刷新、401 自动续签和 iCloud 基本 smoke。
+- 用户已在 build `119` 完成 iCloud 同步 smoke且未发现同步问题；但 2026-07-19 的水单刷新现场日志暴露 App runtime 缺陷，因此该 build 已失去最终候选资格。修复、订阅窄屏布局和订阅异常确认 / 忽略闭环已进入 runtime commit `e620b51`，并通过移动 `xcbuild-v1.7.0` 触发替换构建；新 build 尚未完成，仍需验证水单连续刷新、401 自动续签、订阅处理和 iCloud 基本 smoke。
 
-详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-437`。
+详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-440`。
 
 ## Release Gates
 
 ### P0 - Candidate Evidence
 
-- build `119` 已因水单邮箱本地状态缺陷被否决；修复提交后必须触发新的 Xcode Cloud 四平台 build、确认精确源码 SHA，并将 ASC `1.6.0` 四平台重新绑定到替换候选。
+- build `119` 已因水单邮箱本地状态缺陷被否决；替换构建已触发，必须等待 Xcode Cloud 四平台成功、确认精确源码 SHA 与新 build number，再将 ASC `1.6.0` 四平台重新绑定到替换候选。
 - iPhone、iPad、Mac 分别完成冷启动、快速切 Tab、月报月份切换、数据清洗和 OCR 固定路径 smoke；单设备结果不能替代其它平台。
 - 最新 TestFlight 候选的 iCloud 同步 smoke 已由用户确认未发现问题；若后续修改 App runtime、CloudKit schema、entitlement 或同步实现，必须在新候选重新执行。
 - 使用重庆 Moxy 记录复测“保留本机 -> 推送 -> 拉取”，确认并发改动冲突不再复活。
@@ -99,8 +99,8 @@
 
 ## Next Actions
 
-1. 提交并推送水单地址稳定性修复，移动 `xcbuild-v1.7.0` 触发替换四平台构建；成功后用精确 build / SHA 更新 ASC 绑定。
-2. 在替换 TestFlight 上连续刷新水单至少 5 次，覆盖正常 200 与一次 401 自动续签，确认显示和复制地址始终一致；同时复跑 iCloud 基本 smoke。
+1. 回读 `xcbuild-v1.7.0` 对应 Xcode Cloud 四平台运行，确认精确源码、build number、processing、有效期和 App Store eligibility；成功后更新 ASC `1.6.0` 四平台绑定。
+2. 在替换 TestFlight 上连续刷新水单至少 5 次，覆盖正常 200 与一次 401 自动续签；同时验证订阅日期排版、异常确认 / 忽略、iPad 同步不复活和 iCloud 基本 smoke。
 3. 复核已冻结商店资产、Review Notes、App Privacy 与最终 binary 一致性，完成 release-readiness 审计后再提交审核。
 
 ## Source Of Truth Map

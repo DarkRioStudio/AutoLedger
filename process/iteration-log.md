@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-19（ITER-439 订阅异常确认 / 忽略闭环）
+更新日期：2026-07-19（ITER-440 替换 TestFlight 构建触发）
 
 ## 记录规则
 
@@ -43,6 +43,23 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-440 替换 TestFlight 构建触发
+- 日期：2026-07-19
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：Release Candidate / Build Trigger
+- 类型：Git / Xcode Cloud / 发布治理 / 测试
+- 目标：把已确认的水单地址稳定性、订阅 UI / 处理闭环和宣传 / ASC 工具修改推送到 `main`，移动唯一滚动构建标签触发替换 build 119 的四平台候选。
+- 改动范围：提交 runtime 与发布材料基线 `e620b51`，补充当前状态和本条发布证据，推送 `main`，移动 `xcbuild-v1.7.0`。
+- 未改动范围：未修改版本号、build number、签名、entitlement、SQLite / CloudKit / D1 schema、StoreKit Product ID、ASC build relationship、截图 / App Preview、App Privacy、Review Notes、提审或发布状态；未创建新的产品版本标签。
+- 完成内容：提交包含云端水单地址稳定性与旧本地状态恢复、订阅卡片日期排版、订阅异常确认 / 忽略与配置同步、五语本地化、回归覆盖、宣传 metadata 和自定义产品页工具；后续证据文档提交只记录发布阶段变化。
+- 完成内容：最新 `main` 已推送，唯一滚动标签 `xcbuild-v1.7.0` 已从旧 build 119 源码移动到最新 `main`，用于触发 Xcode Cloud 四平台替换构建。
+- 未完成内容：尚未取得新 Xcode Cloud run / build number、四平台 Archive、TestFlight processing、有效期、App Store eligibility 或 ASC 绑定证据；未执行替换 TestFlight 真机 smoke。
+- 测试情况：提交前完整 `run_offline_regression.sh`、iOS generic workspace build、folio Worker 31 项 Vitest、Wrangler types / TypeScript、staging deploy dry-run、三个 ASC Ruby 工具语法、ASC metadata smoke、文档真源 smoke 与 `git diff --check` 均通过；构建只保留工程既有 Swift 6 迁移 / deprecated warning。
+- 风险与注意事项：移动标签只证明 Git 构建触发输入已更新，不证明 Xcode Cloud 接单或 App Store 可用；build 119 的 ASC 四平台绑定在新 build 成功前继续保留但不再代表最终候选。
+- 回滚方式：Git 代码通过新 revert 提交回滚；滚动构建标签可移动回经确认的提交，但不得把旧 build 119 重新声明为最终候选。Worker 生产部署已有独立 deployment 回滚能力。
+- 结论：替换候选的 Git 输入已完成推送和触发，发布门禁进入 Xcode Cloud / ASC 实时回读阶段。
+- 下一步建议：等待并回读四平台运行；成功后绑定 ASC `1.6.0`，安装新 TestFlight，验证水单连续刷新、订阅异常处理、iPad 同步和 iCloud 基本路径。
 
 ### ITER-439 订阅异常确认 / 忽略闭环
 - 日期：2026-07-19
