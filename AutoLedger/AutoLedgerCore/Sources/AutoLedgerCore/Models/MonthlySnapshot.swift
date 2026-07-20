@@ -186,15 +186,11 @@ public struct MonthlySnapshot: Sendable {
         from trendMonths: [(monthStart: Date, isCurrentMonth: Bool)],
         totals: [Date: (total: Double, count: Int)]
     ) -> [MonthlyTrendMetric] {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月"
-
         return trendMonths.map { month in
             let metric = totals[month.monthStart] ?? (0, 0)
             return MonthlyTrendMetric(
                 monthStart: month.monthStart,
-                label: formatter.string(from: month.monthStart),
+                label: AppFormatters.shortMonth(month.monthStart),
                 total: metric.total,
                 transactionCount: metric.count,
                 isCurrentMonth: month.isCurrentMonth

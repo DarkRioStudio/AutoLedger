@@ -259,6 +259,7 @@ final class WatchSessionManager: NSObject {
         var snapshot: [String: Any] = [
             "ledgerName": todaySummary.ledgerName,
             "totalExpense": todaySummary.totalExpense,
+            "currencyCode": todaySummary.currencyCode,
             "transactionCount": todaySummary.transactionCount,
             "isSnapshotStale": todaySummary.isSnapshotStale,
             "savedAt": Date().timeIntervalSince1970

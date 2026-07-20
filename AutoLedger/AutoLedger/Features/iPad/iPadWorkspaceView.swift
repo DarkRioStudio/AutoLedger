@@ -1930,7 +1930,7 @@ private struct IPadBatchImportWorkspaceView: View {
                     HStack(spacing: 8) {
                         Text(stateTitle(for: item.state))
                         Text("·")
-                        Text(item.amount.map(AppFormatters.currency) ?? String(localized: "common.none"))
+                        Text(item.amount.map { AppFormatters.currency($0) } ?? String(localized: "common.none"))
                     }
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
@@ -2091,7 +2091,7 @@ private struct IPadBatchImportWorkspaceView: View {
         } else {
             detailCard(titleKey: "ipad.batch_import.detail.fields") {
                 detailRow("transaction_editor.merchant", value: item.merchant ?? String(localized: "common.none"))
-                detailRow("transaction_editor.amount", value: item.amount.map(AppFormatters.currency) ?? String(localized: "common.none"))
+                detailRow("transaction_editor.amount", value: item.amount.map { AppFormatters.currency($0) } ?? String(localized: "common.none"))
                 detailRow("transaction_editor.category", value: item.category ?? String(localized: "common.none"))
                 detailRow("transaction_editor.source", value: item.source ?? String(localized: "common.none"))
                 detailRow("transaction_editor.date", value: item.occurredAt.map(AppFormatters.exportDateTime) ?? String(localized: "common.none"))

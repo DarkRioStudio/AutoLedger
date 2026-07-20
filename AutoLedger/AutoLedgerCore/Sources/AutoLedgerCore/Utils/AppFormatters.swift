@@ -1,37 +1,13 @@
 import Foundation
 
 public enum AppFormatters: Sendable {
-    public static let calendar = Calendar(identifier: .gregorian)
-
-    nonisolated(unsafe) private static let currencyFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "CNY"
-        formatter.currencySymbol = "¥"
-        formatter.maximumFractionDigits = 2
-        return formatter
-    }()
-
-    nonisolated(unsafe) private static let shortDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "M月d日 HH:mm"
-        return formatter
-    }()
-
-    nonisolated(unsafe) private static let monthFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy年M月"
-        return formatter
-    }()
-
-    nonisolated(unsafe) private static let exportDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
+    /// Business date calculations remain Gregorian while following the user's current time zone.
+    public static var calendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.locale = .autoupdatingCurrent
+        value.timeZone = .autoupdatingCurrent
+        return value
+    }
 
     private static let normalizedDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -41,36 +17,76 @@ public enum AppFormatters: Sendable {
         return formatter
     }()
 
-    public static func currency(_ amount: Double) -> String {
-        currencyFormatter.string(from: NSNumber(value: amount)) ?? "¥0.00"
+    public static func currency(
+        _ amount: Double,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        currency(amount, code: nil, locale: locale)
     }
 
-    public static func currency(_ amount: Double, code: String?) -> String {
-        let normalizedCode = code?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .uppercased() ?? ""
-        guard !normalizedCode.isEmpty else {
-            return currency(amount)
-        }
-
+    public static func currency(
+        _ amount: Double,
+        code: String?,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let normalizedCode = resolvedCurrencyCode(code, locale: locale)
+        let minorDigits = currencyMinorDigits(normalizedCode)
         let formatter = NumberFormatter()
+        formatter.locale = locale
         formatter.numberStyle = .currency
         formatter.currencyCode = normalizedCode
-        formatter.maximumFractionDigits = currencyMinorDigits(normalizedCode)
-        formatter.minimumFractionDigits = currencyMinorDigits(normalizedCode)
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(normalizedCode) \(amount)"
+        formatter.maximumFractionDigits = minorDigits
+        formatter.minimumFractionDigits = minorDigits
+        return formatter.string(from: NSNumber(value: amount)) ?? fallbackCurrencyString(
+            amount,
+            code: normalizedCode,
+            minorDigits: minorDigits,
+            locale: locale
+        )
     }
 
-    public static func shortDateTime(_ date: Date) -> String {
-        shortDateFormatter.string(from: date)
+    public static func shortDateTime(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        localizedDateString(date, template: "MMMdjm", locale: locale)
     }
 
-    public static func month(_ date: Date) -> String {
-        monthFormatter.string(from: date)
+    public static func month(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        localizedDateString(date, template: "yMMMM", locale: locale)
+    }
+
+    public static func shortMonth(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        localizedDateString(date, template: "MMM", locale: locale)
+    }
+
+    public static func shortDate(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        localizedDateString(date, template: "Md", locale: locale)
+    }
+
+    public static func time(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        localizedDateString(date, template: "jm", locale: locale)
     }
 
     public static func exportDateTime(_ date: Date) -> String {
-        exportDateFormatter.string(from: date)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: date)
     }
 
     public static func normalizedDateString(_ rawValue: String) -> String? {
@@ -78,13 +94,51 @@ public enum AppFormatters: Sendable {
         return normalizedDateFormatter.string(from: date)
     }
 
-    private static func currencyMinorDigits(_ code: String) -> Int {
+    public static func resolvedCurrencyCode(
+        _ code: String?,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let normalized = code?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        if normalized.count == 3,
+           normalized.unicodeScalars.allSatisfy(CharacterSet.uppercaseLetters.contains) {
+            return normalized
+        }
+        return locale.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    public static func currencyMinorDigits(_ code: String) -> Int {
         switch code.uppercased() {
         case "JPY", "KRW", "VND", "IDR":
             return 0
         default:
             return 2
         }
+    }
+
+    private static func localizedDateString(_ date: Date, template: String, locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        return formatter.string(from: date)
+    }
+
+    private static func fallbackCurrencyString(
+        _ amount: Double,
+        code: String,
+        minorDigits: Int,
+        locale: Locale
+    ) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = minorDigits
+        formatter.maximumFractionDigits = minorDigits
+        let value = formatter.string(from: NSNumber(value: amount)) ?? String(amount)
+        return "\(code) \(value)"
     }
 
     public static func parseFlexibleDate(_ rawValue: String) -> Date? {

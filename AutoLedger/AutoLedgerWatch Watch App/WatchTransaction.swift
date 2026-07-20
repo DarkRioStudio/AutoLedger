@@ -5,6 +5,7 @@ struct WatchTransaction: Identifiable, Hashable {
     let id: UUID
     let merchant: String
     let amount: Double
+    let currencyCode: String
     let category: String
     let source: String
     let note: String
@@ -14,6 +15,7 @@ struct WatchTransaction: Identifiable, Hashable {
         id: UUID = UUID(),
         merchant: String,
         amount: Double,
+        currencyCode: String = WatchLedgerFormatters.systemCurrencyCode,
         category: String = "",
         source: String = "",
         note: String = "",
@@ -22,6 +24,7 @@ struct WatchTransaction: Identifiable, Hashable {
         self.id = id
         self.merchant = merchant
         self.amount = amount
+        self.currencyCode = WatchLedgerFormatters.resolvedCurrencyCode(currencyCode)
         self.category = category
         self.source = source
         self.note = note
@@ -38,6 +41,7 @@ struct WatchTransaction: Identifiable, Hashable {
         self.id = UUID()
         self.merchant = merchant
         self.amount = amount
+        self.currencyCode = WatchLedgerFormatters.resolvedCurrencyCode(dict["currencyCode"] as? String)
         self.category = dict["category"] as? String ?? ""
         self.source = dict["source"] as? String ?? ""
         self.note = dict["note"] as? String ?? ""
@@ -45,25 +49,19 @@ struct WatchTransaction: Identifiable, Hashable {
     }
 
     var formattedAmount: String {
-        String(format: "¥%.2f", amount)
+        WatchLedgerFormatters.currency(amount, code: currencyCode)
     }
 
     var formattedDate: String {
-        let f = DateFormatter()
-        f.dateFormat = "MM/dd HH:mm"
-        return f.string(from: occurredAt)
+        WatchLedgerFormatters.date(occurredAt, template: "Mdjm")
     }
 
     var formattedTime: String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: occurredAt)
+        WatchLedgerFormatters.date(occurredAt, template: "jm")
     }
 
     var formattedDetailDate: String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy/MM/dd HH:mm"
-        return f.string(from: occurredAt)
+        WatchLedgerFormatters.date(occurredAt, template: "yMMMdjm")
     }
 
     var relativeDateText: String {
@@ -74,9 +72,7 @@ struct WatchTransaction: Identifiable, Hashable {
         if calendar.isDateInYesterday(occurredAt) {
             return String(localized: "watch.date.yesterday")
         }
-        let f = DateFormatter()
-        f.dateFormat = "MM/dd"
-        return f.string(from: occurredAt)
+        return WatchLedgerFormatters.date(occurredAt, template: "Md")
     }
 
     var compactDateText: String {
@@ -106,6 +102,7 @@ struct WatchTransaction: Identifiable, Hashable {
 struct WatchTodaySummary: Equatable, Hashable {
     var ledgerName: String
     var totalExpense: Double
+    var currencyCode: String
     var transactionCount: Int
     var recentDisplayName: String?
     var updatedAt: Date?
@@ -114,6 +111,7 @@ struct WatchTodaySummary: Equatable, Hashable {
     static let empty = WatchTodaySummary(
         ledgerName: String(localized: "watch.today.default_ledger"),
         totalExpense: 0,
+        currencyCode: WatchLedgerFormatters.systemCurrencyCode,
         transactionCount: 0,
         recentDisplayName: nil,
         updatedAt: nil,
@@ -123,6 +121,7 @@ struct WatchTodaySummary: Equatable, Hashable {
     init(
         ledgerName: String,
         totalExpense: Double,
+        currencyCode: String = WatchLedgerFormatters.systemCurrencyCode,
         transactionCount: Int,
         recentDisplayName: String?,
         updatedAt: Date?,
@@ -130,6 +129,7 @@ struct WatchTodaySummary: Equatable, Hashable {
     ) {
         self.ledgerName = ledgerName
         self.totalExpense = totalExpense
+        self.currencyCode = WatchLedgerFormatters.resolvedCurrencyCode(currencyCode)
         self.transactionCount = transactionCount
         self.recentDisplayName = recentDisplayName
         self.updatedAt = updatedAt
@@ -148,6 +148,7 @@ struct WatchTodaySummary: Equatable, Hashable {
             ? String(localized: "watch.today.default_ledger")
             : ledgerName ?? String(localized: "watch.today.default_ledger")
         self.totalExpense = totalExpense
+        self.currencyCode = WatchLedgerFormatters.resolvedCurrencyCode(dict["currencyCode"] as? String)
         self.transactionCount = transactionCount
 
         let recent = (dict["recentDisplayName"] as? String)?
@@ -174,6 +175,7 @@ struct WatchTodaySummary: Equatable, Hashable {
         return WatchTodaySummary(
             ledgerName: String(localized: "watch.today.default_ledger"),
             totalExpense: today.reduce(0) { $0 + $1.amount },
+            currencyCode: today.first?.currencyCode ?? WatchLedgerFormatters.systemCurrencyCode,
             transactionCount: today.count,
             recentDisplayName: today.first?.merchant,
             updatedAt: today.isEmpty ? nil : Date(),
@@ -186,18 +188,50 @@ struct WatchTodaySummary: Equatable, Hashable {
     }
 
     var formattedAmount: String {
-        String(format: "¥%.2f", totalExpense)
+        WatchLedgerFormatters.currency(totalExpense, code: currencyCode)
     }
 
     var formattedUpdatedAt: String? {
         guard let updatedAt else { return nil }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: updatedAt)
+        return WatchLedgerFormatters.date(updatedAt, template: "jm")
     }
 
     var snapshotStatusText: String? {
         guard isSnapshotStale else { return nil }
         return String(localized: "watch.today.snapshot_stale")
+    }
+}
+
+private enum WatchLedgerFormatters {
+    static var systemCurrencyCode: String {
+        Locale.autoupdatingCurrent.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    static func resolvedCurrencyCode(_ value: String?) -> String {
+        let normalized = value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        return normalized.count == 3 ? normalized : systemCurrencyCode
+    }
+
+    static func currency(_ amount: Double, code: String?) -> String {
+        let resolvedCode = resolvedCurrencyCode(code)
+        let digits = ["JPY", "KRW", "VND", "IDR"].contains(resolvedCode) ? 0 : 2
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .currency
+        formatter.currencyCode = resolvedCode
+        formatter.minimumFractionDigits = digits
+        formatter.maximumFractionDigits = digits
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(resolvedCode) \(amount)"
+    }
+
+    static func date(_ date: Date, template: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.calendar = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        return formatter.string(from: date)
     }
 }

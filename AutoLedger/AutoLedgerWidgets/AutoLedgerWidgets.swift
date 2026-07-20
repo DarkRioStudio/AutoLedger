@@ -52,6 +52,40 @@ private enum WidgetDeepLink {
     static let subscriptionsURL = URL(string: "autoledger://subscriptions")!
 }
 
+private enum WidgetFormatters {
+    static var systemCurrencyCode: String {
+        Locale.autoupdatingCurrent.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    static func resolvedCurrencyCode(_ value: String?) -> String {
+        let normalized = value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        return normalized.count == 3 ? normalized : systemCurrencyCode
+    }
+
+    static func currency(_ amount: Double, code: String?, compact: Bool = false) -> String {
+        let resolvedCode = resolvedCurrencyCode(code)
+        let digits = ["JPY", "KRW", "VND", "IDR"].contains(resolvedCode) ? 0 : 2
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .currency
+        formatter.currencyCode = resolvedCode
+        formatter.minimumFractionDigits = compact ? 0 : digits
+        formatter.maximumFractionDigits = compact ? min(digits, 1) : digits
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(resolvedCode) \(amount)"
+    }
+
+    static func date(_ date: Date, template: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.calendar = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        return formatter.string(from: date)
+    }
+}
+
 private struct WidgetLedgerMetrics {
     let ledgerScope: WidgetLedgerScope
     let todayTotal: Double
@@ -85,9 +119,19 @@ private struct WidgetLedgerMetrics {
 private struct WidgetLedgerScope {
     let id: String
     let name: String
+    let currencyCode: String
+
+    init(id: String, name: String, currencyCode: String = WidgetFormatters.systemCurrencyCode) {
+        self.id = id
+        self.name = name
+        self.currencyCode = WidgetFormatters.resolvedCurrencyCode(currencyCode)
+    }
 
     static let defaultLedgerID = "default-local-ledger"
-    static let defaultLocal = WidgetLedgerScope(id: defaultLedgerID, name: WidgetCopy.localized(zh: "本地账本", ja: "ローカル台帳", en: "Local Ledger"))
+    static let defaultLocal = WidgetLedgerScope(
+        id: defaultLedgerID,
+        name: WidgetCopy.localized(zh: "本地账本", ja: "ローカル台帳", en: "Local Ledger")
+    )
 }
 
 private enum WidgetLedgerStore {
@@ -180,7 +224,7 @@ private enum WidgetLedgerStore {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let fallbackID = requestedLedgerID?.isEmpty == false ? requestedLedgerID! : WidgetLedgerScope.defaultLedgerID
         let sql = """
-        SELECT id, name
+        SELECT id, name, currency
         FROM ledger_profiles
         WHERE id = ?
           AND archived_at IS NULL
@@ -202,7 +246,12 @@ private enum WidgetLedgerStore {
                 : WidgetLedgerScope(id: fallbackID, name: WidgetLedgerScope.defaultLocal.name)
         }
 
-        return WidgetLedgerScope(id: String(cString: idCString), name: String(cString: nameCString))
+        let currencyCode = sqlite3_column_text(statement, 2).map { String(cString: $0) }
+        return WidgetLedgerScope(
+            id: String(cString: idCString),
+            name: String(cString: nameCString),
+            currencyCode: WidgetFormatters.resolvedCurrencyCode(currencyCode)
+        )
     }
 
     private static func loadSnapshotMetadata(referenceDate: Date) -> (updatedAt: Date, isStale: Bool) {
@@ -706,13 +755,11 @@ private struct DailyExpenseWidgetView: View {
     }
 
     private func compactCurrency(_ value: Double) -> String {
-        if value >= 10_000 {
-            return String(format: "¥%.1f万", value / 10_000)
-        }
-        if value >= 1_000 {
-            return String(format: "¥%.0f", value)
-        }
-        return String(format: "¥%.0f", value)
+        WidgetFormatters.currency(
+            value,
+            code: entry.metrics.ledgerScope.currencyCode,
+            compact: true
+        )
     }
 
     private func smallBadge(icon: String, text: String, compact: Bool) -> some View {
@@ -732,12 +779,7 @@ private struct DailyExpenseWidgetView: View {
     }
 
     private func currency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "CNY"
-        formatter.currencySymbol = "¥"
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: value)) ?? "¥0.00"
+        WidgetFormatters.currency(value, code: entry.metrics.ledgerScope.currencyCode)
     }
 }
 
@@ -986,27 +1028,16 @@ private struct MonthlyReportWidgetView: View {
     }
 
     private func shortUpdateTime(_ date: Date, isStale: Bool) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "HH:mm"
         let prefix = isStale ? WidgetCopy.staleSnapshotUpdatedPrefix : WidgetCopy.updatedPrefix
-        return "\(prefix) \(formatter.string(from: date))"
+        return "\(prefix) \(WidgetFormatters.date(date, template: "jm"))"
     }
 
     private func shortDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = "M/d"
-        return formatter.string(from: date)
+        WidgetFormatters.date(date, template: "Md")
     }
 
     private func currency(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "CNY"
-        formatter.currencySymbol = "¥"
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: value)) ?? "¥0.00"
+        WidgetFormatters.currency(value, code: entry.metrics.ledgerScope.currencyCode)
     }
 }
 

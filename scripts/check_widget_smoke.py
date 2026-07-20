@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WIDGET_FILE = ROOT / "AutoLedger/AutoLedgerWidgets/AutoLedgerWidgets.swift"
+WATCH_WIDGET_FILE = ROOT / "AutoLedger/AutoLedgerWatchWidgetsExtension/AutoLedgerWatchWidgetsExtension.swift"
 BUNDLE_FILE = ROOT / "AutoLedger/AutoLedgerWidgets/AutoLedgerWidgetsBundle.swift"
 NAVIGATION_FILE = ROOT / "AutoLedger/AutoLedger/App/AutoLedgerNavigationState.swift"
 LEDGER_STORE_FILE = ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift"
@@ -26,6 +27,8 @@ REQUIRED_WIDGET_SNIPPETS = [
     "ledger_id IS NULL OR ledger_id = ?",
     "WidgetSubscription",
     "Link(destination: WidgetDeepLink.quickAddURL",
+    "SELECT id, name, currency",
+    "WidgetFormatters.currency",
 ]
 
 FORBIDDEN_WIDGET_SNIPPETS = [
@@ -36,6 +39,23 @@ FORBIDDEN_WIDGET_SNIPPETS = [
     "预算剩余",
     "予算残高",
     "Budget Left",
+    'currencyCode = "CNY"',
+    'currencySymbol = "¥"',
+    'Image(systemName: "yensign',
+    'dateFormat = "HH:mm"',
+    'dateFormat = "M/d"',
+]
+
+REQUIRED_WATCH_WIDGET_SNIPPETS = [
+    'dict["currencyCode"]',
+    "WatchLedgerWidgetFormatters.currency",
+    'setLocalizedDateFormatFromTemplate("jm")',
+]
+
+FORBIDDEN_WATCH_WIDGET_SNIPPETS = [
+    'String(format: "¥',
+    'Image(systemName: "yensign',
+    'dateFormat = "HH:mm"',
 ]
 
 REQUIRED_NAVIGATION_SNIPPETS = [
@@ -64,7 +84,15 @@ def main() -> int:
             failures.append(f"{WIDGET_FILE.relative_to(ROOT)} missing widget snippet: {snippet}")
     for snippet in FORBIDDEN_WIDGET_SNIPPETS:
         if snippet in widget_source:
-            failures.append(f"{WIDGET_FILE.relative_to(ROOT)} still contains unsupported budget snippet: {snippet}")
+            failures.append(f"{WIDGET_FILE.relative_to(ROOT)} contains forbidden widget snippet: {snippet}")
+
+    watch_widget_source = read(WATCH_WIDGET_FILE)
+    for snippet in REQUIRED_WATCH_WIDGET_SNIPPETS:
+        if snippet not in watch_widget_source:
+            failures.append(f"{WATCH_WIDGET_FILE.relative_to(ROOT)} missing Watch widget snippet: {snippet}")
+    for snippet in FORBIDDEN_WATCH_WIDGET_SNIPPETS:
+        if snippet in watch_widget_source:
+            failures.append(f"{WATCH_WIDGET_FILE.relative_to(ROOT)} contains forbidden Watch widget snippet: {snippet}")
 
     if "sqlite3_open_v2" not in widget_source or "SQLITE_OPEN_READONLY" not in widget_source:
         failures.append("Widget must open SQLite in read-only mode")

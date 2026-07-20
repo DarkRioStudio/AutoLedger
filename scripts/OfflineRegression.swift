@@ -63,6 +63,7 @@ struct OfflineRegression {
         verifyLedgerAmountInputParsing(reporter: reporter)
         verifyPaymentAmountExtraction(reporter: reporter)
         verifyReceiptCurrencyDetection(reporter: reporter)
+        verifyGlobalFormattingContract(reporter: reporter)
         verifyMerchantExtraction(reporter: reporter)
         verifyCategoryResolution(reporter: reporter)
         verifyLedgerDateCandidateExtraction(reporter: reporter)
@@ -289,6 +290,54 @@ struct OfflineRegression {
             source: .manual
         )
         reporter.check(receipt?.currencyCode == "USD", "ReceiptParser attaches detected currency to imported receipt")
+    }
+
+    private static func verifyGlobalFormattingContract(reporter: RegressionReporter) {
+        let enUS = Locale(identifier: "en_US")
+        let enGB = Locale(identifier: "en_GB")
+        let zhCN = Locale(identifier: "zh_CN")
+        let sampleDate = AppFormatters.parseFlexibleDate("2026-07-04 18:05") ?? Date(timeIntervalSince1970: 0)
+
+        reporter.check(
+            AppFormatters.resolvedCurrencyCode(nil, locale: enUS) == "USD",
+            "AppFormatters resolves the system-region USD currency"
+        )
+        reporter.check(
+            AppFormatters.resolvedCurrencyCode(nil, locale: enGB) == "GBP",
+            "AppFormatters resolves the system-region GBP currency"
+        )
+        reporter.check(
+            AppFormatters.currency(1_234.56, code: "USD", locale: enUS).contains("$"),
+            "AppFormatters formats USD using the requested locale"
+        )
+        reporter.check(
+            AppFormatters.currency(1_234.56, code: "GBP", locale: enGB).contains("£"),
+            "AppFormatters formats GBP using the requested locale"
+        )
+        reporter.check(
+            !AppFormatters.currency(1_234, code: "JPY", locale: enUS).contains(".00"),
+            "AppFormatters keeps zero-minor-unit currencies free of synthetic decimals"
+        )
+        reporter.check(
+            AppFormatters.currencyMinorDigits("KRW") == 0 && AppFormatters.currencyMinorDigits("CAD") == 2,
+            "AppFormatters exposes ISO-style currency minor-unit behavior"
+        )
+
+        let usShortDate = AppFormatters.shortDate(sampleDate, locale: enUS)
+        let gbShortDate = AppFormatters.shortDate(sampleDate, locale: enGB)
+        reporter.check(
+            usShortDate != gbShortDate,
+            "AppFormatters honors MDY and DMY locale ordering"
+        )
+        reporter.check(
+            !AppFormatters.month(sampleDate, locale: enUS).contains("年") &&
+                AppFormatters.month(sampleDate, locale: zhCN).contains("年"),
+            "AppFormatters localizes month labels instead of forcing Chinese output"
+        )
+        reporter.check(
+            AppFormatters.exportDateTime(sampleDate).hasPrefix("2026-07-04 "),
+            "AppFormatters keeps export timestamps machine-stable"
+        )
     }
 
     private static func verifyHotelStayModels(reporter: RegressionReporter) {

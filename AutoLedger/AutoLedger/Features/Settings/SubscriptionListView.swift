@@ -337,8 +337,8 @@ struct SubscriptionListView: View {
             return String(
                 format: String(localized: "subscriptions.anomaly.billing_cycle_drift_format"),
                 anomaly.merchant,
-                anomaly.expectedDate.map(AppFormatters.shortDateTime) ?? "-",
-                anomaly.actualDate.map(AppFormatters.shortDateTime) ?? "-"
+                anomaly.expectedDate.map { AppFormatters.shortDateTime($0) } ?? "-",
+                anomaly.actualDate.map { AppFormatters.shortDateTime($0) } ?? "-"
             )
         }
     }

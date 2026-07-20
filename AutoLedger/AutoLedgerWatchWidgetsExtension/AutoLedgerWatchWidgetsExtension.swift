@@ -26,6 +26,7 @@ private enum WatchLedgerWidgetSnapshotStore {
 private struct WatchLedgerWidgetSnapshot: Equatable {
     var ledgerName: String
     var totalExpense: Double
+    var currencyCode: String
     var transactionCount: Int
     var recentDisplayName: String?
     var updatedAt: Date?
@@ -35,6 +36,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     static let empty = WatchLedgerWidgetSnapshot(
         ledgerName: WatchLedgerWidgetCopy.defaultLedgerName,
         totalExpense: 0,
+        currencyCode: WatchLedgerWidgetFormatters.systemCurrencyCode,
         transactionCount: 0,
         recentDisplayName: nil,
         updatedAt: nil,
@@ -45,6 +47,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     init(
         ledgerName: String,
         totalExpense: Double,
+        currencyCode: String = WatchLedgerWidgetFormatters.systemCurrencyCode,
         transactionCount: Int,
         recentDisplayName: String?,
         updatedAt: Date?,
@@ -53,6 +56,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     ) {
         self.ledgerName = ledgerName
         self.totalExpense = totalExpense
+        self.currencyCode = WatchLedgerWidgetFormatters.resolvedCurrencyCode(currencyCode)
         self.transactionCount = transactionCount
         self.recentDisplayName = recentDisplayName
         self.updatedAt = updatedAt
@@ -67,6 +71,7 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
             ? ledgerName ?? WatchLedgerWidgetCopy.defaultLedgerName
             : WatchLedgerWidgetCopy.defaultLedgerName
         self.totalExpense = dict["totalExpense"] as? Double ?? 0
+        self.currencyCode = WatchLedgerWidgetFormatters.resolvedCurrencyCode(dict["currencyCode"] as? String)
         self.transactionCount = dict["transactionCount"] as? Int ?? 0
 
         let recent = (dict["recentDisplayName"] as? String)?
@@ -87,28 +92,65 @@ private struct WatchLedgerWidgetSnapshot: Equatable {
     }
 
     var formattedAmount: String {
-        String(format: "¥%.2f", totalExpense)
+        WatchLedgerWidgetFormatters.currency(totalExpense, code: currencyCode)
     }
 
     var compactAmount: String {
-        if totalExpense >= 10_000 {
-            return String(format: "¥%.1f万", totalExpense / 10_000)
-        }
-        if totalExpense >= 1_000 {
-            return String(format: "¥%.0f", totalExpense)
-        }
-        return String(format: "¥%.2f", totalExpense)
+        WatchLedgerWidgetFormatters.currency(totalExpense, code: currencyCode, compact: true)
     }
 
     var cornerAmount: String {
-        String(format: "%.2f", totalExpense)
+        WatchLedgerWidgetFormatters.decimal(totalExpense, code: currencyCode)
     }
 
     var updatedDisplayText: String? {
         guard let updatedAt else { return nil }
+        return WatchLedgerWidgetFormatters.time(updatedAt)
+    }
+}
+
+private enum WatchLedgerWidgetFormatters {
+    static var systemCurrencyCode: String {
+        Locale.autoupdatingCurrent.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    static func resolvedCurrencyCode(_ value: String?) -> String {
+        let normalized = value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        return normalized.count == 3 ? normalized : systemCurrencyCode
+    }
+
+    static func currency(_ amount: Double, code: String?, compact: Bool = false) -> String {
+        let resolvedCode = resolvedCurrencyCode(code)
+        let digits = ["JPY", "KRW", "VND", "IDR"].contains(resolvedCode) ? 0 : 2
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .currency
+        formatter.currencyCode = resolvedCode
+        formatter.minimumFractionDigits = compact ? 0 : digits
+        formatter.maximumFractionDigits = compact ? min(digits, 1) : digits
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(resolvedCode) \(amount)"
+    }
+
+    static func decimal(_ amount: Double, code: String?) -> String {
+        let resolvedCode = resolvedCurrencyCode(code)
+        let digits = ["JPY", "KRW", "VND", "IDR"].contains(resolvedCode) ? 0 : 2
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = digits
+        formatter.maximumFractionDigits = digits
+        return formatter.string(from: NSNumber(value: amount)) ?? String(amount)
+    }
+
+    static func time(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: updatedAt)
+        formatter.locale = .autoupdatingCurrent
+        formatter.calendar = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.setLocalizedDateFormatFromTemplate("jm")
+        return formatter.string(from: date)
     }
 }
 
@@ -234,13 +276,13 @@ private struct WatchDailyExpenseWidgetView: View {
         Label {
             Text("\(WatchLedgerWidgetCopy.title) \(entry.snapshot.compactAmount)")
         } icon: {
-            Image(systemName: "yensign.circle.fill")
+            Image(systemName: "banknote.fill")
         }
     }
 
     private var circularView: some View {
         Gauge(value: spendingProgress, in: 0...1) {
-            Image(systemName: "yensign")
+            Image(systemName: "banknote")
         } currentValueLabel: {
             Text(entry.snapshot.compactAmount)
                 .font(.system(.caption2, design: .rounded).weight(.bold))
@@ -289,7 +331,7 @@ private struct WatchDailyExpenseWidgetView: View {
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Image(systemName: "yensign.circle.fill")
+                Image(systemName: "banknote.fill")
                 Text(WatchLedgerWidgetCopy.title)
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
@@ -338,7 +380,7 @@ private struct WatchDailyExpenseCornerTextWidgetView: View {
     let entry: WatchDailyExpenseEntry
 
     var body: some View {
-        Image(systemName: "yensign.circle.fill")
+        Image(systemName: "banknote.fill")
             .font(.system(size: 22, weight: .bold, design: .rounded))
             .widgetAccentable()
             .widgetLabel {

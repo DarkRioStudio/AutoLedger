@@ -16,6 +16,7 @@ final class WatchConnectivityHost: NSObject {
     private static let ledgerSnapshotUpdatedAtKey = "ledgerSnapshotUpdatedAt"
     private static let lastSuccessfulCloudKitSyncAtKey = "lastSuccessfulCloudKitSyncAt"
     private static let ledgerCloudSyncEnabledKey = "ledgerCloudSyncEnabled"
+    private static let defaultWriteLedgerIDKey = "defaultWriteLedgerID"
 
     private var lastApplicationContextDigest: String?
     private var lastQueuedBackgroundDigest: String?
@@ -90,6 +91,7 @@ final class WatchConnectivityHost: NSObject {
         [
             "merchant": t.merchant,
             "amount": t.amount,
+            "currencyCode": t.ledgerCurrencyCode ?? currentLedgerCurrencyCode(),
             "category": t.categoryTitle,
             "source": t.sourceTitle,
             "note": t.note,
@@ -102,12 +104,19 @@ final class WatchConnectivityHost: NSObject {
     }
 
     private func makeTodaySummaryPayload() -> [String: Any] {
-        let summary = TodaySpendingSummary.build(from: currentTransactions(), referenceDate: .now)
+        let ledgerID = currentLedgerID()
+        let summary = TodaySpendingSummary.build(
+            from: currentTransactions(),
+            referenceDate: .now,
+            ledgerID: ledgerID,
+            ledgerName: currentLedgerName(for: ledgerID)
+        )
         let metadata = makeSnapshotMetadata()
         let snapshotUpdatedAt = metadata["snapshotUpdatedAt"] as? Double ?? Date().timeIntervalSince1970
         var payload: [String: Any] = [
             "ledgerName": summary.ledgerName,
             "totalExpense": summary.totalExpense,
+            "currencyCode": currentLedgerCurrencyCode(),
             "transactionCount": summary.transactionCount,
             "updatedAt": snapshotUpdatedAt,
             "isSnapshotStale": metadata["isSnapshotStale"] as? Bool ?? false
@@ -141,6 +150,7 @@ final class WatchConnectivityHost: NSObject {
             [
                 transaction["occurredAt"] as? Double ?? 0,
                 transaction["amount"] as? Double ?? 0,
+                transaction["currencyCode"] as? String ?? "",
                 transaction["merchant"] as? String ?? "",
                 transaction["category"] as? String ?? "",
                 transaction["source"] as? String ?? "",
@@ -153,6 +163,7 @@ final class WatchConnectivityHost: NSObject {
         return [
             String(describing: payload["snapshotUpdatedAt"] as? Double ?? 0),
             String(describing: todaySummary["totalExpense"] as? Double ?? 0),
+            todaySummary["currencyCode"] as? String ?? "",
             String(describing: todaySummary["transactionCount"] as? Int ?? 0),
             todaySummary["ledgerName"] as? String ?? "",
             todaySummary["recentDisplayName"] as? String ?? "",
@@ -162,13 +173,37 @@ final class WatchConnectivityHost: NSObject {
     }
 
     private func currentTransactions() -> [Transaction] {
+        let ledgerID = currentLedgerID()
         if let store = LedgerStore.shared {
-            return store.transactions
+            return store.transactions.filter { $0.resolvedLedgerID() == ledgerID }
         }
         return ((try? SQLiteTransactionStore().loadTransactions()) ?? [])
+            .filter { $0.resolvedLedgerID() == ledgerID }
             .sorted { lhs, rhs in
                 return lhs.occurredAt > rhs.occurredAt
             }
+    }
+
+    private func currentLedgerID() -> String {
+        if let store = LedgerStore.shared {
+            return store.defaultWriteLedgerID
+        }
+        let defaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+        let candidate = defaults?.string(forKey: Self.defaultWriteLedgerIDKey) ??
+            UserDefaults.standard.string(forKey: Self.defaultWriteLedgerIDKey)
+        let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? TodaySpendingSummary.defaultLedgerID : trimmed
+    }
+
+    private func currentLedgerName(for ledgerID: String) -> String {
+        LedgerStore.shared?.ledgerName(for: ledgerID) ?? TodaySpendingSummary.defaultLedgerName
+    }
+
+    private func currentLedgerCurrencyCode() -> String {
+        if let store = LedgerStore.shared {
+            return store.ledgerCurrencyCode(for: store.defaultWriteLedgerID)
+        }
+        return ExpenseCurrencyPreference.currentCode
     }
 
     private func currentCustomCategories() -> [String] {
@@ -240,7 +275,9 @@ final class WatchConnectivityHost: NSObject {
             occurredAt: Date(timeIntervalSince1970: ts),
             categoryLabel: categoryLabel,
             sourceLabel: ReceiptSource.manual.rawValue,
-            note: note.isEmpty ? "[Watch]" : "[Watch] \(note)"
+            note: note.isEmpty ? "[Watch]" : "[Watch] \(note)",
+            ledgerID: currentLedgerID(),
+            ledgerCurrencyCode: currentLedgerCurrencyCode()
         )
         LedgerStore.shared?.addTransaction(transaction)
         publishLatestLedgerSnapshot()

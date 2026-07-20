@@ -606,7 +606,12 @@ final class LedgerStore: ObservableObject {
         let resolvedID = ledgerID?.trimmingCharacters(in: .whitespacesAndNewlines)
         let targetID = resolvedID?.isEmpty == false ? resolvedID : TodaySpendingSummary.defaultLedgerID
         let currency = ledgerProfiles.first { $0.id == targetID }?.currency
-        return LedgerCurrencyOption.supportedCode(matching: currency)
+        let normalizedCurrency = currency?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return LedgerCurrencyOption.supportedCode(
+            matching: normalizedCurrency?.isEmpty == false
+                ? normalizedCurrency
+                : ExpenseCurrencyPreference.currentCode
+        )
     }
 
     private var currentLedgerScopeID: String {
