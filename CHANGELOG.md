@@ -9,7 +9,15 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / Global Format Foundation）
+- [2026-07-20] 从 `main` 精确基线 `022dba591c77b40b5a936b9d9e1d87f51a4f6796` 建立 `codex/v1.8.0-foundation`，启动 `GOAL-2460` 第一批：核心金额、日期与月份格式改为跟随 locale 和账本币种；旧账本未显式配置币种时跟随系统地区；WatchConnectivity 向后兼容传递账本币种；iPhone / Watch Widget 去除 `CNY`、`¥`、`万`、`yensign` 与固定日期格式硬编码，并从账本 profile 读取币种。离线全量回归、Widget smoke 与 iOS generic workspace build 通过。本轮未修改版本号、build number、schema、Worker、StoreKit、ASC 或发布标签，五个英语市场仍需后续完整验收。
+
+### 变更（全球产品战略 / v1.8.0 Draft）
+- [2026-07-20] AutoLedger 统一为 Auto+ 全球 Apple 用户方向：定位收敛为私密、本地优先个人账本、自动化导入与酒店水单归档；第一阶段验证美国、英国、加拿大、澳大利亚、新加坡，第二阶段日德法。`v1.8.0` 改为英语五市场质量组，西语 / 巴葡顺延；App Store 建议、国际化准入、Pro `Unlock automation`、月 / 年付建议与代码结构风险已落入真源文档。本轮只更新文档和文档 smoke，不修改 App / Worker / schema / StoreKit / ASC 在线状态、构建或标签。
+
 ### 变更（v1.7.0）
+- [2026-07-20] 将“截图与小票识别”“酒店水单归档”“本地优先与 Apple 生态”三张五语自定义产品页作为独立 iOS items-only submission 提交审核；提交前回读确认 15 个本地化、30 个 iPhone / iPad 截图集和 135 张素材均与 repo 文案 / 有序 MD5 匹配且处理状态为 `COMPLETE`。新审核单恰好包含三项，`submittedDate=2026-07-20T07:13:53.321Z`，审核单与三页均独立回读为 `WAITING_FOR_REVIEW`；原 ASC `1.6.0` iOS 主版本审核单仍为 `WAITING_FOR_REVIEW`，未被撤回或修改。页面获批前仍不作为正式公开落地页。
+- [2026-07-20] 完成 ASC `1.6.0` 最终提审：Xcode Cloud build `120` 精确对应 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`，四平台均为 `VALID / APP_STORE_ELIGIBLE / expired=false` 并从 build `119` 改绑到 build `120`；用户确认水单刷新、401 续签、订阅处理、iCloud、关键交互和 Mac smoke 六项门禁全部通过。提交前将 ASC 英语、日语、简中、繁中 App Info 同步到五语 metadata 真源并回读全量匹配；iOS、macOS、tvOS、visionOS 各自只包含一个 `1.6.0` 版本项目，正式提交后独立回读均为 `WAITING_FOR_REVIEW`、`submittedDate` 非空、发布方式 `AFTER_APPROVAL`。三张自定义产品页仍为独立草稿，未随主版本自动提交或公开。
 - [2026-07-19] 将水单收件箱地址稳定性修复、订阅窄屏排版、订阅异常确认 / 忽略闭环、第一版宣传材料和 ASC 自定义产品页工具提交为 runtime 基线 `e620b51`，完整离线回归、iOS generic workspace build、folio Worker 31 项测试 / typecheck / staging dry-run、ASC Ruby 语法与 metadata smoke 均通过；随后推送最新 `main` 并移动唯一滚动构建标签 `xcbuild-v1.7.0` 触发替换四平台构建。构建触发不等于 Archive、TestFlight processing、App Store eligibility、ASC 绑定或真机验收通过；下一步必须实时回读 Xcode Cloud / ASC，再在新 TestFlight 验证水单刷新、订阅处理与 iCloud。
 - [2026-07-19] 修复订阅异常进入待处理中心后无法处理的问题：订阅页异常行新增“已确认 / 忽略”，决定按当前稳定异常指纹持久化，处理后立即从订阅页和统一待处理中心移除；未来新交易或订阅字段形成新指纹时仍会重新提醒。决定记录进入既有备份与 CloudKit 配置 JSON，跨设备按更新时间合并，旧配置缺少字段时向后兼容为空；未新增 CloudKit record type / field 或 SQLite schema，也不自动改订阅金额、日期或历史账单。完整离线回归、订阅 / 待处理 / CloudKit / 可靠性 smoke、`git diff --check` 与 iOS generic workspace build 通过；待替换 TestFlight 验证 iPhone 处理后计数下降及 iPad 同步后不复活。
 - [2026-07-19] 修复 iPhone 订阅管理卡片在长商户名和窄屏下把“每月 · 下次扣费时间”拆成多行的问题：金额与状态收进顶部右侧区域，周期 / 下次扣费改为商户名下方的独立整行并从左侧对齐；日期摘要保持单行、允许适度字距收紧和缩放，同时保留动态字体布局能力。窄屏自适应、无障碍 smoke、`git diff --check` 与 iOS generic workspace build 通过；待替换 TestFlight 真机确认最终视觉。

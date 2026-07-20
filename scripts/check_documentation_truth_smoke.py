@@ -46,6 +46,7 @@ def main() -> int:
     required_truth_files = [
         ROOT / "PROJECT_STATUS.md",
         DOCS / "ROADMAP.md",
+        DOCS / "product" / "GLOBAL_PRODUCT_STRATEGY.md",
         DOCS / "product" / "I18N_ROADMAP.md",
         DOCS / "README.md",
         ROOT / "versions" / "v1.7.0-plan.md",
@@ -75,6 +76,7 @@ def main() -> int:
     for snippet in [
         "文档状态：Canonical",
         "docs/ROADMAP.md",
+        "docs/product/GLOBAL_PRODUCT_STRATEGY.md",
         "docs/product/I18N_ROADMAP.md",
         "versions/v1.7.0-plan.md",
         "## Release Gates",
@@ -85,9 +87,10 @@ def main() -> int:
     for snippet in [
         "文档状态：Canonical",
         "../PROJECT_STATUS.md",
+        "product/GLOBAL_PRODUCT_STRATEGY.md",
         "## Roadmap Horizon",
         "### Now - Ship v1.7.0 / ASC 1.6.0",
-        "### Next - Ship v1.8.0 / ASC 1.7.0: Review & Close",
+        "### Next - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close",
         "## Language Expansion Cadence",
         "### Not Planned",
         "## Source Of Truth Boundaries",
@@ -97,9 +100,9 @@ def main() -> int:
     for snippet in [
         "文档状态：Canonical",
         "## English Primary Language",
-        "每个公开功能版本",
+        "语言 / 市场能力",
         "`v1.8.0`",
-        "西班牙语 `es` + 巴西葡语 `pt-BR`",
+        "`v1.8.0` 改为英语五市场质量组",
         "## Six Release Gates",
     ]:
         require(i18n_roadmap, snippet, "docs/product/I18N_ROADMAP.md", failures)
@@ -107,6 +110,7 @@ def main() -> int:
     for snippet in [
         "docs/",
         "├── ROADMAP.md",
+        "product/GLOBAL_PRODUCT_STRATEGY.md",
         "product/I18N_ROADMAP.md",
         "architecture/LedgerTextInterpreter.md",
         "operations/pro-access-audit.md",
@@ -118,7 +122,7 @@ def main() -> int:
     for snippet in [
         "docs/product/I18N_ROADMAP.md",
         "Primary Language",
-        "西班牙语 `es` + 巴西葡语 `pt-BR` 已排入 `v1.8.0`",
+        "`v1.8.0` 改为美国、英国、加拿大、澳大利亚和新加坡英语市场质量组",
         "不改变本版本只新增韩语的范围",
     ]:
         require(v17_plan, snippet, "versions/v1.7.0-plan.md", failures)
@@ -128,14 +132,15 @@ def main() -> int:
         "## English Primary Language Gate",
         "`English (U.S.) / en-US`",
         "## Scheduled Cohorts",
-        "不在 `v1.7.0` 加入西语、巴葡",
+        "不新增 UI 语言",
     ]:
         require(v17_i18n, snippet, "versions/v1.7.0-i18n-release-matrix.md", failures)
 
     for snippet in [
-        "文档状态：Draft / Planning",
+        "文档状态：Draft / Early Execution",
         "Review & Close",
-        "Spanish And Brazilian Portuguese Cohort",
+        "### 1. Global Foundation",
+        "### 6. English-Market Cohort",
         "`GOAL-2460`",
         "`GOAL-2470`",
     ]:
@@ -143,10 +148,10 @@ def main() -> int:
 
     for snippet in [
         "文档状态：Draft",
-        "## Locale Contract",
-        "Spanish (Spain)",
-        "Portuguese (Brazil)",
-        "## Six-Gate Matrix",
+        "## Market Contract",
+        "United States",
+        "Singapore",
+        "## Market-Gate Matrix",
     ]:
         require(v18_i18n, snippet, "versions/v1.8.0-i18n-release-matrix.md", failures)
 

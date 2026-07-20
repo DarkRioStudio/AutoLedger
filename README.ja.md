@@ -7,14 +7,14 @@
 <h1 align="center">AutoLedger</h1>
 
 <p align="center">
-  <strong>ローカルファーストの個人向け自動化家計簿 + ホテル明細アーカイブ</strong><br/>
-AutoLedger はローカルファーストの個人向け自動化家計簿です。スクリーンショット、レシート、音声入力、クリップボード、ショートカット、ホテル明細 PDF から支出情報を抽出し、確認可能な帳簿記録に変換します。基本的な記帳機能は継続して無料で利用でき、Pro はメール明細、候補の一括処理、専用明細受信箱など、時間を節約する自動化機能のみを解放します。
+  <strong>世界の Apple ユーザー向け、プライバシー重視・ローカルファーストの個人台帳</strong><br/>
+AutoLedger は Auto+ 製品群の個人支出台帳です。スクリーンショット、レシート、音声、クリップボード、ショートカット、ホテル明細 PDF を確認可能な記録へ整理します。基本的な記帳機能は継続して無料で利用でき、Pro はメール明細、候補の一括処理、専用受信箱など、時間を節約する自動化機能を解放します。
 </p>
 
 <p align="center">
+  <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.en.md">English</a> ·
   <a href="README.ja.md">日本語</a>
 </p>
 
@@ -26,7 +26,7 @@ Pro / IAP / サブスクリプションのゲートを削除、回避、改ざ�
 
 ## 位置づけ / Why AutoLedger
 
-AutoLedger は、手入力を前提にした単なる家計簿 App ではありません。スクリーンショット、レシート、サブスクリプション、ホテル明細など、散らばりやすい支出素材を整理し、繰り返し入力を減らすことに重点を置いています。
+AutoLedger は、手入力を前提にした予算管理 App ではなく、銀行口座にも接続しません。スクリーンショット、レシート、サブスクリプション、複数通貨の支出、ホテル明細を整理し、繰り返し入力を減らすことに重点を置いています。
 
 解析結果は保存前に確認できます。日常の支払いスクリーンショット、紙または電子レシート、継続課金、出張や旅行後のホテル明細アーカイブに向いています。
 
@@ -118,7 +118,7 @@ AutoLedger では UI のローカライズと、レシート / 明細認識用�
 - **v1.7.0 Korean scope**: 韓国語 App UI の草案と `AutoLedgerCore` の `ko` 認識パックはすでにリポジトリに入り、韓国語の金額、日付、店舗、分類キーワード、`ko-KR + en-US` OCR hint を扱います。韓国語 ASC 文言、スクリーンショット、実サンプル、人手レビューは未完了の release gate であり、`ko` はまだ Ready ではありません。
 - **Release gates and cadence**: [現行版の matrix](versions/v1.7.0-i18n-release-matrix.md) は、ストア、UI、認識パック、実サンプル、地域別レシート、人手レビューの 6 gate を要求します。[複数バージョンの言語ロードマップ](docs/product/I18N_ROADMAP.md) では、公開機能バージョンごとに新しい言語グループを 1 組追加します。
 - **English primary language**: ASC `1.6.0` 以降、工程 fallback と App Store の Primary Language は英語を目標にします。Xcode の `developmentRegion = en` と ASC の `English (U.S.) / en-US` は別々に証跡を確認します。
-- **Next cohort**: `v1.8.0` の Draft はスペイン語 `es` とブラジルポルトガル語 `pt-BR` を予定しますが、現在の `v1.7.0` 候補には含みません。
+- **Next quality cohort**: `v1.8.0` の Draft は米国、英国、カナダ、オーストラリア、シンガポールの英語 5 市場を検証し、UI 言語は追加しません。第 2 段階で日本語品質を高め、ドイツ語とフランス語を追加し、スペイン語とブラジルポルトガル語は後続候補へ移します。
 - **Extension model**: 今後の言語パックは、純データ、バージョン管理、fallback 可能、レビュー可能な形で追加します。ユーザー訂正の共有は opt-in、脱識別、撤回可能で、reviewed pack に入る前に確認が必要です。このリポジトリでは現時点で遠隔 hot update や自動アップロードは実装していません。
 
 ## Tech Stack
@@ -196,7 +196,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
 - `v1.6.4` は ASC / App Store `1.5.0` の closeout baseline として完了しました。`GOAL-2200` で Free / Pro 境界を固定し、Pro ページ、購入復元 / サブスクリプション管理、ローカルメール月次枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit 変換、レビュー条項、visionOS / macOS hotfix、最終 baseline tag まで収束しています。
 - `v1.7.0` は ASC / App Store `1.6.0` 候補を収束中です。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro の検索 / サブスク異常 / 月次 ZIP / 高度なルール / スマート整理、第一版クラウド加盟店別名提案、共有画像、ホテル旅程メモリー、privacy-safe analytics が main line に入っています。残る重点は複数デバイス TestFlight、iCloud、5 言語ストア素材、プライバシー、ASC release gate です。
-- `v1.8.0 / ASC 1.7.0` は Review & Close、理解しやすい同期状態、月締め、スペイン語、ブラジルポルトガル語の Draft を作成済みです。まだ実装開始を意味せず、`v1.7.0` の範囲も拡大しません。
+- `v1.8.0 / ASC 1.7.0` は Review & Close、理解しやすい同期状態、月締め、英語 5 市場の品質検証 Draft を作成済みです。まだ実装開始を意味せず、`v1.7.0` の範囲も拡大しません。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -208,7 +208,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundation and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
 | v1.7.0 | 1.6.0 | Candidate closeout | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, subscription anomalies, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics; final cross-device, iCloud, store-asset, and privacy gates remain |
-| v1.8.0 | 1.7.0 | Planning draft | Review & Close、永続化された未処理項目、理解しやすい同期状態、月締め；v1.7 のリリース判断後にスペイン語とブラジルポルトガル語を追加 |
+| v1.8.0 | 1.7.0 | Planning draft | Review & Close、永続化された未処理項目、理解しやすい同期状態、月締め；v1.7 のリリース判断後に英語 5 市場の形式、ストア、プライバシー、実機 gate を検証 |
 
 ## License
 

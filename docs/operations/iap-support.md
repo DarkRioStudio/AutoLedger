@@ -1,17 +1,19 @@
 # StoreKit Products
 
 > 文档状态：Active
-> 真源范围：Support Developer 与 AutoLedger Pro 商品 / 权益说明；可执行 gate 以代码和服务端 entitlement 为准
+> 真源范围：AutoLedger Pro 与可选 Support Developer 商品 / 权益说明；可执行 gate 以代码和服务端 entitlement 为准
 > 上位路线图：[ROADMAP.md](../ROADMAP.md)
 
-更新日期：2026-07-17
+更新日期：2026-07-20
 
 ## 1. 产品定位
 
-AutoLedger 的付费能力分为两条线：
+AutoLedger 的主要付费产品是 `AutoLedger Pro`：
 
-- `Support Developer`：一次性消耗型赞助，不解锁功能，不影响任何记账能力。
 - `AutoLedger Pro`：订阅型自动化权益，只解锁省时间的自动化能力，例如本地邮箱水单扫描、专属水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议、高级规则自动应用和用户显式开启后的第一版云端商户别名建议。
+- `Support Developer`：既有一次性消耗型赞助，可以保留为次要、完全可选入口；不解锁功能，不影响记账能力，也不承担主要付费表达。
+
+全球主要表达统一为 `Unlock automation / 解锁自动化能力`，不使用“支持开发者”解释 Pro 的订阅价值。
 
 基础记账长期免费。手动记账、单张截图 / 照片识别、语音 / 文本输入、手动酒店水单 PDF 导入、酒店历史记录查看、基础订阅管理、基础月报、Widget / Share Extension、JSON 导入导出、备份恢复以及历史记录编辑 / 删除，都不应被 Pro 锁住。
 
@@ -58,7 +60,7 @@ AutoLedger.xcworkspace -> AutoLedger scheme -> Run -> Options -> StoreKit Config
 | AutoLedger Pro Monthly | `top.darkrio326.AutoLedger.pro.monthly` | $2.99 | Monthly |
 | AutoLedger Pro Yearly | `top.darkrio326.AutoLedger.pro.yearly` | $19.99 | Yearly |
 
-当前首发年付价为 `$19.99 / year`。后续新订阅用户价格可能调整；已订阅用户将尽量保留当前续订价格。实际价格、地区税费和本地化展示以 App Store Connect 为准。
+当前首发年付价为 `$19.99 / year`；标准年付目标价为 `$24.99 / year`。后续新订阅用户价格可能调整；已订阅用户将尽量保留当前续订价格。不同地区可以独立配置价格档位，实际价格、地区税费和本地化展示以 App Store Connect 为准。
 
 Pro 当前 P0 自动化权益：
 

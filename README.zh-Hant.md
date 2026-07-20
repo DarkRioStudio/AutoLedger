@@ -7,14 +7,14 @@
 <h1 align="center">AutoLedger</h1>
 
 <p align="center">
-  <strong>本地優先的個人自動化帳本 + 飯店水單歸檔工具</strong><br/>
-AutoLedger 是一個本地優先的個人自動化帳本。它可以從截圖、收據、語音、剪貼簿、捷徑和飯店水單 PDF 中擷取消費資訊，生成可複核的帳本記錄。基礎記帳長期免費；Pro 只解鎖郵件水單、批次候選、專屬收件箱等節省時間的自動化能力。
+  <strong>面向全球 Apple 使用者的本機優先個人帳本 + 自動化匯入 + 飯店水單歸檔</strong><br/>
+AutoLedger 是 Auto+ 產品矩陣中的隱私優先、本機優先個人帳本。它可從截圖、收據、語音、剪貼簿、捷徑和飯店水單 PDF 擷取消費資訊，生成可複核記錄。基礎記帳長期免費；Pro 解鎖郵件水單、批次候選與專屬收件匣等節省時間的自動化能力。
 </p>
 
 <p align="center">
+  <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.en.md">English</a> ·
   <a href="README.ja.md">日本語</a>
 </p>
 
@@ -26,7 +26,7 @@ AutoLedger 採用 source-available 非商業授權，可供學習、個人研究
 
 ## 定位 / Why AutoLedger
 
-AutoLedger 不是又一個需要手動填表的記帳 App。它專注於減少重複輸入，把截圖、收據、訂閱和飯店水單這些零散的消費素材整理成結構化記錄。
+AutoLedger 不是又一個需要手動填表的預算 App，也不連接銀行帳戶。它專注於減少重複輸入，把截圖、收據、訂閱、多幣別消費和飯店水單整理成結構化個人記錄。
 
 識別結果預設進入可複核流程，使用者保存前可以檢查和編輯。它適合日常支付截圖、紙本或電子收據、週期訂閱，以及出差 / 旅行後的飯店水單歸檔。
 
@@ -78,7 +78,7 @@ App 仍要求使用者在保存前複核候選結果。雲端自動化不會靜�
 
 **語音記帳** — 在首頁按住麥克風說出「午餐 28 元」等短句；解析結果可在保存前確認。
 
-**分享擴充** — 在微信 / 支付寶等 App 中分享支付截圖 → 選擇 AutoLedger。
+**分享擴充** — 從任何支援系統分享的 App 傳送截圖、圖片或 PDF → 選擇 AutoLedger。
 
 ## 飯店水單匯入
 
@@ -118,7 +118,7 @@ AutoLedger 的介面本地化和帳單識別語言包是兩層獨立能力：
 - **v1.7.0 韓語範圍**：韓語 App UI 草稿與 `AutoLedgerCore` `ko` 識別包已進入倉庫，覆蓋韓文金額、日期、商戶、分類關鍵詞和 `ko-KR + en-US` OCR hint；韓語 ASC 文案、截圖、真實樣本與人工審校仍是發布門禁，因此 `ko` 尚未標記為 Ready。
 - **發布門禁與節奏**：[目前版本矩陣](versions/v1.7.0-i18n-release-matrix.md) 以商店、介面、識別包、真實樣本、地區票據和人工審校六項 gate 管理語言；[跨版本語言路線](docs/product/I18N_ROADMAP.md) 固定每個公開功能版本同時交付一組新語言。
 - **英語主語言**：從 ASC `1.6.0` 起，工程 fallback 與 App Store Primary Language 目標統一為英語；Xcode `developmentRegion = en` 與 ASC `English (U.S.) / en-US` 必須分別驗證。
-- **下一語言組**：`v1.8.0` Draft 規劃西班牙語 `es` + 巴西葡萄牙語 `pt-BR`；兩者不屬於目前 `v1.7.0` 候選範圍。
+- **下一品質組**：`v1.8.0` Draft 改為美國、英國、加拿大、澳洲、新加坡五個英語市場品質組，不新增 UI 語言；第二階段提升日語並新增德語、法語，西班牙語與巴西葡萄牙語順延為後續候選。
 - **擴展原則**：後續語言包以純資料、版本化、可 fallback 的方式擴展；使用者糾錯共享必須 opt-in、脫敏、可撤回，並經審核後才可能進入 reviewed pack。本倉庫目前不實作遠端語言包熱更新或自動上傳。
 
 ## Tech Stack
@@ -196,7 +196,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.3` 已完成目前範圍：酒店 C1 AutoLedger 專屬收件箱第一版 App/Core 工程骨架、審核說明和回歸 baseline；C2 Worker 登入使用者信箱自動掃描僅保留為個人自用或未來實驗路線。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 發布收口基線，`GOAL-2200` 完成 Free / Pro 邊界凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 端 PDFKit 本地轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口。
 - `v1.7.0` 正在收口 ASC / App Store `1.6.0` 候選：即時 OCR、韓語 UI 和 `ko` 識別包、i18n 發布矩陣、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro 進階搜尋 / 訂閱異常 / 月結 ZIP / 進階規則 / 智能整理、第一版雲端商戶別名建議、分享圖、酒店旅程回憶和隱私安全 analytics 已進入主線；目前重點是跨設備 TestFlight、iCloud、五語商店素材、隱私和 ASC 發布門禁。
-- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、易懂同步狀態、月結閉環及西語 / 巴葡的 Draft；目前不表示已進入實作，也不擴大 `v1.7.0` 範圍。
+- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、易懂同步狀態、月結閉環及英語五市場品質組 Draft；目前不表示已進入實作，也不擴大 `v1.7.0` 範圍。
 
 | 內部版本 | App Store | 狀態 | 主要內容 |
 |---|---|---|---|
@@ -208,7 +208,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.3 | 1.5.0 預設沿用 | 已完成 | 酒店水單 C1 專屬收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、雲端候選模型、deep link、PDFKit 本地轉換入口、審核說明和回歸 baseline |
 | v1.6.4 | 1.5.0 預設沿用 | 已完成 | Personal Pro 訂閱基礎和 ASC 1.5.0 收口基線：Free / Pro 邊界已凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 雲端候選下載與 PDFKit 轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口 |
 | v1.7.0 | 1.6.0 | 候選收口 | 即時 OCR 與 fallback；五語 UI / 識別；`common-api`；服務端訂閱；ASC metadata-as-code；Pro 搜尋、訂閱異常、月結 ZIP、進階規則、智能整理和第一版 hash-only 雲端商戶別名；分享圖、酒店旅程回憶與隱私安全發布觀測；發布前完成跨設備、iCloud、商店素材與隱私門禁 |
-| v1.8.0 | 1.7.0 | 規劃草案 | Review & Close：持久化待處理、易懂同步狀態、月結閉環；待 v1.7 發布決定後新增西班牙語與巴西葡萄牙語 |
+| v1.8.0 | 1.7.0 | 規劃草案 | Review & Close：持久化待處理、易懂同步狀態、月結閉環；待 v1.7 發布決定後完成英語五市場的格式、商店、隱私與真機准入 |
 
 ## License
 

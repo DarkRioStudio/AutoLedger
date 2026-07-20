@@ -1,8 +1,8 @@
 # AutoLedger
 
-[简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [English](README.en.md) · [日本語](README.ja.md)
+[English](README.en.md) · [简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md)
 
-AutoLedger is a local-first personal automated ledger. It extracts expense information from screenshots, receipts, voice input, the clipboard, Shortcuts, and hotel folio PDFs, then turns it into reviewable ledger entries. Core bookkeeping stays free; Pro only unlocks time-saving automation such as email folios, batch candidates, and a dedicated folio inbox.
+AutoLedger is a private, local-first personal expense ledger with automated imports for Apple users worldwide. It turns screenshots, receipts, voice input, the clipboard, Shortcuts, and hotel folio PDFs into reviewable records. Core bookkeeping stays free; Pro unlocks time-saving automation such as email folios, batch candidates, and a dedicated folio inbox.
 
 ## License / Commercial Use
 
@@ -12,9 +12,11 @@ You may not remove, bypass, or tamper with Pro / IAP / subscription gates and di
 
 ## Why AutoLedger
 
-AutoLedger is not just another manual bookkeeping app. It focuses on reducing repetitive input and organizing messy expense materials such as screenshots, receipts, subscriptions, and hotel folios.
+AutoLedger is not another budgeting app and does not connect to bank accounts. It focuses on reducing repetitive input and organizing expense materials such as screenshots, receipts, subscriptions, multi-currency purchases, and hotel folios.
 
-Parsed results stay reviewable before saving, so the user can correct the record before it becomes part of the ledger.
+Parsed results stay reviewable before saving, so the user can correct the record before it becomes part of the ledger. It is designed for privacy-conscious Apple users, frequent travelers, and people who automate repetitive work.
+
+See the [global product strategy](docs/product/GLOBAL_PRODUCT_STRATEGY.md) for the Auto+ principles, target markets, App Store recommendations, localization checklist, and documented code-structure risks.
 
 ## Features
 
@@ -48,7 +50,7 @@ Free remains useful for everyday bookkeeping. AutoLedger does not move existing 
 
 Free includes manual entries, single screenshot / photo import, voice / text input, manual hotel folio PDF import, hotel history review, basic subscription management, basic reports, widgets / Share Extension, export / import, backup, and editing or deleting historical records.
 
-Pro is positioned as time-saving automation, not as a lock on the ledger. Pro now covers local email folio scan, batch candidate import, advanced deduplication, the dedicated cloud folio inbox, advanced search, subscription anomaly alerts, monthly packages, advanced rules, smart cleanup suggestions, and the first opt-in cloud merchant-alias suggestions based on redacted aggregate features. Later directions include a unified review queue, month-end checklists, smart review, advanced share templates, and more reliable cross-device automation sync.
+The primary Pro message is “Unlock automation,” not “support the developer” or access to the ledger. Pro now covers local email folio scan, batch candidate import, advanced deduplication, the dedicated cloud folio inbox, advanced search, subscription anomaly alerts, monthly packages, advanced rules, smart cleanup suggestions, and the first opt-in cloud merchant-alias suggestions based on redacted aggregate features. Later directions include a unified review queue, month-end checklists, smart review, advanced share templates, and more reliable cross-device automation sync.
 
 ## Local-First And Cloud Automation
 
@@ -100,7 +102,7 @@ AutoLedger separates UI localization from receipt/bill recognition language pack
 - **v1.7.0 Korean scope**: the Korean App UI draft and `AutoLedgerCore` `ko` recognition pack are now in the tree, covering Korean amount, date, merchant, category keywords, and `ko-KR + en-US` OCR hints. Korean ASC copy, screenshots, realistic samples, and human review remain release gates, so `ko` is not Ready yet.
 - **Release gates and cadence**: the [current release matrix](versions/v1.7.0-i18n-release-matrix.md) requires store, UI, recognition, realistic samples, regional receipt coverage, and human review. The [cross-version localization roadmap](docs/product/I18N_ROADMAP.md) assigns one new language cohort to every public feature release.
 - **English primary language**: starting with ASC `1.6.0`, both the engineering fallback and App Store primary-language target are English. Xcode `developmentRegion = en` and ASC Primary Language `English (U.S.) / en-US` require separate evidence.
-- **Next cohort**: the `v1.8.0` draft schedules Spanish `es` and Brazilian Portuguese `pt-BR`; neither is part of the current `v1.7.0` candidate.
+- **Next quality cohort**: the `v1.8.0` draft now validates the United States, United Kingdom, Canada, Australia, and Singapore in English without adding a UI language. Phase 2 improves Japanese and adds German and French; Spanish and Brazilian Portuguese move to a later candidate cohort.
 - **Extension model**: future packs should remain pure data, versioned, reviewable, and fallback-friendly. User correction sharing must be opt-in, redacted, revocable, and reviewed before entering a reviewed pack. This repository does not currently implement remote language-pack hot updates or automatic uploads.
 
 ## Build Requirements
@@ -218,7 +220,7 @@ Current repository status:
 - `v1.6.3` is complete for its current scope: the hotel C1 dedicated folio inbox App/Core skeleton, review notes, and regression baseline. C2 Worker login to user mailboxes stays personal-use / future experimental only.
 - `v1.6.4` has closed out as the ASC / App Store `1.5.0` baseline. `GOAL-2200` froze the Free / Pro boundary; the Pro page, restore / manage subscription entry points, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue resources, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are now settled.
 - `v1.7.0` is closing its ASC / App Store `1.6.0` candidate: live OCR, Korean UI and `ko` recognition, the i18n release matrix, reusable `common-api` infrastructure, App Store Server Notifications, ASC metadata-as-code, Pro search / anomaly / monthly ZIP / advanced rule / smart-cleanup features, the first cloud merchant-alias suggestions, local share cards, hotel journey memories, and privacy-safe analytics are on the main line. The remaining focus is cross-device TestFlight, iCloud, five-language store assets, privacy, and ASC release gates.
-- `v1.8.0 / ASC 1.7.0` now has a draft for Review & Close, human-readable sync, month close, Spanish, and Brazilian Portuguese. It is not yet in execution and does not expand `v1.7.0`.
+- `v1.8.0 / ASC 1.7.0` now has a draft for Review & Close, human-readable sync, month close, and the five-market English quality cohort. It is not yet in execution and does not expand `v1.7.0`.
 
 | Internal version | App Store | Status | Focus |
 | --- | --- | --- | --- |
@@ -231,7 +233,7 @@ Current repository status:
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud-candidate model, deep links, PDFKit local-conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundations and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; the Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
 | v1.7.0 | 1.6.0 | Candidate closeout | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, anomaly detection, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics; final cross-device, iCloud, store-asset, and privacy gates remain |
-| v1.8.0 | 1.7.0 | Planning draft | Review & Close: persistent pending work, understandable sync state, and month close; adds Spanish and Brazilian Portuguese after the v1.7 release decision |
+| v1.8.0 | 1.7.0 | Planning draft | Review & Close: persistent pending work, understandable sync state, month close, and format / store / privacy / device admission for five English-speaking markets after the v1.7 release decision |
 
 ## License
 

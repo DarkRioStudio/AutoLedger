@@ -2,9 +2,10 @@
 
 > 文档状态：Canonical
 > 真源范围：`docs/` 导航、物理分类、文档生命周期和编写规则
-> 最后核验：2026-07-17
+> 最后核验：2026-07-20
 > 当前状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
 > 核心路线图：[ROADMAP.md](ROADMAP.md)
+> 全球产品战略：[product/GLOBAL_PRODUCT_STRATEGY.md](product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[product/I18N_ROADMAP.md](product/I18N_ROADMAP.md)
 
 `docs/` 已按职责物理分组。根目录只保留本索引与核心产品路线图；版本执行计划放在 `versions/`，迭代流程与事实日志放在 `process/`。
@@ -38,11 +39,12 @@ docs/
 |---|---|---|
 | [../PROJECT_STATUS.md](../PROJECT_STATUS.md) | Canonical | 当前版本、发布阶段、阻断、门禁和下一步 |
 | [ROADMAP.md](ROADMAP.md) | Canonical | 核心产品方向、跨版本优先级、依赖和非目标 |
+| [product/GLOBAL_PRODUCT_STRATEGY.md](product/GLOBAL_PRODUCT_STRATEGY.md) | Active | Auto+ 全球定位、市场顺序、App Store 建议、国际化清单与结构风险 |
 | [product/I18N_ROADMAP.md](product/I18N_ROADMAP.md) | Canonical | 每版本语言组、英语主语言策略与通用语言门禁 |
 | [../versions/v1.7.0-plan.md](../versions/v1.7.0-plan.md) | Canonical | 当前版本范围、GOAL、测试与验收 |
 | [../versions/v1.7.0-i18n-release-matrix.md](../versions/v1.7.0-i18n-release-matrix.md) | Active | 当前版本语言完成度与缺口 |
 | [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md) | Draft | 下一版本 Review & Close 产品计划 |
-| [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md) | Draft | 下一版本西语 / 巴葡实施矩阵 |
+| [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md) | Draft | 下一版本英语五市场质量与准入矩阵 |
 | [../process/agent-iteration-workflow.md](../process/agent-iteration-workflow.md) | Canonical | 迭代方法、门禁与执行前检查 |
 | [../process/iteration-log.md](../process/iteration-log.md) | Canonical | 每轮实施事实、风险、验证和回滚 |
 | [../CHANGELOG.md](../CHANGELOG.md) | Canonical | 已完成变更历史 |
@@ -52,6 +54,7 @@ docs/
 | 文档 | 状态 | 说明 |
 |---|---|---|
 | [product/I18N_ROADMAP.md](product/I18N_ROADMAP.md) | Canonical | 跨版本语言分组、主语言策略与发布准入 |
+| [product/GLOBAL_PRODUCT_STRATEGY.md](product/GLOBAL_PRODUCT_STRATEGY.md) | Active | 全球用户、市场与商店策略；不替代当前状态或版本执行计划 |
 | [product/autoledger-personal-pro-design.md](product/autoledger-personal-pro-design.md) | Active | Personal Pro 定位、Free / Pro 原则和酒店 / 邮箱自动化设计 |
 | [product/autoledger-personal-pro-roadmap.md](product/autoledger-personal-pro-roadmap.md) | Active | Pro 专项路线；优先级由核心 `ROADMAP.md` 派生 |
 
@@ -103,6 +106,7 @@ docs/
 - 同一事实只能有一个真源。README、专项设计和发布文案只能摘要或链接，不得分别维护冲突状态。
 - 当前阶段、候选、阻断和下一步只写入 `PROJECT_STATUS.md`。
 - 核心产品方向、跨版本优先级和明确非目标只写入根级 `ROADMAP.md`。
+- 全球市场顺序、商店建议、国际化检查清单和结构风险在 `product/GLOBAL_PRODUCT_STRATEGY.md` 展开，但不得覆盖核心路线图的优先级。
 - 语言组顺序、英语主语言策略和通用语言门禁只写入 `product/I18N_ROADMAP.md`。
 - 版本范围、GOAL、测试与验收只写入 `versions/v*.md`。
 - Free / Pro 能力的执行真源是代码、服务端 entitlement 和回归测试；审计文档必须跟随实现更新。

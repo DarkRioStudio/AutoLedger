@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-19（ITER-440 替换 TestFlight 构建触发）
+更新日期：2026-07-20（ITER-444 v1.8 全球格式基础第一批）
 
 ## 记录规则
 
@@ -43,6 +43,77 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-444 v1.8 全球格式基础第一批
+- 日期：2026-07-20
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：GOAL-2460 / Global Format Foundation
+- 类型：能力增强 / 国际化 / Watch / Widget / 测试
+- 目标：从已发布候选对应的 `main` 精确基线启动下一开发线，先移除核心格式器、Watch 与 Widget 中面向中国地区的金额和日期硬编码，为英语五市场验收建立可回归的格式合同。
+- 改动范围：`AppFormatters` 的 locale / currency 合同；月度趋势标签；无显式币种账本的系统地区 fallback；iPhone 与 Watch 的快照币种传递；iPhone / Watch Widget 的账本币种读取、金额与日期展示；相关调用兼容修正；离线回归与 Widget 静态 smoke。
+- 未改动范围：未修改 `MARKETING_VERSION`、build number、SQLite / CloudKit schema、StoreKit、Worker、ASC 在线状态、构建标签、产品发布标签、待处理持久化、月结、语音 locale 或全球商店素材。
+- 完成内容：在 `codex/v1.8.0-foundation` 分支上以 `main` / `origin/main` 的 `022dba591c77b40b5a936b9d9e1d87f51a4f6796` 为起点；用户可见金额默认跟随账本币种，旧账本未显式配置时跟随系统地区；用户可见日期、时间和月份使用 locale template，导出时间戳继续保持 `yyyy-MM-dd HH:mm:ss` 稳定合同。
+- 完成内容：WatchConnectivity 的账单与今日摘要新增向后兼容的 `currencyCode`，Watch 写入账单使用当前默认写入账本及其币种；iPhone Widget 从只读 `ledger_profiles.currency` 取币种，Watch / Widget 去除 `¥`、`CNY`、`万`、`yensign` 和固定 `HH:mm` / `M/d` 展示。
+- 未完成内容：`GOAL-2460` 尚未完成；语音识别地区、歧义日期复核、全量 App 页面格式审计、美英加澳新真实设备与票据样本、截图和 ASC 验收仍待后续批次。
+- 测试情况：`bash scripts/run_offline_regression.sh` PASS，新增 USD / GBP / JPY / KRW / CAD、MDY / DMY、英语 / 中文月份及稳定导出时间戳回归；`python3 scripts/check_widget_smoke.py` PASS；`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' build` PASS。构建只保留工程既有 Swift 6 渐进迁移和 MediaPipe 弃用 warning。
+- 风险与注意事项：旧 Watch / Widget 快照没有 `currencyCode` 时会回退到设备系统币种，等待 iPhone 下一次同步后恢复账本币种；多币种汇总仍必须按账本本位币处理，不能直接混加原始币种金额；本轮只是格式基础，不代表五个英语市场 Ready。
+- 回滚方式：可独立回退格式器、WatchConnectivity 与两个 Widget 文件；新快照字段为可选读取，不需要数据迁移或清库，旧版本会忽略新增字段。
+- 结论：v1.8 工程线已从文档规划进入第一批实现，全球格式基础在主 App、Watch 和 Widget 上形成可构建、可回归的最小闭环。
+- 下一步建议：继续审计主 App 剩余用户可见硬编码，并为日期歧义与语音 locale 建立失败优先回归；随后再进入 `GOAL-2410` PendingAction 合同，不提前写持久化 schema。
+
+### ITER-443 三张自定义产品页独立提审
+- 日期：2026-07-20
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：App Review / Waiting for Review
+- 类型：发布治理 / ASC / 营销资产
+- 目标：在不撤回、不修改 ASC `1.6.0` 主版本审核单的前提下，将三张已完成差异化素材的自定义产品页作为独立 iOS items-only submission 提交审核。
+- 改动范围：只读回读三张自定义产品页、五语 Promotional Text、30 个 iPhone / iPad 截图集、135 张远端素材处理状态与有序校验和；读取现有 iOS 审核单；创建一份仅含三个 `appCustomProductPageVersion` item 的 iOS review submission；提交并独立回读；当前状态、版本计划、CHANGELOG 与本日志。
+- 未改动范围：未修改 App / Worker runtime、候选 binary、版本号、build number、签名、entitlement、SQLite / CloudKit / D1 schema、StoreKit、App Privacy、默认产品页截图 / App Preview、Review Notes、四平台 `1.6.0` app-version submission、Xcode Cloud tag、正式产品标签、Campaign Link 或官网。
+- 完成内容：“截图与小票识别页”“酒店水单归档页”“本地优先与 Apple 生态页”的五语 Promotional Text 与 repo 真源匹配；每页 5 个 locale、10 个 iPhone / iPad 截图集、45 张素材均为 `COMPLETE`，三页合计 30 个截图集 / 135 张素材的远端顺序与本地 MD5 全量匹配。
+- 完成内容：预检确认 ASC `1.6.0` iOS 主版本及其原审核单仍为 `WAITING_FOR_REVIEW`，当时不存在另一份 iOS items-only submission；随后创建独立审核单，恰好加入三个自定义产品页版本并提交。新的审核单 `submittedDate=2026-07-20T07:13:53.321Z`，审核单和三张页面独立回读均为 `WAITING_FOR_REVIEW`，成员关系为 3/3；主版本审核单保持原状态。
+- 未完成内容：Apple 尚未开始或完成自定义产品页审核；页面在获批前仍不应作为正式公开落地页，Campaign 与自定义页 Analytics 也尚无真实渠道样本。
+- 测试情况：临时提交脚本 `ruby -c` 通过；提交前 dry-run、素材完整性 / 处理状态 / MD5 顺序门禁、活跃审核单重复检查通过；提交后由全新进程独立回读两份 iOS 审核单，确认主版本与 items-only submission 均为 `WAITING_FOR_REVIEW`，后者恰好包含三张页面。`scripts/check_documentation_truth_smoke.py` 与 `git diff --check` 通过。
+- 风险与注意事项：同一 iOS 平台现有两份并行审核单，Apple 不保证审核顺序；自定义产品页获批不等同于 ASC `1.6.0` 四平台版本获批。审核期间不能修改页面截图、预览或 Promotional Text；若被拒，先读取具体 item 与 Resolution Center，再做最小修复。
+- 回滚方式：审核提交后不自动撤回；如必须修改页面，需要在 ASC 显式撤回该 items-only submission，保留主版本审核单不动，再按 repo 素材真源修订和重提。
+- 结论：三张自定义产品页已独立进入 Apple 审核队列，不再是 `PREPARE_FOR_SUBMISSION` 草稿；ASC `1.6.0` 主版本审核未受影响。
+- 下一步建议：只读监控四个平台主版本和 iOS 自定义产品页两类审核状态；页面获批并确认专属 URL 可见后，再启用 Campaign Link 与对应 `ppid` 落地页进行营销。
+
+### ITER-442 ASC 1.6.0 四平台正式提审
+- 日期：2026-07-20
+- 所属版本：v1.7.0 / ASC 1.6.0
+- 所属阶段：App Review / Waiting for Review
+- 类型：发布治理 / ASC / TestFlight / 人工验收
+- 目标：在六项最终设备门禁通过后，将精确候选 build `120` 绑定并提交 iOS、macOS、tvOS、visionOS 四个平台审核。
+- 改动范围：只读回读 Xcode Cloud / build / ASC 资产；四平台 build relationship；英语、日语、简中、繁中 App Info 真源同步；四份 review submission 与各自一个 app version item；提交后在线回读；当前状态、版本计划、CHANGELOG 与本日志。
+- 未改动范围：未修改 App / Worker runtime、版本号、build number、签名、entitlement、SQLite / CloudKit / D1 schema、StoreKit Product ID、订阅价格、App Privacy 问卷、截图 / App Preview 文件、Review Notes、Xcode Cloud tag、正式产品标签或自定义产品页审核状态。
+- 完成内容：Xcode Cloud run / build `120` 状态为 `SUCCEEDED`，source commit 精确对应 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；四平台 binary 均为 `VALID / APP_STORE_ELIGIBLE / expired=false / usesNonExemptEncryption=false`，ASC `1.6.0` 已从被否决的 build `119` 改绑到 build `120` 并逐平台回读。
+- 完成内容：用户确认六项最终门禁全部通过，包括水单连续刷新地址稳定、401 自动续签不换地址、订阅异常确认 / 忽略与计数、iPhone / iPad iCloud 同步不复活、Tab / 冷启动 / 月份切换无明显回退，以及 Mac 启动 / 账本读取 smoke。
+- 完成内容：线上 metadata 审计发现英语、日语、简中、繁中 App Info 仍为旧文案，其中日语标题为中文；按 `tools/asc-metadata/metadata.yml` 定点同步后再次 dry-run，五语 App Info 和四平台版本本地化均与真源匹配。截图 MD5、五语 iPhone App Preview 数量、四平台 Review Notes、订阅本地化与已审核产品状态保持完整。
+- 完成内容：按 Apple 当前 `reviewSubmissions` / `reviewSubmissionItems` schema 为四个平台分别创建草稿，确认每份草稿只有一个对应 `1.6.0` app version item 且状态为 `READY_FOR_REVIEW` 后统一提交；独立回读确认四份审核单和四个平台版本均为 `WAITING_FOR_REVIEW`，`submittedDate` 非空，仍绑定 build `120`，`releaseType=AFTER_APPROVAL`。
+- 未完成内容：Apple 尚未开始或完成审核；三张自定义产品页仍为独立 `PREPARE_FOR_SUBMISSION` 草稿，没有随主版本自动提交或公开；正式产品标签仍等待审核结果。
+- 测试情况：仓库既有完整离线回归、iOS generic workspace build、folio Worker 31 项测试 / typecheck / staging dry-run、ASC Ruby syntax / metadata smoke 保持通过；本轮新增 `ruby -c` 提交脚本检查，ASC metadata 全量 audit / post-write dry-run、build bind readback、review submission 独立在线回读均通过；人工六项设备 smoke 由用户确认通过。
+- 风险与注意事项：`AFTER_APPROVAL` 表示批准后进入发布流程；审核期间不得继续修改候选 binary 或重复创建审核单。若进入 `UNRESOLVED_ISSUES`，必须先读取 Resolution Center 和具体 item，再决定最小 metadata 修复或新 binary 热修。
+- 回滚方式：审核提交后不做自动取消；如必须撤回，需基于实时 ASC 状态执行显式 cancel 并记录原因。App Info 可按 metadata 真源重新同步；build 关系仅在版本退回可编辑状态后变更。
+- 结论：ASC `1.6.0` 四平台已正式进入 Apple 审核队列，当前发布阶段为等待审核。
+- 下一步建议：只读监控四个平台审核状态和 Resolution Center；没有 Apple 新反馈时停止重复写入，审核通过后再确认商店发布状态与正式产品标签。
+
+### ITER-441 Auto+ 全球产品战略与路线图收口
+- 日期：2026-07-20
+- 所属版本：产品战略 / v1.8.0 Draft
+- 所属阶段：Documentation & Planning
+- 类型：文档 / 产品治理 / 商店与国际化规划
+- 目标：把 AutoLedger 从“截图即记账”收敛为面向全球 Apple 用户的私密、本地优先个人账本，并统一 Auto+ 原则、App Store、国际化、Pro 与功能优先级。
+- 改动范围：四语 README、`PROJECT_STATUS.md`、全球产品战略、核心路线图、跨版本国际化路线、v1.7 派生边界、v1.8 计划与英语五市场矩阵、Pro / IAP 文档及文档真源 smoke。
+- 未改动范围：未修改 Swift、App / Extension、Worker、SQLite / CloudKit / D1 schema、StoreKit 配置、Product ID、ASC 在线字段 / 价格 / 截图 / 审核状态、签名、版本号、build number、构建标签或产品 release tag。
+- 完成内容：产品定位统一为“本地优先的个人账本 + 自动化导入 + 酒店水单归档”，英文定位统一为 `Private, local-first personal expense ledger with automated imports.`；明确不以银行同步、复杂预算、家庭资产或地区支付平台扩张作为主线。
+- 完成内容：冻结第一阶段美英加澳新英语市场、第二阶段日德法；`v1.8.0` 从西语 / 巴葡改为英语五市场质量组，西语 / 巴葡顺延；补齐 App Store 建议、国际化清单、P0 / P1 / 降级项和仅记录不重构的格式器、Watch / Widget、语音与日期歧义风险。
+- 完成内容：Pro 主要表达统一为 `Unlock automation / 解锁自动化能力`，建议美国基准 `$2.99/月`、早鸟 `$19.99/年`、标准 `$24.99/年`；现有 Support 商品只保留为次要可选入口。
+- 未完成内容：建议元数据、价格和市场顺序尚未写入 ASC；全球格式、语音 locale、Watch / Widget 和歧义日期风险尚未进入开发，等待下一阶段单独授权。
+- 测试情况：`scripts/check_documentation_truth_smoke.py` 通过；两仓 metadata 建议字段长度均在 Name 30、Subtitle 30、Promotional Text 170、Keywords 100 字符限制内；`git diff --check` 通过。文档轮次未运行 App 构建或业务回归，因为没有修改产品实现。
+- 风险与注意事项：英语市场 Ready 需要格式、币种、票据 / 酒店样本、隐私、商店资产和真实设备的联合证据；metadata-as-code 或文档变更不能替代 ASC 在线回读。
+- 回滚方式：定点回退本轮文档和文档 smoke 期望；不需要数据迁移、Worker 回滚或 App Store 操作。
+- 结论：产品战略和后续版本优先级已完成文档层收口，当前发布线门禁保持不变；下一阶段从全球格式合同与 P0 风险逐项进入开发。
+- 下一步建议：先对 `AppFormatters`、Watch / Widget、语音 locale 和日期歧义建立测试矩阵，再按独立任务实施；ASC 写入、定价和新市场发布另设可回读的发布门禁。
 
 ### ITER-440 替换 TestFlight 构建触发
 - 日期：2026-07-19

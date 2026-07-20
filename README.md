@@ -7,14 +7,14 @@
 <h1 align="center">AutoLedger</h1>
 
 <p align="center">
-  <strong>本地优先个人账本 + 自动化导入 + 酒店水单归档</strong><br/>
-  AutoLedger 是一个本地优先的个人账本。截图、小票、语音、剪贴板、快捷指令、手动导入和酒店水单 PDF 都只是导入入口，识别结果会先进入可复核流程，再由用户确认写入账本。基础记账长期免费；Pro 只解锁邮箱水单、专属收件箱、批量候选、智能去重和月结整理等省时间自动化能力。
+  <strong>面向全球 Apple 用户的本地优先个人账本 + 自动化导入 + 酒店水单归档</strong><br/>
+  AutoLedger 是 Auto+ 产品矩阵中的隐私优先、本地优先个人账本。截图、小票、语音、剪贴板、快捷指令和酒店水单 PDF 都是可自动化的导入入口；结果会先进入复核，再由用户确认写入账本。基础记账长期免费；Pro 解锁邮箱水单、专属收件箱、批量候选、智能去重和月结整理等省时间自动化能力。
 </p>
 
 <p align="center">
+  <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.en.md">English</a> ·
   <a href="README.ja.md">日本語</a>
 </p>
 
@@ -37,9 +37,11 @@ You may not remove, bypass, or tamper with Pro / IAP / subscription gates and di
 
 ## 定位 / Why AutoLedger
 
-AutoLedger 不是又一个需要手工填表的记账 App。它关注的是减少重复输入，把截图、小票、订阅和酒店水单这些零散、混乱的消费材料整理成结构化记录。
+AutoLedger 不是又一个需要手工填表的预算 App，也不连接银行账户。它关注的是减少重复输入，把截图、小票、订阅和酒店水单这些零散、混乱的消费材料整理成结构化个人记录。
 
-识别结果默认进入可复核流程，用户保存前可以检查和编辑。它适合日常支付截图、纸质或电子小票、周期订阅，以及出差 / 旅行后的酒店水单归档。
+识别结果默认进入可复核流程，用户保存前可以检查和编辑。它适合注重隐私的 Apple 用户、旅行者和自动化爱好者，用来整理日常小票、周期订阅、多币种消费与出差 / 旅行后的酒店水单。
+
+Auto+ 共同原则、全球市场顺序、App Store 建议、国际化清单与结构风险见 [全球产品战略](docs/product/GLOBAL_PRODUCT_STRATEGY.md)。
 
 ## Features
 
@@ -73,7 +75,7 @@ Free 会长期保留可用的日常记账能力。AutoLedger 不会把现有核�
 
 Free 包括手动记账、单张截图 / 拍照导入、语音 / 文本输入、手动酒店水单 PDF 导入、酒店历史查看、基础订阅管理、基础月报、Widget / Share Extension、JSON 导入导出、备份，以及历史记录的查看、编辑和删除。
 
-Pro 的定位是省时间自动化，而不是账本访问权限。当前 Pro 能力包括本地邮箱水单扫描、专属云端水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议、高级规则自动应用，以及用户显式开启后使用脱敏聚合特征生成的第一版云端商户别名建议；后续继续推进统一待处理队列、月结检查清单、规则中心、智能视图 / Saved Views、订阅省钱看板、智能复核队列、高级分享模板和多设备自动化同步。
+Pro 的统一表达是“解锁自动化能力”，而不是账本访问权限或“支持开发者”。当前 Pro 能力包括本地邮箱水单扫描、专属云端水单收件箱、批量候选导入、高级去重、高级搜索、订阅异常提醒、月结导出包、智能整理建议、高级规则自动应用，以及用户显式开启后使用脱敏聚合特征生成的第一版云端商户别名建议；后续继续推进统一待处理队列、月结检查清单、规则中心、智能视图 / Saved Views、订阅省钱看板、智能复核队列、高级分享模板和多设备自动化同步。
 
 ## 本地优先与云端自动化
 
@@ -89,7 +91,7 @@ App 仍要求用户在保存前复核候选结果。云端自动化不会静默�
 
 **语音记账** — 在首页按住麦克风说「午饭 28 元」可快速识别；账本页也可点击波形按钮输入一句话，账本字段会实时生成并可确认保存，也可通过 Siri / 快捷指令触发语音记账
 
-**分享扩展** — 在微信/支付宝中分享截图 → 选择 AutoLedger
+**分享扩展** — 从任意支持系统分享的 App 发送截图、图片或 PDF → 选择 AutoLedger
 
 ## 酒店消费导入
 
@@ -129,7 +131,7 @@ AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 - **v1.7.0 韩语范围**：已启动韩语 App UI 资源草稿和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语 ASC 文案、截图、母语审校和 golden cases 补齐前，不把 `ko` 标成公开 Ready 语言。
 - **i18n 发布矩阵**：[当前版本矩阵](versions/v1.7.0-i18n-release-matrix.md) 将每个语言按商店、界面、识别包、真实样本、地区票据和人工审校六项门禁管理；[跨版本语言路线](docs/product/I18N_ROADMAP.md) 固定每个公开功能版本同时交付一组新语言。
 - **英语主语言**：从 ASC `1.6.0` 起，工程与 App Store 主语言目标统一为英语；工程 `developmentRegion = en` 与 ASC Primary Language `English (U.S.) / en-US` 分别验证，仓库配置不替代 ASC 线上证据。
-- **下一语言组**：`v1.8.0` Draft 规划西班牙语 `es` + 巴西葡语 `pt-BR`；它们不属于当前 `v1.7.0` 候选范围。
+- **下一质量组**：`v1.8.0` Draft 改为美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
 ## Tech Stack
@@ -235,7 +237,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 发布收口基线，`GOAL-2200` 完成 Free / Pro 边界冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API、App 侧 PDFKit 本地转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口。
 - `v1.7.0` 正在作为 ASC / App Store `1.6.0` 候选收口：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已进入主线；当前重点是跨设备 TestFlight、iCloud、五语商店资产、隐私和 ASC 发布门禁。
-- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、可信同步、月结闭环和西语 / 巴葡的 Draft；当前不表示已进入实施，也不扩大 `v1.7.0` 范围。
+- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、可信同步、月结闭环和英语五市场质量组 Draft；当前不表示已进入实施，也不扩大 `v1.7.0` 范围。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -258,7 +260,7 @@ bash scripts/run_golden_regression.sh
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | ✅ 已完成 | Personal Pro 订阅基础和 ASC 1.5.0 收口基线：Free / Pro 边界已冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口 |
 | v1.7.0 | **1.6.0** | 🧪 候选收口 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测；发布前完成跨设备、iCloud、商店资产与隐私门禁 |
-| v1.8.0 | **1.7.0** | 📝 规划草案 | Review & Close：持久化待处理、可理解同步状态、月结闭环；新增西班牙语 + 巴西葡语；须待 v1.7 发布决定后进入 Execution Ready |
+| v1.8.0 | **1.7.0** | 📝 规划草案 | Review & Close：持久化待处理、可理解同步状态、月结闭环；完成英语五市场的格式、商店、隐私与真实设备准入；须待 v1.7 发布决定后进入 Execution Ready |
 
 ## License
 
