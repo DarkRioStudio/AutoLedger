@@ -120,6 +120,7 @@ private struct HotelStayListSnapshotCacheKey: Equatable {
 
 struct ReceiptImportReviewDraft: Identifiable {
     let id = UUID()
+    let createdAt = Date()
     let receipt: ImportedReceipt
     let rawText: String
     let notePrefix: String

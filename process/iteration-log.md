@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-20（ITER-445 v1.8 全球格式与日期安全第二批）
+更新日期：2026-07-20（ITER-446 v1.8 PendingAction Core 合同第一批）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-446 v1.8 PendingAction Core 合同第一批
+- 日期：2026-07-20
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：GOAL-2410 / Persistent Pending Actions
+- 类型：能力增强 / Core 合同 / 隐私 / 测试
+- 目标：把待处理中心从只有分类计数的快照推进为有稳定来源、原因、动作和生命周期的真实条目合同，并先接通当前已经存在的五类来源。
+- 改动范围：`AutoLedgerCore` 的 PendingAction kind、category、priority、稳定 ID、source reference、reason code、target、动作集合、状态与迁移；待处理快照的条目聚合；OCR 待确认、酒店草稿、疑似重复、订阅异常和数据清洗建议的条目生成；五语原因文案；离线和静态回归。
+- 未改动范围：未新增 SQLite table、CloudKit record type / field / index、备份字段或 D1 schema；未持久化用户的 deferred / resolved / dismissed 决策；未增加新的 UI 操作语义；未接入本地邮箱候选、云收件箱候选、月结缺资料或同步冲突条目；未修改 Worker、StoreKit、ASC、版本号、build number 或构建标签。
+- 完成内容：新增版本化 `pa1` identity，由 kind、source type、source ID 和可选 source revision 确定；同一来源修订得到相同 ID，来源修订变化产生新的处理边界。空来源 ID 会被拒绝，数据清洗建议使用稳定 opaque fingerprint，不把可能含商户名的 preview ID 复制进 PendingAction 合同。
+- 完成内容：状态机覆盖 `pending / deferred / resolved / dismissed`，只允许可处理项延后、解决或忽略，终态必须显式 reopen，重复终态迁移会被拒绝；条目保留创建、更新、解决和延后时间，并声明 Pro 属性、目标入口与可执行动作集合。
+- 完成内容：待处理中心加载器不再只传入五类数量，而是从现有业务真源生成条目，再由条目推导分组和数量；当前 iPhone / iPad / Mac 仍消费原有分组 UI，因此没有扩张尚未落地的处理交互。
+- 未完成内容：本批不关闭整个 `GOAL-2410`；本地 / 云端邮箱候选、月结和同步冲突仍需在来源路由明确后以新增 kind 接入。`GOAL-2420` 的决策 overlay、SQLite / 备份 / CloudKit 持久化、来源 revision 对齐、删除清理和迁移仍待设计评审与实现。
+- 测试情况：`bash scripts/run_offline_regression.sh` PASS，覆盖稳定 ID、revision 变化、空来源拒绝、opaque fingerprint、状态迁移、终态保护、五类条目聚合及 JSON 往返；PendingAction smoke、五语文案、隐私 forbidden fragments 和 `git diff --check` PASS；iOS generic workspace build PASS，只保留工程既有 Swift 6 渐进迁移、MediaPipe 与 Watch API warning。
+- 风险与注意事项：当前 resolved / dismissed 只是 Core 可表达状态，App 重启后仍会从来源重新生成 pending 条目；在 `GOAL-2420` 持久化完成前不能把“处理后不复活”作为已交付能力。opaque fingerprint 用于避免复制业务文本，不替代来源表的真实 identity 和 revision。
+- 回滚方式：可独立回退 PendingAction 模型、条目聚合和加载器生成链；当前没有 schema 或持久化迁移，不需要清库、CloudKit 回滚或备份升级。
+- 结论：现有五类待处理来源已经共享一套可回归、隐私最小化的 Core 条目合同，原分组 UI 保持兼容，为下一批决策持久化建立了明确边界。
+- 下一步建议：先设计 `PendingActionDecision` overlay，只持久化稳定 source identity、revision 与用户决定；评审重启、来源更新、删除、备份恢复和跨设备合并矩阵后，再落 SQLite / CloudKit schema。
 
 ### ITER-445 v1.8 全球格式与日期安全第二批
 - 日期：2026-07-20

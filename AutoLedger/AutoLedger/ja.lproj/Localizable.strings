@@ -415,6 +415,14 @@
 "pending_center.subscription.subtitle" = "値上げ、重複請求、請求周期の変化を確認します";
 "pending_center.cleaning.title" = "スマート整理候補";
 "pending_center.cleaning.subtitle" = "加盟店名を統一し、確認済みのカテゴリ設定を適用します";
+"pending_action.reason.receiptNeedsConfirmation" = "保存する前に認識したレシートを確認してください。";
+"pending_action.reason.hotelDraftNeedsReview" = "台帳へ記録する前にホテル明細を確認してください。";
+"pending_action.reason.suspectedDuplicate" = "これらの記録は同じ支出の可能性があります。";
+"pending_action.reason.subscriptionPriceIncrease" = "サブスクリプション料金が上がった可能性があります。";
+"pending_action.reason.subscriptionDuplicateCharge" = "サブスクリプションが重複請求された可能性があります。";
+"pending_action.reason.subscriptionBillingCycleDrift" = "請求日が予定された課金周期から外れています。";
+"pending_action.reason.merchantNormalizationSuggested" = "統一できる加盟店名の候補があります。";
+"pending_action.reason.categoryCorrectionSuggested" = "確認済みのカテゴリ設定を一致する記録に適用できます。";
 "ledger.status.aliases_refreshed_format" = "加盟店エイリアスを更新し、過去の取引 %d 件を更新しました。";
 "ledger.status.sample_parse_failed" = "サンプルを解析できませんでした。";
 "ledger.status.subscription_recognized_format" = "サブスクリプションとして認識：%@ %@/%@";

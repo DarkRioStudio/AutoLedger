@@ -415,6 +415,14 @@
 "pending_center.subscription.subtitle" = "Check price increases, duplicate charges, and billing changes";
 "pending_center.cleaning.title" = "Smart Cleanup";
 "pending_center.cleaning.subtitle" = "Normalize merchant names and apply confirmed category preferences";
+"pending_action.reason.receiptNeedsConfirmation" = "Confirm the recognized receipt before it is saved.";
+"pending_action.reason.hotelDraftNeedsReview" = "Review the hotel folio before posting it to the ledger.";
+"pending_action.reason.suspectedDuplicate" = "These records may describe the same expense.";
+"pending_action.reason.subscriptionPriceIncrease" = "A subscription charge appears to have increased.";
+"pending_action.reason.subscriptionDuplicateCharge" = "A subscription may have been charged more than once.";
+"pending_action.reason.subscriptionBillingCycleDrift" = "A subscription charge falls outside its expected billing cycle.";
+"pending_action.reason.merchantNormalizationSuggested" = "A consistent merchant name is available for review.";
+"pending_action.reason.categoryCorrectionSuggested" = "A confirmed category preference can be applied to matching records.";
 "ledger.status.aliases_refreshed_format" = "Merchant aliases updated and %d past transactions refreshed.";
 "ledger.status.sample_parse_failed" = "The sample could not be parsed.";
 "ledger.status.subscription_recognized_format" = "Subscription recognized: %@ %@/%@";

@@ -143,6 +143,140 @@ struct OfflineRegression {
     }
 
     private static func verifyPendingActionCenterPlanner(reporter: RegressionReporter) {
+        let createdAt = AppFormatters.parseFlexibleDate("2026-07-20 10:00") ?? Date(timeIntervalSince1970: 0)
+        let updatedAt = createdAt.addingTimeInterval(60)
+        let receiptSource = PendingActionSourceReference(
+            type: .receiptImportReview,
+            id: "receipt-1",
+            revision: "1"
+        )
+        guard let receiptItem = try? PendingActionItem(
+            kind: .receiptConfirmation,
+            source: receiptSource,
+            reason: .receiptNeedsConfirmation,
+            createdAt: createdAt
+        ) else {
+            reporter.check(false, "PendingActionItem accepts a stable receipt source")
+            return
+        }
+        let sameReceiptItem = try? PendingActionItem(
+            kind: .receiptConfirmation,
+            source: receiptSource,
+            reason: .receiptNeedsConfirmation,
+            createdAt: createdAt
+        )
+        let revisedReceiptItem = try? PendingActionItem(
+            kind: .receiptConfirmation,
+            source: PendingActionSourceReference(
+                type: .receiptImportReview,
+                id: "receipt-1",
+                revision: "2"
+            ),
+            reason: .receiptNeedsConfirmation,
+            createdAt: createdAt
+        )
+        reporter.check(
+            receiptItem.id == sameReceiptItem?.id,
+            "PendingActionItem identity is stable for the same source revision"
+        )
+        reporter.check(
+            receiptItem.id != revisedReceiptItem?.id,
+            "PendingActionItem identity changes when source revision changes"
+        )
+        let noRevisionID = PendingActionID(
+            kind: .receiptConfirmation,
+            source: PendingActionSourceReference(type: .receiptImportReview, id: "receipt-1")
+        )
+        let literalZeroRevisionID = PendingActionID(
+            kind: .receiptConfirmation,
+            source: PendingActionSourceReference(type: .receiptImportReview, id: "receipt-1", revision: "0")
+        )
+        reporter.check(
+            noRevisionID != literalZeroRevisionID,
+            "PendingActionItem identity distinguishes a missing revision from literal revision zero"
+        )
+        reporter.check(
+            receiptItem.reason.localizationKey == "pending_action.reason.receiptNeedsConfirmation",
+            "PendingActionItem exposes a localizable reason key"
+        )
+        reporter.check(
+            (try? PendingActionItem(
+                kind: .receiptConfirmation,
+                source: PendingActionSourceReference(type: .receiptImportReview, id: "   "),
+                reason: .receiptNeedsConfirmation,
+                createdAt: createdAt
+            )) == nil,
+            "PendingActionItem rejects blank source identity"
+        )
+
+        let rawCleaningID = "merchantNormalization:Coffee Shop->Coffee"
+        let opaqueCleaningID = PendingActionSourceReference.opaqueID(for: rawCleaningID)
+        reporter.check(
+            opaqueCleaningID == PendingActionSourceReference.opaqueID(for: rawCleaningID) &&
+                !opaqueCleaningID.contains("Coffee"),
+            "PendingAction source fingerprints are stable without copying merchant content"
+        )
+
+        let deferredItem = try? receiptItem.applying(
+            .deferUntil(updatedAt.addingTimeInterval(3_600)),
+            at: updatedAt
+        )
+        let resolvedItem = deferredItem.flatMap { try? $0.applying(.resolve, at: updatedAt.addingTimeInterval(120)) }
+        let reopenedItem = resolvedItem.flatMap { try? $0.applying(.reopen, at: updatedAt.addingTimeInterval(180)) }
+        reporter.check(
+            deferredItem?.state == .deferred && deferredItem?.deferredUntil != nil,
+            "PendingAction lifecycle defers an actionable item"
+        )
+        reporter.check(
+            resolvedItem?.state == .resolved && resolvedItem?.resolvedAt != nil && resolvedItem?.deferredUntil == nil,
+            "PendingAction lifecycle resolves and timestamps an item"
+        )
+        reporter.check(
+            reopenedItem?.state == .pending && reopenedItem?.resolvedAt == nil,
+            "PendingAction lifecycle only reopens terminal items explicitly"
+        )
+        reporter.check(
+            (try? resolvedItem?.applying(.resolve, at: updatedAt.addingTimeInterval(240))) == nil,
+            "PendingAction lifecycle rejects repeated terminal transitions"
+        )
+
+        let itemSeeds: [(PendingActionKind, PendingActionSourceType, String, PendingActionReasonCode)] = [
+            (.receiptConfirmation, .receiptImportReview, "receipt", .receiptNeedsConfirmation),
+            (.hotelDraftReview, .hotelStayDraft, "hotel", .hotelDraftNeedsReview),
+            (.duplicateCandidate, .dataCleaningPreview, "duplicate", .suspectedDuplicate),
+            (.subscriptionAnomaly, .subscriptionAnomaly, "subscription", .subscriptionPriceIncrease),
+            (.cleaningSuggestion, .dataCleaningPreview, "cleaning", .merchantNormalizationSuggested)
+        ]
+        let actionableItems = itemSeeds.compactMap { kind, sourceType, id, reason in
+            try? PendingActionItem(
+                kind: kind,
+                source: PendingActionSourceReference(type: sourceType, id: id),
+                reason: reason,
+                createdAt: createdAt
+            )
+        }
+        let itemSnapshot = PendingActionCenterPlanner().buildSnapshot(
+            items: actionableItems + [resolvedItem].compactMap { $0 }
+        )
+        reporter.check(
+            itemSnapshot.totalCount == 5 && itemSnapshot.items.count == 5,
+            "Pending action center derives counts from actionable item contracts"
+        )
+        reporter.check(
+            itemSnapshot.items(for: .duplicateReview).first?.source.id == "duplicate",
+            "Pending action center exposes source-backed items by category"
+        )
+        reporter.check(
+            itemSnapshot.groups.first?.category == .receiptReview,
+            "Pending action center item planner preserves priority ordering"
+        )
+        let encodedReceiptItem = try? JSONEncoder().encode(receiptItem)
+        let decodedReceiptItem = encodedReceiptItem.flatMap { try? JSONDecoder().decode(PendingActionItem.self, from: $0) }
+        reporter.check(
+            decodedReceiptItem == receiptItem,
+            "PendingActionItem round-trips without source business payload"
+        )
+
         let duplicate = DataCleaningPreviewItem(
             id: "duplicate:1",
             kind: .duplicateCandidate,

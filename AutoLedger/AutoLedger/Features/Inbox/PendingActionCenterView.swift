@@ -25,10 +25,12 @@ enum PendingActionCenterLoader {
         let categoryCorrections = store.categoryCorrections
         let ignoredPreviewIDs = store.ignoredDataCleaningPreviewIDs
         let handledSubscriptionAnomalyIDs = Set(store.subscriptionAnomalyDecisions.keys)
-        let receiptReviewCount = store.pendingReceiptReview == nil ? 0 : 1
-        let hotelReviewCount = store.hotelStayDrafts.filter {
+        let receiptReviewSeed = store.pendingReceiptReview.map {
+            (id: $0.id.uuidString, createdAt: $0.createdAt)
+        }
+        let hotelDrafts = store.hotelStayDrafts.filter {
             ![HotelStayDraftStatus.confirmed, .rejected, .postedToLedger].contains($0.status)
-        }.count
+        }
 
         return await Task.detached(priority: .userInitiated) {
             let cleaningSnapshot = DataCleaningPreviewPlanner().buildSnapshot(
@@ -41,12 +43,85 @@ enum PendingActionCenterLoader {
                 subscriptions: subscriptions,
                 transactions: transactions
             ).filteringHandledAnomalies(withIDs: handledSubscriptionAnomalyIDs)
-            return PendingActionCenterPlanner().buildSnapshot(
-                receiptReviewCount: receiptReviewCount,
-                hotelReviewCount: hotelReviewCount,
-                cleaningSnapshot: cleaningSnapshot,
-                subscriptionAnomalyCount: anomalySummary.anomalies.count
-            )
+            var items: [PendingActionItem] = []
+
+            if let receiptReviewSeed,
+               let item = try? PendingActionItem(
+                   kind: .receiptConfirmation,
+                   source: PendingActionSourceReference(
+                       type: .receiptImportReview,
+                       id: receiptReviewSeed.id
+                   ),
+                   reason: .receiptNeedsConfirmation,
+                   createdAt: receiptReviewSeed.createdAt
+               ) {
+                items.append(item)
+            }
+
+            items.append(contentsOf: hotelDrafts.compactMap { draft in
+                try? PendingActionItem(
+                    kind: .hotelDraftReview,
+                    source: PendingActionSourceReference(
+                        type: .hotelStayDraft,
+                        id: draft.id.uuidString,
+                        revision: "\(draft.status.rawValue):\(Int(draft.updatedAt.timeIntervalSince1970))"
+                    ),
+                    reason: .hotelDraftNeedsReview,
+                    createdAt: draft.createdAt,
+                    updatedAt: draft.updatedAt
+                )
+            })
+
+            let transactionDates = Dictionary(uniqueKeysWithValues: transactions.map { ($0.id, $0.occurredAt) })
+            items.append(contentsOf: cleaningSnapshot.items.compactMap { preview in
+                let kind: PendingActionKind = preview.kind == .duplicateCandidate
+                    ? .duplicateCandidate
+                    : .cleaningSuggestion
+                let reason: PendingActionReasonCode
+                switch preview.kind {
+                case .duplicateCandidate:
+                    reason = .suspectedDuplicate
+                case .merchantAlias:
+                    reason = .merchantNormalizationSuggested
+                case .categoryCorrection:
+                    reason = .categoryCorrectionSuggested
+                }
+                let evidenceDate = preview.affectedTransactionIDs
+                    .compactMap { transactionDates[$0] }
+                    .max() ?? Date(timeIntervalSince1970: 0)
+                return try? PendingActionItem(
+                    kind: kind,
+                    source: PendingActionSourceReference(
+                        type: .dataCleaningPreview,
+                        id: PendingActionSourceReference.opaqueID(for: preview.id)
+                    ),
+                    reason: reason,
+                    createdAt: evidenceDate
+                )
+            })
+
+            items.append(contentsOf: anomalySummary.anomalies.compactMap { anomaly in
+                let reason: PendingActionReasonCode
+                switch anomaly.kind {
+                case .priceIncrease:
+                    reason = .subscriptionPriceIncrease
+                case .duplicateCharge:
+                    reason = .subscriptionDuplicateCharge
+                case .billingCycleDrift:
+                    reason = .subscriptionBillingCycleDrift
+                }
+                return try? PendingActionItem(
+                    kind: .subscriptionAnomaly,
+                    source: PendingActionSourceReference(
+                        type: .subscriptionAnomaly,
+                        id: anomaly.id
+                    ),
+                    reason: reason,
+                    createdAt: anomaly.detectedAt
+                )
+            })
+
+            return PendingActionCenterPlanner().buildSnapshot(items: items)
         }.value
     }
 }

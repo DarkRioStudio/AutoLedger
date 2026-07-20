@@ -415,6 +415,14 @@
 "pending_center.subscription.subtitle" = "가격 인상, 중복 청구, 결제 주기 변화를 확인합니다";
 "pending_center.cleaning.title" = "스마트 정리 제안";
 "pending_center.cleaning.subtitle" = "가맹점 이름을 통일하고 확인된 카테고리 설정을 적용합니다";
+"pending_action.reason.receiptNeedsConfirmation" = "저장하기 전에 인식된 영수증을 확인하세요.";
+"pending_action.reason.hotelDraftNeedsReview" = "원장에 기록하기 전에 호텔 명세서를 검토하세요.";
+"pending_action.reason.suspectedDuplicate" = "이 기록들은 같은 지출일 수 있습니다.";
+"pending_action.reason.subscriptionPriceIncrease" = "구독 요금이 인상된 것으로 보입니다.";
+"pending_action.reason.subscriptionDuplicateCharge" = "구독이 중복 결제되었을 수 있습니다.";
+"pending_action.reason.subscriptionBillingCycleDrift" = "구독 결제일이 예상 청구 주기에서 벗어났습니다.";
+"pending_action.reason.merchantNormalizationSuggested" = "통일할 수 있는 가맹점 이름 제안이 있습니다.";
+"pending_action.reason.categoryCorrectionSuggested" = "확인된 카테고리 설정을 일치하는 기록에 적용할 수 있습니다.";
 "ledger.status.aliases_refreshed_format" = "가맹점 별칭을 업데이트하고 이전 거래 %d건을 새로 고쳤습니다.";
 "ledger.status.sample_parse_failed" = "샘플을 분석하지 못했습니다.";
 "ledger.status.subscription_recognized_format" = "구독으로 인식됨: %@ %@/%@";

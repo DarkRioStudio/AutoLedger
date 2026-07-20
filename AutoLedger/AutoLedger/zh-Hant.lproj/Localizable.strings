@@ -415,6 +415,14 @@
 "pending_center.subscription.subtitle" = "查看漲價、重複扣款和週期變化";
 "pending_center.cleaning.title" = "智能整理建議";
 "pending_center.cleaning.subtitle" = "統一商戶名稱並套用已確認的分類偏好";
+"pending_action.reason.receiptNeedsConfirmation" = "請在儲存前確認識別到的帳單。";
+"pending_action.reason.hotelDraftNeedsReview" = "請在入帳前複核酒店水單。";
+"pending_action.reason.suspectedDuplicate" = "這些記錄可能對應同一筆消費。";
+"pending_action.reason.subscriptionPriceIncrease" = "偵測到訂閱扣費金額可能上漲。";
+"pending_action.reason.subscriptionDuplicateCharge" = "訂閱可能發生了重複扣費。";
+"pending_action.reason.subscriptionBillingCycleDrift" = "訂閱扣費時間偏離了預期週期。";
+"pending_action.reason.merchantNormalizationSuggested" = "發現可供確認的統一商戶名稱。";
+"pending_action.reason.categoryCorrectionSuggested" = "可以將已確認的分類偏好套用到符合的記錄。";
 "ledger.status.aliases_refreshed_format" = "已更新商戶別名，並重新整理 %d 筆歷史帳單。";
 "ledger.status.sample_parse_failed" = "範例解析失敗。";
 "ledger.status.subscription_recognized_format" = "已識別為訂閱：%@ %@/%@";

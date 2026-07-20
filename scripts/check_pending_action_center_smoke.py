@@ -16,6 +16,7 @@ def require(text: str, snippet: str, label: str, failures: list[str]) -> None:
 
 def main() -> int:
     failures: list[str] = []
+    model = (CORE / "Models" / "PendingAction.swift").read_text(encoding="utf-8")
     planner = (CORE / "Services" / "PendingActionCenterPlanner.swift").read_text(encoding="utf-8")
     center = (APP / "Features" / "Inbox" / "PendingActionCenterView.swift").read_text(encoding="utf-8")
     inbox = (APP / "Features" / "Inbox" / "InboxView.swift").read_text(encoding="utf-8")
@@ -28,12 +29,37 @@ def main() -> int:
         "subscriptionAnomaly",
         "cleaningSuggestion",
     ]:
-        require(planner, f"case {category}", "PendingActionCenterPlanner", failures)
+        require(planner, f"case .{category}", "PendingActionCenterPlanner", failures)
+
+    for snippet in [
+        "struct PendingActionItem",
+        "struct PendingActionSourceReference",
+        "struct PendingActionID",
+        "enum PendingActionState",
+        "case pending",
+        "case deferred",
+        "case resolved",
+        "case dismissed",
+        "enum PendingActionAvailableAction",
+        "enum PendingActionTarget",
+        "func applying(",
+        "opaqueID(for rawValue:",
+    ]:
+        require(model, snippet, "PendingAction contract", failures)
+
+    for forbidden in ["rawText", "sourcePDFData", "sourceEmailSubject", "merchant:", "amount:"]:
+        if forbidden in model:
+            failures.append(f"PendingAction contract must not copy source business data: {forbidden}")
+
+    require(planner, "buildSnapshot(items:", "PendingActionCenterPlanner", failures)
+    require(planner, ".filter { $0.state.isActionable }", "PendingActionCenterPlanner", failures)
 
     require(center, "PendingActionCenterLoader", "PendingActionCenterView", failures)
     require(center, "Task.detached", "PendingActionCenterView", failures)
     require(center, "filteringHandledAnomalies", "PendingActionCenterView", failures)
     require(center, "subscriptionAnomalyDecisionRevision", "PendingActionCenterView", failures)
+    require(center, "PendingActionItem(", "PendingActionCenterView", failures)
+    require(center, "PendingActionSourceReference.opaqueID", "PendingActionCenterView", failures)
     require(inbox, "PendingActionCenterCard(", "InboxView", failures)
     require(inbox, "PendingActionCenterListView(", "InboxView", failures)
     require(ipad, "case pendingActions", "IPadWorkspaceView", failures)
@@ -52,6 +78,14 @@ def main() -> int:
             "pending_center.duplicate.title",
             "pending_center.subscription.title",
             "pending_center.cleaning.title",
+            "pending_action.reason.receiptNeedsConfirmation",
+            "pending_action.reason.hotelDraftNeedsReview",
+            "pending_action.reason.suspectedDuplicate",
+            "pending_action.reason.subscriptionPriceIncrease",
+            "pending_action.reason.subscriptionDuplicateCharge",
+            "pending_action.reason.subscriptionBillingCycleDrift",
+            "pending_action.reason.merchantNormalizationSuggested",
+            "pending_action.reason.categoryCorrectionSuggested",
         ]:
             require(strings, f'"{key}"', f"{locale} Localizable.strings", failures)
 

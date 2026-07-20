@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（v1.8.0 / Persistent Pending Actions）
+- [2026-07-20] 完成 `GOAL-2410` 第一批：`AutoLedgerCore` 新增真实 `PendingActionItem` 合同，覆盖版本化稳定 identity、来源 type / ID / revision、五类 kind / category、可本地化 reason、priority、Pro 属性、目标入口、动作集合，以及 `pending / deferred / resolved / dismissed` 生命周期。现有 OCR 待确认、酒店草稿、疑似重复、订阅异常与数据清洗建议已生成来源支持的条目，再由条目推导原有分组 UI；数据清洗来源使用稳定 opaque fingerprint，不复制商户等业务内容。五语原因文案、稳定 ID、状态迁移、JSON 往返、隐私 smoke、完整离线回归及 iOS generic workspace build 均通过。本批不新增 SQLite / CloudKit / 备份 schema，也不持久化用户决定；重启不复活、来源 revision 合并与跨设备同步仍属于 `GOAL-2420`，因此不关闭整个 `GOAL-2410`。
+
 ### 变更（v1.8.0 / Global Format Foundation）
 - [2026-07-20] 完成 `GOAL-2460` 第二批：快速记账通知、Watch 快速输入 / 语音确认、酒店草稿 fallback、支持页预览和分享卡不再固定人民币；语音识别从固定 `zh_CN` 改为跟随 App 语言与系统英语地区；纯数字日期按 locale 的月/日或日/月顺序解析，并在 OCR 确认页对双解日期显示五语复核警告。新增全球格式静态 smoke 并接入完整离线回归，美英日期顺序、歧义检测、历史酒店日期、本地化覆盖、Widget smoke 与 iOS generic workspace build 均通过。本轮保留人民币 OCR 输入规则、截图演示数据和机器日期协议，不修改 schema、Worker、StoreKit、ASC、版本号或构建标签。
 - [2026-07-20] 从 `main` 精确基线 `022dba591c77b40b5a936b9d9e1d87f51a4f6796` 建立 `codex/v1.8.0-foundation`，启动 `GOAL-2460` 第一批：核心金额、日期与月份格式改为跟随 locale 和账本币种；旧账本未显式配置币种时跟随系统地区；WatchConnectivity 向后兼容传递账本币种；iPhone / Watch Widget 去除 `CNY`、`¥`、`万`、`yensign` 与固定日期格式硬编码，并从账本 profile 读取币种。离线全量回归、Widget smoke 与 iOS generic workspace build 通过。本轮未修改版本号、build number、schema、Worker、StoreKit、ASC 或发布标签，五个英语市场仍需后续完整验收。

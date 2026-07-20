@@ -1,23 +1,5 @@
 import Foundation
 
-public enum PendingActionCategory: String, Codable, CaseIterable, Sendable {
-    case receiptReview
-    case hotelReview
-    case duplicateReview
-    case subscriptionAnomaly
-    case cleaningSuggestion
-}
-
-public enum PendingActionPriority: Int, Codable, Comparable, Sendable {
-    case normal = 0
-    case elevated = 1
-    case urgent = 2
-
-    public static func < (lhs: PendingActionPriority, rhs: PendingActionPriority) -> Bool {
-        lhs.rawValue < rhs.rawValue
-    }
-}
-
 public struct PendingActionGroup: Identifiable, Codable, Equatable, Sendable {
     public var category: PendingActionCategory
     public var count: Int
@@ -41,9 +23,11 @@ public struct PendingActionGroup: Identifiable, Codable, Equatable, Sendable {
 
 public struct PendingActionCenterSnapshot: Codable, Equatable, Sendable {
     public var groups: [PendingActionGroup]
+    public var items: [PendingActionItem]
 
-    public init(groups: [PendingActionGroup] = []) {
+    public init(groups: [PendingActionGroup] = [], items: [PendingActionItem] = []) {
         self.groups = groups
+        self.items = items
     }
 
     public var totalCount: Int {
@@ -57,10 +41,32 @@ public struct PendingActionCenterSnapshot: Codable, Equatable, Sendable {
     public func count(for category: PendingActionCategory) -> Int {
         groups.first { $0.category == category }?.count ?? 0
     }
+
+    public func items(for category: PendingActionCategory) -> [PendingActionItem] {
+        items.filter { $0.category == category && $0.state.isActionable }
+    }
 }
 
 public struct PendingActionCenterPlanner: Sendable {
     public init() {}
+
+    public func buildSnapshot(items: [PendingActionItem]) -> PendingActionCenterSnapshot {
+        let actionableItems = items
+            .filter { $0.state.isActionable }
+            .sorted(by: itemSort)
+        let grouped = Dictionary(grouping: actionableItems, by: \PendingActionItem.category)
+        let groups = grouped.map { category, items in
+            PendingActionGroup(
+                category: category,
+                count: items.count,
+                priority: items.map(\.priority).max() ?? .normal,
+                isProAutomation: items.contains { $0.isProAutomation }
+            )
+        }
+        .sorted(by: groupSort)
+
+        return PendingActionCenterSnapshot(groups: groups, items: actionableItems)
+    }
 
     public func buildSnapshot(
         receiptReviewCount: Int,
@@ -105,13 +111,28 @@ public struct PendingActionCenterPlanner: Sendable {
         .filter { $0.count > 0 }
 
         return PendingActionCenterSnapshot(
-            groups: candidates.sorted { lhs, rhs in
-                if lhs.priority != rhs.priority {
-                    return lhs.priority > rhs.priority
-                }
-                return categoryRank(lhs.category) < categoryRank(rhs.category)
-            }
+            groups: candidates.sorted(by: groupSort)
         )
+    }
+
+    private func itemSort(_ lhs: PendingActionItem, _ rhs: PendingActionItem) -> Bool {
+        if lhs.priority != rhs.priority {
+            return lhs.priority > rhs.priority
+        }
+        if categoryRank(lhs.category) != categoryRank(rhs.category) {
+            return categoryRank(lhs.category) < categoryRank(rhs.category)
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.id.rawValue < rhs.id.rawValue
+    }
+
+    private func groupSort(_ lhs: PendingActionGroup, _ rhs: PendingActionGroup) -> Bool {
+        if lhs.priority != rhs.priority {
+            return lhs.priority > rhs.priority
+        }
+        return categoryRank(lhs.category) < categoryRank(rhs.category)
     }
 
     private func categoryRank(_ category: PendingActionCategory) -> Int {

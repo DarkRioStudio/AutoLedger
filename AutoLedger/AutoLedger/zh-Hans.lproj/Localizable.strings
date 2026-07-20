@@ -415,6 +415,14 @@
 "pending_center.subscription.subtitle" = "查看涨价、重复扣费和周期变化";
 "pending_center.cleaning.title" = "智能整理建议";
 "pending_center.cleaning.subtitle" = "统一商户名称并应用已确认的分类偏好";
+"pending_action.reason.receiptNeedsConfirmation" = "请在保存前确认识别到的账单。";
+"pending_action.reason.hotelDraftNeedsReview" = "请在入账前复核酒店水单。";
+"pending_action.reason.suspectedDuplicate" = "这些记录可能对应同一笔消费。";
+"pending_action.reason.subscriptionPriceIncrease" = "检测到订阅扣费金额可能上涨。";
+"pending_action.reason.subscriptionDuplicateCharge" = "订阅可能发生了重复扣费。";
+"pending_action.reason.subscriptionBillingCycleDrift" = "订阅扣费时间偏离了预期周期。";
+"pending_action.reason.merchantNormalizationSuggested" = "发现可供确认的统一商户名称。";
+"pending_action.reason.categoryCorrectionSuggested" = "可以将已确认的分类偏好应用到匹配记录。";
 "ledger.status.aliases_refreshed_format" = "已更新商户别名，并刷新 %d 笔历史账单。";
 "ledger.status.sample_parse_failed" = "示例解析失败。";
 "ledger.status.subscription_recognized_format" = "已识别为订阅：%@ %@/%@";
