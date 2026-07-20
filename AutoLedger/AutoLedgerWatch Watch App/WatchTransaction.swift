@@ -202,7 +202,7 @@ struct WatchTodaySummary: Equatable, Hashable {
     }
 }
 
-private enum WatchLedgerFormatters {
+enum WatchLedgerFormatters {
     static var systemCurrencyCode: String {
         Locale.autoupdatingCurrent.currency?.identifier.uppercased() ?? "USD"
     }
@@ -224,6 +224,25 @@ private enum WatchLedgerFormatters {
         formatter.minimumFractionDigits = digits
         formatter.maximumFractionDigits = digits
         return formatter.string(from: NSNumber(value: amount)) ?? "\(resolvedCode) \(amount)"
+    }
+
+    static func currencySymbol(code: String?) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .currency
+        formatter.currencyCode = resolvedCurrencyCode(code)
+        return formatter.currencySymbol ?? resolvedCurrencyCode(code)
+    }
+
+    static func decimal(_ amount: Double, code: String?) -> String {
+        let resolvedCode = resolvedCurrencyCode(code)
+        let digits = ["JPY", "KRW", "VND", "IDR"].contains(resolvedCode) ? 0 : 2
+        let formatter = NumberFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = digits
+        formatter.maximumFractionDigits = digits
+        return formatter.string(from: NSNumber(value: amount)) ?? String(amount)
     }
 
     static func date(_ date: Date, template: String) -> String {

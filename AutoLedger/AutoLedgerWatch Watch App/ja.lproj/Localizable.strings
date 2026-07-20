@@ -58,7 +58,7 @@
 "watch.voice.parse_accessibility" = "解析して確認へ進む";
 "watch.voice.amount_missing" = "金額を認識できませんでした。もう一度お試しください。";
 "watch.voice.confirm.title" = "確認";
-"watch.voice.confirm.amount_accessibility_format" = "支出 %.2f、%@";
+"watch.voice.confirm.amount_accessibility_format" = "支出 %@、%@";
 "watch.voice.confirm.save_accessibility" = "この取引を保存";
 "watch.voice.confirm.save_hint" = "確認後、iPhone に同期されます";
 "watch.voice.confirm.empty" = "保存する内容がありません";

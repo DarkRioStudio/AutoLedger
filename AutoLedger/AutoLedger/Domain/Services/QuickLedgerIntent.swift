@@ -212,6 +212,7 @@ struct QuickLedgerIntent: AppIntent {
         await NotificationService.shared.scheduleQuickLedgerSuccessNotification(
             merchant: receipt.merchant,
             amount: receipt.amount,
+            currencyCode: receipt.currencyCode,
             transactionID: transaction.id
         )
 

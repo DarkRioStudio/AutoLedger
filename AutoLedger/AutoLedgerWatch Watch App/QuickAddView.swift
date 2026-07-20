@@ -58,7 +58,7 @@ struct QuickAddView: View {
         @Bindable var vm = viewModel
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text("¥")
+                Text(WatchLedgerFormatters.currencySymbol(code: viewModel.todaySummary.currencyCode))
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                 Button {
                     isAmountPadPresented.toggle()
@@ -86,7 +86,9 @@ struct QuickAddView: View {
 
     private var amountDisplayText: String {
         let raw = viewModel.quickAddAmountText.trimmingCharacters(in: .whitespaces)
-        return raw.isEmpty ? "0.00" : raw
+        return raw.isEmpty
+            ? WatchLedgerFormatters.decimal(0, code: viewModel.todaySummary.currencyCode)
+            : raw
     }
 }
 

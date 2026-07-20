@@ -95,7 +95,7 @@ struct ImportLedgerJSONIntent: AppIntent {
                 occurredAt: draft.occurredAt,
                 categoryLabel: draft.categoryLabel,
                 sourceLabel: ReceiptSource.manual.rawValue,
-                note: note(from: draft),
+                note: note(from: draft, targetCurrencyCode: targetContext.currencyCode),
                 ledgerID: targetContext.ledgerID,
                 ledgerCurrencyCode: targetContext.currencyCode
             )
@@ -114,7 +114,7 @@ struct ImportLedgerJSONIntent: AppIntent {
                 occurredAt: draft.occurredAt,
                 categoryLabel: draft.categoryLabel,
                 sourceLabel: ReceiptSource.manual.rawValue,
-                note: note(from: draft),
+                note: note(from: draft, targetCurrencyCode: targetContext.currencyCode),
                 ledgerID: targetContext.ledgerID,
                 ledgerCurrencyCode: quote.quoteCurrencyCode,
                 originalAmount: draft.amount,
@@ -131,7 +131,7 @@ struct ImportLedgerJSONIntent: AppIntent {
                 occurredAt: draft.occurredAt,
                 categoryLabel: draft.categoryLabel,
                 sourceLabel: ReceiptSource.manual.rawValue,
-                note: note(from: draft),
+                note: note(from: draft, targetCurrencyCode: targetContext.currencyCode),
                 ledgerID: targetContext.ledgerID,
                 ledgerCurrencyCode: targetContext.currencyCode,
                 originalAmount: draft.amount,
@@ -146,15 +146,21 @@ struct ImportLedgerJSONIntent: AppIntent {
         let profile = profiles.first { $0.id == preferredLedgerID }
             ?? profiles.first { $0.id == TodaySpendingSummary.defaultLedgerID }
             ?? LedgerProfile.defaultLocal()
-        return (profile.id, LedgerCurrencyOption.supportedCode(matching: profile.currency))
+        return (
+            profile.id,
+            LedgerCurrencyOption.supportedCode(
+                matching: profile.currency ?? ExpenseCurrencyPreference.currentCode
+            )
+        )
     }
 
-    private func note(from draft: StructuredLedgerJSONDraft) -> String {
+    private func note(from draft: StructuredLedgerJSONDraft, targetCurrencyCode: String) -> String {
         var parts: [String] = []
         if !draft.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             parts.append(draft.note.trimmingCharacters(in: .whitespacesAndNewlines))
         }
-        if let currency = draft.currency, currency != "CNY" {
+        if let currency = draft.currency,
+           LedgerCurrencyOption.supportedCode(matching: currency) != targetCurrencyCode {
             parts.append(String(format: String(localized: "import_ledger_json.currency_note_format"), currency))
         }
         parts.append(String(format: String(localized: "import_ledger_json.confidence_note_format"), draft.confidence))

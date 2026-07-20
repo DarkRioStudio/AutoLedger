@@ -39,6 +39,10 @@ struct ReceiptImportConfirmView: View {
         store.ledgerCurrencyCode(for: store.targetLedgerIDForNewTransactions)
     }
 
+    private var hasAmbiguousRecognizedDate: Bool {
+        AppFormatters.isAmbiguousNumericDate(draft.receipt.rawText)
+    }
+
     private var shouldShowCurrencyConversion: Bool {
         currencyCode != targetCurrencyCode
     }
@@ -95,6 +99,12 @@ struct ReceiptImportConfirmView: View {
                         selection: $occurredAt,
                         displayedComponents: [.date, .hourAndMinute]
                     )
+
+                    if hasAmbiguousRecognizedDate {
+                        Label("receipt_confirm.ambiguous_date_warning", systemImage: "calendar.badge.exclamationmark")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
 
                 Section("transaction_editor.section.amount") {

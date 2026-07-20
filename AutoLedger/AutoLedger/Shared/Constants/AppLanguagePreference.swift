@@ -31,6 +31,27 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
         }
     }
 
+    nonisolated var speechRecognitionLocale: Locale {
+        switch self {
+        case .system:
+            return .autoupdatingCurrent
+        case .zhHans:
+            return Locale(identifier: "zh-CN")
+        case .zhHant:
+            return Locale(identifier: "zh-TW")
+        case .english:
+            let systemLocale = Locale.autoupdatingCurrent
+            if systemLocale.language.languageCode?.identifier == "en" {
+                return systemLocale
+            }
+            return Locale(identifier: "en-US")
+        case .japanese:
+            return Locale(identifier: "ja-JP")
+        case .korean:
+            return Locale(identifier: "ko-KR")
+        }
+    }
+
     nonisolated var catalogLanguageKey: String {
         switch self {
         case .system:

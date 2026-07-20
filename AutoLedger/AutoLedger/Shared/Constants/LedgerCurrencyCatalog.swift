@@ -1,7 +1,12 @@
 import Foundation
 
 struct LedgerCurrencyOption: Identifiable, Hashable {
-    static let defaultCode = "CNY"
+    static var defaultCode: String {
+        let systemCode = Locale.autoupdatingCurrent.currency?.identifier
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        return common.contains { $0.code == systemCode } ? systemCode : "USD"
+    }
 
     let code: String
     let symbol: String

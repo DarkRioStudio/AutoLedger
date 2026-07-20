@@ -618,6 +618,7 @@
 "receipt_confirm.section.ocr_text" = "Recognized Text";
 "receipt_confirm.pending_summary" = "Receipt details were recognized. Confirm before saving.";
 "receipt_confirm.multi_receipt_notice" = "This image may include multiple receipts. Only one was recognized. Import each receipt separately for best results.";
+"receipt_confirm.ambiguous_date_warning" = "The recognized numeric date can use either month/day or day/month order. Check the date before saving.";
 "inbox.recent_ocr" = "Recent OCR Text";
 "inbox.merchant_rankings" = "Merchant Rankings";
 "inbox.clipboard.empty" = "No image found in the clipboard.";

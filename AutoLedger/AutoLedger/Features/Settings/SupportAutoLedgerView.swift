@@ -914,7 +914,7 @@ private struct ProDashboardPreview: View {
                     Text("pro.preview.month")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(metricSecondaryText)
-                    Text("¥8,952")
+                    Text(AppFormatters.currency(8_952, code: ExpenseCurrencyPreference.currentCode))
                         .font(.system(size: 28, weight: .black, design: .rounded).monospacedDigit())
                         .foregroundStyle(metricPrimaryText)
                     Text("pro.preview.records")

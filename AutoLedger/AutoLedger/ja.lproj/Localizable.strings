@@ -618,6 +618,7 @@
 "receipt_confirm.section.ocr_text" = "認識テキスト";
 "receipt_confirm.pending_summary" = "レシート情報を認識しました。確認してから保存してください。";
 "receipt_confirm.multi_receipt_notice" = "画像に複数のレシートが含まれている可能性があります。現在は1件のみ認識しました。1件ずつ読み込むことをおすすめします。";
+"receipt_confirm.ambiguous_date_warning" = "認識した数字の日付は月/日と日/月の両方に解釈できます。保存前に日付を確認してください。";
 "inbox.recent_ocr" = "最近の OCR テキスト";
 "inbox.merchant_rankings" = "加盟店ランキング";
 "inbox.clipboard.empty" = "クリップボードに画像が見つかりません。";

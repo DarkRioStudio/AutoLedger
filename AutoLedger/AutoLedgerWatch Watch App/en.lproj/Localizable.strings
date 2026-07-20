@@ -58,7 +58,7 @@
 "watch.voice.parse_accessibility" = "Parse and continue to review";
 "watch.voice.amount_missing" = "No amount recognized. Please try again.";
 "watch.voice.confirm.title" = "Review";
-"watch.voice.confirm.amount_accessibility_format" = "Expense %.2f, %@";
+"watch.voice.confirm.amount_accessibility_format" = "Expense %@, %@";
 "watch.voice.confirm.save_accessibility" = "Save this transaction";
 "watch.voice.confirm.save_hint" = "After confirmation, it will sync to iPhone";
 "watch.voice.confirm.empty" = "Nothing to save";

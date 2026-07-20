@@ -127,7 +127,7 @@ struct AddTransactionIntent: AppIntent {
             WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
             NotificationCenter.default.post(name: NotificationService.didSaveTransactionFromIntent, object: nil)
         }
-        addTxLogger.info("[AddTx] 已记录：\(merchantForSave) ¥\(amount)")
+        addTxLogger.info("[AddTx] 已记录：\(merchantForSave) \(AppFormatters.currency(amount, code: transaction.ledgerCurrencyCode))")
 
         let msg = String(
             format: String(localized: "add_transaction.success_format"),

@@ -621,6 +621,7 @@
 "receipt_confirm.section.ocr_text" = "識別原文";
 "receipt_confirm.pending_summary" = "已識別到帳單資訊，請確認後儲存。";
 "receipt_confirm.multi_receipt_notice" = "偵測到圖片中可能包含多筆帳單，目前僅識別了一筆。建議將每筆帳單單獨截圖後分別匯入。";
+"receipt_confirm.ambiguous_date_warning" = "識別到的純數字日期可能是月/日或日/月順序，請在儲存前確認日期。";
 "inbox.recent_ocr" = "最近 OCR 文字";
 "inbox.merchant_rankings" = "商家消費排名";
 "inbox.clipboard.empty" = "剪貼板中沒有圖片。";

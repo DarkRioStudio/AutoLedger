@@ -28,7 +28,7 @@ struct MonthlySummaryShareCardView: View {
                     ShareCardMetricTile(
                         titleKey: "share_card.monthly.total",
                         value: showsAmount ? data.totalAmountText : String(localized: "share_card.amount_hidden"),
-                        systemImage: showsAmount ? "yensign.circle.fill" : "eye.slash.fill"
+                        systemImage: showsAmount ? "banknote.fill" : "eye.slash.fill"
                     )
                 }
 

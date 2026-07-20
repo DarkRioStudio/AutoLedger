@@ -141,7 +141,10 @@ public enum AppFormatters: Sendable {
         return "\(code) \(value)"
     }
 
-    public static func parseFlexibleDate(_ rawValue: String) -> Date? {
+    public static func parseFlexibleDate(
+        _ rawValue: String,
+        locale: Locale = .autoupdatingCurrent
+    ) -> Date? {
         let normalized = rawValue
             .replacingOccurrences(of: "年", with: "-")
             .replacingOccurrences(of: "月", with: "-")
@@ -151,28 +154,38 @@ public enum AppFormatters: Sendable {
             .replacingOccurrences(of: #"[\u00A0\u2000-\u200B\u3000\uFEFF]"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let formats = [
+        let monthFirstFormats = [
             "M-d-yy HH:mm:ss",
             "MM-dd-yy HH:mm:ss",
             "M-d-yy HH:mm",
             "MM-dd-yy HH:mm",
             "M-d-yy",
             "MM-dd-yy",
+            "M-d-yyyy",
+            "MM-dd-yyyy"
+        ]
+        let dayFirstFormats = [
+            "d-M-yy HH:mm:ss",
+            "dd-MM-yy HH:mm:ss",
+            "d-M-yy HH:mm",
+            "dd-MM-yy HH:mm",
             "d-M-yy",
             "dd-MM-yy",
-            "yy-M-d",
-            "yy-MM-dd",
+            "d-M-yyyy",
+            "dd-MM-yyyy"
+        ]
+        let yearFirstFormats = [
             "yyyy-M-d HH:mm:ss",
             "yyyy-MM-dd HH:mm:ss",
             "yyyy-M-d HH:mm",
             "yyyy-MM-dd HH:mm",
             "yyyy-M-d",
-            "yyyy-MM-dd",
-            "M-d-yyyy",
-            "MM-dd-yyyy",
-            "d-M-yyyy",
-            "dd-MM-yyyy"
+            "yyyy-MM-dd"
         ]
+        let localeOrderedFormats = prefersDayFirstDateOrder(locale: locale)
+            ? dayFirstFormats + monthFirstFormats
+            : monthFirstFormats + dayFirstFormats
+        let formats = yearFirstFormats + localeOrderedFormats
 
         for dateFormat in formats {
             guard format(dateFormat, isCompatibleWith: normalized) else { continue }
@@ -187,6 +200,43 @@ public enum AppFormatters: Sendable {
         }
 
         return nil
+    }
+
+    /// Returns true when a numeric date can validly mean either month/day or day/month.
+    /// Year-first dates and dates with a component above 12 are not ambiguous.
+    public static func isAmbiguousNumericDate(_ rawValue: String) -> Bool {
+        let pattern = #"(?<!\d)(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2}|\d{4})(?!\d)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return false }
+        let range = NSRange(rawValue.startIndex..<rawValue.endIndex, in: rawValue)
+
+        for match in regex.matches(in: rawValue, range: range) {
+            guard match.numberOfRanges == 4,
+                  let firstRange = Range(match.range(at: 1), in: rawValue),
+                  let secondRange = Range(match.range(at: 2), in: rawValue),
+                  let first = Int(rawValue[firstRange]),
+                  let second = Int(rawValue[secondRange])
+            else { continue }
+
+            if (1...12).contains(first),
+               (1...12).contains(second),
+               first != second {
+                return true
+            }
+        }
+        return false
+    }
+
+    public static func prefersDayFirstDateOrder(locale: Locale) -> Bool {
+        guard let pattern = DateFormatter.dateFormat(
+            fromTemplate: "Mdy",
+            options: 0,
+            locale: locale
+        ),
+        let monthIndex = pattern.firstIndex(of: "M"),
+        let dayIndex = pattern.firstIndex(of: "d") else {
+            return false
+        }
+        return dayIndex < monthIndex
     }
 
     private static func format(_ format: String, isCompatibleWith normalized: String) -> Bool {

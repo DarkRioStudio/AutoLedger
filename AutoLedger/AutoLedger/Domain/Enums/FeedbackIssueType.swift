@@ -42,7 +42,7 @@ enum FeedbackIssueType: String, CaseIterable, Identifiable {
         case .feedback:             return "bubble.left"
         case .ocr_parse_wrong:      return "eye.trianglebadge.exclamationmark"
         case .merchant_parse_wrong: return "person.crop.circle.badge.exclamationmark"
-        case .amount_parse_wrong:   return "yensign.circle"
+        case .amount_parse_wrong:   return "banknote"
         case .time_parse_wrong:     return "clock.badge.exclamationmark"
         case .save_failed:          return "externaldrive.badge.xmark"
         case .shortcut_flow:        return "bolt.trianglebadge.exclamationmark"

@@ -15,11 +15,15 @@ final class VoiceSpeechRecognizer: ObservableObject {
     @Published private(set) var state: RecognitionState = .idle
     @Published private(set) var transcript = ""
 
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh_CN"))
+    private let recognizer: SFSpeechRecognizer?
     private var audioEngine: AVAudioEngine?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var startToken: UUID?
+
+    init(locale: Locale = AppLanguagePreference.current.speechRecognitionLocale) {
+        recognizer = SFSpeechRecognizer(locale: locale)
+    }
 
     var isListening: Bool {
         if case .listening = state { return true }

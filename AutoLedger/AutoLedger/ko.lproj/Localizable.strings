@@ -618,6 +618,7 @@
 "receipt_confirm.section.ocr_text" = "인식 원문";
 "receipt_confirm.pending_summary" = "영수증 정보를 인식했습니다. 확인한 뒤 저장하세요.";
 "receipt_confirm.multi_receipt_notice" = "이미지에 여러 영수증이 포함되었을 수 있습니다. 현재는 1건만 인식했습니다. 영수증별로 따로 가져오세요.";
+"receipt_confirm.ambiguous_date_warning" = "인식된 숫자 날짜는 월/일 또는 일/월 순서일 수 있습니다. 저장하기 전에 날짜를 확인하세요.";
 "inbox.recent_ocr" = "최근 OCR 텍스트";
 "inbox.merchant_rankings" = "판매자 순위";
 "inbox.clipboard.empty" = "클립보드에 이미지가 없습니다.";

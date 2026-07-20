@@ -543,7 +543,7 @@ private struct HotelStayDraftRowView: View {
         }
         let currency = draft.localizedData?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             ?? payload?.currency?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? "CNY"
+            ?? ExpenseCurrencyPreference.currentCode
         return presenter.localizedAmountText(totalAmount, currency: currency)
     }
 
@@ -1593,7 +1593,7 @@ private struct HotelStayRecordEditForm: Equatable {
     }
 
     private static func defaultTransactionDate(checkOutDate: String?, fallback: Date) -> Date {
-        let baseDate = checkOutDate.flatMap(AppFormatters.parseFlexibleDate) ?? fallback
+        let baseDate = checkOutDate.flatMap { AppFormatters.parseFlexibleDate($0) } ?? fallback
         var components = AppFormatters.calendar.dateComponents([.year, .month, .day], from: baseDate)
         components.hour = 16
         components.minute = 0

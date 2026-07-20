@@ -58,7 +58,7 @@
 "watch.voice.parse_accessibility" = "解析并进入确认";
 "watch.voice.amount_missing" = "未能识别金额，请重试";
 "watch.voice.confirm.title" = "确认";
-"watch.voice.confirm.amount_accessibility_format" = "支出 %.2f 元，%@";
+"watch.voice.confirm.amount_accessibility_format" = "支出 %@，%@";
 "watch.voice.confirm.save_accessibility" = "保存此笔账单";
 "watch.voice.confirm.save_hint" = "确认后将同步至 iPhone";
 "watch.voice.confirm.empty" = "无可保存内容";

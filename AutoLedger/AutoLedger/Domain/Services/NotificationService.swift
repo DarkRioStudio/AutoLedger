@@ -96,10 +96,15 @@ final class NotificationService: Sendable {
         ])
     }
 
-    func scheduleQuickLedgerSuccessNotification(merchant: String, amount: Double, transactionID: UUID) {
+    func scheduleQuickLedgerSuccessNotification(
+        merchant: String,
+        amount: Double,
+        currencyCode: String?,
+        transactionID: UUID
+    ) {
         guard !Self.isScreenshotMode else { return }
         let center = UNUserNotificationCenter.current()
-        let formattedAmountText = String(format: "¥%.2f", amount)
+        let formattedAmountText = AppFormatters.currency(amount, code: currencyCode)
         center.getNotificationSettings { settings in
             let scheduleNotification: () -> Void = {
                 let content = UNMutableNotificationContent()
@@ -181,7 +186,4 @@ final class NotificationService: Sendable {
         center.add(request)
     }
 
-    private func formattedAmount(_ amount: Double) -> String {
-        String(format: "¥%.2f", amount)
-    }
 }

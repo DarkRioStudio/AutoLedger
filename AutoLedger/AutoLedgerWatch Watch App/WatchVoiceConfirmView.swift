@@ -18,7 +18,10 @@ struct WatchVoiceConfirmView: View {
 
                     // MARK: 金额展示
                     VStack(spacing: 2) {
-                        Text("¥ \(draft.amount, specifier: "%.2f")")
+                        Text(WatchLedgerFormatters.currency(
+                            draft.amount,
+                            code: viewModel.todaySummary.currencyCode
+                        ))
                             .font(.title2.bold())
                         Text(draft.merchant)
                             .font(.footnote)
@@ -27,7 +30,11 @@ struct WatchVoiceConfirmView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(
-                        Text(String(format: String(localized: "watch.voice.confirm.amount_accessibility_format"), draft.amount, draft.merchant))
+                        Text(String(
+                            format: String(localized: "watch.voice.confirm.amount_accessibility_format"),
+                            WatchLedgerFormatters.currency(draft.amount, code: viewModel.todaySummary.currencyCode),
+                            draft.merchant
+                        ))
                     )
 
                     Divider()

@@ -58,7 +58,7 @@
 "watch.voice.parse_accessibility" = "解析並進入確認";
 "watch.voice.amount_missing" = "未能識別金額，請重試";
 "watch.voice.confirm.title" = "確認";
-"watch.voice.confirm.amount_accessibility_format" = "支出 %.2f 元，%@";
+"watch.voice.confirm.amount_accessibility_format" = "支出 %@，%@";
 "watch.voice.confirm.save_accessibility" = "儲存此筆帳單";
 "watch.voice.confirm.save_hint" = "確認後將同步至 iPhone";
 "watch.voice.confirm.empty" = "無可儲存內容";

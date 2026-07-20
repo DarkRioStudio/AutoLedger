@@ -338,6 +338,30 @@ struct OfflineRegression {
             AppFormatters.exportDateTime(sampleDate).hasPrefix("2026-07-04 "),
             "AppFormatters keeps export timestamps machine-stable"
         )
+
+        let usAmbiguousDate = AppFormatters.parseFlexibleDate("04/07/2026", locale: enUS)
+        let gbAmbiguousDate = AppFormatters.parseFlexibleDate("04/07/2026", locale: enGB)
+        let usComponents = usAmbiguousDate.map { AppFormatters.calendar.dateComponents([.month, .day], from: $0) }
+        let gbComponents = gbAmbiguousDate.map { AppFormatters.calendar.dateComponents([.month, .day], from: $0) }
+        reporter.check(
+            usComponents?.month == 4 && usComponents?.day == 7,
+            "AppFormatters parses ambiguous numeric dates in month-first locales"
+        )
+        reporter.check(
+            gbComponents?.month == 7 && gbComponents?.day == 4,
+            "AppFormatters parses ambiguous numeric dates in day-first locales"
+        )
+        reporter.check(
+            !AppFormatters.prefersDayFirstDateOrder(locale: enUS) &&
+                AppFormatters.prefersDayFirstDateOrder(locale: enGB),
+            "AppFormatters derives numeric date order from locale"
+        )
+        reporter.check(
+            AppFormatters.isAmbiguousNumericDate("Paid 04/07/2026") &&
+                !AppFormatters.isAmbiguousNumericDate("Paid 14/07/2026") &&
+                !AppFormatters.isAmbiguousNumericDate("Paid 2026-07-04"),
+            "AppFormatters flags only genuinely ambiguous numeric dates for review"
+        )
     }
 
     private static func verifyHotelStayModels(reporter: RegressionReporter) {

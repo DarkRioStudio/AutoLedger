@@ -114,6 +114,7 @@ struct VoiceLedgerIntent: AppIntent {
         await NotificationService.shared.scheduleQuickLedgerSuccessNotification(
             merchant: receipt.merchant,
             amount: amount,
+            currencyCode: receipt.currencyCode,
             transactionID: transaction.id
         )
 
