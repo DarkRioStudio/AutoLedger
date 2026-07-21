@@ -18,6 +18,9 @@ def main() -> int:
     failures: list[str] = []
     model = (CORE / "Models" / "PendingAction.swift").read_text(encoding="utf-8")
     planner = (CORE / "Services" / "PendingActionCenterPlanner.swift").read_text(encoding="utf-8")
+    backup = (CORE / "Models" / "BackupBundle.swift").read_text(encoding="utf-8")
+    sync_plan = (CORE / "Models" / "LedgerSyncPlan.swift").read_text(encoding="utf-8")
+    ledger_store = (APP / "App" / "LedgerStore.swift").read_text(encoding="utf-8")
     center = (APP / "Features" / "Inbox" / "PendingActionCenterView.swift").read_text(encoding="utf-8")
     inbox = (APP / "Features" / "Inbox" / "InboxView.swift").read_text(encoding="utf-8")
     ipad = (APP / "Features" / "iPad" / "iPadWorkspaceView.swift").read_text(encoding="utf-8")
@@ -42,7 +45,11 @@ def main() -> int:
         "case dismissed",
         "enum PendingActionAvailableAction",
         "enum PendingActionTarget",
+        "struct PendingActionDecision",
+        "enum PendingActionDecisionDisposition",
+        "enum PendingActionDecisionOverlay",
         "func applying(",
+        "func isVisible(at timestamp:",
         "opaqueID(for rawValue:",
     ]:
         require(model, snippet, "PendingAction contract", failures)
@@ -51,8 +58,8 @@ def main() -> int:
         if forbidden in model:
             failures.append(f"PendingAction contract must not copy source business data: {forbidden}")
 
-    require(planner, "buildSnapshot(items:", "PendingActionCenterPlanner", failures)
-    require(planner, ".filter { $0.state.isActionable }", "PendingActionCenterPlanner", failures)
+    require(planner, "items: [PendingActionItem]", "PendingActionCenterPlanner", failures)
+    require(planner, ".filter { $0.isVisible(at: timestamp) }", "PendingActionCenterPlanner", failures)
 
     require(center, "PendingActionCenterLoader", "PendingActionCenterView", failures)
     require(center, "Task.detached", "PendingActionCenterView", failures)
@@ -60,6 +67,11 @@ def main() -> int:
     require(center, "subscriptionAnomalyDecisionRevision", "PendingActionCenterView", failures)
     require(center, "PendingActionItem(", "PendingActionCenterView", failures)
     require(center, "PendingActionSourceReference.opaqueID", "PendingActionCenterView", failures)
+    require(center, "PendingActionDecisionOverlay.applying", "PendingActionCenterView", failures)
+    require(ledger_store, "recordPendingActionDecision(", "LedgerStore", failures)
+    require(ledger_store, "persistPendingActionDecisions()", "LedgerStore", failures)
+    require(backup, "pendingActionDecisions", "BackupBundle", failures)
+    require(sync_plan, "mergePendingActionDecisions(", "LedgerConfigurationSyncPolicy", failures)
     require(inbox, "PendingActionCenterCard(", "InboxView", failures)
     require(inbox, "PendingActionCenterListView(", "InboxView", failures)
     require(ipad, "case pendingActions", "IPadWorkspaceView", failures)

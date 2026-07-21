@@ -50,9 +50,12 @@ public struct PendingActionCenterSnapshot: Codable, Equatable, Sendable {
 public struct PendingActionCenterPlanner: Sendable {
     public init() {}
 
-    public func buildSnapshot(items: [PendingActionItem]) -> PendingActionCenterSnapshot {
+    public func buildSnapshot(
+        items: [PendingActionItem],
+        at timestamp: Date = .now
+    ) -> PendingActionCenterSnapshot {
         let actionableItems = items
-            .filter { $0.state.isActionable }
+            .filter { $0.isVisible(at: timestamp) }
             .sorted(by: itemSort)
         let grouped = Dictionary(grouping: actionableItems, by: \PendingActionItem.category)
         let groups = grouped.map { category, items in

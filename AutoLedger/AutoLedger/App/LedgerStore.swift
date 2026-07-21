@@ -221,10 +221,14 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var subscriptionAnomalyDecisions: [String: SubscriptionAnomalyDecisionRecord] = [:] {
         didSet { subscriptionAnomalyDecisionRevision &+= 1 }
     }
+    @Published private(set) var pendingActionDecisions: [String: PendingActionDecision] = [:] {
+        didSet { pendingActionDecisionRevision &+= 1 }
+    }
 
     private(set) var dataCleaningRevision: UInt64 = 0
     private(set) var visibleTransactionsRevision: UInt64 = 0
     private(set) var subscriptionAnomalyDecisionRevision: UInt64 = 0
+    private(set) var pendingActionDecisionRevision: UInt64 = 0
 
     private let parser: ReceiptParser
     private let smartParser = SmartReceiptParser()
@@ -332,6 +336,7 @@ final class LedgerStore: ObservableObject {
         self.merchantAliasDeletedKeys = loadsPersistedConfiguration ? Self.loadMerchantAliasDeletedKeys() : []
         self.ignoredDataCleaningPreviewIDs = loadsPersistedConfiguration ? Self.loadIgnoredDataCleaningPreviewIDs() : []
         self.subscriptionAnomalyDecisions = loadsPersistedConfiguration ? Self.loadSubscriptionAnomalyDecisions() : [:]
+        self.pendingActionDecisions = loadsPersistedConfiguration ? Self.loadPendingActionDecisions() : [:]
         let initialLedgerProfiles = loadsPersistedConfiguration && !shouldDeferSQLiteStateHydration
             ? LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
             : [LedgerProfile.defaultLocal()]
@@ -541,6 +546,25 @@ final class LedgerStore: ObservableObject {
 
     func unresolvedSubscriptionAnomalySummary(_ summary: SubscriptionAnomalySummary) -> SubscriptionAnomalySummary {
         summary.filteringHandledAnomalies(withIDs: Set(subscriptionAnomalyDecisions.keys))
+    }
+
+    @discardableResult
+    func recordPendingActionDecision(
+        for item: PendingActionItem,
+        mutation: PendingActionMutation,
+        at timestamp: Date = .now
+    ) throws -> PendingActionDecision {
+        let decision = try PendingActionDecision(
+            item: item,
+            mutation: mutation,
+            updatedAt: timestamp
+        )
+        pendingActionDecisions[decision.id.rawValue] = decision
+        persistPendingActionDecisions()
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+        return decision
     }
 
     var targetLedgerIDForNewTransactions: String {
@@ -3390,6 +3414,22 @@ final class LedgerStore: ObservableObject {
         UserDefaults.standard.set(data, forKey: Self.subscriptionAnomalyDecisionsKey)
     }
 
+    private static func loadPendingActionDecisions() -> [String: PendingActionDecision] {
+        guard let data = UserDefaults.standard.data(forKey: Self.pendingActionDecisionsKey),
+              let decisions = try? JSONDecoder().decode(
+                  [String: PendingActionDecision].self,
+                  from: data
+              ) else {
+            return [:]
+        }
+        return PendingActionDecision.normalizedDictionary(decisions)
+    }
+
+    private func persistPendingActionDecisions() {
+        guard let data = try? JSONEncoder().encode(pendingActionDecisions) else { return }
+        UserDefaults.standard.set(data, forKey: Self.pendingActionDecisionsKey)
+    }
+
     private static func loadDataCleaningApplicationHistory() -> [DataCleaningApplicationHistoryEntry] {
         guard let data = UserDefaults.standard.data(forKey: Self.dataCleaningApplicationHistoryKey),
               let entries = try? JSONDecoder().decode([DataCleaningApplicationHistoryEntry].self, from: data) else {
@@ -3628,6 +3668,7 @@ extension LedgerStore {
     private static let merchantAliasDeletedKeysKey = "merchantAliasDeletedKeys"
     private static let ignoredDataCleaningPreviewIDsKey = "ignoredDataCleaningPreviewIDs"
     private static let subscriptionAnomalyDecisionsKey = "subscriptionAnomalyDecisions"
+    private static let pendingActionDecisionsKey = "pendingActionDecisions"
     private static let dataCleaningApplicationHistoryKey = "dataCleaningApplicationHistory"
     private static let dataCleaningApplicationHistoryLimit = 20
     private static let appGroupIdentifier = "group.top.darkrio326.AutoLedger"
@@ -3737,6 +3778,7 @@ extension LedgerStore {
                 notes: subscriptionNotes,
                 anomalyDecisions: subscriptionAnomalyDecisions
             ),
+            pendingActionDecisions: pendingActionDecisions,
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
                 monthlyAnomalyThresholdPercent: UserDefaults.standard.double(forKey: "monthlyAnomalyThresholdPercent"),
@@ -4632,6 +4674,8 @@ extension LedgerStore {
         UserDefaults.standard.set(merged.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
         subscriptionAnomalyDecisions = merged.subscriptionMetadata.anomalyDecisions
         persistSubscriptionAnomalyDecisions()
+        pendingActionDecisions = merged.pendingActionDecisions
+        persistPendingActionDecisions()
         UserDefaults.standard.set(merged.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
         UserDefaults.standard.set(merged.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
         UserDefaults.standard.set(merged.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")
@@ -4683,6 +4727,7 @@ extension LedgerStore {
                 notes: subscriptionNotes,
                 anomalyDecisions: subscriptionAnomalyDecisions
             ),
+            pendingActionDecisions: pendingActionDecisions,
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
                 monthlyAnomalyThresholdPercent: UserDefaults.standard.double(forKey: "monthlyAnomalyThresholdPercent"),
@@ -4888,6 +4933,8 @@ extension LedgerStore {
         UserDefaults.standard.set(bundle.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
         subscriptionAnomalyDecisions = bundle.subscriptionMetadata.anomalyDecisions
         persistSubscriptionAnomalyDecisions()
+        pendingActionDecisions = bundle.pendingActionDecisions
+        persistPendingActionDecisions()
         UserDefaults.standard.set(bundle.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
         UserDefaults.standard.set(bundle.appSettings.monthlyAnomalyThresholdPercent, forKey: "monthlyAnomalyThresholdPercent")
         UserDefaults.standard.set(bundle.appSettings.llmEnhancementEnabled, forKey: "llmEnhancementEnabled")

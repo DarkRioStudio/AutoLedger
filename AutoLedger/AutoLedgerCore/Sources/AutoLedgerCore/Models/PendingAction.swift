@@ -177,6 +177,143 @@ public enum PendingActionMutation: Equatable, Sendable {
     case reopen
 }
 
+public enum PendingActionDecisionDisposition: String, Codable, CaseIterable, Sendable {
+    case deferred
+    case resolved
+    case dismissed
+    case reopened
+}
+
+public struct PendingActionDecision: Identifiable, Codable, Equatable, Sendable {
+    public let kind: PendingActionKind
+    public let source: PendingActionSourceReference
+    public let disposition: PendingActionDecisionDisposition
+    public let updatedAt: Date
+    public let deferredUntil: Date?
+
+    public var id: PendingActionID {
+        PendingActionID(kind: kind, source: source)
+    }
+
+    public init(
+        kind: PendingActionKind,
+        source: PendingActionSourceReference,
+        disposition: PendingActionDecisionDisposition,
+        updatedAt: Date = .now,
+        deferredUntil: Date? = nil
+    ) throws {
+        guard source.isValid else { throw PendingActionContractError.invalidSourceID }
+        self.kind = kind
+        self.source = source
+        self.disposition = disposition
+        self.updatedAt = updatedAt
+        self.deferredUntil = disposition == .deferred ? deferredUntil : nil
+    }
+
+    public init(
+        item: PendingActionItem,
+        mutation: PendingActionMutation,
+        updatedAt: Date = .now
+    ) throws {
+        if mutation != .reopen {
+            _ = try item.applying(mutation, at: updatedAt)
+        }
+        let disposition: PendingActionDecisionDisposition
+        let deferredUntil: Date?
+        switch mutation {
+        case let .deferUntil(date):
+            disposition = .deferred
+            deferredUntil = date
+        case .resolve:
+            disposition = .resolved
+            deferredUntil = nil
+        case .dismiss:
+            disposition = .dismissed
+            deferredUntil = nil
+        case .reopen:
+            disposition = .reopened
+            deferredUntil = nil
+        }
+        try self.init(
+            kind: item.kind,
+            source: item.source,
+            disposition: disposition,
+            updatedAt: updatedAt,
+            deferredUntil: deferredUntil
+        )
+    }
+
+    public func applying(to item: PendingActionItem, at timestamp: Date) -> PendingActionItem {
+        guard item.id == id else { return item }
+        switch disposition {
+        case .deferred:
+            if let deferredUntil, deferredUntil <= timestamp {
+                return item
+            }
+            return (try? item.applying(.deferUntil(deferredUntil), at: updatedAt)) ?? item
+        case .resolved:
+            return (try? item.applying(.resolve, at: updatedAt)) ?? item
+        case .dismissed:
+            return (try? item.applying(.dismiss, at: updatedAt)) ?? item
+        case .reopened:
+            return item
+        }
+    }
+
+    public static func normalizedDictionary(
+        _ decisions: [String: PendingActionDecision]
+    ) -> [String: PendingActionDecision] {
+        decisions.values.reduce(into: [:]) { result, decision in
+            guard decision.source.isValid else { return }
+            let key = decision.id.rawValue
+            guard let existing = result[key] else {
+                result[key] = decision
+                return
+            }
+            if decision.isPreferred(over: existing) {
+                result[key] = decision
+            }
+        }
+    }
+
+    public func isPreferred(over existing: PendingActionDecision) -> Bool {
+        if updatedAt != existing.updatedAt {
+            return updatedAt > existing.updatedAt
+        }
+        if disposition != existing.disposition {
+            return disposition.mergeRank > existing.disposition.mergeRank
+        }
+        let candidateDeferredUntil = deferredUntil?.timeIntervalSince1970 ?? .greatestFiniteMagnitude
+        let existingDeferredUntil = existing.deferredUntil?.timeIntervalSince1970 ?? .greatestFiniteMagnitude
+        return candidateDeferredUntil >= existingDeferredUntil
+    }
+}
+
+private extension PendingActionDecisionDisposition {
+    var mergeRank: Int {
+        switch self {
+        case .deferred: return 0
+        case .resolved: return 1
+        case .dismissed: return 2
+        case .reopened: return 3
+        }
+    }
+}
+
+public enum PendingActionDecisionOverlay {
+    public static func applying(
+        _ decisions: [String: PendingActionDecision],
+        to items: [PendingActionItem],
+        at timestamp: Date = .now
+    ) -> [PendingActionItem] {
+        let normalizedDecisions = PendingActionDecision.normalizedDictionary(decisions)
+        return items.map { item in
+            guard let decision = normalizedDecisions[item.id.rawValue] else { return item }
+            return decision.applying(to: item, at: timestamp)
+        }
+    }
+}
+
 public enum PendingActionContractError: Error, Equatable, Sendable {
     case invalidSourceID
     case invalidTransition(from: PendingActionState, mutation: PendingActionMutation)
@@ -228,6 +365,17 @@ public struct PendingActionItem: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var category: PendingActionCategory { kind.category }
+
+    public func isVisible(at timestamp: Date) -> Bool {
+        switch state {
+        case .pending:
+            return true
+        case .deferred:
+            return deferredUntil.map { $0 <= timestamp } ?? false
+        case .resolved, .dismissed:
+            return false
+        }
+    }
 
     public func applying(_ mutation: PendingActionMutation, at timestamp: Date) throws -> PendingActionItem {
         var copy = self

@@ -18,6 +18,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
     public let ledgerProfiles: [LedgerProfile]
     public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
+    public let pendingActionDecisions: [String: PendingActionDecision]
     public let appSettings: BackupAppSettings
 
     public init(
@@ -38,6 +39,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         ledgerProfiles: [LedgerProfile] = [],
         defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
+        pendingActionDecisions: [String: PendingActionDecision] = [:],
         appSettings: BackupAppSettings
     ) {
         self.schemaVersion = schemaVersion
@@ -57,6 +59,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         self.ledgerProfiles = ledgerProfiles
         self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
+        self.pendingActionDecisions = PendingActionDecision.normalizedDictionary(pendingActionDecisions)
         self.appSettings = appSettings
     }
 
@@ -78,6 +81,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         case ledgerProfiles
         case defaultWriteLedgerID
         case subscriptionMetadata
+        case pendingActionDecisions
         case appSettings
     }
 
@@ -100,6 +104,12 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
         defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
+        pendingActionDecisions = PendingActionDecision.normalizedDictionary(
+            try container.decodeIfPresent(
+                [String: PendingActionDecision].self,
+                forKey: .pendingActionDecisions
+            ) ?? [:]
+        )
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
 }

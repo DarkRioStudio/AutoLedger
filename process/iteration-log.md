@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-20（ITER-446 v1.8 PendingAction Core 合同第一批）
+更新日期：2026-07-21（ITER-447 v1.8 PendingAction 决策持久化第一批）
 
 ## 记录规则
 
@@ -43,6 +43,25 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-447 v1.8 PendingAction 决策持久化第一批
+- 日期：2026-07-21
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：GOAL-2420 / Pending Action Persistence
+- 类型：能力增强 / 持久化 / 备份 / CloudKit 配置 / 测试
+- 目标：让 PendingAction 的延后、解决、忽略和重开决定拥有可重启、可备份、可合并的最小持久化 overlay，并确保旧来源修订的决定不会错误压制新事项。
+- 改动范围：`PendingActionDecision` 合同与 overlay；延后可见性；`LedgerStore` UserDefaults 持久化 API；`BackupBundle`；既有 `LedgerConfigurationSyncPayload` JSON；CloudKit 配置合并；待处理加载器；离线、兼容和静态回归。
+- 未改动范围：未新增 SQLite table / column / migration，未新增 CloudKit record type / field / index，未修改 Production schema；未增加 iPhone / iPad / Mac 通用逐条或批量操作 UI；未接入邮箱候选、云收件箱、月结或同步冲突新来源；未修改 Worker、D1、StoreKit、ASC、版本号、build number 或构建标签。
+- 完成内容：决定只保存 kind、source type / ID / revision、`deferred / resolved / dismissed / reopened`、更新时间和可选延后时间，不复制账本、商户、金额、PDF、OCR 或邮箱正文。外部决定字典会按计算出的 `pa1` identity 重新规范化，并过滤无效来源。
+- 完成内容：决定 overlay 只应用于完全相同的 source revision；来源 revision 变化后自动形成新事项。未来延后的事项在到期前不进入快照，到期后重新出现；resolved / dismissed 被过滤；reopened 作为显式同步 tombstone 保留，跨设备 latest-wins 合并时不会被旧的忽略决定复活。
+- 完成内容：`LedgerStore` 将决定编码到本机 UserDefaults，记录后沿用既有配置变更、CloudKit push 和自动备份调度；手工 / iCloud 备份新增向后兼容字段，旧备份缺字段按空集合读取并可正常恢复。
+- 完成内容：跨设备同步复用既有 CloudKit configuration record 的 `payloadJSON`，仅增加可选 JSON 成员；没有新增 CloudKit schema。合并按每个稳定 action ID 的 `updatedAt` 选取最新决定，同一时间戳冲突时确定性优先 reopened tombstone，旧配置缺字段按空集合解码。
+- 未完成内容：现有待处理中心仍是分组导航，尚未调用通用决定 API；真实用户的延后 / 忽略 / 重开入口属于 `GOAL-2430`。本轮只完成 codec 与合并回归，没有进行两台真实设备的 CloudKit 往返验收；决定保留 / 垃圾回收策略也需在更多来源接入后冻结，因此不关闭整个 `GOAL-2420`。
+- 测试情况：`bash scripts/run_offline_regression.sh` PASS，覆盖决定 JSON 往返、损坏键规范化、重启恢复、revision 变化、来源删除不生成孤立事项、延后到期、reopen tombstone、备份写入 / 旧备份兼容 / 恢复、旧 CloudKit 配置兼容和 latest-wins 合并；PendingAction smoke、文档真源 smoke 与 `git diff --check` PASS；iOS generic workspace build PASS，只保留工程既有 Swift 6 渐进迁移、MediaPipe 与 Watch API warning。
+- 风险与注意事项：CloudKit configuration 仍是单记录 JSON 合并路径，真实多设备同秒写入需设备验证；reopened tombstone 当前不自动清理，以避免旧设备复活决定，后续必须先冻结安全 retention 再做限额。没有 UI 调用前，不能把本批描述为用户已可处理所有待办。
+- 回滚方式：可回退决定模型、UserDefaults 字段、备份 / 配置 JSON 成员和 overlay；新增字段均可选且没有数据库 / CloudKit schema migration，旧版本会忽略 JSON 新成员，回滚不需清库或 Production schema 操作。
+- 结论：PendingAction 已具备隐私最小、revision-aware、向后兼容的决定持久化底座，重启 / 备份 / 配置合并合同可回归；用户操作闭环和真实跨设备证据仍保持开放。
+- 下一步建议：进入 `GOAL-2430`，先在 iPhone 提供逐条复核、延后、忽略和重开，并让来源模块与待处理中心双向更新；随后用 iPhone + iPad 验证 CloudKit 决定不复活，再决定 tombstone retention。
 
 ### ITER-446 v1.8 PendingAction Core 合同第一批
 - 日期：2026-07-20

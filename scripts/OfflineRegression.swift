@@ -240,6 +240,97 @@ struct OfflineRegression {
             "PendingAction lifecycle rejects repeated terminal transitions"
         )
 
+        let dismissedDecision = try? PendingActionDecision(
+            item: receiptItem,
+            mutation: .dismiss,
+            updatedAt: updatedAt
+        )
+        let dismissedItems = PendingActionDecisionOverlay.applying(
+            dismissedDecision.map { [$0.id.rawValue: $0] } ?? [:],
+            to: [receiptItem],
+            at: updatedAt
+        )
+        reporter.check(
+            PendingActionCenterPlanner().buildSnapshot(items: dismissedItems, at: updatedAt).isEmpty,
+            "PendingAction decision overlay suppresses a dismissed source revision"
+        )
+        let revisedItems = PendingActionDecisionOverlay.applying(
+            dismissedDecision.map { [$0.id.rawValue: $0] } ?? [:],
+            to: [revisedReceiptItem].compactMap { $0 },
+            at: updatedAt
+        )
+        reporter.check(
+            PendingActionCenterPlanner().buildSnapshot(items: revisedItems, at: updatedAt).totalCount == 1,
+            "PendingAction decision overlay does not suppress a newer source revision"
+        )
+
+        let futureDate = updatedAt.addingTimeInterval(3_600)
+        let deferredDecision = try? PendingActionDecision(
+            item: receiptItem,
+            mutation: .deferUntil(futureDate),
+            updatedAt: updatedAt
+        )
+        let deferredItems = PendingActionDecisionOverlay.applying(
+            deferredDecision.map { [$0.id.rawValue: $0] } ?? [:],
+            to: [receiptItem],
+            at: updatedAt
+        )
+        reporter.check(
+            PendingActionCenterPlanner().buildSnapshot(items: deferredItems, at: updatedAt).isEmpty,
+            "PendingAction decision overlay hides an item until its deferred date"
+        )
+        let dueItems = PendingActionDecisionOverlay.applying(
+            deferredDecision.map { [$0.id.rawValue: $0] } ?? [:],
+            to: [receiptItem],
+            at: futureDate
+        )
+        reporter.check(
+            PendingActionCenterPlanner().buildSnapshot(items: dueItems, at: futureDate).totalCount == 1,
+            "PendingAction decision overlay restores an item when its deferred date arrives"
+        )
+
+        let reopenedDecision = try? PendingActionDecision(
+            item: receiptItem,
+            mutation: .reopen,
+            updatedAt: updatedAt.addingTimeInterval(120)
+        )
+        let reopenedItems = PendingActionDecisionOverlay.applying(
+            reopenedDecision.map { [$0.id.rawValue: $0] } ?? [:],
+            to: [receiptItem],
+            at: updatedAt.addingTimeInterval(120)
+        )
+        reporter.check(
+            PendingActionCenterPlanner().buildSnapshot(
+                items: reopenedItems,
+                at: updatedAt.addingTimeInterval(120)
+            ).totalCount == 1,
+            "PendingAction reopened tombstone keeps the current source revision visible"
+        )
+        let encodedDecision = dismissedDecision.flatMap { try? JSONEncoder().encode($0) }
+        let decodedDecision = encodedDecision.flatMap {
+            try? JSONDecoder().decode(PendingActionDecision.self, from: $0)
+        }
+        reporter.check(
+            decodedDecision == dismissedDecision,
+            "PendingAction decision round-trips without source business payload"
+        )
+        let normalizedDecisions = PendingActionDecision.normalizedDictionary(
+            dismissedDecision.map { ["malformed-key": $0] } ?? [:]
+        )
+        reporter.check(
+            normalizedDecisions[dismissedDecision?.id.rawValue ?? ""] == dismissedDecision &&
+                normalizedDecisions["malformed-key"] == nil,
+            "PendingAction decision dictionaries normalize external keys to stable identity"
+        )
+        reporter.check(
+            PendingActionDecisionOverlay.applying(
+                normalizedDecisions,
+                to: [],
+                at: updatedAt
+            ).isEmpty,
+            "PendingAction decisions never materialize an item after its source is deleted"
+        )
+
         let itemSeeds: [(PendingActionKind, PendingActionSourceType, String, PendingActionReasonCode)] = [
             (.receiptConfirmation, .receiptImportReview, "receipt", .receiptNeedsConfirmation),
             (.hotelDraftReview, .hotelStayDraft, "hotel", .hotelDraftNeedsReview),
@@ -4158,6 +4249,33 @@ struct OfflineRegression {
             autoClipboardImportEnabled: false,
             iCloudBackupEnabled: false
         )
+        let pendingSource = PendingActionSourceReference(
+            type: .receiptImportReview,
+            id: "configuration-pending-action",
+            revision: "1"
+        )
+        let localPendingDecision = try? PendingActionDecision(
+            kind: .receiptConfirmation,
+            source: pendingSource,
+            disposition: .dismissed,
+            updatedAt: Date(timeIntervalSince1970: 1_780_000_100)
+        )
+        let remoteReopenedDecision = try? PendingActionDecision(
+            kind: .receiptConfirmation,
+            source: pendingSource,
+            disposition: .reopened,
+            updatedAt: Date(timeIntervalSince1970: 1_780_000_100)
+        )
+        let remoteOnlyDecision = try? PendingActionDecision(
+            kind: .hotelDraftReview,
+            source: PendingActionSourceReference(
+                type: .hotelStayDraft,
+                id: "configuration-hotel-draft",
+                revision: "needsReview:1"
+            ),
+            disposition: .resolved,
+            updatedAt: Date(timeIntervalSince1970: 1_780_020_200)
+        )
         let local = LedgerConfigurationSyncPayload(
             updatedAt: Date(timeIntervalSince1970: 1_780_000_000),
             deviceID: "iphone",
@@ -4192,6 +4310,7 @@ struct OfflineRegression {
                     )
                 ]
             ),
+            pendingActionDecisions: localPendingDecision.map { [$0.id.rawValue: $0] } ?? [:],
             appSettings: appSettings
         )
         let emptyRemote = LedgerConfigurationSyncPayload(
@@ -4206,6 +4325,7 @@ struct OfflineRegression {
             ledgerProfiles: [],
             defaultWriteLedgerID: nil,
             subscriptionMetadata: BackupSubscriptionMetadata(),
+            pendingActionDecisions: [:],
             appSettings: appSettings
         )
 
@@ -4253,6 +4373,9 @@ struct OfflineRegression {
                     )
                 ]
             ),
+            pendingActionDecisions: [remoteReopenedDecision, remoteOnlyDecision]
+                .compactMap { $0 }
+                .reduce(into: [:]) { $0[$1.id.rawValue] = $1 },
             appSettings: appSettings
         )
         let merged = LedgerConfigurationSyncPolicy.merge(local: local, remote: remote)
@@ -4286,6 +4409,11 @@ struct OfflineRegression {
             merged.subscriptionMetadata.anomalyDecisions["shared-anomaly"]?.disposition == .ignored &&
                 merged.subscriptionMetadata.anomalyDecisions["remote-anomaly"]?.disposition == .confirmed,
             "LedgerConfigurationSyncPolicy merges subscription anomaly decisions by latest update"
+        )
+        reporter.check(
+            merged.pendingActionDecisions[localPendingDecision?.id.rawValue ?? ""]?.disposition == .reopened &&
+                merged.pendingActionDecisions[remoteOnlyDecision?.id.rawValue ?? ""]?.disposition == .resolved,
+            "LedgerConfigurationSyncPolicy merges pending action decisions and deterministically preserves reopen tombstones"
         )
 
         let legacyConfigurationData = Data("""
@@ -4328,6 +4456,10 @@ struct OfflineRegression {
         reporter.check(
             legacyConfiguration?.subscriptionMetadata.anomalyDecisions == [:],
             "LedgerConfigurationSyncPayload decodes legacy metadata without subscription anomaly decisions"
+        )
+        reporter.check(
+            legacyConfiguration?.pendingActionDecisions == [:],
+            "LedgerConfigurationSyncPayload decodes legacy payload without pending action decisions"
         )
     }
 
@@ -7221,6 +7353,7 @@ struct OfflineRegression {
         defer {
             UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
             UserDefaults.standard.removeObject(forKey: "subscriptionAnomalyDecisions")
+            UserDefaults.standard.removeObject(forKey: "pendingActionDecisions")
             try? FileManager.default.removeItem(at: rootURL)
         }
 
@@ -7230,6 +7363,7 @@ struct OfflineRegression {
         UserDefaults.standard.removeObject(forKey: "subscriptionAnnualPriceOverrides")
         UserDefaults.standard.removeObject(forKey: "subscriptionNotes")
         UserDefaults.standard.removeObject(forKey: "subscriptionAnomalyDecisions")
+        UserDefaults.standard.removeObject(forKey: "pendingActionDecisions")
         UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
 
         let sourceStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "source.sqlite3")
@@ -7352,6 +7486,26 @@ struct OfflineRegression {
         UserDefaults.standard.set([subscription.id.uuidString: 168.0], forKey: "subscriptionAnnualPriceOverrides")
         UserDefaults.standard.set([subscription.id.uuidString: "年度价备注"], forKey: "subscriptionNotes")
         sourceLedger.recordSubscriptionAnomalyDecision(id: "backup-anomaly", disposition: .confirmed)
+        let persistedPendingItem = try PendingActionItem(
+            kind: .receiptConfirmation,
+            source: PendingActionSourceReference(
+                type: .receiptImportReview,
+                id: "backup-pending-action",
+                revision: "1"
+            ),
+            reason: .receiptNeedsConfirmation,
+            createdAt: AppFormatters.parseFlexibleDate("2026-04-24 12:00") ?? .now
+        )
+        let persistedPendingDecision = try sourceLedger.recordPendingActionDecision(
+            for: persistedPendingItem,
+            mutation: .dismiss,
+            at: AppFormatters.parseFlexibleDate("2026-04-24 12:05") ?? .now
+        )
+        let restartedLedger = LedgerStore(transactionStore: nil)
+        reporter.check(
+            restartedLedger.pendingActionDecisions[persistedPendingDecision.id.rawValue] == persistedPendingDecision,
+            "LedgerStore reloads pending action decisions after restart"
+        )
 
         let bundle = try sourceLedger.makeBackupBundle()
         reporter.check(bundle.summary.transactionCount == 1, "BackupBundle summary counts active transactions")
@@ -7421,6 +7575,22 @@ struct OfflineRegression {
             bundle.subscriptionMetadata.anomalyDecisions["backup-anomaly"]?.disposition == .confirmed,
             "BackupBundle includes subscription anomaly decisions"
         )
+        reporter.check(
+            bundle.pendingActionDecisions[persistedPendingDecision.id.rawValue] == persistedPendingDecision,
+            "BackupBundle includes pending action decisions"
+        )
+
+        let encodedBundle = try JSONEncoder().encode(bundle)
+        var legacyBundleObject = try JSONSerialization.jsonObject(with: encodedBundle) as? [String: Any] ?? [:]
+        legacyBundleObject.removeValue(forKey: "pendingActionDecisions")
+        let legacyBundleData = try JSONSerialization.data(withJSONObject: legacyBundleObject)
+        let legacyBundle = try JSONDecoder().decode(BackupBundle.self, from: legacyBundleData)
+        reporter.check(
+            legacyBundle.pendingActionDecisions == [:],
+            "BackupBundle decodes legacy backups without pending action decisions"
+        )
+
+        UserDefaults.standard.removeObject(forKey: "pendingActionDecisions")
 
         let restoreStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "restore.sqlite3")
         let restoreLedger = LedgerStore(transactionStore: restoreStore)
@@ -7517,6 +7687,10 @@ struct OfflineRegression {
         reporter.check(
             restoreLedger.subscriptionAnomalyDecisions["backup-anomaly"]?.disposition == .confirmed,
             "Backup restore keeps subscription anomaly decisions"
+        )
+        reporter.check(
+            restoreLedger.pendingActionDecisions[persistedPendingDecision.id.rawValue] == persistedPendingDecision,
+            "Backup restore keeps pending action decisions"
         )
     }
 

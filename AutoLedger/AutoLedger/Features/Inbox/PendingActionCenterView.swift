@@ -13,6 +13,7 @@ enum PendingActionCenterLoader {
             String(store.ignoredDataCleaningPreviewIDs.count),
             String(store.dataCleaningRevision),
             String(store.subscriptionAnomalyDecisionRevision),
+            String(store.pendingActionDecisionRevision),
             store.pendingReceiptReview?.id.uuidString ?? "none",
             store.lastImportSummary ?? ""
         ].joined(separator: "|")
@@ -25,6 +26,7 @@ enum PendingActionCenterLoader {
         let categoryCorrections = store.categoryCorrections
         let ignoredPreviewIDs = store.ignoredDataCleaningPreviewIDs
         let handledSubscriptionAnomalyIDs = Set(store.subscriptionAnomalyDecisions.keys)
+        let pendingActionDecisions = store.pendingActionDecisions
         let receiptReviewSeed = store.pendingReceiptReview.map {
             (id: $0.id.uuidString, createdAt: $0.createdAt)
         }
@@ -121,7 +123,16 @@ enum PendingActionCenterLoader {
                 )
             })
 
-            return PendingActionCenterPlanner().buildSnapshot(items: items)
+            let timestamp = Date()
+            let resolvedItems = PendingActionDecisionOverlay.applying(
+                pendingActionDecisions,
+                to: items,
+                at: timestamp
+            )
+            return PendingActionCenterPlanner().buildSnapshot(
+                items: resolvedItems,
+                at: timestamp
+            )
         }.value
     }
 }

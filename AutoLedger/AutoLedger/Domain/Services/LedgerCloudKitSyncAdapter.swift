@@ -1399,6 +1399,7 @@ struct LedgerCloudKitSyncAdapter {
                 ledgerProfiles: payload.ledgerProfiles,
                 defaultWriteLedgerID: payload.defaultWriteLedgerID,
                 subscriptionMetadata: payload.subscriptionMetadata,
+                pendingActionDecisions: payload.pendingActionDecisions,
                 appSettings: payload.appSettings
             )
         }

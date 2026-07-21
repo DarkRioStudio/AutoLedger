@@ -117,6 +117,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
     public let ledgerProfiles: [LedgerProfile]
     public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
+    public let pendingActionDecisions: [String: PendingActionDecision]
     public let appSettings: BackupAppSettings
 
     public init(
@@ -132,6 +133,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         ledgerProfiles: [LedgerProfile] = [],
         defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
+        pendingActionDecisions: [String: PendingActionDecision] = [:],
         appSettings: BackupAppSettings
     ) {
         self.recordName = recordName
@@ -146,6 +148,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         self.ledgerProfiles = ledgerProfiles
         self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
+        self.pendingActionDecisions = PendingActionDecision.normalizedDictionary(pendingActionDecisions)
         self.appSettings = appSettings
     }
 
@@ -162,6 +165,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         case ledgerProfiles
         case defaultWriteLedgerID
         case subscriptionMetadata
+        case pendingActionDecisions
         case appSettings
     }
 
@@ -181,6 +185,12 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
         defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
+        pendingActionDecisions = PendingActionDecision.normalizedDictionary(
+            try container.decodeIfPresent(
+                [String: PendingActionDecision].self,
+                forKey: .pendingActionDecisions
+            ) ?? [:]
+        )
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
 
@@ -239,6 +249,10 @@ public enum LedgerConfigurationSyncPolicy {
                     remote.subscriptionMetadata.anomalyDecisions
                 )
             ),
+            pendingActionDecisions: mergePendingActionDecisions(
+                local.pendingActionDecisions,
+                remote.pendingActionDecisions
+            ),
             appSettings: remote.appSettings
         )
     }
@@ -255,7 +269,8 @@ public enum LedgerConfigurationSyncPolicy {
             lhs.merchantAliasDeletedKeys != rhs.merchantAliasDeletedKeys ||
             lhs.ledgerProfiles != rhs.ledgerProfiles ||
             lhs.defaultWriteLedgerID != rhs.defaultWriteLedgerID ||
-            lhs.subscriptionMetadata != rhs.subscriptionMetadata
+            lhs.subscriptionMetadata != rhs.subscriptionMetadata ||
+            lhs.pendingActionDecisions != rhs.pendingActionDecisions
     }
 
     private static func mergeLedgerProfiles(
@@ -419,6 +434,23 @@ public enum LedgerConfigurationSyncPolicy {
         return merged
     }
 
+    private static func mergePendingActionDecisions(
+        _ local: [String: PendingActionDecision],
+        _ remote: [String: PendingActionDecision]
+    ) -> [String: PendingActionDecision] {
+        var merged = local
+        for (id, remoteDecision) in remote {
+            guard let localDecision = merged[id] else {
+                merged[id] = remoteDecision
+                continue
+            }
+            if remoteDecision.isPreferred(over: localDecision) {
+                merged[id] = remoteDecision
+            }
+        }
+        return merged
+    }
+
     private static func mergeMerchantAliases(
         _ local: [String: String],
         _ remote: [String: String],
@@ -457,7 +489,8 @@ public extension LedgerConfigurationSyncPayload {
             (defaultWriteLedgerID != nil && defaultWriteLedgerID != TodaySpendingSummary.defaultLedgerID) ||
             !subscriptionMetadata.annualPriceOverrides.isEmpty ||
             !subscriptionMetadata.notes.isEmpty ||
-            !subscriptionMetadata.anomalyDecisions.isEmpty
+            !subscriptionMetadata.anomalyDecisions.isEmpty ||
+            !pendingActionDecisions.isEmpty
     }
 }
 
