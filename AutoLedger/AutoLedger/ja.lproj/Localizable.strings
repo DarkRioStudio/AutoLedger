@@ -405,6 +405,9 @@
 "pending_center.empty.title" = "すべて確認済みです";
 "pending_center.empty.detail" = "新しい認識結果、ホテル明細、整理候補がここに表示されます。";
 "pending_center.total_format" = "%d 件あります。台帳へ保存または整理する前に確認してください。";
+"pending_center.section.review" = "要確認";
+"pending_center.section.later" = "後で確認";
+"pending_center.section.handled" = "対応済み";
 "pending_center.receipt.title" = "レシートの確認";
 "pending_center.receipt.subtitle" = "認識結果を確認してから台帳へ保存します";
 "pending_center.hotel.title" = "ホテル明細の確認";
@@ -423,6 +426,17 @@
 "pending_action.reason.subscriptionBillingCycleDrift" = "請求日が予定された課金周期から外れています。";
 "pending_action.reason.merchantNormalizationSuggested" = "統一できる加盟店名の候補があります。";
 "pending_action.reason.categoryCorrectionSuggested" = "確認済みのカテゴリ設定を一致する記録に適用できます。";
+"pending_action.open" = "確認";
+"pending_action.defer" = "後で";
+"pending_action.defer.tomorrow" = "明日";
+"pending_action.defer.week" = "7日後";
+"pending_action.ignore" = "無視";
+"pending_action.reopen" = "再度開く";
+"pending_action.ignore.confirm.title" = "この項目を無視しますか？";
+"pending_action.ignore.confirm.message" = "対応済みに残り、元データが存在する間は再度開くことができます。";
+"pending_action.state.deferred_until" = "再表示";
+"pending_action.state.dismissed" = "無視済み";
+"pending_action.state.resolved" = "対応済み";
 "ledger.status.aliases_refreshed_format" = "加盟店エイリアスを更新し、過去の取引 %d 件を更新しました。";
 "ledger.status.sample_parse_failed" = "サンプルを解析できませんでした。";
 "ledger.status.subscription_recognized_format" = "サブスクリプションとして認識：%@ %@/%@";

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-21（ITER-447 v1.8 PendingAction 决策持久化第一批）
+更新日期：2026-07-21（ITER-448 v1.8 PendingAction 逐条操作第一批）
 
 ## 记录规则
 
@@ -43,6 +43,24 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-448 v1.8 PendingAction 逐条操作第一批
+- 日期：2026-07-21
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：GOAL-2430 / Unified Pending Action Review
+- 类型：能力增强 / UI / 国际化 / 测试
+- 目标：把待处理中心从分类跳转升级为来源支持的逐条复核，让用户可以打开原业务页面、延后、忽略，并从稍后或已处理分区重新打开事项。
+- 改动范围：`PendingActionCenterSnapshot` 分区；iPhone sheet；iPad / Mac 共用工作区；来源路由；决定写入；五语操作文案；离线与静态回归。
+- 未改动范围：未直接在待处理中心确认、修改或删除账单、酒店、订阅或清洗真源；未增加批量操作、本地邮箱 / 云收件箱 / 月结 / 同步冲突新来源；未修改 SQLite / CloudKit schema、Worker、D1、StoreKit、ASC、版本号、build number、构建标签或产品发布标签。
+- 完成内容：首页卡片和 `totalCount` 继续只统计当前可处理项；中心快照新增 `deferredItems` 与 `handledItems`，未来延后事项不会计入待处理数量，但仍可被用户提前重新打开；resolved / dismissed 事项保留在已处理分区，只要原来源仍存在即可重开。旧快照缺少新分区时向后兼容为空。
+- 完成内容：iPhone、iPad 和 Mac 共用逐条卡片，显示类型、原因和 Pro 标识；“复核”回到原业务入口，酒店优先使用条目的精确 draft ID；“稍后”支持明天或 7 天后，“忽略”需要二次确认，“重新打开”写入既有 reopened tombstone。来源业务确认继续由原页面完成，待处理中心不复制或篡改业务真源。
+- 完成内容：简中、繁中、英语、日语和韩语补齐待复核、稍后、已处理、复核、延后、忽略、重开、确认提示与状态文案；PendingAction smoke 增加三分区和三种决定动作的静态门禁。
+- 未完成内容：本批没有批量处理、多选或筛选；当前只覆盖已接入的五类来源。真实 iPhone + iPad CloudKit 延后 / 忽略 / 重开往返、跨设备同秒写入、tombstone retention 和 20,000 条账本性能证据仍未完成，因此不关闭整个 `GOAL-2430` 或 `GOAL-2420`。
+- 测试情况：`bash scripts/run_offline_regression.sh` PASS，新增 dismiss 进入已处理、defer 进入稍后、到期恢复、快照三分区 JSON 往返和旧 payload 兼容断言；PendingAction smoke、五语 strings 校验与 `git diff --check` PASS；`xcodebuild -workspace AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' -derivedDataPath /tmp/AutoLedgerPendingActionDerivedData CODE_SIGNING_ALLOWED=NO build` PASS，只保留工程既有 Swift 6 渐进迁移、MediaPipe 与 Watch API warning。
+- 风险与注意事项：已处理列表只会展示当前仍能从业务真源重建的事项，来源删除后不会由孤立决定重新生成；“忽略”隐藏的是当前 source revision，新 revision 会重新进入待处理。当前 UI 没有决定保存失败提示，因为现有写入只可能在合同非法迁移时抛错；若未来改为独立数据库，必须补用户可见错误和重试。
+- 回滚方式：可独立回退三分区快照、逐条卡片和五语文案，恢复旧分组导航；持久化决定格式和既有业务真源不变，没有数据库或 CloudKit schema 回滚。
+- 结论：当前五类待处理已经具备可用的逐条复核、稍后、忽略和重开闭环，iPhone、iPad 与 Mac 共享同一语义；批量能力和真实跨设备验收仍保持开放。
+- 下一步建议：在 iPhone 与 iPad 上用同一 source revision 验证“iPhone 忽略 -> iPad 不复活 -> iPad 重开 -> iPhone 恢复”，再决定 tombstone retention；随后接入月结缺资料和同步冲突来源，最后评估批量安全操作。
 
 ### ITER-447 v1.8 PendingAction 决策持久化第一批
 - 日期：2026-07-21

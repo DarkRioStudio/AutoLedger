@@ -405,6 +405,9 @@
 "pending_center.empty.title" = "All Caught Up";
 "pending_center.empty.detail" = "New recognition results, hotel folios, and cleanup suggestions will appear here.";
 "pending_center.total_format" = "%d items. Review each one before saving or organizing your ledger.";
+"pending_center.section.review" = "Needs Review";
+"pending_center.section.later" = "Later";
+"pending_center.section.handled" = "Handled";
 "pending_center.receipt.title" = "Receipts to Confirm";
 "pending_center.receipt.subtitle" = "Check recognition results before saving them";
 "pending_center.hotel.title" = "Hotel Folios to Review";
@@ -423,6 +426,17 @@
 "pending_action.reason.subscriptionBillingCycleDrift" = "A subscription charge falls outside its expected billing cycle.";
 "pending_action.reason.merchantNormalizationSuggested" = "A consistent merchant name is available for review.";
 "pending_action.reason.categoryCorrectionSuggested" = "A confirmed category preference can be applied to matching records.";
+"pending_action.open" = "Review";
+"pending_action.defer" = "Later";
+"pending_action.defer.tomorrow" = "Tomorrow";
+"pending_action.defer.week" = "In 7 Days";
+"pending_action.ignore" = "Ignore";
+"pending_action.reopen" = "Reopen";
+"pending_action.ignore.confirm.title" = "Ignore This Item?";
+"pending_action.ignore.confirm.message" = "It will remain in Handled and can be reopened while the source still exists.";
+"pending_action.state.deferred_until" = "Returns";
+"pending_action.state.dismissed" = "Ignored";
+"pending_action.state.resolved" = "Handled";
 "ledger.status.aliases_refreshed_format" = "Merchant aliases updated and %d past transactions refreshed.";
 "ledger.status.sample_parse_failed" = "The sample could not be parsed.";
 "ledger.status.subscription_recognized_format" = "Subscription recognized: %@ %@/%@";

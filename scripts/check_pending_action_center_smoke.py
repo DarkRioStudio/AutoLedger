@@ -60,6 +60,8 @@ def main() -> int:
 
     require(planner, "items: [PendingActionItem]", "PendingActionCenterPlanner", failures)
     require(planner, ".filter { $0.isVisible(at: timestamp) }", "PendingActionCenterPlanner", failures)
+    require(planner, "deferredItems: [PendingActionItem]", "PendingActionCenterSnapshot", failures)
+    require(planner, "handledItems: [PendingActionItem]", "PendingActionCenterSnapshot", failures)
 
     require(center, "PendingActionCenterLoader", "PendingActionCenterView", failures)
     require(center, "Task.detached", "PendingActionCenterView", failures)
@@ -68,6 +70,10 @@ def main() -> int:
     require(center, "PendingActionItem(", "PendingActionCenterView", failures)
     require(center, "PendingActionSourceReference.opaqueID", "PendingActionCenterView", failures)
     require(center, "PendingActionDecisionOverlay.applying", "PendingActionCenterView", failures)
+    require(center, "PendingActionItemRow(", "PendingActionCenterView", failures)
+    require(center, "onDecision(item, .deferUntil(date))", "PendingActionCenterView", failures)
+    require(center, "onDecision(item, .reopen)", "PendingActionCenterView", failures)
+    require(center, "onDecision(item, .dismiss)", "PendingActionCenterView", failures)
     require(ledger_store, "recordPendingActionDecision(", "LedgerStore", failures)
     require(ledger_store, "persistPendingActionDecisions()", "LedgerStore", failures)
     require(backup, "pendingActionDecisions", "BackupBundle", failures)
@@ -90,6 +96,14 @@ def main() -> int:
             "pending_center.duplicate.title",
             "pending_center.subscription.title",
             "pending_center.cleaning.title",
+            "pending_center.section.review",
+            "pending_center.section.later",
+            "pending_center.section.handled",
+            "pending_action.open",
+            "pending_action.defer",
+            "pending_action.ignore",
+            "pending_action.reopen",
+            "pending_action.ignore.confirm.title",
             "pending_action.reason.receiptNeedsConfirmation",
             "pending_action.reason.hotelDraftNeedsReview",
             "pending_action.reason.suspectedDuplicate",

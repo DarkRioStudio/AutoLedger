@@ -405,6 +405,9 @@
 "pending_center.empty.title" = "都處理好了";
 "pending_center.empty.detail" = "新的識別結果、酒店水單或整理建議會顯示在這裡。";
 "pending_center.total_format" = "共 %d 項，逐項確認後再寫入或整理帳本。";
+"pending_center.section.review" = "待覆核";
+"pending_center.section.later" = "稍後處理";
+"pending_center.section.handled" = "已處理";
 "pending_center.receipt.title" = "帳單待確認";
 "pending_center.receipt.subtitle" = "檢查識別結果後再儲存至帳本";
 "pending_center.hotel.title" = "酒店水單待覆核";
@@ -423,6 +426,17 @@
 "pending_action.reason.subscriptionBillingCycleDrift" = "訂閱扣費時間偏離了預期週期。";
 "pending_action.reason.merchantNormalizationSuggested" = "發現可供確認的統一商戶名稱。";
 "pending_action.reason.categoryCorrectionSuggested" = "可以將已確認的分類偏好套用到符合的記錄。";
+"pending_action.open" = "覆核";
+"pending_action.defer" = "稍後";
+"pending_action.defer.tomorrow" = "明天";
+"pending_action.defer.week" = "7 天後";
+"pending_action.ignore" = "忽略";
+"pending_action.reopen" = "重新開啟";
+"pending_action.ignore.confirm.title" = "忽略這個項目？";
+"pending_action.ignore.confirm.message" = "它會保留在「已處理」中；只要來源仍存在，就可以重新開啟。";
+"pending_action.state.deferred_until" = "恢復時間";
+"pending_action.state.dismissed" = "已忽略";
+"pending_action.state.resolved" = "已處理";
 "ledger.status.aliases_refreshed_format" = "已更新商戶別名，並重新整理 %d 筆歷史帳單。";
 "ledger.status.sample_parse_failed" = "範例解析失敗。";
 "ledger.status.subscription_recognized_format" = "已識別為訂閱：%@ %@/%@";

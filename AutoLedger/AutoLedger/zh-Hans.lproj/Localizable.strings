@@ -405,6 +405,9 @@
 "pending_center.empty.title" = "都处理好了";
 "pending_center.empty.detail" = "新的识别结果、酒店水单或整理建议会显示在这里。";
 "pending_center.total_format" = "共 %d 项，逐项确认后再写入或整理账本。";
+"pending_center.section.review" = "待复核";
+"pending_center.section.later" = "稍后处理";
+"pending_center.section.handled" = "已处理";
 "pending_center.receipt.title" = "账单待确认";
 "pending_center.receipt.subtitle" = "检查识别结果后再保存到账本";
 "pending_center.hotel.title" = "酒店水单待复核";
@@ -423,6 +426,17 @@
 "pending_action.reason.subscriptionBillingCycleDrift" = "订阅扣费时间偏离了预期周期。";
 "pending_action.reason.merchantNormalizationSuggested" = "发现可供确认的统一商户名称。";
 "pending_action.reason.categoryCorrectionSuggested" = "可以将已确认的分类偏好应用到匹配记录。";
+"pending_action.open" = "复核";
+"pending_action.defer" = "稍后";
+"pending_action.defer.tomorrow" = "明天";
+"pending_action.defer.week" = "7 天后";
+"pending_action.ignore" = "忽略";
+"pending_action.reopen" = "重新打开";
+"pending_action.ignore.confirm.title" = "忽略这个项目？";
+"pending_action.ignore.confirm.message" = "它会保留在“已处理”中；只要来源仍存在，就可以重新打开。";
+"pending_action.state.deferred_until" = "恢复时间";
+"pending_action.state.dismissed" = "已忽略";
+"pending_action.state.resolved" = "已处理";
 "ledger.status.aliases_refreshed_format" = "已更新商户别名，并刷新 %d 笔历史账单。";
 "ledger.status.sample_parse_failed" = "示例解析失败。";
 "ledger.status.subscription_recognized_format" = "已识别为订阅：%@ %@/%@";

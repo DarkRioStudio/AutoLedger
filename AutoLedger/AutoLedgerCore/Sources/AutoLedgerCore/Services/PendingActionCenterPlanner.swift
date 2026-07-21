@@ -24,10 +24,19 @@ public struct PendingActionGroup: Identifiable, Codable, Equatable, Sendable {
 public struct PendingActionCenterSnapshot: Codable, Equatable, Sendable {
     public var groups: [PendingActionGroup]
     public var items: [PendingActionItem]
+    public var deferredItems: [PendingActionItem]
+    public var handledItems: [PendingActionItem]
 
-    public init(groups: [PendingActionGroup] = [], items: [PendingActionItem] = []) {
+    public init(
+        groups: [PendingActionGroup] = [],
+        items: [PendingActionItem] = [],
+        deferredItems: [PendingActionItem] = [],
+        handledItems: [PendingActionItem] = []
+    ) {
         self.groups = groups
         self.items = items
+        self.deferredItems = deferredItems
+        self.handledItems = handledItems
     }
 
     public var totalCount: Int {
@@ -38,12 +47,31 @@ public struct PendingActionCenterSnapshot: Codable, Equatable, Sendable {
         totalCount == 0
     }
 
+    public var hasStoredItems: Bool {
+        !items.isEmpty || !deferredItems.isEmpty || !handledItems.isEmpty
+    }
+
     public func count(for category: PendingActionCategory) -> Int {
         groups.first { $0.category == category }?.count ?? 0
     }
 
     public func items(for category: PendingActionCategory) -> [PendingActionItem] {
         items.filter { $0.category == category && $0.state.isActionable }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case groups
+        case items
+        case deferredItems
+        case handledItems
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        groups = try container.decodeIfPresent([PendingActionGroup].self, forKey: .groups) ?? []
+        items = try container.decodeIfPresent([PendingActionItem].self, forKey: .items) ?? []
+        deferredItems = try container.decodeIfPresent([PendingActionItem].self, forKey: .deferredItems) ?? []
+        handledItems = try container.decodeIfPresent([PendingActionItem].self, forKey: .handledItems) ?? []
     }
 }
 
@@ -57,6 +85,14 @@ public struct PendingActionCenterPlanner: Sendable {
         let actionableItems = items
             .filter { $0.isVisible(at: timestamp) }
             .sorted(by: itemSort)
+        let deferredItems = items
+            .filter { item in
+                item.state == .deferred && !item.isVisible(at: timestamp)
+            }
+            .sorted(by: deferredItemSort)
+        let handledItems = items
+            .filter { $0.state == .resolved || $0.state == .dismissed }
+            .sorted(by: handledItemSort)
         let grouped = Dictionary(grouping: actionableItems, by: \PendingActionItem.category)
         let groups = grouped.map { category, items in
             PendingActionGroup(
@@ -68,7 +104,12 @@ public struct PendingActionCenterPlanner: Sendable {
         }
         .sorted(by: groupSort)
 
-        return PendingActionCenterSnapshot(groups: groups, items: actionableItems)
+        return PendingActionCenterSnapshot(
+            groups: groups,
+            items: actionableItems,
+            deferredItems: deferredItems,
+            handledItems: handledItems
+        )
     }
 
     public func buildSnapshot(
@@ -129,6 +170,26 @@ public struct PendingActionCenterPlanner: Sendable {
             return lhs.createdAt < rhs.createdAt
         }
         return lhs.id.rawValue < rhs.id.rawValue
+    }
+
+    private func deferredItemSort(_ lhs: PendingActionItem, _ rhs: PendingActionItem) -> Bool {
+        switch (lhs.deferredUntil, rhs.deferredUntil) {
+        case let (lhsDate?, rhsDate?) where lhsDate != rhsDate:
+            return lhsDate < rhsDate
+        case (nil, _?):
+            return false
+        case (_?, nil):
+            return true
+        default:
+            return itemSort(lhs, rhs)
+        }
+    }
+
+    private func handledItemSort(_ lhs: PendingActionItem, _ rhs: PendingActionItem) -> Bool {
+        if lhs.updatedAt != rhs.updatedAt {
+            return lhs.updatedAt > rhs.updatedAt
+        }
+        return itemSort(lhs, rhs)
     }
 
     private func groupSort(_ lhs: PendingActionGroup, _ rhs: PendingActionGroup) -> Bool {

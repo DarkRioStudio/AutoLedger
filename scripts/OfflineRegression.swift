@@ -200,6 +200,12 @@ struct OfflineRegression {
             "PendingActionItem exposes a localizable reason key"
         )
         reporter.check(
+            receiptItem.availableActions.contains(.defer) &&
+                receiptItem.availableActions.contains(.dismiss) &&
+                receiptItem.availableActions.contains(.reopen),
+            "PendingActionItem declares the generic later, ignore, and reopen actions exposed by the center"
+        )
+        reporter.check(
             (try? PendingActionItem(
                 kind: .receiptConfirmation,
                 source: PendingActionSourceReference(type: .receiptImportReview, id: "   "),
@@ -250,9 +256,14 @@ struct OfflineRegression {
             to: [receiptItem],
             at: updatedAt
         )
+        let dismissedSnapshot = PendingActionCenterPlanner().buildSnapshot(
+            items: dismissedItems,
+            at: updatedAt
+        )
         reporter.check(
-            PendingActionCenterPlanner().buildSnapshot(items: dismissedItems, at: updatedAt).isEmpty,
-            "PendingAction decision overlay suppresses a dismissed source revision"
+            dismissedSnapshot.isEmpty &&
+                dismissedSnapshot.handledItems.first?.state == .dismissed,
+            "PendingAction center removes a dismissed source revision from the active count but keeps it reopenable"
         )
         let revisedItems = PendingActionDecisionOverlay.applying(
             dismissedDecision.map { [$0.id.rawValue: $0] } ?? [:],
@@ -275,17 +286,23 @@ struct OfflineRegression {
             to: [receiptItem],
             at: updatedAt
         )
+        let deferredSnapshot = PendingActionCenterPlanner().buildSnapshot(
+            items: deferredItems,
+            at: updatedAt
+        )
         reporter.check(
-            PendingActionCenterPlanner().buildSnapshot(items: deferredItems, at: updatedAt).isEmpty,
-            "PendingAction decision overlay hides an item until its deferred date"
+            deferredSnapshot.isEmpty &&
+                deferredSnapshot.deferredItems.first?.deferredUntil == futureDate,
+            "PendingAction center removes a deferred item from the active count while keeping it reopenable"
         )
         let dueItems = PendingActionDecisionOverlay.applying(
             deferredDecision.map { [$0.id.rawValue: $0] } ?? [:],
             to: [receiptItem],
             at: futureDate
         )
+        let dueSnapshot = PendingActionCenterPlanner().buildSnapshot(items: dueItems, at: futureDate)
         reporter.check(
-            PendingActionCenterPlanner().buildSnapshot(items: dueItems, at: futureDate).totalCount == 1,
+            dueSnapshot.totalCount == 1 && dueSnapshot.deferredItems.isEmpty,
             "PendingAction decision overlay restores an item when its deferred date arrives"
         )
 
@@ -350,7 +367,9 @@ struct OfflineRegression {
             items: actionableItems + [resolvedItem].compactMap { $0 }
         )
         reporter.check(
-            itemSnapshot.totalCount == 5 && itemSnapshot.items.count == 5,
+            itemSnapshot.totalCount == 5 &&
+                itemSnapshot.items.count == 5 &&
+                itemSnapshot.handledItems.count == 1,
             "Pending action center derives counts from actionable item contracts"
         )
         reporter.check(
@@ -366,6 +385,31 @@ struct OfflineRegression {
         reporter.check(
             decodedReceiptItem == receiptItem,
             "PendingActionItem round-trips without source business payload"
+        )
+        let encodedSnapshot = try? JSONEncoder().encode(itemSnapshot)
+        let decodedSnapshot = encodedSnapshot.flatMap {
+            try? JSONDecoder().decode(PendingActionCenterSnapshot.self, from: $0)
+        }
+        reporter.check(
+            decodedSnapshot == itemSnapshot,
+            "Pending action center snapshot round-trips review, later, and handled sections"
+        )
+        let legacySnapshotData = encodedSnapshot.flatMap { data -> Data? in
+            guard var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+                return nil
+            }
+            object.removeValue(forKey: "deferredItems")
+            object.removeValue(forKey: "handledItems")
+            return try? JSONSerialization.data(withJSONObject: object)
+        }
+        let legacySnapshot = legacySnapshotData.flatMap {
+            try? JSONDecoder().decode(PendingActionCenterSnapshot.self, from: $0)
+        }
+        reporter.check(
+            legacySnapshot?.items.count == itemSnapshot.items.count &&
+                legacySnapshot?.deferredItems.isEmpty == true &&
+                legacySnapshot?.handledItems.isEmpty == true,
+            "Pending action center snapshot defaults new sections when decoding an older payload"
         )
 
         let duplicate = DataCleaningPreviewItem(

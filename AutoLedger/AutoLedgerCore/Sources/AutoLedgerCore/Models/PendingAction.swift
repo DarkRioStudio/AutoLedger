@@ -66,10 +66,9 @@ public enum PendingActionKind: String, Codable, CaseIterable, Sendable {
 
     public var defaultActions: [PendingActionAvailableAction] {
         switch self {
-        case .receiptConfirmation, .hotelDraftReview, .subscriptionAnomaly:
-            return [.open, .confirm, .dismiss]
-        case .duplicateCandidate, .cleaningSuggestion:
-            return [.open, .confirm, .`defer`, .dismiss]
+        case .receiptConfirmation, .hotelDraftReview, .subscriptionAnomaly,
+             .duplicateCandidate, .cleaningSuggestion:
+            return [.open, .confirm, .`defer`, .dismiss, .reopen]
         }
     }
 }

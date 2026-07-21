@@ -98,7 +98,8 @@ struct InboxView: View {
                     PendingActionCenterListView(
                         snapshot: pendingActionSnapshot,
                         isRefreshing: isRefreshingPendingActions,
-                        onSelect: openPendingAction
+                        onOpen: openPendingAction,
+                        onDecision: recordPendingActionDecision
                     )
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
@@ -162,13 +163,13 @@ struct InboxView: View {
     }
 
     @MainActor
-    private func openPendingAction(_ category: PendingActionCategory) {
+    private func openPendingAction(_ item: PendingActionItem) {
         isPresentingPendingActionCenter = false
-        switch category {
+        switch item.category {
         case .receiptReview:
             break
         case .hotelReview:
-            let draftID = store.hotelStayDrafts.first {
+            let draftID = UUID(uuidString: item.source.id) ?? store.hotelStayDrafts.first {
                 ![HotelStayDraftStatus.confirmed, .rejected, .postedToLedger].contains($0.status)
             }?.id
             navigationState.openHotelReviewQueue(draftID: draftID)
@@ -180,6 +181,17 @@ struct InboxView: View {
         case .subscriptionAnomaly:
             selectedTab = AutoLedgerHomeTab.settings.rawValue
             navigationState.settingsPath = [.subscriptions]
+        }
+    }
+
+    private func recordPendingActionDecision(
+        _ item: PendingActionItem,
+        _ mutation: PendingActionMutation
+    ) {
+        do {
+            try store.recordPendingActionDecision(for: item, mutation: mutation)
+        } catch {
+            assertionFailure("Invalid pending action transition: \(error)")
         }
     }
 
