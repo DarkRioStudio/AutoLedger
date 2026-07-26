@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（v1.7.0 / ASC 1.6.0 发布收口）
+- [2026-07-26] 用户确认 ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 四平台均已过审。创建并推送不可移动产品标签 `v1.7.0`，标签精确指向 build `120` 源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；随后在隔离 worktree 完成 `git diff --check` 和完整离线回归，将 `codex/v1.8.0-foundation` 的六个线性提交 fast-forward 合入远端 `main` 至 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。本轮未修改 App / Worker runtime、ASC、build、CloudKit / D1 schema、StoreKit、签名、entitlement 或 `xcbuild-v1.7.0`，原工作树未提交内容保持未暂存、未提交。
+
 ### 新增（v1.8.0 / Persistent Pending Actions）
 - [2026-07-21] 完成 `GOAL-2430` 第一批：iPhone、iPad 与 Mac 待处理中心从分类导航升级为来源支持的逐条卡片；首页数量仍只统计当前待复核项，中心新增“稍后”和“已处理”分区。用户可打开原业务页面复核、延后到明天或 7 天后、二次确认忽略，并在来源仍存在时提前或事后重新打开；酒店条目优先路由到精确 draft ID。来源确认继续在原页面完成，中心不复制或直接修改账单真源。五语文案、三分区 JSON / 旧 payload 兼容、决定迁移、PendingAction smoke、完整离线回归和 iOS generic workspace build 均通过。本批未增加批量操作或新来源，也未完成真实 iPhone + iPad CloudKit 往返和 tombstone retention，因此不关闭整个 `GOAL-2430` / `GOAL-2420`。
 - [2026-07-21] 完成 `GOAL-2420` 第一批：新增 revision-aware `PendingActionDecision` overlay，保存延后、解决、忽略与显式重开决定；同一 `pa1` 来源修订可在重启后继续过滤，来源 revision 变化自动成为新事项，延后事项到期后重新出现，来源删除不会由孤立决定重新生成。决定以隐私最小字段写入 UserDefaults、手工 / iCloud 备份和既有 CloudKit configuration `payloadJSON`，跨设备按 `updatedAt` 合并且同时间戳确定性优先 `reopened` tombstone，防止旧远端忽略状态复活；旧备份和旧配置缺字段均向后兼容为空。完整离线回归、PendingAction smoke 与 iOS generic workspace build 通过。本批没有新增 SQLite / CloudKit schema，也尚未增加通用用户操作 UI 或完成真实双设备 CloudKit 验收，因此不关闭整个 `GOAL-2420`。

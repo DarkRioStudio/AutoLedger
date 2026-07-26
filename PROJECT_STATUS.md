@@ -2,30 +2,32 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-07-20
+> 截止日期：2026-07-26
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 > 全球产品战略：[docs/product/GLOBAL_PRODUCT_STRATEGY.md](docs/product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
-> 当前版本执行计划：[versions/v1.7.0-plan.md](versions/v1.7.0-plan.md)
+> 当前版本执行计划：[versions/v1.8.0-plan.md](versions/v1.8.0-plan.md)
 
 ## Current Snapshot
 
 | 项目 | 当前状态 |
 |---|---|
-| 内部开发线 | `v1.7.0` |
-| App Store 对外版本 | `1.6.0` |
-| 发布阶段 | ASC `1.6.0` 四平台已提交审核，当前均为 `WAITING_FOR_REVIEW` |
+| 内部开发线 | `v1.8.0` |
+| 已过审 App Store 版本 | `1.6.0`（内部 `v1.7.0`） |
+| 发布阶段 | 用户于 2026-07-26 确认 ASC `1.6.0` iOS、macOS、tvOS、visionOS 四平台均已过审；本轮未再次调用 ASC API |
 | 自定义产品页 | 三张五语页面已通过独立 iOS items-only submission 提交，审核单与三页均为 `WAITING_FOR_REVIEW`；主版本审核单保持独立 |
 | 已验证候选产品行为基线 | build `120` / `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；六项最终 TestFlight / 真机门禁已由用户确认通过 |
 | Xcode Cloud 触发标签 | `xcbuild-v1.7.0` 已移动到包含 runtime 基线与发布证据文档的最新 `main` |
 | 最近人工结论 | build `120` 的水单刷新、401 续签、订阅处理、iCloud、交互性能和 Mac smoke 均通过 |
 | 精确 TestFlight build | build `120`；iOS、macOS、tvOS、visionOS 均为 `VALID / APP_STORE_ELIGIBLE / expired=false`，且已绑定 ASC `1.6.0` |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
-| 下一版本 | `v1.8.0 / ASC 1.7.0` 的 Review & Close 与英语五市场质量组仅为 Draft，不扩大当前发布范围 |
+| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 已进入 Early Execution；`codex/v1.8.0-foundation` 已 fast-forward 合入远端 `main` |
 
 本文件回答“项目现在在哪里”。它不替代版本计划、回归证据、CHANGELOG 或逐轮迭代日志。
 
 ## Release Position
+
+ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已推进到 `v1.8.0` foundation 提交 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。审核通过不自动证明所有地区商店页面已经完成传播，本轮也没有修改 ASC、构建或已发布 binary。
 
 `v1.7.0 / ASC 1.6.0` 的主要产品与工程能力已经进入主线：
 
@@ -101,9 +103,9 @@
 
 ## Next Actions
 
-1. 等待 Apple 审核，定期只读回读四个平台状态；没有 `UNRESOLVED_ISSUES` 或 Resolution Center 新消息时不重复提交。
-2. 若审核通过，确认四个平台实际发布状态与商店可见版本；`AFTER_APPROVAL` 会在批准后进入发布流程。
-3. 独立监控三张自定义产品页审核；获批并确认专属 URL 可见后，再把 Campaign Link 与对应 `ppid` 页面投入营销。
+1. 只读确认四个平台在目标地区的商店可见性与版本传播；不得用产品 tag 替代线上可见证据。
+2. 独立监控三张自定义产品页审核；获批并确认专属 URL 可见后，再把 Campaign Link 与对应 `ppid` 页面投入营销。
+3. 以远端 `main` 的 `a844349fc93ddd29cb6f4d4974a6051273ba28cb` 继续 `v1.8.0 / ASC 1.7.0` Early Execution，并按 `versions/v1.8.0-plan.md` 保持每批独立门禁。
 
 ## Source Of Truth Map
 

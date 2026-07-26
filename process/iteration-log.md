@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-21（ITER-448 v1.8 PendingAction 逐条操作第一批）
+更新日期：2026-07-26（ITER-449 ASC 1.6.0 发布收口与 v1.8 主线切换）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-449 ASC 1.6.0 发布收口与 v1.8 主线切换
+- 日期：2026-07-26
+- 所属版本：v1.7.0 / ASC 1.6.0 -> v1.8.0 / ASC 1.7.0
+- 所属阶段：Release Closeout / Mainline Transition
+- 类型：发布治理 / Git / 文档
+- 目标：在用户确认 ASC `1.6.0` 四平台全部过审后，冻结最终内部产品标签，并把已验证的 `v1.8.0-foundation` 线性合回远端 `main` 继续开发。
+- 改动范围：只读核对工作树、远端 `main`、候选 build 源码、现有 tag 约定和分支拓扑；在隔离 worktree 验证 `v1.8.0-foundation`；创建并推送 `v1.7.0`；fast-forward 远端 `main`；更新当前状态、CHANGELOG 与本日志。
+- 未改动范围：未修改 App / Worker runtime、ASC 在线状态、build、CloudKit / D1 schema、StoreKit、签名、entitlement、`xcbuild-v1.7.0` 或既有产品标签；未暂存、提交、移动或清理原工作树的未提交文件。
+- 完成内容：不可移动 annotated tag `v1.7.0` 已推送，远端 dereference 精确为 build `120` 源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`，与 `xcbuild-v1.7.0` 的 commit 一致。`codex/v1.8.0-foundation` 是该候选的六提交线性后继，远端 `main` 已无强推 fast-forward 到 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。
+- 未完成内容：本轮审核结论来自用户人工确认，没有重新调用 ASC API 验证各地区商店传播；三张自定义产品页仍需独立确认审核和公开 URL。原主工作树因保留未提交修改，本地 `main` 暂时落后远端六个提交。
+- 测试情况：`git diff --check 022dba59..a844349f` PASS；`bash scripts/run_offline_regression.sh` PASS，包含布局、可访问性、CloudKit、App Intents、Widget、全球格式、可靠性、性能、五语发布、visionOS、PendingAction、Pro、ASC metadata、截图、App Preview、酒店天气与文档真源 smoke；远端 `main` 由 `git ls-remote` 与 GitHub API 双重回读为 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。
+- 风险与注意事项：GitHub 在推送后报告默认分支存在 2 个 high Dependabot vulnerabilities，未在本轮扩大为依赖修复；旧 `v1.0.0` 本地与远端 tag 对象不一致，普通 `fetch --tags` 会拒绝覆盖，本轮未强制修改。原工作树的 README、CHANGELOG、iteration log 等未提交改动与新主线存在路径重叠，不能直接强行 fast-forward。
+- 回滚方式：`v1.7.0` 是已过审产品标签，不移动；如 `v1.8.0` 主线需要回退，应通过新的 revert 提交回退对应 foundation commits，不重写远端 `main`。文档事实错误可用后续 scoped commit 修正。
+- 结论：ASC `1.6.0` 对应的内部 `v1.7.0` 已完成标签冻结，远端主线已切换到 `v1.8.0` Early Execution。
+- 下一步建议：先将原工作树的未提交内容按来源隔离，再同步本地 `main`；随后按 `v1.8.0-plan.md` 继续真实双设备 PendingAction 往返、tombstone retention 与英语五市场验收，不把本次审核通过外推为这些门禁已完成。
 
 ### ITER-448 v1.8 PendingAction 逐条操作第一批
 - 日期：2026-07-21
