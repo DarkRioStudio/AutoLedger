@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 新增（韩语 README）
+- [2026-07-28] 新增完整 `README.ko.md`，以韩语覆盖产品定位、App Store / TestFlight 入口、Free / Pro 边界、酒店水单、隐私、五语 UI / 识别、构建、项目结构和版本路线图；简中、繁中、英语、日语 README 的语言导航与五语能力摘要同步更新，品牌资产清单、核心路线图和文档真源 smoke 扩展到五语 README。本轮不修改 App / Worker runtime、ASC、版本号、构建或发布标签。
+
 ### 变更（README / App Store 下载入口）
 - [2026-07-28] 在中文 README 顶部徽章区新增 AutoLedger 的地区无关 App Store 下载链接，指向 `https://apps.apple.com/app/id6761892533`；本轮不修改 App、其它语言 README、ASC 在线状态、版本号、构建或发布配置。
 

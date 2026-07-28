@@ -1,6 +1,6 @@
 # AutoLedger
 
-[English](README.en.md) · [简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md)
+[English](README.en.md) · [简体中文](README.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
 AutoLedger is a private, local-first personal expense ledger with automated imports for Apple users worldwide. It turns screenshots, receipts, voice input, the clipboard, Shortcuts, and hotel folio PDFs into reviewable records. Core bookkeeping stays free; Pro unlocks time-saving automation such as email folios, batch candidates, and a dedicated folio inbox.
 
@@ -100,9 +100,9 @@ The app includes optional local model support and StoreKit support purchases. St
 
 AutoLedger separates UI localization from receipt/bill recognition language packs:
 
-- **App UI languages**: the main user-facing paths currently cover `zh-Hans` Simplified Chinese, `zh-Hant` Traditional Chinese, `en` English, and `ja` Japanese. Main App, Watch, Widget, Control Widget, and Share Extension key coverage is checked by `scripts/check_localization_coverage.py`.
-- **App Store screenshot languages**: the screenshot pipeline organizes iPhone, iPad, Mac, Apple Watch, Apple TV, and visionOS copy for `zh-Hans`, `zh-Hant`, `en`, and `ja`. Japanese screenshots and store metadata still require human review before submission.
-- **Recognition language packs**: `AutoLedgerCore` includes built-in `zh-Hans`, `zh-Hant`, `en`, and `ja` packs for receipt keywords, amount formats, date formats, layered amount labels, merchant labels, non-merchant exclusions, category keywords, and OCR language hints.
+- **App UI languages**: the main user-facing paths currently cover `zh-Hans` Simplified Chinese, `zh-Hant` Traditional Chinese, `en` English, `ja` Japanese, and `ko` Korean. Main App, Watch, Widget, Control Widget, and Share Extension key coverage is checked by `scripts/check_localization_coverage.py`.
+- **App Store screenshot languages**: the screenshot pipeline organizes iPhone, iPad, Mac, Apple Watch, Apple TV, and visionOS copy for `zh-Hans`, `zh-Hant`, `en`, `ja`, and `ko`.
+- **Recognition language packs**: `AutoLedgerCore` includes built-in `zh-Hans`, `zh-Hant`, `en`, `ja`, and `ko` packs for receipt keywords, amount formats, date formats, layered amount labels, merchant labels, non-merchant exclusions, category keywords, and OCR language hints.
 - **Japanese receipt recognition**: the Japanese pack covers common fields such as `合計`, `小計`, `税込`, `店舗`, `注文番号`, `カフェ`, and `コンビニ`; OCR hints prefer `ja-JP + en-US`, and amount / merchant / category parsing is covered by offline regression.
 - **v1.7.0 Korean scope**: the Korean App UI and `AutoLedgerCore` `ko` recognition pack shipped with ASC `1.6.0`, covering Korean amount, date, merchant, category keywords, and `ko-KR + en-US` OCR hints. Korean store copy, screenshots, and App Preview assets shipped with the release; broader realistic samples, regional depth, and native-language review remain post-release quality work.
 - **Release gates and cadence**: the [current release matrix](versions/v1.7.0-i18n-release-matrix.md) requires store, UI, recognition, realistic samples, regional receipt coverage, and human review. The [cross-version localization roadmap](docs/product/I18N_ROADMAP.md) assigns one new language cohort to every public feature release.

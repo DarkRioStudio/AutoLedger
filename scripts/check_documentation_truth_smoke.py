@@ -200,11 +200,19 @@ def main() -> int:
         if path.name != "README.md" and f"({relative_doc})" not in docs_index:
             failures.append(f"docs/README.md does not index {relative_doc}")
 
-    for readme_name in ["README.md", "README.zh-Hant.md", "README.en.md", "README.ja.md"]:
+    readme_names = [
+        "README.md",
+        "README.zh-Hant.md",
+        "README.en.md",
+        "README.ja.md",
+        "README.ko.md",
+    ]
+    for readme_name in readme_names:
         readme = (ROOT / readme_name).read_text(encoding="utf-8")
         require(readme, "(PROJECT_STATUS.md)", readme_name, failures)
         require(readme, "(docs/ROADMAP.md)", readme_name, failures)
         require(readme, "(docs/product/I18N_ROADMAP.md)", readme_name, failures)
+        require(readme, "README.ko.md", readme_name, failures)
         require(readme, "https://apps.apple.com/app/id6761892533", readme_name, failures)
         require(readme, "https://testflight.apple.com/join/T3Wu6ngk", readme_name, failures)
 
@@ -219,6 +227,7 @@ def main() -> int:
         ROOT / "README.en.md": ["Later Pro directions include cloud-assisted cleanup"],
         ROOT / "README.zh-Hant.md": ["後續會繼續推進雲端輔助整理"],
         ROOT / "README.ja.md": ["今後はクラウド補助整理"],
+        ROOT / "README.ko.md": ["현재 버전은 장부 데이터를 업로드하지 않습니다"],
         ROOT / "README.md": [
             "https://apps.apple.com/us/app/autoledger-quick-ledger/id6761892533",
         ],
@@ -239,7 +248,7 @@ def main() -> int:
         ROOT / "AutoLedgerCoreKit" / "README.md",
         ROOT / "ReceiptDebugTool" / "README.md",
     ]
-    link_scopes += [ROOT / name for name in ["README.md", "README.zh-Hant.md", "README.en.md", "README.ja.md"]]
+    link_scopes += [ROOT / name for name in readme_names]
     link_scopes += docs_files
     for path in link_scopes:
         failures.extend(markdown_link_failures(path))

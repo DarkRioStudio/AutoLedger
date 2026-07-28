@@ -166,7 +166,7 @@ AutoLedger 的长期定位是：
 | `docs/*/*-audit.md` | 某一时间点的审计证据 | 永久产品真源 |
 | `process/iteration-log.md` | 实施事实和回滚记录 | 当前状态摘要 |
 | `CHANGELOG.md` | 已完成变更历史 | 未来规划和发布判定 |
-| 四语 README | 对外介绍和路线图摘要 | 独立定义内部事实 |
+| 五语 README | 对外介绍和路线图摘要 | 独立定义内部事实 |
 
 ## Update Rules
 

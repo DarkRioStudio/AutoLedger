@@ -15,7 +15,8 @@ AutoLedger は Auto+ 製品群の個人支出台帳です。スクリーンシ�
   <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.ja.md">日本語</a>
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
 </p>
 
 ## ダウンロードと TestFlight
@@ -116,9 +117,9 @@ App Store スクリーンショットの出力パイプラインは [tools/appst
 
 AutoLedger では UI のローカライズと、レシート / 明細認識用の言語パックを分けています。
 
-- **App UI languages**: 主要なユーザー向け導線は `zh-Hans` 簡体字中国語、`zh-Hant` 繁体字中国語、`en` 英語、`ja` 日本語に対応しています。Main App、Watch、Widget、Control Widget、Share Extension の key 一致は `scripts/check_localization_coverage.py` で検証します。
-- **App Store screenshot languages**: iPhone、iPad、Mac、Apple Watch、Apple TV、visionOS のスクリーンショット文言は `zh-Hans` / `zh-Hant` / `en` / `ja` で管理されています。日本語スクリーンショットとストア metadata は提出前に人手で確認します。
-- **Recognition language packs**: `AutoLedgerCore` には `zh-Hans`、`zh-Hant`、`en`、`ja` の内蔵パックがあり、レシート関連語、金額形式、日付形式、金額ラベル、店舗ラベル、店舗ではない語の除外、分類キーワード、OCR language hints を扱います。
+- **App UI languages**: 主要なユーザー向け導線は `zh-Hans` 簡体字中国語、`zh-Hant` 繁体字中国語、`en` 英語、`ja` 日本語、`ko` 韓国語に対応しています。Main App、Watch、Widget、Control Widget、Share Extension の key 一致は `scripts/check_localization_coverage.py` で検証します。
+- **App Store screenshot languages**: iPhone、iPad、Mac、Apple Watch、Apple TV、visionOS のスクリーンショット文言は `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` で管理されています。
+- **Recognition language packs**: `AutoLedgerCore` には `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` の内蔵パックがあり、レシート関連語、金額形式、日付形式、金額ラベル、店舗ラベル、店舗ではない語の除外、分類キーワード、OCR language hints を扱います。
 - **Japanese receipt recognition**: 日本語パックは `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` などを扱います。OCR hint は `ja-JP + en-US` を優先し、金額 / 店舗 / 分類解析はオフライン回帰に含まれています。
 - **v1.7.0 Korean scope**: 韓国語 App UI と `AutoLedgerCore` の `ko` 認識パックは ASC `1.6.0` で正式リリースされ、韓国語の金額、日付、店舗、分類キーワード、`ko-KR + en-US` OCR hint を扱います。韓国語ストア文言、スクリーンショット、App Preview はリリース済みで、実サンプル、地域別品質、母語レビューはリリース後の品質改善として継続します。
 - **Release gates and cadence**: [現行版の matrix](versions/v1.7.0-i18n-release-matrix.md) は、ストア、UI、認識パック、実サンプル、地域別レシート、人手レビューの 6 gate を要求します。[複数バージョンの言語ロードマップ](docs/product/I18N_ROADMAP.md) では、公開機能バージョンごとに新しい言語グループを 1 組追加します。

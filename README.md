@@ -15,7 +15,8 @@
   <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.ja.md">日本語</a>
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
 </p>
 
 <p align="center">
@@ -130,11 +131,11 @@ App Store 截图管线说明：[tools/appstore-screenshots/README.md](tools/apps
 
 AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 
-- **App UI 语言**：当前主路径覆盖 `zh-Hans` 简体中文、`zh-Hant` 繁体中文、`en` 英文、`ja` 日文；`v1.7.0` 已开始加入 `ko` 韩语资源草稿。主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校验。
-- **App Store 截图语言**：截图管线已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 组织 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 场景文案；日文截图和商店元数据仍需人工审校后再提交。
-- **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
+- **App UI 语言**：当前主路径覆盖 `zh-Hans` 简体中文、`zh-Hant` 繁体中文、`en` 英文、`ja` 日文和 `ko` 韩文。主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校验。
+- **App Store 截图语言**：截图管线已按 `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` 组织 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 场景文案。
+- **账单识别语言包**：`AutoLedgerCore` 内置 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` 识别包，承载账单关键词、金额格式、日期格式、分层金额标签、商户标签、非商户排除词、分类关键词和 OCR 语言提示。
 - **日文账单识别**：日文包覆盖 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常见字段；OCR hint 使用 `ja-JP + en-US`，金额和商户 / 分类解析已经进入离线回归。
-- **v1.7.0 韩语范围**：已启动韩语 App UI 资源草稿和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语 ASC 文案、截图、母语审校和 golden cases 补齐前，不把 `ko` 标成公开 Ready 语言。
+- **v1.7.0 韩语范围**：韩语 App UI 和 `AutoLedgerCore` `ko` 识别包已随 ASC `1.6.0` 正式发布，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语商店文案、截图与 App Preview 已随版本交付，更多真实样本、地区细节与母语审校作为发布后质量工作持续补强。
 - **i18n 发布矩阵**：[当前版本矩阵](versions/v1.7.0-i18n-release-matrix.md) 将每个语言按商店、界面、识别包、真实样本、地区票据和人工审校六项门禁管理；[跨版本语言路线](docs/product/I18N_ROADMAP.md) 固定每个公开功能版本同时交付一组新语言。
 - **英语主语言**：从 ASC `1.6.0` 起，工程与 App Store 主语言目标统一为英语；工程 `developmentRegion = en` 与 ASC Primary Language `English (U.S.) / en-US` 分别验证，仓库配置不替代 ASC 线上证据。
 - **下一质量组**：`v1.8.0` 已进入 Early Execution，目标为美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
@@ -191,7 +192,7 @@ AutoLedgerRio/
 ├── scripts/                       # 回归测试脚本
 ├── tests/                         # Golden 回归样例
 ├── tools/app-icons/               # App Icon 生成与验证工具
-├── tools/appstore-screenshots/    # App Store 截图导出管线（zh-Hans / zh-Hant / en / ja）
+├── tools/appstore-screenshots/    # App Store 截图导出管线（zh-Hans / zh-Hant / en / ja / ko）
 ├── tools/receipt_ocr/             # 小票 OCR 批处理与样本工具
 ├── tools/worker/                  # Worker / 远端能力实验
 └── template/                      # 文档模板

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-28（ITER-453 四语 README 发布入口与状态同步）
+更新日期：2026-07-28（ITER-455 新增韩语 README）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-455 新增韩语 README
+- 日期：2026-07-28
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Documentation / Korean Public Entry
+- 类型：文档 / 国际化 / 测试
+- 目标：为韩国用户提供与现有公开 README 同等级的完整韩语项目入口，并把根 README 体系从四语扩展为五语。
+- 改动范围：新增 `README.ko.md`；更新简中、繁中、英语、日语 README 的语言导航和五语能力摘要；同步品牌资产清单、核心路线图、文档真源 smoke、CHANGELOG 与本日志。
+- 未改动范围：未修改 App / Worker runtime、ASC 在线状态、版本号、build number、签名、entitlement、StoreKit、CloudKit / SQLite / D1 schema、构建标签、产品标签或现有营销 / 视频资产。
+- 完成内容：韩语 README 覆盖产品定位、正式版与 TestFlight、许可、快速记录、自动整理、酒店水单、Free / Pro、云端隐私边界、五语 UI / 识别、构建、项目结构、仓库状态和版本路线图；五份 README 互相链接，smoke 将 `README.ko.md` 纳入真源链接与外部入口检查。
+- 未完成内容：韩语 README 尚未经过独立韩语母语审校；当前文案由工程语义和既有韩语产品术语对齐，后续可按母语反馈细化表达，但不能改变产品或隐私事实。
+- 测试情况：文档真源 smoke、五语互链与 Markdown 本地链接检查、隐私绝对表述扫描、Python 语法编译和 `git diff --check` PASS；五份 README 均包含韩语入口、App Store、TestFlight、项目状态、核心路线图与语言路线图链接。
+- 风险与注意事项：韩语文案不得把本地优先误写成绝对不上云；App Store / TestFlight、云水单收件箱、Common API 和服务端权益边界必须与其它语言保持一致。
+- 回滚方式：删除 `README.ko.md`，移除四份既有 README 的韩语导航，并恢复品牌资产、路线图与 smoke 的四语清单；不涉及线上或数据回滚。
+- 结论：韩语 README 与五语根文档体系已完成并通过自动文档门禁。
+- 下一步建议：公开发布前可再做一次独立韩语母语审校；提交时只纳入本轮文档与文档 smoke，继续隔离现有同步状态功能改动。
 
 ### ITER-453 四语 README 发布入口与状态同步
 - 日期：2026-07-28

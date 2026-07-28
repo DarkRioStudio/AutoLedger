@@ -15,7 +15,8 @@ AutoLedger 是 Auto+ 產品矩陣中的隱私優先、本機優先個人帳本�
   <a href="README.en.md">English</a> ·
   <a href="README.md">简体中文</a> ·
   <a href="README.zh-Hant.md">繁體中文</a> ·
-  <a href="README.ja.md">日本語</a>
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a>
 </p>
 
 ## 下載與 TestFlight
@@ -116,9 +117,9 @@ App Store 截圖管線說明：[tools/appstore-screenshots/README.md](tools/apps
 
 AutoLedger 的介面本地化和帳單識別語言包是兩層獨立能力：
 
-- **App UI 語言**：目前主路徑覆蓋 `zh-Hans` 簡體中文、`zh-Hant` 繁體中文、`en` 英文和 `ja` 日文；主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校驗。
-- **App Store 截圖語言**：截圖管線已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 組織 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 場景文案；日文截圖和商店 metadata 仍需人工審校後再提交。
-- **帳單識別語言包**：`AutoLedgerCore` 內建 `zh-Hans`、`zh-Hant`、`en`、`ja` 識別包，承載帳單關鍵詞、金額格式、日期格式、分層金額標籤、商戶標籤、非商戶排除詞、分類關鍵詞和 OCR 語言提示。
+- **App UI 語言**：目前主路徑覆蓋 `zh-Hans` 簡體中文、`zh-Hant` 繁體中文、`en` 英文、`ja` 日文和 `ko` 韓文；主 App、Watch、Widget、Control Widget、Share Extension 的 key 集合由 `scripts/check_localization_coverage.py` 校驗。
+- **App Store 截圖語言**：截圖管線已按 `zh-Hans` / `zh-Hant` / `en` / `ja` / `ko` 組織 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 場景文案。
+- **帳單識別語言包**：`AutoLedgerCore` 內建 `zh-Hans`、`zh-Hant`、`en`、`ja`、`ko` 識別包，承載帳單關鍵詞、金額格式、日期格式、分層金額標籤、商戶標籤、非商戶排除詞、分類關鍵詞和 OCR 語言提示。
 - **日文帳單識別**：日文包覆蓋 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常見欄位；OCR hint 使用 `ja-JP + en-US`，金額和商戶 / 分類解析已進入離線回歸。
 - **v1.7.0 韓語範圍**：韓語 App UI 與 `AutoLedgerCore` `ko` 識別包已隨 ASC `1.6.0` 正式發布，覆蓋韓文金額、日期、商戶、分類關鍵詞和 `ko-KR + en-US` OCR hint；韓語商店文案、截圖與 App Preview 已隨版本交付，更多真實樣本、地區細節與母語審校作為發布後品質工作持續補強。
 - **發布門禁與節奏**：[目前版本矩陣](versions/v1.7.0-i18n-release-matrix.md) 以商店、介面、識別包、真實樣本、地區票據和人工審校六項 gate 管理語言；[跨版本語言路線](docs/product/I18N_ROADMAP.md) 固定每個公開功能版本同時交付一組新語言。
