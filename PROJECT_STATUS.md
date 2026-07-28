@@ -2,7 +2,7 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-07-26
+> 截止日期：2026-07-28
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 > 全球产品战略：[docs/product/GLOBAL_PRODUCT_STRATEGY.md](docs/product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
@@ -13,8 +13,8 @@
 | 项目 | 当前状态 |
 |---|---|
 | 内部开发线 | `v1.8.0` |
-| 已过审 App Store 版本 | `1.6.0`（内部 `v1.7.0`） |
-| 发布阶段 | 用户于 2026-07-26 确认 ASC `1.6.0` iOS、macOS、tvOS、visionOS 四平台均已过审；本轮未再次调用 ASC API |
+| 已发布 App Store 版本 | `1.6.0`（内部 `v1.7.0`） |
+| 发布阶段 | 用户确认 `v1.7.0 / ASC 1.6.0` 已正式发布；2026-07-28 Apple 公开查询接口回读美国区商店当前版本为 `1.6.0` |
 | 自定义产品页 | 三张五语页面已通过独立 iOS items-only submission 提交，审核单与三页均为 `WAITING_FOR_REVIEW`；主版本审核单保持独立 |
 | 已验证候选产品行为基线 | build `120` / `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；六项最终 TestFlight / 真机门禁已由用户确认通过 |
 | Xcode Cloud 触发标签 | `xcbuild-v1.7.0` 已移动到包含 runtime 基线与发布证据文档的最新 `main` |
@@ -27,7 +27,7 @@
 
 ## Release Position
 
-ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已推进到 `v1.8.0` foundation 提交 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。审核通过不自动证明所有地区商店页面已经完成传播，本轮也没有修改 ASC、构建或已发布 binary。
+`v1.7.0 / ASC 1.6.0` 已正式发布。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已推进到 `v1.8.0` foundation 提交 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。2026-07-28 Apple 公开查询接口确认美国区商店当前版本为 `1.6.0`；该证据不替代其它地区与平台的传播检查，本轮也没有修改 ASC、构建或已发布 binary。
 
 `v1.7.0 / ASC 1.6.0` 的主要产品与工程能力已经进入主线：
 
@@ -39,7 +39,7 @@ ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产�
 - App Store Server Notifications、ASC metadata-as-code 和服务端 Pro entitlement 基础；
 - 本地分享图、酒店旅程回忆和跨平台工作台。
 
-当前阶段不再适合横向加入大功能。发布前只处理明确阻断、事实错误、隐私 / 权益边界、严重性能问题和发布材料缺口。
+该发布线已进入维护状态；后续只处理明确回归、事实错误、隐私 / 权益边界和必要热修。新功能按 `v1.8.0 / ASC 1.7.0` Early Execution 独立推进。
 
 ## Recently Closed
 
@@ -55,7 +55,7 @@ ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产�
 - `docs/` 已按产品、架构、能力、平台、运维和归档物理分组；核心 `ROADMAP.md` 作为唯一专项例外保留在 `docs/` 根目录。
 - 已建立跨版本语言准入路线并将 `v1.8.0` 调整为英语五市场质量组；工程 `developmentRegion = en` 已核验，ASC Primary Language 已在线回读确认为 `English (U.S.) / en-US`。日语质量提升、德语与法语进入第二阶段，西班牙语与巴西葡语顺延。
 - 五语六平台截图已完成 ASC `1.6.0` 上传与 API 回读：中简、中繁、美英、日、韩在 iPhone、iPad、Mac、Watch、tvOS、visionOS 的 150 张目标截图均与本地 MD5 矩阵匹配；显式存在的 `en-GB` 已同步 `en-US` 元数据和六平台当前英文截图，避免旧资产覆盖主语言 fallback。
-- ASC `1.5.0` 四平台元数据已从线上归档；ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 已提交并处于 `WAITING_FOR_REVIEW`，planned 五语版本文案已填充并回读一致。Primary Language 已确认为 `en-US`，韩语 App 名称、副标题、隐私链接与 Apple TV 隐私正文已定点写入并回读一致。
+- ASC `1.5.0` 四平台元数据已从线上归档；ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 已完成提交、审核并正式发布，planned 五语版本文案已填充并回读一致。Primary Language 已确认为 `en-US`，韩语 App 名称、副标题、隐私链接与 Apple TV 隐私正文已定点写入并回读一致。
 - ASC `1.6.0` 五语 iPhone App Preview v003 已上传：五条视频均与本地 MD5 一致且 `videoDeliveryState=COMPLETE`；英文 / 简中旧片在新片完成后删除。五语 poster frame 已统一为 OCR 首屏的 `1.4s / 00:00:01:12`，API 回读时间码与生成图状态均为 `COMPLETE`。韩语母语审校按发布决定转为非阻断质量增强；最终 binary 逐镜一致性核验仍未完成。
 - 四平台 Review Notes 已从 repo profile 写入 ASC 并按长度 / SHA-256 回读一致；iOS / macOS 使用主功能说明，tvOS / visionOS 使用只读看板说明，均保持 `demoAccountRequired=false` 且未覆盖审核联系人字段。
 - Xcode Cloud build `119` 曾运行成功但因水单地址本地状态缺陷被否决；ASC `1.6.0` 四个平台现已改绑 build `120` 的有效、未过期、App Store eligible binary，并完成幂等 API 回读。
@@ -68,27 +68,25 @@ ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产�
 
 详细证据见 [process/iteration-log.md](process/iteration-log.md) 的 `ITER-421` 至 `ITER-443`。
 
-## Release Gates
+## v1.7.0 Release Closeout
 
-### P0 - Candidate Evidence
+### Released Baseline
 
-- build `120`、精确源码、四平台处理 / eligibility、ASC 绑定和六项最终设备门禁均已完成；审核期间不得继续修改候选 binary、CloudKit schema、entitlement 或同步实现。
-- 重庆 Moxy 冲突处置、云端商户建议和生产服务证据沿用提交前已完成的验证；如 Apple 提出新问题，按最小审核热修重新建立候选，不直接移动正式产品标签。
+- build `120`、精确源码、四平台处理 / eligibility、ASC 绑定和六项最终设备门禁均已完成，`v1.7.0 / ASC 1.6.0` 已正式发布。
+- 已发布 binary 与不可移动产品标签保持冻结；如出现线上问题，按独立热修重新建立候选，不改写既有发布标签。
 
-### P0 - Release And Privacy
+### Post-release Quality
 
 - 对照 [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) 维护五语事实状态。韩语母语审校因暂无合适审校者，按发布决定不阻断 ASC `1.6.0`；真实样本与地区专项作为已知质量缺口继续积累，不得伪装为已经完成。
-- ASC `1.6.0` 的 Primary Language 已在线确认为 `English (U.S.) / en-US`；显式 `en-GB` 元数据和六平台截图已同步当前英语资产，提交前仅剩与最终 binary 的一致性复核。
+- ASC `1.6.0` 的 Primary Language 已在线确认为 `English (U.S.) / en-US`；显式 `en-GB` 元数据和六平台截图已同步当前英语资产。
 - ASC metadata、订阅本地化、截图 / App Preview、Review Notes 与 App Privacy URL 已完成线上回读；App Privacy 数据类型口径已核对一致。
 - Crash Data、Performance Data 与 Product Interaction 已在线确认只用于 Analytics，not linked，not tracking。
-- 若最终候选包含 CloudKit record type、field 或 index 变化，必须先将 Development schema 部署到 Production 并记录证据。
-- 冻结本次商店图标：明确沿用当前图标，或完成多层图标资产后再统一重导商店素材；不能在截图完成后继续改动。
 
-### P1 - Operational Confidence
+### Operational Follow-up
 
 - 复核 Common API、hotel-folio-inbox、Cloudflare Access、D1 / R2 / Queue 和 App Store Server Notifications 的生产 smoke。
 - 确认 Dashboard 新旧指标口径已分开，历史样本不被解释为当前构建失败率。
-- 归档最终回归基线、发布说明和人工证据；移动产品发布标签前再次确认当前提交无未记录改动。
+- 持续归档发布后回归、商店传播与人工反馈；这些跟踪项不改变已经完成的正式发布结论。
 
 ## Known Risks And Limitations
 
@@ -103,7 +101,7 @@ ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产�
 
 ## Next Actions
 
-1. 只读确认四个平台在目标地区的商店可见性与版本传播；不得用产品 tag 替代线上可见证据。
+1. 只读跟踪四个平台在目标地区的商店可见性与版本传播；不得用产品 tag 替代线上可见证据。
 2. 独立监控三张自定义产品页审核；获批并确认专属 URL 可见后，再把 Campaign Link 与对应 `ppid` 页面投入营销。
 3. 以远端 `main` 的 `a844349fc93ddd29cb6f4d4974a6051273ba28cb` 继续 `v1.8.0 / ASC 1.7.0` Early Execution，并按 `versions/v1.8.0-plan.md` 保持每批独立门禁。
 
@@ -117,7 +115,7 @@ ASC `1.6.0` 四平台审核门禁已经由用户确认完成。不可移动产�
 | 每个版本扩展哪些语言、统一门禁是什么 | [docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md) |
 | v1.7.0 做什么、如何验收 | [versions/v1.7.0-plan.md](versions/v1.7.0-plan.md) |
 | 多语言是否可公开发布 | [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) |
-| 下一版本规划了什么 | [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md) 与 [versions/v1.8.0-i18n-release-matrix.md](versions/v1.8.0-i18n-release-matrix.md)；均为 Draft |
+| 当前开发版本规划了什么 | [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md) 已进入 Early Execution；[versions/v1.8.0-i18n-release-matrix.md](versions/v1.8.0-i18n-release-matrix.md) 仍为 Draft |
 | Free / Pro 可执行边界 | `AutoLedgerCore/Models/ProAccessPolicy.swift` 与对应回归 |
 | Free / Pro 审计解释 | [docs/operations/pro-access-audit.md](docs/operations/pro-access-audit.md) |
 | 每轮做了什么 | [process/iteration-log.md](process/iteration-log.md) |

@@ -2,9 +2,9 @@
 
 > 文档状态：Canonical
 > 真源范围：产品方向、优先级、跨版本主线、依赖关系与明确非目标
-> 最后核验：2026-07-20
+> 最后核验：2026-07-28
 > 当前状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
-> 当前版本执行计划：[../versions/v1.7.0-plan.md](../versions/v1.7.0-plan.md)
+> 当前版本执行计划：[../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)
 > 全球产品战略：[product/GLOBAL_PRODUCT_STRATEGY.md](product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[product/I18N_ROADMAP.md](product/I18N_ROADMAP.md)
 
@@ -36,22 +36,21 @@ AutoLedger 的长期定位是：
 
 ## Roadmap Horizon
 
-### Now - Ship v1.7.0 / ASC 1.6.0
+### Released - v1.7.0 / ASC 1.6.0
 
-当前只做发布收口，不继续横向扩 scope：
+`v1.7.0 / ASC 1.6.0` 已正式发布，当前发布线包含：
 
-- 完成 TestFlight 性能、iCloud 最终一致性、云端收件箱和云端别名建议的跨设备验收；
-- 冻结实时 OCR、五语 UI / 识别、Common API、Pro 自动化和酒店水单的当前行为；
-- 完成图标、截图、App Preview、ASC metadata、订阅本地化、Review Notes 和隐私声明；
-- 将 ASC Primary Language 切换或确认可切换为 `English (U.S.) / en-US`，并保留线上证据；
-- 归档 Xcode Cloud、CloudKit Production schema、Worker production 和人工 smoke 证据；
-- 只修复发布阻断、事实错误、隐私 / 权益边界和有证据的严重性能问题。
+- 实时 OCR、五语 UI / 识别、Common API、Pro 自动化和酒店水单工作流；
+- TestFlight 性能、iCloud 最终一致性、云端收件箱和云端别名建议的跨设备验收；
+- 图标、截图、App Preview、ASC metadata、订阅本地化、Review Notes 和隐私声明；
+- `English (U.S.) / en-US` App Store Primary Language，以及韩语 `ko` / 韩国新增语言组；
+- Xcode Cloud、CloudKit Production schema、Worker production 和人工 smoke 发布证据。
 
-本版本的新语言组固定为韩语 `ko` / 韩国。西语和巴葡规划不会扩大当前候选范围。
+该发布线进入维护状态；后续只处理有证据的回归、隐私 / 权益问题与必要热修，不再扩大版本范围。
 
 ### Global P0 - English-Market Readiness
 
-当前发布收口后，优先完成全球基础，不立即用更多功能或更多语言扩张范围：
+当前优先完成全球基础，不立即用更多功能或更多语言扩张范围：
 
 1. 英文 App Store 名称、副标题、描述、关键词和截图叙事；
 2. 美国、英国、加拿大、澳大利亚和新加坡的日期、时间、数字、货币和价格验收；
@@ -61,9 +60,9 @@ AutoLedger 的长期定位是：
 
 详细商店建议、国际化清单和当前代码结构风险见 [全球产品战略](product/GLOBAL_PRODUCT_STRATEGY.md)。
 
-### Next - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close
+### Now - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close
 
-下一版本优先把已有能力串成可完成的账本闭环，而不是继续增加孤立入口：
+当前开发线优先把已有能力串成可完成的账本闭环，而不是继续增加孤立入口：
 
 1. **持久化待处理事项**：统一 OCR 待确认、云收件箱候选、重复、订阅异常、清洗建议、同步冲突和月结缺资料项。
 2. **可完成的复核生命周期**：支持确认、忽略、延后、撤销和来源双向更新，避免已处理事项在重启或同步后复活。
@@ -72,7 +71,7 @@ AutoLedger 的长期定位是：
 5. **云端辅助可靠性**：补建议缓存、cooldown / backoff、配额和最小日志策略，不扩大上传字段。
 6. **英语市场发布组**：以 `en-US` 为主语言，验证 `en-GB`、`en-CA`、`en-AU`、`en-SG` 的格式、术语、价格、截图、支持页和隐私说明；本版本不新增 UI 语言。
 
-详细范围见 [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)；语言完成度见 [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md)。两者目前均为 Draft，不表示已经进入实施。
+详细范围见 [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)，该计划已进入 Early Execution；语言完成度见仍处于 Draft 的 [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md)。
 
 ### Later - Expand Carefully
 
@@ -112,8 +111,8 @@ AutoLedger 的长期定位是：
 | 开发线 | 对外版本 | 路线图角色 |
 |---|---|---|
 | `v1.6.4` | ASC `1.5.0` | Free / Pro 边界、Personal Pro、云端水单收件箱和发布基线 |
-| `v1.7.0` | ASC `1.6.0` | 当前发布线：实时 OCR、五语、Common API、Pro 自动化、发布观测；新增韩语，主语言目标改为英语 |
-| `v1.8.0` | ASC `1.7.0` | Draft：全球基础、Review & Close、持久化待处理、可信同步、月结闭环；验证英语五市场，不新增 UI 语言 |
+| `v1.7.0` | ASC `1.6.0` | Released：实时 OCR、五语、Common API、Pro 自动化、发布观测；新增韩语，主语言改为英语 |
+| `v1.8.0` | ASC `1.7.0` | Early Execution：全球基础、Review & Close、持久化待处理、可信同步、月结闭环；验证英语五市场，不新增 UI 语言 |
 | `v1.9.0` | ASC `1.8.0` | Planned：Understand & Save、规则中心、Saved Views、订阅省钱；日语质量提升 + 德语 + 法语 |
 | `v2.0` | 待确定 | Planned：Archive & Remember、凭证与旅行档案；西语 + 巴葡为候选组 |
 

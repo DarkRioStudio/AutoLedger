@@ -65,6 +65,7 @@ def main() -> int:
         return 1
 
     project_status = (ROOT / "PROJECT_STATUS.md").read_text(encoding="utf-8")
+    readme_cn = (ROOT / "README.md").read_text(encoding="utf-8")
     roadmap = (DOCS / "ROADMAP.md").read_text(encoding="utf-8")
     i18n_roadmap = (DOCS / "product" / "I18N_ROADMAP.md").read_text(encoding="utf-8")
     docs_index = (DOCS / "README.md").read_text(encoding="utf-8")
@@ -79,7 +80,7 @@ def main() -> int:
         "docs/product/GLOBAL_PRODUCT_STRATEGY.md",
         "docs/product/I18N_ROADMAP.md",
         "versions/v1.7.0-plan.md",
-        "## Release Gates",
+        "## v1.7.0 Release Closeout",
         "## Source Of Truth Map",
     ]:
         require(project_status, snippet, "PROJECT_STATUS.md", failures)
@@ -89,8 +90,8 @@ def main() -> int:
         "../PROJECT_STATUS.md",
         "product/GLOBAL_PRODUCT_STRATEGY.md",
         "## Roadmap Horizon",
-        "### Now - Ship v1.7.0 / ASC 1.6.0",
-        "### Next - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close",
+        "### Released - v1.7.0 / ASC 1.6.0",
+        "### Now - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close",
         "## Language Expansion Cadence",
         "### Not Planned",
         "## Source Of Truth Boundaries",
@@ -123,12 +124,12 @@ def main() -> int:
         "docs/product/I18N_ROADMAP.md",
         "Primary Language",
         "`v1.8.0` 改为美国、英国、加拿大、澳大利亚和新加坡英语市场质量组",
-        "不改变本版本只新增韩语的范围",
+        "不改变本版本只新增韩语的历史范围",
     ]:
         require(v17_plan, snippet, "versions/v1.7.0-plan.md", failures)
 
     for snippet in [
-        "文档状态：Active",
+        "文档状态：Released Snapshot",
         "## English Primary Language Gate",
         "`English (U.S.) / en-US`",
         "## Scheduled Cohorts",
@@ -154,6 +155,13 @@ def main() -> int:
         "## Market-Gate Matrix",
     ]:
         require(v18_i18n, snippet, "versions/v1.8.0-i18n-release-matrix.md", failures)
+
+    for snippet in [
+        "https://apps.apple.com/app/id6761892533",
+        "https://testflight.apple.com/join/T3Wu6ngk",
+        "## 下载与 TestFlight",
+    ]:
+        require(readme_cn, snippet, "README.md", failures)
 
     docs_files = sorted(DOCS.rglob("*.md"))
     allowed_statuses = {"Canonical", "Active", "Reference", "Draft", "Historical", "Superseded"}
@@ -197,6 +205,8 @@ def main() -> int:
         require(readme, "(PROJECT_STATUS.md)", readme_name, failures)
         require(readme, "(docs/ROADMAP.md)", readme_name, failures)
         require(readme, "(docs/product/I18N_ROADMAP.md)", readme_name, failures)
+        require(readme, "https://apps.apple.com/app/id6761892533", readme_name, failures)
+        require(readme, "https://testflight.apple.com/join/T3Wu6ngk", readme_name, failures)
 
     stale_checks = {
         DOCS / "operations" / "pro-access-audit.md": [
@@ -209,6 +219,9 @@ def main() -> int:
         ROOT / "README.en.md": ["Later Pro directions include cloud-assisted cleanup"],
         ROOT / "README.zh-Hant.md": ["後續會繼續推進雲端輔助整理"],
         ROOT / "README.ja.md": ["今後はクラウド補助整理"],
+        ROOT / "README.md": [
+            "https://apps.apple.com/us/app/autoledger-quick-ledger/id6761892533",
+        ],
     }
     for path, stale_snippets in stale_checks.items():
         source = path.read_text(encoding="utf-8")

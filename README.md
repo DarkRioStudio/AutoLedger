@@ -21,6 +21,7 @@
 <p align="center">
   <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml/badge.svg" alt="Xcode Build" /></a>
   <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
+  <a href="https://apps.apple.com/app/id6761892533"><img src="https://img.shields.io/badge/App_Store-下载-0D96F6?logo=appstore&logoColor=white" alt="App Store 下载" /></a>
   <a href="https://app.darkrio326.top/autoledger/"><img src="https://img.shields.io/badge/官网-app.darkrio326.top-orange?logo=safari&logoColor=white" alt="官网" /></a>
   <img src="https://img.shields.io/badge/platform-iOS_17+-blue?logo=apple" alt="Platform" />
   <img src="https://img.shields.io/badge/swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6" />
@@ -28,6 +29,11 @@
 </p>
 
 ---
+
+## 下载与 TestFlight
+
+- **App Store 正式版**：[下载 AutoLedger](https://apps.apple.com/app/id6761892533)
+- **TestFlight 公测**：[加入 AutoLedger Beta](https://testflight.apple.com/join/T3Wu6ngk)；测试名额与可用构建以 Apple TestFlight 页面显示为准。
 
 ## License / Commercial Use
 
@@ -131,7 +137,7 @@ AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 - **v1.7.0 韩语范围**：已启动韩语 App UI 资源草稿和 `AutoLedgerCore` `ko` 识别包，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语 ASC 文案、截图、母语审校和 golden cases 补齐前，不把 `ko` 标成公开 Ready 语言。
 - **i18n 发布矩阵**：[当前版本矩阵](versions/v1.7.0-i18n-release-matrix.md) 将每个语言按商店、界面、识别包、真实样本、地区票据和人工审校六项门禁管理；[跨版本语言路线](docs/product/I18N_ROADMAP.md) 固定每个公开功能版本同时交付一组新语言。
 - **英语主语言**：从 ASC `1.6.0` 起，工程与 App Store 主语言目标统一为英语；工程 `developmentRegion = en` 与 ASC Primary Language `English (U.S.) / en-US` 分别验证，仓库配置不替代 ASC 线上证据。
-- **下一质量组**：`v1.8.0` Draft 改为美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
+- **下一质量组**：`v1.8.0` 已进入 Early Execution，目标为美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
 ## Tech Stack
@@ -236,8 +242,8 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 适配阶段二、酒店邮箱导入、Deep link / Widget / App Intents、数据可靠性和日文发布材料审校。
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 发布收口基线，`GOAL-2200` 完成 Free / Pro 边界冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API、App 侧 PDFKit 本地转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口。
-- `v1.7.0` 正在作为 ASC / App Store `1.6.0` 候选收口：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已进入主线；当前重点是跨设备 TestFlight、iCloud、五语商店资产、隐私和 ASC 发布门禁。
-- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、可信同步、月结闭环和英语五市场质量组 Draft；当前不表示已进入实施，也不扩大 `v1.7.0` 范围。
+- `v1.7.0 / ASC 1.6.0` 已正式发布：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已随该发布线收口。
+- `v1.8.0 / ASC 1.7.0` 已进入 Early Execution，继续推进 Review & Close、可信同步、月结闭环和英语五市场质量组。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -259,8 +265,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | **1.5.0 默认沿用** | ✅ 已完成 | SDK 适配阶段二、酒店邮箱导入草稿队列 / 去重 / 候选批量导入、Deep link Router、Widget / App Intents 第一段、CSV / JSON 与备份恢复 smoke、日文发布材料审校、GOAL-1960 release smoke |
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | ✅ 已完成 | Personal Pro 订阅基础和 ASC 1.5.0 收口基线：Free / Pro 边界已冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口 |
-| v1.7.0 | **1.6.0** | 🧪 候选收口 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测；发布前完成跨设备、iCloud、商店资产与隐私门禁 |
-| v1.8.0 | **1.7.0** | 📝 规划草案 | Review & Close：持久化待处理、可理解同步状态、月结闭环；完成英语五市场的格式、商店、隐私与真实设备准入；须待 v1.7 发布决定后进入 Execution Ready |
+| v1.7.0 | **1.6.0** | ✅ 已发布 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测 |
+| v1.8.0 | **1.7.0** | 🚧 Early Execution | Review & Close：持久化待处理、可理解同步状态、月结闭环；完成英语五市场的格式、商店、隐私与真实设备准入 |
 
 ## License
 

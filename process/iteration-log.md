@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-26（ITER-449 ASC 1.6.0 发布收口与 v1.8 主线切换）
+更新日期：2026-07-28（ITER-453 四语 README 发布入口与状态同步）
 
 ## 记录规则
 
@@ -43,6 +43,54 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-453 四语 README 发布入口与状态同步
+- 日期：2026-07-28
+- 所属版本：v1.7.0 / ASC 1.6.0 -> v1.8.0 / ASC 1.7.0
+- 所属阶段：Documentation / Publish
+- 类型：文档 / 测试
+- 目标：让简中、繁中、英语和日语 README 统一展示正式版与 TestFlight 入口，并保持 v1.7 已发布、v1.8 Early Execution 的公开状态一致。
+- 改动范围：四语根 README、文档真源 smoke、CHANGELOG 与本日志；复用 ITER-452 已更新的路线图、项目状态、v1.7 计划和语言发布矩阵。
+- 未改动范围：未修改 App / Worker 代码、ASC 在线状态、版本号、build number、签名、entitlement、StoreKit、CloudKit / SQLite / D1 schema、构建标签或产品标签；未纳入现有未跟踪营销和视频资产。
+- 完成内容：英语、繁中和日语 README 新增本地化下载区域，统一使用地区无关 App Store 短链接和公开 TestFlight 邀请；三份 README 的韩语发布说明、路线图摘要和版本表同步为 v1.7 Released / v1.8 Early Execution；文档 smoke 增加四语链接存在性门禁。
+- 未完成内容：TestFlight 名额、可用 build 和其它地区商店传播由 Apple 控制，本轮不写入或改变这些外部状态。
+- 测试情况：四语下载入口与状态矛盾扫描、Apple 入口可访问检查、文档真源 smoke、Markdown 本地链接检查、Python 语法编译与 `git diff --check` PASS。
+- 风险与注意事项：App Store 使用地区无关短链接，由 Apple 按访问者地区解析；TestFlight 仅承诺提供入口，不承诺测试名额或持续存在特定 build。
+- 回滚方式：移除英语、繁中和日语下载区域，恢复其旧路线图摘要，并回退文档 smoke 对应断言；不涉及线上或数据回滚。
+- 结论：四语 README 的公开下载入口与发布状态已统一，可作为独立文档提交发布。
+- 下一步建议：发布后检查 GitHub README 渲染与四语链接，继续按 v1.8 Early Execution 推进。
+
+### ITER-452 v1.7 正式发布状态与 TestFlight 入口
+- 日期：2026-07-28
+- 所属版本：v1.7.0 / ASC 1.6.0 -> v1.8.0 / ASC 1.7.0
+- 所属阶段：Release Closeout / Early Execution
+- 类型：文档 / 发布状态
+- 目标：将已正式发布的 `v1.7.0 / ASC 1.6.0` 写回产品真源与公开 README，并提供公开 TestFlight 入口。
+- 改动范围：中文 README、`PROJECT_STATUS.md`、核心产品路线图、v1.7 版本计划与语言发布矩阵、文档真源 smoke、CHANGELOG 和本日志。
+- 未改动范围：未修改其它语言 README、App / Worker 代码、ASC 在线状态、版本号、build number、签名、entitlement、StoreKit、CloudKit / SQLite / D1 schema、构建标签或产品标签；未触碰现有未跟踪营销和视频资产。
+- 完成内容：路线图将 v1.7 从 Now / candidate 调整为 Released，并将 v1.8 Early Execution 提升为 Now；项目状态、v1.7 计划和语言矩阵同步为正式发布事实；中文 README 增加 App Store 正式版与 TestFlight 公测独立区域，并修正版本摘要与状态表；文档真源 smoke 同步新的生命周期和路线图标题，并固定检查地区无关 App Store 短链接与 TestFlight 链接。
+- 未完成内容：其它语言 README 尚未同步下载区域；三张自定义产品页仍按其独立审核事实维护，本轮不推断其已发布；未执行任何 ASC 写入、构建、提交或发布操作。
+- 测试情况：Apple 公开 lookup 回读 `AutoLedger - Quick Ledger` 当前版本为 `1.6.0`；TestFlight 邀请页返回 HTTP 200 且页面标题匹配 AutoLedger beta；文档真源 smoke、Markdown 本地链接检查与 `git diff --check` PASS。
+- 风险与注意事项：正式发布结论来自用户确认并由美国区公开商店版本回读交叉验证；其它地区与平台的传播状态仍应独立只读跟踪。TestFlight 名额与可用构建由 Apple 控制，不在 README 承诺持续可用。
+- 回滚方式：恢复路线图、状态、版本计划和语言矩阵的候选口径，并移除 README TestFlight 区域及对应日志；不涉及线上或数据回滚。
+- 结论：`v1.7.0 / ASC 1.6.0` 已在产品真源和公开中文 README 中统一标记为正式发布，App Store 与 TestFlight 入口均可直接访问。
+- 下一步建议：继续按 `v1.8.0 / ASC 1.7.0` Early Execution 推进；如需公开文档多语言一致，再单独同步英语、繁中与日语 README。
+
+### ITER-451 README 增加 App Store 下载入口
+- 日期：2026-07-28
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Documentation
+- 类型：文档
+- 目标：让 README 访问者可从项目首页直接进入 AutoLedger 的公开 App Store 下载页。
+- 改动范围：`README.md` 顶部徽章区、CHANGELOG 与本日志。
+- 未改动范围：未修改其它语言 README、App 代码、版本号、build number、ASC 在线状态、签名、entitlement、StoreKit、构建标签或发布配置；未触碰现有未跟踪营销和视频资产。
+- 完成内容：新增带 App Store 图标与“下载”文案的徽章，目标地址为地区无关短链接 `https://apps.apple.com/app/id6761892533`。
+- 未完成内容：其它语言 README 尚未同步该入口；本轮不执行 ASC 写入、构建、提交或发布。
+- 测试情况：目标 URL 精确匹配检查、README 顶部 HTML 标签结构检查与 `git diff --check` PASS；Apple 页面命令行请求返回 HTTP 200，但按请求地区重定向到商店首页，无法作为具体商品页内容回读证据。
+- 风险与注意事项：App Store 会按访问者地区处理商店页面；README 使用地区无关短链接，由 Apple 决定具体商店区域跳转。
+- 回滚方式：移除 README 顶部 App Store 徽章，并删除对应 CHANGELOG 与本日志条目。
+- 结论：中文 README 已具备直接可见的 App Store 下载入口。
+- 下一步建议：如需四语 README 一致，可在后续独立同步英语、繁中与日语入口。
 
 ### ITER-449 ASC 1.6.0 发布收口与 v1.8 主线切换
 - 日期：2026-07-26

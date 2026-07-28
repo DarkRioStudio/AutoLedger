@@ -18,6 +18,11 @@ AutoLedger 是 Auto+ 產品矩陣中的隱私優先、本機優先個人帳本�
   <a href="README.ja.md">日本語</a>
 </p>
 
+## 下載與 TestFlight
+
+- **App Store 正式版**：[下載 AutoLedger](https://apps.apple.com/app/id6761892533)
+- **TestFlight 公測**：[加入 AutoLedger Beta](https://testflight.apple.com/join/T3Wu6ngk)；測試名額與可用版本以 Apple TestFlight 頁面顯示為準。
+
 ## License / Commercial Use
 
 AutoLedger 採用 source-available 非商業授權，可供學習、個人研究、安全審查與貢獻參考。未經書面許可，不允許商業使用、換皮發布、SaaS / 托管服務、再分發，或將修改版 App 上架到 App Store、Google Play、Steam、Microsoft Store、微信小程式或其他公開應用市場。
@@ -115,10 +120,10 @@ AutoLedger 的介面本地化和帳單識別語言包是兩層獨立能力：
 - **App Store 截圖語言**：截圖管線已按 `zh-Hans` / `zh-Hant` / `en` / `ja` 組織 iPhone、iPad、Mac、Apple Watch、Apple TV 和 visionOS 場景文案；日文截圖和商店 metadata 仍需人工審校後再提交。
 - **帳單識別語言包**：`AutoLedgerCore` 內建 `zh-Hans`、`zh-Hant`、`en`、`ja` 識別包，承載帳單關鍵詞、金額格式、日期格式、分層金額標籤、商戶標籤、非商戶排除詞、分類關鍵詞和 OCR 語言提示。
 - **日文帳單識別**：日文包覆蓋 `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` 等常見欄位；OCR hint 使用 `ja-JP + en-US`，金額和商戶 / 分類解析已進入離線回歸。
-- **v1.7.0 韓語範圍**：韓語 App UI 草稿與 `AutoLedgerCore` `ko` 識別包已進入倉庫，覆蓋韓文金額、日期、商戶、分類關鍵詞和 `ko-KR + en-US` OCR hint；韓語 ASC 文案、截圖、真實樣本與人工審校仍是發布門禁，因此 `ko` 尚未標記為 Ready。
+- **v1.7.0 韓語範圍**：韓語 App UI 與 `AutoLedgerCore` `ko` 識別包已隨 ASC `1.6.0` 正式發布，覆蓋韓文金額、日期、商戶、分類關鍵詞和 `ko-KR + en-US` OCR hint；韓語商店文案、截圖與 App Preview 已隨版本交付，更多真實樣本、地區細節與母語審校作為發布後品質工作持續補強。
 - **發布門禁與節奏**：[目前版本矩陣](versions/v1.7.0-i18n-release-matrix.md) 以商店、介面、識別包、真實樣本、地區票據和人工審校六項 gate 管理語言；[跨版本語言路線](docs/product/I18N_ROADMAP.md) 固定每個公開功能版本同時交付一組新語言。
 - **英語主語言**：從 ASC `1.6.0` 起，工程 fallback 與 App Store Primary Language 目標統一為英語；Xcode `developmentRegion = en` 與 ASC `English (U.S.) / en-US` 必須分別驗證。
-- **下一品質組**：`v1.8.0` Draft 改為美國、英國、加拿大、澳洲、新加坡五個英語市場品質組，不新增 UI 語言；第二階段提升日語並新增德語、法語，西班牙語與巴西葡萄牙語順延為後續候選。
+- **下一品質組**：`v1.8.0` 已進入 Early Execution，目標為美國、英國、加拿大、澳洲、新加坡五個英語市場品質組，不新增 UI 語言；第二階段提升日語並新增德語、法語，西班牙語與巴西葡萄牙語順延為後續候選。
 - **擴展原則**：後續語言包以純資料、版本化、可 fallback 的方式擴展；使用者糾錯共享必須 opt-in、脫敏、可撤回，並經審核後才可能進入 reviewed pack。本倉庫目前不實作遠端語言包熱更新或自動上傳。
 
 ## Tech Stack
@@ -195,8 +200,8 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` 已完成，收口 SDK 適配階段二、酒店郵件匯入、Deep link / Widget / App Intents、資料可靠性、日文發布材料審校和 `GOAL-1960` release smoke。
 - `v1.6.3` 已完成目前範圍：酒店 C1 AutoLedger 專屬收件箱第一版 App/Core 工程骨架、審核說明和回歸 baseline；C2 Worker 登入使用者信箱自動掃描僅保留為個人自用或未來實驗路線。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 發布收口基線，`GOAL-2200` 完成 Free / Pro 邊界凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 端 PDFKit 本地轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口。
-- `v1.7.0` 正在收口 ASC / App Store `1.6.0` 候選：即時 OCR、韓語 UI 和 `ko` 識別包、i18n 發布矩陣、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro 進階搜尋 / 訂閱異常 / 月結 ZIP / 進階規則 / 智能整理、第一版雲端商戶別名建議、分享圖、酒店旅程回憶和隱私安全 analytics 已進入主線；目前重點是跨設備 TestFlight、iCloud、五語商店素材、隱私和 ASC 發布門禁。
-- `v1.8.0 / ASC 1.7.0` 已建立 Review & Close、易懂同步狀態、月結閉環及英語五市場品質組 Draft；目前不表示已進入實作，也不擴大 `v1.7.0` 範圍。
+- `v1.7.0 / ASC 1.6.0` 已正式發布：即時 OCR、韓語 UI 和 `ko` 識別包、i18n 發布矩陣、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro 進階搜尋 / 訂閱異常 / 月結 ZIP / 進階規則 / 智能整理、第一版雲端商戶別名建議、分享圖、酒店旅程回憶和隱私安全 analytics 已隨該發布線收口。
+- `v1.8.0 / ASC 1.7.0` 已進入 Early Execution，繼續推進 Review & Close、易懂同步狀態、月結閉環及英語五市場品質組。
 
 | 內部版本 | App Store | 狀態 | 主要內容 |
 |---|---|---|---|
@@ -207,8 +212,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 預設沿用 | 已完成 | SDK 適配階段二、酒店郵件草稿佇列 / 去重 / 候選批次匯入、Deep link Router、Widget / App Intents 第一段、資料可靠性、日文發布材料審校和 release smoke |
 | v1.6.3 | 1.5.0 預設沿用 | 已完成 | 酒店水單 C1 專屬收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、雲端候選模型、deep link、PDFKit 本地轉換入口、審核說明和回歸 baseline |
 | v1.6.4 | 1.5.0 預設沿用 | 已完成 | Personal Pro 訂閱基礎和 ASC 1.5.0 收口基線：Free / Pro 邊界已凍結；Pro 頁面、恢復購買 / 管理訂閱、本地郵箱月度免費額度、候選批次 gate、高級去重 gate、C1 Cloudflare Worker、D1/R2/Queue、雲端候選 API、App 雲端候選下載與 PDFKit 轉換入口、審核條款、visionOS / macOS 熱修和最終基線 tag 已收口 |
-| v1.7.0 | 1.6.0 | 候選收口 | 即時 OCR 與 fallback；五語 UI / 識別；`common-api`；服務端訂閱；ASC metadata-as-code；Pro 搜尋、訂閱異常、月結 ZIP、進階規則、智能整理和第一版 hash-only 雲端商戶別名；分享圖、酒店旅程回憶與隱私安全發布觀測；發布前完成跨設備、iCloud、商店素材與隱私門禁 |
-| v1.8.0 | 1.7.0 | 規劃草案 | Review & Close：持久化待處理、易懂同步狀態、月結閉環；待 v1.7 發布決定後完成英語五市場的格式、商店、隱私與真機准入 |
+| v1.7.0 | 1.6.0 | 已發布 | 即時 OCR 與 fallback；五語 UI / 識別；`common-api`；服務端訂閱；ASC metadata-as-code；Pro 搜尋、訂閱異常、月結 ZIP、進階規則、智能整理和第一版 hash-only 雲端商戶別名；分享圖、酒店旅程回憶與隱私安全發布觀測 |
+| v1.8.0 | 1.7.0 | Early Execution | Review & Close：持久化待處理、易懂同步狀態、月結閉環；完成英語五市場的格式、商店、隱私與真機准入 |
 
 ## License
 
