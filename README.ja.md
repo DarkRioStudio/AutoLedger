@@ -18,6 +18,11 @@ AutoLedger は Auto+ 製品群の個人支出台帳です。スクリーンシ�
   <a href="README.ja.md">日本語</a>
 </p>
 
+## ダウンロードと TestFlight
+
+- **App Store 正式版**：[AutoLedger をダウンロード](https://apps.apple.com/app/id6761892533)
+- **TestFlight ベータ**：[AutoLedger Beta に参加](https://testflight.apple.com/join/T3Wu6ngk)。テスト枠と利用可能なビルドは Apple TestFlight の表示に従います。
+
 ## License / Commercial Use
 
 AutoLedger は source-available の非商用ライセンスで公開されています。学習、個人研究、セキュリティレビュー、貢献のために参照できます。書面による許可なく、商用利用、ホワイトラベル公開、SaaS / ホスト型再配布、または改変版 App を App Store、Google Play、Steam、Microsoft Store、WeChat Mini Programs などの公開マーケットへ公開することはできません。
@@ -115,10 +120,10 @@ AutoLedger では UI のローカライズと、レシート / 明細認識用�
 - **App Store screenshot languages**: iPhone、iPad、Mac、Apple Watch、Apple TV、visionOS のスクリーンショット文言は `zh-Hans` / `zh-Hant` / `en` / `ja` で管理されています。日本語スクリーンショットとストア metadata は提出前に人手で確認します。
 - **Recognition language packs**: `AutoLedgerCore` には `zh-Hans`、`zh-Hant`、`en`、`ja` の内蔵パックがあり、レシート関連語、金額形式、日付形式、金額ラベル、店舗ラベル、店舗ではない語の除外、分類キーワード、OCR language hints を扱います。
 - **Japanese receipt recognition**: 日本語パックは `合計`、`小計`、`税込`、`店舗`、`注文番号`、`カフェ`、`コンビニ` などを扱います。OCR hint は `ja-JP + en-US` を優先し、金額 / 店舗 / 分類解析はオフライン回帰に含まれています。
-- **v1.7.0 Korean scope**: 韓国語 App UI の草案と `AutoLedgerCore` の `ko` 認識パックはすでにリポジトリに入り、韓国語の金額、日付、店舗、分類キーワード、`ko-KR + en-US` OCR hint を扱います。韓国語 ASC 文言、スクリーンショット、実サンプル、人手レビューは未完了の release gate であり、`ko` はまだ Ready ではありません。
+- **v1.7.0 Korean scope**: 韓国語 App UI と `AutoLedgerCore` の `ko` 認識パックは ASC `1.6.0` で正式リリースされ、韓国語の金額、日付、店舗、分類キーワード、`ko-KR + en-US` OCR hint を扱います。韓国語ストア文言、スクリーンショット、App Preview はリリース済みで、実サンプル、地域別品質、母語レビューはリリース後の品質改善として継続します。
 - **Release gates and cadence**: [現行版の matrix](versions/v1.7.0-i18n-release-matrix.md) は、ストア、UI、認識パック、実サンプル、地域別レシート、人手レビューの 6 gate を要求します。[複数バージョンの言語ロードマップ](docs/product/I18N_ROADMAP.md) では、公開機能バージョンごとに新しい言語グループを 1 組追加します。
 - **English primary language**: ASC `1.6.0` 以降、工程 fallback と App Store の Primary Language は英語を目標にします。Xcode の `developmentRegion = en` と ASC の `English (U.S.) / en-US` は別々に証跡を確認します。
-- **Next quality cohort**: `v1.8.0` の Draft は米国、英国、カナダ、オーストラリア、シンガポールの英語 5 市場を検証し、UI 言語は追加しません。第 2 段階で日本語品質を高め、ドイツ語とフランス語を追加し、スペイン語とブラジルポルトガル語は後続候補へ移します。
+- **Next quality cohort**: `v1.8.0` は Early Execution に入り、米国、英国、カナダ、オーストラリア、シンガポールの英語 5 市場を検証します。UI 言語は追加しません。第 2 段階で日本語品質を高め、ドイツ語とフランス語を追加し、スペイン語とブラジルポルトガル語は後続候補へ移します。
 - **Extension model**: 今後の言語パックは、純データ、バージョン管理、fallback 可能、レビュー可能な形で追加します。ユーザー訂正の共有は opt-in、脱識別、撤回可能で、reviewed pack に入る前に確認が必要です。このリポジトリでは現時点で遠隔 hot update や自動アップロードは実装していません。
 
 ## Tech Stack
@@ -195,8 +200,8 @@ bash scripts/run_golden_regression.sh
 - `v1.6.2` は完了しました。SDK adaptation phase 2、ホテルメール取り込み、Deep link / Widget / App Intents、データ信頼性、日本語リリース素材レビュー、`GOAL-1960` release smoke を収束しました。
 - `v1.6.3` は現在の範囲を完了しました。ホテル C1 AutoLedger 専用受信箱の App/Core 第一版骨格、レビュー説明、回帰 baseline までを収束しています。C2 Worker によるユーザー mailbox ログイン型自動スキャンは個人利用または将来の実験扱いのままです。
 - `v1.6.4` は ASC / App Store `1.5.0` の closeout baseline として完了しました。`GOAL-2200` で Free / Pro 境界を固定し、Pro ページ、購入復元 / サブスクリプション管理、ローカルメール月次枠、候補一括 gate、高度な重複整理 gate、C1 Cloudflare Worker、D1/R2/Queue、クラウド候補 API、App 側 PDFKit 変換、レビュー条項、visionOS / macOS hotfix、最終 baseline tag まで収束しています。
-- `v1.7.0` は ASC / App Store `1.6.0` 候補を収束中です。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro の検索 / サブスク異常 / 月次 ZIP / 高度なルール / スマート整理、第一版クラウド加盟店別名提案、共有画像、ホテル旅程メモリー、privacy-safe analytics が main line に入っています。残る重点は複数デバイス TestFlight、iCloud、5 言語ストア素材、プライバシー、ASC release gate です。
-- `v1.8.0 / ASC 1.7.0` は Review & Close、理解しやすい同期状態、月締め、英語 5 市場の品質検証 Draft を作成済みです。まだ実装開始を意味せず、`v1.7.0` の範囲も拡大しません。
+- `v1.7.0 / ASC 1.6.0` は正式リリース済みです。ライブ OCR、韓国語 UI と `ko` 認識、i18n release matrix、`common-api`、App Store Server Notifications、ASC metadata-as-code、Pro の検索 / サブスク異常 / 月次 ZIP / 高度なルール / スマート整理、第一版クラウド加盟店別名提案、共有画像、ホテル旅程メモリー、privacy-safe analytics はこのリリースラインで収束しました。
+- `v1.8.0 / ASC 1.7.0` は Early Execution に入り、Review & Close、理解しやすい同期状態、月締め、英語 5 市場の品質検証を進めています。
 
 | Internal Version | App Store | Status | Focus |
 |---|---|---|---|
@@ -207,8 +212,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.2 | 1.5.0 by default | Completed | SDK adaptation phase 2, hotel email draft queue / dedupe / batch candidate import, deep-link Router, Widget / App Intents, data reliability, Japanese release-material review, release smoke |
 | v1.6.3 | 1.5.0 by default | Completed | Hotel C1 dedicated folio inbox App/Core skeleton: `folio+<token>@getautoledger.app` contract, cloud candidate model, deep links, PDFKit local conversion entry, review notes, and regression baseline |
 | v1.6.4 | 1.5.0 by default | Completed | Personal Pro foundation and ASC 1.5.0 closeout baseline: Free / Pro boundaries are frozen; Pro page, restore / manage subscriptions, local email monthly allowance, batch-candidate gate, advanced dedupe gate, C1 Cloudflare Worker, D1/R2/Queue, cloud-candidate API, App-side PDFKit conversion, review terms, visionOS / macOS hotfixes, and final baseline tag are settled |
-| v1.7.0 | 1.6.0 | Candidate closeout | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, subscription anomalies, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics; final cross-device, iCloud, store-asset, and privacy gates remain |
-| v1.8.0 | 1.7.0 | Planning draft | Review & Close、永続化された未処理項目、理解しやすい同期状態、月締め；v1.7 のリリース判断後に英語 5 市場の形式、ストア、プライバシー、実機 gate を検証 |
+| v1.7.0 | 1.6.0 | Released | Live OCR and fallbacks; five-language UI / recognition; `common-api`; server subscriptions; ASC metadata-as-code; Pro search, subscription anomalies, monthly ZIP, advanced rules, smart cleanup, and first hash-only cloud merchant aliases; share cards, hotel journey memories, and privacy-safe release analytics |
+| v1.8.0 | 1.7.0 | Early Execution | Review & Close、永続化された未処理項目、理解しやすい同期状態、月締め；英語 5 市場の形式、ストア、プライバシー、実機 gate を検証 |
 
 ## License
 

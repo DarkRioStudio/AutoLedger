@@ -9,6 +9,13 @@
 
 ## [Unreleased]
 
+### 变更（README / App Store 下载入口）
+- [2026-07-28] 在中文 README 顶部徽章区新增 AutoLedger 的地区无关 App Store 下载链接，指向 `https://apps.apple.com/app/id6761892533`；本轮不修改 App、其它语言 README、ASC 在线状态、版本号、构建或发布配置。
+
+### 变更（v1.7.0 正式发布状态 / TestFlight 入口）
+- [2026-07-28] 根据用户确认及 Apple 公开商店查询，将内部 `v1.7.0 / ASC 1.6.0` 从候选收口更新为正式发布，并同步核心路线图、项目状态、v1.7 版本计划、语言发布矩阵与中文 README；README 新增独立“下载与 TestFlight”区域，公开测试入口为 `https://testflight.apple.com/join/T3Wu6ngk`。本轮未修改 ASC、App、构建、版本号、发布标签或其它语言 README。
+- [2026-07-28] 将 App Store 正式版、TestFlight 公测、`v1.7.0 / ASC 1.6.0` 已发布及 `v1.8.0` Early Execution 状态同步到英语、繁体中文和日语 README；文档真源 smoke 现要求四语 README 均保留地区无关 App Store 短链接和 TestFlight 入口。本轮不修改 App、Worker、ASC、版本号、构建或发布标签。
+
 ### 变更（v1.7.0 / ASC 1.6.0 发布收口）
 - [2026-07-26] 用户确认 ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 四平台均已过审。创建并推送不可移动产品标签 `v1.7.0`，标签精确指向 build `120` 源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；随后在隔离 worktree 完成 `git diff --check` 和完整离线回归，将 `codex/v1.8.0-foundation` 的六个线性提交 fast-forward 合入远端 `main` 至 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。本轮未修改 App / Worker runtime、ASC、build、CloudKit / D1 schema、StoreKit、签名、entitlement 或 `xcbuild-v1.7.0`，原工作树未提交内容保持未暂存、未提交。
 
