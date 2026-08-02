@@ -143,7 +143,8 @@ public enum TransactionCategory: String, CaseIterable, Codable, Identifiable, Se
         if lowered.contains("电费") || lowered.contains("水费") || lowered.contains("燃气") {
             return .utilities
         }
-        if lowered.contains("影院") || lowered.contains("电影") || lowered.contains("游戏") {
+        if lowered.contains("影院") || lowered.contains("电影") || lowered.contains("游戏")
+            || lowered.contains("欢乐谷") || lowered.contains("游乐园") || lowered.contains("主题公园") {
             return .entertainment
         }
         if lowered.contains("淘宝") || lowered.contains("京东") || lowered.contains("拼多多")

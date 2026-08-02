@@ -40,7 +40,7 @@ public struct ReceiptParser: Sendable {
         if headerCount > 1 { return true }
 
         // 策略 2：独立金额行（微信格式 "-XX.XX" 独占一行）出现多次
-        let negAmountPattern = #"^\s*-[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+        let negAmountPattern = #"^\s*[-−][0-9]+(?:\.[0-9]{1,2})?\s*$"#
         if let regex = try? NSRegularExpression(pattern: negAmountPattern) {
             let negAmountCount = lines.filter { line in
                 regex.firstMatch(in: line, range: NSRange(line.startIndex..<line.endIndex, in: line)) != nil
@@ -112,10 +112,10 @@ public struct ReceiptParser: Sendable {
         let paperReceipt = analyzePaperReceipt(lines: cleanedLines)
 
         // 多商品纸质小票：必须优先取 TOTAL/AMOUNT DUE 等总额，避免把第一条商品价记成整单金额。
-        let amount: Double
+        let recognizedAmount: Double
         let receiptDiagnostics: ReceiptParseDiagnostics?
         if paperReceipt.isMultiItemReceipt, let total = paperReceipt.totalCandidates.first {
-            amount = total
+            recognizedAmount = total
             receiptDiagnostics = ReceiptParseDiagnostics(
                 isMultiItemReceipt: true,
                 totalMatched: true,
@@ -125,7 +125,7 @@ public struct ReceiptParser: Sendable {
                 rule: "receipt_total_priority"
             )
         } else if paperReceipt.isMultiItemReceipt, let fallbackAmount = paperReceipt.priceCandidates.sorted(by: >).first {
-            amount = fallbackAmount
+            recognizedAmount = fallbackAmount
             receiptDiagnostics = ReceiptParseDiagnostics(
                 isMultiItemReceipt: true,
                 totalMatched: false,
@@ -136,20 +136,27 @@ public struct ReceiptParser: Sendable {
                 note: "multi-item receipt without reliable total"
             )
         } else if let didiAmt = extractDidiTripAmount(lines: cleanedLines) {
-            amount = didiAmt
+            recognizedAmount = didiAmt
             receiptDiagnostics = nil
         } else if let imageData, let didiAmt = extractDidiTripAmountFromImage(data: imageData, lines: cleanedLines) {
-            amount = didiAmt
+            recognizedAmount = didiAmt
             receiptDiagnostics = nil
         } else if let genericAmt = extractAmount(from: normalized) {
-            amount = genericAmt
+            recognizedAmount = genericAmt
             receiptDiagnostics = nil
         } else {
             return nil
         }
 
-        // 微信支付详情页：标签块→值块格式，优先提取商户全称和支付时间
+        // 微信支付详情页：标签块→值块格式，优先提取商户全称、支付时间和累计退款金额。
         let wechatDetail = parseWeChatDetailBlock(lines: cleanedLines)
+        guard let amount = finalPaymentAmount(
+            originalAmount: recognizedAmount,
+            refundedAmount: wechatDetail?.refundedAmount
+        ) else {
+            // 全额退款没有正向实际支出，不生成支出草稿。
+            return nil
+        }
 
         // 抖音团购券码页：从"适用门店"区块提取门店名称
         let douyinMerchant = parseDouyinVoucher(lines: cleanedLines)
@@ -226,6 +233,29 @@ public struct ReceiptParser: Sendable {
             suggestedCategory: category,
             parseDiagnostics: receiptDiagnostics
         )
+    }
+
+    /// 供智能解析入口在调用本地/外部模型前短路全额退款，避免模型重新采用原支付金额。
+    func isFullyRefundedWeChatDetail(text: String) -> Bool {
+        let normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = normalized
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard let originalAmount = extractAmount(from: normalized),
+              let refundedAmount = parseWeChatDetailBlock(lines: lines)?.refundedAmount else {
+            return false
+        }
+        return abs(originalAmount - refundedAmount) < 0.005
+    }
+
+    private func finalPaymentAmount(originalAmount: Double, refundedAmount: Double?) -> Double? {
+        guard let refundedAmount, refundedAmount > 0 else { return originalAmount }
+        if abs(originalAmount - refundedAmount) < 0.005 { return nil }
+        guard refundedAmount < originalAmount else { return originalAmount }
+        return ((originalAmount - refundedAmount) * 100).rounded() / 100
     }
 
     private func analyzePaperReceipt(lines: [String]) -> PaperReceiptAnalysis {
@@ -507,7 +537,7 @@ public struct ReceiptParser: Sendable {
         let lines = text.components(separatedBy: .newlines)
 
         // 微信支付格式优先：独立行 "-XX.XX" 就是实际支付金额
-        let wechatNegPattern = #"^\s*-([0-9]+(?:\.[0-9]{1,2})?)\s*$"#
+        let wechatNegPattern = #"^\s*[-−]([0-9]+(?:\.[0-9]{1,2})?)\s*$"#
         if let negRegex = try? NSRegularExpression(pattern: wechatNegPattern) {
             for line in lines {
                 let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
@@ -1407,9 +1437,9 @@ public struct ReceiptParser: Sendable {
     // MARK: - 微信支付详情页 label-block → value-block 解析
 
     /// 微信支付交易详情页的 OCR 输出通常为：标签连续排列（当前状态、支付时间、商户全称…），
-    /// 之后是对应值按相同顺序排列。此方法检测该结构并提取商户名和支付时间。
+    /// 之后是对应值按相同顺序排列。此方法检测该结构并提取商户名、支付时间和退款金额。
     /// 页面标题可能为"交易详情"（从账单列表点入）或"全部账单"（从微信支付主页点入）。
-    private func parseWeChatDetailBlock(lines: [String]) -> (merchant: String?, date: Date?)? {
+    private func parseWeChatDetailBlock(lines: [String]) -> (merchant: String?, date: Date?, refundedAmount: Double?)? {
         let isWeChatPage = lines.contains(where: { $0.contains("交易详情") || $0.contains("全部账单") })
         guard isWeChatPage else { return nil }
         let normalizedLines = mergeWrappedParenthesisLines(lines)
@@ -1439,6 +1469,7 @@ public struct ReceiptParser: Sendable {
         var merchant: String?
         var productName: String?   // value of 商品 label, used as fallback
         var date: Date?
+        var refundedAmount: Double?
 
         // Bare POS terminal ID pattern, e.g. （8285）— a payment terminal number, not a merchant name
         let terminalIDPattern = #"^[（(]\s*\d+\s*[）)]$"#
@@ -1462,6 +1493,15 @@ public struct ReceiptParser: Sendable {
             if item.label == "支付时间" && !value.isEmpty {
                 date = AppFormatters.parseFlexibleDate(value)
             }
+            if item.label == "当前状态" {
+                refundedAmount = extractWeChatRefundAmount(from: value)
+            }
+        }
+
+        // 某些 OCR 版本只在上方“退款记录”行保留金额；取首个退款金额作为兜底，
+        // 不累加与“当前状态”重复出现的同一金额。
+        if refundedAmount == nil {
+            refundedAmount = normalizedLines.lazy.compactMap(extractWeChatRefundAmount(from:)).first
         }
 
         // When 商户全称 was a bare terminal ID (or absent), try the display merchant shown above
@@ -1469,7 +1509,7 @@ public struct ReceiptParser: Sendable {
         // scan upward through nearby lines and filter known WeChat chrome/noise before falling
         // back to the 商品 value.
         if merchant == nil {
-            let negAmountPattern = #"^\s*-[0-9]+(?:\.[0-9]{1,2})?\s*$"#
+            let negAmountPattern = #"^\s*[-−][0-9]+(?:\.[0-9]{1,2})?\s*$"#
             if let negRegex = try? NSRegularExpression(pattern: negAmountPattern),
                let negIdx = normalizedLines.indices.first(where: { i in
                    let ln = normalizedLines[i]
@@ -1483,7 +1523,28 @@ public struct ReceiptParser: Sendable {
             }
         }
 
-        return (merchant, date)
+        return (merchant, date, refundedAmount)
+    }
+
+    private func extractWeChatRefundAmount(from value: String) -> Double? {
+        let completedRefundSignals = ["已退款", "已部分退款", "已全额退款", "退款成功"]
+        guard completedRefundSignals.contains(where: { value.contains($0) }) else { return nil }
+        let patterns = [
+            #"[¥￥]\s*([0-9]+(?:\.[0-9]{1,2})?)"#,
+            #"([0-9]+(?:\.[0-9]{1,2})?)\s*元"#
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let nsRange = NSRange(value.startIndex..<value.endIndex, in: value)
+            guard let match = regex.firstMatch(in: value, range: nsRange),
+                  let range = Range(match.range(at: 1), in: value),
+                  let amount = Double(String(value[range])),
+                  amount > 0 else {
+                continue
+            }
+            return amount
+        }
+        return nil
     }
 
     private func nearbyWeChatDisplayMerchant(
@@ -1522,8 +1583,9 @@ public struct ReceiptParser: Sendable {
 
     /// 合并被 OCR 拆成多行的括号内容，避免标签块值映射被换行错位。
     /// 例如："天津市...（个" + "Fictional Sole Proprietor" -> "天津市...（个Fictional Sole Proprietor"。
-    /// 同时合并因行宽限制被拆开的公司全称后缀，
-    /// 例如："Example Convenience Store" + "公司" -> "Example Convenience Store"。
+    /// 同时合并因行宽限制被拆开的公司全称后缀或分公司名，
+    /// 例如："示例商贸有限" + "公司"，以及
+    /// "示例文旅实业有限公司欢" + "乐谷分公司"。
     private func mergeWrappedParenthesisLines(_ lines: [String]) -> [String] {
         var merged: [String] = []
         var index = 0
@@ -1539,8 +1601,8 @@ public struct ReceiptParser: Sendable {
                 lookahead += 1
             }
 
-            // 公司全称被 OCR 在"有限"后换行（如"Example Convenience Store" + "公司"）时合并。
-            if lookahead < lines.count && current.hasSuffix("有限") {
+            if lookahead < lines.count,
+               shouldMergeWrappedCompanyName(current, continuation: lines[lookahead]) {
                 current += lines[lookahead]
                 lookahead += 1
             }
@@ -1550,6 +1612,32 @@ public struct ReceiptParser: Sendable {
         }
 
         return merged
+    }
+
+    private func shouldMergeWrappedCompanyName(_ current: String, continuation: String) -> Bool {
+        let first = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        let second = continuation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !first.isEmpty, !second.isEmpty else { return false }
+
+        // 常见断点："有限" + "公司"。限制续行必须以公司后缀结束，避免吞掉下一字段值。
+        if first.hasSuffix("有限") {
+            return second.hasPrefix("公司") || second.hasPrefix("责任公司")
+        }
+
+        // 新版微信账单会在分支机构名称中间换行，如
+        // "...有限公司欢" + "乐谷分公司"。前一行必须已出现法人类型，后一行必须是分支机构后缀。
+        let legalEntityMarkers = ["有限公司", "有限责任公司", "股份有限公司"]
+        let branchSuffixes = ["分公司", "支公司", "子公司"]
+        let acquirerSignals = ["银行", "支付", "银联", "财付通"]
+        guard let marker = legalEntityMarkers.first(where: { first.contains($0) }),
+              let markerRange = first.range(of: marker, options: .backwards) else {
+            return false
+        }
+        let trailingFragment = first[markerRange.upperBound...]
+        return !trailingFragment.isEmpty
+            && trailingFragment.count <= 4
+            && branchSuffixes.contains(where: { second.hasSuffix($0) })
+            && !acquirerSignals.contains(where: { second.contains($0) })
     }
 
     private func parenthesisBalance(_ line: String) -> Int {

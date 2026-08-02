@@ -144,7 +144,6 @@ struct DataManagementView: View {
                 set: { enabled in
                     Task {
                         await store.setLedgerCloudSyncEnabled(enabled)
-                        statusMessage = store.ledgerCloudSyncStatus
                     }
                 }
             )) {
@@ -165,25 +164,8 @@ struct DataManagementView: View {
                     .tint(AppTheme.accent)
             }
 
+            cloudKitUserStatusSection
             cloudKitConflictSection
-
-            if !store.ledgerCloudSyncLog.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("data_management.cloudkit_log")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.ink)
-
-                    ForEach(store.ledgerCloudSyncLog.suffix(6), id: \.self) { item in
-                        Text(item)
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(AppTheme.mutedInk)
-                            .lineLimit(3)
-                    }
-                }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppTheme.canvas.opacity(0.7)))
-            }
 
             actionButton(
                 titleKey: store.isLedgerCloudSyncRunning
@@ -194,7 +176,6 @@ struct DataManagementView: View {
             ) {
                 Task {
                     await store.syncLedgerWithCloudKitNow(forceFull: true)
-                    statusMessage = store.ledgerCloudSyncStatus
                 }
             }
             .disabled(store.isLedgerCloudSyncRunning || !store.isLedgerCloudSyncEnabled)
@@ -205,6 +186,46 @@ struct DataManagementView: View {
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(AppTheme.card))
     }
 
+    private var cloudKitUserStatusSection: some View {
+        let status = store.ledgerUserSyncStatus
+        let tint = cloudKitStatusTint(status.state)
+
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: cloudKitStatusSystemImage(status.state))
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(tint.opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(cloudKitStatusTitle(status.state))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
+
+                Text(cloudKitStatusDetail(status.state))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.mutedInk)
+
+                if let lastSuccessfulSyncAt = status.lastSuccessfulSyncAt {
+                    Text(
+                        String(
+                            format: String(localized: "data_management.cloudkit_last_success_format"),
+                            AppFormatters.shortDateTime(lastSuccessfulSyncAt)
+                        )
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.mutedInk)
+                }
+            }
+
+            Spacer(minLength: 8)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(AppTheme.canvas.opacity(0.74)))
+        .accessibilityElement(children: .combine)
+    }
+
     @ViewBuilder
     private var cloudKitConflictSection: some View {
         let conflicts = store.ledgerSyncConflictRecords
@@ -212,10 +233,10 @@ struct DataManagementView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("待处理同步冲突")
+                        Text("data_management.cloudkit_conflict.title")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(AppTheme.ink)
-                        Text("这些账单在多台设备上同时改动。当前先支持保留本机版本，然后继续同步。")
+                        Text("data_management.cloudkit_conflict.detail")
                             .font(.caption)
                             .foregroundStyle(AppTheme.mutedInk)
                     }
@@ -234,18 +255,20 @@ struct DataManagementView: View {
                 }
 
                 if conflicts.count > 4 {
-                    Text("还有 \(conflicts.count - 4) 条冲突未展开。")
+                    Text(
+                        String(
+                            format: String(localized: "data_management.cloudkit_conflict.more_format"),
+                            conflicts.count - 4
+                        )
+                    )
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
 
                 Button {
-                    let resolved = store.keepLocalVersionsForAllLedgerSyncConflicts()
-                    statusMessage = resolved > 0
-                        ? "已保留本机版本并清除 \(resolved) 条同步冲突。"
-                        : "没有需要处理的同步冲突。"
+                    _ = store.keepLocalVersionsForAllLedgerSyncConflicts()
                 } label: {
-                    Label("全部保留本机版本", systemImage: "checkmark.circle.fill")
+                    Label("data_management.cloudkit_conflict.keep_all_local", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
@@ -271,7 +294,7 @@ struct DataManagementView: View {
                 HStack(spacing: 8) {
                     Text(AppFormatters.currency(record.transaction.amount))
                         .font(.caption.weight(.semibold))
-                    Text(AppFormatters.exportDateTime(record.transaction.occurredAt))
+                    Text(AppFormatters.shortDateTime(record.transaction.occurredAt))
                         .font(.caption)
                     Text(record.transaction.categoryTitle)
                         .font(.caption)
@@ -283,13 +306,9 @@ struct DataManagementView: View {
             Spacer(minLength: 8)
 
             Button {
-                if store.keepLocalVersionForLedgerSyncConflict(transactionID: record.transaction.id) {
-                    statusMessage = "已保留本机版本：\(record.transaction.merchant)"
-                } else {
-                    statusMessage = store.ledgerCloudSyncStatus
-                }
+                _ = store.keepLocalVersionForLedgerSyncConflict(transactionID: record.transaction.id)
             } label: {
-                Label("保留本机", systemImage: "checkmark")
+                Label("data_management.cloudkit_conflict.keep_local", systemImage: "checkmark")
                     .labelStyle(.iconOnly)
             }
             .buttonStyle(.bordered)
@@ -297,10 +316,41 @@ struct DataManagementView: View {
             .controlSize(.small)
             .tint(AppTheme.accent)
             .disabled(store.isLedgerCloudSyncRunning)
-            .accessibilityLabel("保留本机版本")
+            .accessibilityLabel(Text("data_management.cloudkit_conflict.keep_local_accessibility"))
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AppTheme.card.opacity(0.72)))
+    }
+
+    private func cloudKitStatusTitle(_ state: LedgerUserSyncState) -> LocalizedStringKey {
+        LocalizedStringKey("data_management.cloudkit_state.\(state.rawValue).title")
+    }
+
+    private func cloudKitStatusDetail(_ state: LedgerUserSyncState) -> LocalizedStringKey {
+        LocalizedStringKey("data_management.cloudkit_state.\(state.rawValue).detail")
+    }
+
+    private func cloudKitStatusSystemImage(_ state: LedgerUserSyncState) -> String {
+        switch state {
+        case .disabled: return "icloud.slash"
+        case .checkingAccount: return "person.crop.circle.badge.questionmark"
+        case .syncing: return "arrow.triangle.2.circlepath.icloud"
+        case .waitingToUpload: return "icloud.and.arrow.up"
+        case .upToDate: return "checkmark.icloud.fill"
+        case .offline: return "wifi.slash"
+        case .needsConflictReview: return "exclamationmark.arrow.triangle.2.circlepath"
+        case .failedWithLocalDataSafe: return "exclamationmark.icloud"
+        }
+    }
+
+    private func cloudKitStatusTint(_ state: LedgerUserSyncState) -> Color {
+        switch state {
+        case .disabled: return AppTheme.mutedInk
+        case .checkingAccount, .syncing, .waitingToUpload: return AppTheme.accent
+        case .upToDate: return .green
+        case .offline, .needsConflictReview: return .orange
+        case .failedWithLocalDataSafe: return .red
+        }
     }
 
     private var manualBackupCard: some View {

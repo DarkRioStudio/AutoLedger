@@ -17,17 +17,18 @@
 | 发布阶段 | 用户确认 `v1.7.0 / ASC 1.6.0` 已正式发布；2026-07-28 Apple 公开查询接口回读美国区商店当前版本为 `1.6.0` |
 | 自定义产品页 | 三张五语页面已通过独立 iOS items-only submission 提交，审核单与三页均为 `WAITING_FOR_REVIEW`；主版本审核单保持独立 |
 | 已验证候选产品行为基线 | build `120` / `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；六项最终 TestFlight / 真机门禁已由用户确认通过 |
-| Xcode Cloud 触发标签 | `xcbuild-v1.7.0` 已移动到包含 runtime 基线与发布证据文档的最新 `main` |
+| Xcode Cloud 触发标签 | 已授权创建 `xcbuild-v1.8.0` 指向本轮最新 `main`，用于 ASC `1.7.0` 内部验证构建；旧 `xcbuild-v1.7.0` 保持在已发布基线 |
 | 最近人工结论 | build `120` 的水单刷新、401 续签、订阅处理、iCloud、交互性能和 Mac smoke 均通过 |
 | 精确 TestFlight build | build `120`；iOS、macOS、tvOS、visionOS 均为 `VALID / APP_STORE_ELIGIBLE / expired=false`，且已绑定 ASC `1.6.0` |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
-| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 已进入 Early Execution；`codex/v1.8.0-foundation` 已 fast-forward 合入远端 `main` |
+| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 已进入 Early Execution；全球格式、PendingAction 与可理解同步状态均已有第一批实现 |
+| 工程版本基线 | 所有 Xcode target / configuration 的 `MARKETING_VERSION` 均为 `1.7.0`；`CURRENT_PROJECT_VERSION` 不变；本轮仅触发内部构建，云端 build number、processing 与 ASC 绑定待实时回读 |
 
 本文件回答“项目现在在哪里”。它不替代版本计划、回归证据、CHANGELOG 或逐轮迭代日志。
 
 ## Release Position
 
-`v1.7.0 / ASC 1.6.0` 已正式发布。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已推进到 `v1.8.0` foundation 提交 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。2026-07-28 Apple 公开查询接口确认美国区商店当前版本为 `1.6.0`；该证据不替代其它地区与平台的传播检查，本轮也没有修改 ASC、构建或已发布 binary。
+`v1.7.0 / ASC 1.6.0` 已正式发布。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已继续推进 `v1.8.0` 开发线，本轮只通过 `xcbuild-v1.8.0` 触发 ASC `1.7.0` 内部验证构建，不移动旧产品基线。Apple 公开查询接口确认美国区商店已发布版本为 `1.6.0`；该证据不替代其它地区与平台的传播检查，也不代表本次新构建已完成 processing、绑定或真机验收。
 
 `v1.7.0 / ASC 1.6.0` 的主要产品与工程能力已经进入主线：
 
@@ -43,6 +44,7 @@
 
 ## Recently Closed
 
+- `GOAL-2440` 第一批已冻结八态普通用户同步合同，数据管理页改为展示可理解状态、上次成功时间与冲突入口；完整 CloudKit 阶段日志只保留在开发者诊断。
 - 启动 SQLite 水合和同步完成后的全量解码已移出 UI actor；启动 iCloud 同步等待本地账本可交互后继续。
 - 账本与酒店 Tab 复用派生快照，TS 117 真机反馈比前版明显改善。
 - “保留本机”后的旧 CloudKit 冲突元数据不再在下一轮拉取时复活。
@@ -97,13 +99,13 @@
 - 截图与 App Preview 本地成品仍位于忽略目录；ASC MD5、视频处理状态、poster frame 时间码与生成图状态已经回读，但不会替代原生设备长文本检查或与最终提交 binary 的一致性复核。韩语母语审校是明确接受的非阻断缺口，后续反馈仍应修订文案。
 - 三张自定义产品页目前处于 `WAITING_FOR_REVIEW`，获批前其专属 URL 不应作为正式公开落地页；Campaign 与自定义页 Analytics 需要达到 Apple 的隐私阈值后才会显示数据。自定义产品页 API 不接受 Apple Watch screenshot display type，因此差异化素材范围为 iPhone 与 iPad。
 - `versions/v1.7.0-plan.md` 保留逐阶段执行记录；其中带日期的“未完成”描述是当时事实，不能覆盖本文件的当前状态。
-- `v1.8.0` 与后续语言组是规划事实，不代表实现、ASC locale、截图、识别样本或人工审校已经完成。
+- `v1.8.0` 已完成全球格式、PendingAction 合同 / 决定持久化 / 逐条 UI，以及可理解同步状态的第一批实现；这不代表真实双设备同步、重庆 Moxy 冲突、月结、批量处理、ASC locale、截图、识别样本或人工审校已经完成。
 
 ## Next Actions
 
-1. 只读跟踪四个平台在目标地区的商店可见性与版本传播；不得用产品 tag 替代线上可见证据。
-2. 独立监控三张自定义产品页审核；获批并确认专属 URL 可见后，再把 Campaign Link 与对应 `ppid` 页面投入营销。
-3. 以远端 `main` 的 `a844349fc93ddd29cb6f4d4974a6051273ba28cb` 继续 `v1.8.0 / ASC 1.7.0` Early Execution，并按 `versions/v1.8.0-plan.md` 保持每批独立门禁。
+1. 实时回读 `xcbuild-v1.8.0` 对应的 Xcode Cloud 运行、四平台 Archive、实际 build number、TestFlight processing 与 ASC `1.7.0` 可绑定状态。
+2. 用真实 iPhone / iPad 验证 `GOAL-2440` 第一批的离线、待上传、恢复、账号受限、无权益与本地数据失败安全路径，并重跑重庆 Moxy 已知冲突与新版微信退款截图样例。
+3. 将同步冲突作为来源支持的 PendingAction 增量接入；随后推进 `GOAL-2450` 月结检查。英语五市场继续按独立矩阵补真实设备、样本、商店、支持和隐私证据。
 
 ## Source Of Truth Map
 

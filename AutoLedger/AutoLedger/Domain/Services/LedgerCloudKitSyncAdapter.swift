@@ -54,6 +54,17 @@ struct LedgerCloudKitAccountCheck: Equatable {
     var canUsePrivateDatabase: Bool {
         state == .available
     }
+
+    var userFacingUnavailableState: LedgerUserSyncState {
+        switch state {
+        case .available:
+            return .syncing
+        case .temporarilyUnavailable, .couldNotDetermine:
+            return .offline
+        case .noAccount, .restricted, .unknown:
+            return .failedWithLocalDataSafe
+        }
+    }
 }
 
 enum LedgerCloudKitFieldValue: Equatable {
@@ -666,6 +677,39 @@ struct LedgerCloudKitSyncAdapter {
         }
 
         return parts.joined(separator: " | ")
+    }
+
+    nonisolated static func userFacingFailureState(for error: Error) -> LedgerUserSyncState {
+        isOfflineFailure(error) ? .offline : .failedWithLocalDataSafe
+    }
+
+    nonisolated private static func isOfflineFailure(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain,
+           [.notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost, .timedOut]
+            .contains(URLError.Code(rawValue: nsError.code)) {
+            return true
+        }
+
+        if nsError.domain == CKError.errorDomain,
+           let code = CKError.Code(rawValue: nsError.code) {
+            switch code {
+            case .networkUnavailable, .networkFailure, .serviceUnavailable:
+                return true
+            case .partialFailure:
+                if let partialErrors = nsError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error],
+                   !partialErrors.isEmpty {
+                    return partialErrors.values.allSatisfy(isOfflineFailure)
+                }
+            default:
+                break
+            }
+        }
+
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            return isOfflineFailure(underlying)
+        }
+        return false
     }
 
     nonisolated private static func partialErrorSummary(from error: NSError) -> String? {

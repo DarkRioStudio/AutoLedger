@@ -65,6 +65,10 @@ struct SmartReceiptParser: Sendable {
         imageData: Data? = nil,
         fallbackMerchant: String? = nil
     ) async -> SmartResult? {
+        guard !ruleParser.isFullyRefundedWeChatDetail(text: text) else {
+            logger.info("[规则优先] 微信账单已全额退款，不生成正向支出草稿")
+            return nil
+        }
         let ruleResult = ruleParser.parse(
             text: text,
             source: source,
@@ -110,6 +114,10 @@ struct SmartReceiptParser: Sendable {
         ocrMinConfidence: Float? = nil,
         provider: LLMProvider
     ) async -> SmartResult? {
+        guard !ruleParser.isFullyRefundedWeChatDetail(text: text) else {
+            logger.info("[规则优先] 微信账单已全额退款，不调用模型生成正向支出")
+            return nil
+        }
         if let diagnostics = ruleParser.receiptDiagnostics(text: text), diagnostics.isMultiItemReceipt {
             logger.info("[规则优先] 命中多商品小票，直接使用 receipt total 规则。\(diagnostics.debugSummary)")
             guard let receipt = ruleParser.parse(text: text, source: source, fallbackMerchant: fallbackMerchant) else {

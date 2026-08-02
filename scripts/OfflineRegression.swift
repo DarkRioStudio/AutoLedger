@@ -99,6 +99,7 @@ struct OfflineRegression {
         try verifyLedgerProfileManagement(reporter: reporter)
         try verifyLedgerSelectionAndTransactionMoves(reporter: reporter)
         try verifyLedgerScopedSurfaces(reporter: reporter)
+        verifyLedgerUserSyncStatus(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
         verifyLedgerSyncPlanner(reporter: reporter)
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
@@ -3904,6 +3905,91 @@ struct OfflineRegression {
         )
     }
 
+    private static func verifyLedgerUserSyncStatus(reporter: RegressionReporter) {
+        let lastSuccessAt = Date(timeIntervalSince1970: 1_790_000_000)
+
+        let disabled = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: false,
+            activityState: .syncing,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 3
+        )
+        reporter.check(disabled.state == .disabled, "Ledger user sync status keeps disabled authoritative")
+        reporter.check(
+            disabled.lastSuccessfulSyncAt == lastSuccessAt,
+            "Ledger user sync status preserves the last successful timestamp while disabled"
+        )
+
+        let waiting = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .disabled,
+            lastSuccessfulSyncAt: nil,
+            conflictCount: 0
+        )
+        reporter.check(
+            waiting.state == .waitingToUpload,
+            "Ledger user sync status maps an enabled idle baseline to waiting to upload"
+        )
+
+        let checking = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .checkingAccount,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 2
+        )
+        reporter.check(
+            checking.state == .checkingAccount,
+            "Ledger user sync status keeps account checking visible during an active attempt"
+        )
+
+        let syncing = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .syncing,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 0
+        )
+        reporter.check(syncing.state == .syncing, "Ledger user sync status exposes active syncing")
+
+        let conflict = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .upToDate,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 2
+        )
+        reporter.check(
+            conflict.state == .needsConflictReview && conflict.conflictCount == 2,
+            "Ledger user sync status promotes stored conflicts over an idle up-to-date state"
+        )
+        reporter.check(conflict.needsAttention, "Ledger conflict sync status needs attention")
+        reporter.check(
+            conflict.state.localDataRemainsAvailable,
+            "Ledger conflict sync status explicitly keeps local data available"
+        )
+
+        let offline = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .offline,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 0
+        )
+        reporter.check(offline.state == .offline, "Ledger user sync status exposes offline failures")
+        reporter.check(
+            offline.state.localDataRemainsAvailable,
+            "Ledger offline sync status explicitly keeps local data available"
+        )
+
+        let failed = LedgerUserSyncStatusResolver.resolve(
+            isEnabled: true,
+            activityState: .failedWithLocalDataSafe,
+            lastSuccessfulSyncAt: lastSuccessAt,
+            conflictCount: 0
+        )
+        reporter.check(
+            failed.state == .failedWithLocalDataSafe && failed.needsAttention,
+            "Ledger user sync status keeps non-network failures local-data-safe and actionable"
+        )
+    }
+
     private static func verifySyncConflictResolver(reporter: RegressionReporter) {
         let transactionID = UUID()
         let baseTransaction = Transaction(
@@ -5521,6 +5607,79 @@ struct OfflineRegression {
             }
             // Skip date check for samples that have no expected date fixture.
         }
+
+        let wechatPartiallyRefundedDetailText = """
+        08:274
+        X
+        账单
+        全部账单
+        示例欢乐谷
+        -50.00
+        退款记录
+        已退款¥20.00>
+        2026年8月1日23:00:15
+        当前状态
+        支付时间
+        商品
+        商户全称
+        收单机构
+        支付方式
+        交易单号
+        商户单号
+        已退款（¥20.00）
+        2026年8月1日 10:17:26
+        租费用
+        示例文旅实业有限公司欢
+        乐谷分公司
+        示例支付科技有限公司
+        示例银行信用卡（5398）
+        WECHAT-REFUND-TRANSACTION-001
+        WECHAT-REFUND-MERCHANT-001
+        """
+        reporter.check(
+            !parser.detectMultipleReceipts(text: wechatPartiallyRefundedDetailText),
+            "ReceiptParser does not treat a WeChat refund record as a second receipt"
+        )
+        if let receipt = parser.parse(text: wechatPartiallyRefundedDetailText, source: .wechat) {
+            reporter.check(
+                receipt.merchant == "示例文旅实业有限公司欢乐谷分公司",
+                "ReceiptParser merges the wrapped legal merchant on the new WeChat bill layout"
+            )
+            reporter.check(
+                abs(receipt.amount - 30.00) < 0.001,
+                "ReceiptParser records the final WeChat payment amount after a partial refund"
+            )
+            reporter.check(
+                receipt.currencyCode == "CNY",
+                "ReceiptParser detects CNY from the WeChat refund metadata"
+            )
+            reporter.check(
+                receipt.suggestedCategory == .entertainment,
+                "ReceiptParser categorizes the WeChat theme-park merchant as entertainment"
+            )
+            if let expectedPaymentDate = AppFormatters.parseFlexibleDate("2026年8月1日 10:17:26") {
+                reporter.check(
+                    sameMinute(receipt.occurredAt, expectedPaymentDate),
+                    "ReceiptParser uses the WeChat payment time instead of the later refund time"
+                )
+            } else {
+                reporter.check(false, "WeChat refund regression fixture payment date parses")
+            }
+        } else {
+            reporter.check(false, "ReceiptParser parses the new partially refunded WeChat bill layout")
+        }
+
+        let fullyRefundedWeChatDetailText = wechatPartiallyRefundedDetailText
+            .replacingOccurrences(of: "已退款¥20.00", with: "已退款¥50.00")
+            .replacingOccurrences(of: "已退款（¥20.00）", with: "已退款（¥50.00）")
+        reporter.check(
+            parser.isFullyRefundedWeChatDetail(text: fullyRefundedWeChatDetailText),
+            "ReceiptParser identifies a fully refunded WeChat bill before model enhancement"
+        )
+        reporter.check(
+            parser.parse(text: fullyRefundedWeChatDetailText, source: .wechat) == nil,
+            "ReceiptParser does not create a positive expense draft for a fully refunded WeChat bill"
+        )
 
         let alipayDiscountSuccessText = """
         08:18

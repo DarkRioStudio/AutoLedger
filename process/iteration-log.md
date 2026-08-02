@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-07-28（ITER-455 新增韩语 README）
+更新日期：2026-08-02（ITER-457 ASC 1.7.0 内部验证构建）
 
 ## 记录规则
 
@@ -44,6 +44,38 @@
 
 ## 日志条目
 
+### ITER-457 ASC 1.7.0 内部验证构建
+- 日期：2026-08-02
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Internal Build / Xcode Cloud Trigger
+- 类型：构建 / 发布治理 / 文档
+- 目标：按用户明确授权，将当前已完成并通过本地门禁的 `v1.8.0` 开发线改动推送到 `main`，以商店版本 `1.7.0` 创建一版新的 Xcode Cloud 内部验证构建。
+- 改动范围：收敛 ITER-450 工程版本基线、ITER-454 可理解同步状态第一批和 ITER-456 新版微信退款识别；更新构建状态文档；显式提交本轮代码 / 测试 / 文档，推送 `main` 并创建 `xcbuild-v1.8.0`。
+- 未改动范围：不纳入 `.playwright-mcp/`、`versions/assets/marketing/`、`video-workflow/`；不修改 `CURRENT_PROJECT_VERSION`、Bundle ID、签名、entitlement、StoreKit、SQLite / CloudKit / D1 schema、ASC metadata 或线上版本；不移动 `xcbuild-v1.7.0` 和不可移动产品标签 `v1.7.0`，不创建产品标签 `v1.8.0`，不绑定构建、不提交审核、不发布。
+- 完成内容：16 个 Xcode target / configuration 均保持 `MARKETING_VERSION = 1.7.0`；将完成的版本基线、同步状态与微信退款识别作为同一可回滚构建基线提交到 `main`；创建 `v1.8.0` 开发线唯一可移动构建触发标签 `xcbuild-v1.8.0` 指向该提交。
+- 未完成内容：Xcode Cloud run、四平台 Archive、云端实际 build number、TestFlight processing、ASC `1.7.0` 版本存在性 / 绑定资格与真机验收不由 Git tag 自动证明，仍须触发后实时回读。
+- 测试情况：候选代码的完整 `bash scripts/run_offline_regression.sh`、iOS generic `.xcworkspace` 无签名构建、文档真源 smoke、版本一致性与 `git diff --check` 通过；推送后以 `git ls-remote` 回读 `main` 与 `xcbuild-v1.8.0` 同一提交。
+- 风险与注意事项：`xcbuild-v1.8.0` 仅是可移动构建触发标签，不是产品发布证据；首次云端运行是否成功、生成的 build number 与四平台处理结果必须以 Xcode Cloud / ASC 为准。工作树中的营销 / 视频 / Playwright 产物继续保持未跟踪且不进入提交。
+- 回滚方式：若云端构建失败，在独立修复提交通过本地门禁后再移动 `xcbuild-v1.8.0`；不回写或强制移动旧产品标签。若需回退 `main`，使用明确的反向提交，不覆盖历史。
+- 结论：ASC `1.7.0` 内部验证构建基线已完成本地门禁并按授权推送；外部构建与 TestFlight 状态待实时回读。
+- 下一步建议：先回读 Xcode Cloud 与 ASC，确认 run、四平台 Archive、实际 build number 和 processing，再开始 iPhone → iPad / Mac 的同路径人工验收。
+
+### ITER-456 新版微信退款账单详情识别
+- 日期：2026-08-02
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Recognition Quality / WeChat Bill Detail
+- 类型：Bugfix / 能力增强 / 测试
+- 目标：沿 `IDEA-001` 的 `IDEA-008` 微信详情页解析路径，适配用户提供的新版“账单 / 全部账单”部分退款截图，按用户确认的口径稳定提取最终实际支付金额、商户全称、支付时间、币种和分类。
+- 改动范围：`ReceiptParser` 的微信负金额、跨行公司名、累计退款金额与最终支付额规则；`SmartReceiptParser` 的全额退款模型短路；`TransactionCategory` 的主题公园分类词、脱敏离线回归、CHANGELOG 与本日志。
+- 未改动范围：未新增收入 / 退款 / 调整交易类型，未修改 Transaction / ImportedReceipt、既有原交易、确认页、SQLite / CloudKit / D1 schema、外部辅助接口、Worker、StoreKit、签名、entitlement、版本号、build number、ASC 在线状态或构建标签。
+- 完成内容：使用原附件在本机 Vision OCR 复现新版字段顺序；支持 ASCII 连字符与 Unicode 减号的微信独立负金额；把“示例文旅实业有限公司欢 / 乐谷分公司”一类分支机构跨行值安全合并，避免后续字段错位；从“当前状态”读取累计已退款金额，将部分退款 `50.00 - 20.00` 记为最终实际支付 `30.00`，并避免“退款记录”和“当前状态”重复金额被扣减两次；日期固定取支付时间而非退款时间，币种识别为 CNY，退款区块不计作第二笔账单；全额退款在规则、外部辅助和本地模型入口前短路，不生成正向支出草稿；欢乐谷 / 游乐园 / 主题公园归入娱乐分类。
+- 未完成内容：本轮不会查找、关联或自动修改此前已经导入的原支付交易，也未新增独立退款 / 调整交易及其统计口径；没有用 iPhone 真机完成最终确认页保存测试。若要支持跨截图的完整退款生命周期，仍需独立设计交易类型、原交易关联与重复导入策略。
+- 测试情况：用户附件本地 Vision OCR 成功复现退款详情文本；脱敏样例的非多账单、商户、最终实际支付 `30.00`、CNY、娱乐分类、支付时间、全额退款识别及全额退款不生成草稿共 8 项断言 PASS；`bash scripts/run_offline_regression.sh` 完整 PASS；Xcode beta 下 `xcodebuild -workspace AutoLedger/AutoLedger.xcworkspace -scheme AutoLedger -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build` PASS。
+- 风险与注意事项：跨行公司名只在前行已有法人类型且末尾残留 1～4 个字符、后行以分 / 支 / 子公司结尾并排除银行 / 支付机构信号时合并，以免吞掉下一字段；退款金额按页面展示的累计已退款状态只扣减一次。若原支付 `50.00` 已经存在于账本，再导入本截图会得到新的 `30.00` 草稿，仍需用户在确认页核对并手工协调旧记录；退款金额异常大于原支付时保留原金额，避免错误 OCR 产生负数或破坏性扣减。
+- 回滚方式：移除微信负金额字符兼容、分支机构跨行合并、退款净额 / 全额退款短路、主题公园分类词和对应脱敏回归；不涉及数据迁移或线上回滚。
+- 结论：新版微信部分退款账单详情已能按最终实际支付额生成可复核支出草稿，全额退款不会生成正向支出；本地回归和 iOS workspace 构建门禁通过。
+- 下一步建议：先用该截图在 iPhone 确认页走一次同路径人工验收；若需自动回写已存在的原支付记录，再独立评审退款交易模型与原交易关联，不扩大本轮识别规则范围。
+
 ### ITER-455 新增韩语 README
 - 日期：2026-07-28
 - 所属版本：v1.8.0 / ASC 1.7.0
@@ -59,6 +91,22 @@
 - 回滚方式：删除 `README.ko.md`，移除四份既有 README 的韩语导航，并恢复品牌资产、路线图与 smoke 的四语清单；不涉及线上或数据回滚。
 - 结论：韩语 README 与五语根文档体系已完成并通过自动文档门禁。
 - 下一步建议：公开发布前可再做一次独立韩语母语审校；提交时只纳入本轮文档与文档 smoke，继续隔离现有同步状态功能改动。
+
+### ITER-454 v1.8 可理解同步状态第一批
+- 日期：2026-07-28
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Early Execution / Trustworthy Sync
+- 类型：能力增强 / 测试 / 文档
+- 目标：完成 `GOAL-2440` 第一批，让普通用户看到稳定、可理解且明确本地数据安全边界的同步状态，同时保留开发者诊断细节。
+- 改动范围：`AutoLedgerCore` 同步状态合同、CloudKit 错误映射、`LedgerStore` 状态聚合、数据管理页、五语本地化、离线回归 / 静态 smoke、v1.8 计划、项目状态、CHANGELOG 与本日志。
+- 未改动范围：未新增或迁移 SQLite / CloudKit / D1 schema，未修改 Worker、StoreKit、签名、entitlement、build number、ASC 在线状态、构建标签或产品标签；未纳入现有未跟踪营销与视频资产。
+- 完成内容：新增 `disabled / checkingAccount / syncing / waitingToUpload / upToDate / offline / needsConflictReview / failedWithLocalDataSafe` 八态合同；`LedgerStore` 接入启用、账号检查、上传 / 拉取、待上传、成功时间、冲突与失败结果；普通用户页移除调试长日志，只显示五语状态、上次成功时间和冲突入口；网络与 CloudKit 暂时错误递归映射为离线，其它错误明确本地数据仍可使用，开发者页继续保留完整同步日志。
+- 未完成内容：真实 iPhone / iPad 离线、账号受限、无权益、待上传与恢复路径尚未形成设备证据；重庆 Moxy 已知冲突回归、同步冲突 PendingAction 来源及跨设备处理后不复活仍未完成，因此不关闭整个 `GOAL-2440`。
+- 测试情况：五语 `plutil -lint`、同步状态静态 smoke、本地化 smoke、文档真源 smoke、完整 `bash scripts/run_offline_regression.sh` 与 iOS generic `.xcworkspace` 无签名构建 PASS；首次 workspace build 暴露 `URLError.Code` 非可选初始化误用，定点修复后全目标构建通过。
+- 风险与注意事项：稳定用户状态不能替代完整阶段日志，也不能用本地模拟替代真实 CloudKit 账号、网络和双设备证据；离线与失败状态不得阻断本地账本读取和编辑。
+- 回滚方式：移除用户同步状态模型及 `LedgerStore` 聚合，恢复数据管理页原同步展示和对应五语文案 / smoke；不涉及数据迁移或线上回滚。
+- 结论：`GOAL-2440` 第一批已完成代码、五语和本地门禁，可进入真实设备与 PendingAction 冲突来源阶段。
+- 下一步建议：先完成双设备离线 / 恢复与重庆 Moxy 冲突证据，再接入同步冲突 PendingAction，随后推进 `GOAL-2450` 月结。
 
 ### ITER-453 四语 README 发布入口与状态同步
 - 日期：2026-07-28
@@ -107,6 +155,22 @@
 - 回滚方式：移除 README 顶部 App Store 徽章，并删除对应 CHANGELOG 与本日志条目。
 - 结论：中文 README 已具备直接可见的 App Store 下载入口。
 - 下一步建议：如需四语 README 一致，可在后续独立同步英语、繁中与日语入口。
+
+### ITER-450 ASC 1.7.0 工程版本统一
+- 日期：2026-07-28
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Version Baseline
+- 类型：发布配置 / 文档 / 测试
+- 目标：将新开发线所有 Apple target 与 build configuration 的 `MARKETING_VERSION` 统一推进到对外版本 `1.7.0`，避免主 App、扩展和其它平台继续携带旧 `1.6.0`。
+- 改动范围：`AutoLedger.xcodeproj/project.pbxproj` 的全部 `MARKETING_VERSION`；`LedgerStore` 运行时版本兜底；`PROJECT_STATUS.md`、`versions/v1.8.0-plan.md`、CHANGELOG 与本日志。
+- 未改动范围：未修改 `CURRENT_PROJECT_VERSION`、build number、Bundle ID、签名、entitlement、StoreKit、SQLite / CloudKit / D1 schema、Worker、ASC 在线版本、构建标签或产品标签；未触碰未跟踪营销和视频资产。
+- 完成内容：主 App、Watch、Widget、Share Extension、Control Widget、tvOS 与 visionOS 的 16 个 Debug / Release build configuration 均改为 `MARKETING_VERSION = 1.7.0`；Info.plist 继续使用 Xcode 构建变量；运行时版本读取仍优先使用 `CFBundleShortVersionString`，仅将异常兜底从 `1.5.0` 更新为 `1.7.0`。
+- 未完成内容：本轮没有上传构建、创建或移动 `xcbuild-*` 标签，也没有在 ASC 创建 `1.7.0` 版本；实际 build number、Archive、TestFlight processing、App Store eligibility 和设备验收仍属于后续独立门禁。
+- 测试情况：`project.pbxproj` plist lint 与版本一致性审计 PASS，16 个 `MARKETING_VERSION` 均为 `1.7.0` 且无其它值；`git diff --check`、文档真源 smoke、完整 `bash scripts/run_offline_regression.sh` 与 iOS generic Debug workspace 无签名构建 PASS。首次沙箱内运行因无法写入 clang / Xcode 缓存并访问相关服务而被环境拦截，受控沙箱外重跑通过。
+- 风险与注意事项：测试代码中的 `1.6.0` 用作历史诊断事件样例，不是工程版本真源，因此保持不变；不得因本地版本号更新而宣称 ASC 或 TestFlight 已存在新版本。
+- 回滚方式：将 16 个 build configuration 与 `LedgerStore` 兜底恢复到上一工程版本，并同步回退本轮状态、计划和日志记录；不涉及数据迁移或线上回滚。
+- 结论：ASC `1.7.0` 的本地工程版本基线已统一并通过回归与构建门禁；尚未创建构建、移动标签或修改 ASC。
+- 下一步建议：以该本地基线继续 v1.8.0 开发；需要生成新构建时，再单独确认 build number、提交范围与 Xcode Cloud 触发标签。
 
 ### ITER-449 ASC 1.6.0 发布收口与 v1.8 主线切换
 - 日期：2026-07-26

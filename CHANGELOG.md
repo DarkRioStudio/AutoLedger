@@ -9,6 +9,15 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / ASC 1.7.0 内部验证构建）
+- [2026-08-02] 经用户明确授权，将已完成的 ASC `1.7.0` 工程版本基线、可理解同步状态第一批和新版微信退款账单识别收敛为首个 `v1.8.0` 开发线内部验证构建：16 个 Xcode target / configuration 继续使用 `MARKETING_VERSION = 1.7.0`，不修改 `CURRENT_PROJECT_VERSION`；推送当前 `main` 后创建唯一可移动的 Xcode Cloud 触发标签 `xcbuild-v1.8.0`。旧 `xcbuild-v1.7.0` 与不可移动产品标签 `v1.7.0` 保持不变，且本次不创建产品发布标签 `v1.8.0`。完整离线回归、iOS generic `.xcworkspace` 无签名构建、文档真源与差异检查通过；标签触发不等于 Xcode Cloud Archive、TestFlight processing、ASC `1.7.0` 绑定、真机验收或发布完成，实际云端 build number 与处理状态仍须实时回读。
+
+### 修复（v1.8.0 / 微信退款账单详情识别）
+- [2026-08-02] 适配新版微信“账单 / 全部账单”退款详情：基于用户提供截图的本地 Vision OCR 顺序，修复商户全称在“有限公司欢 / 乐谷分公司”等分支机构名称中间换行后字段错位的问题；独立负金额兼容 ASCII 连字符和 Unicode 减号，读取“当前状态”中的累计已退款金额并将部分退款按最终实际支付额入账（脱敏样例 `50.00 - 20.00 = 30.00`），相同退款金额在“退款记录”和“当前状态”重复出现时只扣减一次。仍以“支付时间”而非退款记录时间入账，并避免把退款记录判成第二笔账单；全额退款在规则、外部辅助和本地模型入口前短路，不生成正向支出草稿。欢乐谷、游乐园与主题公园商户归入娱乐分类。新增 8 项脱敏回归；完整离线回归与 iOS generic `.xcworkspace` 无签名构建通过。本轮未新增退款交易类型、原交易关联 / 自动回写、SQLite / CloudKit schema 或线上变更。
+
+### 新增（v1.8.0 / Human-Readable Sync State）
+- [2026-07-28] 完成 `GOAL-2440` 第一批：新增八态普通用户同步合同，将启用状态、账号检查、同步阶段、待上传、本次错误、上次成功时间和冲突数量收敛为稳定状态；数据管理页只展示五语可理解文案、上次成功时间与冲突入口，完整 CloudKit 阶段日志继续保留在开发者诊断。网络中断与 CloudKit 暂时不可用映射为离线，其它错误明确本地数据仍安全可用。同步状态回归、静态 smoke、五语 strings lint、完整离线回归和 iOS generic workspace build 通过。本批未新增 SQLite / CloudKit schema，真实双设备、账号 / 权益异常、重庆 Moxy 冲突与 PendingAction 冲突来源仍待验收。
+
 ### 新增（韩语 README）
 - [2026-07-28] 新增完整 `README.ko.md`，以韩语覆盖产品定位、App Store / TestFlight 入口、Free / Pro 边界、酒店水单、隐私、五语 UI / 识别、构建、项目结构和版本路线图；简中、繁中、英语、日语 README 的语言导航与五语能力摘要同步更新，品牌资产清单、核心路线图和文档真源 smoke 扩展到五语 README。本轮不修改 App / Worker runtime、ASC、版本号、构建或发布标签。
 
@@ -18,6 +27,9 @@
 ### 变更（v1.7.0 正式发布状态 / TestFlight 入口）
 - [2026-07-28] 根据用户确认及 Apple 公开商店查询，将内部 `v1.7.0 / ASC 1.6.0` 从候选收口更新为正式发布，并同步核心路线图、项目状态、v1.7 版本计划、语言发布矩阵与中文 README；README 新增独立“下载与 TestFlight”区域，公开测试入口为 `https://testflight.apple.com/join/T3Wu6ngk`。本轮未修改 ASC、App、构建、版本号、发布标签或其它语言 README。
 - [2026-07-28] 将 App Store 正式版、TestFlight 公测、`v1.7.0 / ASC 1.6.0` 已发布及 `v1.8.0` Early Execution 状态同步到英语、繁体中文和日语 README；文档真源 smoke 现要求四语 README 均保留地区无关 App Store 短链接和 TestFlight 入口。本轮不修改 App、Worker、ASC、版本号、构建或发布标签。
+
+### 变更（v1.8.0 / ASC 1.7.0 工程版本基线）
+- [2026-07-28] 将主 App、Watch、Widget、Share Extension、Control Widget、tvOS 与 visionOS 的全部 Debug / Release build configuration 的 `MARKETING_VERSION` 从 `1.6.0` 统一推进到 `1.7.0`；`LedgerStore` 的运行时版本兜底同步为 `1.7.0`。本轮不修改 `CURRENT_PROJECT_VERSION`、build number、Bundle ID、签名、entitlement、StoreKit、CloudKit / SQLite / D1 schema、ASC 在线状态或构建标签。
 
 ### 变更（v1.7.0 / ASC 1.6.0 发布收口）
 - [2026-07-26] 用户确认 ASC `1.6.0` 的 iOS、macOS、tvOS、visionOS 四平台均已过审。创建并推送不可移动产品标签 `v1.7.0`，标签精确指向 build `120` 源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；随后在隔离 worktree 完成 `git diff --check` 和完整离线回归，将 `codex/v1.8.0-foundation` 的六个线性提交 fast-forward 合入远端 `main` 至 `a844349fc93ddd29cb6f4d4974a6051273ba28cb`。本轮未修改 App / Worker runtime、ASC、build、CloudKit / D1 schema、StoreKit、签名、entitlement 或 `xcbuild-v1.7.0`，原工作树未提交内容保持未暂存、未提交。

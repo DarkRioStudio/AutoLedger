@@ -7,6 +7,7 @@ python3 "$ROOT/scripts/check_adaptive_layout_rules.py"
 python3 "$ROOT/scripts/check_accessibility_smoke.py"
 python3 "$ROOT/scripts/check_deep_link_smoke.py"
 python3 "$ROOT/scripts/check_cloudkit_sync_smoke.py"
+python3 "$ROOT/scripts/check_human_readable_sync_status_smoke.py"
 python3 "$ROOT/scripts/check_cloudkit_hotel_pdf_asset_smoke.py"
 python3 "$ROOT/scripts/check_hotel_email_import_smoke.py"
 python3 "$ROOT/scripts/check_app_intents_smoke.py"
@@ -285,6 +286,7 @@ enum LedgerCloudKitSyncMode {
 struct LedgerCloudKitAccountCheck {
     let canUsePrivateDatabase: Bool
     let message: String
+    var userFacingUnavailableState: LedgerUserSyncState { .failedWithLocalDataSafe }
 }
 
 struct LedgerCloudKitPushResult {
@@ -300,6 +302,10 @@ struct LedgerCloudKitSyncAdapter {
     static func describe(_ error: Error) -> String {
         let nsError = error as NSError
         return "\(nsError.domain) \(nsError.code): \(nsError.localizedDescription)"
+    }
+
+    static func userFacingFailureState(for error: Error) -> LedgerUserSyncState {
+        .failedWithLocalDataSafe
     }
 
     func checkAccountStatus() async -> LedgerCloudKitAccountCheck {
@@ -377,6 +383,7 @@ swiftc \
   "$CORE/Models/TodaySpendingSummary.swift" \
   "$CORE/Models/LedgerProfile.swift" \
   "$CORE/Models/SyncMetadata.swift" \
+  "$CORE/Models/LedgerUserSyncStatus.swift" \
   "$CORE/Models/LedgerSyncPlan.swift" \
   "$CORE/Models/LedgerDashboardCloudSnapshot.swift" \
   "$CORE/Models/HotelStay.swift" \
