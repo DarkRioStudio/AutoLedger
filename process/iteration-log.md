@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-02（ITER-457 ASC 1.7.0 内部验证构建）
+更新日期：2026-08-03（ITER-458 账户迁移后重触发内部构建）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-458 账户迁移后重触发内部构建
+- 日期：2026-08-03
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Internal Build / Account Migration Retrigger
+- 类型：构建 / 发布治理 / 文档
+- 目标：处理 Xcode Cloud 账户迁移导致首次 `xcbuild-v1.8.0` 未触发的问题，在不改业务代码和商店版本的前提下产生一个新的、可审计的构建触发源提交。
+- 改动范围：先重建同一 SHA 的 `xcbuild-v1.8.0` 并回读 GitHub 事件；因只看到 `DeleteEvent`、未看到可确认的 `CreateEvent`，新增本条构建追溯、CHANGELOG、项目状态与版本计划切片，推送 `main` 后移动 `xcbuild-v1.8.0`。
+- 未改动范围：不修改 App / Core / Worker runtime、`MARKETING_VERSION = 1.7.0`、`CURRENT_PROJECT_VERSION`、Bundle ID、签名、entitlement、StoreKit、SQLite / CloudKit / D1 schema 或 ASC metadata；不纳入 `.playwright-mcp/`、营销素材和视频目录；不移动 `xcbuild-v1.7.0`、`v1.7.0`，不创建产品标签 `v1.8.0`，不绑定构建、不提交审核、不发布。
+- 完成内容：远端 `xcbuild-v1.8.0` 已先在 `bf1513ac` 上删除并重新创建；因同 SHA 重建缺少可靠的新建事件证据，改用仅含追溯文档的新提交形成新切片，再将可移动构建标签指向新 SHA，确保 GitHub 产生新的主线提交与标签更新事件。
+- 未完成内容：迁移后 Xcode Cloud 是否收到触发、实际 run / build number、四平台 Archive、TestFlight processing 与 ASC `1.7.0` 绑定资格仍需 Apple 侧实时回读。
+- 测试情况：本切片不改 runtime；沿用父提交 `bf1513ac` 已通过的隔离完整离线回归、全新 DerivedData workspace build 和远端 CI 证据，并对本切片执行文档真源 smoke、版本一致性、敏感信息扫描与 `git diff --check`；推送后以 `git ls-remote` 回读 `main` 和 `xcbuild-v1.8.0`。
+- 风险与注意事项：构建标签更新只证明 GitHub ref 已变化，不证明 Apple 账户迁移后的 webhook、Archive 或 processing 成功；不得因本切片或 GitHub CI 通过宣称 TestFlight 已有新构建。
+- 回滚方式：若迁移后的 workflow 仍未触发，先检查 Xcode Cloud 产品与 GitHub 仓库连接，不连续制造切片；本次文档提交可用普通反向提交回滚，构建标签只在确认下一候选后移动。
+- 结论：已选择无业务改动的新切片作为账户迁移后的确定性重触发源，商店版本和旧发布标签边界保持不变。
+- 下一步建议：优先从迁移后的 Xcode Cloud / ASC 回读新 run、source commit、实际 build number 与 processing；若仍无 run，转为修复仓库连接，而不是继续重复移动标签。
 
 ### ITER-457 ASC 1.7.0 内部验证构建
 - 日期：2026-08-02

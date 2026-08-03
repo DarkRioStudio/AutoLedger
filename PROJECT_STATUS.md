@@ -17,7 +17,7 @@
 | 发布阶段 | 用户确认 `v1.7.0 / ASC 1.6.0` 已正式发布；2026-07-28 Apple 公开查询接口回读美国区商店当前版本为 `1.6.0` |
 | 自定义产品页 | 三张五语页面已通过独立 iOS items-only submission 提交，审核单与三页均为 `WAITING_FOR_REVIEW`；主版本审核单保持独立 |
 | 已验证候选产品行为基线 | build `120` / `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；六项最终 TestFlight / 真机门禁已由用户确认通过 |
-| Xcode Cloud 触发标签 | 已授权创建 `xcbuild-v1.8.0` 指向本轮最新 `main`，用于 ASC `1.7.0` 内部验证构建；旧 `xcbuild-v1.7.0` 保持在已发布基线 |
+| Xcode Cloud 触发标签 | 账户迁移后已授权将 `xcbuild-v1.8.0` 移到最新文档型重触发切片，用于 ASC `1.7.0` 内部验证构建；旧 `xcbuild-v1.7.0` 保持在已发布基线 |
 | 最近人工结论 | build `120` 的水单刷新、401 续签、订阅处理、iCloud、交互性能和 Mac smoke 均通过 |
 | 精确 TestFlight build | build `120`；iOS、macOS、tvOS、visionOS 均为 `VALID / APP_STORE_ELIGIBLE / expired=false`，且已绑定 ASC `1.6.0` |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |

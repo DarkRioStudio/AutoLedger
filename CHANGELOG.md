@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / 账户迁移后构建重触发）
+- [2026-08-03] 因 Xcode Cloud 账户迁移，首次 `xcbuild-v1.8.0` 未产生 Apple 侧构建。先将远端可移动标签从原候选 `bf1513ac` 删除并在同一提交重新创建；GitHub 回读只出现标签删除事件、未出现可确认的新建事件，因此按用户授权增加一个仅更新构建追溯文档、不修改 App / Core / Worker runtime 的重触发切片，并将 `xcbuild-v1.8.0` 移到该新提交。商店版本继续为 `1.7.0`，`CURRENT_PROJECT_VERSION`、旧 `xcbuild-v1.7.0`、不可移动产品标签 `v1.7.0` 与产品标签边界均不变；新的 Xcode Cloud run、实际 build number、TestFlight processing 和 ASC 绑定仍须从迁移后的 Apple 账户实时回读。
+
 ### 变更（v1.8.0 / ASC 1.7.0 内部验证构建）
 - [2026-08-02] 经用户明确授权，将已完成的 ASC `1.7.0` 工程版本基线、可理解同步状态第一批和新版微信退款账单识别收敛为首个 `v1.8.0` 开发线内部验证构建：16 个 Xcode target / configuration 继续使用 `MARKETING_VERSION = 1.7.0`，不修改 `CURRENT_PROJECT_VERSION`；推送当前 `main` 后创建唯一可移动的 Xcode Cloud 触发标签 `xcbuild-v1.8.0`。旧 `xcbuild-v1.7.0` 与不可移动产品标签 `v1.7.0` 保持不变，且本次不创建产品发布标签 `v1.8.0`。完整离线回归、iOS generic `.xcworkspace` 无签名构建、文档真源与差异检查通过；标签触发不等于 Xcode Cloud Archive、TestFlight processing、ASC `1.7.0` 绑定、真机验收或发布完成，实际云端 build number 与处理状态仍须实时回读。
 
