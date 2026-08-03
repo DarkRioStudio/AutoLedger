@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.8.0 / PendingAction Release Archive）
+- [2026-08-03] 修复 iOS 与 macOS 的 Xcode Cloud Release Archive 在 `PendingActionCenterView.swift:7` 因 revision 数组字面量类型推断过于复杂而失败：`PendingActionCenterLoader.revision(for:)` 改为显式 `[String]` 并逐项追加 11 个既有组成字段，字段顺序、分隔符和刷新语义保持不变。PendingAction smoke、完整离线回归以及全新 DerivedData 的 generic iOS / generic macOS 无签名 Release Archive 均通过；新的云端有签名 Archive、build number 与 TestFlight processing 仍须触发后实时回读。
+
 ### 变更（v1.8.0 / 账户迁移后构建重触发）
 - [2026-08-03] 因 Xcode Cloud 账户迁移，首次 `xcbuild-v1.8.0` 未产生 Apple 侧构建。先将远端可移动标签从原候选 `bf1513ac` 删除并在同一提交重新创建；GitHub 回读只出现标签删除事件、未出现可确认的新建事件，因此按用户授权增加一个仅更新构建追溯文档、不修改 App / Core / Worker runtime 的重触发切片，并将 `xcbuild-v1.8.0` 移到该新提交。商店版本继续为 `1.7.0`，`CURRENT_PROJECT_VERSION`、旧 `xcbuild-v1.7.0`、不可移动产品标签 `v1.7.0` 与产品标签边界均不变；新的 Xcode Cloud run、实际 build number、TestFlight processing 和 ASC 绑定仍须从迁移后的 Apple 账户实时回读。
 

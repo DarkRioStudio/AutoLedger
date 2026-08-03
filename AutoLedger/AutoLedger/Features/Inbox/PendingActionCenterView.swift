@@ -4,19 +4,20 @@ import SwiftUI
 @MainActor
 enum PendingActionCenterLoader {
     static func revision(for store: LedgerStore) -> String {
-        [
-            String(store.visibleTransactions.count),
-            String(store.visibleSubscriptions.count),
-            String(store.hotelStayDrafts.count),
-            String(store.merchantAliases.count),
-            String(store.categoryCorrections.count),
-            String(store.ignoredDataCleaningPreviewIDs.count),
-            String(store.dataCleaningRevision),
-            String(store.subscriptionAnomalyDecisionRevision),
-            String(store.pendingActionDecisionRevision),
-            store.pendingReceiptReview?.id.uuidString ?? "none",
-            store.lastImportSummary ?? ""
-        ].joined(separator: "|")
+        var components: [String] = []
+        components.reserveCapacity(11)
+        components.append(String(store.visibleTransactions.count))
+        components.append(String(store.visibleSubscriptions.count))
+        components.append(String(store.hotelStayDrafts.count))
+        components.append(String(store.merchantAliases.count))
+        components.append(String(store.categoryCorrections.count))
+        components.append(String(store.ignoredDataCleaningPreviewIDs.count))
+        components.append(String(store.dataCleaningRevision))
+        components.append(String(store.subscriptionAnomalyDecisionRevision))
+        components.append(String(store.pendingActionDecisionRevision))
+        components.append(store.pendingReceiptReview?.id.uuidString ?? "none")
+        components.append(store.lastImportSummary ?? "")
+        return components.joined(separator: "|")
     }
 
     static func load(from store: LedgerStore) async -> PendingActionCenterSnapshot {

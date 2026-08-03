@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-03（ITER-458 账户迁移后重触发内部构建）
+更新日期：2026-08-03（ITER-459 PendingAction Release Archive 类型检查修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-459 PendingAction Release Archive 类型检查修复
+- 日期：2026-08-03
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Internal Build / Archive Repair
+- 类型：Bugfix / 构建 / 测试
+- 目标：修复 Xcode Cloud 在 iOS 与 macOS Archive 时对 `PendingActionCenterView.swift:7` 报出 “The compiler is unable to type-check this expression in reasonable time” 并终止归档的问题。
+- 改动范围：仅拆分 `PendingActionCenterLoader.revision(for:)` 的 revision 字符串构造表达式，并同步 CHANGELOG 与本日志。
+- 未改动范围：不改变 revision 的 11 个组成字段、顺序、分隔符或刷新语义；不修改 PendingAction 模型、决定持久化、UI、SQLite / CloudKit / D1 schema、Worker、StoreKit、版本号、build number、Bundle ID、签名、entitlement、ASC metadata 或产品标签；不纳入现有未跟踪素材目录。
+- 完成内容：将同时包含多组 `LedgerStore` 属性访问、数字转字符串与可选值合并的单个数组字面量，改为显式 `[String]`、预留容量并逐项追加，最后再执行 `joined(separator: "|")`；原 revision 输出合同保持不变，Release 全模块类型检查不再超时。
+- 未完成内容：新的 Xcode Cloud 有签名 Archive、实际 run / build number、TestFlight processing 与 ASC `1.7.0` 绑定资格仍需修复提交触发后从 Apple 侧实时回读。
+- 测试情况：`python3 scripts/check_pending_action_center_smoke.py` PASS；`bash scripts/run_offline_regression.sh` 完整 PASS；Xcode 27 beta 使用全新 DerivedData 分别执行 generic iOS 与 generic macOS Release `xcodebuild archive`，均在 `CODE_SIGNING_ALLOWED=NO` 下 `exit 0`；`git diff --check` PASS。
+- 风险与注意事项：本地无签名 Archive 已覆盖原类型检查失败路径，但不等同于 Xcode Cloud 的签名、上传或 TestFlight processing 成功；构建日志仍有既存 Swift 6 迁移和 MediaPipe Catalyst slice 警告，本轮未扩展处理。
+- 回滚方式：恢复 `revision(for:)` 的原数组字面量并移除本条日志与 CHANGELOG 条目；不涉及数据迁移或线上数据回滚。
+- 结论：iOS 与 macOS 的原 Release Archive 编译阻断已用最小、行为等价的表达式拆分消除，并通过双平台干净归档与完整离线回归。
+- 下一步建议：从 Xcode Cloud 回读本修复触发后的四平台 Archive、source commit、实际 build number 与 processing；若出现新的独立错误，再按首个真实失败点处理。
 
 ### ITER-458 账户迁移后重触发内部构建
 - 日期：2026-08-03
