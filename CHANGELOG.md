@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / Locked A 正式 App Icon）
+- [2026-08-04] 将 AutoLedger 主 iOS AppIcon 锁定为 Auto 系列 Locked A 微调版：暖中性色底板和账单卡片构图保持不变，前景信息卡主体以画布中心统一放大 6%，提升主屏幕与设置 App 列表中的小尺寸存在感；橙色识别星光、缩小后的绿色确认标记和既有信息层级继续保留。仓库新增可编辑 SVG、无透明 1024×1024 生产母版，并让现有 iOS 图标生成器确定性导出 Light / Dark / Tinted 三个槽位。本轮只替换主 iOS AppIcon，不修改 Watch、tvOS、visionOS 图标，不修改 App UI、版本号、build number、签名、ASC 在线状态或发布资源。完整离线回归、真机签名构建与覆盖安装通过；iPhone 15 Pro 的真实主屏幕、设置 App 列表小图标和 App 启动均完成目检。
+
 ### 修复（v1.8.0 / 币种回归 CI 地区隔离）
 - [2026-08-04] 修复交易币种固化回归在 GitHub 美区 runner 上因系统默认币种为 USD、而旧测试桩长期固定 CNY 所产生的假失败：离线回归入口现在显式固定测试默认消费币种为 CNY，真实 `ExpenseCurrencyPreference` 与地区变化专项断言继续参与编译和验证；该设置仅存在于测试进程，不改变 App 运行时、用户默认值或交易数据。
 

@@ -6,12 +6,13 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 IOS_ICON_ROOT = ROOT / "AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset"
+APPROVED_IOS_MASTER_PATH = ROOT / "tools/app-icons/sources/autoledger-locked-a-1024.png"
 WATCH_ICON_ROOT = ROOT / "AutoLedger/AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset"
 TV_ICON_ROOT = ROOT / "AutoLedger/AutoLedgerTV/Assets.xcassets/App Icon & Top Shelf Image.brandassets"
 VISION_ICON_ROOT = ROOT / "AutoLedger/AutoLedgerVision/Assets.xcassets/AppIcon.solidimagestack"
@@ -322,9 +323,16 @@ def save(image: Image.Image, path: Path) -> None:
 
 
 def generate_ios_icons() -> None:
-    save(compose_icon((1024, 1024)), IOS_ICON_ROOT / "AppIcon-Light.png")
-    save(compose_icon((1024, 1024), dark=True), IOS_ICON_ROOT / "AppIcon-Dark.png")
-    save(compose_icon((1024, 1024), tinted=True), IOS_ICON_ROOT / "AppIcon-Tinted.png")
+    with Image.open(APPROVED_IOS_MASTER_PATH) as source:
+        master = source.convert("RGB")
+    if master.size != (1024, 1024):
+        raise ValueError(f"Approved iOS app icon must be 1024x1024, got {master.size}")
+
+    # Locked Concept A is the approved composition for both default appearances.
+    # The tinted slot keeps the same geometry and uses luminance as the tint mask.
+    save(master, IOS_ICON_ROOT / "AppIcon-Light.png")
+    save(master.copy(), IOS_ICON_ROOT / "AppIcon-Dark.png")
+    save(ImageOps.grayscale(master).convert("RGB"), IOS_ICON_ROOT / "AppIcon-Tinted.png")
 
 
 def generate_watch_icons() -> None:

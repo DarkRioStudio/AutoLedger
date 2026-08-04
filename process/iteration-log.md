@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-04（ITER-461 币种回归 CI 地区隔离修复）
+更新日期：2026-08-04（ITER-462 Locked A 正式 App Icon）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-462 Locked A 正式 App Icon
+- 日期：2026-08-04
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Production Asset / Device Validation
+- 类型：视觉资源 / 构建 / 真机验收
+- 目标：把已人工锁定的 Auto 系列 Locked A 微调版作为 AutoLedger 下一版正式主 iOS AppIcon，并在提交前完成真实小尺寸、系统编译和物理 iPhone 显示验证。
+- 改动范围：主 iOS `AppIcon.appiconset` 的 Light / Dark / Tinted 槽位、仓库内可编辑 SVG 与 1024×1024 生产母版、现有图标生成器、CHANGELOG 与本日志。
+- 未改动范围：不修改 Watch、tvOS、visionOS 图标，不修改 App 内 UI、业务逻辑、SQLite / CloudKit / D1 schema、Worker、StoreKit、版本号、build number、Bundle ID、签名、entitlement、ASC 在线状态、构建标签或产品标签；不纳入现有未跟踪的 Playwright、营销与视频目录。
+- 完成内容：保留 Locked A 的暖中性色底板、账单卡片比例、橙色识别星光、缩小后的绿色确认标记与完整信息层级；只将前景主体围绕画布中心按 `1.06` 缩放，底板不变。新增可编辑 SVG 和 RGB / 无透明 1024×1024 母版；Light 与 Dark 使用同一批准构图，Tinted 使用同几何的灰度版本；重复生成的 3 个生产 PNG 哈希稳定。
+- 未完成内容：本轮没有替换其它平台图标，没有创建 Xcode Cloud / TestFlight / ASC 构建，没有推送提交或触发发布；商店包中的最终显示仍须由后续正式构建独立验证。
+- 测试情况：20 / 29 / 40 / 60px 真实像素网格目检通过；Asset Catalog 尺寸、RGB 与无透明检查通过；Xcode 27 对物理 `Rio's iPhone 15 Pro`（iOS 27.0）完成签名 Debug build，`actool` 无 AppIcon / Asset 警告，编译产物 `CFBundlePrimaryIcon = AppIcon` 且含 `Assets.car`；覆盖安装后真机主屏幕三枚 Auto 系列图标并排显示正常，设置 App 列表中的约 29pt AutoLedger 图标清楚，App 启动成功；`bash scripts/run_offline_regression.sh` 完整 PASS，`git diff --check` PASS。
+- 风险与注意事项：Light 与 Dark 当前有意保持同一暖色构图，Tinted 为确定性灰度适配；本地开发签名安装与主屏幕目检不等同于 App Store 构建、TestFlight processing 或 ASC 发布完成。系统图标缓存若在后续构建中未刷新，应先核对 build 与安装来源，不再次修改设计。
+- 回滚方式：恢复原主 iOS 三个 AppIcon PNG 和生成器入口，移除 Locked A 仓库母版及本条文档；不涉及数据迁移、用户数据或线上服务回滚。
+- 结论：AutoLedger 的 Locked A 6% 主体放大版已完成生产资源绑定、系统编译和物理 iPhone 主屏幕 / 设置列表 / 启动验证，可作为下一版正式主 iOS AppIcon 提交。
+- 下一步建议：提交本轮独立 icon 变更后停止；是否进入 Xcode Cloud、TestFlight 或 ASC 版本绑定必须另行授权。
 
 ### ITER-461 币种回归 CI 地区隔离修复
 - 日期：2026-08-04
