@@ -654,6 +654,8 @@
 "transaction_editor.source" = "來源";
 "transaction_editor.date" = "時間";
 "transaction_editor.amount" = "金額";
+"transaction_editor.currency" = "幣種";
+"transaction_editor.currency.fixed_help" = "本筆帳單儲存時會固定此幣種；之後更改系統地區或預設幣種不會重新計算。";
 "transaction_editor.category" = "分類";
 "transaction_editor.note" = "備註";
 "transaction_editor.title.new" = "新增帳單";
@@ -1059,11 +1061,16 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.currency.body" = "預設消費幣種只在帳單沒有識別到幣種時使用；寫入不同幣種帳本時會準備換算。";
+"language.currency.body" = "預設消費幣種用於手動記帳和未識別出幣種的帳單。每筆帳單儲存時會固定幣種；更改預設幣種或系統地區不會重算歷史金額。";
 "language.currency.title" = "消費預設幣種";
 "language.currency.system_format" = "跟隨系統（%@）";
 "language.currency.subtitle_system_format" = "目前跟隨系統：%@";
 "language.currency.subtitle_custom_format" = "目前固定為 %@";
+"language.currency.region_change.title" = "系統地區幣種已變更";
+"language.currency.region_change.message_format" = "系統幣種已從 %@ 變為 %@。是否只讓之後的新記錄使用新幣種？既有帳單的幣種和金額不會變更，也不會自動換算。";
+"language.currency.region_change.use_new_format" = "新記錄改用 %@";
+"language.currency.region_change.keep_format" = "繼續使用 %@";
+"ledger.currency.multiple_unconverted" = "多幣種（未換算）";
 "language.footer" = "這些設定只影響本機 App 介面和未標明幣種帳單的預設理解，不會改變已儲存帳本資料。";
 
 "pro.title" = "AutoLedger Pro";

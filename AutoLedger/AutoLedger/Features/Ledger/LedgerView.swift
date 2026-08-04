@@ -131,7 +131,11 @@ struct LedgerView: View {
                     occurredAt: .now,
                     category: .other,
                     source: .manual,
-                    note: ""
+                    note: "",
+                    ledgerID: store.targetLedgerIDForNewTransactions,
+                    ledgerCurrencyCode: store.ledgerCurrencyCode(
+                        for: store.targetLedgerIDForNewTransactions
+                    )
                 ),
                 isNew: true
             ) { newTransaction, _, _ in
@@ -244,7 +248,7 @@ struct LedgerView: View {
                             }
                                 .id(transaction.id)
                                 .tag(transaction.id)
-                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount, code: store.transactionCurrencyCode(for: transaction)))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
                                 .accessibilityHint(Text("ledger.transaction.edit_hint"))
                                 .padding(.vertical, 6)
                                 .autoLedgerSelectableRowBackground(
@@ -512,7 +516,12 @@ struct LedgerView: View {
 
                     Spacer(minLength: 8)
 
-                    Text(AppFormatters.currency(transaction.amount))
+                    Text(
+                        AppFormatters.currency(
+                            transaction.amount,
+                            code: store.transactionCurrencyCode(for: transaction)
+                        )
+                    )
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)

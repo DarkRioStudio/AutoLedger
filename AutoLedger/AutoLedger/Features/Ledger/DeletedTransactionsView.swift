@@ -35,7 +35,12 @@ struct DeletedTransactionsView: View {
 
                                             Spacer()
 
-                                            Text(AppFormatters.currency(transaction.amount))
+                                            Text(
+                                                AppFormatters.currency(
+                                                    transaction.amount,
+                                                    code: store.transactionCurrencyCode(for: transaction)
+                                                )
+                                            )
                                                 .font(.headline.weight(.bold))
                                                 .foregroundStyle(AppTheme.ink)
                                         }
@@ -52,7 +57,7 @@ struct DeletedTransactionsView: View {
                                 .padding(.vertical, 6)
                                 .listRowBackground(AppTheme.card)
                                 .accessibilityElement(children: .ignore)
-                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount, code: store.transactionCurrencyCode(for: transaction)))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
                                 .accessibilityHint(Text("deleted_transactions.footer"))
                                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                     Button {

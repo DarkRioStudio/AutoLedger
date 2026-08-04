@@ -98,14 +98,24 @@ public enum AppFormatters: Sendable {
         _ code: String?,
         locale: Locale = .autoupdatingCurrent
     ) -> String {
-        let normalized = code?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .uppercased() ?? ""
-        if normalized.count == 3,
-           normalized.unicodeScalars.allSatisfy(CharacterSet.uppercaseLetters.contains) {
+        if let normalized = normalizedCurrencyCode(code) {
             return normalized
         }
         return locale.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    /// Normalizes an explicitly stored ISO-style currency code without consulting
+    /// the current locale. This is used when a transaction already owns its unit.
+    public static func normalizedCurrencyCode(_ code: String?) -> String? {
+        let normalized = code?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased() ?? ""
+        guard normalized.count == 3,
+              normalized.unicodeScalars.allSatisfy(CharacterSet.uppercaseLetters.contains)
+        else {
+            return nil
+        }
+        return normalized
     }
 
     public static func currencyMinorDigits(_ code: String) -> Int {

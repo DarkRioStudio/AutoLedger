@@ -225,6 +225,47 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         }
     }
 
+    /// Freezes the unit of legacy transactions that predate transaction-level
+    /// currency metadata. Amounts and sync metadata are deliberately untouched:
+    /// this is a local compatibility backfill, not a currency conversion or a
+    /// user edit that should win a CloudKit conflict.
+    @discardableResult
+    public func backfillMissingLedgerCurrencyCodes(
+        defaultCurrencyCode: String,
+        defaultLedgerID: String = TodaySpendingSummary.defaultLedgerID
+    ) throws -> Int {
+        let fallbackCurrencyCode = AppFormatters.normalizedCurrencyCode(defaultCurrencyCode) ?? "USD"
+        let sql = """
+        UPDATE transactions
+        SET ledger_currency_code = COALESCE(
+            (
+                SELECT CASE
+                    WHEN LENGTH(TRIM(currency)) = 3 THEN UPPER(TRIM(currency))
+                    ELSE NULL
+                END
+                FROM ledger_profiles
+                WHERE id = COALESCE(NULLIF(TRIM(transactions.ledger_id), ''), ?)
+            ),
+            ?
+        )
+        WHERE ledger_currency_code IS NULL OR TRIM(ledger_currency_code) = '';
+        """
+        var statement: OpaquePointer?
+        defer { sqlite3_finalize(statement) }
+
+        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw SQLiteTransactionStoreError.prepareStatement(sql)
+        }
+
+        sqlite3_bind_text(statement, 1, defaultLedgerID, -1, sqliteTransient)
+        sqlite3_bind_text(statement, 2, fallbackCurrencyCode, -1, sqliteTransient)
+
+        guard sqlite3_step(statement) == SQLITE_DONE else {
+            throw SQLiteTransactionStoreError.executeStatement(sql)
+        }
+        return Int(sqlite3_changes(db))
+    }
+
     public func delete(transactionID: UUID) throws {
         let sql = """
         UPDATE transactions

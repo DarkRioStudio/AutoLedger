@@ -359,7 +359,7 @@ struct InboxView: View {
         HStack(spacing: 10) {
             captureHeroMetricButton(
                 title: localized("inbox.hero.monthly_expense.title", fallback: "This Month"),
-                value: AppFormatters.currency(store.monthlySnapshot.totalExpense),
+                value: store.formattedCurrentLedgerAmount(store.monthlySnapshot.totalExpense),
                 detail: String(format: localized("inbox.hero.monthly_expense.detail", fallback: "%d transactions"), store.monthlySnapshot.transactionCount),
                 systemImage: "chart.bar.fill",
                 action: { selectedTab = AutoLedgerHomeTab.report.rawValue }
@@ -521,7 +521,7 @@ struct InboxView: View {
         HStack(spacing: 10) {
             compactInsightButton(
                 title: localized("inbox.hero.monthly_expense.title", fallback: "This Month"),
-                value: AppFormatters.currency(store.monthlySnapshot.totalExpense),
+                value: store.formattedCurrentLedgerAmount(store.monthlySnapshot.totalExpense),
                 detail: String(format: localized("inbox.hero.monthly_expense.detail", fallback: "%d transactions"), store.monthlySnapshot.transactionCount),
                 systemImage: "chart.bar.fill",
                 action: { selectedTab = AutoLedgerHomeTab.report.rawValue }
@@ -917,7 +917,12 @@ struct InboxView: View {
 
                 Spacer()
 
-                Text(AppFormatters.currency(receipt.amount))
+                Text(
+                    AppFormatters.currency(
+                        receipt.amount,
+                        code: receipt.currencyCode ?? ExpenseCurrencyPreference.currentCode
+                    )
+                )
                     .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
             }
@@ -1094,12 +1099,23 @@ struct InboxView: View {
         )
     }
 
-    private var merchantRankings: [(merchant: String, total: Double)] {
-        var totals: [String: Double] = [:]
-        for t in store.visibleTransactions {
-            totals[t.merchant, default: 0] += t.amount
+    private var merchantRankings: [(merchant: String, total: Double, currencyCode: String)] {
+        struct MerchantCurrencyKey: Hashable {
+            let merchant: String
+            let currencyCode: String
         }
-        return totals.map { (merchant: $0.key, total: $0.value) }
+
+        var totals: [MerchantCurrencyKey: Double] = [:]
+        for t in store.visibleTransactions {
+            let key = MerchantCurrencyKey(
+                merchant: t.merchant,
+                currencyCode: store.transactionCurrencyCode(for: t)
+            )
+            totals[key, default: 0] += t.amount
+        }
+        return totals.map {
+            (merchant: $0.key.merchant, total: $0.value, currencyCode: $0.key.currencyCode)
+        }
             .sorted { $0.total > $1.total }
     }
 
@@ -1112,7 +1128,11 @@ struct InboxView: View {
                 occurredAt: .now,
                 category: .other,
                 source: .manual,
-                note: ""
+                note: "",
+                ledgerID: store.targetLedgerIDForNewTransactions,
+                ledgerCurrencyCode: store.ledgerCurrencyCode(
+                    for: store.targetLedgerIDForNewTransactions
+                )
             ),
             isNew: true
         ) { newTransaction, _, _ in
@@ -1138,7 +1158,7 @@ struct InboxView: View {
 
                         Spacer()
 
-                        Text(AppFormatters.currency(item.total))
+                        Text(AppFormatters.currency(item.total, code: item.currencyCode))
                             .font(.body.weight(.semibold))
                             .foregroundStyle(AppTheme.accent)
                     }

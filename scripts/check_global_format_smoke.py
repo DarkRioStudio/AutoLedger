@@ -17,6 +17,12 @@ FILES = {
     "share_card": ROOT / "AutoLedger/AutoLedger/Features/ShareCards/MonthlySummaryShareCardView.swift",
     "hotel_archive": ROOT / "AutoLedger/AutoLedger/Features/Hotel/HotelStayArchiveView.swift",
     "formatters": ROOT / "AutoLedger/AutoLedgerCore/Sources/AutoLedgerCore/Utils/AppFormatters.swift",
+    "currency_preference": ROOT / "AutoLedger/AutoLedger/Shared/Constants/ExpenseCurrencyPreference.swift",
+    "root": ROOT / "AutoLedger/AutoLedger/App/AutoLedgerApp.swift",
+    "ledger_store": ROOT / "AutoLedger/AutoLedger/App/LedgerStore.swift",
+    "ledger_view": ROOT / "AutoLedger/AutoLedger/Features/Ledger/LedgerView.swift",
+    "inbox": ROOT / "AutoLedger/AutoLedger/Features/Inbox/InboxView.swift",
+    "transaction_editor": ROOT / "AutoLedger/AutoLedger/Features/Ledger/TransactionEditorView.swift",
 }
 
 FORBIDDEN = {
@@ -26,6 +32,7 @@ FORBIDDEN = {
     "watch_voice": ['Text("¥ '],
     "share_card": ['"yensign.circle.fill"'],
     "hotel_archive": ['?? "CNY"'],
+    "ledger_view": ["AppFormatters.currency(transaction.amount))"],
 }
 
 REQUIRED = {
@@ -36,6 +43,29 @@ REQUIRED = {
     "share_card": ['"banknote.fill"'],
     "hotel_archive": ["ExpenseCurrencyPreference.currentCode"],
     "formatters": ["isAmbiguousNumericDate", "prefersDayFirstDateOrder"],
+    "currency_preference": [
+        "pendingSystemCurrencyChange",
+        "useCurrentSystemCurrency",
+        "keepPreviousCurrency",
+    ],
+    "root": [
+        '"language.currency.region_change.message_format"',
+        "detectSystemCurrencyChangeIfNeeded",
+    ],
+    "ledger_store": [
+        "backfillMissingLedgerCurrencyCodes",
+        "transactionCurrencyCode(for:",
+        "currentLedgerCurrencyCode",
+        "formattedCurrentLedgerAmount",
+        "ledgerCurrencyCode: fixedCurrencyCode",
+        '"ledger.currency.multiple_unconverted"',
+    ],
+    "ledger_view": ["code: store.transactionCurrencyCode(for: transaction)"],
+    "inbox": ["store.formattedCurrentLedgerAmount"],
+    "transaction_editor": [
+        'LabeledContent("transaction_editor.currency")',
+        'Text("transaction_editor.currency.fixed_help")',
+    ],
 }
 
 

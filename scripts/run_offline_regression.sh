@@ -139,14 +139,6 @@ enum ExternalReceiptAssistSettings {
     static var isEnabled: Bool = false
 }
 
-enum ExpenseCurrencyPreference {
-    static let userDefaultsKey = "expenseDefaultCurrencyCode"
-    static let systemValue = "system"
-    static var systemCurrencyCode: String { "CNY" }
-    static var currentCode: String { "CNY" }
-    static func normalizedRawValue(_ value: String?) -> String { value ?? systemValue }
-}
-
 struct CurrencyConversionPreviewQuote: Equatable {
     let sourceAmount: Double
     let sourceCurrencyCode: String
@@ -435,6 +427,7 @@ swiftc \
   "$PREP_DIR/LedgerStore.swift" \
   "$PREP_DIR/SmartReceiptParserStub.swift" \
   "$PREP_DIR/IOSStubs.swift" \
+  "$ROOT/AutoLedger/AutoLedger/Shared/Constants/ExpenseCurrencyPreference.swift" \
   "$CORE/Utils/AppFormatters.swift" \
   "$CORE/Utils/ImportDuplicateDetector.swift" \
   "$CORE/Utils/TextSimilarity.swift" \

@@ -139,7 +139,14 @@ struct VoiceLedgerQuickEntryView: View {
                 Spacer()
 
                 if let amount {
-                    Text(AppFormatters.currency(amount))
+                    Text(
+                        AppFormatters.currency(
+                            amount,
+                            code: store.ledgerCurrencyCode(
+                                for: store.targetLedgerIDForNewTransactions
+                            )
+                        )
+                    )
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                 }

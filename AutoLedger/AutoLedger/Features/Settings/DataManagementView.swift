@@ -292,7 +292,12 @@ struct DataManagementView: View {
                     .lineLimit(1)
 
                 HStack(spacing: 8) {
-                    Text(AppFormatters.currency(record.transaction.amount))
+                    Text(
+                        AppFormatters.currency(
+                            record.transaction.amount,
+                            code: store.transactionCurrencyCode(for: record.transaction)
+                        )
+                    )
                         .font(.caption.weight(.semibold))
                     Text(AppFormatters.shortDateTime(record.transaction.occurredAt))
                         .font(.caption)

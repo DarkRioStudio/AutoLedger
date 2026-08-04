@@ -287,6 +287,12 @@ final class LedgerStore: ObservableObject {
     ) {
         let shouldDeferSQLiteStateHydration =
             deferSQLiteStateHydration && transactionStore is SQLiteTransactionStore
+        if loadsPersistedConfiguration,
+           let sqlStore = transactionStore as? SQLiteTransactionStore {
+            _ = try? sqlStore.backfillMissingLedgerCurrencyCodes(
+                defaultCurrencyCode: ExpenseCurrencyPreference.currentCode
+            )
+        }
         self.parser = parser
         self.sampleReceipts = sampleProvider.samples
         self.transactionStore = transactionStore
@@ -587,6 +593,32 @@ final class LedgerStore: ObservableObject {
         currentLedgerScopeName
     }
 
+    var currentLedgerCurrencyCode: String {
+        guard isShowingAllLedgers else {
+            return ledgerCurrencyCode(for: selectedLedgerID)
+        }
+
+        let visibleCurrencyCodes = Set(visibleTransactions.map(transactionCurrencyCode(for:)))
+        if visibleCurrencyCodes.count == 1, let onlyCode = visibleCurrencyCodes.first {
+            return onlyCode
+        }
+        return ledgerCurrencyCode(for: defaultWriteLedgerID)
+    }
+
+    var currentLedgerHasMixedCurrencies: Bool {
+        Set(visibleTransactions.map(transactionCurrencyCode(for:))).count > 1
+    }
+
+    func formattedCurrentLedgerAmount(_ amount: Double) -> String {
+        guard !currentLedgerHasMixedCurrencies else {
+            return localizedMessage(
+                "ledger.currency.multiple_unconverted",
+                fallback: "多币种（未换算）"
+            )
+        }
+        return AppFormatters.currency(amount, code: currentLedgerCurrencyCode)
+    }
+
     func transactionsForCurrentLedger(_ source: [Transaction]) -> [Transaction] {
         guard !isShowingAllLedgers else { return source }
         return source.filter { $0.resolvedLedgerID() == selectedLedgerID }
@@ -649,6 +681,19 @@ final class LedgerStore: ObservableObject {
                 ? normalizedCurrency
                 : ExpenseCurrencyPreference.currentCode
         )
+    }
+
+    func transactionCurrencyCode(for transaction: Transaction) -> String {
+        if let storedCode = AppFormatters.normalizedCurrencyCode(transaction.ledgerCurrencyCode) {
+            return storedCode
+        }
+        return ledgerCurrencyCode(for: transaction.resolvedLedgerID())
+    }
+
+    func defaultCurrencyPreferenceDidChange() {
+        invalidateMonthlyReportCaches()
+        objectWillChange.send()
+        reloadWidgets()
     }
 
     private var currentLedgerScopeID: String {
@@ -1165,6 +1210,10 @@ final class LedgerStore: ObservableObject {
     private func startSQLiteSnapshotLoadIfNeeded(from sqlStore: SQLiteTransactionStore) {
         guard pendingSQLiteSnapshotTask == nil else { return }
 
+        _ = try? sqlStore.backfillMissingLedgerCurrencyCodes(
+            defaultCurrencyCode: ExpenseCurrencyPreference.currentCode
+        )
+
         let seedTransactions = Self.seedTransactions
         let startingRevision = persistenceStateRevision
         didDiscardLastSQLiteSnapshot = false
@@ -1246,6 +1295,9 @@ final class LedgerStore: ObservableObject {
     }
 
     private func refreshFromSQLiteStore(_ sqlStore: SQLiteTransactionStore) {
+        _ = try? sqlStore.backfillMissingLedgerCurrencyCodes(
+            defaultCurrencyCode: ExpenseCurrencyPreference.currentCode
+        )
         transactions        = (try? sqlStore.loadTransactions())             ?? transactions
         deletedTransactions = (try? sqlStore.loadDeletedTransactions())      ?? deletedTransactions
         debugRecords        = (try? sqlStore.loadDebugEvents())              ?? debugRecords
@@ -1400,7 +1452,10 @@ final class LedgerStore: ObservableObject {
                 "ledger.status.manual_saved_format",
                 fallback: "已手动记账：%@ %@。",
                 resolvedTransaction.merchant,
-                AppFormatters.currency(resolvedTransaction.amount)
+                AppFormatters.currency(
+                    resolvedTransaction.amount,
+                    code: transactionCurrencyCode(for: resolvedTransaction)
+                )
             )
             reloadWidgets()
             return true
@@ -1419,7 +1474,10 @@ final class LedgerStore: ObservableObject {
             "ledger.status.manual_saved_format",
             fallback: "已手动记账：%@ %@。",
             resolvedTransaction.merchant,
-            AppFormatters.currency(resolvedTransaction.amount)
+            AppFormatters.currency(
+                resolvedTransaction.amount,
+                code: transactionCurrencyCode(for: resolvedTransaction)
+            )
         )
         reloadWidgets()
         requestAutomaticBackup()
@@ -1553,7 +1611,10 @@ final class LedgerStore: ObservableObject {
                 fallback: "已复制账单：%@ %@。"
             ),
             duplicated.merchant,
-            AppFormatters.currency(duplicated.amount)
+            AppFormatters.currency(
+                duplicated.amount,
+                code: transactionCurrencyCode(for: duplicated)
+            )
         )
         return duplicated
     }
@@ -2017,7 +2078,7 @@ final class LedgerStore: ObservableObject {
                 "ledger.status.imported_format",
                 fallback: "已导入 %@，金额 %@。",
                 merchant,
-                AppFormatters.currency(amount)
+                AppFormatters.currency(amount, code: ExpenseCurrencyPreference.currentCode)
             )
         }
     }
@@ -2040,9 +2101,20 @@ final class LedgerStore: ObservableObject {
         let ledgerAssignedTransaction = transaction.ledgerID == nil
             ? transaction.assigningLedgerIDIfMissing(original.resolvedLedgerID())
             : transaction
-        let resolvedTransaction = transactionPreparedForLedgerCurrency(
-            assigningHotelCategoryIfNeeded(ledgerAssignedTransaction)
-        )
+        let categoryAssignedTransaction = assigningHotelCategoryIfNeeded(ledgerAssignedTransaction)
+        let resolvedTransaction: Transaction
+        if let fixedCurrencyCode = AppFormatters.normalizedCurrencyCode(original.ledgerCurrencyCode) {
+            resolvedTransaction = categoryAssignedTransaction.replacingCurrencyMetadata(
+                ledgerCurrencyCode: fixedCurrencyCode,
+                originalAmount: categoryAssignedTransaction.originalAmount,
+                originalCurrencyCode: categoryAssignedTransaction.originalCurrencyCode,
+                exchangeRate: categoryAssignedTransaction.exchangeRate,
+                exchangeRateDate: categoryAssignedTransaction.exchangeRateDate,
+                exchangeRateProvider: categoryAssignedTransaction.exchangeRateProvider
+            )
+        } else {
+            resolvedTransaction = transactionPreparedForLedgerCurrency(categoryAssignedTransaction)
+        }
         let categoryChanged = original.category != resolvedTransaction.category
         let beforeMetadata = (transactionStore as? SQLiteTransactionStore)
             .flatMap { try? $0.loadTransactionSyncMetadata(transactionID: resolvedTransaction.id) }

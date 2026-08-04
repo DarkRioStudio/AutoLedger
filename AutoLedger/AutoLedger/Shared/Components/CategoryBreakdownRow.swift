@@ -3,6 +3,7 @@ import SwiftUI
 
 struct CategoryBreakdownRow: View {
     let metric: MonthlySnapshot.CategoryMetric
+    let currencyCode: String?
     var isSelected = false
     var isDimmed = false
 
@@ -22,7 +23,7 @@ struct CategoryBreakdownRow: View {
                         .accessibilityHidden(true)
                 }
 
-                Text(AppFormatters.currency(metric.total))
+                Text(formattedTotal)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
             }
@@ -60,12 +61,19 @@ struct CategoryBreakdownRow: View {
                 String(
                     format: String(localized: "report.category.accessibility_format"),
                     metric.title,
-                    AppFormatters.currency(metric.total),
+                    formattedTotal,
                     String(format: String(localized: "report.percentage_format"), Int((metric.ratio * 100).rounded()))
                 )
             )
         )
         .accessibilityHint(Text("report.category.accessibility_hint"))
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private var formattedTotal: String {
+        guard let currencyCode else {
+            return String(localized: "ledger.currency.multiple_unconverted")
+        }
+        return AppFormatters.currency(metric.total, code: currencyCode)
     }
 }

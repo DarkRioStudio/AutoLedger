@@ -577,6 +577,36 @@ struct OfflineRegression {
             "AppFormatters resolves the system-region GBP currency"
         )
         reporter.check(
+            AppFormatters.normalizedCurrencyCode(" usd ") == "USD" &&
+                AppFormatters.normalizedCurrencyCode("US") == nil,
+            "AppFormatters distinguishes an explicitly stored currency from locale fallback"
+        )
+        let storedCurrencyPreference = UserDefaults.standard.string(
+            forKey: ExpenseCurrencyPreference.userDefaultsKey
+        )
+        defer {
+            if let storedCurrencyPreference {
+                UserDefaults.standard.set(
+                    storedCurrencyPreference,
+                    forKey: ExpenseCurrencyPreference.userDefaultsKey
+                )
+            } else {
+                UserDefaults.standard.removeObject(forKey: ExpenseCurrencyPreference.userDefaultsKey)
+            }
+        }
+        ExpenseCurrencyPreference.keepPreviousCurrency(
+            after: .init(previousCode: "JPY", currentCode: ExpenseCurrencyPreference.systemCurrencyCode)
+        )
+        reporter.check(
+            ExpenseCurrencyPreference.currentCode == "JPY",
+            "ExpenseCurrencyPreference can keep the previous default after a system-region change"
+        )
+        ExpenseCurrencyPreference.useCurrentSystemCurrency()
+        reporter.check(
+            ExpenseCurrencyPreference.currentCode == ExpenseCurrencyPreference.systemCurrencyCode,
+            "ExpenseCurrencyPreference can explicitly accept the new system-region currency"
+        )
+        reporter.check(
             AppFormatters.currency(1_234.56, code: "USD", locale: enUS).contains("$"),
             "AppFormatters formats USD using the requested locale"
         )
@@ -3432,6 +3462,7 @@ struct OfflineRegression {
     }
 
     private static func verifyLedgerDefaultAssignment(reporter: RegressionReporter) throws {
+        UserDefaults.standard.removeObject(forKey: "defaultWriteLedgerID")
         let date = Date(timeIntervalSince1970: 1_780_400_000)
         let hotelStayRecordID = UUID(uuidString: "00000000-0000-0000-0000-000000001842") ?? UUID()
         let legacyTransaction = Transaction(
@@ -3479,6 +3510,58 @@ struct OfflineRegression {
         }
 
         let store = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: "ledger-default.sqlite3")
+        let legacyDefaultCurrencyTransaction = Transaction(
+            merchant: "Legacy Currency Store",
+            amount: 88,
+            occurredAt: date,
+            category: .shopping,
+            source: .manual,
+            note: "missing transaction currency"
+        )
+        let travelProfile = LedgerProfile(
+            id: "travel-ledger",
+            name: "Travel",
+            currency: "JPY",
+            sortOrder: 10
+        )
+        let legacyTravelCurrencyTransaction = Transaction(
+            merchant: "Legacy Travel Store",
+            amount: 9_800,
+            occurredAt: date,
+            category: .shopping,
+            source: .manual,
+            note: "missing travel currency",
+            ledgerID: travelProfile.id
+        )
+        _ = try store.loadLedgerProfiles()
+        try store.saveLedgerProfile(travelProfile)
+        try store.save(transaction: legacyDefaultCurrencyTransaction)
+        try store.save(transaction: legacyTravelCurrencyTransaction)
+        let syncMetadataBeforeBackfill = try store.loadTransactionSyncMetadata(
+            transactionID: legacyDefaultCurrencyTransaction.id
+        )
+        let backfilledCount = try store.backfillMissingLedgerCurrencyCodes(defaultCurrencyCode: "CNY")
+        let backfilledTransactions = try store.loadTransactions()
+        let syncMetadataAfterBackfill = try store.loadTransactionSyncMetadata(
+            transactionID: legacyDefaultCurrencyTransaction.id
+        )
+        reporter.check(backfilledCount == 2, "SQLite freezes currency metadata for legacy transactions")
+        reporter.check(
+            backfilledTransactions.first { $0.id == legacyDefaultCurrencyTransaction.id }?.ledgerCurrencyCode == "CNY" &&
+                backfilledTransactions.first { $0.id == legacyDefaultCurrencyTransaction.id }?.amount == 88,
+            "SQLite freezes a legacy default-ledger currency without converting its amount"
+        )
+        reporter.check(
+            backfilledTransactions.first { $0.id == legacyTravelCurrencyTransaction.id }?.ledgerCurrencyCode == "JPY" &&
+                backfilledTransactions.first { $0.id == legacyTravelCurrencyTransaction.id }?.amount == 9_800,
+            "SQLite prefers the transaction ledger profile while freezing legacy currency"
+        )
+        reporter.check(
+            syncMetadataBeforeBackfill?.syncRevision == syncMetadataAfterBackfill?.syncRevision &&
+                syncMetadataBeforeBackfill?.updatedAt == syncMetadataAfterBackfill?.updatedAt,
+            "Legacy currency backfill does not impersonate a user edit or advance sync metadata"
+        )
+
         let ledger = LedgerStore(transactionStore: store)
         let manual = Transaction(
             merchant: "Manual Default Store",
@@ -3491,8 +3574,9 @@ struct OfflineRegression {
         reporter.check(ledger.addTransaction(manual), "LedgerStore accepts manual transaction for default ledger assignment")
         let storedManual = try store.loadTransactions().first { $0.id == manual.id }
         reporter.check(
-            storedManual?.ledgerID == TodaySpendingSummary.defaultLedgerID,
-            "LedgerStore writes default ledger id for new manual transaction"
+            storedManual?.ledgerID == TodaySpendingSummary.defaultLedgerID &&
+                storedManual?.ledgerCurrencyCode == "CNY",
+            "LedgerStore writes the selected default ledger and currency for a new manual transaction"
         )
 
         let travel = Transaction(
@@ -3512,13 +3596,17 @@ struct OfflineRegression {
             occurredAt: travel.occurredAt,
             category: .shopping,
             source: .manual,
-            note: "travel ledger edited"
+            note: "travel ledger edited",
+            ledgerCurrencyCode: "USD"
         )
-        reporter.check(ledger.updateTransaction(travelEditWithoutLedger), "LedgerStore updates transaction while preserving ledger assignment")
+        reporter.check(
+            ledger.updateTransaction(travelEditWithoutLedger),
+            "LedgerStore updates transaction while rejecting an implicit currency change"
+        )
         let storedTravel = try store.loadTransactions().first { $0.id == travel.id }
         reporter.check(
-            storedTravel?.ledgerID == "travel-ledger",
-            "LedgerStore preserves existing ledger id when update payload omits it"
+            storedTravel?.ledgerID == "travel-ledger" && storedTravel?.ledgerCurrencyCode == "JPY",
+            "LedgerStore preserves existing ledger id and fixed currency when update payload omits them"
         )
     }
 
@@ -3716,6 +3804,14 @@ struct OfflineRegression {
             reporter.check(
                 ledgerStore.visibleTransactions.map(\.id) == [selectedWriteTransaction.id, travelTransaction.id, defaultTransaction.id],
                 "LedgerStore shows all ledgers when selected"
+            )
+            reporter.check(
+                ledgerStore.currentLedgerHasMixedCurrencies,
+                "LedgerStore detects mixed transaction currencies without assuming conversion"
+            )
+            reporter.check(
+                ledgerStore.formattedCurrentLedgerAmount(1_905) == "多币种（未换算）",
+                "LedgerStore does not label a mixed-currency aggregate as one currency"
             )
             ledgerStore.showSelectedLedgerOnly()
             reporter.check(!ledgerStore.isShowingAllLedgers, "LedgerStore can restore selected-ledger-only mode")
@@ -6390,8 +6486,12 @@ struct OfflineRegression {
             "LedgerStore completes deferred SQLite hydration before foreground work continues"
         )
         reporter.check(
-            ledger.transactions.contains(transaction),
-            "LedgerStore publishes transactions from deferred SQLite hydration"
+            ledger.transactions.contains {
+                $0.id == transaction.id &&
+                    abs($0.amount - transaction.amount) < 0.001 &&
+                    $0.ledgerCurrencyCode == "CNY"
+            },
+            "LedgerStore publishes deferred SQLite transactions with a frozen currency and unchanged amount"
         )
         reporter.check(
             ledger.subscriptions.contains {
@@ -6421,8 +6521,12 @@ struct OfflineRegression {
         try store.save(transaction: cloudMergedTransaction)
         await ledger.refreshFromStoreInBackground()
         reporter.check(
-            ledger.transactions.contains(cloudMergedTransaction),
-            "LedgerStore publishes a post-sync SQLite merge through background hydration"
+            ledger.transactions.contains {
+                $0.id == cloudMergedTransaction.id &&
+                    abs($0.amount - cloudMergedTransaction.amount) < 0.001 &&
+                    $0.ledgerCurrencyCode == "CNY"
+            },
+            "LedgerStore publishes a post-sync SQLite merge with a frozen currency and unchanged amount"
         )
     }
 

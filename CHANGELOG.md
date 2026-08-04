@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.8.0 / 交易币种固化）
+- [2026-08-04] 修复记账、账本与相关汇总入口继续按当前系统国家或地区重解释金额单位的问题：默认消费币种现在用于之后的新记录，每笔交易在写入时固定 `ledgerCurrencyCode`，后续编辑、系统地区变化或默认币种变化都不会批量改写或换算既有金额。系统模式检测到地区币种变化时会询问未来新记录是否采用新币种；旧交易仅在币种缺失时按账本显式币种或已接受默认币种补齐元数据，不修改金额、`updated_at` 或同步 revision；混合币种合计显示“多币种（未换算）”。完整离线回归、全球格式与五语本地化门禁、generic iOS `.xcworkspace` 无签名构建通过；新的 TestFlight 和真机同路径验收仍待后续构建。
+
 ### 修复（v1.8.0 / PendingAction Release Archive）
 - [2026-08-03] 修复 iOS 与 macOS 的 Xcode Cloud Release Archive 在 `PendingActionCenterView.swift:7` 因 revision 数组字面量类型推断过于复杂而失败：`PendingActionCenterLoader.revision(for:)` 改为显式 `[String]` 并逐项追加 11 个既有组成字段，字段顺序、分隔符和刷新语义保持不变。PendingAction smoke、完整离线回归以及全新 DerivedData 的 generic iOS / generic macOS 无签名 Release Archive 均通过；新的云端有签名 Archive、build number 与 TestFlight processing 仍须触发后实时回读。
 

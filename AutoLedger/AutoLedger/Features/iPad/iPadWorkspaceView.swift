@@ -263,7 +263,7 @@ private struct IPadWorkspaceOverviewView: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3), spacing: 14) {
                         MetricCard(
                             title: String(localized: "ipad.workspace.metric.month"),
-                            value: AppFormatters.currency(snapshot.totalExpense),
+                            value: store.formattedCurrentLedgerAmount(snapshot.totalExpense),
                             detail: String(format: String(localized: "report.transaction_count_format"), snapshot.transactionCount),
                             accent: AppTheme.accent
                         )
@@ -1930,7 +1930,9 @@ private struct IPadBatchImportWorkspaceView: View {
                     HStack(spacing: 8) {
                         Text(stateTitle(for: item.state))
                         Text("·")
-                        Text(item.amount.map { AppFormatters.currency($0) } ?? String(localized: "common.none"))
+                        Text(item.amount.map {
+                            AppFormatters.currency($0, code: store.currentLedgerCurrencyCode)
+                        } ?? String(localized: "common.none"))
                     }
                     .font(.caption)
                     .foregroundStyle(AppTheme.mutedInk)
@@ -2091,7 +2093,12 @@ private struct IPadBatchImportWorkspaceView: View {
         } else {
             detailCard(titleKey: "ipad.batch_import.detail.fields") {
                 detailRow("transaction_editor.merchant", value: item.merchant ?? String(localized: "common.none"))
-                detailRow("transaction_editor.amount", value: item.amount.map { AppFormatters.currency($0) } ?? String(localized: "common.none"))
+                detailRow(
+                    "transaction_editor.amount",
+                    value: item.amount.map {
+                        AppFormatters.currency($0, code: store.currentLedgerCurrencyCode)
+                    } ?? String(localized: "common.none")
+                )
                 detailRow("transaction_editor.category", value: item.category ?? String(localized: "common.none"))
                 detailRow("transaction_editor.source", value: item.source ?? String(localized: "common.none"))
                 detailRow("transaction_editor.date", value: item.occurredAt.map(AppFormatters.exportDateTime) ?? String(localized: "common.none"))
@@ -3210,7 +3217,7 @@ private struct IPadReportWorkspaceView: View {
 
             monthStepper
 
-            Text(AppFormatters.currency(snapshot.totalExpense))
+            Text(store.formattedCurrentLedgerAmount(snapshot.totalExpense))
                 .font(.system(size: 42, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.accent)
                 .monospacedDigit()
@@ -3312,7 +3319,7 @@ private struct IPadReportWorkspaceView: View {
                     ForEach(snapshot.categoryBreakdown.prefix(6)) { metric in
                         IPadAnalysisProgressRow(
                             title: metric.title,
-                            value: AppFormatters.currency(metric.total),
+                            value: store.formattedCurrentLedgerAmount(metric.total),
                             ratioText: percentageText(metric.ratio),
                             ratio: metric.ratio,
                             tint: metric.tint,
@@ -3369,7 +3376,7 @@ private struct IPadReportWorkspaceView: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(AppFormatters.currency(activeMetric?.total ?? snapshot.totalExpense))
+                        Text(store.formattedCurrentLedgerAmount(activeMetric?.total ?? snapshot.totalExpense))
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
                         Text(transactionCountText(activeMetric?.transactionCount ?? snapshot.transactionCount))
@@ -3390,7 +3397,7 @@ private struct IPadReportWorkspaceView: View {
                     ForEach(Array(snapshot.topMerchantMetrics.prefix(6).enumerated()), id: \.element.id) { index, metric in
                         IPadAnalysisProgressRow(
                             title: metric.merchant,
-                            value: AppFormatters.currency(metric.total),
+                            value: store.formattedCurrentLedgerAmount(metric.total),
                             ratioText: transactionCountText(metric.transactionCount),
                             ratio: metric.ratio,
                             tint: index == 0 ? AppTheme.accentSecondary : AppTheme.accent,
@@ -4059,7 +4066,12 @@ private struct IPadLedgerWorkspaceView: View {
 
             TableColumn(String(localized: "transaction_editor.amount")) { transaction in
                 let isSelected = selectedTransactionIDs.contains(transaction.id)
-                Text(AppFormatters.currency(transaction.amount))
+                Text(
+                    AppFormatters.currency(
+                        transaction.amount,
+                        code: store.transactionCurrencyCode(for: transaction)
+                    )
+                )
                     .font(.body.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(isSelected ? Color.white : AppTheme.ink)
@@ -4150,7 +4162,9 @@ private struct IPadLedgerWorkspaceView: View {
                         .lineLimit(1)
 
                     ForEach(selectedDuplicateTransactions) { transaction in
-                        Text("\(transaction.merchant) \(AppFormatters.currency(transaction.amount))")
+                        Text(
+                            "\(transaction.merchant) \(AppFormatters.currency(transaction.amount, code: store.transactionCurrencyCode(for: transaction)))"
+                        )
                             .font(.caption)
                             .foregroundStyle(AppTheme.ink)
                             .lineLimit(1)
@@ -4313,6 +4327,7 @@ private enum MacLedgerBatchAction {
 }
 
 private struct IPadTransactionCompactRow: View {
+    @EnvironmentObject private var store: LedgerStore
     let transaction: Transaction
 
     var body: some View {
@@ -4334,7 +4349,12 @@ private struct IPadTransactionCompactRow: View {
 
                     Spacer()
 
-                    Text(AppFormatters.currency(transaction.amount))
+                    Text(
+                        AppFormatters.currency(
+                            transaction.amount,
+                            code: store.transactionCurrencyCode(for: transaction)
+                        )
+                    )
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
@@ -4355,6 +4375,7 @@ private struct IPadTransactionCompactRow: View {
 }
 
 private struct IPadTransactionInspector: View {
+    @EnvironmentObject private var store: LedgerStore
     let transaction: Transaction?
     let edit: (Transaction) -> Void
     let duplicate: (Transaction) -> Void
@@ -4378,7 +4399,12 @@ private struct IPadTransactionInspector: View {
 
                             Spacer()
 
-                            Text(AppFormatters.currency(transaction.amount))
+                            Text(
+                                AppFormatters.currency(
+                                    transaction.amount,
+                                    code: store.transactionCurrencyCode(for: transaction)
+                                )
+                            )
                                 .font(.largeTitle.weight(.bold))
                                 .foregroundStyle(AppTheme.accent)
                                 .lineLimit(1)

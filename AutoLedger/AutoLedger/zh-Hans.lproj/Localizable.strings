@@ -651,6 +651,8 @@
 "transaction_editor.source" = "来源";
 "transaction_editor.date" = "时间";
 "transaction_editor.amount" = "金额";
+"transaction_editor.currency" = "币种";
+"transaction_editor.currency.fixed_help" = "本笔账单保存时会固定该币种；之后更改系统地区或默认币种不会重算。";
 "transaction_editor.category" = "分类";
 "transaction_editor.note" = "备注";
 "transaction_editor.title.new" = "新增账单";
@@ -1056,11 +1058,16 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.currency.body" = "默认消费币种只在账单没有识别到币种时使用；写入不同币种账本时会准备换算。";
+"language.currency.body" = "默认消费币种用于手动记账和未识别出币种的账单。每笔账单保存时会固定币种；更改默认币种或系统地区不会重算历史金额。";
 "language.currency.title" = "消费默认币种";
 "language.currency.system_format" = "跟随系统（%@）";
 "language.currency.subtitle_system_format" = "当前跟随系统：%@";
 "language.currency.subtitle_custom_format" = "当前固定为 %@";
+"language.currency.region_change.title" = "系统地区币种已变化";
+"language.currency.region_change.message_format" = "系统币种已从 %@ 变为 %@。是否仅让之后的新记录使用新币种？已有账单的币种和金额不会更改，也不会自动换算。";
+"language.currency.region_change.use_new_format" = "新记录改用 %@";
+"language.currency.region_change.keep_format" = "继续使用 %@";
+"ledger.currency.multiple_unconverted" = "多币种（未换算）";
 "language.footer" = "这些设置只影响本机 App 界面和未标明币种账单的默认理解，不会改变已保存账本数据。";
 
 "pro.title" = "AutoLedger Pro";

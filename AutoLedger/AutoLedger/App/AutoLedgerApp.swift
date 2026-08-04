@@ -31,6 +31,7 @@ struct AutoLedgerApp: App {
             AppThemeCustomTheme.secondaryHexKey: AppThemeCustomTheme.defaultSecondaryHex,
             AppLanguagePreference.userDefaultsKey: AppLanguagePreference.system.rawValue
         ])
+        ExpenseCurrencyPreference.prepareForLaunch()
         ScreenshotModeConfig.installRuntimeOverrides()
 
         ClipboardImportIntent.handler = {
@@ -101,6 +102,7 @@ private struct AutoLedgerRootView: View {
     @State private var didScheduleLaunchSync = false
     @State private var didScheduleAnalyticsUpload = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
+    @State private var pendingSystemCurrencyChange: ExpenseCurrencyPreference.SystemCurrencyChange?
 
     init() {
         _store = StateObject(
@@ -175,6 +177,56 @@ private struct AutoLedgerRootView: View {
                     Text("")
                 }
             }
+            .alert(
+                localizedRootString(
+                    "language.currency.region_change.title",
+                    fallback: "系统地区币种已变化"
+                ),
+                isPresented: Binding(
+                    get: { pendingSystemCurrencyChange != nil },
+                    set: { if !$0 { pendingSystemCurrencyChange = nil } }
+                ),
+                presenting: pendingSystemCurrencyChange
+            ) { change in
+                Button(
+                    String(
+                        format: localizedRootString(
+                            "language.currency.region_change.use_new_format",
+                            fallback: "新记录改用 %@"
+                        ),
+                        change.currentCode
+                    )
+                ) {
+                    ExpenseCurrencyPreference.useCurrentSystemCurrency()
+                    pendingSystemCurrencyChange = nil
+                    store.defaultCurrencyPreferenceDidChange()
+                }
+                Button(
+                    String(
+                        format: localizedRootString(
+                            "language.currency.region_change.keep_format",
+                            fallback: "继续使用 %@"
+                        ),
+                        change.previousCode
+                    ),
+                    role: .cancel
+                ) {
+                    ExpenseCurrencyPreference.keepPreviousCurrency(after: change)
+                    pendingSystemCurrencyChange = nil
+                    store.defaultCurrencyPreferenceDidChange()
+                }
+            } message: { change in
+                Text(
+                    String(
+                        format: localizedRootString(
+                            "language.currency.region_change.message_format",
+                            fallback: "系统币种已从 %@ 变为 %@。是否仅让之后的新记录使用新币种？已有账单的币种和金额不会更改，也不会自动换算。"
+                        ),
+                        change.previousCode,
+                        change.currentCode
+                    )
+                )
+            }
             .task {
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 SupportPurchaseManager.shared.startTransactionListener()
@@ -211,6 +263,7 @@ private struct AutoLedgerRootView: View {
                 if newPhase == .active {
                     AppSessionDiagnosticsService.markActive()
                     Task { @MainActor in
+                        detectSystemCurrencyChangeIfNeeded()
                         await handleSceneBecameActive()
                     }
                 } else if newPhase == .background {
@@ -221,6 +274,7 @@ private struct AutoLedgerRootView: View {
             .onAppear {
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 Task { @MainActor in
+                    detectSystemCurrencyChangeIfNeeded()
                     await store.refreshFromStoreInBackground()
                     consumeAppIntentNavigationHandoffIfNeeded()
                     consumeNotificationDeepLinkHandoffIfNeeded()
@@ -266,6 +320,11 @@ private struct AutoLedgerRootView: View {
             languageKey: AppLanguagePreference.current.catalogLanguageKey,
             fallback: fallback
         )
+    }
+
+    private func detectSystemCurrencyChangeIfNeeded() {
+        guard pendingSystemCurrencyChange == nil else { return }
+        pendingSystemCurrencyChange = ExpenseCurrencyPreference.pendingSystemCurrencyChange()
     }
 
     @MainActor

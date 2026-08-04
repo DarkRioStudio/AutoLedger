@@ -651,6 +651,8 @@
 "transaction_editor.source" = "출처";
 "transaction_editor.date" = "날짜";
 "transaction_editor.amount" = "양";
+"transaction_editor.currency" = "통화";
+"transaction_editor.currency.fixed_help" = "거래를 저장할 때 이 통화가 고정됩니다. 이후 지역이나 기본 통화를 바꿔도 다시 계산되지 않습니다.";
 "transaction_editor.category" = "범주";
 "transaction_editor.note" = "메모";
 "transaction_editor.title.new" = "새로운 거래";
@@ -1056,11 +1058,16 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.currency.body" = "기본 지출 통화는 영수증에서 통화를 인식하지 못했을 때만 사용합니다. 원장 통화가 다르면 환산을 준비합니다.";
+"language.currency.body" = "기본 지출 통화는 수동 기록과 통화를 인식하지 못한 내역에 사용합니다. 저장된 거래는 당시 통화를 유지하며 기본 통화나 시스템 지역을 바꿔도 과거 금액을 다시 계산하지 않습니다.";
 "language.currency.title" = "기본 지출 통화";
 "language.currency.system_format" = "시스템(%@)";
 "language.currency.subtitle_system_format" = "현재 시스템 따름: %@";
 "language.currency.subtitle_custom_format" = "현재 %@로 고정";
+"language.currency.region_change.title" = "시스템 지역 통화가 변경됨";
+"language.currency.region_change.message_format" = "시스템 통화가 %@에서 %@로 변경되었습니다. 새 통화를 이후 기록에만 사용할까요? 기존 거래의 통화와 금액은 바뀌지 않으며 자동 환산되지 않습니다.";
+"language.currency.region_change.use_new_format" = "새 기록에 %@ 사용";
+"language.currency.region_change.keep_format" = "%@ 계속 사용";
+"ledger.currency.multiple_unconverted" = "여러 통화(환산 안 함)";
 "language.footer" = "이 설정은 로컬 인터페이스와 통화가 표시되지 않은 영수증 해석에만 영향을 줍니다. 저장된 원장 데이터는 바뀌지 않습니다.";
 
 "pro.title" = "AutoLedger Pro";

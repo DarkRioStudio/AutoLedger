@@ -70,6 +70,9 @@ struct ReportView: View {
                             let activeID = activeCategoryID(in: snapshot)
                             CategoryBreakdownRow(
                                 metric: metric,
+                                currencyCode: store.currentLedgerHasMixedCurrencies
+                                    ? nil
+                                    : store.currentLedgerCurrencyCode,
                                 isSelected: activeID == metric.id,
                                 isDimmed: activeID != nil && activeID != metric.id
                             )
@@ -196,6 +199,10 @@ struct ReportView: View {
         AppFormatters.calendar.dateInterval(of: .month, for: date)?.start
     }
 
+    private func currencyText(_ amount: Double) -> String {
+        store.formattedCurrentLedgerAmount(amount)
+    }
+
     private func isSelectedMonth(_ month: Date) -> Bool {
         AppFormatters.calendar.isDate(month, equalTo: selectedMonth, toGranularity: .month)
     }
@@ -304,7 +311,7 @@ struct ReportView: View {
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
 
-                    Text(String(format: String(localized: "report.anomaly.detail_format"), AppFormatters.currency(alert.currentTotal), AppFormatters.currency(alert.baselineAverage), alert.ratioPercent))
+                    Text(String(format: String(localized: "report.anomaly.detail_format"), currencyText(alert.currentTotal), currencyText(alert.baselineAverage), alert.ratioPercent))
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                 }
@@ -327,7 +334,7 @@ struct ReportView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.76))
 
-                Text(AppFormatters.currency(snapshot.totalExpense))
+                Text(currencyText(snapshot.totalExpense))
                     .font(.system(size: totalAmountFontSize, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -407,7 +414,7 @@ struct ReportView: View {
                     .foregroundStyle(AppTheme.mutedInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Text(AppFormatters.currency(highlighted?.total ?? snapshot.totalExpense))
+                Text(currencyText(highlighted?.total ?? snapshot.totalExpense))
                     .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
                     .lineLimit(1)
@@ -441,7 +448,7 @@ struct ReportView: View {
                 .opacity(activeLabel == nil || metric.label == activeLabel ? 1 : dimmedChartOpacity)
                 .annotation(position: .top, alignment: .center, spacing: 4) {
                     if metric.label == activeLabel || (differentiateWithoutColor && metric.isCurrentMonth) {
-                        Text(AppFormatters.currency(metric.total))
+                        Text(currencyText(metric.total))
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(AppTheme.ink)
                             .lineLimit(1)
@@ -491,7 +498,7 @@ struct ReportView: View {
                         .foregroundStyle(AppTheme.mutedInk)
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(AppFormatters.currency(metric.total))
+                        Text(currencyText(metric.total))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(AppTheme.ink)
                         Text(transactionCountText(metric.transactionCount))
@@ -503,7 +510,7 @@ struct ReportView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.mutedInk)
                     Spacer()
-                    Text(AppFormatters.currency(snapshot.totalExpense))
+                    Text(currencyText(snapshot.totalExpense))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(AppTheme.ink)
                 }
@@ -546,7 +553,7 @@ struct ReportView: View {
 
                             Spacer()
 
-                            Text(AppFormatters.currency(metric.total))
+                            Text(currencyText(metric.total))
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(AppTheme.ink)
                                 .lineLimit(1)
@@ -672,7 +679,7 @@ struct ReportView: View {
             MonthlySummaryShareCardData.CategoryItem(
                 id: metric.id,
                 title: metric.title,
-                amountText: AppFormatters.currency(metric.total),
+                amountText: currencyText(metric.total),
                 percentText: percentageText(metric.ratio),
                 iconName: metric.iconName
             )
@@ -681,7 +688,7 @@ struct ReportView: View {
         return MonthlySummaryShareCardData(
             monthLabel: snapshot.monthLabel,
             transactionCountText: transactionCountText(snapshot.transactionCount),
-            totalAmountText: AppFormatters.currency(snapshot.totalExpense),
+            totalAmountText: currencyText(snapshot.totalExpense),
             categories: categories,
             summary: monthlyShareSummary(for: snapshot)
         )
@@ -728,7 +735,7 @@ struct ReportView: View {
         String(
             format: String(localized: "report.summary.accessibility_format"),
             snapshot.monthLabel,
-            AppFormatters.currency(snapshot.totalExpense),
+            currencyText(snapshot.totalExpense),
             transactionCountText(snapshot.transactionCount),
             snapshot.topMerchant,
             merchantCountText(snapshot.topMerchantMetrics.count)
@@ -740,7 +747,7 @@ struct ReportView: View {
             String(
                 format: String(localized: "report.category.accessibility_format"),
                 metric.title,
-                AppFormatters.currency(metric.total),
+                currencyText(metric.total),
                 percentageText(metric.ratio)
             )
         }
@@ -754,7 +761,7 @@ struct ReportView: View {
             String(
                 format: String(localized: "report.trend.accessibility_item_format"),
                 metric.label,
-                AppFormatters.currency(metric.total),
+                currencyText(metric.total),
                 transactionCountText(metric.transactionCount)
             )
         }
@@ -769,7 +776,7 @@ struct ReportView: View {
             format: String(localized: "report.merchant.accessibility_format"),
             rank,
             metric.merchant,
-            AppFormatters.currency(metric.total),
+            currencyText(metric.total),
             transactionCountText(metric.transactionCount),
             percentageText(metric.ratio)
         )

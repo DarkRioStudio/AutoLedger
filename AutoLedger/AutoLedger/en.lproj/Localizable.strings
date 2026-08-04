@@ -651,6 +651,8 @@
 "transaction_editor.source" = "Source";
 "transaction_editor.date" = "Date";
 "transaction_editor.amount" = "Amount";
+"transaction_editor.currency" = "Currency";
+"transaction_editor.currency.fixed_help" = "This currency is fixed when the transaction is saved. Later region or default-currency changes do not recalculate it.";
 "transaction_editor.category" = "Category";
 "transaction_editor.note" = "Note";
 "transaction_editor.title.new" = "New Transaction";
@@ -1056,11 +1058,16 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.currency.body" = "Default spending currency is used only when a bill does not show its currency. Different ledger currencies will be prepared for conversion.";
+"language.currency.body" = "Default spending currency is used for manual entries and bills with no recognized currency. Each saved transaction keeps its currency; changing the default or system region does not recalculate history.";
 "language.currency.title" = "Default spending currency";
 "language.currency.system_format" = "System (%@)";
 "language.currency.subtitle_system_format" = "Following system: %@";
 "language.currency.subtitle_custom_format" = "Fixed to %@";
+"language.currency.region_change.title" = "System region currency changed";
+"language.currency.region_change.message_format" = "The system currency changed from %@ to %@. Use the new currency only for future entries? Existing transaction currencies and amounts will stay unchanged and will not be converted automatically.";
+"language.currency.region_change.use_new_format" = "Use %@ for new entries";
+"language.currency.region_change.keep_format" = "Keep using %@";
+"ledger.currency.multiple_unconverted" = "Multiple currencies (not converted)";
 "language.footer" = "These settings only affect the local interface and bills with no visible currency. Saved ledger data is not changed.";
 
 "pro.title" = "AutoLedger Pro";

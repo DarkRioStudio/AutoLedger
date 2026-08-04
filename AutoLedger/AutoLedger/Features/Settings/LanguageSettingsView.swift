@@ -4,6 +4,7 @@ struct LanguageSettingsView: View {
     @AppStorage(AppLanguagePreference.userDefaultsKey) private var selectedLanguageRawValue = AppLanguagePreference.system.rawValue
     @AppStorage(ExpenseCurrencyPreference.userDefaultsKey) private var selectedExpenseCurrencyRawValue = ExpenseCurrencyPreference.systemValue
     @Environment(\.locale) private var locale
+    @EnvironmentObject private var store: LedgerStore
 
     private var selectedLanguage: AppLanguagePreference {
         AppLanguagePreference(rawValue: selectedLanguageRawValue) ?? .system
@@ -12,7 +13,7 @@ struct LanguageSettingsView: View {
     private var selectedExpenseCurrencyCode: String {
         let rawValue = ExpenseCurrencyPreference.normalizedRawValue(selectedExpenseCurrencyRawValue)
         if rawValue == ExpenseCurrencyPreference.systemValue {
-            return ExpenseCurrencyPreference.systemCurrencyCode
+            return ExpenseCurrencyPreference.currentCode
         }
         return LedgerCurrencyOption.supportedCode(matching: rawValue)
     }
@@ -136,7 +137,9 @@ struct LanguageSettingsView: View {
 
             Menu {
                 Button {
+                    ExpenseCurrencyPreference.useCurrentSystemCurrency()
                     selectedExpenseCurrencyRawValue = ExpenseCurrencyPreference.systemValue
+                    store.defaultCurrencyPreferenceDidChange()
                 } label: {
                     currencyMenuLabel(
                         title: String(
@@ -150,6 +153,7 @@ struct LanguageSettingsView: View {
                 ForEach(LedgerCurrencyOption.common) { option in
                     Button {
                         selectedExpenseCurrencyRawValue = option.code
+                        store.defaultCurrencyPreferenceDidChange()
                     } label: {
                         currencyMenuLabel(
                             title: option.localizedTitle,
@@ -190,7 +194,7 @@ struct LanguageSettingsView: View {
         if selectedExpenseCurrencyRawValue == ExpenseCurrencyPreference.systemValue {
             return String(
                 format: localizedString("language.currency.subtitle_system_format"),
-                ExpenseCurrencyPreference.systemCurrencyCode
+                ExpenseCurrencyPreference.currentCode
             )
         }
         return String(format: localizedString("language.currency.subtitle_custom_format"), selectedExpenseCurrencyCode)
@@ -218,4 +222,5 @@ struct LanguageSettingsView: View {
     NavigationStack {
         LanguageSettingsView()
     }
+    .environmentObject(LedgerStore(transactionStore: nil, loadsPersistedConfiguration: false))
 }

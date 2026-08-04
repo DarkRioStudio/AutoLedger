@@ -106,6 +106,16 @@ struct TransactionEditorView: View {
                         .keyboardType(.decimalPad)
                         .focused($focusedField, equals: .amount)
 
+                    LabeledContent("transaction_editor.currency") {
+                        Text(transactionCurrencyCode)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+
+                    Text("transaction_editor.currency.fixed_help")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+
                     Picker("transaction_editor.category", selection: $category) {
                         ForEach(TransactionCategory.allCases) { item in
                             Text(item.title).tag(item.rawValue)
@@ -282,6 +292,10 @@ struct TransactionEditorView: View {
         LedgerAmountInputParser.parse(amountText) ?? 0
     }
 
+    private var transactionCurrencyCode: String {
+        store.transactionCurrencyCode(for: transaction)
+    }
+
     private func editedTransaction() -> Transaction {
         let trimmedMerchant = merchant.trimmingCharacters(in: .whitespacesAndNewlines)
         return Transaction(
@@ -294,7 +308,8 @@ struct TransactionEditorView: View {
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
             ledgerID: transaction.ledgerID,
             hotelStayRecordID: transaction.hotelStayRecordID,
-            ledgerCurrencyCode: transaction.ledgerCurrencyCode,
+            ledgerCurrencyCode: AppFormatters.normalizedCurrencyCode(transaction.ledgerCurrencyCode)
+                ?? transactionCurrencyCode,
             originalAmount: transaction.originalAmount,
             originalCurrencyCode: transaction.originalCurrencyCode,
             exchangeRate: transaction.exchangeRate,

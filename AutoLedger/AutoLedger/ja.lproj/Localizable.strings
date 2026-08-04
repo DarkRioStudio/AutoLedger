@@ -651,6 +651,8 @@
 "transaction_editor.source" = "ソース";
 "transaction_editor.date" = "日付";
 "transaction_editor.amount" = "金額";
+"transaction_editor.currency" = "通貨";
+"transaction_editor.currency.fixed_help" = "この取引を保存した時点で通貨が固定されます。後から地域や既定通貨を変更しても再計算されません。";
 "transaction_editor.category" = "カテゴリ";
 "transaction_editor.note" = "メモ";
 "transaction_editor.title.new" = "新規取引";
@@ -1056,11 +1058,16 @@
 "language.option.english" = "English";
 "language.option.japanese" = "日本語";
 "language.option.korean" = "한국어";
-"language.currency.body" = "支出の既定通貨は、レシートから通貨を識別できない場合だけ使います。台帳の通貨が異なる場合は換算を準備します。";
+"language.currency.body" = "支出の既定通貨は、手動入力と通貨を識別できない明細に使います。保存した取引はその時点の通貨を保持し、既定通貨やシステム地域を変更しても過去の金額は再計算されません。";
 "language.currency.title" = "支出の既定通貨";
 "language.currency.system_format" = "システム（%@）";
 "language.currency.subtitle_system_format" = "現在はシステムに従う：%@";
 "language.currency.subtitle_custom_format" = "現在は %@ に固定";
+"language.currency.region_change.title" = "システム地域の通貨が変わりました";
+"language.currency.region_change.message_format" = "システム通貨が %@ から %@ に変わりました。新しい通貨を今後の記録だけに使いますか？保存済み取引の通貨と金額は変更されず、自動換算も行われません。";
+"language.currency.region_change.use_new_format" = "新規記録に %@ を使う";
+"language.currency.region_change.keep_format" = "%@ を使い続ける";
+"ledger.currency.multiple_unconverted" = "複数通貨（未換算）";
 "language.footer" = "これらの設定は、この端末の表示と通貨が明記されていないレシートの解釈だけに影響します。保存済みの台帳データは変わりません。";
 
 "pro.title" = "AutoLedger Pro";
