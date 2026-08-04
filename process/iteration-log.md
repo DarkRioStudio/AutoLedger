@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-04（ITER-460 交易币种固化与地区变化确认）
+更新日期：2026-08-04（ITER-461 币种回归 CI 地区隔离修复）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-461 币种回归 CI 地区隔离修复
+- 日期：2026-08-04
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Internal Build / CI Repair
+- 类型：Bugfix / 测试 / 构建
+- 目标：修复交易币种固化提交在 GitHub 美区 runner 上因默认系统币种不同而触发的离线回归假失败，使测试基线不再依赖执行机器地区。
+- 改动范围：仅在 `OfflineRegression` 入口显式把回归默认消费币种固定为 `CNY`，并同步 CHANGELOG 与本日志。
+- 未改动范围：不修改 App / Core 运行时币种选择、交易数据、SQLite / CloudKit / D1 schema、Worker、StoreKit、版本号、build number、签名、entitlement、ASC 在线状态、产品标签或既有未跟踪素材。
+- 完成内容：真实 `ExpenseCurrencyPreference` 继续参与离线编译和地区变化专项断言；测试主流程在创建账本前显式写入 `CNY`，恢复旧固定桩的确定性基线，同时保留对系统币种接受 / 保留行为的独立覆盖。
+- 未完成内容：新的 GitHub CI、Xcode Cloud Archive、实际 build number 与 TestFlight processing 需在本修复提交推送和构建标签更新后重新回读。
+- 测试情况：首个远端提交 `4d66163f` 的 GitHub `Xcode Build` PASS；`Tests` 在美区 runner 暴露 5 个硬编码 CNY 断言失败，日志确认静态 smoke 全部通过且仅默认币种期望受 runner 地区影响。修复后以 `AppleLocale=en_US` / 英语环境重跑完整离线回归 PASS，文档真源 smoke、全球格式 smoke 与 `git diff --check` PASS。
+- 风险与注意事项：该固定值只属于离线测试进程，不写入 App 数据或发布包；不能因此宣称真实地区切换和 TestFlight 已完成人工验收。
+- 回滚方式：移除回归入口的显式 `CNY` 设置及本条记录；不会触及产品数据。
+- 结论：根因是测试环境未隔离，而不是交易币种运行时实现失败；修复保持产品代码和币种合同不变。
+- 下一步建议：推送修复提交、重新移动 `xcbuild-v1.8.0`，并等待新的 GitHub 两项 CI 结论；Apple 侧构建状态仍需独立回读。
 
 ### ITER-460 交易币种固化与地区变化确认
 - 日期：2026-08-04

@@ -43,6 +43,10 @@ private struct FailingTransactionStore: TransactionStore {
 @main
 struct OfflineRegression {
     static func main() async throws {
+        // The regression baseline intentionally uses CNY for default-ledger cases.
+        // Pin it explicitly so host/CI region settings cannot change test semantics.
+        UserDefaults.standard.set("CNY", forKey: ExpenseCurrencyPreference.userDefaultsKey)
+
         let reporter = RegressionReporter()
         let parser = ReceiptParser()
         let sampleProvider = SampleReceiptProvider()
