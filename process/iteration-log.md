@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-05（ITER-463 Locked A 语义强化与主体对齐）
+更新日期：2026-08-05（ITER-464 DeepSeek V4 Flash low 思考强度测速切片）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-464 DeepSeek V4 Flash low 思考强度测速切片
+- 日期：2026-08-05
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Internal TestFlight Feedback / Performance Experiment
+- 类型：性能 / Bugfix / 构建
+- 目标：针对本机与 TestFlight 快捷指令截图记账偶发超时，先只把 DeepSeek V4 Flash 的思考强度从默认 `high` 显式降为 `low`，生成独立构建供同路径真机测速，再决定是否处理网络超时和其它尾延迟。
+- 改动范围：外部收据辅助 OpenAI-compatible 请求体、App 请求时的 provider 传递、为本次单变量实测前移一次的短期缓存键版本、离线回归、v1.8.0 计划、CHANGELOG 与本日志。
+- 未改动范围：不关闭思考模式，不新增或调整请求超时、重试、规则优先、`max_tokens`、prompt、缓存、endpoint、模型名或 API key；不修改酒店水单外部解析、Gemma、本地规则、SQLite / CloudKit / D1 schema、Worker、StoreKit、版本号、build number、Bundle ID、签名、entitlement、ASC 在线状态或产品标签；不纳入现有未跟踪的 Playwright、营销和视频目录。
+- 完成内容：外部收据辅助客户端现把运行时 provider 传给 codec；仅当 provider 为 DeepSeek 且解析后的模型名精确匹配 `deepseek-v4-flash` 时，请求 JSON 才写入 `reasoning_effort: "low"`。DeepSeek V4 Pro、Qwen、OpenAI、自定义 provider 以及酒店水单请求均保持原合同，不会继承本次 Flash 实验参数。外部辅助缓存键由 `v1` 前移为 `v2`，避免新构建使用同一截图测速时复用最长 24 小时内由旧默认 high 请求产生的结果；TTL、容量和缓存内容均未改变。
+- 未完成内容：尚未获得该构建在真实 DeepSeek API、iPhone 快捷指令和 TestFlight 上的耗时样本；未处理 URLSession 无产品级硬截止时间、API 失败降级等待、保存后数据库 / Watch 同步尾延迟等其它候选因素。
+- 测试情况：DeepSeek 官方 2026-08-05 文档回读确认 `deepseek-v4-flash` 的请求 `low` 实际映射为 `low`，而 V4 Pro 当前会把 `low` 映射为 `high`；离线回归新增 Flash 写入 low、Pro 不继承、Qwen 不继承和旧缓存键隔离断言并完整 PASS；Xcode 27 使用全新 DerivedData 对 `.xcworkspace` 执行 generic iOS `CODE_SIGNING_ALLOWED=NO` 构建并 `BUILD SUCCEEDED`；`git diff --check` PASS。首轮回归因测试调用误接到酒店 codec 暴露编译错误，修正测试接线后重跑通过，酒店运行时未改动。
+- 风险与注意事项：本次仍保留思考模式，low 只能降低模型推理开销，不能消除网络抖动或 URLSession 长等待；不能在真机 A/B 前宣称超时已经修复。构建标签只触发 Xcode Cloud，不等同于 Apple Archive、TestFlight processing 或设备性能验收完成。
+- 回滚方式：移除请求体可选 `reasoning_effort`、外部收据客户端的 provider 传递，恢复缓存键 `v1` 并移除对应回归断言，即恢复 DeepSeek V4 Flash 默认思考强度；不涉及数据迁移或线上数据回滚。
+- 结论：DeepSeek V4 Flash low 已形成单变量、可回滚的性能实测切片，本地代码与构建门禁通过，可进入下一版真机对照测试。
+- 下一步建议：在新 TestFlight 使用同一张截图连续执行至少 3 次快捷指令，记录总耗时、是否超时及调试页外部 API 耗时；完成 low 样本后，再单独评估 2.5–3 秒硬截止时间、规则优先或关闭思考，不把多项优化混入本次对照。
 
 ### ITER-463 Locked A 语义强化与主体对齐
 - 日期：2026-08-05

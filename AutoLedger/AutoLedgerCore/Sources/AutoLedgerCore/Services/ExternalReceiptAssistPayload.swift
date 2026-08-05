@@ -211,12 +211,14 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
         let messages: [ChatMessage]
         let temperature: Double
         let responseFormat: ResponseFormat
+        let reasoningEffort: String?
 
         enum CodingKeys: String, CodingKey {
             case model
             case messages
             case temperature
             case responseFormat = "response_format"
+            case reasoningEffort = "reasoning_effort"
         }
     }
 
@@ -252,17 +254,24 @@ public struct ExternalReceiptAssistOpenAICompatibleCodec: Sendable {
 
     public func makeRequestData(
         payload: ExternalReceiptAssistPayload,
-        model: String
+        model: String,
+        provider: ExternalReceiptAssistProvider? = nil
     ) throws -> Data {
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedModel = trimmedModel.isEmpty ? ExternalReceiptAssistProvider.deepSeek.defaultModel : trimmedModel
+        let reasoningEffort: String? = provider == .deepSeek &&
+            resolvedModel.caseInsensitiveCompare(ExternalReceiptAssistProvider.deepSeek.defaultModel) == .orderedSame
+            ? "low"
+            : nil
         let request = ChatCompletionRequest(
-            model: trimmedModel.isEmpty ? ExternalReceiptAssistProvider.deepSeek.defaultModel : trimmedModel,
+            model: resolvedModel,
             messages: [
                 ChatMessage(role: "system", content: systemPrompt),
                 ChatMessage(role: "user", content: userPrompt(for: payload))
             ],
             temperature: 0.1,
-            responseFormat: ResponseFormat(type: "json_object")
+            responseFormat: ResponseFormat(type: "json_object"),
+            reasoningEffort: reasoningEffort
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]

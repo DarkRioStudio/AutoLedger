@@ -208,7 +208,8 @@ struct ExternalReceiptAssistClient: ExternalReceiptAssistClientProtocol {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try codec.makeRequestData(
             payload: payload,
-            model: configuration.modelName ?? ExternalReceiptAssistSettings.modelName
+            model: configuration.modelName ?? ExternalReceiptAssistSettings.modelName,
+            provider: configuration.provider
         )
 
         let (data, response) = try await URLSession.shared.data(for: request)

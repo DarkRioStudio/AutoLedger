@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / DeepSeek V4 Flash low 思考强度测速）
+- [2026-08-05] 针对快捷指令截图记账偶发超时，先建立单变量性能实测切片：外部收据辅助仅在 provider 为 DeepSeek 且模型精确为 `deepseek-v4-flash` 时，在请求体显式发送 `reasoning_effort: "low"`。DeepSeek V4 Pro、Qwen、OpenAI、自定义 provider 和酒店水单解析均不继承该参数；短期缓存键前移一次，避免同一截图复用最长 24 小时内由旧 high 请求产生的结果而污染测速，TTL 与缓存策略不变。本轮不关闭思考模式，也不修改网络超时、规则优先、token 上限、endpoint、模型名或 API key。完整离线回归和全新 DerivedData 的 generic iOS workspace 构建通过，真实 API 与 TestFlight 快捷指令速度仍需在新构建中对照验收。
+
 ### 变更（v1.8.0 / Locked A 语义强化与主体对齐）
 - [2026-08-05] 将主 iOS AppIcon 从上一版 Locked A `1.06×` 主体推进为已人工确认的语义强化版：前景统一使用 `1.18×` 尺度并下移，保留账单卡片、橙色识别星光和绿色确认语义，同时减少非核心信息量。针对真机主屏幕反馈，AutoLedger 主卡源高度由 688 缩短为 640、宽度由 616 居中扩展为 662，并将完整前景进一步下移 26px；主卡高度和上下边界与 AutoNotice 对齐，宽度与 AutoThings 前卡对齐，避免底部暖色留边显得更宽或整体视觉偏窄。可编辑 SVG、无透明 1024×1024 母版和 Light / Dark / Tinted 三个生产槽位已同步，母版与批准预览逐像素一致；全新 DerivedData 的物理 iPhone 签名构建、覆盖安装和主屏幕直接截图通过。为强制刷新 SpringBoard 旧图标缓存，仅在本地命令行构建中临时覆盖 build number，仓库版本号与正式 build number 未修改；本轮不修改 App UI、业务逻辑、其它平台图标、ASC 在线状态或发布资源。
 

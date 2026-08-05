@@ -2425,7 +2425,8 @@ struct OfflineRegression {
         let codec = ExternalReceiptAssistOpenAICompatibleCodec()
         let requestData = try? codec.makeRequestData(
             payload: payload,
-            model: ExternalReceiptAssistProvider.deepSeek.defaultModel
+            model: ExternalReceiptAssistProvider.deepSeek.defaultModel,
+            provider: .deepSeek
         )
         let requestJSON = requestData.flatMap { String(data: $0, encoding: .utf8) } ?? ""
 
@@ -2435,6 +2436,32 @@ struct OfflineRegression {
         reporter.check(!requestJSON.contains("explanation"), "ExternalReceiptAssistOpenAICompatibleCodec does not request explanation by default")
         reporter.check(requestJSON.contains("Demo Coffee"), "ExternalReceiptAssistOpenAICompatibleCodec includes sanitized text")
         reporter.check(!requestJSON.contains("raw OCR"), "ExternalReceiptAssistOpenAICompatibleCodec avoids raw OCR wording")
+        reporter.check(
+            requestJSON.contains("\"reasoning_effort\":\"low\""),
+            "ExternalReceiptAssistOpenAICompatibleCodec uses low reasoning for DeepSeek V4 Flash"
+        )
+
+        let deepSeekProRequestJSON = (try? codec.makeRequestData(
+            payload: payload,
+            model: "deepseek-v4-pro",
+            provider: .deepSeek
+        ))
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        reporter.check(
+            !deepSeekProRequestJSON.contains("reasoning_effort"),
+            "ExternalReceiptAssistOpenAICompatibleCodec does not force Flash reasoning policy onto DeepSeek V4 Pro"
+        )
+
+        let qwenRequestJSON = (try? codec.makeRequestData(
+            payload: payload,
+            model: ExternalReceiptAssistProvider.qwen.defaultModel,
+            provider: .qwen
+        ))
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        reporter.check(
+            !qwenRequestJSON.contains("reasoning_effort"),
+            "ExternalReceiptAssistOpenAICompatibleCodec keeps DeepSeek reasoning policy out of other providers"
+        )
 
         let responseData = """
         {
@@ -2485,6 +2512,7 @@ struct OfflineRegression {
             sanitizedTextHash: "hash-demo-001",
             endpointFingerprint: "endpoint-hash-001"
         )
+        reporter.check(key.hasPrefix("v2|"), "ExternalReceiptAssistCachePolicy invalidates pre-reasoning-policy cache entries")
         reporter.check(!key.contains("Demo Coffee"), "ExternalReceiptAssistCachePolicy key never embeds sanitized OCR text")
         reporter.check(key.contains("hash-demo-001"), "ExternalReceiptAssistCachePolicy key uses supplied sanitized hash")
 

@@ -44,7 +44,7 @@ public struct ExternalReceiptAssistCachePolicy: Sendable {
         endpointFingerprint: String?
     ) -> String {
         [
-            "v1",
+            "v2",
             payload.source.rawValue,
             configuration.provider.rawValue,
             normalized(configuration.modelName),
