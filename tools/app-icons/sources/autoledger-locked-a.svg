@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <title>AutoLedger — Locked Concept A micro-refinement</title>
-  <desc>Editable vector concept for the DarkRio Studio Auto-series icon review. No text or currency glyphs.</desc>
+  <title>AutoLedger — Locked A Bold Aligned</title>
+  <desc>Editable production vector for the approved DarkRio Studio Auto-series app icon. No text or currency glyphs.</desc>
   <defs>
     <linearGradient id="canvasGradient" x1="96" y1="72" x2="932" y2="954" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#F5F0E3"/>
@@ -17,7 +17,21 @@
   </defs>
   <rect width="1024" height="1024" fill="url(#canvasGradient)"/>
   <rect width="1024" height="1024" fill="url(#washGradient)"/>
-  <g transform="translate(512 512) scale(1.06) translate(-512 -512)">
-  <g filter="url(#cardShadow)"><rect x="204" y="168" width="616" height="688" rx="106" fill="#FFFEFA" stroke="#D5CDBD" stroke-width="8" /></g><rect x="270" y="236" width="182" height="68" rx="34" fill="#2B7857" /><path d="M738 226 C743 248 752 259 774 264 C752 269 743 280 738 302 C733 280 724 269 702 264 C724 259 733 248 738 226 Z" fill="#D68027"/><circle cx="701" cy="230" r="8" fill="#D68027" opacity="0.72"/><circle cx="772" cy="302" r="7" fill="#D68027" opacity="0.58"/><rect x="270" y="358" width="350" height="38" rx="19" fill="#242926" /><rect x="270" y="430" width="474" height="30" rx="15" fill="#C6CEC8" /><rect x="270" y="488" width="390" height="30" rx="15" fill="#C6CEC8" /><rect x="270" y="570" width="288" height="122" rx="38" fill="#DDECE3" /><rect x="312" y="611" width="202" height="38" rx="19" fill="#1F5C43" /><circle cx="710" cy="690" r="80" fill="#2B7857" /><path d="M675.6 690.0 L701.8 717.9 L752.6 655.6" fill="none" stroke="#FFFFFF" stroke-width="24.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="754" cy="376" r="30" fill="#D68027" />
+  <g transform="translate(512 568) scale(1.18) translate(-512 -512)">
+  <g filter="url(#cardShadow)"><rect x="181" y="168" width="662" height="640" rx="106" fill="#FFFEFA" stroke="#D5CDBD" stroke-width="8" /></g>
+  <rect x="270" y="236" width="182" height="68" rx="34" fill="#2B7857" />
+  <g transform="translate(738 264) scale(1.12) translate(-738 -264)">
+    <path d="M738 226 C743 248 752 259 774 264 C752 269 743 280 738 302 C733 280 724 269 702 264 C724 259 733 248 738 226 Z" fill="#D68027"/>
+    <circle cx="701" cy="230" r="8" fill="#D68027" opacity="0.72"/>
+    <circle cx="772" cy="302" r="7" fill="#D68027" opacity="0.58"/>
+  </g>
+  <rect x="270" y="350" width="388" height="44" rx="22" fill="#242926" />
+  <rect x="270" y="422" width="420" height="26" rx="13" fill="#C6CEC8" opacity="0.76" />
+  <rect x="248" y="542" width="410" height="158" rx="46" fill="#DDECE3" />
+  <circle cx="304" cy="621" r="34" fill="#2B7857" />
+  <rect x="352" y="600" width="220" height="44" rx="22" fill="#242926" />
+  <circle cx="612" cy="622" r="22" fill="#D68027" />
+  <circle cx="724" cy="700" r="52" fill="#2B7857" />
+  <path d="M702 700 L718 716 L750 676" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 变更（v1.8.0 / Locked A 语义强化与主体对齐）
+- [2026-08-05] 将主 iOS AppIcon 从上一版 Locked A `1.06×` 主体推进为已人工确认的语义强化版：前景统一使用 `1.18×` 尺度并下移，保留账单卡片、橙色识别星光和绿色确认语义，同时减少非核心信息量。针对真机主屏幕反馈，AutoLedger 主卡源高度由 688 缩短为 640、宽度由 616 居中扩展为 662，并将完整前景进一步下移 26px；主卡高度和上下边界与 AutoNotice 对齐，宽度与 AutoThings 前卡对齐，避免底部暖色留边显得更宽或整体视觉偏窄。可编辑 SVG、无透明 1024×1024 母版和 Light / Dark / Tinted 三个生产槽位已同步，母版与批准预览逐像素一致；全新 DerivedData 的物理 iPhone 签名构建、覆盖安装和主屏幕直接截图通过。为强制刷新 SpringBoard 旧图标缓存，仅在本地命令行构建中临时覆盖 build number，仓库版本号与正式 build number 未修改；本轮不修改 App UI、业务逻辑、其它平台图标、ASC 在线状态或发布资源。
+
 ### 变更（v1.8.0 / Locked A 正式 App Icon）
 - [2026-08-04] 将 AutoLedger 主 iOS AppIcon 锁定为 Auto 系列 Locked A 微调版：暖中性色底板和账单卡片构图保持不变，前景信息卡主体以画布中心统一放大 6%，提升主屏幕与设置 App 列表中的小尺寸存在感；橙色识别星光、缩小后的绿色确认标记和既有信息层级继续保留。仓库新增可编辑 SVG、无透明 1024×1024 生产母版，并让现有 iOS 图标生成器确定性导出 Light / Dark / Tinted 三个槽位。本轮只替换主 iOS AppIcon，不修改 Watch、tvOS、visionOS 图标，不修改 App UI、版本号、build number、签名、ASC 在线状态或发布资源。完整离线回归、真机签名构建与覆盖安装通过；iPhone 15 Pro 的真实主屏幕、设置 App 列表小图标和 App 启动均完成目检。
 

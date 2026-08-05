@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-04（ITER-462 Locked A 正式 App Icon）
+更新日期：2026-08-05（ITER-463 Locked A 语义强化与主体对齐）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-463 Locked A 语义强化与主体对齐
+- 日期：2026-08-05
+- 所属版本：v1.8.0 / ASC 1.7.0
+- 所属阶段：Production Asset / Device Validation
+- 类型：视觉资源 / 构建 / 真机验收
+- 目标：在不再发散概念方向的前提下，增强 AutoLedger 的记账主元素，并修复与 AutoNotice、AutoThings 并排时主体偏小、主卡偏窄且底部留边显得更宽的问题。
+- 改动范围：主 iOS `AppIcon.appiconset` 的 Light / Dark / Tinted 槽位、仓库内可编辑 SVG 与 1024×1024 生产母版、CHANGELOG 与本日志。
+- 未改动范围：不修改 Watch、tvOS、visionOS 图标，不修改 App 内 UI、业务逻辑、SQLite / CloudKit / D1 schema、Worker、StoreKit、仓库版本号、正式 build number、Bundle ID、签名、entitlement、ASC 在线状态、构建标签或产品标签；不纳入现有未跟踪的 Playwright、营销与视频目录。
+- 完成内容：前景从上一版 Locked A 的 `1.06×` 统一扩大到 `1.18×` 并下移，聚焦账单卡片、识别星光、整理后的账目行和确认状态；AutoLedger 主卡源高度从 688 缩短到 640，与 AutoNotice 主卡同高。真机首轮覆盖安装因同 bundle / 同 build 的 SpringBoard 缓存仍显示旧 `1.06×` 图标；使用全新 DerivedData 和仅限命令行的较高本地 build number 后确认新母版已刷新。随后按主屏幕反馈把 AutoLedger 完整前景再下移 26px，使主卡渲染边界约为 `y=162.08...917.28`，与 AutoNotice 的 `y=162.04...917.24` 对齐；再将主卡从 `x=204 / width=616` 居中扩展为 `x=181 / width=662`，其 `1.18×` 渲染宽度为 `781.16px`，与 AutoThings 前卡一致。内部语义元素、卡片高度、圆形和 `1.18×` 尺度均不变。
+- 未完成内容：本轮没有替换其它平台图标，没有创建 Xcode Cloud / TestFlight / ASC 构建，没有推送提交或触发发布；本地 Debug 缓存刷新使用的 `2026080501` / `2026080502` / `2026080503` 仅为命令行覆盖值，不进入工程或正式版本历史。
+- 测试情况：20 / 29 / 40 / 60px 真实像素预览与 Asset Catalog 尺寸、RGB / 无透明检查通过；正式 AutoLedger 1024 母版与批准预览逐像素差异为 0，Light 槽位与母版逐像素差异为 0；三枚图标生成器复跑哈希稳定；`bash scripts/run_offline_regression.sh` 完整 PASS；Xcode 27 使用全新 DerivedData 对物理 `Rio's iPhone 15 Pro` 完成签名 Debug build，最终包 `CFBundleVersion=2026080503`（仅命令行覆盖）并 `BUILD SUCCEEDED`；覆盖安装后以 `devicectl` 从物理 iPhone 直接抓取最终主屏幕截图，AutoLedger 主卡底部暖色留边已与 AutoThings 基本一致，宽度明显更接近 AutoThings，且不再相对 AutoNotice 缩小一档。
+- 风险与注意事项：iOS 对同 bundle / 同 build 的覆盖安装可能保留 SpringBoard 图标缓存，视觉验收必须区分仓库母版、编译包和设备当前显示；本地开发签名与命令行 build number 只用于验证，不等同于 App Store 构建、TestFlight processing 或 ASC 发布完成。Light 与 Dark 当前有意保持同一暖色构图，Tinted 为确定性灰度适配。
+- 回滚方式：恢复上一版 Locked A 的 SVG、1024 母版和主 iOS 三个 AppIcon PNG，并移除本条文档；不涉及数据迁移、用户数据或线上服务回滚。
+- 结论：AutoLedger 语义强化版已完成生产资源绑定、主卡宽高与垂直边界对齐、干净真机签名构建、缓存刷新和物理主屏幕验证，可与同轮 AutoNotice / AutoThings 作为三枚独立提交进入下一版。
+- 下一步建议：提交本轮三个 repo 的独立 icon 变更后停止；是否推送、移动 Xcode Cloud 构建标签、生成 TestFlight 或绑定 ASC 必须另行授权。
 
 ### ITER-462 Locked A 正式 App Icon
 - 日期：2026-08-04
