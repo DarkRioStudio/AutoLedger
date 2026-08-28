@@ -50,15 +50,15 @@
 - 所属阶段：Repository Consolidation
 - 类型：仓库治理 / 历史事实回收 / 依赖更新 / 测试 / 构建
 - 目标：以最新 `origin/main` 为真源，审计全部分支、stash 和 worktree；在不覆盖当前主线后续改动的前提下，只把仍有价值且可证明未进入 `main` 的修改收敛为一个可推送、可构建的候选，并准备移动唯一可变构建标签 `xcbuild-v1.8.0`。
-- 改动范围：中文 README 的 GitHub Actions 链接、feedback 工具示例与测试、Common API README、AutoNotice D1 seed、Worker 合同 fixture / 断言；Dependabot PR #42 中两套 Worker 的 package manifest / lockfile；CHANGELOG 与本日志。
+- 改动范围：中文 README 的 GitHub Actions 链接、feedback 工具示例与测试、Common API README、AutoNotice D1 seed、Worker 合同 fixture / 断言；Dependabot PR #42 及其直接 successor PR #43 中两套 Worker 的 package manifest / lockfile；CHANGELOG 与本日志。
 - 未改动范围：不直接 `stash pop`；不回退当前 README、CHANGELOG 或迭代时间线；不写 staging / production D1，不部署 Worker，不修改 AutoLedger App / Core、SQLite / CloudKit / D1 schema、StoreKit、签名、entitlement、ASC 在线状态、版本号或构建号；不创建 / 移动不可变产品标签 `v1.8.0`，不移动 `v1.7.0` 或 `xcbuild-v1.7.0`；不纳入未跟踪的 Playwright、营销和视频目录。
-- 完成内容：仓库示例身份统一为 `DarkRioStudio/AutoLedger`；AutoNotice seed 恢复 `0.1.0 / 0.2.0 / 0.3.0` 中英文记录和 `2026.07.21.1` 资源版本，合同测试同步覆盖 0.3 返回值与 manifest 版本列表；原 stash 中已被后续主线覆盖的内容没有重复重放。Dependabot PR #42 已以 merge commit 收敛，Common API Wrangler 更新到 `4.118.0`，Hotel Folio Inbox 的 Wrangler 更新到 `4.118.0`、`@cloudflare/vitest-pool-workers` 更新到 `0.20.1`。全部其它分支、stash 和缺失 worktree 记录均已按 commit ancestry、patch equivalence 与内容差异分类。
-- 未完成内容：本条记录提交后的远端 `main` 推送、PR #42 状态回读、GitHub CI 和 `xcbuild-v1.8.0` 远端标签移动必须独立核验；标签触发不等于 Xcode Cloud Archive、TestFlight processing、ASC 绑定或真机验收完成。
+- 完成内容：仓库示例身份统一为 `DarkRioStudio/AutoLedger`；AutoNotice seed 恢复 `0.1.0 / 0.2.0 / 0.3.0` 中英文记录和 `2026.07.21.1` 资源版本，合同测试同步覆盖 0.3 返回值与 manifest 版本列表；原 stash 中已被后续主线覆盖的内容没有重复重放。Dependabot PR #42 及首次推送后自动生成的直接 successor PR #43 均已完成本地收敛：Common API Wrangler 更新到 `4.127.0`，Hotel Folio Inbox 的 Wrangler 更新到 `4.120.0`、`@cloudflare/vitest-pool-workers` 更新到 `0.20.3`，两套锁文件同步取得 `postcss 8.5.26` 与 `undici 7.29.0`。全部其它分支、stash 和缺失 worktree 记录均已按 commit ancestry、patch equivalence 与内容差异分类。
+- 未完成内容：本条记录所在最终提交的远端 `main` 推送、PR #42 / #43 状态回读、GitHub CI 和 `xcbuild-v1.8.0` 远端标签移动必须独立核验；标签触发不等于 Xcode Cloud Archive、TestFlight processing、ASC 绑定或真机验收完成。
 - 测试情况：`git diff --check` PASS；`python3 tools/feedback/test_email_to_issue.py` PASS；Common API 的 Wrangler types、TypeScript 与 51 / 51 Vitest 合同测试 PASS；Hotel Folio Inbox 的 Wrangler types、TypeScript 与 31 / 31 Vitest 合同测试 PASS；`bash scripts/run_offline_regression.sh` 完整 PASS；Xcode 27 使用全新 DerivedData 对 `.xcworkspace` 执行 generic iOS `CODE_SIGNING_ALLOWED=NO` 构建并 `BUILD SUCCEEDED`。首次反馈脚本调用因工作目录错误未找到文件，改从仓库根目录重跑后通过，产品代码无失败。
-- 风险与注意事项：seed 用于复现 2026-07-21 已落地的 D1 内容，不表示 AutoNotice `0.3.0` 在 2026-08-28 仍是最新公开版本；`codex/v1.3.0-backup-restore` 属于 564 个提交落后、127 个提交领先的歧义旧历史，必须保留，不能机械合并或删除；三处未跟踪目录保持原样。升级后的 `npm ci` 审计仍报告 Common API 5 项、Hotel Folio Inbox 6 项中高风险依赖告警，本轮不运行会重写依赖树的 `npm audit fix`。
-- 回滚方式：回退本次恢复提交与 PR #42 merge commit；线上 D1 与 Worker 未发生变化，不需要生产回滚。构建触发标签为可移动指针，可在有明确候选时按发布流程重新指向，不影响不可变产品标签。
-- 结论：唯一确认未进入主线的 stash 业务事实与唯一开放的可干净合入依赖 PR 已收敛，完整本地门禁通过；候选具备推送 `main` 并移动 `xcbuild-v1.8.0` 的条件。
-- 下一步建议：推送本条记录所在的最终 `main`，核对 PR #42 与远端 commit，再移动 `xcbuild-v1.8.0` 并分别等待 GitHub CI、回读 Apple 构建状态；只清理已经证明可恢复或已进入主线的本地引用。
+- 风险与注意事项：seed 用于复现 2026-07-21 已落地的 D1 内容，不表示 AutoNotice `0.3.0` 在 2026-08-28 仍是最新公开版本；`codex/v1.3.0-backup-restore` 属于 564 个提交落后、127 个提交领先的歧义旧历史，必须保留，不能机械合并或删除；三处未跟踪目录保持原样。PR #43 是 PR #42 合入后由 Dependabot 自动生成的直接 successor，两套更新后锁文件经 `npm ci` 审计均为 0；未来自动生成的新依赖 PR 仍应作为新任务独立审查，不能无限延长本次收敛边界。
+- 回滚方式：回退本次恢复提交与 PR #42 / #43 merge commit；线上 D1 与 Worker 未发生变化，不需要生产回滚。构建触发标签为可移动指针，可在有明确候选时按发布流程重新指向，不影响不可变产品标签。
+- 结论：唯一确认未进入主线的 stash 业务事实、初始开放依赖 PR 及其直接 successor 已收敛，完整本地门禁通过；候选具备推送 `main` 并移动 `xcbuild-v1.8.0` 的条件。
+- 下一步建议：推送本条记录所在的最终 `main`，核对 PR #42 / #43 与远端 commit，再移动 `xcbuild-v1.8.0` 并分别等待 GitHub CI、回读 Apple 构建状态；只清理已经证明可恢复或已进入主线的本地引用。
 
 ### ITER-464 DeepSeek V4 Flash low 思考强度测速切片
 - 日期：2026-08-05
