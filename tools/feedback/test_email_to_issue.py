@@ -60,10 +60,10 @@ print("✅ extract_bundle (valid zip) OK")
 
 # 7. GitHub notification filter
 _orig_repo = _m.GITHUB_REPOSITORY
-_m.GITHUB_REPOSITORY = "darkrio326/AutoLedgerRio"
-assert is_github_notification("[darkrio326/AutoLedgerRio] PR opened by copilot"), \
+_m.GITHUB_REPOSITORY = "DarkRioStudio/AutoLedger"
+assert is_github_notification("[DarkRioStudio/AutoLedger] PR opened by copilot"), \
     "Should detect GitHub notification label"
-assert is_github_notification("[darkrio326/AutoLedgerRio] Some issue title"), \
+assert is_github_notification("[DarkRioStudio/AutoLedger] Some issue title"), \
     "Should detect GitHub notification label (issue)"
 assert not is_github_notification("[AutoLedger][L2][iOS][1.1.0(10)][ocr_parse_wrong] 金额识别错误"), \
     "Should not flag a legitimate feedback email"

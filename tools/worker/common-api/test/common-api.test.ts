@@ -84,11 +84,11 @@ const releaseNotesFixtures: ReleaseNoteFixture[] = [
     app_version: "0.1.0",
     locale: "zh-Hans",
     schema_version: 1,
-    resource_version: "2026.07.06.3",
+    resource_version: "2026.07.21.1",
     current_title: "当前版本",
-    current_body: "0.1.0 是 AutoNotice 的第一个 App Store 发布版本，打通了天气提醒闭环。",
+    current_body: "0.1 是 AutoNotice 的内部 Notice Engine 验证版本，未公开发布。",
     upcoming_title: "后续计划",
-    upcoming_body: "0.2.0 会继续完善天气提醒，扩展为五个天气提醒开关。",
+    upcoming_body: "0.2 已作为 AutoNotice 的首个公开版本在 App Store 上架。",
     status: "published"
   },
   {
@@ -96,11 +96,11 @@ const releaseNotesFixtures: ReleaseNoteFixture[] = [
     app_version: "0.2.0",
     locale: "zh-Hans",
     schema_version: 1,
-    resource_version: "2026.07.06.3",
+    resource_version: "2026.07.21.1",
     current_title: "当前版本",
-    current_body: "0.2.0 是 AutoNotice 的内部开发线，正在升级 WeatherSnapshot 和多天气规则条件判断。",
+    current_body: "0.2 是 AutoNotice 的首个公开版本，已在 App Store 上架。",
     upcoming_title: "后续计划",
-    upcoming_body: "下一步会落地降雨、降温、升温、大风和天气预警五个开关。",
+    upcoming_body: "0.3 聚焦全球英语市场基础、Webhook 独立入口与引导，以及 APNs 恢复与弱网可靠性。",
     status: "published"
   },
   {
@@ -108,11 +108,35 @@ const releaseNotesFixtures: ReleaseNoteFixture[] = [
     app_version: "0.2.0",
     locale: "en",
     schema_version: 1,
-    resource_version: "2026.07.06.3",
+    resource_version: "2026.07.21.1",
     current_title: "Current Version",
-    current_body: "0.2.0 is the internal AutoNotice development line.",
+    current_body: "0.2 is the first public AutoNotice release on the App Store.",
     upcoming_title: "Coming Next",
-    upcoming_body: "Next we will implement five Weather Notice switches.",
+    upcoming_body: "0.3 focuses on the global English-market foundation and notification reliability.",
+    status: "published"
+  },
+  {
+    app_id: "autonotice",
+    app_version: "0.3.0",
+    locale: "zh-Hans",
+    schema_version: 1,
+    resource_version: "2026.07.21.1",
+    current_title: "当前版本",
+    current_body: "0.3 是当前开发版本：Webhook 已升级为可发现的独立入口，并补充 APNs 恢复与有界网络重试。",
+    upcoming_title: "后续计划",
+    upcoming_body: "接下来完成真实弱网、production APNs、真实 Webhook、五个英语市场材料和真机验收。",
+    status: "published"
+  },
+  {
+    app_id: "autonotice",
+    app_version: "0.3.0",
+    locale: "en",
+    schema_version: 1,
+    resource_version: "2026.07.21.1",
+    current_title: "Current Version",
+    current_body: "0.3 is the current development release with a dedicated Webhook entry and stronger notification reliability.",
+    upcoming_title: "Coming Next",
+    upcoming_body: "Next we will validate real weak networks, production APNs, live Webhook delivery, five English-market storefronts, and real devices.",
     status: "published"
   }
 ];
@@ -796,9 +820,9 @@ describe("common api worker contract", () => {
     expect(releaseNotesCapability.supportedApps).toContain("autonotice");
     expect(releaseNotesCapability.supportedVersions).toMatchObject({
       autoledger: ["1.5.0", "1.6.0"],
-      autonotice: ["0.1.0", "0.2.0"]
+      autonotice: ["0.1.0", "0.2.0", "0.3.0"]
     });
-    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.06.3");
+    expect(releaseNotesCapability.resourceVersion).toBe("2026.07.21.1");
     expect(weatherForecastCapability.status).toBe("configuration_required");
     expect(weatherForecastCapability.currentEndpoint).toBe("https://api.darkrio326.top/v1/weather/current");
     expect(hotelWeatherCapability.status).toBe("configuration_required");
@@ -1017,8 +1041,8 @@ describe("common api worker contract", () => {
     expect(upcoming.body).toContain("订阅异常提醒");
   });
 
-  it("serves AutoNotice release notes from the same Common API endpoint", async () => {
-    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autonotice&version=0.2.0&locale=zh-Hans"), env);
+  it("serves the AutoNotice 0.3.0 release notes from the same Common API endpoint", async () => {
+    const response = await routeFetch(new Request("https://example.test/v1/release-notes?app=autonotice&version=0.3.0&locale=zh-Hans"), env);
     const body = await jsonBody(response);
     const current = body.current as Record<string, unknown>;
     const upcoming = body.upcoming as Record<string, unknown>;
@@ -1027,12 +1051,12 @@ describe("common api worker contract", () => {
     expect(body).toMatchObject({
       schemaVersion: 1,
       app: "autonotice",
-      version: "0.2.0",
+      version: "0.3.0",
       locale: "zh-Hans",
-      availableVersions: ["0.1.0", "0.2.0"]
+      availableVersions: ["0.1.0", "0.2.0", "0.3.0"]
     });
-    expect(current.body).toContain("WeatherSnapshot");
-    expect(upcoming.body).toContain("五个开关");
+    expect(current.body).toContain("Webhook");
+    expect(upcoming.body).toContain("production APNs");
   });
 
   it("falls back locale aliases for release notes without changing the requested app version", async () => {

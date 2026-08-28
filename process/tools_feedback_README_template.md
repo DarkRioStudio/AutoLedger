@@ -172,7 +172,7 @@ export GMAIL_USERNAME="user@example.com"
 export GMAIL_APP_PASSWORD="your-app-password"
 export FEEDBACK_SUBJECT_PREFIX="[AutoLedger]"
 export GITHUB_TOKEN="YOUR_GITHUB_TOKEN"
-export GITHUB_REPOSITORY="darkrio326/AutoLedger"
+export GITHUB_REPOSITORY="DarkRioStudio/AutoLedger"
 
 python tools/feedback/email_to_issue.py
 ```

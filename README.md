@@ -20,8 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/xcode-build.yml/badge.svg" alt="Xcode Build" /></a>
-  <a href="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml"><img src="https://github.com/darkrio326/AutoLedger/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
+  <a href="https://github.com/DarkRioStudio/AutoLedger/actions/workflows/xcode-build.yml"><img src="https://github.com/DarkRioStudio/AutoLedger/actions/workflows/xcode-build.yml/badge.svg" alt="Xcode Build" /></a>
+  <a href="https://github.com/DarkRioStudio/AutoLedger/actions/workflows/tests.yml"><img src="https://github.com/DarkRioStudio/AutoLedger/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
   <a href="https://apps.apple.com/app/id6761892533"><img src="https://img.shields.io/badge/App_Store-下载-0D96F6?logo=appstore&logoColor=white" alt="App Store 下载" /></a>
   <a href="https://getautoledger.app/"><img src="https://img.shields.io/badge/官网-getautoledger.app-orange?logo=safari&logoColor=white" alt="官网" /></a>
   <img src="https://img.shields.io/badge/platform-iOS_17+-blue?logo=apple" alt="Platform" />

@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-08-05（ITER-464 DeepSeek V4 Flash low 思考强度测速切片）
+更新日期：2026-08-28（ITER-465 仓库迁移与 Common API stash 事实回收）
 
 ## 记录规则
 
@@ -43,6 +43,22 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-465 仓库迁移与 Common API stash 事实回收
+- 日期：2026-08-28
+- 所属版本：v1.8.0 / 共享 Common API
+- 所属阶段：Repository Consolidation
+- 类型：仓库治理 / 历史事实回收 / 测试
+- 目标：在不覆盖当前主线后续改动的前提下，把 2026-07-26 stash 中仍有价值且未进入 `main` 的仓库身份与 AutoNotice release-notes 修改恢复为可审计源码。
+- 改动范围：中文 README 的 GitHub Actions 链接、feedback 工具示例与测试、Common API README、AutoNotice D1 seed、Worker 合同 fixture / 断言、CHANGELOG 与本日志。
+- 未改动范围：不直接 `stash pop`；不回退当前 README、CHANGELOG 或迭代时间线；不写 staging / production D1，不部署 Worker，不修改 AutoLedger App / Core、SQLite / CloudKit / D1 schema、StoreKit、签名、entitlement、ASC 在线状态、版本号、构建号或标签；不纳入未跟踪的 Playwright、营销和视频目录。
+- 完成内容：仓库示例身份统一为 `DarkRioStudio/AutoLedger`；AutoNotice seed 恢复 `0.1.0 / 0.2.0 / 0.3.0` 中英文记录和 `2026.07.21.1` 资源版本，合同测试同步覆盖 0.3 返回值与 manifest 版本列表。原 stash 中已经被后续主线覆盖的其它内容没有重复重放。
+- 未完成内容：开放 Dependabot PR、分支 / worktree / stash 清理、完整离线回归、iOS workspace 构建、`main` 推送与 `xcbuild-v1.8.0` 移动将在同一仓库收敛任务的后续步骤独立留证。
+- 测试情况：`git diff --check` PASS；`python3 tools/feedback/test_email_to_issue.py` PASS；`tools/worker/common-api` 的 Wrangler types、TypeScript 与 51 / 51 Vitest 合同测试 PASS。首次反馈脚本调用因工作目录错误未找到文件，改从仓库根目录重跑后通过，产品代码无失败。
+- 风险与注意事项：seed 用于复现 2026-07-21 已落地的 D1 内容，不表示 AutoNotice `0.3.0` 在 2026-08-28 仍是最新公开版本；本轮没有以历史 stash 覆盖当前主线文档。
+- 回滚方式：回退本条恢复提交即可；线上 D1 与 Worker 未发生变化，不需要生产回滚。
+- 结论：唯一确认未进入主线的 stash 业务事实已按当前文件结构恢复并通过针对性测试，可继续处理开放依赖 PR 和仓库引用清理。
+- 下一步建议：合入并重新验证 Dependabot PR，完成全量门禁后再推送 `main` 和移动唯一可变构建标签。
 
 ### ITER-464 DeepSeek V4 Flash low 思考强度测速切片
 - 日期：2026-08-05

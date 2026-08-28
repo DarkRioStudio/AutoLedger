@@ -10,7 +10,7 @@ Environment variables (required):
     GMAIL_USERNAME          Gmail address
     GMAIL_APP_PASSWORD      Gmail App Password (16 chars, spaces okay)
     GH_PAT_TOKEN            GitHub PAT with Issues:write scope
-    GITHUB_REPOSITORY       owner/repo  (e.g. darkrio326/AutoLedgerRio)
+    GITHUB_REPOSITORY       owner/repo  (e.g. DarkRioStudio/AutoLedger)
 
 Environment variables (optional):
     FEEDBACK_SUBJECT_PREFIX  Default: [AutoLedger]
@@ -77,7 +77,7 @@ def is_github_notification(subject: str) -> bool:
     """Return True if the subject is a GitHub repository notification email.
 
     GitHub (and Copilot) notification emails carry a ``[owner/repo]`` label at
-    the start of the subject, e.g. ``[darkrio326/AutoLedgerRio] PR opened``.
+    the start of the subject, e.g. ``[DarkRioStudio/AutoLedger] PR opened``.
     These must be skipped so the bot does not create garbage issues from them.
     """
     if not GITHUB_REPOSITORY:
