@@ -9,8 +9,8 @@
 
 ## [Unreleased]
 
-### 变更（仓库收敛 / Common API 事实回收）
-- [2026-08-28] 从 2026-07-26 的受保护 stash 中恢复此前已完成但未进入 Git 主线的仓库迁移与 Common API 事实：README / feedback 工具示例改用当前 `DarkRioStudio/AutoLedger` 身份；AutoNotice release-notes seed 补回 `0.3.0` 中英文记录，并校正 `0.1` 内部验证、`0.2` 首个公开版本的历史口径及资源版本 `2026.07.21.1`。本次只恢复 repo 内可复现源文件和合同测试，不重新写入 D1、不部署 Worker，也不修改 AutoLedger App、用户数据、构建版本或发布标签。
+### 变更（仓库分支 / stash 收敛与构建触发准备）
+- [2026-08-28] 完成 `main` 交付前的全仓库引用收敛：从 2026-07-26 的受保护 stash 中恢复此前已完成但未进入 Git 主线的仓库迁移与 Common API 事实，README / feedback 工具示例改用当前 `DarkRioStudio/AutoLedger` 身份；AutoNotice release-notes seed 补回 `0.3.0` 中英文记录，并校正 `0.1` 内部验证、`0.2` 首个公开版本的历史口径及资源版本 `2026.07.21.1`。同时合入 Dependabot PR #42，将两套 Worker 的 Wrangler 更新到 `4.118.0`，并将 Hotel Folio Inbox 的 `@cloudflare/vitest-pool-workers` 更新到 `0.20.1`。Common API 51 项、Hotel Folio Inbox 31 项合同测试、完整离线回归和 generic iOS workspace 构建通过。歧义旧分支、未跟踪的 Playwright / 营销 / 视频目录以及不可移动产品标签均保持不动；本任务只允许在远端 `main` 核验后移动唯一可变构建触发标签 `xcbuild-v1.8.0`，不创建 `v1.8.0` 产品标签，不写 D1、不部署 Worker，也不修改 AutoLedger App、用户数据、构建版本或 Apple 发布状态。
 
 ### 变更（v1.8.0 / DeepSeek V4 Flash low 思考强度测速）
 - [2026-08-05] 针对快捷指令截图记账偶发超时，先建立单变量性能实测切片：外部收据辅助仅在 provider 为 DeepSeek 且模型精确为 `deepseek-v4-flash` 时，在请求体显式发送 `reasoning_effort: "low"`。DeepSeek V4 Pro、Qwen、OpenAI、自定义 provider 和酒店水单解析均不继承该参数；短期缓存键前移一次，避免同一截图复用最长 24 小时内由旧 high 请求产生的结果而污染测速，TTL 与缓存策略不变。本轮不关闭思考模式，也不修改网络超时、规则优先、token 上限、endpoint、模型名或 API key。完整离线回归和全新 DerivedData 的 generic iOS workspace 构建通过，真实 API 与 TestFlight 快捷指令速度仍需在新构建中对照验收。
