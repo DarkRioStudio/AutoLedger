@@ -1671,3 +1671,6 @@
 "month_close.exported" = "월별 패키지가 생성되었습니다. 클라우드 백업은 아닙니다.";
 "month_close.confirm_format" = "알림이 %d개 남아 있습니다. 누락된 증빙과 불완전한 기록을 확인하세요. 완료 후에도 편집하거나 다시 열 수 있습니다.";
 "cleaning.cloud.cooldown" = "클라우드 재요청 대기 중입니다. 로컬 제안은 계속 사용할 수 있습니다.";
+"cleaning.rule.source" = "제안 출처";
+"cleaning.rule.local" = "로컬 규칙";
+"cleaning.rule.last_applied" = "최근 적용";

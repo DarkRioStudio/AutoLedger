@@ -1671,3 +1671,6 @@
 "month_close.exported" = "已生成月结包，导出文件不等于云备份。";
 "month_close.confirm_format" = "仍有 %d 项提醒。请确认已检查缺失凭证及不完整记录；完成后仍可编辑或重新打开本月。";
 "cleaning.cloud.cooldown" = "云端建议暂缓请求，本地建议仍可使用。";
+"cleaning.rule.source" = "建议来源";
+"cleaning.rule.local" = "本地规则";
+"cleaning.rule.last_applied" = "最近应用";

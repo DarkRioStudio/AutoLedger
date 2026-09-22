@@ -1671,3 +1671,6 @@
 "month_close.exported" = "月次パッケージを生成済みです。クラウドバックアップではありません。";
 "month_close.confirm_format" = "未処理の通知が %d 件あります。証憑の不足や不完全な記録を確認してください。完了後も編集や再開ができます。";
 "cleaning.cloud.cooldown" = "クラウドへの再リクエストを待機中です。ローカルの提案は利用できます。";
+"cleaning.rule.source" = "提案の提供元";
+"cleaning.rule.local" = "ローカルルール";
+"cleaning.rule.last_applied" = "最終適用";

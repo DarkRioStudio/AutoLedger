@@ -1674,3 +1674,6 @@
 "month_close.exported" = "已產生月結包，匯出檔案不等於雲端備份。";
 "month_close.confirm_format" = "仍有 %d 項提醒。請確認已檢查缺失憑證及不完整記錄；完成後仍可編輯或重新開啟本月。";
 "cleaning.cloud.cooldown" = "雲端建議暫緩請求，本機建議仍可使用。";
+"cleaning.rule.source" = "建議來源";
+"cleaning.rule.local" = "本機規則";
+"cleaning.rule.last_applied" = "最近套用";

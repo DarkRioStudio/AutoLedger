@@ -1671,3 +1671,6 @@
 "month_close.exported" = "Monthly package generated; files are not a cloud backup.";
 "month_close.confirm_format" = "%d reminders remain. Confirm that you have checked missing receipts and incomplete records. You can still edit or reopen this month.";
 "cleaning.cloud.cooldown" = "Cloud suggestions are cooling down. Local suggestions remain available.";
+"cleaning.rule.source" = "Suggestion source";
+"cleaning.rule.local" = "Local rules";
+"cleaning.rule.last_applied" = "Last applied";
