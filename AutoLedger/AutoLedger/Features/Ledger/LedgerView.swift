@@ -53,31 +53,24 @@ struct LedgerView: View {
         self.onOpenLedgerSettings = onOpenLedgerSettings
     }
 
-    private var filteredTransactions: [Transaction] {
+    private var filterPeriod: DateInterval? {
         let cal = Calendar.current
         switch filter {
         case .all:
-            return store.visibleTransactions
+            return nil
         case .month:
-            return store.visibleTransactions.filter {
-                cal.isDate($0.occurredAt, equalTo: filterDate, toGranularity: .month)
-            }
+            return cal.dateInterval(of: .month, for: filterDate)
         case .year:
-            return store.visibleTransactions.filter {
-                cal.isDate($0.occurredAt, equalTo: filterDate, toGranularity: .year)
-            }
+            return cal.dateInterval(of: .year, for: filterDate)
         }
     }
 
     private var searchFilteredTransactions: [Transaction] {
-        let query = effectiveAdvancedSearchQuery
+        var query = effectiveAdvancedSearchQuery
         if query.hasAdvancedFilters && !proEntitlement.canUse(.advancedSearch) {
-            return LedgerAdvancedSearchService().search(
-                transactions: filteredTransactions,
-                query: LedgerAdvancedSearchQuery(keyword: query.keyword)
-            )
+            query = LedgerAdvancedSearchQuery(keyword: query.keyword)
         }
-        return LedgerAdvancedSearchService().search(transactions: filteredTransactions, query: query)
+        return store.ledgerListTransactions(query: query, period: filterPeriod)
     }
 
     private var effectiveAdvancedSearchQuery: LedgerAdvancedSearchQuery {
@@ -243,12 +236,14 @@ struct LedgerView: View {
                             .listRowBackground(AppTheme.card)
                     } else {
                         ForEach(results) { transaction in
+                            let amount = AppFormatters.currency(transaction.amount, code: store.transactionCurrencyCode(for: transaction))
+                            let date = AppFormatters.shortDateTime(transaction.occurredAt)
                             NavigationLink(value: transaction.id) {
-                                transactionRow(transaction)
+                                transactionRow(transaction, amount: amount, date: date)
                             }
                                 .id(transaction.id)
                                 .tag(transaction.id)
-                                .accessibilityLabel("\(transaction.merchant)，\(AppFormatters.currency(transaction.amount, code: store.transactionCurrencyCode(for: transaction)))，\(transaction.categoryTitle)，\(AppFormatters.shortDateTime(transaction.occurredAt))")
+                                .accessibilityLabel("\(transaction.merchant)，\(amount)，\(transaction.categoryTitle)，\(date)")
                                 .accessibilityHint(Text("ledger.transaction.edit_hint"))
                                 .padding(.vertical, 6)
                                 .autoLedgerSelectableRowBackground(
@@ -493,7 +488,7 @@ struct LedgerView: View {
         }
     }
 
-    private func transactionRow(_ transaction: Transaction) -> some View {
+    private func transactionRow(_ transaction: Transaction, amount: String, date: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: transaction.categoryEnum.iconName)
                 .font(.subheadline.weight(.semibold))
@@ -516,12 +511,7 @@ struct LedgerView: View {
 
                     Spacer(minLength: 8)
 
-                    Text(
-                        AppFormatters.currency(
-                            transaction.amount,
-                            code: store.transactionCurrencyCode(for: transaction)
-                        )
-                    )
+                    Text(amount)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
@@ -541,7 +531,7 @@ struct LedgerView: View {
 
                     Spacer(minLength: 8)
 
-                    Text(AppFormatters.shortDateTime(transaction.occurredAt))
+                    Text(date)
                         .multilineTextAlignment(.trailing)
                         .lineLimit(1)
                         .frame(minWidth: 58, alignment: .trailing)

@@ -40,6 +40,15 @@ private struct FailingTransactionStore: TransactionStore {
     func bootstrapIfNeeded(with transactions: [Transaction]) throws -> [Transaction] { throw RegressionStoreFailure() }
 }
 
+private struct PerformanceReadOnlyStore: TransactionStore {
+    let transactions: [Transaction]
+    func loadTransactions() throws -> [Transaction] { transactions }
+    func save(transaction: Transaction) throws { throw RegressionStoreFailure() }
+    func update(transaction: Transaction) throws { throw RegressionStoreFailure() }
+    func delete(transactionID: UUID) throws { throw RegressionStoreFailure() }
+    func bootstrapIfNeeded(with transactions: [Transaction]) throws -> [Transaction] { self.transactions }
+}
+
 @main
 struct OfflineRegression {
     static func main() async throws {
@@ -102,6 +111,8 @@ struct OfflineRegression {
         try verifyLedgerDefaultAssignment(reporter: reporter)
         try verifyLedgerProfileManagement(reporter: reporter)
         try verifyLedgerSelectionAndTransactionMoves(reporter: reporter)
+        try verifyLedgerListCache(reporter: reporter)
+        verifyLedgerListPerformance(reporter: reporter)
         try verifyLedgerScopedSurfaces(reporter: reporter)
         verifyLedgerUserSyncStatus(reporter: reporter)
         verifySyncConflictResolver(reporter: reporter)
@@ -3762,6 +3773,66 @@ struct OfflineRegression {
                 ledgerStore.defaultWriteLedgerID == TodaySpendingSummary.defaultLedgerID,
                 "LedgerStore restores local ledger when archiving default write ledger"
             )
+        }
+    }
+
+    private static func verifyLedgerListPerformance(reporter: RegressionReporter) {
+        for count in [500, 5_000, 20_000] {
+            let referenceDate = Date(timeIntervalSince1970: 1_780_600_000)
+            let transactions = (0..<count).map { index in
+                Transaction(merchant: index.isMultiple(of: 2) ? "Coffee" : "Hotel",
+                            amount: Double(index), occurredAt: referenceDate.addingTimeInterval(Double(-index)),
+                            category: .dining, source: .manual, note: "Synthetic performance fixture",
+                            ledgerID: TodaySpendingSummary.defaultLedgerID, ledgerCurrencyCode: "USD")
+            }
+            let store = LedgerStore(transactionStore: PerformanceReadOnlyStore(transactions: transactions), loadsPersistedConfiguration: false)
+            let query = LedgerAdvancedSearchQuery(keyword: "Coffee", sort: .amountAscending)
+            let started = Date()
+            let cold = store.ledgerListTransactions(query: query, period: nil)
+            let coldMS = Date().timeIntervalSince(started) * 1000
+            let repeated = Date()
+            var total = 0
+            for _ in 0..<1000 {
+                total += store.ledgerListTransactions(query: query, period: nil).count
+            }
+            let warmMS = Date().timeIntervalSince(repeated) * 1000 / 1000
+            reporter.check(cold.count == count / 2 && total == count / 2 * 1000, "\(count)-row cached selection preserves matches")
+            reporter.check(cold.map(\.id) == LedgerAdvancedSearchService().search(transactions: store.visibleTransactions, query: query).map(\.id), "\(count)-row cache preserves authoritative search order")
+            print(String(format: "PERF list rows=%d cold_ms=%.3f warm_mean_ms=%.6f repeats=1000", count, coldMS, warmMS))
+        }
+    }
+
+    private static func verifyLedgerListCache(reporter: RegressionReporter) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let persistence = try SQLiteTransactionStore(baseDirectoryURL: root, filename: "list-cache.sqlite3")
+        let store = LedgerStore(transactionStore: persistence, loadsPersistedConfiguration: false)
+        let start = Date(timeIntervalSince1970: 1_780_600_000)
+        let period = DateInterval(start: start, duration: 3600)
+        var coffee = Transaction(merchant: "Coffee", amount: 18, occurredAt: start,
+                                 category: .dining, source: .manual, note: "")
+        let boundary = Transaction(merchant: "Coffee", amount: 42, occurredAt: period.end,
+                                   category: .dining, source: .manual, note: "")
+        reporter.check(store.addTransaction(coffee) && store.addTransaction(boundary), "Cache fixture saves")
+        let query = LedgerAdvancedSearchQuery(keyword: "Coffee", minAmount: 10)
+        reporter.check(store.ledgerListTransactions(query: query, period: period).map(\.id) == [coffee.id], "Period includes start and excludes next period boundary")
+        reporter.check(store.ledgerListTransactions(query: query, period: period).map(\.id) == [coffee.id], "Repeated selection read preserves result")
+        reporter.check(store.ledgerListTransactions(query: query, period: nil).count == 2, "Removing period invalidates cache")
+        reporter.check(store.ledgerListTransactions(query: LedgerAdvancedSearchQuery(minAmount: 30), period: nil).map(\.id) == [boundary.id], "Amount query change invalidates cache")
+        _ = store.ledgerListTransactions(query: query, period: period)
+        coffee = Transaction(id: coffee.id, merchant: "Bakery", amount: coffee.amount,
+                             occurredAt: coffee.occurredAt, category: .dining, source: .manual, note: "")
+        reporter.check(store.updateTransaction(coffee), "Same-ID merchant edit succeeds")
+        reporter.check(store.ledgerListTransactions(query: query, period: period).isEmpty, "Same-count edit invalidates cached keyword match")
+        let plain = LedgerAdvancedSearchQuery()
+        reporter.check(store.ledgerListTransactions(query: plain, period: nil).count == 2, "Removing paid filters restores complete result")
+        store.deleteTransaction(boundary)
+        reporter.check(store.ledgerListTransactions(query: plain, period: nil).map(\.id) == [coffee.id], "Delete invalidates cached list")
+        if let travel = store.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY") {
+            store.selectLedgerProfile(travel)
+            reporter.check(store.ledgerListTransactions(query: plain, period: nil).isEmpty, "Ledger selection invalidates cached scope")
+            store.selectAllLedgers()
+            reporter.check(store.ledgerListTransactions(query: plain, period: nil).map(\.id) == [coffee.id], "All-ledger scope invalidates cached result")
         }
     }
 
