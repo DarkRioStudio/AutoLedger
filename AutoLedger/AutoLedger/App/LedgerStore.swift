@@ -112,6 +112,14 @@ private struct VisibleTransactionsCacheKey: Equatable {
     let showsAllLedgers: Bool
 }
 
+private struct LedgerListCacheKey: Equatable {
+    let revision: UInt64
+    let query: LedgerAdvancedSearchQuery
+    let period: DateInterval?
+    let calendar: Calendar
+    let locale: Locale
+}
+
 private struct HotelStayListSnapshotCacheKey: Equatable {
     let revision: UInt64
     let ledgerID: String?
@@ -253,6 +261,7 @@ final class LedgerStore: ObservableObject {
     private var monthlyAnomalyCache: [MonthlyAnomalyCacheKey: [AnomalyAlert]] = [:]
     private var reportMonthOptionsCache: [String: [Date]] = [:]
     private var visibleTransactionsCache: (key: VisibleTransactionsCacheKey, value: [Transaction])?
+    private var ledgerListCache: (key: LedgerListCacheKey, value: [Transaction])?
     private var hotelStayRecordsRevision: UInt64 = 0
     private var hotelStayListSnapshotCache: (key: HotelStayListSnapshotCacheKey, value: HotelStayListSnapshot)?
 
@@ -496,6 +505,27 @@ final class LedgerStore: ObservableObject {
         }
         let value = transactionsForCurrentLedger(transactions)
         visibleTransactionsCache = (key, value)
+        return value
+    }
+
+    /// Navigation selection does not change the source revision. Reuse the last
+    /// result until data, ledger scope, search, period or regional settings change.
+    func ledgerListTransactions(query: LedgerAdvancedSearchQuery, period: DateInterval?) -> [Transaction] {
+        let key = LedgerListCacheKey(
+            revision: visibleTransactionsRevision, query: query, period: period,
+            calendar: .current, locale: .current
+        )
+        if let ledgerListCache, ledgerListCache.key == key {
+            return ledgerListCache.value
+        }
+        let source: [Transaction]
+        if let period {
+            source = visibleTransactions.filter { $0.occurredAt >= period.start && $0.occurredAt < period.end }
+        } else {
+            source = visibleTransactions
+        }
+        let value = LedgerAdvancedSearchService().search(transactions: source, query: query)
+        ledgerListCache = (key, value)
         return value
     }
 

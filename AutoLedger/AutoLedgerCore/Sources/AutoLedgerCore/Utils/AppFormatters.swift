@@ -1,6 +1,70 @@
 import Foundation
 
 public enum AppFormatters: Sendable {
+    private static let displayFormatters = DisplayFormatterCache()
+
+    /// Formatter instances never leave this lock: Core callers can format from
+    /// background import tasks while SwiftUI renders. Keys capture preferences
+    /// rather than retaining autoupdating values inside a dictionary.
+    private final class DisplayFormatterCache: @unchecked Sendable {
+        private struct CurrencyKey: Hashable {
+            let locale: Locale
+            let code: String
+        }
+        private struct DateKey: Hashable {
+            let locale: Locale
+            let calendar: Calendar
+            let template: String
+        }
+        private let lock = NSLock()
+        private var currencies: [CurrencyKey: NumberFormatter] = [:]
+        private var dates: [DateKey: DateFormatter] = [:]
+
+        func currency(_ amount: Double, code: String, locale: Locale) -> String? {
+            let locale = locale == .autoupdatingCurrent ? Locale.current : locale
+            let key = CurrencyKey(locale: locale, code: code)
+            return lock.withLock {
+                let formatter: NumberFormatter
+                if let cached = currencies[key] {
+                    formatter = cached
+                } else {
+                    formatter = NumberFormatter()
+                    formatter.locale = locale
+                    formatter.numberStyle = .currency
+                    formatter.currencyCode = code
+                    formatter.maximumFractionDigits = currencyMinorDigits(code)
+                    formatter.minimumFractionDigits = currencyMinorDigits(code)
+                    if currencies.count >= 64 { currencies.removeAll() }
+                    currencies[key] = formatter
+                }
+                return formatter.string(from: NSNumber(value: amount))
+            }
+        }
+
+        func date(_ date: Date, template: String, locale: Locale) -> String {
+            let locale = locale == .autoupdatingCurrent ? Locale.current : locale
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.locale = .current
+            calendar.timeZone = .current
+            let key = DateKey(locale: locale, calendar: calendar, template: template)
+            return lock.withLock {
+                let formatter: DateFormatter
+                if let cached = dates[key] {
+                    formatter = cached
+                } else {
+                    formatter = DateFormatter()
+                    formatter.locale = locale
+                    formatter.calendar = calendar
+                    formatter.timeZone = calendar.timeZone
+                    formatter.setLocalizedDateFormatFromTemplate(template)
+                    if dates.count >= 64 { dates.removeAll() }
+                    dates[key] = formatter
+                }
+                return formatter.string(from: date)
+            }
+        }
+    }
+
     /// Business date calculations remain Gregorian while following the user's current time zone.
     public static var calendar: Calendar {
         var value = Calendar(identifier: .gregorian)
@@ -31,13 +95,7 @@ public enum AppFormatters: Sendable {
     ) -> String {
         let normalizedCode = resolvedCurrencyCode(code, locale: locale)
         let minorDigits = currencyMinorDigits(normalizedCode)
-        let formatter = NumberFormatter()
-        formatter.locale = locale
-        formatter.numberStyle = .currency
-        formatter.currencyCode = normalizedCode
-        formatter.maximumFractionDigits = minorDigits
-        formatter.minimumFractionDigits = minorDigits
-        return formatter.string(from: NSNumber(value: amount)) ?? fallbackCurrencyString(
+        return displayFormatters.currency(amount, code: normalizedCode, locale: locale) ?? fallbackCurrencyString(
             amount,
             code: normalizedCode,
             minorDigits: minorDigits,
@@ -128,12 +186,7 @@ public enum AppFormatters: Sendable {
     }
 
     private static func localizedDateString(_ date: Date, template: String, locale: Locale) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.calendar = calendar
-        formatter.timeZone = .autoupdatingCurrent
-        formatter.setLocalizedDateFormatFromTemplate(template)
-        return formatter.string(from: date)
+        displayFormatters.date(date, template: template, locale: locale)
     }
 
     private static func fallbackCurrencyString(

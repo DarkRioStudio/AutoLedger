@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（v1.8.0 / 账本交互性能第一批）
+- [2026-09-22] 金额与展示日期格式化器按地区 / 币种 / 模板 / 时区缓存并在锁内使用，账单行与无障碍文案复用显示结果；账本筛选按交易版本和查询条件复用，避免导航选择时重复扫描和排序。编辑、删除、账本切换与日期边界回归通过，保留交易币种和 Pro 行为。完整离线回归 1,158 项、iOS workspace 无签名构建及合成计算基准通过；设备卡顿验收仍开放。新增 v1.8 性能与剩余范围核查，未发布新构建或部署服务。
+
 ### 变更（仓库分支 / stash 收敛与构建触发准备）
 - [2026-08-28] 完成 `main` 交付前的全仓库引用收敛：从 2026-07-26 的受保护 stash 中恢复此前已完成但未进入 Git 主线的仓库迁移与 Common API 事实，README / feedback 工具示例改用当前 `DarkRioStudio/AutoLedger` 身份；AutoNotice release-notes seed 补回 `0.3.0` 中英文记录，并校正 `0.1` 内部验证、`0.2` 首个公开版本的历史口径及资源版本 `2026.07.21.1`。连续合入 Dependabot PR #42 及其在首次推送后自动生成的直接 successor PR #43：Common API Wrangler 更新到 `4.127.0`，Hotel Folio Inbox Wrangler 更新到 `4.120.0`、`@cloudflare/vitest-pool-workers` 更新到 `0.20.3`，两套锁文件同步取得 `postcss 8.5.26` 与 `undici 7.29.0`；两目录 `npm audit` 均为 0。Common API 51 项、Hotel Folio Inbox 31 项合同测试、完整离线回归和 generic iOS workspace 构建通过。歧义旧分支、未跟踪的 Playwright / 营销 / 视频目录以及不可移动产品标签均保持不动；本任务只允许在远端 `main` 核验后移动唯一可变构建触发标签 `xcbuild-v1.8.0`，不创建 `v1.8.0` 产品标签，不写 D1、不部署 Worker，也不修改 AutoLedger App、用户数据、构建版本或 Apple 发布状态。
 
