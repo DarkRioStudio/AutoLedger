@@ -296,18 +296,10 @@
 "hotel_stay.detail.weather.precipitation_format" = "降水 %@";
 "hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.memory.title" = "旅の記憶";
-"hotel_stay.detail.memory.subtitle" = "滞在日、場所、過去の天気から端末内で短いメモを作ります。";
-"hotel_stay.detail.memory.privacy_note" = "この滞在記録と天気概要だけを使います。ホテル名、金額、PDF、認識原文はアップロードしません。";
+"hotel_stay.detail.memory.subtitle" = "DeepSeek で宿泊情報を短い記録にまとめます。生成後に編集できます。";
+"hotel_stay.detail.memory.privacy_note" = "生成時に、この宿泊のホテル名、場所、日付、天気を設定済みの DeepSeek サービスへ送信します。部屋番号、予約確認番号、金額、元の明細は送信しません。";
 "hotel_stay.detail.memory.share_action" = "この文で滞在カードを共有";
 "hotel_stay.detail.memory.accessibility_label" = "旅の記憶文を使って滞在共有画像を作成";
-"hotel_stay.detail.memory.default_hotel" = "このホテル";
-"hotel_stay.detail.memory.default_location" = "この街";
-"hotel_stay.detail.memory.default_dates" = "この滞在";
-"hotel_stay.detail.memory.weather_separator" = "、";
-"hotel_stay.detail.memory.temperature_range_format" = "%@ から %@";
-"hotel_stay.detail.memory.weather_format" = "%@、%@、%@。滞在中は主に%@、気温はおよそ%@で、旅の記憶として残したい時間でした。";
-"hotel_stay.detail.memory.weather_only_format" = "%@、%@、%@。滞在中は主に%@で、旅の記憶として残したい時間でした。";
-"hotel_stay.detail.memory.simple_format" = "%@、%@、%@。旅の記憶として残したい滞在でした。";
 "hotel_stay.detail.transaction_merchant" = "加盟店";
 "hotel_stay.detail.transaction_amount" = "金額";
 "hotel_stay.detail.transaction_date" = "日付";
@@ -1635,3 +1627,19 @@
 "share_card.watermark" = "AutoLedger";
 "share_card.error.render_failed" = "共有画像を描画できませんでした。";
 "share_card.error.png_failed" = "PNG 画像を作成できませんでした。";
+
+"hotel_stay.detail.memory.generate" = "DeepSeek で作成";
+
+"hotel_stay.detail.memory.regenerate" = "書き直す";
+
+"hotel_stay.detail.memory.generating" = "宿泊の記録を作成中…";
+
+"hotel_stay.detail.memory.configure" = "設定の外部 API で DeepSeek と API キーを設定してください。";
+
+"hotel_stay.detail.memory.failed" = "生成できませんでした。もう一度お試しください。";
+
+"hotel_stay.detail.memory.draft" = "宿泊メモの下書き";
+
+"hotel_stay.detail.weather.condition_unavailable" = "天気の説明はありません";
+
+"hotel_stay.detail.weather.value_unavailable" = "データなし";

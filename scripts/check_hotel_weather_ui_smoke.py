@@ -18,7 +18,7 @@ def main() -> int:
     service_path = APP / "Domain" / "Services" / "CommonAPIHotelWeatherService.swift"
     detail_path = APP / "Features" / "Hotel" / "HotelStayArchiveView.swift"
     catalog_path = APP / "Features" / "Hotel" / "HotelStayLocationCatalog.swift"
-    memory_path = APP / "Features" / "Hotel" / "HotelStayJourneyMemoryComposer.swift"
+    memory_path = ROOT / "AutoLedger" / "AutoLedgerCore" / "Sources" / "AutoLedgerCore" / "Services" / "HotelJourneyMemory.swift"
 
     service = service_path.read_text(encoding="utf-8") if service_path.exists() else ""
     detail = detail_path.read_text(encoding="utf-8")
@@ -46,21 +46,20 @@ def main() -> int:
         "hotel_stay.detail.weather.unavailable",
         ".task(id: weatherTaskID)",
         "hotelJourneyMemoryCard",
-        "journeyMemoryText",
+        "journeyMemoryInput",
+        "HotelJourneyMemoryClient.generate",
         "hotel_stay.detail.memory.title",
-        "hotelShareCardData(reviewText: text)",
+        "hotelShareCardData(reviewText: journeyMemoryDraft)",
     ]:
         require(detail, snippet, "HotelStayArchiveView.swift", failures)
 
     for snippet in [
-        "enum HotelStayJourneyMemoryComposer",
-        "weatherDays",
-        "hotel_stay.detail.memory.weather_format",
-        "hotel_stay.detail.memory.weather_only_format",
-        "hotel_stay.detail.memory.simple_format",
-        "temperature_range_format",
+        "enum HotelJourneyMemoryCodec",
+        "struct HotelJourneyMemoryInput",
+        "conditionDescription",
+        "Check-out is exclusive",
     ]:
-        require(memory, snippet, "HotelStayJourneyMemoryComposer.swift", failures)
+        require(memory, snippet, "HotelJourneyMemory.swift", failures)
 
     for forbidden in [
         "roomNumber",
@@ -71,7 +70,7 @@ def main() -> int:
         "sourcePDFData",
     ]:
         if forbidden in memory:
-            failures.append(f"HotelStayJourneyMemoryComposer.swift should not reference sensitive field: {forbidden}")
+            failures.append(f"HotelJourneyMemory.swift should not reference sensitive field: {forbidden}")
 
     for snippet in [
         "struct WeatherLocation",
@@ -98,14 +97,14 @@ def main() -> int:
             "hotel_stay.detail.memory.privacy_note",
             "hotel_stay.detail.memory.share_action",
             "hotel_stay.detail.memory.accessibility_label",
-            "hotel_stay.detail.memory.default_hotel",
-            "hotel_stay.detail.memory.default_location",
-            "hotel_stay.detail.memory.default_dates",
-            "hotel_stay.detail.memory.weather_separator",
-            "hotel_stay.detail.memory.temperature_range_format",
-            "hotel_stay.detail.memory.weather_format",
-            "hotel_stay.detail.memory.weather_only_format",
-            "hotel_stay.detail.memory.simple_format",
+            "hotel_stay.detail.memory.generate",
+            "hotel_stay.detail.memory.regenerate",
+            "hotel_stay.detail.memory.generating",
+            "hotel_stay.detail.memory.configure",
+            "hotel_stay.detail.memory.failed",
+            "hotel_stay.detail.memory.draft",
+            "hotel_stay.detail.weather.condition_unavailable",
+            "hotel_stay.detail.weather.value_unavailable",
         ]:
             require(strings, f'"{key}"', f"{locale} Localizable.strings", failures)
 

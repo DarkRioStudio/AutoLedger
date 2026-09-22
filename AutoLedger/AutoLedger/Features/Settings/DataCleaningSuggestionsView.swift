@@ -69,7 +69,7 @@ struct DataCleaningSuggestionsView: View {
             .autoLedgerReadableContent(maxWidth: 720)
         }
         .background(AppTheme.screenGradient.ignoresSafeArea())
-        .navigationTitle("ipad.cleaning.title")
+        .autoLedgerContentTitleNavigation("ipad.cleaning.title")
         .autoLedgerSolidNavigationBarChrome()
         .onAppear {
             let startedAt = Date()
