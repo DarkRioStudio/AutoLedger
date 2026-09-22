@@ -519,6 +519,11 @@ struct HotelFolioInboxImportView: View {
                 recordCloudInboxDebug("云端酒店水单收件箱：凭据已自动续签并重试")
             }
             candidates = fetched
+            store.replaceImportPendingReferences(fetched.filter { $0.status.isVisibleInInboxImportList }.compactMap {
+                try? PendingActionItem(kind: .cloudInboxCandidate,
+                    source: .init(type: .cloudInboxCandidate, id: $0.id.uuidString),
+                    reason: .cloudInboxNeedsReview, createdAt: $0.receivedAt)
+            }, kind: .cloudInboxCandidate)
             if let targetCandidateID, fetched.contains(where: { $0.id == targetCandidateID }) {
                 selectedCandidateIDs = [targetCandidateID]
             } else {
@@ -599,6 +604,7 @@ struct HotelFolioInboxImportView: View {
                     settings: settings
                 )
                 drafts.append(draft)
+                store.removeImportPendingReference(id: candidate.id.uuidString, kind: .cloudInboxCandidate)
                 recordCloudInboxDebug(
                     "云端酒店水单收件箱：已生成本地草稿 · file=\(candidate.attachmentFileName) · chars=\(draft.rawText.count)",
                     rawText: draft.rawText

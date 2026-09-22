@@ -117,6 +117,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
     public let ledgerProfiles: [LedgerProfile]
     public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
+    public let monthCloseRecords: [String: MonthCloseRecord]
     public let pendingActionDecisions: [String: PendingActionDecision]
     public let appSettings: BackupAppSettings
 
@@ -133,6 +134,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         ledgerProfiles: [LedgerProfile] = [],
         defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
+        monthCloseRecords: [String: MonthCloseRecord] = [:],
         pendingActionDecisions: [String: PendingActionDecision] = [:],
         appSettings: BackupAppSettings
     ) {
@@ -148,6 +150,7 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         self.ledgerProfiles = ledgerProfiles
         self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
+        self.monthCloseRecords = monthCloseRecords
         self.pendingActionDecisions = PendingActionDecision.normalizedDictionary(pendingActionDecisions)
         self.appSettings = appSettings
     }
@@ -165,8 +168,30 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         case ledgerProfiles
         case defaultWriteLedgerID
         case subscriptionMetadata
+        case monthCloseRecords
         case pendingActionDecisions
         case appSettings
+        case extendedPendingActionDecisions
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(recordName, forKey: .recordName)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(deviceID, forKey: .deviceID)
+        try container.encode(subscriptions, forKey: .subscriptions)
+        try container.encode(categoryCorrections, forKey: .categoryCorrections)
+        try container.encode(customCategories, forKey: .customCategories)
+        try container.encode(customSources, forKey: .customSources)
+        try container.encode(merchantAliases, forKey: .merchantAliases)
+        try container.encode(merchantAliasDeletedKeys, forKey: .merchantAliasDeletedKeys)
+        try container.encode(ledgerProfiles, forKey: .ledgerProfiles)
+        try container.encode(defaultWriteLedgerID, forKey: .defaultWriteLedgerID)
+        try container.encode(subscriptionMetadata, forKey: .subscriptionMetadata)
+        try container.encode(monthCloseRecords, forKey: .monthCloseRecords)
+        try container.encode(pendingActionDecisions.filter { !$0.value.kind.usesExtendedDecisionField }, forKey: .pendingActionDecisions)
+        try container.encode(pendingActionDecisions.filter { $0.value.kind.usesExtendedDecisionField }, forKey: .extendedPendingActionDecisions)
+        try container.encode(appSettings, forKey: .appSettings)
     }
 
     public init(from decoder: Decoder) throws {
@@ -185,12 +210,12 @@ public struct LedgerConfigurationSyncPayload: Codable, Equatable, Sendable {
         ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
         defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
-        pendingActionDecisions = PendingActionDecision.normalizedDictionary(
-            try container.decodeIfPresent(
-                [String: PendingActionDecision].self,
-                forKey: .pendingActionDecisions
-            ) ?? [:]
-        )
+        monthCloseRecords = try container.decodeIfPresent([String: MonthCloseRecord].self, forKey: .monthCloseRecords) ?? [:]
+        let legacy = try container.decodeIfPresent([String: PendingActionDecision].self, forKey: .pendingActionDecisions) ?? [:]
+        let extended = try container.decodeIfPresent([String: PendingActionDecision].self, forKey: .extendedPendingActionDecisions) ?? [:]
+        pendingActionDecisions = PendingActionDecision.normalizedDictionary(legacy.merging(extended) { lhs, rhs in
+            rhs.isPreferred(over: lhs) ? rhs : lhs
+        })
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
 
@@ -249,6 +274,7 @@ public enum LedgerConfigurationSyncPolicy {
                     remote.subscriptionMetadata.anomalyDecisions
                 )
             ),
+            monthCloseRecords: MonthCloseRecord.merge(local.monthCloseRecords, remote.monthCloseRecords),
             pendingActionDecisions: mergePendingActionDecisions(
                 local.pendingActionDecisions,
                 remote.pendingActionDecisions
@@ -270,6 +296,7 @@ public enum LedgerConfigurationSyncPolicy {
             lhs.ledgerProfiles != rhs.ledgerProfiles ||
             lhs.defaultWriteLedgerID != rhs.defaultWriteLedgerID ||
             lhs.subscriptionMetadata != rhs.subscriptionMetadata ||
+            lhs.monthCloseRecords != rhs.monthCloseRecords ||
             lhs.pendingActionDecisions != rhs.pendingActionDecisions
     }
 
@@ -490,6 +517,7 @@ public extension LedgerConfigurationSyncPayload {
             !subscriptionMetadata.annualPriceOverrides.isEmpty ||
             !subscriptionMetadata.notes.isEmpty ||
             !subscriptionMetadata.anomalyDecisions.isEmpty ||
+            !monthCloseRecords.isEmpty ||
             !pendingActionDecisions.isEmpty
     }
 }

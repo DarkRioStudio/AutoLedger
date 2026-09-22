@@ -1643,3 +1643,31 @@
 "hotel_stay.detail.weather.condition_unavailable" = "天気の説明はありません";
 
 "hotel_stay.detail.weather.value_unavailable" = "データなし";
+
+/* 1.7.0 completion: review and month close */
+"pending_center.emailReview.title" = "メール候補";
+"pending_center.cloudInboxReview.title" = "クラウド受信箱の候補";
+"pending_center.syncConflict.title" = "同期の競合";
+"pending_center.missingInformation.title" = "情報の確認";
+"pending_center.emailReview.subtitle" = "検出した添付ファイルを確認します。";
+"pending_center.cloudInboxReview.subtitle" = "受信したホテル明細を確認します。";
+"pending_center.syncConflict.subtitle" = "競合する記録の処理方法を選びます。";
+"pending_center.missingInformation.subtitle" = "分類の確認が必要な記録です。";
+"pending_action.reason.emailNeedsReview" = "メールの添付ファイルを確認してください。";
+"pending_action.reason.cloudInboxNeedsReview" = "クラウドの明細を確認してください。";
+"pending_action.reason.syncConflictNeedsReview" = "この記録には同期の競合があります。同期設定で解決してください。";
+"pending_action.reason.categoryMissing" = "分類を確認してください。「その他」で正しい場合は無視できます。";
+"pending_action.batch.preview" = "選択した操作を確認";
+"pending_action.batch.explanation" = "以下の通知だけを無視または延期します。記録は削除されず、ここで再開できます。";
+"pending_action.batch.changed" = "選択内容が変わりました。更新して再度確認してください。";
+"month_close.title" = "月次チェック";
+"month_close.explanation" = "今月の未処理事項と証憑を確認します。完了しても編集は可能で、バックアップの代わりにはなりません。";
+"month_close.completed" = "月次チェック完了";
+"month_close.reopen" = "月次チェックを再開";
+"month_close.pending_format" = "確認が必要な項目：%d 件";
+"month_close.review" = "項目を確認";
+"month_close.complete" = "今月を完了";
+"month_close.export_pending" = "月次パッケージはまだ生成されていません（任意）。";
+"month_close.exported" = "月次パッケージを生成済みです。クラウドバックアップではありません。";
+"month_close.confirm_format" = "未処理の通知が %d 件あります。証憑の不足や不完全な記録を確認してください。完了後も編集や再開ができます。";
+"cleaning.cloud.cooldown" = "クラウドへの再リクエストを待機中です。ローカルの提案は利用できます。";

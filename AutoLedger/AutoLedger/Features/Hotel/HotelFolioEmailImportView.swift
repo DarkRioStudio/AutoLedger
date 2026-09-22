@@ -650,6 +650,14 @@ struct HotelFolioEmailImportView: View {
                     handleScanProgress(progress)
                 }
             )
+            let references = candidates.flatMap { message in
+                message.attachments.compactMap { attachment in
+                    try? PendingActionItem(kind: .emailCandidate,
+                        source: .init(type: .emailCandidate, id: pendingReferenceID(message, attachment)),
+                        reason: .emailNeedsReview, createdAt: .now)
+                }
+            }
+            store.replaceImportPendingReferences(references, kind: .emailCandidate)
             selectedAttachmentIDs = Set(defaultSelectedAttachmentIDs)
             statusMessage = candidates.isEmpty
                 ? String(localized: "hotel_stay.email.status.no_results")
@@ -717,6 +725,7 @@ struct HotelFolioEmailImportView: View {
                     targetLedgerID: targetLedgerID
                 )
                 drafts.append(draft)
+                store.removeImportPendingReference(id: pendingReferenceID(message, attachment), kind: .emailCandidate)
                 recordEmailScanDebug("邮箱水单批量导入：已生成待确认草稿 · file=\(attachment.fileName) · chars=\(draft.rawText.count)", rawText: draft.rawText)
             } catch {
                 failures.append("\(attachment.fileName): \(error.localizedDescription)")
@@ -774,6 +783,13 @@ struct HotelFolioEmailImportView: View {
         recordEmailScanDebug("邮箱水单批量导入：完成 · drafts=\(drafts.count) · failures=\(failures.count)")
         onDraftsReady(drafts)
         dismiss()
+    }
+
+    private func pendingReferenceID(_ message: HotelFolioEmailMessage, _ attachment: HotelFolioEmailAttachment) -> String {
+        let account = settings.emailAddress.lowercased()
+        let messageID = message.messageID ?? message.uid
+        let attachmentID = HotelFolioEmailFingerprint.attachmentHash(attachment.data) ?? attachment.id
+        return PendingActionSourceReference.opaqueID(for: [account, messageID, attachmentID].joined(separator: "|"))
     }
 
     private func handleScanProgress(_ progress: HotelFolioEmailScanProgress) {

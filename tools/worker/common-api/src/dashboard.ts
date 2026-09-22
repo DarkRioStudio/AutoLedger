@@ -121,7 +121,10 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const liveOCRCompletions = importCompletions.filter((event) => (
     stringPayload(event.payload, "flow_type") === "live_ocr"
   ));
-  const confirmationEvents = events.filter((event) => event.eventName === "al_confirmation_state");
+  const allConfirmationEvents = events.filter((event) => event.eventName === "al_confirmation_state");
+  const reviewEvents = allConfirmationEvents.filter((event) =>
+    ["pending_action", "pending_action_batch", "month_close"].includes(stringPayload(event.payload, "flow_type") ?? ""));
+  const confirmationEvents = allConfirmationEvents.filter((event) => !reviewEvents.includes(event));
   const currencyEvents = events.filter((event) => event.eventName === "al_currency_lookup_status");
   const hotelPDFEvents = events.filter((event) => event.eventName === "al_hotel_pdf_flow_status");
   const commonAPIEvents = events.filter((event) => event.eventName === "al_common_api_request_status");
@@ -171,6 +174,12 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
       "导入错误码分布",
       importCompletions.length,
       breakdown(importCompletions.map((event) => stringPayload(event.payload, "error_code") ?? "unknown"))
+    ),
+    countMetric(
+      "review_lifecycle_actions",
+      "待处理与月结操作（事件次数，非账单数）",
+      reviewEvents.length,
+      breakdown(reviewEvents.map((event) => `${stringPayload(event.payload, "flow_type")}:${stringPayload(event.payload, "confirm_status")}`))
     ),
     percentMetric(
       "confirmation_discard_rate",

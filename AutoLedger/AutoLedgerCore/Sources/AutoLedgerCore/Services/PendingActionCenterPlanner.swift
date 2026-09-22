@@ -206,6 +206,10 @@ public struct PendingActionCenterPlanner: Sendable {
         case .duplicateReview: return 2
         case .subscriptionAnomaly: return 3
         case .cleaningSuggestion: return 4
+        case .emailReview: return 5
+        case .cloudInboxReview: return 6
+        case .syncConflict: return -1
+        case .missingInformation: return 7
         }
     }
 }

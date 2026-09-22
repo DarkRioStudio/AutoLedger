@@ -1,3 +1,4 @@
+import { consumeCleaningQuota } from "./data-cleaning-quota";
 import { compactVerify, decodeProtectedHeader, importPKCS8, importX509, SignJWT } from "jose";
 import PostalMime from "postal-mime";
 
@@ -303,6 +304,8 @@ export default {
 
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(pruneExpiredCandidates(env));
+    ctx.waitUntil(env.DB.prepare("DELETE FROM data_cleaning_quota WHERE utc_day < ?")
+      .bind(new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)).run());
     ctx.waitUntil(processAppStoreNotificationHistory(env).catch((error) => {
       console.error("app_store_notification_history_failed", errorMessage(error));
     }));
@@ -686,6 +689,16 @@ async function dataCleaningAssist(request: Request, env: Env): Promise<Response>
   const payload = body.payload;
   if (payload?.schemaVersion !== 1 || payload.privacyMode !== "hashed_aggregate_v1") {
     return json({ error: "unsupported_data_cleaning_payload" }, env, 400);
+  }
+  if (!entitlement.originalTransactionID) {
+    return json({ error: "server_entitlement_required" }, env, 403);
+  }
+  const subjectHash = await sha256Hex(`cleaning:${entitlement.originalTransactionID}`);
+  if (!await consumeCleaningQuota(env.DB, subjectHash)) {
+    const response = json({ error: "data_cleaning_quota_exceeded" }, env, 429);
+    const nextDay = Math.ceil((Date.now() + 1) / 86_400_000) * 86_400_000;
+    response.headers.set("Retry-After", String(Math.max(1, Math.ceil((nextDay - Date.now()) / 1000))));
+    return response;
   }
   const features = (payload.merchantFeatures ?? [])
     .filter((feature) => /^m_[a-f0-9]{16}$/.test(feature.merchantKeyHash))

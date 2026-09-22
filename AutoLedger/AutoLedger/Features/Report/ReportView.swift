@@ -54,6 +54,8 @@ struct ReportView: View {
 
                     summaryCard(snapshot)
 
+                    MonthCloseCard(month: selectedMonth)
+
                     monthlyExportSection(snapshot)
 
                     if !anomalyAlerts.isEmpty {
@@ -652,6 +654,7 @@ struct ReportView: View {
                 format: String(localized: "report.monthly_export.status_ready_format"),
                 urls.count
             )
+            store.updateMonthClose(for: selectedMonth, exported: true)
             monthlyExportSharePayload = MonthlyExportSharePayload(urls: urls)
             CommonAPIAnalyticsService.trackImportCompleted(
                 flowType: "monthly_export_package",
@@ -786,4 +789,77 @@ struct ReportView: View {
 #Preview {
     ReportView()
         .environmentObject(LedgerStore())
+}
+
+
+struct MonthCloseCard: View {
+    @EnvironmentObject private var store: LedgerStore
+    @EnvironmentObject private var navigationState: AutoLedgerNavigationState
+    let month: Date
+    @State private var snapshot = PendingActionCenterSnapshot()
+    @State private var outstanding: [PendingActionItem] = []
+    @State private var isRefreshing = true
+    @State private var showReview = false
+    @State private var showCompletion = false
+
+    private var record: MonthCloseRecord? { store.monthCloseRecords[store.monthCloseKey(for: month)] }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("month_close.title").font(.headline)
+            Text("month_close.explanation").font(.caption).foregroundStyle(AppTheme.mutedInk)
+            if let completedAt = record?.completedAt {
+                Label("month_close.completed", systemImage: "checkmark.circle")
+                Text(completedAt, format: .dateTime.year().month().day().hour().minute()).font(.caption)
+                Button("month_close.reopen") { store.updateMonthClose(for: month, completed: false) }
+            } else {
+                Button("month_close.complete") { showCompletion = true }.disabled(isRefreshing)
+            }
+                if isRefreshing { ProgressView() }
+                Text(String(format: String(localized: "month_close.pending_format"), outstanding.count))
+                Button("month_close.review") { showReview = true }.disabled(isRefreshing || outstanding.isEmpty)
+            Label(record?.exportedAt == nil ? "month_close.export_pending" : "month_close.exported",
+                  systemImage: record?.exportedAt == nil ? "square.and.arrow.up" : "checkmark")
+                .font(.caption)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .autoLedgerCardSurface(cornerRadius: 18)
+        .onAppear {
+            CommonAPIAnalyticsService.trackFeatureSurfaceOpened(surface: "month_close", entrySurface: "report", openReason: "review")
+        }
+        .task(id: store.monthCloseKey(for: month) + PendingActionCenterLoader.revision(for: store)) {
+            isRefreshing = true
+            let loaded = await PendingActionCenterLoader.load(from: store, month: month)
+            guard !Task.isCancelled else { return }
+            snapshot = loaded
+            outstanding = MonthClosePlanner.outstanding(in: loaded, month: month, calendar: AppFormatters.calendar)
+            isRefreshing = false
+        }
+        .alert("month_close.complete", isPresented: $showCompletion) {
+            Button("month_close.complete") { store.updateMonthClose(for: month, completed: true) }
+            Button("common.cancel", role: .cancel) {}
+        } message: {
+            Text(String(format: String(localized: "month_close.confirm_format"), outstanding.count))
+        }
+        .sheet(isPresented: $showReview) {
+            NavigationStack {
+                PendingActionCenterListView(
+                    snapshot: PendingActionCenterPlanner().buildSnapshot(items: outstanding),
+                    isRefreshing: isRefreshing,
+                    onOpen: { item in
+                        showReview = false
+                        switch item.category {
+                        case .hotelReview: navigationState.openHotelReviewQueue(draftID: UUID(uuidString: item.source.id))
+                        case .subscriptionAnomaly:
+                            navigationState.selectedHomeTab = AutoLedgerHomeTab.settings.rawValue
+                            navigationState.settingsPath = [.subscriptions]
+                        default: navigationState.selectedHomeTab = AutoLedgerHomeTab.inbox.rawValue
+                        }
+                    },
+                    onDecision: { item, mutation in _ = try? store.recordPendingActionDecision(for: item, mutation: mutation) }
+                ).toolbar { Button("common.close") { showReview = false } }
+            }
+        }
+    }
 }

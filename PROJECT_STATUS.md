@@ -2,7 +2,7 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-07-28
+> 截止日期：2026-09-22（历史 Apple 事实保留各自观察日期）
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 > 全球产品战略：[docs/product/GLOBAL_PRODUCT_STRATEGY.md](docs/product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
@@ -21,7 +21,7 @@
 | 最近人工结论 | build `120` 的水单刷新、401 续签、订阅处理、iCloud、交互性能和 Mac smoke 均通过 |
 | 精确 TestFlight build | build `120`；iOS、macOS、tvOS、visionOS 均为 `VALID / APP_STORE_ELIGIBLE / expired=false`，且已绑定 ASC `1.6.0` |
 | 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
-| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 已进入 Early Execution；全球格式、PendingAction 与可理解同步状态均已有第一批实现 |
+| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 开发收口：新增来源、批量复核、月结与异步搜索已实现；候选 CI / 构建状态以精确提交回读为准 |
 | 工程版本基线 | 所有 Xcode target / configuration 的 `MARKETING_VERSION` 均为 `1.7.0`；`CURRENT_PROJECT_VERSION` 不变；本轮仅触发内部构建，云端 build number、processing 与 ASC 绑定待实时回读 |
 
 本文件回答“项目现在在哪里”。它不替代版本计划、回归证据、CHANGELOG 或逐轮迭代日志。
@@ -100,6 +100,10 @@
 - 三张自定义产品页目前处于 `WAITING_FOR_REVIEW`，获批前其专属 URL 不应作为正式公开落地页；Campaign 与自定义页 Analytics 需要达到 Apple 的隐私阈值后才会显示数据。自定义产品页 API 不接受 Apple Watch screenshot display type，因此差异化素材范围为 iPhone 与 iPad。
 - `versions/v1.7.0-plan.md` 保留逐阶段执行记录；其中带日期的“未完成”描述是当时事实，不能覆盖本文件的当前状态。
 - `v1.8.0` 已完成全球格式、PendingAction 合同 / 决定持久化 / 逐条 UI，以及可理解同步状态的第一批实现；这不代表真实双设备同步、重庆 Moxy 冲突、月结、批量处理、ASC locale、截图、识别样本或人工审校已经完成。
+
+## 2026-09-22 开发与发布收口
+
+当前目标为商店 **1.7.0**（内部 v1.8.0）。Owner 要求完成开发并优先替换卡顿版本，未修改部分暂不重复验收。最新开发记录见 [1.7.0 开发收口](versions/v1.8.0-development-completion.md)。下文早期缺口按该记录更新；已有真机“真实账本也流畅”与标题修复反馈沿用。此前 `8f902896` 的 Xcode Cloud 四平台 Archive 已成功，后续源码候选须单独触发与回读，不能复用旧 Archive 作为新源码证据。
 
 ## Next Actions
 

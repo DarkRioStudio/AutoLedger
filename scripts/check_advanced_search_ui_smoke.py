@@ -18,7 +18,8 @@ def main() -> int:
     ledger = (APP / "Features" / "Ledger" / "LedgerView.swift").read_text(encoding="utf-8")
 
     require(ledger, "LedgerAdvancedSearchQuery", "LedgerView", failures)
-    require(ledger, "store.ledgerListTransactions", "LedgerView", failures)
+    require(ledger, "await store.loadLedgerListTransactions", "LedgerView background search", failures)
+    require(ledger, "request == searchRequest", "LedgerView stale result protection", failures)
     store = (APP / "App" / "LedgerStore.swift").read_text(encoding="utf-8")
     require(store, "LedgerAdvancedSearchService().search", "LedgerStore search snapshot", failures)
     require(ledger, "advancedSearchSheet", "LedgerView", failures)

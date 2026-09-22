@@ -1643,3 +1643,31 @@
 "hotel_stay.detail.weather.condition_unavailable" = "Weather description unavailable";
 
 "hotel_stay.detail.weather.value_unavailable" = "Unavailable";
+
+/* 1.7.0 completion: review and month close */
+"pending_center.emailReview.title" = "Email candidates";
+"pending_center.cloudInboxReview.title" = "Cloud inbox candidates";
+"pending_center.syncConflict.title" = "Sync conflicts";
+"pending_center.missingInformation.title" = "Missing information";
+"pending_center.emailReview.subtitle" = "Review discovered email attachments.";
+"pending_center.cloudInboxReview.subtitle" = "Review received hotel documents.";
+"pending_center.syncConflict.subtitle" = "Choose how to handle conflicting records.";
+"pending_center.missingInformation.subtitle" = "Check records needing a category.";
+"pending_action.reason.emailNeedsReview" = "An email attachment is ready for review.";
+"pending_action.reason.cloudInboxNeedsReview" = "A cloud inbox document is ready for review.";
+"pending_action.reason.syncConflictNeedsReview" = "This record has a sync conflict. Open sync settings to resolve it.";
+"pending_action.reason.categoryMissing" = "Confirm the category, or ignore this reminder if Other is intentional.";
+"pending_action.batch.preview" = "Preview selected actions";
+"pending_action.batch.explanation" = "Only these reminders will be ignored or deferred. No records are deleted. You can reopen them in this center.";
+"pending_action.batch.changed" = "The selection changed. Refresh and preview again.";
+"month_close.title" = "Month close";
+"month_close.explanation" = "Review this month’s reminders and supporting documents. Completion does not lock the ledger or replace a backup.";
+"month_close.completed" = "Month completed";
+"month_close.reopen" = "Reopen month";
+"month_close.pending_format" = "%d reminders to review";
+"month_close.review" = "Review items";
+"month_close.complete" = "Complete month";
+"month_close.export_pending" = "No monthly package generation recorded (optional).";
+"month_close.exported" = "Monthly package generated; files are not a cloud backup.";
+"month_close.confirm_format" = "%d reminders remain. Confirm that you have checked missing receipts and incomplete records. You can still edit or reopen this month.";
+"cleaning.cloud.cooldown" = "Cloud suggestions are cooling down. Local suggestions remain available.";

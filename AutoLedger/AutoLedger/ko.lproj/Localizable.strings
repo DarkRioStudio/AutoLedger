@@ -1643,3 +1643,31 @@
 "hotel_stay.detail.weather.condition_unavailable" = "날씨 설명 없음";
 
 "hotel_stay.detail.weather.value_unavailable" = "데이터 없음";
+
+/* 1.7.0 completion: review and month close */
+"pending_center.emailReview.title" = "이메일 후보";
+"pending_center.cloudInboxReview.title" = "클라우드 수신함 후보";
+"pending_center.syncConflict.title" = "동기화 충돌";
+"pending_center.missingInformation.title" = "정보 확인 필요";
+"pending_center.emailReview.subtitle" = "검색된 이메일 첨부 파일을 확인하세요.";
+"pending_center.cloudInboxReview.subtitle" = "수신한 호텔 명세서를 확인하세요.";
+"pending_center.syncConflict.subtitle" = "충돌한 기록의 처리 방법을 선택하세요.";
+"pending_center.missingInformation.subtitle" = "분류 확인이 필요한 기록입니다.";
+"pending_action.reason.emailNeedsReview" = "이메일 첨부 파일을 확인하세요.";
+"pending_action.reason.cloudInboxNeedsReview" = "클라우드 명세서를 확인하세요.";
+"pending_action.reason.syncConflictNeedsReview" = "이 기록에 동기화 충돌이 있습니다. 동기화 설정에서 해결하세요.";
+"pending_action.reason.categoryMissing" = "분류를 확인하세요. 기타가 맞다면 이 알림을 무시할 수 있습니다.";
+"pending_action.batch.preview" = "선택한 작업 미리 보기";
+"pending_action.batch.explanation" = "아래 알림만 무시하거나 미룹니다. 기록은 삭제되지 않으며 여기에서 다시 열 수 있습니다.";
+"pending_action.batch.changed" = "선택한 항목이 변경되었습니다. 새로 고침 후 다시 확인하세요.";
+"month_close.title" = "월 마감 점검";
+"month_close.explanation" = "이번 달 미처리 항목과 증빙을 확인하세요. 완료 후에도 편집할 수 있으며 백업을 대신하지 않습니다.";
+"month_close.completed" = "월 마감 완료";
+"month_close.reopen" = "월 마감 다시 열기";
+"month_close.pending_format" = "확인할 항목 %d개";
+"month_close.review" = "항목 확인";
+"month_close.complete" = "이번 달 완료";
+"month_close.export_pending" = "월별 패키지가 아직 생성되지 않았습니다(선택 사항).";
+"month_close.exported" = "월별 패키지가 생성되었습니다. 클라우드 백업은 아닙니다.";
+"month_close.confirm_format" = "알림이 %d개 남아 있습니다. 누락된 증빙과 불완전한 기록을 확인하세요. 완료 후에도 편집하거나 다시 열 수 있습니다.";
+"cleaning.cloud.cooldown" = "클라우드 재요청 대기 중입니다. 로컬 제안은 계속 사용할 수 있습니다.";
