@@ -296,18 +296,10 @@
 "hotel_stay.detail.weather.precipitation_format" = "降水 %@";
 "hotel_stay.detail.weather.provider_format" = "%@ · %@";
 "hotel_stay.detail.memory.title" = "旅程回憶";
-"hotel_stay.detail.memory.subtitle" = "根據入住日期、地點和歷史天氣在本機產生一段小記。";
-"hotel_stay.detail.memory.privacy_note" = "只使用目前入住記錄和天氣摘要，不上傳酒店名稱、金額、PDF 或原始識別文字。";
+"hotel_stay.detail.memory.subtitle" = "使用 DeepSeek 將入住資訊整理成一段小記，產生後可編輯。";
+"hotel_stay.detail.memory.privacy_note" = "點選產生時，將本次飯店、地點、入住日期及天氣傳送至已設定的 DeepSeek 服務。不傳送房號、確認號、金額或原始水單。";
 "hotel_stay.detail.memory.share_action" = "用這段文案分享入住卡";
 "hotel_stay.detail.memory.accessibility_label" = "使用旅程回憶文案產生入住分享圖";
-"hotel_stay.detail.memory.default_hotel" = "這家酒店";
-"hotel_stay.detail.memory.default_location" = "這座城市";
-"hotel_stay.detail.memory.default_dates" = "這次入住";
-"hotel_stay.detail.memory.weather_separator" = "、";
-"hotel_stay.detail.memory.temperature_range_format" = "%@ 到 %@";
-"hotel_stay.detail.memory.weather_format" = "%@，%@，%@。那幾晚多是%@，氣溫約%@，適合留下一段旅行記憶。";
-"hotel_stay.detail.memory.weather_only_format" = "%@，%@，%@。那幾晚多是%@，適合留下一段旅行記憶。";
-"hotel_stay.detail.memory.simple_format" = "%@，%@，%@。這次入住值得留下一段旅行記憶。";
 "hotel_stay.detail.transaction_merchant" = "商戶";
 "hotel_stay.detail.transaction_amount" = "金額";
 "hotel_stay.detail.transaction_date" = "日期";
@@ -1638,3 +1630,19 @@
 "share_card.watermark" = "AutoLedger";
 "share_card.error.render_failed" = "分享圖渲染失敗。";
 "share_card.error.png_failed" = "PNG 圖片產生失敗。";
+
+"hotel_stay.detail.memory.generate" = "使用 DeepSeek 整理";
+
+"hotel_stay.detail.memory.regenerate" = "重新整理";
+
+"hotel_stay.detail.memory.generating" = "正在整理入住小記…";
+
+"hotel_stay.detail.memory.configure" = "請先在設定的外部 API 頁面設定 DeepSeek 與 API Key。";
+
+"hotel_stay.detail.memory.failed" = "暫時無法產生，請稍後重試。";
+
+"hotel_stay.detail.memory.draft" = "入住小記草稿";
+
+"hotel_stay.detail.weather.condition_unavailable" = "暫無天氣概況";
+
+"hotel_stay.detail.weather.value_unavailable" = "暫無資料";

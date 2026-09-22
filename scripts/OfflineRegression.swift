@@ -112,6 +112,8 @@ struct OfflineRegression {
         try verifyLedgerProfileManagement(reporter: reporter)
         try verifyLedgerSelectionAndTransactionMoves(reporter: reporter)
         try verifyLedgerListCache(reporter: reporter)
+        try verifyShortcutCountCache(reporter: reporter)
+        try verifyHotelJourneyMemory(reporter: reporter)
         verifyLedgerListPerformance(reporter: reporter)
         try verifyLedgerScopedSurfaces(reporter: reporter)
         verifyLedgerUserSyncStatus(reporter: reporter)
@@ -3799,7 +3801,79 @@ struct OfflineRegression {
             reporter.check(cold.count == count / 2 && total == count / 2 * 1000, "\(count)-row cached selection preserves matches")
             reporter.check(cold.map(\.id) == LedgerAdvancedSearchService().search(transactions: store.visibleTransactions, query: query).map(\.id), "\(count)-row cache preserves authoritative search order")
             print(String(format: "PERF list rows=%d cold_ms=%.3f warm_mean_ms=%.6f repeats=1000", count, coldMS, warmMS))
+            let notes: Set<String> = ["Synthetic performance fixture", "Saved by Shortcuts"]
+            let countStarted = Date()
+            let shortcutCount = store.shortcutTransactionCount(noteCandidates: notes)
+            let countColdMS = Date().timeIntervalSince(countStarted) * 1000
+            let countRepeated = Date()
+            var countTotal = 0
+            for _ in 0..<1000 {
+                countTotal += store.shortcutTransactionCount(noteCandidates: notes)
+            }
+            let countWarmMS = Date().timeIntervalSince(countRepeated) * 1000 / 1000
+            reporter.check(shortcutCount == count && countTotal == count * 1000, "\(count)-row shortcut count preserves matches on repeated UI reads")
+            print(String(format: "PERF shortcut rows=%d cold_ms=%.3f warm_mean_ms=%.6f repeats=1000", count, countColdMS, countWarmMS))
         }
+    }
+
+    private static func verifyHotelJourneyMemory(reporter: RegressionReporter) throws {
+        let day = HotelJourneyWeatherDay(date: "2026-06-22", description: " Summary ", minimumCelsius: 23.199865, maximumCelsius: 26.431965, precipitationMillimeters: 3.469167)
+        let checkout = HotelJourneyWeatherDay(date: "2026-06-23", description: "晴", minimumCelsius: 29, maximumCelsius: 35, precipitationMillimeters: nil)
+        let input = HotelJourneyMemoryInput(hotel: "Test Moxy", location: "Chongqing, China", checkIn: "2026-06-22", checkOut: "2026-06-23", language: "zh-Hans", weather: [day, checkout])
+        reporter.check(day.condition == nil && day.minimumCelsius == 23 && day.precipitationMillimeters == 3.5, "Summary placeholder removed without losing measured weather")
+        reporter.check(day.maximumCelsius == 26, "Journey temperature precision matches the weather card")
+        reporter.check(HotelJourneyWeatherDay.conditionDescription("小雨") == "小雨", "Real localized weather condition preserved")
+        reporter.check(input.weather == [day], "One-night stay excludes checkout day weather")
+        let data = try HotelJourneyMemoryCodec.requestData(input: input, model: ExternalReceiptAssistProvider.deepSeek.defaultModel)
+        let request = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let messages = request["messages"] as! [[String: String]]
+        let facts = try JSONSerialization.jsonObject(with: Data(messages[1]["content"]!.utf8)) as! [String: Any]
+        reporter.check(Set(facts.keys) == Set(["hotel", "location", "checkIn", "checkOut", "language", "weather"]), "Journey request contains only disclosed stay facts")
+        reporter.check(!messages[1]["content"]!.contains("Summary"), "Weather placeholder is not passed to DeepSeek as a fact")
+        reporter.check(!messages[1]["content"]!.contains("23.199865") && !messages[1]["content"]!.contains("3.469167"), "Provider decimal noise never enters journey prompt")
+        reporter.check(request["reasoning_effort"] as? String == "low", "Journey reuses DeepSeek Flash low reasoning configuration")
+        reporter.check(messages[0]["content"]!.contains("one night") && messages[0]["content"]!.contains("never instructions"), "Journey instructions distinguish one night and treat record text as data")
+        let response = Data(#"{"choices":[{"message":{"content":"  一段小记。  "},"finish_reason":"stop"}]}"#.utf8)
+        let generatedText = try HotelJourneyMemoryCodec.text(from: response)
+        reporter.check(generatedText == "一段小记。", "Journey extracts generated paragraph")
+        for response in [#"{"choices":[]}"#, #"{"choices":[{"message":{"content":""},"finish_reason":"stop"}]}"#, #"{"choices":[{"message":{"content":"unfinished"},"finish_reason":"length"}]}"#] {
+            do {
+                _ = try HotelJourneyMemoryCodec.text(from: Data(response.utf8))
+                reporter.check(false, "Missing or truncated journey output must fail")
+            } catch { reporter.check(true, "Missing or truncated journey output offers retry rather than template") }
+        }
+    }
+
+    private static func verifyShortcutCountCache(reporter: RegressionReporter) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let persistence = try SQLiteTransactionStore(baseDirectoryURL: root, filename: "shortcut-count.sqlite3")
+        let store = LedgerStore(transactionStore: persistence, loadsPersistedConfiguration: false)
+        let notes: Set<String> = ["Saved by Shortcuts", "快捷指令记账"]
+        reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 0, "Empty shortcut count")
+        let date = Date(timeIntervalSince1970: 1_780_600_000)
+        var english = Transaction(merchant: "Coffee", amount: 18, occurredAt: date,
+                                  category: .dining, source: .manual, note: "Saved by Shortcuts")
+        let chinese = Transaction(merchant: "Tea", amount: 12, occurredAt: date,
+                                  category: .dining, source: .manual, note: "快捷指令记账")
+        let unrelated = Transaction(merchant: "Books", amount: 20, occurredAt: date,
+                                    category: .shopping, source: .manual, note: "Saved by Shortcuts edited")
+        reporter.check(store.addTransaction(english) && store.addTransaction(chinese) && store.addTransaction(unrelated), "Shortcut count fixtures saved")
+        reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 2, "Shortcut count matches multilingual notes exactly")
+        reporter.check(store.shortcutTransactionCount(noteCandidates: ["Saved by Shortcuts"]) == 1, "Changed candidate set invalidates shortcut count")
+        reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 2, "Restored candidate set invalidates shortcut count")
+        english = Transaction(id: english.id, merchant: english.merchant, amount: english.amount,
+                              occurredAt: english.occurredAt, category: .dining, source: .manual, note: "Edited")
+        reporter.check(store.updateTransaction(english), "Shortcut note edit saves with same transaction ID")
+        reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 1, "Same-ID note edit invalidates shortcut count")
+        if let travel = store.createLedgerProfile(name: "Travel", iconName: "airplane", colorName: "teal", currency: "JPY") {
+            store.selectLedgerProfile(travel)
+            reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 0, "Shortcut count follows selected ledger")
+            store.selectAllLedgers()
+            reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 1, "Shortcut count follows all-ledger scope")
+        }
+        store.deleteTransaction(chinese)
+        reporter.check(store.shortcutTransactionCount(noteCandidates: notes) == 0, "Delete invalidates shortcut count")
     }
 
     private static func verifyLedgerListCache(reporter: RegressionReporter) throws {

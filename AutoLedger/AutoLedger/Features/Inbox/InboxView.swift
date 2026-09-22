@@ -27,7 +27,7 @@ struct InboxView: View {
     @State private var isPresentingDataCleaning = false
 
     private var hasShortcutEntries: Bool {
-        !shortcutTransactions.isEmpty
+        shortcutTransactionCount > 0
     }
 
     private var upcomingSubscriptions: [Subscription] {
@@ -293,7 +293,7 @@ struct InboxView: View {
 
     private var captureHeroSubtitle: String {
         if hasShortcutEntries {
-            let count = shortcutTransactions.count
+            let count = shortcutTransactionCount
             return String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count)
         }
         return localized("inbox.quick_setup.subtitle", fallback: "Assign the shortcut to the Action Button so a press-and-hold logs your screenshot.")
@@ -817,7 +817,7 @@ struct InboxView: View {
                         .font(.headline)
                         .foregroundStyle(AppTheme.ink)
 
-                    let count = shortcutTransactions.count
+                    let count = shortcutTransactionCount
                     Text(String(format: localized("inbox.quick_setup.enabled.detail", fallback: "%d transactions logged with Shortcuts"), count))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -1223,12 +1223,11 @@ struct InboxView: View {
 }
 
 private extension InboxView {
-    var shortcutNoteCandidates: Set<String> {
+    static let shortcutNoteCandidates: Set<String> =
         AppLanguagePreference.localizedStrings("quick_ledger.note", fallback: "Saved by Shortcuts")
-    }
 
-    var shortcutTransactions: [Transaction] {
-        store.visibleTransactions.filter { shortcutNoteCandidates.contains($0.note) }
+    var shortcutTransactionCount: Int {
+        store.shortcutTransactionCount(noteCandidates: Self.shortcutNoteCandidates)
     }
 
     var isCameraImportAvailable: Bool {

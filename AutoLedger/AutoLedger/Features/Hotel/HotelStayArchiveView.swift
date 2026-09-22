@@ -655,6 +655,11 @@ struct HotelStayDetailView: View {
     @State private var saveMessageIsSuccess = false
     @State private var showsDeleteConfirmation = false
     @State private var weatherSummaryState: HotelWeatherSummaryState = .idle
+    @State private var journeyMemoryDraft = ""
+    @State private var journeyMemoryRequestID: UUID?
+    @State private var requestedJourneyMemoryInput: HotelJourneyMemoryInput?
+    @State private var isGeneratingJourneyMemory = false
+    @State private var journeyMemoryError: LocalizedStringKey?
     @State private var shareCardPreviewMode: ShareCardPreviewSheet.Mode?
 
     let record: HotelStayRecord
@@ -700,9 +705,7 @@ struct HotelStayDetailView: View {
             identityEditorSection
             stayEditorSection
             hotelWeatherCard
-            if let journeyMemoryText {
-                hotelJourneyMemoryCard(journeyMemoryText)
-            }
+            hotelJourneyMemoryCard
             chargeEditorSection
             linkedTransactionEditorSection
             fieldSection(titleKey: "hotel_stay.detail.source", fields: snapshot.sourceFields)
@@ -749,6 +752,29 @@ struct HotelStayDetailView: View {
         }
         .task(id: weatherTaskID) {
             await refreshWeatherSummary()
+        }
+        .onChange(of: journeyMemoryInput) { _, _ in
+            journeyMemoryRequestID = nil
+            requestedJourneyMemoryInput = nil
+            journeyMemoryDraft = ""
+            journeyMemoryError = nil
+            isGeneratingJourneyMemory = false
+        }
+        .task(id: journeyMemoryRequestID) {
+            guard let input = requestedJourneyMemoryInput, journeyMemoryRequestID != nil else { return }
+            do {
+                let text = try await HotelJourneyMemoryClient.generate(input: input)
+                guard !Task.isCancelled else { return }
+                journeyMemoryDraft = text
+            } catch {
+                guard !Task.isCancelled else { return }
+                if case HotelJourneyMemoryClient.RequestError.needsDeepSeekConfiguration = error {
+                    journeyMemoryError = "hotel_stay.detail.memory.configure"
+                } else {
+                    journeyMemoryError = "hotel_stay.detail.memory.failed"
+                }
+            }
+            isGeneratingJourneyMemory = false
         }
         .confirmationDialog(
             "hotel_stay.delete.confirm.title",
@@ -894,7 +920,7 @@ struct HotelStayDetailView: View {
         }
     }
 
-    private func hotelJourneyMemoryCard(_ text: String) -> some View {
+    private var hotelJourneyMemoryCard: some View {
         Section {
             VStack(alignment: .leading, spacing: 12) {
                 Label {
@@ -906,20 +932,47 @@ struct HotelStayDetailView: View {
                         .foregroundStyle(AppTheme.accent)
                 }
 
-                Text(text)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(AppTheme.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !journeyMemoryDraft.isEmpty {
+                    TextEditor(text: $journeyMemoryDraft)
+                        .font(.body)
+                        .foregroundStyle(AppTheme.ink)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 140)
+                        .accessibilityLabel(Text("hotel_stay.detail.memory.draft"))
+                }
 
                 Button {
-                    shareCardPreviewMode = .hotel(hotelShareCardData(reviewText: text))
+                    journeyMemoryError = nil
+                    isGeneratingJourneyMemory = true
+                    requestedJourneyMemoryInput = journeyMemoryInput
+                    journeyMemoryRequestID = UUID()
                 } label: {
-                    Label("hotel_stay.detail.memory.share_action", systemImage: "photo.on.rectangle.angled")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppTheme.accent)
+                    if isGeneratingJourneyMemory {
+                        ProgressView("hotel_stay.detail.memory.generating")
+                    } else {
+                        Label(journeyMemoryDraft.isEmpty ? "hotel_stay.detail.memory.generate" : "hotel_stay.detail.memory.regenerate", systemImage: "sparkles")
+                    }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("hotel_stay.detail.memory.accessibility_label"))
+                .disabled(isGeneratingJourneyMemory || isWeatherLoading || form.checkOutDateValue <= form.checkInDateValue || PerformanceFixtureConfiguration.isEnabled || ScreenshotModeConfig.isEnabled)
+
+                if let journeyMemoryError {
+                    Text(journeyMemoryError)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                if !journeyMemoryDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        shareCardPreviewMode = .hotel(hotelShareCardData(reviewText: journeyMemoryDraft))
+                    } label: {
+                        Label("hotel_stay.detail.memory.share_action", systemImage: "photo.on.rectangle.angled")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("hotel_stay.detail.memory.accessibility_label"))
+                }
             }
             .padding(.vertical, 4)
             .autoLedgerSelectableRowBackground(false)
@@ -1041,16 +1094,25 @@ struct HotelStayDetailView: View {
         )
     }
 
-    private var journeyMemoryText: String? {
-        guard case .loaded(let response) = weatherSummaryState else { return nil }
-        return HotelStayJourneyMemoryComposer.memoryText(
-            hotelName: form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? record.hotelName,
-            locationText: form.locationText ?? localized("share_card.hotel.location_empty"),
-            dateRangeText: "\(shareDateText(form.checkInDateValue)) - \(shareDateText(form.checkOutDateValue))",
-            weatherDays: response.data.days,
-            localized: { key, fallback in localized(key, fallback: fallback) },
-            temperatureFormatter: formattedTemperature(_:)
+    private var journeyMemoryInput: HotelJourneyMemoryInput {
+        let days: [CommonAPIHotelWeatherService.HotelStayWeatherDay]
+        if case .loaded(let response) = weatherSummaryState { days = response.data.days } else { days = [] }
+        return HotelJourneyMemoryInput(
+            hotel: form.hotelName.trimmingCharacters(in: .whitespacesAndNewlines),
+            location: form.locationText ?? "",
+            checkIn: Self.weatherDateText(form.checkInDateValue),
+            checkOut: Self.weatherDateText(form.checkOutDateValue),
+            language: AppLanguagePreference.current.catalogLanguageKey,
+            weather: days.map { HotelJourneyWeatherDay(date: $0.date, description: $0.description,
+                minimumCelsius: $0.tempMin, maximumCelsius: $0.tempMax, precipitationMillimeters: $0.precipitationAmount) }
         )
+    }
+
+    private var isWeatherLoading: Bool {
+        switch weatherSummaryState {
+        case .idle, .loading: return true
+        case .loaded, .unavailable: return false
+        }
     }
 
     private func refreshWeatherSummary() async {
@@ -1073,8 +1135,10 @@ struct HotelStayDetailView: View {
                 locale: AppLanguagePreference.current.catalogLanguageKey,
                 timezone: location.timezone
             )
+            try Task.checkCancellation()
             weatherSummaryState = response.data.days.isEmpty ? .unavailable : .loaded(response)
         } catch {
+            guard !Task.isCancelled else { return }
             weatherSummaryState = .unavailable
         }
     }
@@ -1093,7 +1157,7 @@ struct HotelStayDetailView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
 
-                Text(day.description.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? localized("hotel_stay.detail.weather.unavailable"))
+                Text(HotelJourneyWeatherDay.conditionDescription(day.description) ?? localized("hotel_stay.detail.weather.condition_unavailable"))
                     .font(.footnote)
                     .foregroundStyle(AppTheme.mutedInk)
 
@@ -1114,10 +1178,9 @@ struct HotelStayDetailView: View {
     }
 
     private func precipitationText(for day: CommonAPIHotelWeatherService.HotelStayWeatherDay) -> String {
-        let precipitation = max(day.precipitationAmount ?? 0, day.snowfallAmount ?? 0)
         return String(
             format: localized("hotel_stay.detail.weather.precipitation_format"),
-            Self.formattedWeatherAmount(precipitation)
+            day.precipitationAmount.map(Self.formattedWeatherAmount) ?? localized("hotel_stay.detail.weather.value_unavailable")
         )
     }
 
@@ -1139,7 +1202,8 @@ struct HotelStayDetailView: View {
         if normalized.contains("wind") {
             return "wind"
         }
-        return "sun.max"
+        if normalized.contains("clear") || normalized.contains("sun") { return "sun.max" }
+        return "thermometer.medium"
     }
 
     private static func weatherDateText(_ date: Date) -> String {
@@ -1359,7 +1423,7 @@ struct HotelStayDetailView: View {
             roomTypeText: form.roomType.trimmingCharacters(in: .whitespacesAndNewlines),
             priceText: form.displayTotalAmountText(using: presenter),
             reviewText: reviewText?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-                ?? journeyMemoryText
+                ?? journeyMemoryDraft.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
                 ?? localized("share_card.hotel.default_review")
         )
     }

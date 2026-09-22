@@ -262,6 +262,7 @@ final class LedgerStore: ObservableObject {
     private var reportMonthOptionsCache: [String: [Date]] = [:]
     private var visibleTransactionsCache: (key: VisibleTransactionsCacheKey, value: [Transaction])?
     private var ledgerListCache: (key: LedgerListCacheKey, value: [Transaction])?
+    private var shortcutCountCache: (revision: UInt64, noteCandidates: Set<String>, count: Int)?
     private var hotelStayRecordsRevision: UInt64 = 0
     private var hotelStayListSnapshotCache: (key: HotelStayListSnapshotCacheKey, value: HotelStayListSnapshot)?
 
@@ -506,6 +507,20 @@ final class LedgerStore: ObservableObject {
         let value = transactionsForCurrentLedger(transactions)
         visibleTransactionsCache = (key, value)
         return value
+    }
+
+    /// Shortcut notes include every bundled translation, regardless of the current UI language.
+    func shortcutTransactionCount(noteCandidates: Set<String>) -> Int {
+        if let shortcutCountCache,
+           shortcutCountCache.revision == visibleTransactionsRevision,
+           shortcutCountCache.noteCandidates == noteCandidates {
+            return shortcutCountCache.count
+        }
+        let count = visibleTransactions.reduce(into: 0) { count, transaction in
+            if noteCandidates.contains(transaction.note) { count += 1 }
+        }
+        shortcutCountCache = (visibleTransactionsRevision, noteCandidates, count)
+        return count
     }
 
     /// Navigation selection does not change the source revision. Reuse the last
