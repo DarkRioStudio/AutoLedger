@@ -3817,10 +3817,11 @@ struct OfflineRegression {
     }
 
     private static func verifyHotelJourneyMemory(reporter: RegressionReporter) throws {
-        let day = HotelJourneyWeatherDay(date: "2026-06-22", description: " Summary ", minimumCelsius: 23, maximumCelsius: 26, precipitationMillimeters: 3.5)
+        let day = HotelJourneyWeatherDay(date: "2026-06-22", description: " Summary ", minimumCelsius: 23.199865, maximumCelsius: 26.431965, precipitationMillimeters: 3.469167)
         let checkout = HotelJourneyWeatherDay(date: "2026-06-23", description: "晴", minimumCelsius: 29, maximumCelsius: 35, precipitationMillimeters: nil)
         let input = HotelJourneyMemoryInput(hotel: "Test Moxy", location: "Chongqing, China", checkIn: "2026-06-22", checkOut: "2026-06-23", language: "zh-Hans", weather: [day, checkout])
         reporter.check(day.condition == nil && day.minimumCelsius == 23 && day.precipitationMillimeters == 3.5, "Summary placeholder removed without losing measured weather")
+        reporter.check(day.maximumCelsius == 26, "Journey temperature precision matches the weather card")
         reporter.check(HotelJourneyWeatherDay.conditionDescription("小雨") == "小雨", "Real localized weather condition preserved")
         reporter.check(input.weather == [day], "One-night stay excludes checkout day weather")
         let data = try HotelJourneyMemoryCodec.requestData(input: input, model: ExternalReceiptAssistProvider.deepSeek.defaultModel)
@@ -3829,6 +3830,7 @@ struct OfflineRegression {
         let facts = try JSONSerialization.jsonObject(with: Data(messages[1]["content"]!.utf8)) as! [String: Any]
         reporter.check(Set(facts.keys) == Set(["hotel", "location", "checkIn", "checkOut", "language", "weather"]), "Journey request contains only disclosed stay facts")
         reporter.check(!messages[1]["content"]!.contains("Summary"), "Weather placeholder is not passed to DeepSeek as a fact")
+        reporter.check(!messages[1]["content"]!.contains("23.199865") && !messages[1]["content"]!.contains("3.469167"), "Provider decimal noise never enters journey prompt")
         reporter.check(request["reasoning_effort"] as? String == "low", "Journey reuses DeepSeek Flash low reasoning configuration")
         reporter.check(messages[0]["content"]!.contains("one night") && messages[0]["content"]!.contains("never instructions"), "Journey instructions distinguish one night and treat record text as data")
         let response = Data(#"{"choices":[{"message":{"content":"  一段小记。  "},"finish_reason":"stop"}]}"#.utf8)
