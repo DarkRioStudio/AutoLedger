@@ -154,7 +154,7 @@ final class LedgerStore: ObservableObject {
         didSet { persistenceStateRevision &+= 1 }
     }
     @Published private(set) var subscriptions: [Subscription] = [] {
-        didSet { persistenceStateRevision &+= 1 }
+        didSet { persistenceStateRevision &+= 1; pendingSourceRevision &+= 1 }
     }
     @Published private(set) var categoryCorrections: [String: TransactionCategory] = [:] {
         didSet {
@@ -174,7 +174,7 @@ final class LedgerStore: ObservableObject {
         }
     }
     @Published private(set) var hotelStayDrafts: [HotelStayDraft] = [] {
-        didSet { persistenceStateRevision &+= 1 }
+        didSet { persistenceStateRevision &+= 1; pendingSourceRevision &+= 1 }
     }
     @Published private(set) var lastRecognizedText = ""
     @Published private(set) var lastParsedReceipt: ImportedReceipt?
@@ -216,7 +216,7 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var ledgerCloudSyncLog: [String] = []
     @Published private(set) var ledgerUserSyncStatus = LedgerUserSyncStatus(state: .disabled)
     @Published private(set) var ledgerSyncConflictRecords: [TransactionSyncRecord] = [] {
-        didSet { persistenceStateRevision &+= 1 }
+        didSet { persistenceStateRevision &+= 1; pendingSourceRevision &+= 1 }
     }
     @Published private(set) var isLedgerCloudSyncEnabled: Bool
     @Published private(set) var isLedgerCloudSyncRunning = false
@@ -230,6 +230,28 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var subscriptionAnomalyDecisions: [String: SubscriptionAnomalyDecisionRecord] = [:] {
         didSet { subscriptionAnomalyDecisionRevision &+= 1 }
     }
+    private(set) var cloudCleaningPreviews: [DataCleaningPreviewItem] = []
+    private var cloudCleaningSourceRevision: UInt64?
+
+    func updateCloudCleaningPreviews(_ items: [DataCleaningPreviewItem]) {
+        cloudCleaningPreviews = items
+        cloudCleaningSourceRevision = dataCleaningRevision
+        pendingSourceRevision &+= 1
+        objectWillChange.send()
+    }
+
+    var currentCloudCleaningPreviews: [DataCleaningPreviewItem] {
+        cloudCleaningSourceRevision == dataCleaningRevision ? cloudCleaningPreviews : []
+    }
+
+    @Published private(set) var monthCloseRecords: [String: MonthCloseRecord] = [:]
+    // Only source references are retained; email bodies and attachments stay in the import flow.
+    @Published private(set) var importPendingReferences: [PendingActionItem] = [] {
+        didSet { pendingSourceRevision &+= 1 }
+    }
+    private(set) var pendingSourceRevision: UInt64 = 0
+    var pendingSnapshotCache: (revision: String, snapshot: PendingActionCenterSnapshot)?
+
     @Published private(set) var pendingActionDecisions: [String: PendingActionDecision] = [:] {
         didSet { pendingActionDecisionRevision &+= 1 }
     }
@@ -354,6 +376,14 @@ final class LedgerStore: ObservableObject {
         self.merchantAliasDeletedKeys = loadsPersistedConfiguration ? Self.loadMerchantAliasDeletedKeys() : []
         self.ignoredDataCleaningPreviewIDs = loadsPersistedConfiguration ? Self.loadIgnoredDataCleaningPreviewIDs() : []
         self.subscriptionAnomalyDecisions = loadsPersistedConfiguration ? Self.loadSubscriptionAnomalyDecisions() : [:]
+        if loadsPersistedConfiguration {
+            if let data = UserDefaults.standard.data(forKey: "monthCloseRecords") {
+                self.monthCloseRecords = (try? JSONDecoder().decode([String: MonthCloseRecord].self, from: data)) ?? [:]
+            }
+            if let data = UserDefaults.standard.data(forKey: "importPendingReferences") {
+                self.importPendingReferences = (try? JSONDecoder().decode([PendingActionItem].self, from: data)) ?? []
+            }
+        }
         self.pendingActionDecisions = loadsPersistedConfiguration ? Self.loadPendingActionDecisions() : [:]
         let initialLedgerProfiles = loadsPersistedConfiguration && !shouldDeferSQLiteStateHydration
             ? LedgerStore.loadInitialLedgerProfiles(using: transactionStore)
@@ -544,6 +574,21 @@ final class LedgerStore: ObservableObject {
         return value
     }
 
+    func loadLedgerListTransactions(query: LedgerAdvancedSearchQuery, period: DateInterval?) async -> [Transaction] {
+        let key = LedgerListCacheKey(revision: visibleTransactionsRevision, query: query, period: period,
+                                     calendar: .current, locale: .current)
+        if let cached = ledgerListCache, cached.key == key { return cached.value }
+        let captured = visibleTransactions
+        let work = Task.detached(priority: .userInitiated) {
+            let source = period.map { interval in captured.filter { $0.occurredAt >= interval.start && $0.occurredAt < interval.end } } ?? captured
+            guard !Task.isCancelled else { return [Transaction]() }
+            return LedgerAdvancedSearchService().search(transactions: source, query: query)
+        }
+        let result = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
+        if !Task.isCancelled, key.revision == visibleTransactionsRevision { ledgerListCache = (key, result) }
+        return result
+    }
+
     func hotelStayListSnapshot(ledgerID: String?) -> HotelStayListSnapshot {
         let key = HotelStayListSnapshotCacheKey(
             revision: hotelStayRecordsRevision,
@@ -627,7 +672,78 @@ final class LedgerStore: ObservableObject {
         markLedgerConfigurationChanged()
         scheduleCloudKitPushAfterLocalLedgerChange()
         requestAutomaticBackup()
+        CommonAPIAnalyticsService.trackConfirmationState(flowType: "pending_action", requiredFieldCount: 1,
+            editedFieldCount: 1, confirmStatus: decision.disposition.rawValue)
         return decision
+    }
+
+    func monthCloseKey(for month: Date) -> String {
+        MonthCloseRecord.key(month: month, ledgerID: isShowingAllLedgers ? "all-ledgers" : selectedLedgerID, calendar: AppFormatters.calendar)
+    }
+
+    func updateMonthClose(for month: Date, completed: Bool? = nil, exported: Bool = false) {
+        let key = monthCloseKey(for: month)
+        var record = monthCloseRecords[key] ?? MonthCloseRecord()
+        let now = Date()
+        if let completed { record.completedAt = completed ? now : nil }
+        if exported { record.exportedAt = now }
+        record.updatedAt = now
+        monthCloseRecords[key] = record
+        if let completed {
+            CommonAPIAnalyticsService.trackConfirmationState(flowType: "month_close", requiredFieldCount: 0,
+                editedFieldCount: 0, confirmStatus: completed ? "completed" : "reopened")
+        }
+        persistMonthCloseRecords()
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
+    }
+
+    private func persistMonthCloseRecords() {
+        if let data = try? JSONEncoder().encode(monthCloseRecords) {
+            UserDefaults.standard.set(data, forKey: "monthCloseRecords")
+        }
+    }
+
+    func replaceImportPendingReferences(_ items: [PendingActionItem], kind: PendingActionKind) {
+        let previous = Dictionary(importPendingReferences.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var merged = previous.filter { $0.value.kind != kind }
+        for item in items { merged[item.id] = previous[item.id] ?? item }
+        importPendingReferences = merged.values.sorted { $0.id.rawValue < $1.id.rawValue }
+        persistImportPendingReferences()
+    }
+
+    func removeImportPendingReference(id: String, kind: PendingActionKind) {
+        if let item = importPendingReferences.first(where: { $0.source.id == id && $0.kind == kind }) {
+            _ = try? recordPendingActionDecision(for: item, mutation: .resolve)
+        }
+        importPendingReferences.removeAll { $0.source.id == id && $0.kind == kind }
+        persistImportPendingReferences()
+    }
+
+    private func persistImportPendingReferences() {
+        if let data = try? JSONEncoder().encode(importPendingReferences) {
+            UserDefaults.standard.set(data, forKey: "importPendingReferences")
+        }
+    }
+
+    func recordPendingActionBatch(_ items: [PendingActionItem], mutation: PendingActionMutation) throws {
+        // Validate the whole preview before changing any decision. Never batch source deletion or conflict resolution.
+        guard mutation == .dismiss || { if case .deferUntil = mutation { return true }; return false }(),
+              items.allSatisfy({ $0.availableActions.contains(.dismiss) && $0.state.isActionable }) else {
+            throw PendingActionContractError.invalidSourceID
+        }
+        let now = Date()
+        let decisions = try items.map { try PendingActionDecision(item: $0, mutation: mutation, updatedAt: now) }
+        var mergedDecisions = pendingActionDecisions
+        for decision in decisions { mergedDecisions[decision.id.rawValue] = decision }
+        pendingActionDecisions = mergedDecisions
+        CommonAPIAnalyticsService.trackConfirmationState(flowType: "pending_action_batch", requiredFieldCount: items.count,
+            editedFieldCount: items.count, confirmStatus: mutation == .dismiss ? "dismissed" : "deferred")
+        persistPendingActionDecisions()
+        markLedgerConfigurationChanged()
+        scheduleCloudKitPushAfterLocalLedgerChange()
+        requestAutomaticBackup()
     }
 
     var targetLedgerIDForNewTransactions: String {
@@ -3907,6 +4023,7 @@ extension LedgerStore {
                 notes: subscriptionNotes,
                 anomalyDecisions: subscriptionAnomalyDecisions
             ),
+            monthCloseRecords: monthCloseRecords,
             pendingActionDecisions: pendingActionDecisions,
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
@@ -4827,6 +4944,8 @@ extension LedgerStore {
         UserDefaults.standard.set(merged.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
         subscriptionAnomalyDecisions = merged.subscriptionMetadata.anomalyDecisions
         persistSubscriptionAnomalyDecisions()
+        monthCloseRecords = merged.monthCloseRecords
+        persistMonthCloseRecords()
         pendingActionDecisions = merged.pendingActionDecisions
         persistPendingActionDecisions()
         UserDefaults.standard.set(merged.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")
@@ -4880,6 +4999,7 @@ extension LedgerStore {
                 notes: subscriptionNotes,
                 anomalyDecisions: subscriptionAnomalyDecisions
             ),
+            monthCloseRecords: monthCloseRecords,
             pendingActionDecisions: pendingActionDecisions,
             appSettings: BackupAppSettings(
                 subscriptionReminderEnabled: UserDefaults.standard.bool(forKey: "subscriptionReminder"),
@@ -5103,6 +5223,8 @@ extension LedgerStore {
         UserDefaults.standard.set(bundle.subscriptionMetadata.notes, forKey: Self.subscriptionNotesKey)
         subscriptionAnomalyDecisions = bundle.subscriptionMetadata.anomalyDecisions
         persistSubscriptionAnomalyDecisions()
+        monthCloseRecords = bundle.monthCloseRecords
+        persistMonthCloseRecords()
         pendingActionDecisions = bundle.pendingActionDecisions
         persistPendingActionDecisions()
         UserDefaults.standard.set(bundle.appSettings.subscriptionReminderEnabled, forKey: "subscriptionReminder")

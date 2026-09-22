@@ -18,6 +18,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
     public let ledgerProfiles: [LedgerProfile]
     public let defaultWriteLedgerID: String?
     public let subscriptionMetadata: BackupSubscriptionMetadata
+    public let monthCloseRecords: [String: MonthCloseRecord]
     public let pendingActionDecisions: [String: PendingActionDecision]
     public let appSettings: BackupAppSettings
 
@@ -39,6 +40,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         ledgerProfiles: [LedgerProfile] = [],
         defaultWriteLedgerID: String? = nil,
         subscriptionMetadata: BackupSubscriptionMetadata,
+        monthCloseRecords: [String: MonthCloseRecord] = [:],
         pendingActionDecisions: [String: PendingActionDecision] = [:],
         appSettings: BackupAppSettings
     ) {
@@ -59,6 +61,7 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         self.ledgerProfiles = ledgerProfiles
         self.defaultWriteLedgerID = defaultWriteLedgerID
         self.subscriptionMetadata = subscriptionMetadata
+        self.monthCloseRecords = monthCloseRecords
         self.pendingActionDecisions = PendingActionDecision.normalizedDictionary(pendingActionDecisions)
         self.appSettings = appSettings
     }
@@ -81,8 +84,35 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         case ledgerProfiles
         case defaultWriteLedgerID
         case subscriptionMetadata
+        case monthCloseRecords
         case pendingActionDecisions
         case appSettings
+        case extendedPendingActionDecisions
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(bundleId, forKey: .bundleId)
+        try container.encode(exportedAt, forKey: .exportedAt)
+        try container.encode(app, forKey: .app)
+        try container.encode(device, forKey: .device)
+        try container.encode(summary, forKey: .summary)
+        try container.encode(transactions, forKey: .transactions)
+        try container.encode(subscriptions, forKey: .subscriptions)
+        try container.encode(hotelStayRecords, forKey: .hotelStayRecords)
+        try container.encode(hotelStayDrafts, forKey: .hotelStayDrafts)
+        try container.encode(categoryCorrections, forKey: .categoryCorrections)
+        try container.encode(customCategories, forKey: .customCategories)
+        try container.encode(customSources, forKey: .customSources)
+        try container.encode(merchantAliases, forKey: .merchantAliases)
+        try container.encode(ledgerProfiles, forKey: .ledgerProfiles)
+        try container.encode(defaultWriteLedgerID, forKey: .defaultWriteLedgerID)
+        try container.encode(subscriptionMetadata, forKey: .subscriptionMetadata)
+        try container.encode(monthCloseRecords, forKey: .monthCloseRecords)
+        try container.encode(pendingActionDecisions.filter { !$0.value.kind.usesExtendedDecisionField }, forKey: .pendingActionDecisions)
+        try container.encode(pendingActionDecisions.filter { $0.value.kind.usesExtendedDecisionField }, forKey: .extendedPendingActionDecisions)
+        try container.encode(appSettings, forKey: .appSettings)
     }
 
     public init(from decoder: Decoder) throws {
@@ -104,12 +134,12 @@ public struct BackupBundle: Codable, Equatable, Sendable {
         ledgerProfiles = try container.decodeIfPresent([LedgerProfile].self, forKey: .ledgerProfiles) ?? []
         defaultWriteLedgerID = try container.decodeIfPresent(String.self, forKey: .defaultWriteLedgerID)
         subscriptionMetadata = try container.decode(BackupSubscriptionMetadata.self, forKey: .subscriptionMetadata)
-        pendingActionDecisions = PendingActionDecision.normalizedDictionary(
-            try container.decodeIfPresent(
-                [String: PendingActionDecision].self,
-                forKey: .pendingActionDecisions
-            ) ?? [:]
-        )
+        monthCloseRecords = try container.decodeIfPresent([String: MonthCloseRecord].self, forKey: .monthCloseRecords) ?? [:]
+        let legacy = try container.decodeIfPresent([String: PendingActionDecision].self, forKey: .pendingActionDecisions) ?? [:]
+        let extended = try container.decodeIfPresent([String: PendingActionDecision].self, forKey: .extendedPendingActionDecisions) ?? [:]
+        pendingActionDecisions = PendingActionDecision.normalizedDictionary(legacy.merging(extended) { lhs, rhs in
+            rhs.isPreferred(over: lhs) ? rhs : lhs
+        })
         appSettings = try container.decode(BackupAppSettings.self, forKey: .appSettings)
     }
 }

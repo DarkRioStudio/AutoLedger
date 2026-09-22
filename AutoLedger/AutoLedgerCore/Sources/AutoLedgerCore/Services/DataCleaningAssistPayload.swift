@@ -451,3 +451,27 @@ private enum DataCleaningAssistFingerprint {
         return String(format: "%016llx", CUnsignedLongLong(hash))
     }
 }
+
+
+public struct DataCleaningAssistCacheEntry: Codable, Sendable {
+    public let response: DataCleaningAssistResponse
+    public let expiresAt: Date
+    public init(response: DataCleaningAssistResponse, expiresAt: Date) {
+        self.response = response; self.expiresAt = expiresAt
+    }
+}
+
+public struct DataCleaningAssistRetryState: Codable, Equatable, Sendable {
+    public var failures: Int = 0
+    public var nextEligibleAt: Date?
+    public init() {}
+    public mutating func recordFailure(at now: Date, retryAfter: TimeInterval? = nil) {
+        failures = min(failures + 1, 8)
+        let delay = max(min(retryAfter ?? 0, 86_400), min(21_600, 60 * pow(2, Double(failures - 1))))
+        nextEligibleAt = now.addingTimeInterval(delay)
+    }
+    public mutating func recordSuccess(at now: Date) {
+        failures = 0
+        nextEligibleAt = now.addingTimeInterval(21_600)
+    }
+}

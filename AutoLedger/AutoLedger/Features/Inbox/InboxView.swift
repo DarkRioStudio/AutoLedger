@@ -178,6 +178,8 @@ struct InboxView: View {
                 await Task.yield()
                 isPresentingDataCleaning = true
             }
+        case .emailReview, .cloudInboxReview, .syncConflict, .missingInformation:
+            break
         case .subscriptionAnomaly:
             selectedTab = AutoLedgerHomeTab.settings.rawValue
             navigationState.settingsPath = [.subscriptions]

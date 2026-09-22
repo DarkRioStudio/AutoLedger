@@ -3191,6 +3191,7 @@ private struct IPadReportWorkspaceView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     metricGrid
+                    MonthCloseCard(month: selectedMonth)
                     analysisGrid
                 }
                 .padding(24)

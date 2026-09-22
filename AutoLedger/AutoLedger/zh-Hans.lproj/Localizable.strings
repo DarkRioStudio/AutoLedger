@@ -1643,3 +1643,34 @@
 "hotel_stay.detail.weather.condition_unavailable" = "天气概况暂缺";
 
 "hotel_stay.detail.weather.value_unavailable" = "暂无数据";
+
+/* 1.7.0 completion: review and month close */
+"pending_center.emailReview.title" = "邮箱候选";
+"pending_center.cloudInboxReview.title" = "云收件箱候选";
+"pending_center.syncConflict.title" = "同步冲突";
+"pending_center.missingInformation.title" = "资料待补充";
+"pending_center.emailReview.subtitle" = "复核已扫描的邮件附件。";
+"pending_center.cloudInboxReview.subtitle" = "复核已收到的酒店水单。";
+"pending_center.syncConflict.subtitle" = "选择如何处理冲突账单。";
+"pending_center.missingInformation.subtitle" = "检查需要确认分类的账单。";
+"pending_action.reason.emailNeedsReview" = "邮件附件等待复核。";
+"pending_action.reason.cloudInboxNeedsReview" = "云收件箱水单等待复核。";
+"pending_action.reason.syncConflictNeedsReview" = "这笔账单存在同步冲突，请打开同步设置处理。";
+"pending_action.reason.categoryMissing" = "请确认分类；若有意使用“其他”，可忽略此提醒。";
+"pending_action.batch.preview" = "预览所选操作";
+"pending_action.batch.explanation" = "仅忽略或延后下列提醒，不删除账单；可以在此中心重新打开。";
+"pending_action.batch.changed" = "所选事项已变化，请刷新后重新预览。";
+"month_close.title" = "月结检查";
+"month_close.explanation" = "核对本月待处理事项及凭证。完成不锁账，也不能替代备份。";
+"month_close.completed" = "本月已完成";
+"month_close.reopen" = "重新打开本月";
+"month_close.pending_format" = "有 %d 项待复核";
+"month_close.review" = "查看待处理事项";
+"month_close.complete" = "完成本月";
+"month_close.export_pending" = "尚未记录月结包生成（可选）。";
+"month_close.exported" = "已生成月结包，导出文件不等于云备份。";
+"month_close.confirm_format" = "仍有 %d 项提醒。请确认已检查缺失凭证及不完整记录；完成后仍可编辑或重新打开本月。";
+"cleaning.cloud.cooldown" = "云端建议暂缓请求，本地建议仍可使用。";
+"cleaning.rule.source" = "建议来源";
+"cleaning.rule.local" = "本地规则";
+"cleaning.rule.last_applied" = "最近应用";

@@ -669,6 +669,26 @@ describe("common api worker contract", () => {
     expect(serialized).not.toContain("merchant");
   });
 
+  it("keeps dashboard review lifecycle events out of receipt discard rates", async () => {
+    const rows = [
+      { flow_type: "receipt_scan", confirm_status: "discarded" },
+      { flow_type: "pending_action_batch", confirm_status: "dismissed" },
+      { flow_type: "month_close", confirm_status: "completed" }
+    ].map((payload, index) => ({
+      event_name: "al_confirmation_state", event_id: `review-${index}`, app_version: "1.7.0",
+      build_number: "candidate", os_major: "27", device_class: "ios",
+      payload_json: JSON.stringify(payload), received_at: new Date().toISOString()
+    }));
+    const db = new AnalyticsDashboardD1Database(releaseNotesFixtures, rows);
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard/data"), {
+      ...env, COMMON_API_DB: db as unknown as D1Database
+    } as unknown as Env);
+    const body = await jsonBody(response);
+    const metrics = new Map((body.metrics as Array<Record<string, unknown>>).map((metric) => [metric.metricID, metric]));
+    expect(metrics.get("review_lifecycle_actions")).toMatchObject({ value: 2, unit: "count" });
+    expect(metrics.get("confirmation_discard_rate")).toMatchObject({ numerator: 1, denominator: 1 });
+  });
+
   it("allows Cloudflare Access email headers only on protected AutoLedger dashboard hosts", () => {
     const accessEnv = {
       ENVIRONMENT: "production",

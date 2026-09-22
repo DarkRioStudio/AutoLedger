@@ -6,6 +6,10 @@ public enum PendingActionCategory: String, Codable, CaseIterable, Sendable {
     case duplicateReview
     case subscriptionAnomaly
     case cleaningSuggestion
+    case emailReview
+    case cloudInboxReview
+    case syncConflict
+    case missingInformation
 }
 
 public enum PendingActionPriority: Int, Codable, Comparable, Sendable {
@@ -24,6 +28,18 @@ public enum PendingActionKind: String, Codable, CaseIterable, Sendable {
     case duplicateCandidate
     case subscriptionAnomaly
     case cleaningSuggestion
+    case emailCandidate
+    case cloudInboxCandidate
+    case syncConflict
+    case missingInformation
+
+    /// Keep new source kinds out of the original decision field while older app builds coexist.
+    public var usesExtendedDecisionField: Bool {
+        switch self {
+        case .emailCandidate, .cloudInboxCandidate, .syncConflict, .missingInformation: return true
+        default: return false
+        }
+    }
 
     public var category: PendingActionCategory {
         switch self {
@@ -32,16 +48,20 @@ public enum PendingActionKind: String, Codable, CaseIterable, Sendable {
         case .duplicateCandidate: return .duplicateReview
         case .subscriptionAnomaly: return .subscriptionAnomaly
         case .cleaningSuggestion: return .cleaningSuggestion
+        case .emailCandidate: return .emailReview
+        case .cloudInboxCandidate: return .cloudInboxReview
+        case .syncConflict: return .syncConflict
+        case .missingInformation: return .missingInformation
         }
     }
 
     public var defaultPriority: PendingActionPriority {
         switch self {
-        case .receiptConfirmation, .hotelDraftReview:
+        case .receiptConfirmation, .hotelDraftReview, .emailCandidate, .cloudInboxCandidate, .syncConflict:
             return .urgent
         case .duplicateCandidate, .subscriptionAnomaly:
             return .elevated
-        case .cleaningSuggestion:
+        case .cleaningSuggestion, .missingInformation:
             return .normal
         }
     }
@@ -50,7 +70,7 @@ public enum PendingActionKind: String, Codable, CaseIterable, Sendable {
         switch self {
         case .duplicateCandidate, .subscriptionAnomaly, .cleaningSuggestion:
             return true
-        case .receiptConfirmation, .hotelDraftReview:
+        case .receiptConfirmation, .hotelDraftReview, .emailCandidate, .cloudInboxCandidate, .syncConflict, .missingInformation:
             return false
         }
     }
@@ -61,14 +81,20 @@ public enum PendingActionKind: String, Codable, CaseIterable, Sendable {
         case .hotelDraftReview: return .hotelReview
         case .duplicateCandidate, .cleaningSuggestion: return .dataCleaning
         case .subscriptionAnomaly: return .subscriptions
+        case .emailCandidate: return .emailImport
+        case .cloudInboxCandidate: return .cloudInbox
+        case .syncConflict: return .syncReview
+        case .missingInformation: return .transaction
         }
     }
 
     public var defaultActions: [PendingActionAvailableAction] {
         switch self {
         case .receiptConfirmation, .hotelDraftReview, .subscriptionAnomaly,
-             .duplicateCandidate, .cleaningSuggestion:
+             .duplicateCandidate, .cleaningSuggestion, .emailCandidate, .cloudInboxCandidate, .missingInformation:
             return [.open, .confirm, .`defer`, .dismiss, .reopen]
+        case .syncConflict:
+            return [.open, .`defer`, .reopen]
         }
     }
 }
@@ -78,6 +104,10 @@ public enum PendingActionSourceType: String, Codable, CaseIterable, Sendable {
     case hotelStayDraft
     case dataCleaningPreview
     case subscriptionAnomaly
+    case emailCandidate
+    case cloudInboxCandidate
+    case transactionSync
+    case transaction
 }
 
 public struct PendingActionSourceReference: Codable, Hashable, Sendable {
@@ -136,6 +166,10 @@ public enum PendingActionReasonCode: String, Codable, CaseIterable, Sendable {
     case subscriptionBillingCycleDrift
     case merchantNormalizationSuggested
     case categoryCorrectionSuggested
+    case emailNeedsReview
+    case cloudInboxNeedsReview
+    case syncConflictNeedsReview
+    case categoryMissing
 
     public var localizationKey: String {
         "pending_action.reason.\(rawValue)"
@@ -167,6 +201,10 @@ public enum PendingActionTarget: String, Codable, CaseIterable, Sendable {
     case hotelReview
     case dataCleaning
     case subscriptions
+    case emailImport
+    case cloudInbox
+    case syncReview
+    case transaction
 }
 
 public enum PendingActionMutation: Equatable, Sendable {
@@ -410,5 +448,45 @@ public struct PendingActionItem: Identifiable, Codable, Equatable, Sendable {
         }
         copy.updatedAt = timestamp
         return copy
+    }
+}
+
+
+/// A reopen is retained as a tombstone so stale devices cannot resurrect completion.
+public struct MonthCloseRecord: Codable, Equatable, Sendable {
+    public var completedAt: Date?
+    public var updatedAt: Date
+    public var exportedAt: Date?
+
+    public init(completedAt: Date? = nil, updatedAt: Date = .now, exportedAt: Date? = nil) {
+        self.completedAt = completedAt
+        self.updatedAt = updatedAt
+        self.exportedAt = exportedAt
+    }
+
+    public static func key(month: Date, ledgerID: String, calendar: Calendar) -> String {
+        let parts = calendar.dateComponents([.era, .year, .month], from: month)
+        return "\(ledgerID)|\(calendar.identifier)|\(parts.era ?? 1)|\(parts.year ?? 0)-\(parts.month ?? 0)"
+    }
+
+    public static func merge(_ local: [String: Self], _ remote: [String: Self]) -> [String: Self] {
+        local.merging(remote) { lhs, rhs in
+            var winner = lhs.updatedAt > rhs.updatedAt ? lhs : rhs
+            if lhs.updatedAt == rhs.updatedAt, lhs.completedAt == nil || rhs.completedAt == nil {
+                winner.completedAt = nil
+            }
+            winner.exportedAt = [lhs.exportedAt, rhs.exportedAt].compactMap { $0 }.max()
+            return winner
+        }
+    }
+}
+
+public enum MonthClosePlanner {
+    /// Includes deferred work: postponing a reminder does not resolve month-end work.
+    public static func outstanding(in snapshot: PendingActionCenterSnapshot, month: Date, calendar: Calendar) -> [PendingActionItem] {
+        guard let interval = calendar.dateInterval(of: .month, for: month) else { return [] }
+        return (snapshot.items + snapshot.deferredItems).filter {
+            $0.createdAt >= interval.start && $0.createdAt < interval.end
+        }
     }
 }

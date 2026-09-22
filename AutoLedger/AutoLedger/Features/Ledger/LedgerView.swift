@@ -65,12 +65,27 @@ struct LedgerView: View {
         }
     }
 
-    private var searchFilteredTransactions: [Transaction] {
+    private struct SearchRequest: Equatable {
+        let revision: UInt64
+        let query: LedgerAdvancedSearchQuery
+        let period: DateInterval?
+        let locale: String
+        let calendar: Calendar
+    }
+    @State private var loadedRequest: SearchRequest?
+    @State private var loadedTransactions: [Transaction] = []
+
+    private var searchRequest: SearchRequest {
         var query = effectiveAdvancedSearchQuery
         if query.hasAdvancedFilters && !proEntitlement.canUse(.advancedSearch) {
             query = LedgerAdvancedSearchQuery(keyword: query.keyword)
         }
-        return store.ledgerListTransactions(query: query, period: filterPeriod)
+        return SearchRequest(revision: store.visibleTransactionsRevision, query: query, period: filterPeriod,
+                             locale: Locale.current.identifier, calendar: .current)
+    }
+
+    private var searchFilteredTransactions: [Transaction] {
+        loadedRequest == searchRequest ? loadedTransactions : []
     }
 
     private var effectiveAdvancedSearchQuery: LedgerAdvancedSearchQuery {
@@ -209,6 +224,17 @@ struct LedgerView: View {
             consumePendingNewTransactionIfNeeded()
             ensurePersistentDetailSelectionIfNeeded()
         }
+        .task(id: searchRequest) {
+            let request = searchRequest
+            if !request.query.keyword.isEmpty {
+                do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+            }
+            let result = await store.loadLedgerListTransactions(query: request.query, period: request.period)
+            guard !Task.isCancelled, request == searchRequest else { return }
+            loadedTransactions = result
+            loadedRequest = request
+            ensurePersistentDetailSelectionIfNeeded()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NotificationService.openNewTransactionEvent)) { _ in
             consumePendingNewTransactionIfNeeded()
         }
@@ -227,7 +253,9 @@ struct LedgerView: View {
                 filterSection
 
                 Section {
-                    if results.isEmpty && !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if loadedRequest != searchRequest {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else if results.isEmpty && !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                         Text("ledger.search.no_results")
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.mutedInk)
@@ -279,7 +307,7 @@ struct LedgerView: View {
             .refreshable {
                 await store.pullLedgerFromCloudKitIfEnabled(reason: "账本下拉刷新，正在从 iCloud 拉取数据。")
             }
-            .onChange(of: searchText) { _, _ in
+            .onChange(of: loadedRequest) { _, _ in
                 if let first = searchFilteredTransactions.first {
                     if reduceMotion {
                         proxy.scrollTo(first.id, anchor: .top)

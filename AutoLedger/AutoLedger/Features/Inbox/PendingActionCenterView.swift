@@ -6,7 +6,8 @@ enum PendingActionCenterLoader {
     static func revision(for store: LedgerStore) -> String {
         var components: [String] = []
         components.reserveCapacity(11)
-        components.append(String(store.visibleTransactions.count))
+        components.append(String(store.visibleTransactionsRevision))
+        components.append(String(store.pendingSourceRevision))
         components.append(String(store.visibleSubscriptions.count))
         components.append(String(store.hotelStayDrafts.count))
         components.append(String(store.merchantAliases.count))
@@ -20,9 +21,19 @@ enum PendingActionCenterLoader {
         return components.joined(separator: "|")
     }
 
-    static func load(from store: LedgerStore) async -> PendingActionCenterSnapshot {
+    static func load(from store: LedgerStore, month: Date? = nil) async -> PendingActionCenterSnapshot {
+        let interval = month.flatMap { AppFormatters.calendar.dateInterval(of: .month, for: $0) }
+        let baseRevision = revision(for: store)
+        let currentRevision = baseRevision + (interval.map { "|month:\($0.start.timeIntervalSince1970)" } ?? "")
+        if let cache = store.pendingSnapshotCache, cache.revision == currentRevision,
+           !cache.snapshot.deferredItems.contains(where: { $0.deferredUntil.map { $0 <= .now } ?? false }) {
+            return cache.snapshot
+        }
+        let extraItems = store.importPendingReferences
+        let conflicts = store.ledgerSyncConflictRecords
         let transactions = store.visibleTransactions
         let subscriptions = store.visibleSubscriptions
+        let cloudPreviews = store.currentCloudCleaningPreviews
         let merchantAliases = store.merchantAliases
         let categoryCorrections = store.categoryCorrections
         let ignoredPreviewIDs = store.ignoredDataCleaningPreviewIDs
@@ -35,18 +46,38 @@ enum PendingActionCenterLoader {
             ![HotelStayDraftStatus.confirmed, .rejected, .postedToLedger].contains($0.status)
         }
 
-        return await Task.detached(priority: .userInitiated) {
-            let cleaningSnapshot = DataCleaningPreviewPlanner().buildSnapshot(
+        let loaded = await Task.detached(priority: .userInitiated) {
+            var cleaningSnapshot = DataCleaningPreviewPlanner().buildSnapshot(
                 transactions: transactions,
                 merchantAliases: merchantAliases,
                 categoryCorrections: categoryCorrections,
                 ignoredPreviewIDs: ignoredPreviewIDs
             )
+            let localIDs = Set(cleaningSnapshot.items.map(\.id))
+            let transactionIDs = Set(transactions.map(\.id))
+            cleaningSnapshot.items.append(contentsOf: cloudPreviews.filter {
+                !localIDs.contains($0.id) && !ignoredPreviewIDs.contains($0.id) &&
+                $0.affectedTransactionIDs.contains(where: { transactionIDs.contains($0) })
+            })
             let anomalySummary = SubscriptionAnomalyDetector().analyze(
                 subscriptions: subscriptions,
                 transactions: transactions
             ).filteringHandledAnomalies(withIDs: handledSubscriptionAnomalyIDs)
-            var items: [PendingActionItem] = []
+            var items: [PendingActionItem] = extraItems
+            let visibleIDs = Set(transactions.map(\.id))
+            items.append(contentsOf: conflicts.filter { visibleIDs.contains($0.transaction.id) }.compactMap { record in
+                try? PendingActionItem(kind: .syncConflict,
+                    source: .init(type: .transactionSync, id: record.transaction.id.uuidString,
+                                  revision: "\(record.metadata.syncRevision):\(record.metadata.updatedAt.timeIntervalSince1970)"),
+                    reason: .syncConflictNeedsReview, createdAt: record.transaction.occurredAt,
+                    updatedAt: record.metadata.updatedAt)
+            })
+            items.append(contentsOf: transactions.filter { $0.category.isEmpty || $0.category == TransactionCategory.other.rawValue }.compactMap { transaction in
+                try? PendingActionItem(kind: .missingInformation,
+                    source: .init(type: .transaction, id: transaction.id.uuidString,
+                                  revision: PendingActionSourceReference.opaqueID(for: transaction.category)),
+                    reason: .categoryMissing, createdAt: transaction.occurredAt)
+            })
 
             if let receiptReviewSeed,
                let item = try? PendingActionItem(
@@ -89,9 +120,10 @@ enum PendingActionCenterLoader {
                 case .categoryCorrection:
                     reason = .categoryCorrectionSuggested
                 }
-                let evidenceDate = preview.affectedTransactionIDs
-                    .compactMap { transactionDates[$0] }
-                    .max() ?? Date(timeIntervalSince1970: 0)
+                let evidenceDates = preview.affectedTransactionIDs.compactMap { transactionDates[$0] }
+                let evidenceDate = evidenceDates.first(where: { date in
+                    interval.map { date >= $0.start && date < $0.end } ?? false
+                }) ?? evidenceDates.max() ?? Date(timeIntervalSince1970: 0)
                 return try? PendingActionItem(
                     kind: kind,
                     source: PendingActionSourceReference(
@@ -135,6 +167,10 @@ enum PendingActionCenterLoader {
                 at: timestamp
             )
         }.value
+        if !Task.isCancelled, baseRevision == revision(for: store) {
+            store.pendingSnapshotCache = (currentRevision, loaded)
+        }
+        return loaded
     }
 }
 
@@ -203,6 +239,25 @@ struct PendingActionCenterCard: View {
 }
 
 struct PendingActionCenterListView: View {
+    @EnvironmentObject private var store: LedgerStore
+    @State private var selectedIDs: Set<PendingActionID> = []
+    @State private var batchPreview: [PendingActionItem] = []
+    @State private var showBatchPreview = false
+    @State private var batchError = false
+    @State private var isApplyingBatch = false
+    @State private var specialTarget: PendingActionTarget?
+    @State private var selectedTransaction: Transaction?
+
+    private func openItem(_ item: PendingActionItem) {
+        switch item.target {
+        case .emailImport, .cloudInbox, .syncReview:
+            specialTarget = item.target
+        case .transaction:
+            selectedTransaction = store.transactions.first { $0.id.uuidString == item.source.id }
+        default: onOpen(item)
+        }
+    }
+
     let snapshot: PendingActionCenterSnapshot
     let isRefreshing: Bool
     let onOpen: (PendingActionItem) -> Void
@@ -212,7 +267,7 @@ struct PendingActionCenterListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            LazyVStack(alignment: .leading, spacing: 14) {
                 if isRefreshing && !snapshot.hasStoredItems {
                     ProgressView("pending_center.loading")
                         .frame(maxWidth: .infinity, minHeight: 180)
@@ -235,10 +290,15 @@ struct PendingActionCenterListView: View {
                             .foregroundStyle(AppTheme.mutedInk)
 
                         ForEach(snapshot.items) { item in
+                            if item.availableActions.contains(.dismiss) {
+                                Toggle(isOn: Binding(get: { selectedIDs.contains(item.id) }, set: {
+                                    if $0 { selectedIDs.insert(item.id) } else { selectedIDs.remove(item.id) }
+                                })) { Text(item.category.titleKey) }
+                            }
                             PendingActionItemRow(
                                 item: item,
                                 presentation: .active,
-                                onOpen: { onOpen(item) },
+                                onOpen: { openItem(item) },
                                 onDefer: { date in onDecision(item, .deferUntil(date)) },
                                 onDismiss: { itemPendingDismissal = item },
                                 onReopen: {}
@@ -257,7 +317,7 @@ struct PendingActionCenterListView: View {
                             PendingActionItemRow(
                                 item: item,
                                 presentation: .deferred,
-                                onOpen: { onOpen(item) },
+                                onOpen: { openItem(item) },
                                 onDefer: { _ in },
                                 onDismiss: { itemPendingDismissal = item },
                                 onReopen: { onDecision(item, .reopen) }
@@ -276,7 +336,7 @@ struct PendingActionCenterListView: View {
                             PendingActionItemRow(
                                 item: item,
                                 presentation: .handled,
-                                onOpen: { onOpen(item) },
+                                onOpen: { openItem(item) },
                                 onDefer: { _ in },
                                 onDismiss: {},
                                 onReopen: { onDecision(item, .reopen) }
@@ -291,6 +351,57 @@ struct PendingActionCenterListView: View {
         .autoLedgerScreenChrome()
         .navigationTitle("pending_center.title")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("pending_action.batch.preview") {
+                    batchPreview = snapshot.items.filter { selectedIDs.contains($0.id) && $0.availableActions.contains(.dismiss) }
+                    showBatchPreview = true
+                }.disabled(selectedIDs.isEmpty || isRefreshing || isApplyingBatch)
+            }
+        }
+        .sheet(isPresented: $showBatchPreview) {
+            NavigationStack {
+                List {
+                    Text("pending_action.batch.explanation")
+                    ForEach(batchPreview) { item in
+                        VStack(alignment: .leading) {
+                            Text(item.category.titleKey)
+                            Text(LocalizedStringKey(item.reason.localizationKey)).font(.caption)
+                        }
+                    }
+                    Button("pending_action.ignore") { applyBatch(.dismiss) }
+                    Button("pending_action.defer.tomorrow") {
+                        applyBatch(.deferUntil(Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: .now)))
+                    }
+                }
+                .disabled(isApplyingBatch)
+                .navigationTitle("pending_action.batch.preview")
+                .toolbar { Button("common.cancel") { showBatchPreview = false } }
+            }
+        }
+        .sheet(isPresented: Binding(get: { specialTarget != nil }, set: { if !$0 { specialTarget = nil } })) {
+            NavigationStack {
+                Group {
+                    switch specialTarget {
+                    case .emailImport:
+                        HotelFolioEmailImportView(targetLedgerID: store.targetLedgerIDForNewTransactions) { drafts in
+                            for draft in drafts { _ = store.saveHotelStayDraft(draft) }
+                        }
+                    case .cloudInbox:
+                        HotelFolioInboxImportView(targetLedgerID: store.targetLedgerIDForNewTransactions) { drafts in
+                            for draft in drafts { _ = store.saveHotelStayDraft(draft) }
+                        }
+                    default: DataManagementView()
+                    }
+                }.toolbar { Button("common.close") { specialTarget = nil } }
+            }
+        }
+        .sheet(item: $selectedTransaction) { transaction in
+            TransactionEditorView(transaction: transaction) { updated, refresh, alias in
+                store.updateTransaction(updated, refreshSameMerchantCategory: refresh, saveMerchantAlias: alias)
+            }
+        }
+        .alert("pending_action.batch.changed", isPresented: $batchError) { Button("common.close", role: .cancel) {} }
         .alert(
             "pending_action.ignore.confirm.title",
             isPresented: Binding(
@@ -312,6 +423,21 @@ struct PendingActionCenterListView: View {
             Text("pending_action.ignore.confirm.message")
         }
     }
+    private func applyBatch(_ mutation: PendingActionMutation) {
+        isApplyingBatch = true
+        Task { @MainActor in
+            let current = await PendingActionCenterLoader.load(from: store)
+            let currentIDs = Set(current.items.map(\.id))
+            guard batchPreview.allSatisfy({ currentIDs.contains($0.id) }) else {
+                showBatchPreview = false; batchError = true; isApplyingBatch = false
+                return
+            }
+            do { try store.recordPendingActionBatch(batchPreview, mutation: mutation) }
+            catch { batchError = true }
+            selectedIDs.removeAll(); showBatchPreview = false; isApplyingBatch = false
+        }
+    }
+
 }
 
 struct IPadPendingActionWorkspaceView: View {
@@ -335,7 +461,9 @@ struct IPadPendingActionWorkspaceView: View {
         }
         .task(id: PendingActionCenterLoader.revision(for: store)) {
             isRefreshing = true
-            snapshot = await PendingActionCenterLoader.load(from: store)
+            let loaded = await PendingActionCenterLoader.load(from: store)
+            guard !Task.isCancelled else { return }
+            snapshot = loaded
             isRefreshing = false
         }
     }
@@ -350,6 +478,8 @@ struct IPadPendingActionWorkspaceView: View {
             openCleaning()
         case .subscriptionAnomaly:
             openSubscriptions()
+        case .emailReview, .cloudInboxReview, .syncConflict, .missingInformation:
+            break
         }
     }
 
@@ -421,6 +551,7 @@ private struct PendingActionItemRow: View {
                         }
                     }
 
+                    Text(item.createdAt, format: .dateTime.year().month().day()).font(.caption)
                     Text(LocalizedStringKey(item.reason.localizationKey))
                         .font(.subheadline)
                         .foregroundStyle(AppTheme.mutedInk)
@@ -450,11 +581,13 @@ private struct PendingActionItemRow: View {
                     }
                     .buttonStyle(.bordered)
 
-                    Button("pending_action.ignore", role: .destructive, action: onDismiss)
-                        .buttonStyle(.bordered)
+                    if item.availableActions.contains(.dismiss) {
+                        Button("pending_action.ignore", role: .destructive, action: onDismiss).buttonStyle(.bordered)
+                    }
                 case .deferred:
-                    Button("pending_action.ignore", role: .destructive, action: onDismiss)
-                        .buttonStyle(.bordered)
+                    if item.availableActions.contains(.dismiss) {
+                        Button("pending_action.ignore", role: .destructive, action: onDismiss).buttonStyle(.bordered)
+                    }
                     Button("pending_action.reopen", action: onReopen)
                         .buttonStyle(.bordered)
                 case .handled:
@@ -583,6 +716,10 @@ private extension PendingActionCategory {
         case .duplicateReview: return "pending_center.duplicate.title"
         case .subscriptionAnomaly: return "pending_center.subscription.title"
         case .cleaningSuggestion: return "pending_center.cleaning.title"
+        case .emailReview: return "pending_center.emailReview.title"
+        case .cloudInboxReview: return "pending_center.cloudInboxReview.title"
+        case .syncConflict: return "pending_center.syncConflict.title"
+        case .missingInformation: return "pending_center.missingInformation.title"
         }
     }
 
@@ -593,6 +730,10 @@ private extension PendingActionCategory {
         case .duplicateReview: return "pending_center.duplicate.subtitle"
         case .subscriptionAnomaly: return "pending_center.subscription.subtitle"
         case .cleaningSuggestion: return "pending_center.cleaning.subtitle"
+        case .emailReview: return "pending_center.emailReview.subtitle"
+        case .cloudInboxReview: return "pending_center.cloudInboxReview.subtitle"
+        case .syncConflict: return "pending_center.syncConflict.subtitle"
+        case .missingInformation: return "pending_center.missingInformation.subtitle"
         }
     }
 
@@ -603,12 +744,16 @@ private extension PendingActionCategory {
         case .duplicateReview: return "doc.on.doc.fill"
         case .subscriptionAnomaly: return "bell.badge.fill"
         case .cleaningSuggestion: return "wand.and.sparkles"
+        case .emailReview: return "envelope"
+        case .cloudInboxReview: return "tray"
+        case .syncConflict: return "icloud.slash"
+        case .missingInformation: return "questionmark.circle"
         }
     }
 
     var tint: Color {
         switch self {
-        case .receiptReview: return AppTheme.accent
+        case .receiptReview, .emailReview, .cloudInboxReview, .syncConflict, .missingInformation: return AppTheme.accent
         case .hotelReview: return AppTheme.accentSecondary
         case .duplicateReview: return Color(red: 0.82, green: 0.36, blue: 0.24)
         case .subscriptionAnomaly: return Color(red: 0.78, green: 0.52, blue: 0.08)

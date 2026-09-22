@@ -57,6 +57,16 @@ struct OfflineRegression {
         UserDefaults.standard.set("CNY", forKey: ExpenseCurrencyPreference.userDefaultsKey)
 
         let reporter = RegressionReporter()
+        if ProcessInfo.processInfo.environment["AUTOLEDGER_REGRESSION_SCOPE"] == "release-completion" {
+            verifyPendingActionCenterPlanner(reporter: reporter)
+            verifyLedgerAdvancedSearch(reporter: reporter)
+            verifyLedgerConfigurationSyncPolicy(reporter: reporter)
+            verifyDataCleaningAssistRequestPolicy(reporter: reporter)
+            try verifyBackupRoundTrip(reporter: reporter)
+            try await verifyReleaseCompletionStore(reporter: reporter)
+            reporter.finish()
+        }
+        try await verifyReleaseCompletionStore(reporter: reporter)
         let parser = ReceiptParser()
         let sampleProvider = SampleReceiptProvider()
 
@@ -158,6 +168,40 @@ struct OfflineRegression {
         42
         30
         """
+    }
+
+    private static func verifyReleaseCompletionStore(reporter: RegressionReporter) async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let persistence = try SQLiteTransactionStore(baseDirectoryURL: root, filename: "completion.sqlite3")
+        let store = LedgerStore(transactionStore: persistence, loadsPersistedConfiguration: false)
+        let date = Date(timeIntervalSince1970: 1_780_600_000)
+        let tx = Transaction(merchant: "Coffee", amount: 18, occurredAt: date, category: .dining, source: .manual, note: "")
+        reporter.check(store.addTransaction(tx), "Async search fixture saves")
+        let found = await store.loadLedgerListTransactions(query: .init(keyword: "Coffee"), period: nil)
+        reporter.check(found.map(\.id) == [tx.id], "Async search uses the current source snapshot")
+        let missing = await store.loadLedgerListTransactions(query: .init(keyword: "absent"), period: nil)
+        reporter.check(missing.isEmpty, "Async search does not reuse a different query result")
+        let item = try PendingActionItem(kind: .emailCandidate, source: .init(type: .emailCandidate, id: "ref"), reason: .emailNeedsReview, createdAt: date)
+        store.replaceImportPendingReferences([item], kind: .emailCandidate)
+        try store.recordPendingActionBatch([item], mutation: .dismiss)
+        reporter.check(store.pendingActionDecisions[item.id.rawValue]?.disposition == .dismissed, "Batch dismissal persists a reversible decision")
+        _ = try store.recordPendingActionDecision(for: item, mutation: .reopen)
+        store.removeImportPendingReference(id: "ref", kind: .emailCandidate)
+        reporter.check(store.importPendingReferences.isEmpty, "Imported candidate leaves the source queue")
+        reporter.check(store.pendingActionDecisions[item.id.rawValue]?.disposition == .resolved, "Imported candidate retains a resolution against rescanning")
+        let conflict = try PendingActionItem(kind: .syncConflict, source: .init(type: .transactionSync, id: "tx"), reason: .syncConflictNeedsReview, createdAt: date)
+        let before = store.pendingActionDecisions
+        do {
+            try store.recordPendingActionBatch([item, conflict], mutation: .dismiss)
+            reporter.check(false, "Batch must reject conflicts")
+        } catch { reporter.check(store.pendingActionDecisions == before, "Invalid batch changes no decisions") }
+        store.updateMonthClose(for: date, completed: true)
+        reporter.check(store.monthCloseRecords[store.monthCloseKey(for: date)]?.completedAt != nil, "Month completion is stored")
+        store.updateMonthClose(for: date, completed: false)
+        reporter.check(store.monthCloseRecords[store.monthCloseKey(for: date)]?.completedAt == nil, "Month reopen clears completion without deleting the record")
+        store.updateMonthClose(for: date, exported: true)
+        reporter.check(store.monthCloseRecords[store.monthCloseKey(for: date)]?.exportedAt != nil, "Month export status is independent of completion")
     }
 
     private static func verifyPendingActionCenterPlanner(reporter: RegressionReporter) {

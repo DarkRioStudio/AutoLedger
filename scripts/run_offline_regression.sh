@@ -3,6 +3,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+if [[ "${AUTOLEDGER_REGRESSION_SCOPE:-all}" == "release-completion" ]]; then
+  python3 "$ROOT/scripts/check_pending_action_center_smoke.py"
+  python3 "$ROOT/scripts/check_cloudkit_sync_smoke.py"
+  python3 "$ROOT/scripts/check_monthly_export_ui_smoke.py"
+  python3 "$ROOT/scripts/check_advanced_search_ui_smoke.py"
+else
 python3 "$ROOT/scripts/check_adaptive_layout_rules.py"
 python3 "$ROOT/scripts/check_accessibility_smoke.py"
 python3 "$ROOT/scripts/check_deep_link_smoke.py"
@@ -33,6 +39,8 @@ python3 "$ROOT/scripts/check_app_preview_v003_smoke.py"
 python3 "$ROOT/scripts/check_hotel_weather_ui_smoke.py"
 python3 "$ROOT/scripts/check_documentation_truth_smoke.py"
 
+fi
+
 TMP_BIN="$(mktemp /tmp/autoledger-offline-regression.XXXXXX)"
 trap 'rm -f "$TMP_BIN"' EXIT
 
@@ -49,6 +57,11 @@ sed '/import AutoLedgerCore/d' "$ROOT/AutoLedger/AutoLedger/Domain/Services/Mont
 
 cat > "$PREP_DIR/SmartReceiptParserStub.swift" << 'STUB'
 import Foundation
+
+enum CommonAPIAnalyticsService {
+    static func trackConfirmationState(flowType: String, requiredFieldCount: Int, editedFieldCount: Int,
+                                       confirmStatus: String, discardReasonCode: String = "none") {}
+}
 
 enum LLMProvider: String, Sendable {
     case apple
@@ -435,3 +448,4 @@ swiftc \
   "$ROOT/scripts/OfflineRegression.swift"
 
 AUTOLEDGER_OFFLINE_REGRESSION=1 "$TMP_BIN"
+swift test --package-path "$ROOT/AutoLedger/AutoLedgerCore" --scratch-path "$PREP_DIR/core-tests" --filter ReleaseCompletionTests

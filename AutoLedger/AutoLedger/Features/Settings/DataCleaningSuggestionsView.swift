@@ -86,6 +86,7 @@ struct DataCleaningSuggestionsView: View {
             )
         }
         .onChange(of: cloudAssistEnabled) { _, isEnabled in
+            if !isEnabled { store.updateCloudCleaningPreviews([]) }
             CommonAPIAnalyticsService.trackFeatureSurfaceOpened(
                 surface: "data_cleaning_cloud_assist",
                 entrySurface: "data_cleaning",
@@ -496,6 +497,11 @@ struct DataCleaningSuggestionsView: View {
             }
 
             VStack(spacing: 8) {
+                detailRow("cleaning.rule.source", value: item.reason == "worker assist merchant normalization"
+                    ? String(localized: "ipad.cleaning.cloud_assist.title") : String(localized: "cleaning.rule.local"))
+                if let latest = store.dataCleaningApplicationHistory.first(where: { $0.previewID == item.id }) {
+                    detailRow("cleaning.rule.last_applied", value: AppFormatters.shortDateTime(latest.appliedAt))
+                }
                 detailRow("ipad.cleaning.current", value: item.currentValue)
                 detailRow("ipad.cleaning.proposed", value: item.proposedValue)
                 if let score = item.score {
@@ -663,7 +669,7 @@ struct DataCleaningSuggestionsView: View {
                         categoryCorrections: categoryCorrections
                     )
                 }.value
-                let response = try await DataCleaningAssistClient().requestSuggestions(
+                let response = try await DataCleaningAssistClient.shared.requestSuggestions(
                     payload: payload,
                     signedTransactionInfo: signedTransactionInfo,
                     endpoint: HotelFolioInboxSettings.currentEndpoint
@@ -676,9 +682,12 @@ struct DataCleaningSuggestionsView: View {
                     )
                 }.value
                 guard !Task.isCancelled else { return }
+                store.updateCloudCleaningPreviews(cloudSnapshot.items)
                 let existingIDs = Set(snapshot.items.map(\.id))
                 snapshot.items.append(contentsOf: cloudSnapshot.items.filter { !existingIDs.contains($0.id) })
                 advancedRulePlan = AdvancedRuleAutomationPlanner().buildPlan(snapshot: snapshot)
+            } catch DataCleaningAssistClientError.coolingDown {
+                cloudAssistErrorMessage = String(localized: "cleaning.cloud.cooldown")
             } catch {
                 cloudAssistErrorMessage = String(localized: "ipad.cleaning.cloud_assist.status.request_failed")
             }
