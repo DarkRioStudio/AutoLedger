@@ -17,8 +17,13 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    uses: ./.github/workflows/ci-changes.yml
+
   xcode-build:
     name: AutoLedgerCore Xcode build
+    needs: changes
+    if: needs.changes.outputs.run_macos == 'true'
     runs-on: macos-latest
     timeout-minutes: 60
 

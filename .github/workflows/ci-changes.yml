@@ -1,0 +1,53 @@
+name: Classify CI changes
+
+on:
+  workflow_call:
+    outputs:
+      run_macos:
+        description: Whether native builds and regressions are needed
+        value: ${{ jobs.changes.outputs.run_macos }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run_macos: ${{ steps.classify.outputs.run_macos }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed files
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: python
+        run: |
+          import os
+          import subprocess
+          from pathlib import PurePosixPath
+
+          def is_documentation(path):
+              p = PurePosixPath(path)
+              return p.suffix == ".md" and (
+                  len(p.parts) == 1 or p.parts[0] in {"docs", "process", "versions"}
+              )
+
+          event = os.environ["EVENT_NAME"]
+          base = os.environ["BASE_SHA"]
+          run_macos = True
+          if event in {"push", "pull_request"} and base and set(base) != {"0"}:
+              separator = "..." if event == "pull_request" else ".."
+              diff = subprocess.check_output([
+                  "git", "diff", "--name-only", "--no-renames", "-z",
+                  base + separator + os.environ["HEAD_SHA"],
+              ])
+              paths = [p for p in diff.decode().split("\0") if p]
+              run_macos = not paths or not all(is_documentation(p) for p in paths)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"run_macos={str(run_macos).lower()}\n")
+          print(f"Native CI required: {run_macos}")
