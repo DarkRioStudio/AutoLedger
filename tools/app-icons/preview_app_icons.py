@@ -102,7 +102,7 @@ def preview_items() -> list[PreviewItem]:
         PreviewItem("iOS Light", "rounded", load("AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png")),
         PreviewItem("iOS Dark", "rounded", load("AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset/AppIcon-Dark.png")),
         PreviewItem("iOS Tinted", "rounded", load("AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset/AppIcon-Tinted.png")),
-        PreviewItem("Mac Catalyst", "rounded", load("AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset/AppIcon-Light.png")),
+        PreviewItem("Mac Catalyst", "rounded", load("AutoLedger/AutoLedger/Assets.xcassets/AppIcon.appiconset/AppIcon-Mac-512@2x.png")),
         PreviewItem("Apple Watch", "circle", load("AutoLedger/AutoLedgerWatch Watch App/Assets.xcassets/AppIcon.appiconset/AppIcon.png")),
         PreviewItem("tvOS 1x", "wide", composite_layers(tv_icon)),
         PreviewItem("tvOS App Store", "wide", composite_layers(tv_store)),
