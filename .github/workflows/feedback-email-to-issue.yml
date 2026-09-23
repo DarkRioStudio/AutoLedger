@@ -2,8 +2,8 @@ name: Feedback Email to GitHub Issue
 
 on:
   schedule:
-    # Every 15 minutes
-    - cron: "*/15 * * * *"
+    # Hourly; feedback may wait up to one polling interval
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
