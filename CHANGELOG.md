@@ -9,6 +9,9 @@
 
 ## [Unreleased]
 
+### 修复（全平台图标，2026-09-23）
+- Watch、tvOS、visionOS 和电视 Top Shelf 统一使用 iPhone 已批准的新图案；Mac Catalyst 增加专用尺寸图标。生成工具统一来源，iPhone/iPad 现有图标不变。
+
 ### 变更（Actions 成本）
 - [2026-09-23] 邮件反馈轮询改为每小时第 17 分钟；纯根目录/文档/流程/版本 Markdown 修改跳过 macOS 回归和 Xcode 构建，保留工作流检查入口。静态检查迁至 Linux，代码、工作流修改与手动触发继续执行原生检查。
 
