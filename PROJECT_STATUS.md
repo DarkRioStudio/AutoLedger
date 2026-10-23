@@ -2,33 +2,32 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-09-22（历史 Apple 事实保留各自观察日期）
+> 截止日期：2026-10-23（历史 Apple 事实保留各自观察日期）
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 > 全球产品战略：[docs/product/GLOBAL_PRODUCT_STRATEGY.md](docs/product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
-> 当前版本执行计划：[versions/v1.8.0-plan.md](versions/v1.8.0-plan.md)
+> 当前版本执行计划：[versions/v1.9.0-plan.md](versions/v1.9.0-plan.md)
 
 ## Current Snapshot
 
 | 项目 | 当前状态 |
 |---|---|
-| 内部开发线 | `v1.8.0` |
-| 已发布 App Store 版本 | `1.6.0`（内部 `v1.7.0`） |
-| 发布阶段 | 用户确认 `v1.7.0 / ASC 1.6.0` 已正式发布；2026-07-28 Apple 公开查询接口回读美国区商店当前版本为 `1.6.0` |
-| 自定义产品页 | 三张五语页面已通过独立 iOS items-only submission 提交，审核单与三页均为 `WAITING_FOR_REVIEW`；主版本审核单保持独立 |
-| 已验证候选产品行为基线 | build `120` / `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；六项最终 TestFlight / 真机门禁已由用户确认通过 |
-| Xcode Cloud 触发标签 | 账户迁移后已授权将 `xcbuild-v1.8.0` 移到最新文档型重触发切片，用于 ASC `1.7.0` 内部验证构建；旧 `xcbuild-v1.7.0` 保持在已发布基线 |
-| 最近人工结论 | build `120` 的水单刷新、401 续签、订阅处理、iCloud、交互性能和 Mac smoke 均通过 |
-| 精确 TestFlight build | build `120`；iOS、macOS、tvOS、visionOS 均为 `VALID / APP_STORE_ELIGIBLE / expired=false`，且已绑定 ASC `1.6.0` |
-| 文档治理 | `PROJECT_STATUS.md`、根级 `docs/ROADMAP.md` 与 `docs/product/I18N_ROADMAP.md` 分别负责当前状态、核心产品路线和跨版本语言路线；其它 `docs` 已物理分类 |
-| 当前开发版本 | `v1.8.0 / ASC 1.7.0` 开发收口：新增来源、批量复核、月结与异步搜索已实现；候选 CI / 构建状态以精确提交回读为准 |
-| 工程版本基线 | 所有 Xcode target / configuration 的 `MARKETING_VERSION` 均为 `1.7.0`；`CURRENT_PROJECT_VERSION` 不变；本轮仅触发内部构建，云端 build number、processing 与 ASC 绑定待实时回读 |
+| 内部开发线 | `v1.9.0` |
+| 已发布 App Store 版本 | `1.7.0`（内部 `v1.8.0`）；2026-10-23 Apple 美国区接口回读，发布日期 2026-09-23 |
+| ASC 四平台状态 | iOS、macOS、tvOS、visionOS 的 `1.7.0` 均为可分发；iOS 绑定 build `132` |
+| 当前开发版本 | `v1.9.0 / ASC 1.8.0`，先修复同步状态文案与首页多位计数；后续功能见独立计划 |
+| 工程版本基线 | 全部 16 个 configuration 的 `MARKETING_VERSION = 1.8.0`；运行时兜底一致；`CURRENT_PROJECT_VERSION` 保持既有构建管理 |
+| 当前验证边界 | 本机无完整 Xcode；组件与离线验证、远端 CI、主 App Archive、TestFlight 和设备验收分别留证 |
+| 新版本计划 | [v1.9.0-plan.md](versions/v1.9.0-plan.md) 已建立；规则中心、Saved Views、订阅省钱看板及德法语言组仍属后续候选 |
+| 历史发布证据 | 下方 build `120`、ASC `1.6.0` 与自定义产品页记录均保留原观察日期，不作为新版本证据 |
 
 本文件回答“项目现在在哪里”。它不替代版本计划、回归证据、CHANGELOG 或逐轮迭代日志。
 
 ## Release Position
 
-`v1.7.0 / ASC 1.6.0` 已正式发布。不可移动产品标签 `v1.7.0` 指向 build `120` 的精确源码 `022dba591c77b40b5a936b9d9e1d87f51a4f6796`；远端 `main` 已继续推进 `v1.8.0` 开发线，本轮只通过 `xcbuild-v1.8.0` 触发 ASC `1.7.0` 内部验证构建，不移动旧产品基线。Apple 公开查询接口确认美国区商店已发布版本为 `1.6.0`；该证据不替代其它地区与平台的传播检查，也不代表本次新构建已完成 processing、绑定或真机验收。
+当前商店 `1.7.0` 已可分发；开发线推进到 `v1.9.0 / ASC 1.8.0`。本轮修复 iCloud 状态本地化和待处理数量显示，不处理或删除截图中的同步冲突与账单。新版本号和商店草稿不代表新 binary、审核或发布完成。
+
+以下为 `v1.7.0 / ASC 1.6.0` 的历史发布记录，保留用于追溯。
 
 `v1.7.0 / ASC 1.6.0` 的主要产品与工程能力已经进入主线：
 
@@ -103,17 +102,13 @@
 
 ## 2026-09-22 开发与发布收口
 
-当前目标为商店 **1.7.0**（内部 v1.8.0）。Owner 要求完成开发并优先替换卡顿版本，未修改部分暂不重复验收。最新开发记录见 [1.7.0 开发收口](versions/v1.8.0-development-completion.md)。下文早期缺口按该记录更新；已有真机“真实账本也流畅”与标题修复反馈沿用。此前 `8f902896` 的 Xcode Cloud 四平台 Archive 已成功，后续源码候选须单独触发与回读，不能复用旧 Archive 作为新源码证据。
+当时目标为商店 **1.7.0**（内部 v1.8.0）。Owner 要求完成开发并优先替换卡顿版本，未修改部分暂不重复验收。最新开发记录见 [1.7.0 开发收口](versions/v1.8.0-development-completion.md)。下文早期缺口按该记录更新；已有真机“真实账本也流畅”与标题修复反馈沿用。此前 `8f902896` 的 Xcode Cloud 四平台 Archive 已成功，后续源码候选须单独触发与回读，不能复用旧 Archive 作为新源码证据。
 
 ## Next Actions
 
-2026-09-22 源码补充：账本性能第一批已通过离线回归、iOS 无签名构建及合成数据基准，真实设备性能验收仍待完成；最新范围缺口见 [v1.8.0 性能治理与剩余范围核查](versions/v1.8.0-performance-and-gap-audit.md)。本次未回读 Apple 在线状态，前述商店 / 构建信息仍为各自原记录日期的历史证据。
-
-当前优先完成隔离 500 / 5,000 / 20,000 条的设备点击、搜索、Tab 与待处理中心性能验收，再按以下发布与功能门禁推进。
-
-1. 实时回读 `xcbuild-v1.8.0` 对应的 Xcode Cloud 运行、四平台 Archive、实际 build number、TestFlight processing 与 ASC `1.7.0` 可绑定状态。
-2. 用真实 iPhone / iPad 验证 `GOAL-2440` 第一批的离线、待上传、恢复、账号受限、无权益与本地数据失败安全路径，并重跑重庆 Moxy 已知冲突与新版微信退款截图样例。
-3. 将同步冲突作为来源支持的 PendingAction 增量接入；随后推进 `GOAL-2450` 月结检查。英语五市场继续按独立矩阵补真实设备、样本、商店、支持和隐私证据。
+1. 完成并交付 [v1.9.0 P0 显示修复与版本基线](versions/v1.9.0-plan.md)，分别记录本地验证、PR / CI 与合并事实。
+2. 在完整 Xcode 环境构建新 App，按真实源码回读 Xcode Cloud、TestFlight build 与 processing；验证五语同步状态、三至六位数量、窄屏及大字体。
+3. 候选冻结后更新 1.8.0 发布材料并进入独立审核流程；继续验证真实双设备同步、英语市场与大账本性能。历史未完成门禁不得因切换版本号自动关闭。
 
 ## Source Of Truth Map
 
@@ -125,7 +120,7 @@
 | 每个版本扩展哪些语言、统一门禁是什么 | [docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md) |
 | v1.7.0 做什么、如何验收 | [versions/v1.7.0-plan.md](versions/v1.7.0-plan.md) |
 | 多语言是否可公开发布 | [versions/v1.7.0-i18n-release-matrix.md](versions/v1.7.0-i18n-release-matrix.md) |
-| 当前开发版本规划了什么 | [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md) 已进入 Early Execution；[versions/v1.8.0-i18n-release-matrix.md](versions/v1.8.0-i18n-release-matrix.md) 仍为 Draft |
+| 当前开发版本规划了什么 | [versions/v1.9.0-plan.md](versions/v1.9.0-plan.md)；上一版质量缺口与语言矩阵保留原证据状态 |
 | Free / Pro 可执行边界 | `AutoLedgerCore/Models/ProAccessPolicy.swift` 与对应回归 |
 | Free / Pro 审计解释 | [docs/operations/pro-access-audit.md](docs/operations/pro-access-audit.md) |
 | 每轮做了什么 | [process/iteration-log.md](process/iteration-log.md) |

@@ -52,6 +52,7 @@ def main() -> int:
         ROOT / "versions" / "v1.7.0-plan.md",
         ROOT / "versions" / "v1.7.0-i18n-release-matrix.md",
         ROOT / "versions" / "v1.8.0-plan.md",
+        ROOT / "versions" / "v1.9.0-plan.md",
         ROOT / "versions" / "v1.8.0-i18n-release-matrix.md",
     ]
     for path in required_truth_files:
@@ -91,7 +92,7 @@ def main() -> int:
         "product/GLOBAL_PRODUCT_STRATEGY.md",
         "## Roadmap Horizon",
         "### Released - v1.7.0 / ASC 1.6.0",
-        "### Now - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close",
+        "### Now - v1.9.0 / ASC 1.8.0: Experience Fixes & Understand/Save",
         "## Language Expansion Cadence",
         "### Not Planned",
         "## Source Of Truth Boundaries",

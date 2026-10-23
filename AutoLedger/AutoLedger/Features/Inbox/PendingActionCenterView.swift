@@ -209,11 +209,17 @@ struct PendingActionCenterCard: View {
                         ProgressView()
                             .tint(AppTheme.accent)
                     } else if !snapshot.isEmpty {
-                        Text("\(snapshot.totalCount)")
+                        Text(snapshot.totalCount, format: .number)
                             .font(.headline.weight(.heavy))
+                            .monospacedDigit()
                             .foregroundStyle(Color.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
                             .frame(minWidth: 32, minHeight: 32)
-                            .background(Circle().fill(AppTheme.accent))
+                            .background(Capsule().fill(AppTheme.accent))
+                            .layoutPriority(1)
                     }
 
                     Image(systemName: "chevron.right")
@@ -642,17 +648,21 @@ private struct PendingActionCompactPill: View {
         HStack(spacing: 5) {
             Image(systemName: group.category.systemImage)
                 .font(.caption2.weight(.bold))
-            Text("\(group.count)")
+            Text(group.count, format: .number)
                 .font(.caption.weight(.bold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .foregroundStyle(group.category.tint)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, minHeight: 34)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(group.category.tint.opacity(0.10))
         )
         .accessibilityLabel(Text(group.category.titleKey))
-        .accessibilityValue(Text("\(group.count)"))
+        .accessibilityValue(Text(group.count, format: .number))
     }
 }
 

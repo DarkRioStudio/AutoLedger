@@ -2,9 +2,9 @@
 
 > 文档状态：Canonical
 > 真源范围：产品方向、优先级、跨版本主线、依赖关系与明确非目标
-> 最后核验：2026-07-28
+> 最后核验：2026-10-23
 > 当前状态：[../PROJECT_STATUS.md](../PROJECT_STATUS.md)
-> 当前版本执行计划：[../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)
+> 当前版本执行计划：[../versions/v1.9.0-plan.md](../versions/v1.9.0-plan.md)
 > 全球产品战略：[product/GLOBAL_PRODUCT_STRATEGY.md](product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[product/I18N_ROADMAP.md](product/I18N_ROADMAP.md)
 
@@ -60,9 +60,9 @@ AutoLedger 的长期定位是：
 
 详细商店建议、国际化清单和当前代码结构风险见 [全球产品战略](product/GLOBAL_PRODUCT_STRATEGY.md)。
 
-### Now - Ship v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close
+### Shipped - v1.8.0 / ASC 1.7.0: Global Readiness & Review/Close
 
-当前开发线优先把已有能力串成可完成的账本闭环，而不是继续增加孤立入口：
+该版本围绕以下方向收口；2026-10-23 ASC 四平台已可分发，代码交付与市场 / 设备质量门禁仍按各自证据记录：
 
 1. **持久化待处理事项**：统一 OCR 待确认、云收件箱候选、重复、订阅异常、清洗建议、同步冲突和月结缺资料项。
 2. **可完成的复核生命周期**：支持确认、忽略、延后、撤销和来源双向更新，避免已处理事项在重启或同步后复活。
@@ -71,11 +71,16 @@ AutoLedger 的长期定位是：
 5. **云端辅助可靠性**：补建议缓存、cooldown / backoff、配额和最小日志策略，不扩大上传字段。
 6. **英语市场发布组**：以 `en-US` 为主语言，验证 `en-GB`、`en-CA`、`en-AU`、`en-SG` 的格式、术语、价格、截图、支持页和隐私说明；本版本不新增 UI 语言。
 
-详细范围见 [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)，该计划已进入 Early Execution；语言完成度见仍处于 Draft 的 [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md)。
+详细范围见 [../versions/v1.8.0-plan.md](../versions/v1.8.0-plan.md)，保留原执行记录；语言完成度见仍处于 Draft 的 [../versions/v1.8.0-i18n-release-matrix.md](../versions/v1.8.0-i18n-release-matrix.md)。
+
+### Now - v1.9.0 / ASC 1.8.0: Experience Fixes & Understand/Save
+
+先修复已有体验：iCloud 状态正确解析五语文案，首页待处理数量适应多位数和地区格式；同步推进工程版本与独立计划。
+
+规则中心、Saved Views、订阅省钱看板，以及日语质量提升、德语 de / 法语 fr 沿用原定后续方向，逐轮明确范围与验收。本轮不把这些候选功能或上一版尚未完成的设备 / 市场门禁视为完成。详见 [v1.9.0 版本计划](../versions/v1.9.0-plan.md)。
 
 ### Later - Expand Carefully
 
-- `v1.9.0 / Understand & Save`：规则中心、Saved Views、订阅省钱看板，完成日语质量提升并新增德语 `de` + 法语 `fr`；
 - `v2.0 / Archive & Remember`：凭证保险箱、附件索引、酒店 / 旅行档案；西语 `es` + 巴西葡语 `pt-BR` 作为候选语言组；
 - 更后版本：印尼语、越南语、印地语 / 印度英语，以及阿拉伯语 / RTL 依次进入独立评审；
 - 高级分享模板、可编辑故事卡、隐私分级导出和年度复盘；

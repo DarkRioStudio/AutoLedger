@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-09-23（ITER-470 全平台图标统一）
+更新日期：2026-10-23（ITER-471 同步状态与待处理计数）
 
 ## 记录规则
 
@@ -43,6 +43,20 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-471 同步状态本地化、待处理计数与新版本基线
+- 日期：2026-10-23
+- 所属版本：v1.9.0 / ASC 1.8.0
+- 来源：IDEA-001；Owner 本轮截图反馈与版本推进要求。
+- 目标：修复数据管理页暴露本地化键、首页多位数量溢出，并补齐下一版计划。
+- 改动范围：DataManagementView、PendingActionCenterView、16 个 Xcode configuration、运行时版本兜底、版本计划与当前状态入口。
+- 完成内容：先构造完整 String 再查询 LocalizedStringKey；待处理总数改为自适应胶囊、地区数字格式与等宽数字，分类数量单行缩放；工程商店版本 1.8.0，内部开发线 v1.9.0。此前只有 v1.8.0 独立计划和 v1.9.0 路线图方向，现已补齐 v1.9.0 计划。
+- Apple 回读：2026-10-23 美国区公开商店 1.7.0，发布日期 2026-09-23；ASC 四平台 1.7.0 均可分发，iOS 绑定 build 132。新版本草稿、CI 与合并以各自后续回执为准。
+- 本地验证：五语资源覆盖、同步状态、PendingAction、布局、无障碍及文档静态检查通过；离线 swiftc 回归 1,194 条 PASS。后续 Core XCTest 因本机仅有 Command Line Tools、缺少 XCTest 模块而失败，完整脚本不标记 PASS，交由远端完整 Xcode 环境继续验证。
+- 组件验证：从实际源码提取 SwiftUI 同步文案方法和待处理卡片进行 macOS 渲染；80 个五语状态标题/说明中 79 项 OCR 对比一致，繁中账号检查标题经图像核对一致；288pt 宽度下 9、99、644、1,234、20,000、999,999 的中英韩数量均在徽标内。macOS 组件渲染不替代 iOS Dynamic Type 或真机验收。
+- 未改动：同步策略、冲突处理、用户账本、SQLite / CloudKit schema、生产服务、签名与 CURRENT_PROJECT_VERSION；不移动发布标签，不提交商店审核。
+- 风险：本机不能生成新的 iOS App Archive，GitHub 现有 Xcode workflow 只构建 Core；新 binary、TestFlight 与实机验证仍开放。
+- 回滚：revert 本轮提交，无需数据或 schema 回滚。
 
 ### ITER-470 全平台图标统一
 - 日期：2026-09-23；IDEA-001；内部 v1.8.0 / 商店 1.7.0。
