@@ -8,6 +8,10 @@
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
 > 当前版本执行计划：[versions/v1.9.0-plan.md](versions/v1.9.0-plan.md)
 
+## Product Scope
+
+2026-10-23 起，AutoLedger 不再扩张产品边界；新版本只允许修复缺陷、完善现有功能、提高体验，以及完成已经进入路线图的能力。既定范围与基线见 [路线图边界](docs/ROADMAP.md#product-scope-policy)，本版本及后续版本均遵守。
+
 ## Current Snapshot
 
 | 项目 | 当前状态 |

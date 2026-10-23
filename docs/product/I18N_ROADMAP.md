@@ -8,6 +8,10 @@
 > 当前版本语言矩阵：[../../versions/v1.7.0-i18n-release-matrix.md](../../versions/v1.7.0-i18n-release-matrix.md)
 > 下一版本语言矩阵：[../../versions/v1.8.0-i18n-release-matrix.md](../../versions/v1.8.0-i18n-release-matrix.md)
 
+## 产品边界补充（2026-10-23）
+
+本路线图服从 [产品边界与既定基线](../ROADMAP.md#product-scope-policy)。已列出的语言 / 地区候选可按原门禁完成，后续不以扩张语言数量为目标新增产品范围。缺陷修复、现有功能与体验完善版本无需新增语言 / 市场组；下述双主线节奏适用于推进既定能力的功能版本。
+
 ## Product Decision
 
 AutoLedger 从 `v1.7.0 / ASC 1.6.0` 起采用产品主题 + 语言 / 市场质量双主线：
