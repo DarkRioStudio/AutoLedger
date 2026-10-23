@@ -652,7 +652,8 @@ describe("common api worker contract", () => {
     expect(byID.get("purchase_flow_failure_rate")).toMatchObject({ value: 100, unit: "percent", numerator: 1, denominator: 1 });
     expect(byID.get("crash_diagnostic_count")).toMatchObject({ value: 1, unit: "count" });
     expect((byID.get("crash_diagnostic_count")?.breakdown as Record<string, number>)["crash@1.6.0(109)"]).toBe(1);
-    expect(byID.get("slow_operation_count")).toMatchObject({ value: 1, unit: "count" });
+    expect(byID.get("slow_operation_count")).toMatchObject({ value: 0, unit: "count" });
+    expect(byID.get("system_performance_diagnostic_count")).toMatchObject({ value: 1, unit: "count" });
     expect(byID.get("performance_operation_top_n")).toMatchObject({ value: 2, unit: "count" });
     expect((byID.get("performance_operation_top_n")?.breakdown as Record<string, number>)["system_hang@1.6.0(109)"]).toBe(1);
     expect(byID.get("developer_performance_sample_count")).toMatchObject({ value: 1, unit: "count" });
@@ -667,6 +668,63 @@ describe("common api worker contract", () => {
     expect(serialized).not.toContain("payload_json");
     expect(serialized).not.toContain("amount");
     expect(serialized).not.toContain("merchant");
+  });
+
+  it("classifies actual live scanner payloads and separates system hangs from app operations", async () => {
+    const rows: AnalyticsDashboardFixture[] = [];
+    const add = (event_name: string, payload: Record<string, string>, count = 1) => {
+      for (let i = 0; i < count; i++) rows.push({
+        event_name, event_id: `diagnostic-${rows.length}`, app_version: "1.7.0", build_number: "132",
+        os_major: "26", device_class: "ios", payload_json: JSON.stringify(payload), received_at: new Date().toISOString()
+      });
+    };
+    add("al_import_flow_started", { flow_type: "receipt_scan", input_type: "live_ocr", start_status: "started" }, 4);
+    add("al_import_flow_completed", { flow_type: "receipt_scan", input_type: "live_ocr", status: "success" });
+    add("al_import_flow_completed", { flow_type: "receipt_scan", input_type: "photo_library", status: "success" }, 8);
+    add("al_crash_diagnostic", { diagnostic_type: "unclean_active_session", signal_source: "session_marker" }, 115);
+    add("al_crash_diagnostic", { diagnostic_type: "hang", signal_source: "metrickit" }, 5);
+    add("al_performance_diagnostic", { diagnostic_type: "hang", operation: "system_hang", severity: "warning", result: "reported_by_metrickit" }, 5);
+    add("al_performance_diagnostic", { diagnostic_type: "store_operation", operation: "refresh_from_foreground", duration_ms_bucket: "3s_10s", severity: "info" });
+    const db = new AnalyticsDashboardD1Database(releaseNotesFixtures, rows);
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard/data"), {
+      ...env, COMMON_API_DB: db as unknown as D1Database
+    } as unknown as Env);
+    const body = await jsonBody(response);
+    const metrics = new Map((body.metrics as Array<Record<string, unknown>>).map((metric) => [metric.metricID, metric]));
+    expect(metrics.get("live_ocr_confirmation_rate")).toMatchObject({ value: 25, numerator: 1, denominator: 4 });
+    expect(metrics.get("import_task_success_rate")).toMatchObject({ value: 100, numerator: 8, denominator: 8 });
+    expect(metrics.get("unclean_session_recovery_count")).toMatchObject({ value: 115 });
+    expect(metrics.get("crash_diagnostic_count")).toMatchObject({ value: 0 });
+    expect(metrics.get("hang_diagnostic_count")).toMatchObject({ value: 5 });
+    expect(metrics.get("system_performance_diagnostic_count")).toMatchObject({ value: 5 });
+    expect(metrics.get("slow_operation_count")).toMatchObject({ value: 1, breakdown: { refresh_from_foreground: 1 } });
+    expect(metrics.get("import_error_code_top_n")).toMatchObject({ value: 0 });
+  });
+
+  it("preserves legacy live_ocr flow classification and excludes CPU and disk diagnostics from app slow counts", async () => {
+    const rows = [
+      ["al_import_flow_started", { flow_type: "live_ocr" }],
+      ["al_import_flow_completed", { flow_type: "live_ocr", status: "success" }],
+      ["al_import_flow_completed", { flow_type: "receipt_scan", input_type: "photo_library", status: "failed", error_code: "network_error" }],
+      ["al_crash_diagnostic", { diagnostic_type: "crash", signal_source: "metrickit" }],
+      ["al_performance_diagnostic", { diagnostic_type: "cpu_exception", severity: "warning" }],
+      ["al_performance_diagnostic", { diagnostic_type: "disk_write_exception", severity: "critical" }]
+    ].map(([event_name, payload], index) => ({
+      event_name: event_name as string, event_id: `legacy-${index}`, app_version: "1.6.0", build_number: "115",
+      os_major: "26", device_class: "ios", payload_json: JSON.stringify(payload), received_at: new Date().toISOString()
+    }));
+    const response = await routeFetch(new Request("https://getautoledger.app/dashboard/data"), {
+      ...env, COMMON_API_DB: new AnalyticsDashboardD1Database(releaseNotesFixtures, rows) as unknown as D1Database
+    } as unknown as Env);
+    const body = await jsonBody(response);
+    const metrics = new Map((body.metrics as Array<Record<string, unknown>>).map((metric) => [metric.metricID, metric]));
+    expect(metrics.get("live_ocr_confirmation_rate")).toMatchObject({ value: 100, numerator: 1, denominator: 1 });
+    expect(metrics.get("import_task_success_rate")).toMatchObject({ value: 0, numerator: 0, denominator: 1 });
+    expect(metrics.get("import_error_code_top_n")).toMatchObject({ value: 1, breakdown: { network_error: 1 } });
+    expect(metrics.get("crash_diagnostic_count")).toMatchObject({ value: 1 });
+    expect(metrics.get("hang_diagnostic_count")).toMatchObject({ value: 0 });
+    expect(metrics.get("slow_operation_count")).toMatchObject({ value: 0 });
+    expect(metrics.get("system_performance_diagnostic_count")).toMatchObject({ value: 2 });
   });
 
   it("keeps dashboard review lifecycle events out of receipt discard rates", async () => {

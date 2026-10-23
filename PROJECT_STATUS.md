@@ -2,7 +2,7 @@
 
 > 文档状态：Canonical
 > 真源范围：当前开发线、发布阶段、已验证基线、剩余门禁和下一步
-> 截止日期：2026-10-23（历史 Apple 事实保留各自观察日期）
+> 截止日期：2026-10-24（历史 Apple 事实保留各自观察日期）
 > 上位产品路线图：[docs/ROADMAP.md](docs/ROADMAP.md)
 > 全球产品战略：[docs/product/GLOBAL_PRODUCT_STRATEGY.md](docs/product/GLOBAL_PRODUCT_STRATEGY.md)
 > 跨版本语言路线：[docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
@@ -19,9 +19,9 @@
 | 内部开发线 | `v1.9.0` |
 | 已发布 App Store 版本 | `1.7.0`（内部 `v1.8.0`）；2026-10-23 Apple 美国区接口回读，发布日期 2026-09-23 |
 | ASC 四平台状态 | iOS、macOS、tvOS、visionOS 的 `1.7.0` 均为可分发；iOS 绑定 build `132` |
-| 当前开发版本 | `v1.9.0 / ASC 1.8.0`，先修复同步状态文案与首页多位计数；后续功能见独立计划 |
+| 当前开发版本 | `v1.9.0 / ASC 1.8.0`，已推进显示修复、匿名指标纠错、会话标记与前台刷新局部优化；后续功能见独立计划 |
 | 工程版本基线 | 全部 16 个 configuration 的 `MARKETING_VERSION = 1.8.0`；运行时兜底一致；`CURRENT_PROJECT_VERSION` 保持既有构建管理 |
-| 当前验证边界 | 本机无完整 Xcode；组件与离线验证、远端 CI、主 App Archive、TestFlight 和设备验收分别留证 |
+| 当前验证边界 | 本机 Xcode 27.1 主 App workspace 无签名构建、Core 26 项 XCTest、离线 1,194 条回归通过；Archive、TestFlight 和设备验收分别留证 |
 | 新版本计划 | [v1.9.0-plan.md](versions/v1.9.0-plan.md) 已建立；规则中心、Saved Views、订阅省钱看板及德法语言组仍属后续候选 |
 | 历史发布证据 | 下方 build `120`、ASC `1.6.0` 与自定义产品页记录均保留原观察日期，不作为新版本证据 |
 
@@ -30,6 +30,8 @@
 ## Release Position
 
 当前商店 `1.7.0` 已可分发；开发线推进到 `v1.9.0 / ASC 1.8.0`。本轮修复 iCloud 状态本地化和待处理数量显示，不处理或删除截图中的同步冲突与账单。新版本号和商店草稿不代表新 binary、审核或发布完成。
+
+2026-10-24 继续处理匿名观测问题：真实数据回放确认实时扫描为 1/4、普通导入为 8/8，原 5 条“系统崩溃”均为挂起。已修正聚合口径、后台启动会话标记和前台刷新中的主线程 SQLite 补齐；Worker 本地 54 项测试通过。源码验证不代表已部署，1.7.0(132) 的挂起根因及新 binary 设备效果仍待核验，详见 [诊断核查](versions/v1.9.0-diagnostics-audit.md)。
 
 以下为 `v1.7.0 / ASC 1.6.0` 的历史发布记录，保留用于追溯。
 

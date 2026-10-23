@@ -2,6 +2,50 @@ import XCTest
 @testable import AutoLedgerCore
 
 final class AnalyticsInstrumentationTests: XCTestCase {
+    func testLiveScanUsesInputTypeAndStaysOutOfTaskSuccessRate() throws {
+        var recorder = AutoLedgerAnalyticsRecorder()
+        for _ in 0..<4 {
+            try recorder.record(.importFlowStarted, payload: [
+                "flow_type": .string("receipt_scan"), "input_type": .string("live_ocr")
+            ])
+        }
+        try recorder.record(.importFlowCompleted, payload: [
+            "flow_type": .string("receipt_scan"), "input_type": .string("live_ocr"), "status": .string("success")
+        ])
+        for _ in 0..<8 {
+            try recorder.record(.importFlowCompleted, payload: [
+                "flow_type": .string("receipt_scan"), "input_type": .string("photo_library"), "status": .string("success")
+            ])
+        }
+        let snapshot = recorder.makeMinimalDashboardSnapshot()
+        XCTAssertEqual(snapshot.metric(id: "live_ocr_confirmation_rate")?.value, 25)
+        XCTAssertEqual(snapshot.metric(id: "import_task_success_rate")?.denominator, 8)
+        XCTAssertEqual(snapshot.metric(id: "import_task_success_rate")?.value, 100)
+        XCTAssertNil(snapshot.metric(id: "import_completion_rate"))
+    }
+
+    func testSystemHangDoesNotCountAsCrashOrApplicationSlowOperation() throws {
+        var recorder = AutoLedgerAnalyticsRecorder()
+        for _ in 0..<5 {
+            try recorder.record(.crashDiagnostic, payload: [
+                "diagnostic_type": .string("hang"), "signal_source": .string("metrickit"), "severity": .string("warning")
+            ])
+            try recorder.record(.performanceDiagnostic, payload: [
+                "diagnostic_type": .string("hang"), "operation": .string("system_hang"),
+                "severity": .string("warning"), "result": .string("reported_by_metrickit")
+            ])
+        }
+        try recorder.record(.performanceDiagnostic, payload: [
+            "diagnostic_type": .string("store_operation"), "operation": .string("refresh_from_foreground"),
+            "duration_ms_bucket": .string("3s_10s"), "severity": .string("info")
+        ])
+        let snapshot = recorder.makeMinimalDashboardSnapshot()
+        XCTAssertEqual(snapshot.metric(id: "crash_diagnostic_count")?.value, 0)
+        XCTAssertEqual(snapshot.metric(id: "hang_diagnostic_count")?.value, 5)
+        XCTAssertEqual(snapshot.metric(id: "system_performance_diagnostic_count")?.value, 5)
+        XCTAssertEqual(snapshot.metric(id: "slow_operation_count")?.value, 1)
+    }
+
     func testBuildsAllowedAnonymousImportCompletionEvent() throws {
         let event = try AutoLedgerAnalyticsEvent.make(
             .importFlowCompleted,
@@ -171,7 +215,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
             "feature_surface_open_count",
             "launch_completion_count",
             "unclean_session_recovery_count",
-            "import_completion_rate",
+            "import_task_success_rate",
+            "live_ocr_confirmation_rate",
             "import_error_code_top_n",
             "confirmation_discard_rate",
             "currency_lookup_success_rate",
@@ -299,7 +344,7 @@ final class AnalyticsInstrumentationTests: XCTestCase {
 
         let snapshot = recorder.makeMinimalDashboardSnapshot()
 
-        XCTAssertEqual(snapshot.metric(id: "import_completion_rate")?.value, 50)
+        XCTAssertEqual(snapshot.metric(id: "import_task_success_rate")?.value, 100)
         XCTAssertEqual(snapshot.metric(id: "launch_completion_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "unclean_session_recovery_count")?.value, 1)
         XCTAssertEqual(snapshot.metric(id: "purchase_flow_failure_rate")?.value, 100)
@@ -314,7 +359,8 @@ final class AnalyticsInstrumentationTests: XCTestCase {
         )
         XCTAssertEqual(snapshot.metric(id: "privacy_payload_violation_count")?.value, 0)
         XCTAssertEqual(snapshot.metric(id: "feature_surface_open_count")?.breakdown["tab_inbox"], 1)
-        XCTAssertEqual(snapshot.metric(id: "import_error_code_top_n")?.breakdown["none"], 1)
+        XCTAssertEqual(snapshot.metric(id: "import_error_code_top_n")?.value, 0)
+        XCTAssertNil(snapshot.metric(id: "import_error_code_top_n")?.breakdown["none"])
     }
 
     func testRecorderCountsPrivacyGuardViolationWithoutStoringForbiddenPayload() {

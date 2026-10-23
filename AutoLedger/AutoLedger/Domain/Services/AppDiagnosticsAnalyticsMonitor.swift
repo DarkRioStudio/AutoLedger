@@ -1,4 +1,5 @@
 import Foundation
+import AutoLedgerCore
 import MetricKit
 import OSLog
 
@@ -124,43 +125,28 @@ extension AppDiagnosticsAnalyticsMonitor: MXMetricManagerSubscriber {
     }
 }
 
+@MainActor
 enum AppSessionDiagnosticsService {
-    nonisolated private static let stateKey = "appDiagnostics.sessionState.v1"
-    nonisolated private static let timestampKey = "appDiagnostics.sessionTimestamp.v1"
+    private static let state = AppSessionDiagnosticsState()
 
-    nonisolated static func recordLaunchRecoveryIfNeeded() {
-        let defaults = UserDefaults.standard
-        let previousState = defaults.string(forKey: stateKey) ?? "unknown"
-        let previousTimestamp = defaults.object(forKey: timestampKey) as? Date
-        if previousState == "active", isRecent(previousTimestamp) {
+    static func recordLaunchRecoveryIfNeeded() {
+        if state.beginLaunch() {
             // This is a recovery hint for the preceding session, not a failed current launch.
             CommonAPIAnalyticsService.trackCrashDiagnostic(
                 diagnosticType: "unclean_active_session",
                 signalSource: "session_marker",
                 severity: "warning",
                 count: 1,
-                terminationState: previousState
+                terminationState: "active"
             )
         }
-        markActive()
     }
 
-    nonisolated static func markActive() {
-        write(state: "active")
+    static func markActive() {
+        state.markActive()
     }
 
-    nonisolated static func markCleanBackground() {
-        write(state: "background_clean")
-    }
-
-    nonisolated private static func write(state: String) {
-        let defaults = UserDefaults.standard
-        defaults.set(state, forKey: stateKey)
-        defaults.set(Date(), forKey: timestampKey)
-    }
-
-    nonisolated private static func isRecent(_ date: Date?) -> Bool {
-        guard let date else { return false }
-        return Date().timeIntervalSince(date) < 24 * 60 * 60
+    static func markCleanBackground() {
+        state.markCleanBackground()
     }
 }

@@ -112,14 +112,17 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
   const featureSurfaceEvents = events.filter((event) => event.eventName === "al_feature_surface_opened");
   const importStarts = events.filter((event) => event.eventName === "al_import_flow_started");
   const importCompletions = events.filter((event) => event.eventName === "al_import_flow_completed");
+  const importFailures = importCompletions.filter((event) => (
+    ["failed", "failure"].includes(stringPayload(event.payload, "status") ?? "")
+  ));
   const taskImportCompletions = importCompletions.filter((event) => (
-    stringPayload(event.payload, "flow_type") !== "live_ocr"
+    !isLiveOCR(event.payload)
   ));
   const liveOCRStarts = importStarts.filter((event) => (
-    stringPayload(event.payload, "flow_type") === "live_ocr"
+    isLiveOCR(event.payload)
   ));
   const liveOCRCompletions = importCompletions.filter((event) => (
-    stringPayload(event.payload, "flow_type") === "live_ocr"
+    isLiveOCR(event.payload)
   ));
   const allConfirmationEvents = events.filter((event) => event.eventName === "al_confirmation_state");
   const reviewEvents = allConfirmationEvents.filter((event) =>
@@ -135,9 +138,13 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
     stringPayload(event.payload, "diagnostic_type") === "unclean_active_session" &&
     stringPayload(event.payload, "signal_source") === "session_marker"
   ));
-  const systemCrashEvents = crashEvents.filter((event) => !uncleanSessionRecoveryEvents.includes(event));
+  const systemCrashEvents = crashEvents.filter((event) => stringPayload(event.payload, "diagnostic_type") === "crash");
+  const systemHangEvents = crashEvents.filter((event) => stringPayload(event.payload, "diagnostic_type") === "hang");
   const performanceEvents = events.filter((event) => event.eventName === "al_performance_diagnostic");
-  const slowPerformanceEvents = performanceEvents.filter((event) => isSlowPerformanceEvent(event.payload));
+  const systemPerformanceEvents = performanceEvents.filter((event) => isSystemPerformanceDiagnostic(event.payload));
+  const slowPerformanceEvents = performanceEvents.filter((event) => (
+    !isSystemPerformanceDiagnostic(event.payload) && isSlowPerformanceEvent(event.payload)
+  ));
   const developerPerformanceEvents = performanceEvents.filter((event) => (
     stringPayload(event.payload, "result") === "developer_mode"
   ));
@@ -172,8 +179,8 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
     countMetric(
       "import_error_code_top_n",
       "导入错误码分布",
-      importCompletions.length,
-      breakdown(importCompletions.map((event) => stringPayload(event.payload, "error_code") ?? "unknown"))
+      importFailures.length,
+      breakdown(importFailures.map((event) => stringPayload(event.payload, "error_code") ?? "unknown"))
     ),
     countMetric(
       "review_lifecycle_actions",
@@ -219,13 +226,25 @@ function buildMetrics(events: Array<{ eventName: string; payload: PrimitivePaylo
     ),
     countMetric(
       "crash_diagnostic_count",
-      "系统崩溃与挂起信号",
+      "系统崩溃诊断事件",
       systemCrashEvents.length,
       breakdown(systemCrashEvents.map((event) => diagnosticBreakdownKey(event.payload, "diagnostic_type")))
     ),
     countMetric(
+      "hang_diagnostic_count",
+      "系统挂起诊断事件",
+      systemHangEvents.length,
+      breakdown(systemHangEvents.map((event) => diagnosticBreakdownKey(event.payload, "diagnostic_type")))
+    ),
+    countMetric(
+      "system_performance_diagnostic_count",
+      "系统性能诊断事件（含挂起，与挂起计数重叠）",
+      systemPerformanceEvents.length,
+      breakdown(systemPerformanceEvents.map((event) => diagnosticBreakdownKey(event.payload, "operation")))
+    ),
+    countMetric(
       "slow_operation_count",
-      "慢操作与卡顿信号",
+      "应用慢操作（不含系统诊断）",
       slowPerformanceEvents.length,
       breakdown(slowPerformanceEvents.map((event) => diagnosticBreakdownKey(event.payload, "operation")))
     ),
@@ -331,6 +350,16 @@ function stringPayload(payload: PrimitivePayload, key: string): string | null {
 
 function isPurchaseFailure(status: string | null): boolean {
   return status === "failed" || status === "cancelled" || status === "canceled" || status === "unknown";
+}
+
+function isLiveOCR(payload: PrimitivePayload): boolean {
+  // The app emits receipt_scan + input_type=live_ocr. Keep the older flow spelling readable.
+  return stringPayload(payload, "input_type") === "live_ocr" || stringPayload(payload, "flow_type") === "live_ocr";
+}
+
+function isSystemPerformanceDiagnostic(payload: PrimitivePayload): boolean {
+  return stringPayload(payload, "result") === "reported_by_metrickit" ||
+    ["hang", "cpu_exception", "disk_write_exception"].includes(stringPayload(payload, "diagnostic_type") ?? "");
 }
 
 function diagnosticBreakdownKey(payload: PrimitivePayload, field: string): string {
@@ -552,7 +581,7 @@ const dashboardHTML = `<!doctype html>
           </div>
           <div>
             <h1>AutoLedger 运营观测面板</h1>
-            <p class="lead">匿名聚合指标，用于上线前检查。启动完成、异常会话恢复和系统崩溃分开统计；异常会话恢复可包含调试器停止或系统回收，不等同于崩溃率。这里不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
+            <p class="lead">匿名聚合指标，用于上线前检查。启动完成、会话恢复、系统崩溃和挂起分别统计；会话恢复可包含调试器停止或系统回收，不等同于崩溃率。诊断条数不等于故障次数，需按来源构建核查。实时扫描确认率是确认与打开事件之比，未确认不等于导入失败。这里不展示账本金额、商户名、截图、PDF、邮箱、酒店标识、房号、精确位置、OCR 文本、StoreKit 交易标识、票据或支付数据。</p>
           </div>
         </div>
       </div>
@@ -664,7 +693,9 @@ const dashboardHTML = `<!doctype html>
       "launch_completion_count",
       "unclean_session_recovery_count",
       "crash_diagnostic_count",
+      "hang_diagnostic_count",
       "slow_operation_count",
+      "system_performance_diagnostic_count",
       "import_task_success_rate",
       "live_ocr_confirmation_rate",
       "hotel_pdf_completion_rate",
@@ -720,8 +751,9 @@ const dashboardHTML = `<!doctype html>
         ["匿名事件", metricValue(byID.get("total_events_count")), "最近接收 " + formatTime(data.latestReceivedAt)],
         ["启动完成", metricValue(byID.get("launch_completion_count")), "存活至启动事件上报"],
         ["会话恢复", metricValue(byID.get("unclean_session_recovery_count")), "非崩溃率，含系统回收"],
-        ["系统崩溃", metricValue(byID.get("crash_diagnostic_count")), "MetricKit / 系统诊断"],
-        ["慢操作", metricValue(byID.get("slow_operation_count")), "超过 3 秒或 warning"],
+        ["系统崩溃", metricValue(byID.get("crash_diagnostic_count")), "crash 诊断事件，非崩溃率"],
+        ["系统挂起", metricValue(byID.get("hang_diagnostic_count")), "hang 诊断事件，按来源构建核查"],
+        ["应用慢操作", metricValue(byID.get("slow_operation_count")), "超过 3 秒或 warning，不含系统诊断"],
         ["导入任务成功率", metricValue(byID.get("import_task_success_rate")), metricRatio(byID.get("import_task_success_rate"))],
         ["实时扫描确认率", metricValue(byID.get("live_ocr_confirmation_rate")), metricRatio(byID.get("live_ocr_confirmation_rate"))]
       ]);
@@ -729,7 +761,10 @@ const dashboardHTML = `<!doctype html>
       renderMetricTable((data.metrics || []).slice().sort((left, right) => metricOrder.indexOf(left.metricID) - metricOrder.indexOf(right.metricID)));
       renderEventBreakdown(data.eventBreakdown || []);
       renderBars(els.versionBreakdown, objectEntries(data.appVersionBreakdown || {}));
-      renderBars(els.crashDiagnostics, objectEntries((byID.get("crash_diagnostic_count") || {}).breakdown || {}));
+      renderBars(els.crashDiagnostics, objectEntries({
+        ...((byID.get("crash_diagnostic_count") || {}).breakdown || {}),
+        ...((byID.get("hang_diagnostic_count") || {}).breakdown || {})
+      }));
       renderBars(els.performanceOps, objectEntries((byID.get("performance_operation_top_n") || {}).breakdown || {}));
       renderBars(els.developerPerformance, objectEntries((byID.get("developer_performance_breakdown") || {}).breakdown || {}));
       renderBars(els.importErrors, objectEntries((byID.get("import_error_code_top_n") || {}).breakdown || {}));
@@ -803,7 +838,8 @@ const dashboardHTML = `<!doctype html>
         ["启动完成", "-", "暂无数据"],
         ["会话恢复", "-", "暂无数据"],
         ["系统崩溃", "-", "暂无数据"],
-        ["慢操作", "-", "暂无数据"],
+        ["系统挂起", "-", "暂无数据"],
+        ["应用慢操作", "-", "暂无数据"],
         ["导入任务成功率", "-", "暂无数据"],
         ["实时扫描确认率", "-", "暂无数据"]
       ]);
