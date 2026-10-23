@@ -3999,7 +3999,7 @@ extension LedgerStore {
         return BackupBundle(
             app: BackupAppInfo(
                 name: Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "AutoLedger",
-                version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.7.0",
+                version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0",
                 build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "dev"
             ),
             device: BackupDeviceInfo(

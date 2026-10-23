@@ -328,11 +328,14 @@ struct DataManagementView: View {
     }
 
     private func cloudKitStatusTitle(_ state: LedgerUserSyncState) -> LocalizedStringKey {
-        LocalizedStringKey("data_management.cloudkit_state.\(state.rawValue).title")
+        // Build the lookup key before SwiftUI interprets interpolation as a format argument.
+        let key = "data_management.cloudkit_state.\(state.rawValue).title"
+        return LocalizedStringKey(key)
     }
 
     private func cloudKitStatusDetail(_ state: LedgerUserSyncState) -> LocalizedStringKey {
-        LocalizedStringKey("data_management.cloudkit_state.\(state.rawValue).detail")
+        let key = "data_management.cloudkit_state.\(state.rawValue).detail"
+        return LocalizedStringKey(key)
     }
 
     private func cloudKitStatusSystemImage(_ state: LedgerUserSyncState) -> String {

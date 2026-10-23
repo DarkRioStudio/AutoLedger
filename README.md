@@ -138,7 +138,7 @@ AutoLedger 的界面本地化和账单识别语言包是两层独立能力：
 - **v1.7.0 韩语范围**：韩语 App UI 和 `AutoLedgerCore` `ko` 识别包已随 ASC `1.6.0` 正式发布，覆盖韩文金额、日期、商户、分类关键词和 `ko-KR + en-US` OCR hint；韩语商店文案、截图与 App Preview 已随版本交付，更多真实样本、地区细节与母语审校作为发布后质量工作持续补强。
 - **i18n 发布矩阵**：[当前版本矩阵](versions/v1.7.0-i18n-release-matrix.md) 将每个语言按商店、界面、识别包、真实样本、地区票据和人工审校六项门禁管理；[跨版本语言路线](docs/product/I18N_ROADMAP.md) 固定每个公开功能版本同时交付一组新语言。
 - **英语主语言**：从 ASC `1.6.0` 起，工程与 App Store 主语言目标统一为英语；工程 `developmentRegion = en` 与 ASC Primary Language `English (U.S.) / en-US` 分别验证，仓库配置不替代 ASC 线上证据。
-- **下一质量组**：`v1.8.0` 已进入 Early Execution，目标为美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
+- **下一质量组**：`v1.8.0` 已发布，仍持续核验美国、英国、加拿大、澳大利亚、新加坡五个英语市场质量组，不新增 UI 语言；第二阶段提升日语并新增德语、法语，西班牙语与巴西葡语顺延为后续候选。
 - **扩展原则**：后续语言包以纯数据、版本化、可 fallback 的方式扩展；用户纠错共享必须 opt-in、脱敏、可撤回，并经过审核后才可能进入 reviewed pack。本仓库当前不实现远程语言包热更新或自动上传。
 
 ## Tech Stack
@@ -244,7 +244,7 @@ bash scripts/run_golden_regression.sh
 - `v1.6.3` 已完成当前范围：酒店 C1 AutoLedger 专属收件箱第一版 App/Core 工程骨架、审核说明和回归 baseline；C2 Worker 登录用户邮箱自动扫描仅保留为个人自用或未来实验路线。
 - `v1.6.4` 已完成 ASC / App Store `1.5.0` 发布收口基线，`GOAL-2200` 完成 Free / Pro 边界冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 专属收件箱 Worker / D1 / R2 / Queue、云候选 API、App 侧 PDFKit 本地转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口。
 - `v1.7.0 / ASC 1.6.0` 已正式发布：实时 OCR 扫描、韩语 UI 和 `ko` 识别包、i18n 发布矩阵、可复用 `common-api` 地点 / 货币 / 汇率 / 天气 / release notes、App Store Server Notifications、ASC metadata-as-code、Pro 高级搜索、订阅异常、月结 ZIP、高级规则、智能整理、第一版云端商户别名建议、基础分享图、酒店旅程回忆和隐私安全 analytics / dashboard 已随该发布线收口。
-- `v1.8.0 / ASC 1.7.0` 已进入 Early Execution，继续推进 Review & Close、可信同步、月结闭环和英语五市场质量组。
+- `v1.8.0 / ASC 1.7.0` 已可分发；当前 `v1.9.0 / ASC 1.8.0` 先修复同步状态文案与多位待处理计数，后续范围见 [新版本计划](versions/v1.9.0-plan.md)。
 
 | 内部版本 | App Store | 状态 | 主要内容 |
 |---------|-----------|------|----------|
@@ -267,7 +267,8 @@ bash scripts/run_golden_regression.sh
 | v1.6.3 | **1.5.0 默认沿用** | ✅ 已完成 | 酒店水单 C1 专属收件箱第一版 App/Core 骨架：`folio+<token>@getautoledger.app` 合同、云候选模型、deep link、PDFKit 本地转换入口、审核说明和回归 baseline；真实 Worker/API 由 1.6.4 接续 |
 | v1.6.4 | **1.5.0 默认沿用** | ✅ 已完成 | Personal Pro 订阅基础和 ASC 1.5.0 收口基线：Free / Pro 边界已冻结；Pro 页面、恢复购买 / 管理订阅、本地邮箱月度免费额度、批量候选 gate、高级去重 gate、C1 Cloudflare Worker、D1/R2/Queue、云候选 API、App 云候选下载与 PDFKit 转换入口、审核条款、visionOS / macOS 热修和最终基线 tag 已收口 |
 | v1.7.0 | **1.6.0** | ✅ 已发布 | 实时 OCR 与 fallback；五语 UI / 识别；`common-api`；服务端订阅；ASC metadata-as-code；Pro 搜索、异常订阅、月结 ZIP、高级规则、智能整理与第一版 hash-only 云端商户别名建议；分享图、酒店旅程回忆和隐私安全发布观测 |
-| v1.8.0 | **1.7.0** | 🚧 Early Execution | Review & Close：持久化待处理、可理解同步状态、月结闭环；完成英语五市场的格式、商店、隐私与真实设备准入 |
+| v1.8.0 | **1.7.0** | ✅ 已可分发 | Review & Close：持久化待处理、可理解同步状态与月结闭环；英语五市场和设备质量缺口继续按证据补齐 |
+| v1.9.0 | **1.8.0** | 🚧 开发中 | 同步状态本地化、多位待处理计数；规则中心、Saved Views 与订阅省钱看板仍为计划候选 |
 
 ## License
 

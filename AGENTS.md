@@ -12,7 +12,7 @@ OCR 与本地模型推理默认在设备端完成；用户主动使用专属云�
 - 跨版本语言路线图真源 → [docs/product/I18N_ROADMAP.md](docs/product/I18N_ROADMAP.md)
 - 文档索引与生命周期 → [docs/README.md](docs/README.md)
 - 迭代工作流（必读） → [process/agent-iteration-workflow.md](process/agent-iteration-workflow.md)
-- 版本计划 → `versions/v*.md`；当前发布线 → [versions/v1.7.0-plan.md](versions/v1.7.0-plan.md)，下一版本草案 → [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md)
+- 版本计划 → `versions/v*.md`；当前商店线 → [versions/v1.8.0-plan.md](versions/v1.8.0-plan.md)，当前开发计划 → [versions/v1.9.0-plan.md](versions/v1.9.0-plan.md)
 - CHANGELOG → [CHANGELOG.md](CHANGELOG.md)
 
 ---
