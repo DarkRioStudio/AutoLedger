@@ -1371,10 +1371,7 @@ final class LedgerStore: ObservableObject {
     private func startSQLiteSnapshotLoadIfNeeded(from sqlStore: SQLiteTransactionStore) {
         guard pendingSQLiteSnapshotTask == nil else { return }
 
-        _ = try? sqlStore.backfillMissingLedgerCurrencyCodes(
-            defaultCurrencyCode: ExpenseCurrencyPreference.currentCode
-        )
-
+        let defaultCurrencyCode = ExpenseCurrencyPreference.currentCode
         let seedTransactions = Self.seedTransactions
         let startingRevision = persistenceStateRevision
         didDiscardLastSQLiteSnapshot = false
@@ -1382,6 +1379,9 @@ final class LedgerStore: ObservableObject {
             let snapshot = await Task.detached(priority: .userInitiated) { () -> SQLiteLedgerSnapshot? in
                 do {
                     let reader = try sqlStore.makeSnapshotReader()
+                    // This UPDATE can scan the whole ledger or wait for a writer.
+                    // Keep it on the independent connection with the snapshot read.
+                    _ = try? reader.backfillMissingLedgerCurrencyCodes(defaultCurrencyCode: defaultCurrencyCode)
                     return try reader.loadLedgerSnapshot(seedTransactions: seedTransactions)
                 } catch {
                     return nil

@@ -12,6 +12,7 @@ import AutoLedgerCore
 @main
 struct AutoLedgerApp: App {
     @UIApplicationDelegateAdaptor(AutoLedgerAppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppThemePreset.userDefaultsKey) private var themeRawValue = AppThemePreset.fresh.rawValue
     @AppStorage(AppColorSchemePreference.userDefaultsKey) private var colorSchemePreferenceRawValue = AppColorSchemePreference.system.rawValue
     @AppStorage(AppThemeCustomTheme.surfaceHexKey) private var customThemeSurfaceHex = AppThemeCustomTheme.defaultSurfaceHex
@@ -73,6 +74,16 @@ struct AutoLedgerApp: App {
             .autoLedgerMotion(AppMotion.theme, value: customThemeAccentHex)
             .autoLedgerMotion(AppMotion.theme, value: customThemeSecondaryHex)
             .autoLedgerMotion(AppMotion.theme, value: languagePreferenceRawValue)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard !ScreenshotModeConfig.isEnabled && !PerformanceFixtureConfiguration.isEnabled else { return }
+            // App-level scenePhase aggregates every window. One background window must
+            // not mark another active window as clean, and a background launch stays inactive.
+            if phase == .active {
+                AppSessionDiagnosticsService.markActive()
+            } else if phase == .background {
+                AppSessionDiagnosticsService.markCleanBackground()
+            }
         }
         #if targetEnvironment(macCatalyst)
         .commands {
@@ -261,13 +272,11 @@ private struct AutoLedgerRootView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 if newPhase == .active {
-                    AppSessionDiagnosticsService.markActive()
                     Task { @MainActor in
                         detectSystemCurrencyChangeIfNeeded()
                         await handleSceneBecameActive()
                     }
                 } else if newPhase == .background {
-                    AppSessionDiagnosticsService.markCleanBackground()
                     store.backupOnAppBackground()
                 }
             }

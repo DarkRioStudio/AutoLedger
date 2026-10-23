@@ -254,9 +254,11 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
         let launchCompletionEvents = launchEvents.filter {
             $0.stringPayload("launch_type") == "foreground" && $0.stringPayload("result") == "success"
         }
-        let importStarts = events(named: .importFlowStarted).count
-        let importSuccesses = events(named: .importFlowCompleted).filter { $0.stringPayload("status") == "success" }.count
         let importCompletions = events(named: .importFlowCompleted)
+        let importFailures = importCompletions.filter { ["failed", "failure"].contains($0.stringPayload("status") ?? "") }
+        let taskImportCompletions = importCompletions.filter { !isLiveOCR($0) }
+        let liveOCRStarts = events(named: .importFlowStarted).filter { isLiveOCR($0) }
+        let liveOCRCompletions = importCompletions.filter { isLiveOCR($0) }
         let confirmationEvents = events(named: .confirmationState)
         let confirmationDiscards = confirmationEvents.filter { $0.stringPayload("confirm_status") == "discarded" }.count
         let currencyEvents = events(named: .currencyLookupStatus)
@@ -278,15 +280,15 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             $0.stringPayload("diagnostic_type") == "unclean_active_session" &&
             $0.stringPayload("signal_source") == "session_marker"
         }
-        let systemCrashEvents = crashEvents.filter {
-            !($0.stringPayload("diagnostic_type") == "unclean_active_session" &&
-              $0.stringPayload("signal_source") == "session_marker")
-        }
+        let systemCrashEvents = crashEvents.filter { $0.stringPayload("diagnostic_type") == "crash" }
+        let systemHangEvents = crashEvents.filter { $0.stringPayload("diagnostic_type") == "hang" }
         let performanceEvents = events(named: .performanceDiagnostic)
+        let systemPerformanceEvents = performanceEvents.filter { isSystemPerformanceDiagnostic($0) }
         let developerPerformanceEvents = performanceEvents.filter {
             $0.stringPayload("result") == "developer_mode"
         }
         let slowPerformanceEvents = performanceEvents.filter { event in
+            guard !isSystemPerformanceDiagnostic(event) else { return false }
             switch event.stringPayload("duration_ms_bucket") {
             case "3s_10s", "10s_30s", "over_30s":
                 return true
@@ -305,14 +307,19 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             countMetric("launch_completion_count", value: launchCompletionEvents.count),
             countMetric("unclean_session_recovery_count", value: uncleanSessionRecoveryEvents.count),
             percentMetric(
-                "import_completion_rate",
-                numerator: importSuccesses,
-                denominator: importStarts
+                "import_task_success_rate",
+                numerator: taskImportCompletions.filter { $0.stringPayload("status") == "success" }.count,
+                denominator: taskImportCompletions.count
+            ),
+            percentMetric(
+                "live_ocr_confirmation_rate",
+                numerator: liveOCRCompletions.filter { $0.stringPayload("status") == "success" }.count,
+                denominator: liveOCRStarts.count
             ),
             countMetric(
                 "import_error_code_top_n",
-                value: importCompletions.count,
-                breakdown: breakdown(importCompletions, field: "error_code")
+                value: importFailures.count,
+                breakdown: breakdown(importFailures, field: "error_code")
             ),
             percentMetric(
                 "confirmation_discard_rate",
@@ -348,6 +355,16 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
                 "crash_diagnostic_count",
                 value: systemCrashEvents.count,
                 breakdown: diagnosticBreakdown(systemCrashEvents, field: "diagnostic_type")
+            ),
+            countMetric(
+                "hang_diagnostic_count",
+                value: systemHangEvents.count,
+                breakdown: diagnosticBreakdown(systemHangEvents, field: "diagnostic_type")
+            ),
+            countMetric(
+                "system_performance_diagnostic_count",
+                value: systemPerformanceEvents.count,
+                breakdown: diagnosticBreakdown(systemPerformanceEvents, field: "operation")
             ),
             countMetric(
                 "slow_operation_count",
@@ -447,6 +464,15 @@ public struct AutoLedgerAnalyticsRecorder: Sendable {
             let key = event.stringPayload(field) ?? "unknown"
             result[key, default: 0] += 1
         }
+    }
+
+    private func isLiveOCR(_ event: AutoLedgerAnalyticsEvent) -> Bool {
+        event.stringPayload("input_type") == "live_ocr" || event.stringPayload("flow_type") == "live_ocr"
+    }
+
+    private func isSystemPerformanceDiagnostic(_ event: AutoLedgerAnalyticsEvent) -> Bool {
+        event.stringPayload("result") == "reported_by_metrickit" ||
+            ["hang", "cpu_exception", "disk_write_exception"].contains(event.stringPayload("diagnostic_type") ?? "")
     }
 
     private func diagnosticBreakdown(
@@ -645,7 +671,8 @@ public enum AutoLedgerAnalyticsCatalog {
         metric("launch_completion_count", "已到达前台启动上报的次数，不推断总启动成功率。", [.appLaunchPerformance], "用于确认启动上报覆盖，不作为发布成功率。"),
         metric("unclean_session_recovery_count", "前次 active 会话在下次启动时被恢复检测到的次数。", [.crashDiagnostic], "含系统回收和调试器停止；不等同崩溃率。"),
         metric("feature_surface_open_count", "匿名功能入口打开次数，按固定 surface 枚举聚合。", [.featureSurfaceOpened], "只用于产品体验判断，不做用户画像。"),
-        metric("import_completion_rate", "导入开始到导入成功完成的比例。", [.importFlowStarted, .importFlowCompleted], "主路径异常下降需调整文案或暂缓。"),
+        metric("import_task_success_rate", "非实时扫描任务中成功终态占全部终态的比例。", [.importFlowCompleted], "不把扫描打开但未确认视为导入失败。"),
+        metric("live_ocr_confirmation_rate", "实时扫描确认成功事件与打开事件之比。", [.importFlowStarted, .importFlowCompleted], "按 input_type=live_ocr 分类；非匹配会话转化率。"),
         metric("import_error_code_top_n", "导入失败事件按错误码聚合。", [.importFlowCompleted], "新增高频错误需进入 launch blocker review。"),
         metric("confirmation_discard_rate", "确认页放弃事件占确认页状态事件比例。", [.confirmationState], "高放弃率时不要强调自动化已顺滑。"),
         metric("currency_lookup_success_rate", "跨币种查询成功占比。", [.currencyLookupStatus], "未稳定前 ASC 文案继续用发布准备。"),
@@ -653,8 +680,10 @@ public enum AutoLedgerAnalyticsCatalog {
         metric("common_api_status_top_n", "Common API 请求按 HTTP 状态 bucket 聚合。", [.commonAPIRequestStatus], "4xx / 5xx 或 network_error 异常时先修基础设施。"),
         metric("pro_gate_boundary_risk", "Pro gate 关闭原因和 Pro confusion 反馈对照。", [.proGateViewed], "出现 Pro 锁数据误解时先改文案。"),
         metric("purchase_flow_failure_rate", "StoreKit failed / canceled / unknown 状态占比。", [.purchaseFlowStatus], "错误码异常时暂停付费转化文案。"),
-        metric("crash_diagnostic_count", "MetricKit crash / hang / 异常退出信号按诊断类型聚合。", [.crashDiagnostic], "任何新增崩溃信号都进入发布前 review。"),
-        metric("slow_operation_count", "关键操作超过 3 秒或系统诊断标记 warning / critical 的次数。", [.performanceDiagnostic], "高频慢操作先做 Instruments 和局部优化。"),
+        metric("crash_diagnostic_count", "crash 诊断事件条数，不含会话恢复和挂起。", [.crashDiagnostic], "按诊断来源构建核查，不代表崩溃率或精确故障次数。"),
+        metric("hang_diagnostic_count", "hang 诊断事件条数。", [.crashDiagnostic], "缺少诊断来源构建时不能归因于上传构建。"),
+        metric("system_performance_diagnostic_count", "MetricKit 挂起、CPU 与磁盘写入诊断事件，含与挂起计数重叠的记录。", [.performanceDiagnostic], "与应用慢操作分开，不能相加当作故障次数。"),
+        metric("slow_operation_count", "应用操作超过 3 秒或标记 warning / critical 的事件，不含系统诊断。", [.performanceDiagnostic], "高频慢操作先做 Instruments 和局部优化。"),
         metric("performance_operation_top_n", "关键操作耗时事件按 operation 枚举聚合。", [.performanceDiagnostic], "用于判断用户主要卡在哪些路径。"),
         metric("developer_performance_sample_count", "开发者模式主动采集的页面阶段性能样本。", [.performanceDiagnostic], "仅用于预发布真机定点分析，不代表普通用户总体分布。"),
         metric("developer_performance_breakdown", "开发者模式样本按页面、阶段、耗时 bucket 和源构建聚合。", [.performanceDiagnostic], "用于定位 Tab 选择提交与目标页面出现之间的延迟阶段。"),
