@@ -1316,7 +1316,14 @@
 "home_quick_action.add_transaction.subtitle" = "開啟帳本並新建一筆";
 
 "notification.quick_ledger.title" = "記帳成功";
-"notification.quick_ledger.body_format" = "記帳成功：%@ - %@。如有異常，請點選開啟 App 確認。";
+"notification.quick_ledger.body_format" = "記帳成功：%@ - %@。長按通知可編輯或撤銷。";
+"notification.quick_ledger.undo" = "撤銷";
+"notification.quick_ledger.undone.title" = "已撤銷記帳";
+"notification.quick_ledger.undone.body" = "已移至回收站，可在 AutoLedger 中還原。";
+"notification.quick_ledger.unavailable.title" = "帳單已不在帳本中";
+"notification.quick_ledger.unavailable.body" = "這筆帳單已刪除或不存在。";
+"notification.quick_ledger.undo_failed.title" = "無法撤銷記帳";
+"notification.quick_ledger.undo_failed.body" = "帳單未移至回收站，請開啟 AutoLedger 重試。";
 "notification.subscription.title" = "明日扣費提醒";
 "notification.subscription.body_format" = "%@ 將於明天扣費 %@（%@）";
 

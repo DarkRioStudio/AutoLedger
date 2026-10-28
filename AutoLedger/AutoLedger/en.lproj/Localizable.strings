@@ -1313,7 +1313,14 @@
 "home_quick_action.add_transaction.subtitle" = "Open Ledger and create a new entry";
 
 "notification.quick_ledger.title" = "Ledger Entry Saved";
-"notification.quick_ledger.body_format" = "Saved: %@ - %@. Tap to review it in AutoLedger if anything looks off.";
+"notification.quick_ledger.body_format" = "Saved: %@ - %@. Touch and hold this notification to edit or undo.";
+"notification.quick_ledger.undo" = "Undo";
+"notification.quick_ledger.undone.title" = "Entry Undone";
+"notification.quick_ledger.undone.body" = "Moved to Recently Deleted. You can restore it in AutoLedger.";
+"notification.quick_ledger.unavailable.title" = "Entry No Longer Available";
+"notification.quick_ledger.unavailable.body" = "This entry has already been deleted or could not be found.";
+"notification.quick_ledger.undo_failed.title" = "Could Not Undo Entry";
+"notification.quick_ledger.undo_failed.body" = "The entry was not moved to Recently Deleted. Open AutoLedger to try again.";
 "notification.subscription.title" = "Charge Reminder for Tomorrow";
 "notification.subscription.body_format" = "%@ will charge %@ tomorrow (%@)";
 

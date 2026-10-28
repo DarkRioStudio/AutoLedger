@@ -132,6 +132,7 @@ struct OfflineRegression {
         verifyLedgerConfigurationSyncPolicy(reporter: reporter)
         try verifySQLiteRoundTrip(reporter: reporter)
         try await verifyDeferredSQLiteLedgerStoreHydration(reporter: reporter)
+        try await verifyQuickLedgerNotificationActions(reporter: reporter)
         try verifySQLiteBusyRetry(reporter: reporter)
         try verifyHotelStaySQLitePersistence(reporter: reporter)
         try verifyHotelStayDraftPersistence(reporter: reporter)
@@ -6748,6 +6749,136 @@ struct OfflineRegression {
                     $0.ledgerCurrencyCode == "CNY"
             },
             "LedgerStore publishes a post-sync SQLite merge with a frozen currency and unchanged amount"
+        )
+    }
+
+    @MainActor
+    private static func verifyQuickLedgerNotificationActions(reporter: RegressionReporter) async throws {
+        let rootURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AutoLedgerNotificationActions-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: rootURL) }
+
+        let filename = "notification.sqlite3"
+        let sqlStore = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: filename)
+        let occurredAt = Date(timeIntervalSince1970: 1_793_152_800)
+        let target = Transaction(
+            merchant: "Notification Target", amount: 25, occurredAt: occurredAt,
+            category: .dining, source: .manual, note: "shortcut",
+            ledgerID: TodaySpendingSummary.defaultLedgerID, ledgerCurrencyCode: "CNY"
+        )
+        let unrelated = Transaction(
+            merchant: "Newer Unrelated Entry", amount: 80, occurredAt: occurredAt.addingTimeInterval(10),
+            category: .shopping, source: .manual, note: "keep",
+            ledgerID: TodaySpendingSummary.defaultLedgerID, ledgerCurrencyCode: "CNY"
+        )
+        try sqlStore.save(transaction: target)
+        try sqlStore.save(transaction: unrelated)
+
+        // The delegate receives the edit before SwiftUI and deferred hydration.
+        let navigation = QuickLedgerNavigationState.shared
+        navigation.markEditTransactionPending(target.id)
+        let ledger = LedgerStore(
+            transactionStore: sqlStore, loadsPersistedConfiguration: false,
+            deferSQLiteStateHydration: true
+        )
+        await ledger.refreshFromStoreInBackground(afterExternalChange: true)
+        let editID = navigation.consumeEditTransactionPending()
+        reporter.check(editID == target.id, "Notification edit survives cold-start hydration with the exact entry ID")
+        reporter.check(navigation.consumeEditTransactionPending() == nil, "Notification edit is consumed once across appearance and activation callbacks")
+        let editable = ledger.transactions.first { $0.id == editID }
+        reporter.check(editable == target, "Notification edit loads the original entry rather than the newest one")
+        let unchanged = try sqlStore.loadTransactions()
+        reporter.check(unchanged.contains(target), "Opening or cancelling notification edit does not mutate the entry")
+
+        let edited = Transaction(
+            id: target.id, merchant: target.merchant, amount: 19, occurredAt: target.occurredAt,
+            category: .dining, source: .manual, note: "corrected",
+            ledgerID: target.ledgerID, ledgerCurrencyCode: "CNY"
+        )
+        reporter.check(
+            ledger.updateTransaction(edited, refreshSameMerchantCategory: false, saveMerchantAlias: false),
+            "Notification edit reuses the existing persisted update path"
+        )
+        let beforeUndo = try sqlStore.loadTransactionSyncMetadata(transactionID: target.id)
+        let coldLedger = LedgerStore(
+            transactionStore: sqlStore, loadsPersistedConfiguration: false,
+            deferSQLiteStateHydration: true
+        )
+
+        // Use the independent background connection used by notification undo.
+        let didDelete = try await Task.detached {
+            try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: filename)
+                .deleteIfActive(transactionID: target.id)
+        }.value
+        reporter.check(didDelete, "Notification undo commits a soft delete for its exact entry")
+        await coldLedger.refreshFromStoreInBackground(afterExternalChange: true)
+        reporter.check(
+            !coldLedger.isPersistentStateLoading && !coldLedger.transactions.contains { $0.id == target.id },
+            "Notification undo during launch is reflected after pending snapshot hydration"
+        )
+        await ledger.refreshFromStoreInBackground(afterExternalChange: true)
+        reporter.check(!ledger.transactions.contains { $0.id == target.id }, "Notification undo refresh removes the entry from the live ledger")
+        reporter.check(ledger.transactions.contains(unrelated), "Notification undo preserves other entries")
+        reporter.check(ledger.deletedTransactions.contains(edited), "Notification undo keeps edited contents in the existing recoverable trash")
+        reporter.check(
+            abs(ledger.transactions.reduce(0) { $0 + $1.amount } - unrelated.amount) < 0.001,
+            "Notification undo refresh removes the amount from active totals"
+        )
+        let deletedMetadata = try sqlStore.loadTransactionSyncMetadata(transactionID: target.id)
+        reporter.check(deletedMetadata?.deletedAt != nil, "Notification undo creates an iCloud deletion tombstone")
+        reporter.check(
+            deletedMetadata?.syncRevision == (beforeUndo?.syncRevision ?? -1) + 1,
+            "Notification undo advances the existing sync revision once"
+        )
+
+        let repeated = try sqlStore.deleteIfActive(transactionID: target.id)
+        let missing = try sqlStore.deleteIfActive(transactionID: UUID())
+        let repeatedMetadata = try sqlStore.loadTransactionSyncMetadata(transactionID: target.id)
+        reporter.check(!repeated && !missing, "Repeated or missing notification targets are no-ops")
+        reporter.check(
+            repeatedMetadata?.syncRevision == deletedMetadata?.syncRevision &&
+                repeatedMetadata?.deletedAt == deletedMetadata?.deletedAt,
+            "Repeated undo preserves the original deletion time and sync revision"
+        )
+        let reopened = try SQLiteTransactionStore(baseDirectoryURL: rootURL, filename: filename)
+        let persistedTrash = try reopened.loadDeletedTransactions()
+        reporter.check(persistedTrash.contains(edited), "Notification undo remains recoverable after reopening SQLite")
+        ledger.restoreTransaction(edited)
+        let restored = try reopened.loadTransactions()
+        reporter.check(restored.contains(edited), "The existing recycle-bin restore returns the notification entry unchanged")
+
+        // A real failed SQLite update must leave the entry and sync metadata intact.
+        let databaseURL = rootURL.appendingPathComponent("AutoLedger").appendingPathComponent(filename)
+        var connection: OpaquePointer?
+        guard sqlite3_open(databaseURL.path, &connection) == SQLITE_OK else {
+            sqlite3_close(connection)
+            reporter.check(false, "Notification undo failure fixture opens SQLite")
+            return
+        }
+        defer { sqlite3_close(connection) }
+        let trigger = """
+        CREATE TRIGGER reject_notification_delete BEFORE UPDATE OF deleted_at ON transactions
+        WHEN NEW.deleted_at IS NOT NULL
+        BEGIN SELECT RAISE(ABORT, 'forced deletion failure'); END;
+        """
+        guard sqlite3_exec(connection, trigger, nil, nil, nil) == SQLITE_OK else {
+            reporter.check(false, "Notification undo failure fixture creates rejecting trigger")
+            return
+        }
+        let beforeFailure = try reopened.loadTransactionSyncMetadata(transactionID: target.id)
+        do {
+            _ = try reopened.deleteIfActive(transactionID: target.id)
+            reporter.check(false, "Notification undo must throw on persistence failure")
+        } catch {
+            reporter.check(true, "Notification undo reports persistence failure rather than success")
+        }
+        let afterFailure = try reopened.loadTransactionSyncMetadata(transactionID: target.id)
+        let afterFailureEntries = try reopened.loadTransactions()
+        reporter.check(afterFailureEntries.contains(edited), "Failed notification undo keeps the active entry")
+        reporter.check(
+            afterFailure?.deletedAt == nil && afterFailure?.syncRevision == beforeFailure?.syncRevision,
+            "Failed notification undo does not publish a deletion tombstone or new revision"
         )
     }
 

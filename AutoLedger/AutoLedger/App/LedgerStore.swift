@@ -1350,11 +1350,17 @@ final class LedgerStore: ObservableObject {
     /// Refreshes persisted SQLite state through an independent reader so that
     /// row decoding and date parsing do not block the UI actor on launch or
     /// when the app returns to the foreground.
-    func refreshFromStoreInBackground() async {
+    func refreshFromStoreInBackground(afterExternalChange: Bool = false) async {
         guard let store = transactionStore else { return }
         guard let sqlStore = store as? SQLiteTransactionStore else {
             refreshFromStore()
             return
+        }
+
+        // Intents and notification actions write through their own connection.
+        // A snapshot already in flight may predate that write, including at launch.
+        if afterExternalChange, let task = pendingSQLiteSnapshotTask {
+            await task.value
         }
 
         // A user edit can land while the independent reader is decoding a large

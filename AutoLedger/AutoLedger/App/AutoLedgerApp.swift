@@ -114,6 +114,8 @@ private struct AutoLedgerRootView: View {
     @State private var didScheduleAnalyticsUpload = false
     @State private var pendingStructuredJSONHandoff: StructuredLedgerJSONIntentHandoff?
     @State private var pendingSystemCurrencyChange: ExpenseCurrencyPreference.SystemCurrencyChange?
+    @State private var quickLedgerTransactionToEdit: Transaction?
+    @State private var isQuickLedgerEntryUnavailable = false
 
     init() {
         _store = StateObject(
@@ -250,9 +252,40 @@ private struct AutoLedgerRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.didSaveTransactionFromIntent)) { _ in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
                 Task { @MainActor in
-                    await refreshStoreWithPerformanceTracking(operation: "refresh_from_intent_notification")
-                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口记账完成，开始推送 iCloud。")
+                    await refreshStoreWithPerformanceTracking(
+                        operation: "refresh_from_intent_notification",
+                        afterExternalChange: true
+                    )
+                    await store.pushPendingIntentLedgerSaveIfNeeded(reason: "外部入口账单变更，开始推送 iCloud。")
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NotificationService.editQuickLedgerTransactionEvent)) { _ in
+                Task { @MainActor in
+                    await consumeQuickLedgerNotificationEditIfNeeded()
+                }
+            }
+            .sheet(item: $quickLedgerTransactionToEdit, onDismiss: {
+                Task { @MainActor in
+                    await consumeQuickLedgerNotificationEditIfNeeded()
+                }
+            }) { transaction in
+                TransactionEditorView(transaction: transaction) { updated, refreshCategory, saveAlias in
+                    let didSave = store.updateTransaction(
+                        updated,
+                        refreshSameMerchantCategory: refreshCategory,
+                        saveMerchantAlias: saveAlias
+                    )
+                    if didSave {
+                        NotificationService.shared.removeQuickLedgerSuccessNotification(transactionID: updated.id)
+                    }
+                    return didSave
+                }
+                .environmentObject(store)
+            }
+            .alert("notification.quick_ledger.unavailable.title", isPresented: $isQuickLedgerEntryUnavailable) {
+                Button("common.ok", role: .cancel) {}
+            } message: {
+                Text("notification.quick_ledger.unavailable.body")
             }
             .onReceive(NotificationCenter.default.publisher(for: NotificationService.openDeepLinkEvent)) { _ in
                 guard !PerformanceFixtureConfiguration.isEnabled else { return }
@@ -285,6 +318,7 @@ private struct AutoLedgerRootView: View {
                 Task { @MainActor in
                     detectSystemCurrencyChangeIfNeeded()
                     await store.refreshFromStoreInBackground()
+                    await consumeQuickLedgerNotificationEditIfNeeded()
                     consumeAppIntentNavigationHandoffIfNeeded()
                     consumeNotificationDeepLinkHandoffIfNeeded()
                     consumeStructuredJSONHandoffIfNeeded()
@@ -340,6 +374,7 @@ private struct AutoLedgerRootView: View {
     private func handleSceneBecameActive() async {
         consumeStructuredJSONHandoffIfNeeded()
         await refreshStoreWithPerformanceTracking(operation: "refresh_from_foreground")
+        await consumeQuickLedgerNotificationEditIfNeeded()
         await ProEntitlementManager.shared.refreshEntitlements()
         scheduleLaunchCloudSyncIfNeeded()
         scheduleCommonAPIRefresh()
@@ -418,15 +453,36 @@ private struct AutoLedgerRootView: View {
     }
 
     @MainActor
-    private func refreshStoreWithPerformanceTracking(operation: String) async {
+    private func refreshStoreWithPerformanceTracking(operation: String, afterExternalChange: Bool = false) async {
         let startedAt = Date()
-        await store.refreshFromStoreInBackground()
+        await store.refreshFromStoreInBackground(afterExternalChange: afterExternalChange)
         CommonAPIAnalyticsService.trackPerformanceDiagnostic(
             diagnosticType: "store_operation",
             surface: "ledger_store",
             operation: operation,
             startedAt: startedAt
         )
+    }
+
+    @MainActor
+    private func consumeQuickLedgerNotificationEditIfNeeded() async {
+        guard !PerformanceFixtureConfiguration.isEnabled,
+              scenePhase == .active,
+              quickLedgerTransactionToEdit == nil,
+              QuickLedgerNavigationState.shared.hasEditTransactionPending else { return }
+
+        await store.refreshFromStoreInBackground(afterExternalChange: true)
+        guard quickLedgerTransactionToEdit == nil,
+              let transactionID = QuickLedgerNavigationState.shared.consumeEditTransactionPending() else { return }
+        navigationState.openLedgerTab()
+        guard let transaction = store.transactions.first(where: { $0.id == transactionID }) else {
+            isQuickLedgerEntryUnavailable = true
+            return
+        }
+        if let profile = store.activeLedgerProfiles.first(where: { $0.id == transaction.resolvedLedgerID() }) {
+            store.selectLedgerProfile(profile)
+        }
+        quickLedgerTransactionToEdit = transaction
     }
 
     @MainActor
