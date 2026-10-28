@@ -1313,7 +1313,14 @@
 "home_quick_action.add_transaction.subtitle" = "台帳を開いて新しい記録を作成";
 
 "notification.quick_ledger.title" = "記帳項目を保存しました";
-"notification.quick_ledger.body_format" = "保存済み: %@ - %@。内容に問題があればタップして AutoLedger で確認してください。";
+"notification.quick_ledger.body_format" = "保存済み: %@ - %@。通知を長押しすると、編集や取り消しができます。";
+"notification.quick_ledger.undo" = "取り消す";
+"notification.quick_ledger.undone.title" = "記帳を取り消しました";
+"notification.quick_ledger.undone.body" = "「最近削除した項目」に移動しました。AutoLedger で復元できます。";
+"notification.quick_ledger.unavailable.title" = "記帳項目が見つかりません";
+"notification.quick_ledger.unavailable.body" = "この項目は削除済みか、存在しません。";
+"notification.quick_ledger.undo_failed.title" = "記帳を取り消せませんでした";
+"notification.quick_ledger.undo_failed.body" = "項目は「最近削除した項目」に移動されていません。AutoLedger を開いて再試行してください。";
 "notification.subscription.title" = "明日の請求リマインダー";
 "notification.subscription.body_format" = "%@ は明日 %@ を請求予定です（%@）";
 

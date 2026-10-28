@@ -1313,7 +1313,14 @@
 "home_quick_action.add_transaction.subtitle" = "打开账本并新建一笔";
 
 "notification.quick_ledger.title" = "记账成功";
-"notification.quick_ledger.body_format" = "记账成功：%@ - %@。如有异常，请点击打开 App 确认。";
+"notification.quick_ledger.body_format" = "记账成功：%@ - %@。长按通知可编辑或撤销。";
+"notification.quick_ledger.undo" = "撤销";
+"notification.quick_ledger.undone.title" = "已撤销记账";
+"notification.quick_ledger.undone.body" = "已移入回收站，可在 AutoLedger 中恢复。";
+"notification.quick_ledger.unavailable.title" = "账单已不在账本中";
+"notification.quick_ledger.unavailable.body" = "这条账单已删除或不存在。";
+"notification.quick_ledger.undo_failed.title" = "未能撤销记账";
+"notification.quick_ledger.undo_failed.body" = "账单未移入回收站，请打开 AutoLedger 重试。";
 "notification.subscription.title" = "明日扣费提醒";
 "notification.subscription.body_format" = "%@ 将于明天扣费 %@（%@）";
 

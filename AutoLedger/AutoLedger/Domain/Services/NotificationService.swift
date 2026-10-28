@@ -2,13 +2,18 @@ import AutoLedgerCore
 import Foundation
 import os.log
 import UserNotifications
+import WidgetKit
 
 final class NotificationService: Sendable {
     static let shared = NotificationService()
     static let quickLedgerOpenLedgerEvent = Notification.Name("AutoLedger.quickLedgerOpenLedgerEvent")
     static let openNewTransactionEvent = Notification.Name("AutoLedger.openNewTransactionEvent")
     static let openDeepLinkEvent = Notification.Name("AutoLedger.openDeepLinkEvent")
-    /// Intent 入账成功后发送，通知 LedgerStore 刷新
+    static let editQuickLedgerTransactionEvent = Notification.Name("AutoLedger.editQuickLedgerTransactionEvent")
+    static let quickLedgerCategoryIdentifier = "AUTOLEDGER_QUICK_LEDGER_SUCCESS"
+    static let quickLedgerEditActionIdentifier = "AUTOLEDGER_QUICK_LEDGER_EDIT"
+    static let quickLedgerUndoActionIdentifier = "AUTOLEDGER_QUICK_LEDGER_UNDO"
+    /// 外部入口入账或撤销成功后发送，通知 LedgerStore 刷新
     static let didSaveTransactionFromIntent = Notification.Name("AutoLedger.didSaveTransactionFromIntent")
     static let quickLedgerDestinationUserInfoKey = "destination"
     static let quickLedgerDestinationLedgerValue = "ledger"
@@ -75,6 +80,86 @@ final class NotificationService: Sendable {
 
     // MARK: - Schedule
 
+    func registerNotificationCategories() {
+        let edit = UNNotificationAction(
+            identifier: Self.quickLedgerEditActionIdentifier,
+            title: String(localized: "common.edit"),
+            options: [.foreground]
+        )
+        let undo = UNNotificationAction(
+            identifier: Self.quickLedgerUndoActionIdentifier,
+            title: String(localized: "notification.quick_ledger.undo"),
+            options: [.authenticationRequired, .destructive]
+        )
+        let category = UNNotificationCategory(
+            identifier: Self.quickLedgerCategoryIdentifier,
+            actions: [edit, undo],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
+
+    func removeQuickLedgerSuccessNotification(transactionID: UUID) {
+        let identifiers = ["quick-ledger-success-\(transactionID.uuidString)"]
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+
+    func undoQuickLedgerTransaction(transactionID: UUID) async {
+        do {
+            // A background notification response may have no SwiftUI scene or
+            // LedgerStore. Use the same durable trash as in-app deletion.
+            let didDelete = try await Task.detached(priority: .userInitiated) {
+                try SQLiteTransactionStore().deleteIfActive(transactionID: transactionID)
+            }.value
+
+            if didDelete {
+                Self.markIntentLedgerSaveNeedsCloudPush()
+                WidgetCenter.shared.reloadAllTimelines()
+                // Watch snapshots prefer the live store when one exists.
+                await LedgerStore.shared?.refreshFromStoreInBackground(afterExternalChange: true)
+                WatchConnectivityHost.shared.publishLatestLedgerSnapshot()
+                NotificationCenter.default.post(name: Self.didSaveTransactionFromIntent, object: nil)
+            }
+            removeQuickLedgerSuccessNotification(transactionID: transactionID)
+            await scheduleQuickLedgerActionResult(
+                transactionID: transactionID,
+                title: didDelete
+                    ? String(localized: "notification.quick_ledger.undone.title")
+                    : String(localized: "notification.quick_ledger.unavailable.title"),
+                body: didDelete
+                    ? String(localized: "notification.quick_ledger.undone.body")
+                    : String(localized: "notification.quick_ledger.unavailable.body")
+            )
+        } catch {
+            Self.logger.error("Failed to undo quick ledger entry: \(error.localizedDescription)")
+            await scheduleQuickLedgerActionResult(
+                transactionID: transactionID,
+                title: String(localized: "notification.quick_ledger.undo_failed.title"),
+                body: String(localized: "notification.quick_ledger.undo_failed.body")
+            )
+        }
+    }
+
+    private func scheduleQuickLedgerActionResult(transactionID: UUID, title: String, body: String) async {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.userInfo = [Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue]
+        let request = UNNotificationRequest(
+            identifier: "quick-ledger-action-result-\(transactionID.uuidString)",
+            content: content,
+            trigger: nil
+        )
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            Self.logger.error("Failed to schedule quick ledger action result: \(error.localizedDescription)")
+        }
+    }
+
     func scheduleUpcomingChargeReminders(for subscriptions: [Subscription]) {
         guard !Self.isScreenshotMode else { return }
         let center = UNUserNotificationCenter.current()
@@ -103,6 +188,7 @@ final class NotificationService: Sendable {
         transactionID: UUID
     ) {
         guard !Self.isScreenshotMode else { return }
+        registerNotificationCategories()
         let center = UNUserNotificationCenter.current()
         let formattedAmountText = AppFormatters.currency(amount, code: currencyCode)
         center.getNotificationSettings { settings in
@@ -115,6 +201,7 @@ final class NotificationService: Sendable {
                     formattedAmountText
                 )
                 content.sound = .default
+                content.categoryIdentifier = Self.quickLedgerCategoryIdentifier
                 content.userInfo = [
                     Self.quickLedgerDestinationUserInfoKey: Self.quickLedgerDestinationLedgerValue,
                     Self.quickLedgerTransactionIDUserInfoKey: transactionID.uuidString

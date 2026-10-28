@@ -267,13 +267,20 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
     }
 
     public func delete(transactionID: UUID) throws {
+        _ = try deleteIfActive(transactionID: transactionID)
+    }
+
+    /// Moves one active entry to the existing trash. A repeated notification
+    /// action must not rewrite its deletion time or create another sync revision.
+    @discardableResult
+    public func deleteIfActive(transactionID: UUID) throws -> Bool {
         let sql = """
         UPDATE transactions
         SET deleted_at = ?, updated_at = ?,
             sync_revision = sync_revision + 1,
             sync_device_id = ?,
             sync_conflict_state = ?
-        WHERE id = ?;
+        WHERE id = ? AND deleted_at IS NULL;
         """
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
@@ -292,6 +299,7 @@ public final class SQLiteTransactionStore: TransactionStore, @unchecked Sendable
         guard sqlite3_step(statement) == SQLITE_DONE else {
             throw SQLiteTransactionStoreError.executeStatement(sql)
         }
+        return sqlite3_changes(db) == 1
     }
 
     public func loadDeletedTransactions(limit: Int = 50) throws -> [Transaction] {

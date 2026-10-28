@@ -439,6 +439,7 @@ swiftc \
   "$PREP_DIR/MonthlyInsightService.swift" \
   "$PREP_DIR/LedgerTextInterpreter.swift" \
   "$PREP_DIR/LedgerStore.swift" \
+  "$ROOT/AutoLedger/AutoLedger/App/QuickLedgerNavigationState.swift" \
   "$PREP_DIR/SmartReceiptParserStub.swift" \
   "$PREP_DIR/IOSStubs.swift" \
   "$ROOT/AutoLedger/AutoLedger/Shared/Constants/ExpenseCurrencyPreference.swift" \

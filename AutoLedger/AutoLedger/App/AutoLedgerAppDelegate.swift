@@ -27,6 +27,7 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         if !ProcessInfo.processInfo.arguments.contains("--screenshot-mode")
             && !PerformanceFixtureConfiguration.isEnabled {
             UNUserNotificationCenter.current().delegate = self
+            NotificationService.shared.registerNotificationCategories()
             AppDiagnosticsAnalyticsMonitor.shared.startIfNeeded()
             AppSessionDiagnosticsService.recordLaunchRecoveryIfNeeded()
         }
@@ -86,6 +87,10 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        guard response.actionIdentifier != UNNotificationDismissActionIdentifier else {
+            completionHandler()
+            return
+        }
         if let deepLink = response.notification.request.content.userInfo[NotificationService.deepLinkUserInfoKey] as? String {
             AutoLedgerDeepLinkHandoff.submit(deepLink)
             NotificationCenter.default.post(name: NotificationService.openDeepLinkEvent, object: nil)
@@ -96,6 +101,26 @@ final class AutoLedgerAppDelegate: NSObject, UIApplicationDelegate, UNUserNotifi
         let destination = response.notification.request.content.userInfo[NotificationService.quickLedgerDestinationUserInfoKey] as? String
         guard destination == NotificationService.quickLedgerDestinationLedgerValue else {
             completionHandler()
+            return
+        }
+
+        if response.actionIdentifier == NotificationService.quickLedgerEditActionIdentifier
+            || response.actionIdentifier == NotificationService.quickLedgerUndoActionIdentifier {
+            guard let value = response.notification.request.content.userInfo[NotificationService.quickLedgerTransactionIDUserInfoKey] as? String,
+                  let transactionID = UUID(uuidString: value) else {
+                completionHandler()
+                return
+            }
+            if response.actionIdentifier == NotificationService.quickLedgerEditActionIdentifier {
+                QuickLedgerNavigationState.shared.markEditTransactionPending(transactionID)
+                NotificationCenter.default.post(name: NotificationService.editQuickLedgerTransactionEvent, object: nil)
+                completionHandler()
+            } else {
+                Task { @MainActor in
+                    await NotificationService.shared.undoQuickLedgerTransaction(transactionID: transactionID)
+                    completionHandler()
+                }
+            }
             return
         }
 
