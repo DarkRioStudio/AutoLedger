@@ -48,7 +48,10 @@ enum LLMProvider: String, CaseIterable, Identifiable, Codable, Sendable {
     var unavailableReason: String? {
         switch self {
         case .appleFoundation:
-            if !isAvailable { return String(localized: "llm.apple.unavailable") }
+            if #available(iOS 26.0, *) {
+                return _appleFMUnavailableReason()
+            }
+            return String(localized: "llm.apple.requires_ios26")
         case .gemma:
             if GemmaService.isRunningInExtension { return String(localized: "llm.gemma.extension_unavailable") }
             if !isAvailable { return String(localized: "llm.gemma.not_downloaded") }
@@ -94,4 +97,20 @@ import FoundationModels
 @available(iOS 26.0, *)
 private func _isAppleFMAvailable() -> Bool {
     SystemLanguageModel.default.isAvailable
+}
+
+@available(iOS 26.0, *)
+private func _appleFMUnavailableReason() -> String? {
+    switch SystemLanguageModel.default.availability {
+    case .available:
+        return nil
+    case .unavailable(.deviceNotEligible):
+        return String(localized: "llm.apple.device_not_eligible")
+    case .unavailable(.appleIntelligenceNotEnabled):
+        return String(localized: "llm.apple.not_enabled")
+    case .unavailable(.modelNotReady):
+        return String(localized: "llm.apple.model_not_ready")
+    case .unavailable:
+        return String(localized: "llm.apple.unavailable")
+    }
 }

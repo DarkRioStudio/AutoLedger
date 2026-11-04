@@ -1220,9 +1220,13 @@
 "ai_model.update_available_format" = "新版本可用：%@（目前 %@）";
 "ai_model.update_model" = "更新模型";
 "ai_model.retry" = "重試";
-"llm.apple.subtitle" = "iOS 26+ 系統內建，無需下載";
+"llm.apple.subtitle" = "iOS 26+ 系統內建，模型由系統管理";
 "llm.gemma.subtitle" = "Google 端側模型（MediaPipe），需下載約 2.5 GB";
-"llm.apple.unavailable" = "目前裝置/地區不支援 Apple Intelligence";
+"llm.apple.unavailable" = "Apple 裝置端模型暫時無法使用，請稍後再試";
+"llm.apple.device_not_eligible" = "系統尚未向此裝置上的 App 提供 Apple 裝置端模型";
+"llm.apple.not_enabled" = "尚未啟用 Apple Intelligence，請在系統設定中開啟";
+"llm.apple.model_not_ready" = "Apple 裝置端模型尚未就緒，可能正在下載或準備中，請稍後再試";
+"llm.apple.requires_ios26" = "Apple 裝置端模型需要 iOS 26 或更新版本";
 "llm.gemma.extension_unavailable" = "Extension 中不可用";
 "llm.gemma.not_downloaded" = "模型尚未下載，請先下載";
 

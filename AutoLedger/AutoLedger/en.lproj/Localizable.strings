@@ -1217,9 +1217,13 @@
 "ai_model.update_available_format" = "New version available: %@ (current %@)";
 "ai_model.update_model" = "Update Model";
 "ai_model.retry" = "Retry";
-"llm.apple.subtitle" = "Built into iOS 26+, no download required";
+"llm.apple.subtitle" = "Built into iOS 26+, model managed by the system";
 "llm.gemma.subtitle" = "Google on-device model via MediaPipe, requires a ~2.5 GB download";
-"llm.apple.unavailable" = "Apple Intelligence is not supported on this device or in this region";
+"llm.apple.unavailable" = "The Apple on-device model is temporarily unavailable. Try again later.";
+"llm.apple.device_not_eligible" = "The system is not currently providing the Apple on-device model to apps on this device.";
+"llm.apple.not_enabled" = "Apple Intelligence is turned off. Enable it in system settings.";
+"llm.apple.model_not_ready" = "The Apple on-device model is not ready. It may be downloading or preparing. Try again later.";
+"llm.apple.requires_ios26" = "The Apple on-device model requires iOS 26 or later.";
 "llm.gemma.extension_unavailable" = "Unavailable in extensions";
 "llm.gemma.not_downloaded" = "Model not downloaded yet. Download it first.";
 

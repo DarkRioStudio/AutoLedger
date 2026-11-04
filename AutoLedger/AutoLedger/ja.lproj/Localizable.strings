@@ -1217,9 +1217,13 @@
 "ai_model.update_available_format" = "新しいバージョンがあります: %@（現在 %@）";
 "ai_model.update_model" = "モデルを更新";
 "ai_model.retry" = "再試行";
-"llm.apple.subtitle" = "iOS 26 以降に内蔵、ダウンロード不要";
+"llm.apple.subtitle" = "iOS 26 以降に内蔵、モデルはシステムが管理";
 "llm.gemma.subtitle" = "MediaPipe 経由の Google オンデバイスモデル。約 2.5 GB のダウンロードが必要";
-"llm.apple.unavailable" = "Apple Intelligence はこのデバイスまたは地域ではサポートされていません";
+"llm.apple.unavailable" = "Apple のオンデバイスモデルは一時的に利用できません。しばらくしてから再試行してください。";
+"llm.apple.device_not_eligible" = "現在、システムはこのデバイスのアプリに Apple のオンデバイスモデルを提供していません。";
+"llm.apple.not_enabled" = "Apple Intelligence がオフになっています。システム設定で有効にしてください。";
+"llm.apple.model_not_ready" = "Apple のオンデバイスモデルの準備ができていません。ダウンロードまたは準備中の可能性があります。しばらくしてから再試行してください。";
+"llm.apple.requires_ios26" = "Apple のオンデバイスモデルには iOS 26 以降が必要です。";
 "llm.gemma.extension_unavailable" = "拡張機能では利用できません";
 "llm.gemma.not_downloaded" = "モデルはまだダウンロードされていません。先にダウンロードしてください。";
 
