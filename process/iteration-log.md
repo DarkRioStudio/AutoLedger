@@ -1,6 +1,6 @@
 # 迭代日志
 
-更新日期：2026-10-28（ITER-474 快捷记账通知纠错）
+更新日期：2026-11-04（ITER-475 Apple 端侧模型状态提示）
 
 ## 记录规则
 
@@ -43,6 +43,19 @@
 - CHANGELOG 条目
 
 ## 日志条目
+
+### ITER-475 按系统原因区分 Apple 端侧模型不可用提示
+- 日期：2026-11-04
+- 所属版本：v1.9.0 / ASC 1.8.0
+- 类型：缺陷修复 / 体验提升
+- 目标：修复既有模型设置页将所有不可用状态统称为“设备/地区不支持 Apple Intelligence”的误导提示，属于 v1.9.0 现有体验修复范围。
+- 改动范围：`LLMProvider.unavailableReason`、主 App 五语资源、CHANGELOG 与本日志。
+- 完成内容：读取 `SystemLanguageModel.default.availability`，分别映射 `deviceNotEligible`、`appleIntelligenceNotEnabled`、`modelNotReady`；可用状态返回 nil，旧系统显示 iOS 26 要求，未知原因使用中性兜底。模型说明改为系统管理，避免“无需下载”与模型准备状态冲突。
+- 问题依据：本轮前置独立真机诊断中，iPhone 15 Pro / iOS 27.3 Beta 的默认模型返回 `deviceNotEligible`，而用户确认系统智能功能可用；该证据不代表所有地区或设备的开放状态。
+- 测试情况：Xcode 27.2 主 App workspace generic iOS Debug 无签名构建通过；全量离线回归与附带 9 项 Core XCTest 通过；五语本地化覆盖、strings 语法和 diff 检查通过。
+- 风险与未完成：本次只调整提示，不改变模型可用性门禁、模型请求、识别降级、账本数据或系统设置；未安装更新后的 App，未执行 Archive、TestFlight 或商店发布。前置诊断不冒充更新后真机 UI 验收。
+- 回滚方式：回退本轮源码和资源提交，无 schema 或数据迁移。
+- 结论：实现与本机验证完成；远端 CI、审阅和合并事实以本轮 PR 为准。
 
 ### ITER-474 快捷记账成功通知的编辑与撤销
 - 日期：2026-10-28
